@@ -33,6 +33,7 @@
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+      overflow-x: hidden;
     }
 
     /* ── HEADER ─────────────────────────── */
@@ -171,6 +172,10 @@
       grid-template-columns: 1fr 1fr;
       gap: 12px;
       margin-bottom: 16px;
+    }
+    /* 4º card (Páginas Abertas) span 2 colunas no mobile para não ficar órfão */
+    @media (max-width: 639px) {
+      .cards-row > *:nth-child(4) { grid-column: span 2; }
     }
 
     @media (min-width: 640px) {
@@ -345,6 +350,8 @@
       }
     }
 
+    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%; }
+    .table-scroll table { min-width: 420px; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
 
     thead tr { border-bottom: 2px solid var(--border); }
@@ -478,10 +485,10 @@
     </div>
 
     <div class="card card-stat accent-green">
-      <div class="s-label">Páginas abertas</div>
-      <div class="s-val" id="stat-views">—</div>
-      <div id="delta-views" class="delta-neu">—</div>
-      <div class="s-sub">total de páginas visualizadas</div>
+      <div class="s-label">Taxa de Conversão</div>
+      <div class="s-val" id="stat-conv">—</div>
+      <div id="delta-conv" class="delta-neu">—</div>
+      <div class="s-sub">leads ÷ visitantes</div>
     </div>
 
   </div>
@@ -536,17 +543,19 @@
       <div class="card-hd">
         <div class="card-hd-title">📄 Por Página</div>
       </div>
-      <table>
-        <thead><tr>
-          <th title="Endereço da página visitada">Página</th>
-          <th title="Pessoas únicas que acessaram essa página">Visitantes únicos</th>
-          <th title="Total de visitas (uma mesma pessoa pode entrar várias vezes)">Total de visitas</th>
-          <th title="Quantidade de vezes que a página foi carregada na tela">Páginas abertas</th>
-        </tr></thead>
-        <tbody id="tb-pages">
-          <tr class="empty-row"><td colspan="4">Carregando...</td></tr>
-        </tbody>
-      </table>
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th title="Endereço da página visitada">Página</th>
+            <th title="Pessoas únicas que acessaram essa página">Visitantes únicos</th>
+            <th title="Total de visitas (uma mesma pessoa pode entrar várias vezes)">Total de visitas</th>
+            <th title="Quantidade de vezes que a página foi carregada na tela">Páginas abertas</th>
+          </tr></thead>
+          <tbody id="tb-pages">
+            <tr class="empty-row"><td colspan="4">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Cities -->
@@ -554,16 +563,18 @@
       <div class="card-hd">
         <div class="card-hd-title">📍 Cidade / Estado</div>
       </div>
-      <table>
-        <thead><tr>
-          <th>Estado</th>
-          <th>Cidade</th>
-          <th title="Pessoas únicas dessa localidade">Visitantes</th>
-        </tr></thead>
-        <tbody id="tb-cities">
-          <tr class="empty-row"><td colspan="3">Carregando...</td></tr>
-        </tbody>
-      </table>
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th>Estado</th>
+            <th>Cidade</th>
+            <th title="Pessoas únicas dessa localidade">Visitantes</th>
+          </tr></thead>
+          <tbody id="tb-cities">
+            <tr class="empty-row"><td colspan="3">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Sources -->
@@ -571,16 +582,18 @@
       <div class="card-hd">
         <div class="card-hd-title">🔗 Origem do Tráfego</div>
       </div>
-      <table>
-        <thead><tr>
-          <th title="De onde veio o visitante (ex: Facebook Ads, Google, link direto)">De onde veio</th>
-          <th title="Pessoas únicas que vieram dessa origem">Visitantes únicos</th>
-          <th title="Total de vezes que acessaram vindo dessa origem">Total de visitas</th>
-        </tr></thead>
-        <tbody id="tb-sources">
-          <tr class="empty-row"><td colspan="3">Carregando...</td></tr>
-        </tbody>
-      </table>
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th title="De onde veio o visitante (ex: Facebook Ads, Google, link direto)">De onde veio</th>
+            <th title="Pessoas únicas que vieram dessa origem">Visitantes únicos</th>
+            <th title="Total de vezes que acessaram vindo dessa origem">Total de visitas</th>
+          </tr></thead>
+          <tbody id="tb-sources">
+            <tr class="empty-row"><td colspan="3">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Events -->
@@ -588,15 +601,17 @@
       <div class="card-hd">
         <div class="card-hd-title">⚡ Eventos / Leads</div>
       </div>
-      <table>
-        <thead><tr>
-          <th style="font-size:11px">AÇÃO DO VISITANTE</th>
-          <th style="text-align:right;font-size:11px">TOTAL</th>
-        </tr></thead>
-        <tbody id="tb-events">
-          <tr class="empty-row"><td colspan="2">Carregando...</td></tr>
-        </tbody>
-      </table>
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th style="font-size:11px">AÇÃO DO VISITANTE</th>
+            <th style="text-align:right;font-size:11px">TOTAL</th>
+          </tr></thead>
+          <tbody id="tb-events">
+            <tr class="empty-row"><td colspan="2">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
   </div>
@@ -751,21 +766,35 @@ async function fetchRealtime() {
 // Período anterior = dados do dobro MENOS dados do período atual.
 // Ex: 14 dias = 50 visitantes, 7 dias = 30 → anterior = 20, delta = +50%
 async function loadSummaryWithCompare() {
-  const deltaIds = ['delta-users', 'delta-sessions', 'delta-views'];
+  const deltaIds = ['delta-users', 'delta-sessions', 'delta-conv'];
 
   try {
-    const [dAtual, dDuplo] = await Promise.all([
+    const [dAtual, dDuplo, dEvAtual, dEvDuplo] = await Promise.all([
       proxy('summary', currentDays),
       proxy('summary', currentDays * 2),
+      proxy('events',  currentDays),
+      proxy('events',  currentDays * 2),
     ]);
 
     const vAtual  = dAtual.rows?.[0]?.metricValues  ?? [];
     const vDuplo  = dDuplo.rows?.[0]?.metricValues  ?? [];
 
+    // Leads = evento Lead_Formulario
+    const leadsAtual = +(dEvAtual.rows?.find(r => r.dimensionValues[0].value === 'Lead_Formulario')?.metricValues[0]?.value ?? 0);
+    const leadsDuplo = +(dEvDuplo.rows?.find(r => r.dimensionValues[0].value === 'Lead_Formulario')?.metricValues[0]?.value ?? 0);
+
+    // Taxa de conversão atual e período anterior
+    const usersAtual = +(vAtual[0]?.value ?? 0);
+    const usersDuplo = +(vDuplo[0]?.value ?? 0);
+    const usersAnt   = usersDuplo - usersAtual;
+    const leadsAnt   = leadsDuplo - leadsAtual;
+    const convAtual  = usersAtual > 0 ? (leadsAtual / usersAtual * 100) : 0;
+    const convAnt    = usersAnt   > 0 ? (leadsAnt   / usersAnt   * 100) : 0;
+
     // Atualiza valores atuais
     document.getElementById('stat-users').textContent    = n(vAtual[0]?.value);
     document.getElementById('stat-sessions').textContent = n(vAtual[1]?.value);
-    document.getElementById('stat-views').textContent    = n(vAtual[2]?.value);
+    document.getElementById('stat-conv').textContent     = convAtual.toFixed(1) + '%';
 
     // Calcula período anterior = duplo - atual
     const calcDelta = (iAtual, iDuplo) => {
@@ -776,10 +805,12 @@ async function loadSummaryWithCompare() {
       return Math.round((atual - anterior) / anterior * 100);
     };
 
+    const deltaConv = convAnt > 0 ? Math.round((convAtual - convAnt) / convAnt * 100) : null;
+
     const deltas = [
       calcDelta(vAtual[0], vDuplo[0]),
       calcDelta(vAtual[1], vDuplo[1]),
-      calcDelta(vAtual[2], vDuplo[2]),
+      deltaConv,
     ];
 
     deltaIds.forEach((id, i) => {
@@ -820,7 +851,7 @@ async function loadSummaryWithCompare() {
 
   } catch(err) {
     const msg = err.message || 'Erro';
-    ['stat-users','stat-sessions','stat-views'].forEach(id =>
+    ['stat-users','stat-sessions','stat-conv'].forEach(id =>
       document.getElementById(id).textContent = msg
     );
     deltaIds.forEach(id => {
@@ -980,7 +1011,8 @@ async function loadChart() {
       }
     );
 
-    // Aviso se só tem 1 dia de dados
+    // Aviso se só tem 1 dia de dados (remove anterior antes de criar novo)
+    wrap.parentElement.querySelectorAll('.chart-aviso').forEach(el => el.remove());
     if (rows.length === 1) {
       const aviso = document.createElement('div');
       aviso.className = 'chart-aviso';
