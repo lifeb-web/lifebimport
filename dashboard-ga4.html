@@ -846,10 +846,16 @@ function _skeletonOn() {
 function _skeletonOff() {
   document.getElementById('insights-list')?.classList.remove('fading');
   document.querySelector('.chart-wrap')?.classList.remove('chart-loading');
+  // Limpa skeletons que não foram substituídos por dados (ex: quando proxy falha)
+  ['stat-users','stat-sessions','stat-conv','stat-leads','stat-bounce','stat-duration'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el?.querySelector('.skel')) el.textContent = '—';
+  });
 }
 
 async function loadAll() {
   const myVersion = ++loadVersion;
+  insightsData = {}; // limpa dados do filtro anterior — evita análise com dados misturados
   _loadingStart();
   _skeletonOn();
 
@@ -976,11 +982,15 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo) {
     const duration = parseFloat(vAtual[4]?.value ?? '');
     if (!isNaN(bounce)) {
       document.getElementById('stat-bounce').textContent = (bounce * 100).toFixed(1) + '%';
+    } else {
+      document.getElementById('stat-bounce').textContent = '—';
     }
     if (!isNaN(duration) && duration > 0) {
       const min = Math.floor(duration / 60);
       const sec = Math.round(duration % 60);
       document.getElementById('stat-duration').textContent = min + 'm ' + String(sec).padStart(2,'0') + 's';
+    } else {
+      document.getElementById('stat-duration').textContent = '—';
     }
 
     // Alimenta engine de análise inteligente
@@ -994,6 +1004,9 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo) {
     const msg = err.message || 'Erro';
     ['stat-users','stat-sessions','stat-conv'].forEach(id =>
       document.getElementById(id).textContent = msg
+    );
+    ['stat-bounce','stat-duration'].forEach(id =>
+      document.getElementById(id).textContent = '—'
     );
     deltaIds.forEach(id => {
       document.getElementById(id).textContent = '—';
@@ -1270,7 +1283,10 @@ async function loadEvents(d) {
     // Atualiza card de Leads Gerados
     document.getElementById('stat-leads').textContent = n(leadCount);
 
-  } catch { tb.innerHTML = errRow(2); }
+  } catch {
+    tb.innerHTML = errRow(2);
+    document.getElementById('stat-leads').textContent = '—';
+  }
 }
 
 // ANÁLISE INTELIGENTE (IA)
@@ -1507,7 +1523,8 @@ function generateInsights() {
 
   const todos = [...rt, ...main];
   if (todos.length <= rt.length) {
-    todos.push({ icon: '✅', text: `Tudo dentro do esperado ${labelPeriodo}. Aumente o período para análises mais ricas.`, tipo: 'info', conf: 1 });
+    const dica = currentDays < 90 ? ` Amplie o período para análises mais ricas.` : '';
+    todos.push({ icon: '✅', text: `Tudo dentro do esperado ${labelPeriodo}.${dica}`, tipo: 'info', conf: 1 });
   }
 
   _renderInsights(todos);
