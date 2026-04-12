@@ -710,6 +710,7 @@ let currentDays   = 1;
 let chart         = null;
 let realtimeTimer = null;
 let refreshTimer  = null;
+let loadVersion   = 0; // controle de race condition
 
 window.addEventListener('load', () => {
   document.getElementById('last-updated').style.display = 'inline';
@@ -730,16 +731,18 @@ function setRange(days, btn) {
   loadAll();
 }
 
-// CARREGA TUDO — events buscado 1x e compartilhado entre summary e tabela
+// CARREGA TUDO — race condition controlada por versão
 async function loadAll() {
-  // Pré-busca events UMA vez para ambas as funções
-  let evAtual = null, evDuplo = null;
-  try {
-    [evAtual, evDuplo] = await Promise.all([
-      proxy('events', currentDays),
-      proxy('events', currentDays * 2),
-    ]);
-  } catch { /* tratado individualmente em cada função */ }
+  const myVersion = ++loadVersion;
+
+  // Pré-busca events UMA vez (catches individuais para não bloquear se um falhar)
+  const [evAtual, evDuplo] = await Promise.all([
+    proxy('events', currentDays).catch(() => null),
+    proxy('events', currentDays * 2).catch(() => null),
+  ]);
+
+  // Se uma versão mais nova já começou, descarta silenciosamente
+  if (myVersion !== loadVersion) return;
 
   await Promise.allSettled([
     loadSummaryWithCompare(evAtual, evDuplo),
@@ -750,7 +753,7 @@ async function loadAll() {
     loadEvents(evAtual),
   ]);
 
-  stamp(); // marca hora APÓS dados chegarem
+  if (myVersion === loadVersion) stamp(); // marca hora só se ainda for a versão mais recente
 }
 
 // API HELPERS — fetch com CORS (Apps Script retorna access-control-allow-origin: *)
@@ -805,7 +808,7 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo) {
     // Atualiza valores atuais
     document.getElementById('stat-users').textContent    = n(vAtual[0]?.value);
     document.getElementById('stat-sessions').textContent = n(vAtual[1]?.value);
-    document.getElementById('stat-conv').textContent     = convAtual.toFixed(1) + '%';
+    document.getElementById('stat-conv').textContent     = usersAtual > 0 ? convAtual.toFixed(1) + '%' : '—';
 
     // Calcula período anterior = duplo - atual
     const calcDelta = (iAtual, iDuplo) => {
