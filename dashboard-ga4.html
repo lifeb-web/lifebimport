@@ -315,7 +315,7 @@
     }
 
     .rt-label { font-size: 12px; opacity: .78; font-weight: 500; }
-    .rt-sub   { font-size: 10px; opacity: .6; font-weight: 400; margin-top: 4px; }
+    .rt-sub   { font-size: 11px; opacity: .6; font-weight: 400; margin-top: 4px; }
 
     /* Stat cards */
     .card-stat .s-label {
@@ -355,14 +355,11 @@
       margin-bottom: 4px;
     }
     .card-metric .m-sub  { font-size: 12px; color: var(--muted); }
-    .card-metric .m-soon { font-size: 12px; color: var(--muted); font-style: italic; }
-
     .accent-purple  { border-top: 3px solid var(--purple);  background: linear-gradient(180deg,#f8f5fd 0%,#fff 40%); }
     .accent-magenta { border-top: 3px solid var(--magenta); background: linear-gradient(180deg,#fff0f8 0%,#fff 40%); }
     .accent-red     { border-top: 3px solid var(--red);     background: linear-gradient(180deg,#fff5f5 0%,#fff 40%); }
     .accent-blue    { border-top: 3px solid var(--blue);    background: linear-gradient(180deg,#f0f5ff 0%,#fff 40%); }
     .accent-green   { border-top: 3px solid var(--green);   background: linear-gradient(180deg,#f0fbf4 0%,#fff 40%); }
-    .accent-teal    { border-top: 3px solid #0891b2;        background: linear-gradient(180deg,#f0fafd 0%,#fff 40%); }
 
     /* ── CHART ──────────────────────────── */
     .card-chart { margin-bottom: 18px; }
@@ -509,7 +506,7 @@
       #dashboard { padding: 16px 16px 24px; }
       .ctrl-bar { flex-direction: column; align-items: flex-start; gap: 10px; }
       .range-btns { width: 100%; display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; }
-      .rbtn { text-align: center; padding: 8px 6px; }
+      .rbtn { text-align: center; padding: 9px 6px; min-height: 38px; }
       .card { padding: 16px 14px; }
       .card-rt { grid-column: span 2; padding: 16px 12px; }
       .rt-num { font-size: 40px; }
@@ -575,21 +572,21 @@
     <div class="card card-stat accent-purple">
       <div class="s-label">Visitantes</div>
       <div class="s-val" id="stat-users">—</div>
-      <div id="delta-users" class="delta-neu">—</div>
+      <div id="delta-users" class="delta-neu" style="display:none"></div>
       <div class="s-sub">pessoas diferentes que acessaram</div>
     </div>
 
     <div class="card card-stat accent-magenta">
       <div class="s-label">Visitas</div>
       <div class="s-val" id="stat-sessions">—</div>
-      <div id="delta-sessions" class="delta-neu">—</div>
+      <div id="delta-sessions" class="delta-neu" style="display:none"></div>
       <div class="s-sub">total de acessos ao site</div>
     </div>
 
     <div class="card card-stat accent-green">
       <div class="s-label">Taxa de Conversão</div>
       <div class="s-val" id="stat-conv">—</div>
-      <div id="delta-conv" class="delta-neu">—</div>
+      <div id="delta-conv" class="delta-neu" style="display:none"></div>
       <div class="s-sub">leads ÷ visitantes</div>
     </div>
 
@@ -623,7 +620,7 @@
   <div class="card" style="margin-bottom:18px;">
     <div class="card-hd">
       <div class="card-hd-title">Análises Inteligentes <span style="font-size:9px;font-weight:700;background:linear-gradient(135deg,#704B9B,#E92085);color:#fff;padding:2px 8px;border-radius:20px;letter-spacing:.5px;text-transform:none">IA</span></div>
-      <div class="badge" id="insights-stamp">—</div>
+      <div class="badge" id="insights-stamp" style="visibility:hidden"></div>
     </div>
     <div id="insights-list" style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
       <div style="color:#6b6484;font-size:13px;font-family:Montserrat,sans-serif;">Carregando análise...</div>
@@ -873,7 +870,7 @@ function _skeletonOn() {
   });
   ['delta-users','delta-sessions','delta-conv','delta-leads'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) { el.textContent = '—'; el.className = 'delta-neu'; }
+    if (el) { el.textContent = ''; el.className = 'delta-neu'; el.style.display = 'none'; }
   });
   document.getElementById('insights-list')?.classList.add('fading');
   document.querySelector('.chart-wrap')?.classList.add('chart-loading');
@@ -996,10 +993,12 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo) {
       const el = document.getElementById(id);
       const d  = deltas[i];
       if (d === null) {
-        el.textContent  = '—';
-        el.className    = 'delta-neu';
+        el.textContent   = '';
+        el.className     = 'delta-neu';
+        el.style.display = 'none';
         return;
       }
+      el.style.display = '';
       if (d > 0) {
         el.textContent = '↑ ' + d + '% vs período anterior';
         el.className   = 'delta-up';
@@ -1044,8 +1043,10 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo) {
       document.getElementById(id).textContent = '—'
     );
     deltaIds.forEach(id => {
-      document.getElementById(id).textContent = '—';
-      document.getElementById(id).className   = 'delta-neu';
+      const el = document.getElementById(id);
+      el.textContent   = '';
+      el.className     = 'delta-neu';
+      el.style.display = 'none';
     });
   }
 }
@@ -1211,7 +1212,7 @@ async function loadChart() {
       }
     }
 
-  } catch(e) { console.error('Chart error:', e); }
+  } catch(e) { /* silently ignore chart errors */ }
   finally { document.querySelector('.chart-wrap')?.classList.remove('chart-loading'); }
 }
 
@@ -1226,7 +1227,7 @@ async function loadPages() {
       const legenda = PAGINAS_LEGENDAS[path] || '';
       return `<tr>
         <td class="td-url" title="${esc(path)}" style="overflow:visible;white-space:normal;">
-          <span class="pg-legenda">${legenda || esc(path)}</span>
+          <span class="pg-legenda">${esc(legenda) || esc(path)}</span>
           ${legenda ? `<span class="pg-path">${esc(path)}</span>` : ''}
         </td>
         <td class="num-p">${n(u)}</td>
@@ -1419,7 +1420,7 @@ function generateInsights() {
     if (currentDays === 1) {
       const agora = new Date();
       const hFmt  = String(agora.getHours()).padStart(2,'0') + 'h' + String(agora.getMinutes()).padStart(2,'0');
-      rt.push({ icon: '📊', text: `<b>${usersAtual} visitante${usersAtual !== 1 ? 's' : ''} até às ${hFmt}.</b> Dia em construção — dados acumulando em tempo real.`, tipo: 'info', conf: 1 });
+      rt.push({ icon: '📊', text: `<b>${usersAtual} visitante${usersAtual !== 1 ? 's' : ''} até às ${hFmt}.</b> Dia em construção. Dados acumulando em tempo real.`, tipo: 'info', conf: 1 });
       if (leadsAtual > 0) {
         rt.push({ icon: '🎯', text: `<b>${leadsAtual} lead${leadsAtual !== 1 ? 's' : ''}</b> gerado${leadsAtual !== 1 ? 's' : ''} hoje (${convAtual.toFixed(1)}% de conversão). Dia começando bem.`, tipo: 'success', conf: 1 });
       } else if (abriu > 0) {
@@ -1439,7 +1440,7 @@ function generateInsights() {
   // Sem análise comportamental — apenas resumo informativo
   const mediaDiaria = usersAtual / currentDays;
   if (mediaDiaria < 1.5 && currentDays >= 14) {
-    rt.push({ icon: '📊', text: `<b>${usersAtual} visitantes em ${currentDays} dias</b> (média de ${mediaDiaria.toFixed(1)}/dia). Volume em acumulação — análises comportamentais disponíveis com mais tráfego.`, tipo: 'info', conf: 1 });
+    rt.push({ icon: '📊', text: `<b>${usersAtual} visitantes em ${currentDays} dias</b> (média de ${mediaDiaria.toFixed(1)}/dia). Volume em acumulação. Análises comportamentais disponíveis com mais tráfego.`, tipo: 'info', conf: 1 });
     if (leadsAtual > 0) rt.push({ icon: '🎯', text: `<b>${leadsAtual} lead${leadsAtual !== 1 ? 's' : ''}</b> gerado${leadsAtual !== 1 ? 's' : ''} ${labelPeriodo} (${convAtual.toFixed(1)}% de conversão).`, tipo: 'success', conf: 1 });
     return _renderInsights(rt);
   }
@@ -1454,11 +1455,11 @@ function generateInsights() {
     rt.push({ icon: '📊', text: `<b>${usersAtual} visitante${usersAtual !== 1 ? 's' : ''}</b> desde meia-noite. Dados acumulando ao longo do dia.`, tipo: 'info', conf: 1 });
 
     if (leadsAtual > 0) {
-      rt.push({ icon: '🎯', text: `<b>${leadsAtual} lead${leadsAtual !== 1 ? 's' : ''}</b> gerado${leadsAtual !== 1 ? 's' : ''} hoje — ${convAtual.toFixed(1)}% de conversão.`, tipo: 'success', conf: 1 });
+      rt.push({ icon: '🎯', text: `<b>${leadsAtual} lead${leadsAtual !== 1 ? 's' : ''}</b> gerado${leadsAtual !== 1 ? 's' : ''} hoje, com ${convAtual.toFixed(1)}% de conversão.`, tipo: 'success', conf: 1 });
     } else if (abriu > 0) {
       const pAband = events['Abandonou_Formulario'] || 0;
       if (pAband > 0) {
-        rt.push({ icon: '📋', text: `<b>${abriu}</b> visitante${abriu !== 1 ? 's' : ''} ${abriu > 1 ? 'abriram' : 'abriu'} o formulário — <b>${pAband}</b> ${pAband > 1 ? 'preencheram' : 'preencheu'} mas não ${pAband > 1 ? 'enviaram' : 'enviou'}.`, tipo: 'warning', conf: 1 });
+        rt.push({ icon: '📋', text: `<b>${abriu}</b> visitante${abriu !== 1 ? 's' : ''} ${abriu > 1 ? 'abriram' : 'abriu'} o formulário. <b>${pAband}</b> ${pAband > 1 ? 'preencheram' : 'preencheu'} mas não ${pAband > 1 ? 'enviaram' : 'enviou'}.`, tipo: 'warning', conf: 1 });
       } else {
         rt.push({ icon: '📋', text: `<b>${abriu}</b> visitante${abriu !== 1 ? 's' : ''} ${abriu > 1 ? 'abriram' : 'abriu'} o formulário. Aguardando envio.`, tipo: 'info', conf: 1 });
       }
@@ -1581,8 +1582,9 @@ function _renderInsights(insights) {
       </div>
     </div>`).join('');
 
-  document.getElementById('insights-stamp').textContent =
-    'atualizada às ' + new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+  const stamp = document.getElementById('insights-stamp');
+  stamp.textContent  = 'atualizada às ' + new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+  stamp.style.visibility = '';
 }
 
 // UTILITÁRIOS
