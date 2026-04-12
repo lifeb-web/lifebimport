@@ -373,6 +373,7 @@
       .tables-grid {
         grid-template-columns: 1fr 1fr;
       }
+      .tables-grid > *:last-child:nth-child(odd) { grid-column: span 2; }
     }
 
     .table-scroll { width: 100%; }
@@ -555,10 +556,28 @@
     </div>
   </div>
 
+  <!-- FUNIL DE CONVERSÃO — posição prioritária (mais acionável que o gráfico) -->
+  <div class="card" style="margin-bottom:18px;">
+    <div class="card-hd">
+      <div class="card-hd-title">⚡ Funil de Conversão</div>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr>
+          <th style="font-size:11px">AÇÃO DO VISITANTE</th>
+          <th style="text-align:right;font-size:11px">TOTAL</th>
+        </tr></thead>
+        <tbody id="tb-events">
+          <tr class="empty-row"><td colspan="2">Carregando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- CHART -->
   <div class="card card-chart">
     <div class="card-hd">
-      <div class="card-hd-title">📈 Visitantes por dia</div>
+      <div class="card-hd-title" id="chart-title">📈 Visitantes por hora</div>
       <div class="badge" id="chart-badge">hoje</div>
     </div>
     <div class="chart-wrap">
@@ -589,25 +608,6 @@
       </div>
     </div>
 
-    <!-- Cities -->
-    <div class="card">
-      <div class="card-hd">
-        <div class="card-hd-title">📍 Cidade / Estado</div>
-      </div>
-      <div class="table-scroll">
-        <table>
-          <thead><tr>
-            <th>Estado</th>
-            <th>Cidade</th>
-            <th title="Pessoas únicas dessa localidade">Visitantes</th>
-          </tr></thead>
-          <tbody id="tb-cities">
-            <tr class="empty-row"><td colspan="3">Carregando...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
     <!-- Sources -->
     <div class="card">
       <div class="card-hd">
@@ -627,19 +627,20 @@
       </div>
     </div>
 
-    <!-- Events -->
+    <!-- Cities -->
     <div class="card">
       <div class="card-hd">
-        <div class="card-hd-title">⚡ Funil de Conversão</div>
+        <div class="card-hd-title">📍 Cidade / Estado</div>
       </div>
       <div class="table-scroll">
         <table>
           <thead><tr>
-            <th style="font-size:11px">AÇÃO DO VISITANTE</th>
-            <th style="text-align:right;font-size:11px">TOTAL</th>
+            <th>Estado</th>
+            <th>Cidade</th>
+            <th title="Pessoas únicas dessa localidade">Visitantes</th>
           </tr></thead>
-          <tbody id="tb-events">
-            <tr class="empty-row"><td colspan="2">Carregando...</td></tr>
+          <tbody id="tb-cities">
+            <tr class="empty-row"><td colspan="3">Carregando...</td></tr>
           </tbody>
         </table>
       </div>
@@ -651,7 +652,7 @@
 <!-- FOOTER -->
 <footer>
   <strong>Life B</strong> | Painel de Resultados &nbsp;·&nbsp;
-  Atualiza a cada 5 min &nbsp;·&nbsp;
+  Atualiza a cada 1 minuto &nbsp;·&nbsp;
   Dados: Google Analytics 4 &nbsp;·&nbsp;
   projetojlbv.com.br
 </footer>
@@ -935,29 +936,17 @@ async function loadChart() {
   const wrap = document.getElementById('visitors-chart')?.parentElement
             ?? document.querySelector('.chart-wrap');
   try {
-    // Remover aviso anterior para não acumular
     wrap.parentElement.querySelectorAll('.chart-aviso').forEach(el => el.remove());
 
-    // Skip fetch quando filtro = Hoje — gráfico diário não faz sentido com 1 ponto
-    if (currentDays === 1) {
-      if (chart) { chart.destroy(); chart = null; }
-      wrap.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;color:#6b6484;font-family:Montserrat,sans-serif;">
-        <div style="font-size:32px">📊</div>
-        <div style="font-weight:600;font-size:14px;color:#221B32">Apenas hoje</div>
-        <div style="font-size:12px;text-align:center">Selecione 7 ou 30 dias para ver a evolução</div>
-      </div>`;
-      return;
-    }
-
-    const d = await proxy('chart');
+    const d    = await proxy('chart');
     const rows = d.rows ?? [];
 
     if (rows.length === 0) {
       if (chart) { chart.destroy(); chart = null; }
       wrap.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;color:#6b6484;font-family:Montserrat,sans-serif;">
         <div style="font-size:32px">📊</div>
-        <div style="font-weight:600;font-size:14px;color:#221B32">Nenhum dado no período</div>
-        <div style="font-size:12px;text-align:center">Tente um período maior ou aguarde visitas</div>
+        <div style="font-weight:600;font-size:14px;color:#221B32">Sem dados no período</div>
+        <div style="font-size:12px;text-align:center">Aguarde novas visitas ou selecione outro período</div>
       </div>`;
       return;
     }
@@ -966,123 +955,122 @@ async function loadChart() {
       wrap.innerHTML = '<canvas id="visitors-chart"></canvas>';
     }
 
-    const labels = [], values = [], bgColors = [], borderColors = [];
-    rows.forEach(r => {
-      const s = r.dimensionValues[0].value; // "20260412"
-      const date = new Date(
-        parseInt(s.slice(0,4)),
-        parseInt(s.slice(4,6)) - 1,
-        parseInt(s.slice(6,8))
-      );
-      const diaSemana = DIAS_SEMANA[date.getDay()];
-      const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-      labels.push(`${diaSemana} ${s.slice(6)}/${s.slice(4,6)}`);
-      values.push(+r.metricValues[0].value);
-      bgColors.push(isWeekend ? 'rgba(112,75,155,.32)' : 'rgba(112,75,155,.18)');
-      borderColors.push(isWeekend ? '#9260c8' : '#704B9B');
-    });
+    if (currentDays === 1) {
+      // MODO HOJE: gráfico por hora do dia
+      document.getElementById('chart-title').textContent = '📈 Visitantes por hora';
 
-    // Linha de média móvel (tendência)
-    const media = values.map((_, i) => {
-      const janela = values.slice(Math.max(0, i-2), i+3);
-      return Math.round(janela.reduce((a,b) => a+b, 0) / janela.length);
-    });
+      const horaAtual = new Date().getHours();
+      const horaMap   = {};
+      rows.forEach(r => { horaMap[parseInt(r.dimensionValues[0].value, 10)] = +r.metricValues[0].value; });
 
-    if (chart) chart.destroy();
-    chart = new Chart(
-      document.getElementById('visitors-chart').getContext('2d'),
-      {
-        data: {
-          labels,
-          datasets: [
-            {
-              type: 'bar',
-              label: 'Visitantes',
-              data: values,
-              backgroundColor: bgColors,
-              borderColor: borderColors,
-              borderWidth: 1.5,
-              borderRadius: 6,
-              borderSkipped: false,
-              order: 2,
-            },
-            {
-              type: 'line',
-              label: 'Tendência',
-              data: media,
-              borderColor: 'rgba(112,75,155,.5)',
-              borderWidth: 2,
-              borderDash: [5,4],
-              pointRadius: 0,
-              fill: false,
-              tension: .4,
-              order: 1,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: true,
-              position: 'top',
-              align: 'end',
-              labels: {
-                font: { family:'Montserrat', size:11 },
-                color: '#6b6484',
-                boxWidth: 14,
-                padding: 14,
-                filter: item => item.text !== 'Tendência' || values.length > 3,
-              },
-            },
-            tooltip: {
-              backgroundColor: '#221B32',
-              titleFont: { family:'Montserrat', weight:'700', size:12 },
-              bodyFont:  { family:'Montserrat', size:12 },
-              padding: 12,
-              callbacks: {
-                title: items => items[0].label,
-                label: c => c.dataset.type === 'bar'
-                  ? ` ${c.parsed.y} visitante${c.parsed.y !== 1 ? 's' : ''}`
-                  : ` média: ${c.parsed.y}`,
-              },
-            },
-          },
-          scales: {
-            x: {
-              grid:  { display: false },
-              ticks: {
-                font: { family:'Montserrat', size:10 },
-                color:'#6b6484',
-                maxTicksLimit: 14,
-                maxRotation: 35,
-              },
-              border:{ display: false },
-            },
-            y: {
-              grid:  { color: 'rgba(0,0,0,.05)' },
-              ticks: {
-                font: { family:'Montserrat', size:11 },
-                color:'#6b6484',
-                precision: 0,
-              },
-              border:{ display: false },
-              beginAtZero: true,
-            },
-          },
-        },
+      const labels = [], values = [], bgColors = [], borderColors = [];
+      for (let h = 0; h <= horaAtual; h++) {
+        labels.push(String(h).padStart(2,'0') + 'h');
+        values.push(horaMap[h] || 0);
+        const isNow = h === horaAtual;
+        bgColors.push(isNow    ? 'rgba(233,32,133,.8)'  : 'rgba(112,75,155,.22)');
+        borderColors.push(isNow ? '#E92085'               : '#704B9B');
       }
-    );
 
-    // Aviso se só tem 1 dia de dados (remove anterior antes de criar novo)
-    wrap.parentElement.querySelectorAll('.chart-aviso').forEach(el => el.remove());
-    if (rows.length === 1) {
-      const aviso = document.createElement('div');
-      aviso.className = 'chart-aviso';
-      aviso.style.cssText = 'font-size:11px;color:#6b6484;font-family:Montserrat,sans-serif;text-align:center;margin-top:6px;';
-      aviso.textContent = 'O gráfico vai crescer conforme novos dias forem registrados.';
-      wrap.parentElement.appendChild(aviso);
+      const maxVal   = Math.max(...values, 0);
+      const peakHour = values.indexOf(maxVal);
+
+      if (chart) chart.destroy();
+      chart = new Chart(
+        document.getElementById('visitors-chart').getContext('2d'),
+        {
+          data: { labels, datasets: [{
+            type: 'bar', label: 'Visitantes', data: values,
+            backgroundColor: bgColors, borderColor: borderColors,
+            borderWidth: 1.5, borderRadius: 5, borderSkipped: false,
+          }]},
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: '#221B32',
+                titleFont: { family:'Montserrat', weight:'700', size:12 },
+                bodyFont:  { family:'Montserrat', size:12 },
+                padding: 12,
+                callbacks: {
+                  title: items => items[0].label + (parseInt(items[0].label) === horaAtual ? ' (agora)' : ''),
+                  label: c => ` ${c.parsed.y} visitante${c.parsed.y !== 1 ? 's' : ''}`,
+                },
+              },
+            },
+            scales: {
+              x: { grid: { display:false }, ticks: { font:{family:'Montserrat',size:10}, color:'#6b6484', maxRotation:0 }, border:{display:false} },
+              y: { grid: { color:'rgba(0,0,0,.05)' }, ticks: { font:{family:'Montserrat',size:11}, color:'#6b6484', precision:0 }, border:{display:false}, beginAtZero:true },
+            },
+          },
+        }
+      );
+
+      if (maxVal > 0 && peakHour !== horaAtual) {
+        const aviso = document.createElement('div');
+        aviso.className = 'chart-aviso';
+        aviso.style.cssText = 'font-size:11px;color:#6b6484;font-family:Montserrat,sans-serif;text-align:center;margin-top:6px;';
+        aviso.textContent = `Pico hoje: ${String(peakHour).padStart(2,'0')}h com ${maxVal} visitante${maxVal !== 1 ? 's' : ''}.`;
+        wrap.parentElement.appendChild(aviso);
+      }
+
+    } else {
+      // MODO 7 / 30 DIAS: gráfico por dia com tendência
+      document.getElementById('chart-title').textContent = '📈 Visitantes por dia';
+
+      const labels = [], values = [], bgColors = [], borderColors = [];
+      rows.forEach(r => {
+        const s    = r.dimensionValues[0].value;
+        const date = new Date(parseInt(s.slice(0,4)), parseInt(s.slice(4,6))-1, parseInt(s.slice(6,8)));
+        const isWE = date.getDay() === 0 || date.getDay() === 6;
+        labels.push(`${DIAS_SEMANA[date.getDay()]} ${s.slice(6)}/${s.slice(4,6)}`);
+        values.push(+r.metricValues[0].value);
+        bgColors.push(isWE ? 'rgba(112,75,155,.32)' : 'rgba(112,75,155,.18)');
+        borderColors.push(isWE ? '#9260c8' : '#704B9B');
+      });
+
+      const media = values.map((_, i) => {
+        const j = values.slice(Math.max(0,i-2), i+3);
+        return Math.round(j.reduce((a,b)=>a+b,0)/j.length);
+      });
+
+      if (chart) chart.destroy();
+      chart = new Chart(
+        document.getElementById('visitors-chart').getContext('2d'),
+        {
+          data: { labels, datasets: [
+            { type:'bar',  label:'Visitantes', data:values, backgroundColor:bgColors, borderColor:borderColors, borderWidth:1.5, borderRadius:6, borderSkipped:false, order:2 },
+            { type:'line', label:'Tendência',  data:media,  borderColor:'rgba(112,75,155,.5)', borderWidth:2, borderDash:[5,4], pointRadius:0, fill:false, tension:.4, order:1 },
+          ]},
+          options: {
+            responsive:true, maintainAspectRatio:false,
+            plugins: {
+              legend: { display:true, position:'top', align:'end', labels:{ font:{family:'Montserrat',size:11}, color:'#6b6484', boxWidth:14, padding:14, filter: item => item.text !== 'Tendência' || values.length > 3 } },
+              tooltip: {
+                backgroundColor:'#221B32', titleFont:{family:'Montserrat',weight:'700',size:12}, bodyFont:{family:'Montserrat',size:12}, padding:12,
+                callbacks: {
+                  title: items => items[0].label,
+                  label: c => c.dataset.type === 'bar' ? ` ${c.parsed.y} visitante${c.parsed.y!==1?'s':''}` : ` média: ${c.parsed.y}`,
+                },
+              },
+            },
+            scales: {
+              x: { grid:{display:false}, ticks:{font:{family:'Montserrat',size:10}, color:'#6b6484', maxTicksLimit:14, maxRotation:35}, border:{display:false} },
+              y: { grid:{color:'rgba(0,0,0,.05)'}, ticks:{font:{family:'Montserrat',size:11}, color:'#6b6484', precision:0}, border:{display:false}, beginAtZero:true },
+            },
+          },
+        }
+      );
+
+      wrap.parentElement.querySelectorAll('.chart-aviso').forEach(el => el.remove());
+      if (rows.length === 1) {
+        const aviso = document.createElement('div');
+        aviso.className = 'chart-aviso';
+        aviso.style.cssText = 'font-size:11px;color:#6b6484;font-family:Montserrat,sans-serif;text-align:center;margin-top:6px;';
+        aviso.textContent = 'O gráfico vai crescer conforme novos dias forem registrados.';
+        wrap.parentElement.appendChild(aviso);
+      }
     }
 
   } catch(e) { console.error('Chart error:', e); }
