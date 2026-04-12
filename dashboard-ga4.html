@@ -547,7 +547,7 @@
   <!-- ANÁLISE INTELIGENTE -->
   <div class="card" style="margin-bottom:18px;">
     <div class="card-hd">
-      <div class="card-hd-title">💡 Análise Inteligente <span style="font-size:10px;font-weight:600;background:linear-gradient(135deg,#704B9B,#E92085);color:#fff;padding:2px 7px;border-radius:20px;letter-spacing:.4px;vertical-align:middle">IA</span></div>
+      <div class="card-hd-title">💡 Análises Inteligentes <span style="font-size:10px;font-weight:600;background:linear-gradient(135deg,#704B9B,#E92085);color:#fff;padding:2px 7px;border-radius:20px;letter-spacing:.4px;vertical-align:middle">IA</span></div>
       <div class="badge" id="insights-stamp">—</div>
     </div>
     <div id="insights-list" style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
@@ -669,8 +669,8 @@ const EVENTOS_META = {
   'Pular_Formulario':     { icon: '⏭️',  nome: 'Pulou o formulário',   desc: 'Fechou o formulário sem preencher nada' },
   'ScrollDepth_25':       { icon: '👀', nome: 'Rolou 25% da página',   desc: 'Passou do primeiro quarto do conteúdo' },
   'ScrollDepth_50':       { icon: '📖', nome: 'Rolou 50% da página',   desc: 'Chegou na metade do conteúdo' },
-  'ScrollDepth_75':       { icon: '🔥', nome: 'Rolou 75% da página',   desc: 'Quase no final — alto engajamento' },
-  'ScrollDepth_100':      { icon: '✅', nome: 'Leu a página inteira',  desc: 'Chegou ao fim — engajamento máximo' },
+  'ScrollDepth_75':       { icon: '🔥', nome: 'Rolou 75% da página',   desc: 'Quase no final, alto engajamento' },
+  'ScrollDepth_100':      { icon: '✅', nome: 'Leu a página inteira',  desc: 'Chegou ao fim com engajamento máximo' },
 };
 
 // Mapa de legendas das páginas
@@ -1223,7 +1223,7 @@ function generateInsights() {
 
   // REALTIME
   if (rtUsers >= 10) {
-    insights.push({ icon: '🔴', text: `<b>${rtUsers} pessoas no site agora</b> — pico de tráfego ativo. Bom momento para observar conversões em tempo real.`, tipo: 'success' });
+    insights.push({ icon: '🔴', text: `<b>${rtUsers} pessoas no site agora.</b> Pico de tráfego ativo, bom momento para acompanhar conversões.`, tipo: 'success' });
   } else if (rtUsers >= 3) {
     insights.push({ icon: '🟢', text: `<b>${rtUsers} pessoa${rtUsers > 1 ? 's' : ''}</b> navegando agora.`, tipo: 'info' });
   }
@@ -1234,7 +1234,7 @@ function generateInsights() {
     return _renderInsights(insights);
   }
   if (!podeAnalisarConversao) {
-    insights.push({ icon: 'ℹ️', text: `<b>${usersAtual} visitante${usersAtual !== 1 ? 's' : ''}</b> ${labelPeriodo}. Análise completa fica disponível a partir de 30 visitantes — selecione 7 ou 30 dias para dados mais ricos.`, tipo: 'info' });
+    insights.push({ icon: 'ℹ️', text: `<b>${usersAtual} visitante${usersAtual !== 1 ? 's' : ''}</b> ${labelPeriodo}. Selecione 7 ou 30 dias para uma análise mais completa.`, tipo: 'info' });
     if (leadsAtual > 0) {
       insights.push({ icon: '🎯', text: `<b>${leadsAtual} lead${leadsAtual !== 1 ? 's' : ''}</b> gerado${leadsAtual !== 1 ? 's' : ''} ${labelPeriodo}${usersAtual > 0 ? ` (${convAtual.toFixed(1)}% de conversão)` : ''}.`, tipo: 'success' });
     }
@@ -1244,7 +1244,7 @@ function generateInsights() {
   // TENDÊNCIA DE TRÁFEGO
   if (podeAnalisarTendencia) {
     const delta = Math.round((usersAtual - usersAnt) / usersAnt * 100);
-    if      (delta >= 20)  insights.push({ icon: '📈', text: `Tráfego <b>cresceu ${delta}%</b> vs período anterior${podeDarRecomendacao ? ' — campanhas gerando mais alcance.' : '.'}`, tipo: 'success' });
+    if      (delta >= 20)  insights.push({ icon: '📈', text: `Tráfego <b>cresceu ${delta}%</b> vs período anterior.${podeDarRecomendacao ? ' Campanhas gerando mais alcance.' : ''}`, tipo: 'success' });
     else if (delta >= 5)   insights.push({ icon: '📊', text: `Tráfego <b>+${delta}%</b> vs período anterior.`, tipo: 'info' });
     else if (delta <= -20) insights.push({ icon: '📉', text: `Tráfego <b>-${Math.abs(delta)}%</b> vs período anterior.${podeDarRecomendacao ? ' Verificar investimento e frequência dos anúncios.' : ' Acompanhar evolução.'}`, tipo: podeDarRecomendacao ? 'warning' : 'info' });
     else if (delta <= -5)  insights.push({ icon: '📉', text: `Tráfego <b>-${Math.abs(delta)}%</b> vs período anterior.`, tipo: 'info' });
@@ -1255,20 +1255,18 @@ function generateInsights() {
     const dU = (usersAtual - usersAnt) / usersAnt;
     const dL = (leadsAtual - leadsAnt) / leadsAnt;
     if (dU > 0.1 && dL < -0.1) {
-      insights.push({ icon: '💡', text: `Tráfego subiu mas leads caíram — público pode estar <b>menos qualificado</b>. Revisar segmentação e criativos.`, tipo: 'warning' });
+      insights.push({ icon: '💡', text: `Tráfego subiu mas leads caíram. Público pode estar <b>menos qualificado</b>. Revisar segmentação e criativos.`, tipo: 'warning' });
     } else if (dU < -0.1 && dL > 0.1) {
-      insights.push({ icon: '🎯', text: `Menos visitas, <b>mais leads</b> — tráfego mais qualificado. Segmentação bem ajustada.`, tipo: 'success' });
+      insights.push({ icon: '🎯', text: `Menos visitas, <b>mais leads</b>. Tráfego mais qualificado que o período anterior. Segmentação bem ajustada.`, tipo: 'success' });
     }
   }
 
   // TAXA DE CONVERSÃO
-  // Benchmark Meta Ads landing page Brasil:
-  //   > 4%  → excelente | 2-4% → saudável | 1-2% → abaixo | < 1% → crítico
   if (podeAnalisarConversao) {
-    if      (convAtual >= 4) insights.push({ icon: '🎯', text: `Conversão <b>excelente: ${convAtual.toFixed(1)}%</b> — acima de 4% é referência para landing pages com tráfego pago.`, tipo: 'success' });
-    else if (convAtual >= 2) insights.push({ icon: '🎯', text: `Conversão <b>saudável: ${convAtual.toFixed(1)}%</b> — dentro da faixa esperada para tráfego pago.`, tipo: 'info' });
-    else if (convAtual >= 1) insights.push({ icon: '⚠️', text: `Conversão <b>abaixo do esperado: ${convAtual.toFixed(1)}%</b>.${podeDarRecomendacao ? ' Revisar CTA e proposta de valor.' : ' Acompanhar com mais dados.'}`, tipo: 'warning' });
-    else if (convAtual > 0)  insights.push({ icon: '🚨', text: `Conversão <b>muito baixa: ${convAtual.toFixed(1)}%</b>.${podeDarRecomendacao ? ' Revisar alinhamento anúncio → página → formulário.' : ' Aguardar mais dados para diagnóstico.'}`, tipo: podeDarRecomendacao ? 'danger' : 'warning' });
+    if      (convAtual >= 4) insights.push({ icon: '🎯', text: `Conversão <b>excelente: ${convAtual.toFixed(1)}%.</b> Acima de 4% é referência para landing pages com tráfego pago.`, tipo: 'success' });
+    else if (convAtual >= 2) insights.push({ icon: '🎯', text: `Conversão <b>saudável: ${convAtual.toFixed(1)}%.</b> Dentro da faixa esperada para tráfego pago.`, tipo: 'info' });
+    else if (convAtual >= 1) insights.push({ icon: '⚠️', text: `Conversão <b>abaixo do esperado: ${convAtual.toFixed(1)}%.${podeDarRecomendacao ? '</b> Revisar CTA e proposta de valor.' : '</b> Acompanhar com mais dados.'}`, tipo: 'warning' });
+    else if (convAtual > 0)  insights.push({ icon: '🚨', text: `Conversão <b>muito baixa: ${convAtual.toFixed(1)}%.${podeDarRecomendacao ? '</b> Revisar alinhamento anúncio, página e formulário.' : '</b> Aguardar mais dados para diagnóstico.'}`, tipo: podeDarRecomendacao ? 'danger' : 'warning' });
     else                     insights.push({ icon: '⚠️', text: `Nenhum lead gerado ${labelPeriodo}.${!podeDarRecomendacao ? ' Aguardar mais dados.' : ' Revisar CTA da página.'}`, tipo: 'warning' });
   }
 
@@ -1282,17 +1280,16 @@ function generateInsights() {
     const pctPreen = Math.round(preencheu / abriu * 100);
     const pctAband = Math.round(abandonou / abriu * 100);
     const pctPulou = Math.round(pulou     / abriu * 100);
-    // Taxa de envio = leads / aberturas
     const pctEnvio = Math.round(leadsAtual / abriu * 100);
 
     if (pctEnvio >= 25) {
-      insights.push({ icon: '✅', text: `Funil eficiente: <b>${pctEnvio}% dos que abriram o formulário enviaram</b> — boa convicção no momento de conversão.`, tipo: 'success' });
+      insights.push({ icon: '✅', text: `Funil eficiente: <b>${pctEnvio}% dos que abriram o formulário enviaram.</b> Boa convicção no momento de conversão.`, tipo: 'success' });
     }
     if (pctAband >= 30) {
-      insights.push({ icon: '⚠️', text: `<b>${pctAband}% preencheram mas não enviaram</b> — possível fricção no envio (campos, confiança, CTA do botão).`, tipo: 'warning' });
+      insights.push({ icon: '⚠️', text: `<b>${pctAband}% preencheram mas não enviaram.</b> Possível fricção no envio: campos, confiança ou CTA do botão.`, tipo: 'warning' });
     }
     if (pctPulou >= 55 && pctEnvio < 15) {
-      insights.push({ icon: '💡', text: `<b>${pctPulou}% fecharam o formulário sem preencher</b>.${podeDarRecomendacao ? ' Testar abordagem mais suave ou oferta de entrada.' : ''}`, tipo: podeDarRecomendacao ? 'warning' : 'info' });
+      insights.push({ icon: '💡', text: `<b>${pctPulou}% fecharam o formulário sem preencher.</b>${podeDarRecomendacao ? ' Testar abordagem mais suave ou oferta de entrada.' : ''}`, tipo: podeDarRecomendacao ? 'warning' : 'info' });
     }
   }
 
@@ -1304,33 +1301,28 @@ function generateInsights() {
   if (podeAnalisarScroll) {
     const pctMeio = Math.round(sc50  / sc25 * 100);
     const pctFim  = Math.round(sc100 / sc25 * 100);
-    // Benchmark: > 25% até o fim é bom para landing page longa com tráfego frio
-    if      (pctFim >= 25)  insights.push({ icon: '📖', text: `<b>${pctFim}% chegaram ao fim da página</b> — ótima retenção de conteúdo.`, tipo: 'success' });
+    if      (pctFim >= 25)  insights.push({ icon: '📖', text: `<b>${pctFim}% chegaram ao fim da página.</b> Ótima retenção de conteúdo.`, tipo: 'success' });
     else if (pctFim < 10 && pctMeio < 40 && podeDarRecomendacao) {
-      insights.push({ icon: '💡', text: `Apenas <b>${pctFim}% chegaram ao fim</b> (${pctMeio}% até a metade) — há queda de atenção no meio do conteúdo.`, tipo: 'warning' });
+      insights.push({ icon: '💡', text: `Apenas <b>${pctFim}% chegaram ao fim</b> (${pctMeio}% até a metade). Há queda de atenção no meio do conteúdo.`, tipo: 'warning' });
     } else if (pctFim < 10) {
-      insights.push({ icon: '💡', text: `<b>${pctFim}% chegaram ao fim da página</b> — retenção abaixo do ideal.`, tipo: 'info' });
+      insights.push({ icon: '💡', text: `<b>${pctFim}% chegaram ao fim da página.</b> Retenção abaixo do ideal.`, tipo: 'info' });
     }
   }
 
   // TAXA DE REJEIÇÃO
-  // Tráfego pago Meta Ads: 60-80% é ESPERADO e normal.
-  // Só alertar nos extremos reais: < 40% (ótimo) e > 88% (problema).
   if (podeAnalisarRejeicao) {
     const bp = bounce * 100;
-    if      (bp < 40)  insights.push({ icon: '✅', text: `Rejeição <b>muito baixa (${bp.toFixed(0)}%)</b> — excelente para tráfego pago. Visitantes estão interagindo.`, tipo: 'success' });
-    else if (bp > 88)  insights.push({ icon: '🚨', text: `Rejeição <b>alta (${bp.toFixed(0)}%)</b> — verificar alinhamento entre anúncio e página.${podeDarRecomendacao ? ' Primeira dobra pode estar gerando rejeição.' : ''}`, tipo: podeDarRecomendacao ? 'danger' : 'warning' });
-    // 40-88%: faixa normal para Meta Ads → silêncio inteligente
+    if      (bp < 40)  insights.push({ icon: '✅', text: `Rejeição <b>muito baixa (${bp.toFixed(0)}%).</b> Excelente para tráfego pago. Visitantes estão interagindo com a página.`, tipo: 'success' });
+    else if (bp > 88)  insights.push({ icon: '🚨', text: `Rejeição <b>alta (${bp.toFixed(0)}%).</b> Verificar alinhamento entre anúncio e página.${podeDarRecomendacao ? ' Primeira dobra pode estar gerando rejeição.' : ''}`, tipo: podeDarRecomendacao ? 'danger' : 'warning' });
   }
 
   // TEMPO MÉDIO
-  // > 90s → engajado | < 30s → possível desalinhamento anúncio/página
   if (podeAnalisarTempo) {
     const m = Math.floor(duration / 60);
     const s = Math.round(duration % 60);
     const fmt = `${m}m${String(s).padStart(2,'0')}s`;
-    if      (duration >= 90) insights.push({ icon: '⏱️', text: `Tempo médio <b>alto (${fmt})</b> — visitantes leem o conteúdo com atenção.`, tipo: 'success' });
-    else if (duration < 30)  insights.push({ icon: '⏱️', text: `Tempo médio <b>baixo (${fmt})</b>${podeDarRecomendacao ? ' — possível desalinhamento entre anúncio e página de destino.' : ' — acompanhar.'}`, tipo: podeDarRecomendacao ? 'warning' : 'info' });
+    if      (duration >= 90) insights.push({ icon: '⏱️', text: `Tempo médio <b>alto (${fmt}).</b> Visitantes leem o conteúdo com atenção.`, tipo: 'success' });
+    else if (duration < 30)  insights.push({ icon: '⏱️', text: `Tempo médio <b>baixo (${fmt}).${podeDarRecomendacao ? '</b> Possível desalinhamento entre anúncio e página de destino.' : '</b> Acompanhar evolução.'}`, tipo: podeDarRecomendacao ? 'warning' : 'info' });
   }
 
   // FALLBACK
