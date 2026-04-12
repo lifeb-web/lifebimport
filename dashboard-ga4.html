@@ -26,6 +26,7 @@
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    html { overflow-x: hidden; }
     body {
       font-family: var(--font);
       background: var(--bg);
@@ -195,9 +196,13 @@
 
     @media (min-width: 640px) {
       .cards-row-secondary {
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(3, 1fr);
         gap: 16px;
       }
+    }
+    /* 3 cards secundários: último span 2 no mobile para não ficar órfão */
+    @media (max-width: 639px) {
+      .cards-row-secondary > *:last-child { grid-column: span 2; }
     }
 
     .card {
@@ -350,8 +355,7 @@
       }
     }
 
-    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%; }
-    .table-scroll table { min-width: 420px; }
+    .table-scroll { width: 100%; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
 
     thead tr { border-bottom: 2px solid var(--border); }
@@ -391,6 +395,7 @@
 
     .td-evt { font-weight: 600; color: var(--magenta); }
     .num-p  { color: var(--purple); }
+    .td-left { text-align: left !important; font-weight: 500; }
 
     .empty-row td { text-align: center !important; color: #c8c2d6; font-style: italic; font-weight: 400; }
     .err-row  td  { text-align: center !important; color: var(--magenta); font-weight: 500; }
@@ -425,6 +430,7 @@
       td { padding: 7px 6px; }
       .td-url { max-width: 130px; }
       .card-metric .m-val { font-size: 22px; }
+      .mh { display: none; }
     }
 
     @media (max-width: 960px) {
@@ -496,12 +502,6 @@
   <!-- CARDS SECUNDÁRIOS — linha 2 -->
   <div class="cards-row-secondary">
 
-    <div class="card card-metric accent-magenta">
-      <div class="m-label">Taxa de Conversão</div>
-      <div class="m-val" id="stat-conv" style="color:var(--magenta)">—</div>
-      <div class="m-sub">leads / visitantes</div>
-    </div>
-
     <div class="card card-metric accent-red">
       <div class="m-label">Taxa de Rejeição</div>
       <div class="m-val" id="stat-bounce" style="color:var(--red)">—</div>
@@ -547,9 +547,9 @@
         <table>
           <thead><tr>
             <th title="Endereço da página visitada">Página</th>
-            <th title="Pessoas únicas que acessaram essa página">Visitantes únicos</th>
-            <th title="Total de visitas (uma mesma pessoa pode entrar várias vezes)">Total de visitas</th>
-            <th title="Quantidade de vezes que a página foi carregada na tela">Páginas abertas</th>
+            <th title="Pessoas únicas que acessaram essa página">Visitantes</th>
+            <th class="mh" title="Total de visitas (uma mesma pessoa pode entrar várias vezes)">Visitas</th>
+            <th class="mh" title="Quantidade de vezes que a página foi carregada na tela">Views</th>
           </tr></thead>
           <tbody id="tb-pages">
             <tr class="empty-row"><td colspan="4">Carregando...</td></tr>
@@ -586,8 +586,8 @@
         <table>
           <thead><tr>
             <th title="De onde veio o visitante (ex: Facebook Ads, Google, link direto)">De onde veio</th>
-            <th title="Pessoas únicas que vieram dessa origem">Visitantes únicos</th>
-            <th title="Total de vezes que acessaram vindo dessa origem">Total de visitas</th>
+            <th title="Pessoas únicas que vieram dessa origem">Visitantes</th>
+            <th class="mh" title="Total de vezes que acessaram vindo dessa origem">Visitas</th>
           </tr></thead>
           <tbody id="tb-sources">
             <tr class="empty-row"><td colspan="3">Carregando...</td></tr>
@@ -914,8 +914,8 @@ async function loadChart() {
       const isWeekend = date.getDay() === 0 || date.getDay() === 6;
       labels.push(`${diaSemana} ${s.slice(6)}/${s.slice(4,6)}`);
       values.push(+r.metricValues[0].value);
-      bgColors.push(isWeekend ? 'rgba(233,32,133,.18)' : 'rgba(112,75,155,.18)');
-      borderColors.push(isWeekend ? '#E92085' : '#704B9B');
+      bgColors.push(isWeekend ? 'rgba(112,75,155,.32)' : 'rgba(112,75,155,.18)');
+      borderColors.push(isWeekend ? '#9260c8' : '#704B9B');
     });
 
     // Linha de média móvel (tendência)
@@ -1039,8 +1039,8 @@ async function loadPages() {
           ${legenda ? `<span class="pg-path">${esc(path)}</span>` : ''}
         </td>
         <td class="num-p">${n(u)}</td>
-        <td>${n(s)}</td>
-        <td>${n(v)}</td>
+        <td class="mh">${n(s)}</td>
+        <td class="mh">${n(v)}</td>
       </tr>`;
     }).join('') || emptyRow(4);
   } catch { tb.innerHTML = errRow(4); }
@@ -1058,7 +1058,7 @@ async function loadCities() {
       const users  = r.metricValues[0].value;
       return `<tr>
         <td>${esc(region)}</td>
-        <td>${esc(city)}</td>
+        <td class="td-left">${esc(city)}</td>
         <td class="num-p">${n(users)}</td>
       </tr>`;
     }).join('') || emptyRow(3);
@@ -1076,7 +1076,7 @@ async function loadSources() {
       return `<tr>
         <td>${esc(src)}</td>
         <td class="num-p">${n(u)}</td>
-        <td>${n(s)}</td>
+        <td class="mh">${n(s)}</td>
       </tr>`;
     }).join('') || emptyRow(3);
   } catch { tb.innerHTML = errRow(3); }
@@ -1123,16 +1123,6 @@ async function loadEvents() {
 
     // Atualiza card de Leads Gerados
     document.getElementById('stat-leads').textContent = n(leadCount);
-
-    // Atualiza taxa de conversão (leads / visitantes)
-    const visitantesEl = document.getElementById('stat-users');
-    const visitantes   = parseInt((visitantesEl.textContent || '0').replace(/\D/g, ''), 10);
-    if (visitantes > 0 && leadCount > 0) {
-      const taxa = (leadCount / visitantes * 100).toFixed(1);
-      document.getElementById('stat-conv').textContent = taxa + '%';
-    } else {
-      document.getElementById('stat-conv').textContent = '0%';
-    }
 
   } catch { tb.innerHTML = errRow(2); }
 }
