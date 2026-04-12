@@ -715,8 +715,8 @@ window.addEventListener('load', () => {
   document.getElementById('last-updated').style.display = 'inline';
   loadAll();
   fetchRealtime();
-  realtimeTimer = setInterval(fetchRealtime, 30_000);
-  refreshTimer  = setInterval(loadAll, 300_000);
+  realtimeTimer = setInterval(fetchRealtime, 15_000);
+  refreshTimer  = setInterval(loadAll, 120_000);
 });
 
 // CONTROLES DE DATA
@@ -730,17 +730,27 @@ function setRange(days, btn) {
   loadAll();
 }
 
-// CARREGA TUDO
+// CARREGA TUDO — events buscado 1x e compartilhado entre summary e tabela
 async function loadAll() {
-  stamp();
+  // Pré-busca events UMA vez para ambas as funções
+  let evAtual = null, evDuplo = null;
+  try {
+    [evAtual, evDuplo] = await Promise.all([
+      proxy('events', currentDays),
+      proxy('events', currentDays * 2),
+    ]);
+  } catch { /* tratado individualmente em cada função */ }
+
   await Promise.allSettled([
-    loadSummaryWithCompare(),
+    loadSummaryWithCompare(evAtual, evDuplo),
     loadChart(),
     loadPages(),
     loadCities(),
     loadSources(),
-    loadEvents(),
+    loadEvents(evAtual),
   ]);
+
+  stamp(); // marca hora APÓS dados chegarem
 }
 
 // API HELPERS — fetch com CORS (Apps Script retorna access-control-allow-origin: *)
@@ -768,23 +778,21 @@ async function fetchRealtime() {
 // Estratégia: 2 fetches paralelos — período atual (days) e período duplo (days*2).
 // Período anterior = dados do dobro MENOS dados do período atual.
 // Ex: 14 dias = 50 visitantes, 7 dias = 30 → anterior = 20, delta = +50%
-async function loadSummaryWithCompare() {
+async function loadSummaryWithCompare(dEvAtual, dEvDuplo) {
   const deltaIds = ['delta-users', 'delta-sessions', 'delta-conv'];
 
   try {
-    const [dAtual, dDuplo, dEvAtual, dEvDuplo] = await Promise.all([
+    const [dAtual, dDuplo] = await Promise.all([
       proxy('summary', currentDays),
       proxy('summary', currentDays * 2),
-      proxy('events',  currentDays),
-      proxy('events',  currentDays * 2),
     ]);
 
     const vAtual  = dAtual.rows?.[0]?.metricValues  ?? [];
     const vDuplo  = dDuplo.rows?.[0]?.metricValues  ?? [];
 
-    // Leads = evento Lead_Formulario
-    const leadsAtual = +(dEvAtual.rows?.find(r => r.dimensionValues[0].value === 'Lead_Formulario')?.metricValues[0]?.value ?? 0);
-    const leadsDuplo = +(dEvDuplo.rows?.find(r => r.dimensionValues[0].value === 'Lead_Formulario')?.metricValues[0]?.value ?? 0);
+    // Leads = evento Lead_Formulario (usa dados pré-buscados pelo loadAll)
+    const leadsAtual = +(dEvAtual?.rows?.find(r => r.dimensionValues[0].value === 'Lead_Formulario')?.metricValues[0]?.value ?? 0);
+    const leadsDuplo = +(dEvDuplo?.rows?.find(r => r.dimensionValues[0].value === 'Lead_Formulario')?.metricValues[0]?.value ?? 0);
 
     // Taxa de conversão atual e período anterior
     const usersAtual = +(vAtual[0]?.value ?? 0);
@@ -872,13 +880,22 @@ async function loadChart() {
             ?? document.querySelector('.chart-wrap');
   try {
     // Remover aviso anterior para não acumular
-    const existingAviso = wrap.parentElement.querySelector('.chart-aviso');
-    if (existingAviso) existingAviso.remove();
+    wrap.parentElement.querySelectorAll('.chart-aviso').forEach(el => el.remove());
+
+    // Skip fetch quando filtro = Hoje — gráfico diário não faz sentido com 1 ponto
+    if (currentDays === 1) {
+      if (chart) { chart.destroy(); chart = null; }
+      wrap.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;color:#6b6484;font-family:Montserrat,sans-serif;">
+        <div style="font-size:32px">📊</div>
+        <div style="font-weight:600;font-size:14px;color:#221B32">Apenas hoje</div>
+        <div style="font-size:12px;text-align:center">Selecione 7 ou 30 dias para ver a evolução</div>
+      </div>`;
+      return;
+    }
 
     const d = await proxy('chart');
     const rows = d.rows ?? [];
 
-    // Sem dados suficientes — mostrar aviso amigável
     if (rows.length === 0) {
       if (chart) { chart.destroy(); chart = null; }
       wrap.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;color:#6b6484;font-family:Montserrat,sans-serif;">
@@ -889,20 +906,8 @@ async function loadChart() {
       return;
     }
 
-    // Garantir que o canvas existe
     if (!document.getElementById('visitors-chart')) {
       wrap.innerHTML = '<canvas id="visitors-chart"></canvas>';
-    }
-
-    // Aviso quando filter = "Hoje" (days=1)
-    if (currentDays === 1) {
-      if (chart) { chart.destroy(); chart = null; }
-      wrap.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;color:#6b6484;font-family:Montserrat,sans-serif;">
-        <div style="font-size:32px">📊</div>
-        <div style="font-weight:600;font-size:14px;color:#221B32">Apenas hoje</div>
-        <div style="font-size:12px;text-align:center">Selecione 7 ou 30 dias para ver a evolução</div>
-      </div>`;
-      return;
     }
 
     const labels = [], values = [], bgColors = [], borderColors = [];
@@ -1086,10 +1091,10 @@ async function loadSources() {
 }
 
 // TABELA — EVENTOS / LEADS com barra de progresso
-async function loadEvents() {
+async function loadEvents(d) {
   const tb = document.getElementById('tb-events');
   try {
-    const d = await proxy('events');
+    if (!d) d = await proxy('events'); // fallback se chamado sem dados
     let leadCount = 0;
 
     // Coleta dados para calcular máximo (barra de progresso relativa)
