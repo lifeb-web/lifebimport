@@ -6,7 +6,6 @@
   <title>Life B | Painel de Resultados</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <style>
     :root {
@@ -446,42 +445,11 @@
   </div>
   <div class="h-right">
     <span id="last-updated"></span>
-    <button class="btn-sm" id="btn-logout" onclick="signOut()">Sair</button>
   </div>
 </header>
 
-<!-- CONFIG WARNING -->
-<div id="config-warning">
-  ⚠️ <strong>Ação necessária:</strong> Defina o <code>OAUTH_CLIENT_ID</code> no topo do script antes de publicar.
-  Veja as instruções comentadas no código.
-</div>
-
-<!-- LOGIN -->
-<div id="login-screen">
-  <div class="login-card">
-    <div class="login-icon">📊</div>
-    <div class="login-title">Painel de Resultados</div>
-    <div class="login-desc">
-      Acompanhe em tempo real os visitantes, leads e origens de tráfego
-      do Projeto JLBV.
-    </div>
-    <button id="signin-btn" onclick="signIn()">
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-        <path fill="#fff" d="M9 3.48c1.69 0 2.83.73 3.48 1.34l2.54-2.48C13.46.89 11.43 0 9 0 5.48 0 2.44 2.02.96 4.96l2.91 2.26C4.6 5.05 6.62 3.48 9 3.48z"/>
-        <path fill="#fff" d="M17.64 9.2c0-.74-.06-1.28-.19-1.84H9v3.34h4.96c-.1.83-.64 2.08-1.84 2.92l2.84 2.2c1.7-1.57 2.68-3.88 2.68-6.62z"/>
-        <path fill="#fff" d="M3.88 10.78A5.54 5.54 0 0 1 3.58 9c0-.62.11-1.22.29-1.78L.96 4.96A9 9 0 0 0 0 9c0 1.45.35 2.82.96 4.04l2.92-2.26z"/>
-        <path fill="#fff" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.84-2.2c-.76.53-1.78.9-3.12.9-2.38 0-4.4-1.57-5.12-3.74L.96 13.04C2.44 15.98 5.48 18 9 18z"/>
-      </svg>
-      Entrar com Google
-    </button>
-    <div class="login-note">
-      Use o e-mail lifebimports@gmail.com para entrar
-    </div>
-  </div>
-</div>
-
 <!-- DASHBOARD -->
-<div id="dashboard">
+<div id="dashboard" style="display:block">
   <div id="error-banner"></div>
 
   <div class="ctrl-bar">
@@ -610,13 +578,7 @@
 
 
 <script>
-// Configuração do painel
-const OAUTH_CLIENT_ID = '629001908508-tp5hr5tt7au7gno8154eki8vk00n71v2.apps.googleusercontent.com';
-
-// ── Configurações fixas ──────────────────
-const PROPERTY_ID = '532575691';
-const SCOPES      = 'https://www.googleapis.com/auth/analytics.readonly';
-const BASE_URL    = `https://analyticsdata.googleapis.com/v1beta/properties/${PROPERTY_ID}`;
+const PROXY_URL = 'https://script.google.com/macros/s/AKfycbxGFDgwJhRVHFUYuOc6KRpZgRQ8CLyeNocnmIZqVASQSUt6350m11RzSdvJcWSMnTYzyw/exec';
 const EVENTS_FILTER = [
   'Lead_Formulario',
   'Contato_WhatsApp',
@@ -689,88 +651,18 @@ function traduzOrigem(s) {
     .replace('/ paid-social', ' (anúncio pago)');
 }
 
-// ── Estado ───────────────────────────────
-let accessToken      = null;
-let currentDays      = 7;
-let chart            = null;
-let realtimeTimer    = null;
-let refreshTimer     = null;
-let tokenClient      = null;
-
-// INIT
-let silentAttempt = false;
-let tokenTimer    = null;
+let currentDays   = 7;
+let chart         = null;
+let realtimeTimer = null;
+let refreshTimer  = null;
 
 window.addEventListener('load', () => {
-  if (OAUTH_CLIENT_ID.startsWith('SEU_CLIENT_ID')) {
-    document.getElementById('config-warning').style.display = 'block';
-  }
-  const t = setInterval(() => {
-    if (window.google?.accounts) {
-      clearInterval(t);
-      tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: OAUTH_CLIENT_ID,
-        scope: SCOPES,
-        callback: handleToken,
-      });
-      if (localStorage.getItem('ga4_authed')) {
-        silentAttempt = true;
-        tokenClient.requestAccessToken({ prompt: '' });
-      }
-    }
-  }, 100);
-});
-
-// AUTENTICAÇÃO
-function signIn() {
-  if (!tokenClient) return;
-  tokenClient.requestAccessToken({ prompt: '' });
-}
-
-function handleToken(resp) {
-  const wasSilent = silentAttempt;
-  silentAttempt = false;
-
-  if (resp.error) {
-    // Falha silenciosa: apenas mostra login sem erro
-    if (wasSilent) return;
-    showError('Não foi possível autenticar. Tente novamente.');
-    return;
-  }
-
-  accessToken = resp.access_token;
-  localStorage.setItem('ga4_authed', '1');
-
-  // Renova o token automaticamente 5 min antes de expirar (token dura 1h)
-  clearTimeout(tokenTimer);
-  tokenTimer = setTimeout(() => {
-    tokenClient.requestAccessToken({ prompt: '' });
-  }, (resp.expires_in - 300) * 1000);
-
-  document.getElementById('login-screen').style.display  = 'none';
-  document.getElementById('dashboard').style.display     = 'block';
-  document.getElementById('btn-logout').style.display    = 'inline-block';
-  document.getElementById('last-updated').style.display  = 'inline';
-
+  document.getElementById('last-updated').style.display = 'inline';
   loadAll();
   fetchRealtime();
-  realtimeTimer = realtimeTimer || setInterval(fetchRealtime, 30_000);
-  refreshTimer  = refreshTimer  || setInterval(loadAll, 60_000);
-}
-
-function signOut() {
-  if (accessToken) google.accounts.oauth2.revoke(accessToken, () => {});
-  accessToken = null;
-  localStorage.removeItem('ga4_authed');
-  clearInterval(realtimeTimer); realtimeTimer = null;
-  clearInterval(refreshTimer);  refreshTimer  = null;
-  clearTimeout(tokenTimer);
-
-  document.getElementById('dashboard').style.display    = 'none';
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('btn-logout').style.display   = 'none';
-  document.getElementById('last-updated').style.display = 'none';
-}
+  realtimeTimer = setInterval(fetchRealtime, 30_000);
+  refreshTimer  = setInterval(loadAll, 300_000);
+});
 
 // CONTROLES DE DATA
 function setRange(days, btn) {
@@ -799,37 +691,19 @@ async function loadAll() {
 }
 
 // API HELPERS
-async function apiReport(body) {
-  const r = await fetch(`${BASE_URL}:runReport`, {
-    method:  'POST',
-    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-    body:    JSON.stringify(body),
-  });
-  if (!r.ok) {
-    const e = await r.json().catch(() => ({}));
-    throw new Error(e.error?.message || `HTTP ${r.status}`);
-  }
-  return r.json();
+async function proxy(action) {
+  const url = `${PROXY_URL}?action=${action}&days=${currentDays}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`Erro HTTP ${r.status}`);
+  const data = await r.json();
+  if (data.error) throw new Error(data.error);
+  return data;
 }
-
-async function apiRealtime(body) {
-  const r = await fetch(`${BASE_URL}:runRealtimeReport`, {
-    method:  'POST',
-    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-    body:    JSON.stringify(body),
-  });
-  if (!r.ok) throw new Error('Realtime API error');
-  return r.json();
-}
-
-const dateRange = () => currentDays === 1
-  ? [{ startDate: 'today', endDate: 'today' }]
-  : [{ startDate: `${currentDays}daysAgo`, endDate: 'today' }];
 
 // TEMPO REAL
 async function fetchRealtime() {
   try {
-    const d = await apiRealtime({ metrics: [{ name: 'activeUsers' }] });
+    const d = await proxy('realtime');
     document.getElementById('rt-count').textContent = d.rows?.[0]?.metricValues?.[0]?.value ?? '0';
   } catch {
     document.getElementById('rt-count').textContent = '—';
@@ -839,14 +713,7 @@ async function fetchRealtime() {
 // Resumo
 async function loadSummary() {
   try {
-    const d = await apiReport({
-      dateRanges: dateRange(),
-      metrics: [
-        { name: 'totalUsers' },
-        { name: 'sessions' },
-        { name: 'screenPageViews' },
-      ],
-    });
+    const d = await proxy('summary');
     const v = d.rows?.[0]?.metricValues ?? [];
     document.getElementById('stat-users').textContent    = n(v[0]?.value);
     document.getElementById('stat-sessions').textContent = n(v[1]?.value);
@@ -861,12 +728,7 @@ async function loadSummary() {
 // GRÁFICO DE LINHA
 async function loadChart() {
   try {
-    const d = await apiReport({
-      dateRanges: dateRange(),
-      dimensions: [{ name: 'date' }],
-      metrics:    [{ name: 'totalUsers' }],
-      orderBys:   [{ dimension: { dimensionName: 'date' }, desc: false }],
-    });
+    const d = await proxy('chart');
 
     const labels = [], values = [];
     (d.rows ?? []).forEach(r => {
@@ -931,13 +793,7 @@ async function loadChart() {
 async function loadPages() {
   const tb = document.getElementById('tb-pages');
   try {
-    const d = await apiReport({
-      dateRanges: dateRange(),
-      dimensions: [{ name: 'pagePath' }],
-      metrics:    [{ name:'totalUsers' }, { name:'sessions' }, { name:'screenPageViews' }],
-      orderBys:   [{ metric: { metricName:'totalUsers' }, desc: true }],
-      limit: 12,
-    });
+    const d = await proxy('pages');
     tb.innerHTML = (d.rows ?? []).map(r => {
       const path = r.dimensionValues[0].value;
       const [u, s, v] = r.metricValues.map(x => x.value);
@@ -955,13 +811,7 @@ async function loadPages() {
 async function loadCities() {
   const tb = document.getElementById('tb-cities');
   try {
-    const d = await apiReport({
-      dateRanges: dateRange(),
-      dimensions: [{ name:'region' }, { name:'city' }],
-      metrics:    [{ name:'totalUsers' }],
-      orderBys:   [{ metric: { metricName:'totalUsers' }, desc: true }],
-      limit: 15,
-    });
+    const d = await proxy('cities');
     tb.innerHTML = (d.rows ?? []).map(r => {
       const region = traduzEstado(r.dimensionValues[0].value);
       const city   = r.dimensionValues[1].value === '(not set)' ? 'Não identificada' : r.dimensionValues[1].value;
@@ -979,13 +829,7 @@ async function loadCities() {
 async function loadSources() {
   const tb = document.getElementById('tb-sources');
   try {
-    const d = await apiReport({
-      dateRanges: dateRange(),
-      dimensions: [{ name:'sessionSourceMedium' }],
-      metrics:    [{ name:'totalUsers' }, { name:'sessions' }],
-      orderBys:   [{ metric: { metricName:'totalUsers' }, desc: true }],
-      limit: 12,
-    });
+    const d = await proxy('sources');
     tb.innerHTML = (d.rows ?? []).map(r => {
       const src = traduzOrigem(r.dimensionValues[0].value);
       const [u, s] = r.metricValues.map(x => x.value);
@@ -1002,18 +846,7 @@ async function loadSources() {
 async function loadEvents() {
   const tb = document.getElementById('tb-events');
   try {
-    const d = await apiReport({
-      dateRanges: dateRange(),
-      dimensions: [{ name:'eventName' }],
-      metrics:    [{ name:'eventCount' }],
-      dimensionFilter: {
-        filter: {
-          fieldName: 'eventName',
-          inListFilter: { values: EVENTS_FILTER },
-        },
-      },
-      orderBys: [{ metric: { metricName:'eventCount' }, desc: true }],
-    });
+    const d = await proxy('events');
     tb.innerHTML = (d.rows ?? []).map(r => {
       const name  = r.dimensionValues[0].value;
       const count = r.metricValues[0].value;
