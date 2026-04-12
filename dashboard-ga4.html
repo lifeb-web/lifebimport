@@ -802,20 +802,21 @@ async function loadSummaryWithCompare() {
       }
     });
 
-    // bounceRate e averageSessionDuration — disponíveis quando Apps Script for atualizado
-    // TODO: quando Apps Script retornar v[3]=bounceRate e v[4]=averageSessionDuration:
-    // const bounce   = vAtual[3]?.value;
-    // const duration = vAtual[4]?.value;
-    // if (bounce !== undefined) {
-    //   document.getElementById('stat-bounce').textContent = (bounce * 100).toFixed(1) + '%';
-    //   document.getElementById('stat-bounce-note').style.display = 'none';
-    // }
-    // if (duration !== undefined) {
-    //   const min = Math.floor(duration / 60);
-    //   const sec = Math.round(duration % 60);
-    //   document.getElementById('stat-duration').textContent = min + 'm ' + sec + 's';
-    //   document.getElementById('stat-duration-note').style.display = 'none';
-    // }
+    // bounceRate e averageSessionDuration (v[3] e v[4] retornados pelo Apps Script)
+    const bounce   = parseFloat(vAtual[3]?.value ?? '');
+    const duration = parseFloat(vAtual[4]?.value ?? '');
+    if (!isNaN(bounce)) {
+      document.getElementById('stat-bounce').textContent = (bounce * 100).toFixed(1) + '%';
+      const noteB = document.getElementById('stat-bounce-note');
+      if (noteB) noteB.style.display = 'none';
+    }
+    if (!isNaN(duration) && duration > 0) {
+      const min = Math.floor(duration / 60);
+      const sec = Math.round(duration % 60);
+      document.getElementById('stat-duration').textContent = min + 'm ' + String(sec).padStart(2,'0') + 's';
+      const noteD = document.getElementById('stat-duration-note');
+      if (noteD) noteD.style.display = 'none';
+    }
 
   } catch(err) {
     const msg = err.message || 'Erro';
