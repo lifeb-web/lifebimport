@@ -670,13 +670,18 @@
     <!-- Cities -->
     <div class="card">
       <div class="card-hd">
-        <div class="card-hd-title">Cidade / Estado</div>
+        <div class="card-hd-title">Estado / Cidade</div>
       </div>
       <div class="table-scroll">
         <table>
+          <colgroup>
+            <col style="width:38%">
+            <col style="width:42%">
+            <col style="width:20%">
+          </colgroup>
           <thead><tr>
             <th>Estado</th>
-            <th>Cidade</th>
+            <th style="text-align:left">Cidade</th>
             <th title="Pessoas únicas dessa localidade">Visitantes</th>
           </tr></thead>
           <tbody id="tb-cities">
@@ -1360,6 +1365,37 @@ function generateInsights() {
   if (mediaDiaria < 1.5 && currentDays >= 14) {
     rt.push({ icon: '📊', text: `<b>${usersAtual} visitantes em ${currentDays} dias</b> (média de ${mediaDiaria.toFixed(1)}/dia). Volume em acumulação — análises comportamentais disponíveis com mais tráfego.`, tipo: 'info', conf: 1 });
     if (leadsAtual > 0) rt.push({ icon: '🎯', text: `<b>${leadsAtual} lead${leadsAtual !== 1 ? 's' : ''}</b> gerado${leadsAtual !== 1 ? 's' : ''} ${labelPeriodo} (${convAtual.toFixed(1)}% de conversão).`, tipo: 'success', conf: 1 });
+    return _renderInsights(rt);
+  }
+
+  // FILTRO HOJE — resumo ao vivo, sem análise estatística
+  // Dados intradiários não têm comparativo: não há período anterior, bounce e tempo são ruidosos
+  if (currentDays === 1) {
+    const sc75  = events['ScrollDepth_75']  || 0;
+    const sc100 = events['ScrollDepth_100'] || 0;
+    const preencheu = events['Preencheu_Formulario'] || 0;
+
+    rt.push({ icon: '📊', text: `<b>${usersAtual} visitante${usersAtual !== 1 ? 's' : ''}</b> desde meia-noite. Dados acumulando ao longo do dia.`, tipo: 'info', conf: 1 });
+
+    if (leadsAtual > 0) {
+      rt.push({ icon: '🎯', text: `<b>${leadsAtual} lead${leadsAtual !== 1 ? 's' : ''}</b> gerado${leadsAtual !== 1 ? 's' : ''} hoje — ${convAtual.toFixed(1)}% de conversão.`, tipo: 'success', conf: 1 });
+    } else if (abriu > 0) {
+      const pAband = events['Abandonou_Formulario'] || 0;
+      if (pAband > 0) {
+        rt.push({ icon: '📋', text: `<b>${abriu}</b> visitante${abriu !== 1 ? 's' : ''} abriu${abriu > 1 ? 'ram' : ''} o formulário — <b>${pAband}</b> preencheu${pAband > 1 ? 'ram' : ''} mas não enviou.`, tipo: 'warning', conf: 1 });
+      } else {
+        rt.push({ icon: '📋', text: `<b>${abriu}</b> visitante${abriu !== 1 ? 's' : ''} abriu${abriu > 1 ? 'ram' : ''} o formulário. Aguardando envio.`, tipo: 'info', conf: 1 });
+      }
+    }
+
+    if (sc100 > 0) {
+      rt.push({ icon: '✅', text: `<b>${sc100}</b> visitante${sc100 !== 1 ? 's' : ''} leu${sc100 > 1 ? 'ram' : ''} a página inteira hoje.`, tipo: 'success', conf: 1 });
+    } else if (sc75 > 0) {
+      rt.push({ icon: '🔥', text: `<b>${sc75}</b> visitante${sc75 !== 1 ? 's' : ''} chegou${sc75 > 1 ? 'ram' : ''} a 75% do conteúdo. Engajamento alto.`, tipo: 'success', conf: 1 });
+    } else if (sc25 > 0) {
+      rt.push({ icon: '👀', text: `<b>${sc25}</b> visitante${sc25 !== 1 ? 's' : ''} passou${sc25 > 1 ? 'ram' : ''} do primeiro quarto da página.`, tipo: 'info', conf: 1 });
+    }
+
     return _renderInsights(rt);
   }
 
