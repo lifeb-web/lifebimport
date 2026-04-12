@@ -505,21 +505,20 @@
     <div class="card card-metric accent-red">
       <div class="m-label">Taxa de Rejeição</div>
       <div class="m-val" id="stat-bounce" style="color:var(--red)">—</div>
-      <div class="m-soon" id="stat-bounce-note">Disponível em breve</div>
-      <div class="m-sub">visitas sem interação</div>
+      <div class="m-sub">visitantes que saíram sem interagir</div>
     </div>
 
     <div class="card card-metric accent-blue">
       <div class="m-label">Tempo Médio</div>
       <div class="m-val" id="stat-duration" style="color:var(--blue)">—</div>
-      <div class="m-soon" id="stat-duration-note">Disponível em breve</div>
-      <div class="m-sub">por visita</div>
+      <div class="m-sub">tempo médio por visita</div>
     </div>
 
     <div class="card card-metric accent-green">
       <div class="m-label">Leads Gerados</div>
       <div class="m-val" id="stat-leads" style="color:var(--green)">—</div>
-      <div class="m-sub">formulários enviados</div>
+      <div id="delta-leads" class="delta-neu">—</div>
+      <div class="m-sub">formulários enviados com contato</div>
     </div>
 
   </div>
@@ -549,7 +548,7 @@
             <th title="Endereço da página visitada">Página</th>
             <th title="Pessoas únicas que acessaram essa página">Visitantes</th>
             <th class="mh" title="Total de visitas (uma mesma pessoa pode entrar várias vezes)">Visitas</th>
-            <th class="mh" title="Quantidade de vezes que a página foi carregada na tela">Views</th>
+            <th class="mh" title="Quantidade de vezes que a página foi carregada na tela">Visualizações</th>
           </tr></thead>
           <tbody id="tb-pages">
             <tr class="empty-row"><td colspan="4">Carregando...</td></tr>
@@ -632,14 +631,14 @@ const PROXY_URL = 'https://script.google.com/macros/s/AKfycbxGFDgwJhRVHFUYuOc6KR
 // Mapa completo de eventos com ícone, nome legível e descrição
 const EVENTOS_META = {
   'Lead_Formulario':      { icon: '🎯', nome: 'Lead gerado',          desc: 'Formulário enviado com nome + telefone' },
-  'Abrir_Formulario':     { icon: '📋', nome: 'Formulário aberto',     desc: 'Visitante abriu o modal de contato' },
-  'Preencheu_Formulario': { icon: '✏️',  nome: 'Formulário preenchido', desc: 'Digitou algum dado no formulário' },
-  'Abandonou_Formulario': { icon: '❌', nome: 'Abandonou preenchido',  desc: 'Tinha dados mas não enviou' },
-  'Pular_Formulario':     { icon: '⏭️',  nome: 'Pulou o formulário',   desc: 'Fechou sem preencher nada' },
+  'Abrir_Formulario':     { icon: '📋', nome: 'Formulário aberto',     desc: 'Visitante abriu o formulário de contato' },
+  'Preencheu_Formulario': { icon: '✏️',  nome: 'Formulário preenchido', desc: 'Digitou pelo menos um campo do formulário' },
+  'Abandonou_Formulario': { icon: '❌', nome: 'Abandonou o formulário', desc: 'Preencheu mas fechou sem enviar' },
+  'Pular_Formulario':     { icon: '⏭️',  nome: 'Pulou o formulário',   desc: 'Fechou o formulário sem preencher nada' },
   'ScrollDepth_25':       { icon: '👀', nome: 'Rolou 25% da página',   desc: 'Passou do primeiro quarto do conteúdo' },
   'ScrollDepth_50':       { icon: '📖', nome: 'Rolou 50% da página',   desc: 'Chegou na metade do conteúdo' },
-  'ScrollDepth_75':       { icon: '📗', nome: 'Rolou 75% da página',   desc: 'Quase no final — alto engajamento' },
-  'ScrollDepth_100':      { icon: '✅', nome: 'Leu a página inteira',  desc: 'Chegou ao fim do conteúdo' },
+  'ScrollDepth_75':       { icon: '🔥', nome: 'Rolou 75% da página',   desc: 'Quase no final — alto engajamento' },
+  'ScrollDepth_100':      { icon: '✅', nome: 'Leu a página inteira',  desc: 'Chegou ao fim — engajamento máximo' },
 };
 
 // Mapa de legendas das páginas
@@ -716,8 +715,8 @@ window.addEventListener('load', () => {
   document.getElementById('last-updated').style.display = 'inline';
   loadAll();
   fetchRealtime();
-  realtimeTimer = setInterval(fetchRealtime, 15_000);
-  refreshTimer  = setInterval(loadAll, 120_000);
+  realtimeTimer = setInterval(fetchRealtime, 10_000);
+  refreshTimer  = setInterval(loadAll, 60_000);
 });
 
 // CONTROLES DE DATA
@@ -782,7 +781,7 @@ async function fetchRealtime() {
 // Período anterior = dados do dobro MENOS dados do período atual.
 // Ex: 14 dias = 50 visitantes, 7 dias = 30 → anterior = 20, delta = +50%
 async function loadSummaryWithCompare(dEvAtual, dEvDuplo) {
-  const deltaIds = ['delta-users', 'delta-sessions', 'delta-conv'];
+  const deltaIds = ['delta-users', 'delta-sessions', 'delta-conv', 'delta-leads'];
 
   try {
     const [dAtual, dDuplo] = await Promise.all([
@@ -819,12 +818,14 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo) {
       return Math.round((atual - anterior) / anterior * 100);
     };
 
-    const deltaConv = convAnt > 0 ? Math.round((convAtual - convAnt) / convAnt * 100) : null;
+    const deltaConv  = convAnt   > 0 ? Math.round((convAtual  - convAnt)  / convAnt  * 100) : null;
+    const deltaLeads = leadsAnt  > 0 ? Math.round((leadsAtual - leadsAnt) / leadsAnt * 100) : null;
 
     const deltas = [
       calcDelta(vAtual[0], vDuplo[0]),
       calcDelta(vAtual[1], vDuplo[1]),
       deltaConv,
+      deltaLeads,
     ];
 
     deltaIds.forEach((id, i) => {
@@ -852,15 +853,11 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo) {
     const duration = parseFloat(vAtual[4]?.value ?? '');
     if (!isNaN(bounce)) {
       document.getElementById('stat-bounce').textContent = (bounce * 100).toFixed(1) + '%';
-      const noteB = document.getElementById('stat-bounce-note');
-      if (noteB) noteB.style.display = 'none';
     }
     if (!isNaN(duration) && duration > 0) {
       const min = Math.floor(duration / 60);
       const sec = Math.round(duration % 60);
       document.getElementById('stat-duration').textContent = min + 'm ' + String(sec).padStart(2,'0') + 's';
-      const noteD = document.getElementById('stat-duration-note');
-      if (noteD) noteD.style.display = 'none';
     }
 
   } catch(err) {
