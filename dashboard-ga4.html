@@ -495,7 +495,7 @@
   <div class="card card-chart">
     <div class="card-hd">
       <div class="card-hd-title">📈 Visitantes por dia</div>
-      <div class="badge" id="chart-badge">hoje</div>
+      <div class="badge" id="chart-badge">7 dias</div>
     </div>
     <div class="chart-wrap">
       <canvas id="visitors-chart"></canvas>
@@ -726,60 +726,132 @@ async function loadSummary() {
   }
 }
 
-// GRÁFICO DE LINHA
+// GRÁFICO — barras + linha de tendência
+const DIAS_SEMANA = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
 async function loadChart() {
+  const wrap = document.getElementById('visitors-chart').parentElement;
   try {
     const d = await proxy('chart');
+    const rows = d.rows ?? [];
 
-    const labels = [], values = [];
-    (d.rows ?? []).forEach(r => {
-      const s = r.dimensionValues[0].value;           // "20250101"
-      labels.push(`${s.slice(6)}/${s.slice(4,6)}`);  // "01/01"
+    // Sem dados suficientes — mostrar aviso amigável
+    if (rows.length === 0) {
+      if (chart) { chart.destroy(); chart = null; }
+      wrap.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;color:#6b6484;font-family:Montserrat,sans-serif;">
+        <div style="font-size:32px">📊</div>
+        <div style="font-weight:600;font-size:14px;color:#221B32">Nenhum dado no período</div>
+        <div style="font-size:12px;text-align:center">Tente um período maior ou aguarde visitas</div>
+      </div>`;
+      return;
+    }
+
+    // Garantir que o canvas existe
+    if (!document.getElementById('visitors-chart')) {
+      wrap.innerHTML = '<canvas id="visitors-chart"></canvas>';
+    }
+
+    const labels = [], values = [], bgColors = [], borderColors = [];
+    rows.forEach(r => {
+      const s = r.dimensionValues[0].value; // "20260412"
+      const date = new Date(
+        parseInt(s.slice(0,4)),
+        parseInt(s.slice(4,6)) - 1,
+        parseInt(s.slice(6,8))
+      );
+      const diaSemana = DIAS_SEMANA[date.getDay()];
+      const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+      labels.push(`${diaSemana} ${s.slice(6)}/${s.slice(4,6)}`);
       values.push(+r.metricValues[0].value);
+      bgColors.push(isWeekend ? 'rgba(233,32,133,.18)' : 'rgba(112,75,155,.18)');
+      borderColors.push(isWeekend ? '#E92085' : '#704B9B');
+    });
+
+    // Linha de média móvel (tendência)
+    const media = values.map((_, i) => {
+      const janela = values.slice(Math.max(0, i-2), i+3);
+      return Math.round(janela.reduce((a,b) => a+b, 0) / janela.length);
     });
 
     if (chart) chart.destroy();
     chart = new Chart(
       document.getElementById('visitors-chart').getContext('2d'),
       {
-        type: 'line',
         data: {
           labels,
-          datasets: [{
-            label: 'Usuários',
-            data: values,
-            borderColor:       '#704B9B',
-            backgroundColor:   'rgba(112,75,155,.09)',
-            fill:              true,
-            tension:           .4,
-            pointBackgroundColor: '#704B9B',
-            pointRadius:       3,
-            pointHoverRadius:  6,
-            borderWidth:       2.5,
-          }],
+          datasets: [
+            {
+              type: 'bar',
+              label: 'Visitantes',
+              data: values,
+              backgroundColor: bgColors,
+              borderColor: borderColors,
+              borderWidth: 1.5,
+              borderRadius: 6,
+              borderSkipped: false,
+              order: 2,
+            },
+            {
+              type: 'line',
+              label: 'Tendência',
+              data: media,
+              borderColor: 'rgba(112,75,155,.5)',
+              borderWidth: 2,
+              borderDash: [5,4],
+              pointRadius: 0,
+              fill: false,
+              tension: .4,
+              order: 1,
+            },
+          ],
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: { display: false },
+            legend: {
+              display: true,
+              position: 'top',
+              align: 'end',
+              labels: {
+                font: { family:'Montserrat', size:11 },
+                color: '#6b6484',
+                boxWidth: 14,
+                padding: 14,
+                filter: item => item.text !== 'Tendência' || values.length > 3,
+              },
+            },
             tooltip: {
               backgroundColor: '#221B32',
-              titleFont: { family: 'Montserrat', weight: '700', size: 12 },
-              bodyFont:  { family: 'Montserrat', size: 12 },
-              padding: 10,
-              callbacks: { label: c => ` ${c.parsed.y} usuários` },
+              titleFont: { family:'Montserrat', weight:'700', size:12 },
+              bodyFont:  { family:'Montserrat', size:12 },
+              padding: 12,
+              callbacks: {
+                title: items => items[0].label,
+                label: c => c.dataset.type === 'bar'
+                  ? ` ${c.parsed.y} visitante${c.parsed.y !== 1 ? 's' : ''}`
+                  : ` média: ${c.parsed.y}`,
+              },
             },
           },
           scales: {
             x: {
-              grid:  { color: 'rgba(0,0,0,.04)' },
-              ticks: { font: { family:'Montserrat', size:11 }, color:'#6b6484', maxTicksLimit:12 },
+              grid:  { display: false },
+              ticks: {
+                font: { family:'Montserrat', size:10 },
+                color:'#6b6484',
+                maxTicksLimit: 14,
+                maxRotation: 35,
+              },
               border:{ display: false },
             },
             y: {
-              grid:  { color: 'rgba(0,0,0,.04)' },
-              ticks: { font: { family:'Montserrat', size:11 }, color:'#6b6484' },
+              grid:  { color: 'rgba(0,0,0,.05)' },
+              ticks: {
+                font: { family:'Montserrat', size:11 },
+                color:'#6b6484',
+                precision: 0,
+              },
               border:{ display: false },
               beginAtZero: true,
             },
@@ -787,6 +859,15 @@ async function loadChart() {
         },
       }
     );
+
+    // Aviso se só tem 1 dia de dados
+    if (rows.length === 1) {
+      const aviso = document.createElement('div');
+      aviso.style.cssText = 'font-size:11px;color:#6b6484;font-family:Montserrat,sans-serif;text-align:center;margin-top:6px;';
+      aviso.textContent = 'O gráfico vai crescer conforme novos dias forem registrados.';
+      wrap.parentElement.appendChild(aviso);
+    }
+
   } catch(e) { console.error('Chart error:', e); }
 }
 
