@@ -1029,7 +1029,24 @@ async function loadChart() {
     }
 
     if (currentDays === 1) {
-      // MODO HOJE: gráfico por hora do dia
+      // Detecta se o proxy retornou dados por hora (novo) ou por data (proxy antigo não atualizado)
+      // Hora: valor "0"–"23" (len <= 2). Data: "20240412" (len = 8)
+      const primeiroValor = rows[0]?.dimensionValues[0]?.value ?? '';
+      const ehHorario = primeiroValor.length <= 2;
+
+      if (!ehHorario) {
+        // Proxy antigo ainda não atualizado — mostra total do dia sem gráfico horário
+        const totalHoje = rows.reduce((s, r) => s + +r.metricValues[0].value, 0);
+        if (chart) { chart.destroy(); chart = null; }
+        wrap.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;color:#6b6484;font-family:Montserrat,sans-serif;text-align:center;padding:16px;">
+          <div style="font-size:28px;font-weight:800;color:#704B9B">${totalHoje}</div>
+          <div style="font-weight:600;font-size:13px;color:#221B32">visitantes hoje</div>
+          <div style="font-size:11px;margin-top:4px">Para ver o gráfico por hora, atualize o Apps Script com o arquivo <b>lifeb-ga4-proxy.gs</b> mais recente.</div>
+        </div>`;
+        return;
+      }
+
+      // MODO HOJE: gráfico por hora do dia (proxy novo)
       document.getElementById('chart-title').textContent = 'Visitantes por hora';
 
       const horaAtual = new Date().getHours();
