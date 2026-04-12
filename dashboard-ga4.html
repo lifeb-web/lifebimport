@@ -896,7 +896,8 @@ async function loadCities() {
     const d = await proxy('cities');
     tb.innerHTML = (d.rows ?? []).map(r => {
       const region = traduzEstado(r.dimensionValues[0].value);
-      const city   = r.dimensionValues[1].value === '(not set)' ? 'Não identificada' : r.dimensionValues[1].value;
+      const cityRaw = r.dimensionValues[1].value;
+      const city    = (!cityRaw || cityRaw === '(not set)') ? 'Não identificada' : cityRaw;
       const users  = r.metricValues[0].value;
       return `<tr>
         <td>${esc(region)}</td>
