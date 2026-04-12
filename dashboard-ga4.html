@@ -690,14 +690,31 @@ async function loadAll() {
   ]);
 }
 
-// API HELPERS
-async function proxy(action) {
-  const url = `${PROXY_URL}?action=${action}&days=${currentDays}`;
-  const r = await fetch(url);
-  if (!r.ok) throw new Error(`Erro HTTP ${r.status}`);
-  const data = await r.json();
-  if (data.error) throw new Error(data.error);
-  return data;
+// API HELPERS — usa JSONP para evitar bloqueio de CORS
+function proxy(action) {
+  return new Promise((resolve, reject) => {
+    const cb = 'ga4cb_' + Date.now();
+    const script = document.createElement('script');
+    const timeout = setTimeout(() => {
+      delete window[cb];
+      document.head.removeChild(script);
+      reject(new Error('Tempo esgotado'));
+    }, 15000);
+    window[cb] = (data) => {
+      clearTimeout(timeout);
+      delete window[cb];
+      document.head.removeChild(script);
+      if (data.error) reject(new Error(data.error));
+      else resolve(data);
+    };
+    script.onerror = () => {
+      clearTimeout(timeout);
+      delete window[cb];
+      reject(new Error('Erro de rede'));
+    };
+    script.src = `${PROXY_URL}?action=${action}&days=${currentDays}&callback=${cb}`;
+    document.head.appendChild(script);
+  });
 }
 
 // TEMPO REAL
