@@ -523,6 +523,17 @@
 
   </div>
 
+  <!-- ANÁLISE INTELIGENTE -->
+  <div class="card" style="margin-bottom:18px;">
+    <div class="card-hd">
+      <div class="card-hd-title">💡 Análise Inteligente</div>
+      <div class="badge" id="insights-stamp">—</div>
+    </div>
+    <div id="insights-list" style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
+      <div style="color:#6b6484;font-size:13px;font-family:Montserrat,sans-serif;">Carregando análise...</div>
+    </div>
+  </div>
+
   <!-- CHART -->
   <div class="card card-chart">
     <div class="card-hd">
@@ -710,6 +721,7 @@ let chart         = null;
 let realtimeTimer = null;
 let refreshTimer  = null;
 let loadVersion   = 0; // controle de race condition
+let insightsData  = {}; // acumula dados de todos os fetches para análise inteligente
 
 window.addEventListener('load', () => {
   document.getElementById('last-updated').style.display = 'inline';
@@ -752,7 +764,7 @@ async function loadAll() {
     loadEvents(evAtual),
   ]);
 
-  if (myVersion === loadVersion) stamp(); // marca hora só se ainda for a versão mais recente
+  if (myVersion === loadVersion) { stamp(); generateInsights(); }
 }
 
 // API HELPERS — fetch com CORS (Apps Script retorna access-control-allow-origin: *)
@@ -770,7 +782,9 @@ async function proxy(action, days) {
 async function fetchRealtime() {
   try {
     const d = await proxy('realtime');
-    document.getElementById('rt-count').textContent = d.rows?.[0]?.metricValues?.[0]?.value ?? '0';
+    const v = +(d.rows?.[0]?.metricValues?.[0]?.value ?? 0);
+    document.getElementById('rt-count').textContent = v || '0';
+    insightsData.rtUsers = v;
   } catch {
     document.getElementById('rt-count').textContent = '—';
   }
@@ -859,6 +873,13 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo) {
       const sec = Math.round(duration % 60);
       document.getElementById('stat-duration').textContent = min + 'm ' + String(sec).padStart(2,'0') + 's';
     }
+
+    // Alimenta engine de análise inteligente
+    Object.assign(insightsData, {
+      usersAtual, usersAnt, leadsAtual, leadsAnt, convAtual,
+      bounce:    isNaN(bounce)   ? null : bounce,
+      duration:  isNaN(duration) || duration <= 0 ? null : duration,
+    });
 
   } catch(err) {
     const msg = err.message || 'Erro';
@@ -1129,10 +1150,136 @@ async function loadEvents(d) {
 
     tb.innerHTML = rowsHtml.join('') || emptyRow(2);
 
+    // Alimenta engine de análise inteligente com mapa de eventos
+    insightsData.events = Object.fromEntries(rowsData.map(r => [r.name, r.count]));
+
     // Atualiza card de Leads Gerados
     document.getElementById('stat-leads').textContent = n(leadCount);
 
   } catch { tb.innerHTML = errRow(2); }
+}
+
+// ANÁLISE INTELIGENTE — engine de regras que interpreta todos os dados do painel
+function generateInsights() {
+  const {
+    usersAtual = 0, usersAnt = 0,
+    leadsAtual = 0, leadsAnt = 0,
+    convAtual  = 0,
+    bounce = null, duration = null,
+    events = {}, rtUsers = 0,
+  } = insightsData;
+
+  const insights = [];
+
+  // ── REALTIME ──────────────────────────────────────
+  if (rtUsers >= 10) {
+    insights.push({ icon: '🔴', text: `<b>${rtUsers} pessoas no site agora</b> — pico de tráfego! Bom momento para monitorar conversões.`, tipo: 'success' });
+  } else if (rtUsers >= 3) {
+    insights.push({ icon: '🟢', text: `<b>${rtUsers} pessoas navegando agora</b> — tráfego ativo no momento.`, tipo: 'info' });
+  }
+
+  // ── TENDÊNCIA DE TRÁFEGO ──────────────────────────
+  if (usersAnt > 0 && currentDays > 1) {
+    const delta = Math.round((usersAtual - usersAnt) / usersAnt * 100);
+    if (delta >= 20)       insights.push({ icon: '📈', text: `Tráfego <b>cresceu ${delta}%</b> vs período anterior — campanhas em boa performance.`, tipo: 'success' });
+    else if (delta >= 5)   insights.push({ icon: '📊', text: `Tráfego <b>+${delta}%</b> vs período anterior.`, tipo: 'info' });
+    else if (delta <= -20) insights.push({ icon: '📉', text: `Tráfego <b>caiu ${Math.abs(delta)}%</b> vs período anterior — verifique o investimento nas campanhas.`, tipo: 'danger' });
+    else if (delta <= -5)  insights.push({ icon: '📉', text: `Tráfego <b>-${Math.abs(delta)}%</b> vs período anterior.`, tipo: 'warning' });
+  }
+
+  // ── QUALIDADE: tráfego subiu mas leads caíram ─────
+  if (usersAnt > 0 && leadsAnt > 0) {
+    const dU = (usersAtual - usersAnt) / usersAnt;
+    const dL = (leadsAtual - leadsAnt) / leadsAnt;
+    if (dU > 0.1 && dL < -0.1) {
+      insights.push({ icon: '💡', text: `Tráfego subiu, mas leads caíram — o público atraído pode estar <b>menos qualificado</b>. Revisar segmentação das campanhas.`, tipo: 'warning' });
+    } else if (dU < -0.1 && dL > 0.1) {
+      insights.push({ icon: '🎯', text: `Menos visitantes, <b>mais leads</b> — tráfego mais qualificado que o período anterior. Boa sinal de segmentação.`, tipo: 'success' });
+    }
+  }
+
+  // ── TAXA DE CONVERSÃO ─────────────────────────────
+  if (usersAtual >= 10) {
+    if (convAtual >= 5)      insights.push({ icon: '🎯', text: `Conversão <b>excelente: ${convAtual.toFixed(1)}%</b> — acima de 5% é referência para landing pages.`, tipo: 'success' });
+    else if (convAtual >= 3) insights.push({ icon: '🎯', text: `Conversão <b>boa: ${convAtual.toFixed(1)}%</b> — dentro da média saudável para landing pages.`, tipo: 'info' });
+    else if (convAtual >= 1) insights.push({ icon: '⚠️', text: `Conversão <b>abaixo do potencial: ${convAtual.toFixed(1)}%</b> — o funil tem espaço de melhoria.`, tipo: 'warning' });
+    else if (convAtual > 0)  insights.push({ icon: '🚨', text: `Conversão <b>muito baixa: ${convAtual.toFixed(1)}%</b> — revisar CTA, formulário e proposta de valor da página.`, tipo: 'danger' });
+  }
+
+  // ── FUNIL DO FORMULÁRIO ───────────────────────────
+  const abriu     = events['Abrir_Formulario']     || 0;
+  const preencheu = events['Preencheu_Formulario'] || 0;
+  const abandonou = events['Abandonou_Formulario'] || 0;
+  const pulou     = events['Pular_Formulario']     || 0;
+
+  if (abriu >= 5) {
+    const pctAband = Math.round(abandonou / abriu * 100);
+    const pctPulou = Math.round(pulou     / abriu * 100);
+    const pctPreen = Math.round(preencheu / abriu * 100);
+
+    if (pctAband >= 35) {
+      insights.push({ icon: '⚠️', text: `<b>${pctAband}% que abriram o formulário preencheram mas não enviaram</b> — possível fricção no formulário ou na oferta.`, tipo: 'warning' });
+    }
+    if (pctPulou >= 50) {
+      insights.push({ icon: '💡', text: `<b>${pctPulou}% fecharam o formulário sem preencher nada</b> — o CTA pode não estar gerando convicção suficiente.`, tipo: 'warning' });
+    }
+    if (pctPreen >= 70 && leadsAtual > 0) {
+      insights.push({ icon: '✅', text: `Funil eficiente: <b>${pctPreen}% dos que abriram o formulário preencheram</b> — boa receptividade ao CTA.`, tipo: 'success' });
+    }
+  }
+
+  // ── ENGAJAMENTO: SCROLL DEPTH ─────────────────────
+  const sc25  = events['ScrollDepth_25']  || 0;
+  const sc50  = events['ScrollDepth_50']  || 0;
+  const sc75  = events['ScrollDepth_75']  || 0;
+  const sc100 = events['ScrollDepth_100'] || 0;
+
+  if (sc25 >= 5) {
+    const pctFim  = Math.round(sc100 / sc25 * 100);
+    const pctMeio = Math.round(sc50  / sc25 * 100);
+    if (pctFim >= 40) {
+      insights.push({ icon: '📖', text: `<b>${pctFim}% dos visitantes leram a página inteira</b> — conteúdo muito engajante.`, tipo: 'success' });
+    } else if (pctFim < 15 && pctMeio < 50) {
+      insights.push({ icon: '💡', text: `Apenas <b>${pctFim}% chegaram ao fim</b> — o conteúdo do meio da página pode estar perdendo a atenção.`, tipo: 'warning' });
+    } else if (pctFim < 15) {
+      insights.push({ icon: '💡', text: `<b>${pctFim}% chegaram ao fim da página</b> — considere revisar o conteúdo para aumentar retenção.`, tipo: 'warning' });
+    }
+  }
+
+  // ── TAXA DE REJEIÇÃO ──────────────────────────────
+  if (bounce !== null) {
+    const bp = bounce * 100;
+    if (bp < 35)      insights.push({ icon: '✅', text: `Taxa de rejeição <b>baixa (${bp.toFixed(0)}%)</b> — visitantes estão interagindo com a página.`, tipo: 'success' });
+    else if (bp > 75) insights.push({ icon: '🚨', text: `Taxa de rejeição <b>alta (${bp.toFixed(0)}%)</b> — a maioria sai sem interagir. Revisar o primeiro dobramento da página.`, tipo: 'danger' });
+    else if (bp > 60) insights.push({ icon: '⚠️', text: `Rejeição em <b>${bp.toFixed(0)}%</b> — vale revisar a primeira impressão da página.`, tipo: 'warning' });
+  }
+
+  // ── TEMPO MÉDIO ───────────────────────────────────
+  if (duration !== null) {
+    const m = Math.floor(duration / 60);
+    const s = Math.round(duration % 60);
+    const fmt = `${m}m${String(s).padStart(2,'0')}s`;
+    if (duration >= 180)      insights.push({ icon: '⏱️', text: `Tempo médio alto <b>(${fmt})</b> — visitantes estão lendo o conteúdo com atenção.`, tipo: 'success' });
+    else if (duration < 45)   insights.push({ icon: '⏱️', text: `Tempo médio muito baixo <b>(${fmt})</b> — conteúdo pode não estar retendo atenção.`, tipo: 'warning' });
+  }
+
+  // ── SEM DADOS SUFICIENTES ─────────────────────────
+  if (insights.length === 0) {
+    insights.push({ icon: '⏳', text: 'Aguardando dados suficientes para gerar análises. Tente um período maior.', tipo: 'info' });
+  }
+
+  // Renderiza até 4 insights mais relevantes
+  const CORES = { success:'#16a34a', warning:'#d97706', danger:'#dc2626', info:'#2563eb' };
+  const BG    = { success:'#f0fdf4', warning:'#fffbeb', danger:'#fff1f2', info:'#eff6ff' };
+
+  document.getElementById('insights-list').innerHTML = insights.slice(0, 4).map(i => `
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:${BG[i.tipo]};border-radius:8px;border-left:3px solid ${CORES[i.tipo]};">
+      <span style="font-size:18px;line-height:1.4;flex-shrink:0">${i.icon}</span>
+      <span style="font-size:13px;color:#221B32;line-height:1.5;font-family:Montserrat,sans-serif">${i.text}</span>
+    </div>`).join('');
+
+  document.getElementById('insights-stamp').textContent =
+    'atualizada às ' + new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
 }
 
 // UTILITÁRIOS
