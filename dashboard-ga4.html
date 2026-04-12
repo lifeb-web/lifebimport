@@ -424,8 +424,8 @@
       vertical-align: middle;
     }
     .s-val, .m-val { transition: opacity .2s ease; }
-    #insights-list  { transition: opacity .2s ease; }
-    #insights-list.fading { opacity: .35; }
+    #insights-narrative { transition: opacity .2s ease; }
+    #insights-narrative.fading { opacity: .35; }
 
     /* ── TABLES GRID — MOBILE FIRST ──────── */
     .tables-grid {
@@ -619,11 +619,11 @@
   <!-- ANÁLISE INTELIGENTE -->
   <div class="card" style="margin-bottom:18px;">
     <div class="card-hd">
-      <div class="card-hd-title">Análises Inteligentes <span style="font-size:9px;font-weight:700;background:linear-gradient(135deg,#704B9B,#E92085);color:#fff;padding:2px 8px;border-radius:20px;letter-spacing:.5px;text-transform:none">IA</span></div>
+      <div class="card-hd-title">Análise Inteligente <span style="font-size:9px;font-weight:700;background:linear-gradient(135deg,#704B9B,#E92085);color:#fff;padding:2px 8px;border-radius:20px;letter-spacing:.5px;text-transform:none">IA</span></div>
       <div class="badge" id="insights-stamp" style="visibility:hidden"></div>
     </div>
-    <div id="insights-list" style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
-      <div style="color:#6b6484;font-size:13px;font-family:Montserrat,sans-serif;">Carregando análise...</div>
+    <div id="insights-narrative" style="margin-top:4px;">
+      <div style="color:#6b6484;font-size:13px;font-family:Montserrat,sans-serif;">Carregando...</div>
     </div>
   </div>
 
@@ -872,11 +872,11 @@ function _skeletonOn() {
     const el = document.getElementById(id);
     if (el) { el.textContent = ''; el.className = 'delta-neu'; el.style.display = 'none'; }
   });
-  document.getElementById('insights-list')?.classList.add('fading');
+  document.getElementById('insights-narrative')?.classList.add('fading');
   document.querySelector('.chart-wrap')?.classList.add('chart-loading');
 }
 function _skeletonOff() {
-  document.getElementById('insights-list')?.classList.remove('fading');
+  document.getElementById('insights-narrative')?.classList.remove('fading');
   document.querySelector('.chart-wrap')?.classList.remove('chart-loading');
   // Limpa skeletons que não foram substituídos por dados (ex: quando proxy falha)
   ['stat-users','stat-sessions','stat-conv','stat-leads','stat-bounce','stat-duration'].forEach(id => {
@@ -1036,9 +1036,9 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo) {
 
     // Alimenta engine de análise inteligente
     Object.assign(insightsData, {
-      usersAtual, usersAnt, leadsAtual, leadsAnt, convAtual,
-      bounce:    isNaN(bounce)   ? null : bounce,
-      duration:  isNaN(duration) || duration <= 0 ? null : duration,
+      usersAtual, leadsAtual, convAtual,
+      bounce:   isNaN(bounce)            ? null : bounce,
+      duration: isNaN(duration) || duration <= 0 ? null : duration,
     });
 
   } catch(err) {
@@ -1356,238 +1356,114 @@ async function loadEvents(d) {
 //   Scroll 100%: > 25% ótimo | < 10% queda de retenção
 //   Tempo: > 90s bom | < 30s possível desalinhamento anúncio/página
 
-function _conf(vol, maxVol, dias, maxDias, tw = 1) {
-  const sv = Math.min(vol / maxVol, 1);
-  const st = Math.min(dias / maxDias, 1);
-  return sv * Math.pow(st, tw);
-}
-
 function generateInsights() {
   const {
-    usersAtual = 0, usersAnt = 0,
-    leadsAtual = 0, leadsAnt = 0,
-    convAtual  = 0,
+    usersAtual = 0, leadsAtual = 0, convAtual = 0,
     bounce = null, duration = null,
     events = {}, rtUsers = 0,
   } = insightsData;
 
-  const labelPeriodo = currentDays === 1 ? 'hoje' : `nos últimos ${currentDays} dias`;
+  const abriu     = events['Abrir_Formulario']     || 0;
+  const abandonou = events['Abandonou_Formulario'] || 0;
+  const sc25      = events['ScrollDepth_25']       || 0;
+  const sc75      = events['ScrollDepth_75']       || 0;
+  const sc100     = events['ScrollDepth_100']      || 0;
 
-  const abriu = events['Abrir_Formulario'] || 0;
-  const sc25  = events['ScrollDepth_25']   || 0;
+  const parts = [];
+  let tipo = 'neutral';
 
-  // Scores compostos: cada métrica tem seu próprio denominador de volume E tempo
-  const cConv  = _conf(usersAtual, 80,  currentDays, 21);      // conversão
-  const cTrend = _conf(usersAtual, 50,  currentDays, 14, 2);   // tendência (tempo ao quadrado)
-  const cFunil = _conf(abriu,      40,  currentDays, 14);      // funil formulário
-  const cScrl  = _conf(sc25,       50,  currentDays, 14);      // scroll depth
-  const cRej   = _conf(usersAtual, 120, currentDays, 21);      // rejeição (mais ruidosa)
-  const cTempo = _conf(usersAtual, 60,  currentDays, 14);      // tempo médio
-
-  // Tom textual baseado no score (sem precisar expor números ao usuário)
-  const tom = c => c >= 0.65 ? '' : c >= 0.25 ? 'Tendência: ' : 'Sinal inicial: ';
-
-  // Badge visível quando confiança ainda está crescendo
-  const badge = c => {
-    if (c >= 0.65) return '';
-    if (c >= 0.25) return `<span style="display:inline-block;font-size:9px;font-weight:700;color:#b45309;border:1px solid rgba(180,83,9,.25);border-radius:20px;padding:1px 7px;margin-right:6px;vertical-align:middle;letter-spacing:.4px">AMOSTRA EM CRESCIMENTO</span>`;
-    return `<span style="display:inline-block;font-size:9px;font-weight:700;color:#9ca3af;border:1px solid #d1d5db;border-radius:20px;padding:1px 7px;margin-right:6px;vertical-align:middle;letter-spacing:.4px">SINAL INICIAL</span>`;
-  };
-
-  // Recomendações estruturais só com alta confiança em conversão E período >= 14 dias
-  const podaRec = cConv >= 0.5 && currentDays >= 14;
-
-  // Mínimos absolutos por métrica — B2B, tráfego pago, landing page industria saude/beleza
-  // Bounce e duração são ruidosas: precisam de amostra grande antes de qualquer conclusão
-  const minConv    = usersAtual >= 20;
-  const minBounce  = usersAtual >= 50;
-  const minDuration = usersAtual >= 35;
-  const minTrend   = usersAtual >= 30;
-  const minFunil   = abriu >= 8;
-  const minScroll  = sc25 >= 15;
-
-  const rt = [];    // insights realtime (sempre primeiro)
-  const main = [];  // insights a ordenar por prioridade+confiança
-
-  // REALTIME (sempre no topo, confiança irrelevante)
-  if (rtUsers >= 10) {
-    rt.push({ icon: '🔴', text: `<b>${rtUsers} pessoas no site agora.</b> Pico de tráfego ativo.`, tipo: 'success', conf: 1 });
-  } else if (rtUsers >= 3) {
-    rt.push({ icon: '🟢', text: `<b>${rtUsers} pessoa${rtUsers > 1 ? 's' : ''}</b> navegando agora.`, tipo: 'info', conf: 1 });
-  }
-
-  // SEM DADOS
-  if (usersAtual === 0) {
-    rt.push({ icon: '⏳', text: `Sem visitas registradas ${labelPeriodo}.`, tipo: 'info', conf: 1 });
-    return _renderInsights(rt);
-  }
-
-  // VOLUME MUITO BAIXO — mensagem útil adaptada ao contexto
-  if (usersAtual < 10) {
-    if (currentDays === 1) {
-      const agora = new Date();
-      const hFmt  = String(agora.getHours()).padStart(2,'0') + 'h' + String(agora.getMinutes()).padStart(2,'0');
-      rt.push({ icon: '📊', text: `<b>${usersAtual} visitante${usersAtual !== 1 ? 's' : ''} até às ${hFmt}.</b> Dia em construção. Dados acumulando em tempo real.`, tipo: 'info', conf: 1 });
-      if (leadsAtual > 0) {
-        rt.push({ icon: '🎯', text: `<b>${leadsAtual} lead${leadsAtual !== 1 ? 's' : ''}</b> gerado${leadsAtual !== 1 ? 's' : ''} hoje (${convAtual.toFixed(1)}% de conversão). Dia começando bem.`, tipo: 'success', conf: 1 });
-      } else if (abriu > 0) {
-        rt.push({ icon: '📋', text: `<b>${abriu} visitante${abriu !== 1 ? 's' : ''}</b> ${abriu > 1 ? 'abriram' : 'abriu'} o formulário, ainda sem envio.`, tipo: 'info', conf: 1 });
-      }
-      if (sc25 > 0) {
-        rt.push({ icon: '👀', text: `<b>${sc25} visitante${sc25 !== 1 ? 's' : ''}</b> ${sc25 > 1 ? 'rolaram' : 'rolou'} pelo menos 25% do conteúdo.`, tipo: 'info', conf: 1 });
-      }
-    } else {
-      rt.push({ icon: 'ℹ️', text: `<b>${usersAtual} visitante${usersAtual !== 1 ? 's' : ''}</b> ${labelPeriodo}. Volume ainda baixo para análise estatística confiável.`, tipo: 'info', conf: 1 });
-      if (leadsAtual > 0) rt.push({ icon: '🎯', text: `<b>${leadsAtual} lead${leadsAtual !== 1 ? 's' : ''}</b> gerado${leadsAtual !== 1 ? 's' : ''} ${labelPeriodo} (${convAtual.toFixed(1)}% de conversão).`, tipo: 'success', conf: 1 });
-    }
-    return _renderInsights(rt);
-  }
-
-  // VOLUME BAIXO PARA O PERÍODO (ex: 16 visitas em 90 dias = 0.18/dia)
-  // Sem análise comportamental — apenas resumo informativo
-  const mediaDiaria = usersAtual / currentDays;
-  if (mediaDiaria < 1.5 && currentDays >= 14) {
-    rt.push({ icon: '📊', text: `<b>${usersAtual} visitantes em ${currentDays} dias</b> (média de ${mediaDiaria.toFixed(1)}/dia). Volume em acumulação. Análises comportamentais disponíveis com mais tráfego.`, tipo: 'info', conf: 1 });
-    if (leadsAtual > 0) rt.push({ icon: '🎯', text: `<b>${leadsAtual} lead${leadsAtual !== 1 ? 's' : ''}</b> gerado${leadsAtual !== 1 ? 's' : ''} ${labelPeriodo} (${convAtual.toFixed(1)}% de conversão).`, tipo: 'success', conf: 1 });
-    return _renderInsights(rt);
-  }
-
-  // FILTRO HOJE — resumo ao vivo, sem análise estatística
-  // Dados intradiários não têm comparativo: não há período anterior, bounce e tempo são ruidosos
+  // HOJE — monitoramento puro, sem diagnóstico
   if (currentDays === 1) {
-    const sc75  = events['ScrollDepth_75']  || 0;
-    const sc100 = events['ScrollDepth_100'] || 0;
-    const preencheu = events['Preencheu_Formulario'] || 0;
+    if (rtUsers >= 3) parts.push(`<b>${rtUsers} pessoa${rtUsers > 1 ? 's' : ''}</b> no site agora.`);
 
-    rt.push({ icon: '📊', text: `<b>${usersAtual} visitante${usersAtual !== 1 ? 's' : ''}</b> desde meia-noite. Dados acumulando ao longo do dia.`, tipo: 'info', conf: 1 });
+    if (usersAtual === 0) {
+      parts.push('Nenhuma visita registrada ainda hoje.');
+    } else {
+      parts.push(`<b>${usersAtual} visitante${usersAtual !== 1 ? 's' : ''}</b> desde meia-noite.`);
 
-    if (leadsAtual > 0) {
-      rt.push({ icon: '🎯', text: `<b>${leadsAtual} lead${leadsAtual !== 1 ? 's' : ''}</b> gerado${leadsAtual !== 1 ? 's' : ''} hoje, com ${convAtual.toFixed(1)}% de conversão.`, tipo: 'success', conf: 1 });
-    } else if (abriu > 0) {
-      const pAband = events['Abandonou_Formulario'] || 0;
-      if (pAband > 0) {
-        rt.push({ icon: '📋', text: `<b>${abriu}</b> visitante${abriu !== 1 ? 's' : ''} ${abriu > 1 ? 'abriram' : 'abriu'} o formulário. <b>${pAband}</b> ${pAband > 1 ? 'preencheram' : 'preencheu'} mas não ${pAband > 1 ? 'enviaram' : 'enviou'}.`, tipo: 'warning', conf: 1 });
-      } else {
-        rt.push({ icon: '📋', text: `<b>${abriu}</b> visitante${abriu !== 1 ? 's' : ''} ${abriu > 1 ? 'abriram' : 'abriu'} o formulário. Aguardando envio.`, tipo: 'info', conf: 1 });
+      if (leadsAtual > 0) {
+        parts.push(`<b>${leadsAtual} lead${leadsAtual !== 1 ? 's' : ''}</b> captado${leadsAtual !== 1 ? 's' : ''} (${convAtual.toFixed(1)}% de conversão).`);
+        tipo = 'success';
+      } else if (abriu > 0) {
+        if (abandonou > 0) {
+          parts.push(`${abriu} ${abriu > 1 ? 'abriram' : 'abriu'} o formulário. ${abandonou} ${abandonou > 1 ? 'preencheram' : 'preencheu'} mas não ${abandonou > 1 ? 'enviaram' : 'enviou'}.`);
+          tipo = 'warning';
+        } else {
+          parts.push(`${abriu} ${abriu > 1 ? 'abriram' : 'abriu'} o formulário, aguardando envio.`);
+        }
+      }
+
+      if (sc100 > 0) {
+        parts.push(`${sc100} ${sc100 > 1 ? 'leram' : 'leu'} a página inteira.`);
+        if (tipo === 'neutral') tipo = 'success';
+      } else if (sc75 > 0) {
+        parts.push(`${sc75} ${sc75 > 1 ? 'chegaram' : 'chegou'} a 75% do conteúdo.`);
+      } else if (sc25 > 0) {
+        parts.push(`${sc25} ${sc25 > 1 ? 'passaram' : 'passou'} de 25% do conteúdo.`);
       }
     }
+    return _renderNarrative(parts, tipo);
+  }
 
-    if (sc100 > 0) {
-      rt.push({ icon: '✅', text: `<b>${sc100}</b> visitante${sc100 !== 1 ? 's' : ''} ${sc100 > 1 ? 'leram' : 'leu'} a página inteira hoje.`, tipo: 'success', conf: 1 });
-    } else if (sc75 > 0) {
-      rt.push({ icon: '🔥', text: `<b>${sc75}</b> visitante${sc75 !== 1 ? 's' : ''} ${sc75 > 1 ? 'chegaram' : 'chegou'} a 75% do conteúdo. Engajamento alto.`, tipo: 'success', conf: 1 });
-    } else if (sc25 > 0) {
-      rt.push({ icon: '👀', text: `<b>${sc25}</b> visitante${sc25 !== 1 ? 's' : ''} ${sc25 > 1 ? 'passaram' : 'passou'} do primeiro quarto da página.`, tipo: 'info', conf: 1 });
+  // PERÍODOS MAIORES — fatos primeiro, análise só com volume
+  if (usersAtual === 0) {
+    return _renderNarrative(['Nenhuma visita registrada no período.'], 'neutral');
+  }
+
+  if (rtUsers >= 3) parts.push(`<b>${rtUsers} pessoa${rtUsers > 1 ? 's' : ''}</b> no site agora.`);
+
+  const mediaDiaria = usersAtual / currentDays;
+  const temVolume   = usersAtual >= 30 && mediaDiaria >= 2;
+
+  // Frase 1: tráfego + leads (sempre)
+  if (leadsAtual > 0) {
+    parts.push(`<b>${usersAtual} visitante${usersAtual !== 1 ? 's' : ''}</b> e <b>${leadsAtual} lead${leadsAtual !== 1 ? 's' : ''}</b> em ${currentDays} dias (${convAtual.toFixed(1)}% de conversão).`);
+    tipo = convAtual >= 2 ? 'success' : 'neutral';
+  } else {
+    parts.push(`<b>${usersAtual} visitante${usersAtual !== 1 ? 's' : ''}</b> em ${currentDays} dias.`);
+    if (temVolume) {
+      parts.push('Nenhum lead gerado ainda.');
+      tipo = 'warning';
+    } else {
+      parts.push('Volume acumulando.');
     }
-
-    return _renderInsights(rt);
   }
 
-  // TENDÊNCIA DE TRÁFEGO (tempo pesado — precisa de ciclos semanais completos)
-  if (cTrend >= 0.08 && usersAnt > 0 && minTrend) {
-    const delta = Math.round((usersAtual - usersAnt) / usersAnt * 100);
-    const t = tom(cTrend), b = badge(cTrend);
-    if      (delta >= 20)  main.push({ icon: '📈', text: `${b}${t}Tráfego <b>cresceu ${delta}%</b> vs período anterior.${podaRec && delta >= 30 ? ' Campanhas gerando mais alcance.' : ''}`, tipo: 'success', conf: cTrend });
-    else if (delta >= 5)   main.push({ icon: '📊', text: `${b}${t}Tráfego <b>+${delta}%</b> vs período anterior.`, tipo: 'info', conf: cTrend });
-    else if (delta <= -20) main.push({ icon: '📉', text: `${b}${t}Tráfego <b>-${Math.abs(delta)}%</b> vs período anterior.${podaRec ? ' Verificar investimento e frequência dos anúncios.' : ''}`, tipo: podaRec ? 'warning' : 'info', conf: cTrend });
-    else if (delta <= -5)  main.push({ icon: '📉', text: `${b}${t}Tráfego <b>-${Math.abs(delta)}%</b> vs período anterior.`, tipo: 'info', conf: cTrend });
+  // Frase 2: observação mais relevante — só com volume suficiente
+  if (temVolume) {
+    if (bounce !== null && usersAtual >= 50) {
+      const bp = (bounce * 100).toFixed(0);
+      if (bounce > 0.88) {
+        parts.push(`Rejeição de <b>${bp}%</b>: o anúncio pode estar atraindo visitantes fora do perfil.`);
+        if (tipo === 'neutral') tipo = 'warning';
+      } else if (bounce < 0.5) {
+        parts.push(`Rejeição baixa (<b>${bp}%</b>): visitantes engajando bem com a página.`);
+        if (tipo === 'neutral') tipo = 'success';
+      }
+    } else if (duration !== null && usersAtual >= 35) {
+      const min = Math.floor(duration / 60), sec = Math.round(duration % 60);
+      const fmt = min > 0 ? `${min}m${String(sec).padStart(2,'0')}s` : `${sec}s`;
+      if (duration >= 90) {
+        parts.push(`Tempo médio <b>${fmt}</b>: visitantes lendo com atenção.`);
+        if (tipo === 'neutral') tipo = 'success';
+      } else if (duration < 30) {
+        parts.push(`Tempo médio <b>${fmt}</b>: pode haver desalinhamento entre anúncio e página.`);
+        if (tipo === 'neutral') tipo = 'warning';
+      }
+    }
   }
 
-  // QUALIDADE DO TRÁFEGO (visitantes x leads — só com confiança alta dos dois)
-  const cQual = Math.min(cConv, cTrend);
-  if (cQual >= 0.4 && usersAnt > 0 && leadsAnt > 0 && minConv && minTrend) {
-    const dU = (usersAtual - usersAnt) / usersAnt;
-    const dL = (leadsAtual - leadsAnt) / leadsAnt;
-    if      (dU > 0.1 && dL < -0.1) main.push({ icon: '💡', text: `Tráfego subiu mas leads caíram. Público pode estar <b>menos qualificado.</b>${podaRec ? ' Revisar segmentação e criativos.' : ''}`, tipo: 'warning', conf: cQual });
-    else if (dU < -0.1 && dL > 0.1) main.push({ icon: '🎯', text: `Menos visitas, <b>mais leads.</b> Tráfego mais qualificado que o período anterior.`, tipo: 'success', conf: cQual });
-  }
-
-  // CONVERSÃO B2B — benchmarks para indústria vendendo para farmácias, supermercados e cosméticos
-  // Excelente >= 2% | Saudável 0.5–2% | Abaixo < 0.3% | Crítico com zero leads
-  if (cConv >= 0.08 && minConv) {
-    const t = tom(cConv), b = badge(cConv);
-    if      (convAtual >= 2)   main.push({ icon: '🎯', text: `${b}${t}Conversão <b>excelente: ${convAtual.toFixed(1)}%.</b> Acima de 2% é referência para B2B em tráfego pago.`, tipo: 'success', conf: cConv });
-    else if (convAtual >= 0.5) main.push({ icon: '🎯', text: `${b}${t}Conversão <b>dentro do esperado: ${convAtual.toFixed(1)}%.</b> Faixa normal para B2B com tráfego pago.`, tipo: 'info', conf: cConv });
-    else if (convAtual >= 0.2) main.push({ icon: '⚠️', text: `${b}${t}Conversão <b>abaixo da média: ${convAtual.toFixed(1)}%.${podaRec ? '</b> Revisar CTA e proposta de valor da landing page.' : '</b>'}`, tipo: 'warning', conf: cConv });
-    else if (convAtual > 0)    main.push({ icon: '🚨', text: `${b}${t}Conversão <b>muito baixa: ${convAtual.toFixed(1)}%.${podaRec ? '</b> Revisar alinhamento entre anúncio, página e público-alvo.' : '</b>'}`, tipo: cConv >= 0.5 ? 'danger' : 'warning', conf: cConv });
-    else                       main.push({ icon: '⚠️', text: `${b}${t}Nenhum lead gerado ${labelPeriodo}.${podaRec ? ' Revisar CTA e oferta da página.' : ''}`, tipo: 'warning', conf: cConv });
-  }
-
-  // FUNIL DO FORMULÁRIO (score baseado em aberturas × tempo)
-  if (cFunil >= 0.08 && abriu > 0 && minFunil) {
-    const abandonou = events['Abandonou_Formulario'] || 0;
-    const pulou     = events['Pular_Formulario']     || 0;
-    const pctEnvio  = Math.round(leadsAtual / abriu * 100);
-    const pctAband  = Math.round(abandonou  / abriu * 100);
-    const pctPulou  = Math.round(pulou      / abriu * 100);
-    const t = tom(cFunil), b = badge(cFunil);
-
-    if (pctEnvio >= 20) main.push({ icon: '✅', text: `${b}${t}Funil eficiente: <b>${pctEnvio}% dos que abriram o formulário enviaram.</b>${cFunil >= 0.4 ? ' Boa convicção no momento de conversão.' : ''}`, tipo: 'success', conf: cFunil });
-    if (pctAband >= 30) main.push({ icon: '⚠️', text: `${b}${t}<b>${pctAband}% preencheram mas não enviaram.</b>${cFunil >= 0.65 && podaRec ? ' Possível fricção: campos, confiança ou CTA do botão.' : ''}`, tipo: 'warning', conf: cFunil });
-    if (pctPulou >= 55 && pctEnvio < 15) main.push({ icon: '💡', text: `${b}${t}<b>${pctPulou}% fecharam o formulário sem preencher.</b>${cFunil >= 0.65 && podaRec ? ' Testar abordagem mais suave ou oferta de entrada.' : ''}`, tipo: cFunil >= 0.4 ? 'warning' : 'info', conf: cFunil });
-  }
-
-  // SCROLL DEPTH (score baseado em eventos sc25 × tempo)
-  if (cScrl >= 0.08 && sc25 > 0 && minScroll) {
-    const sc50  = events['ScrollDepth_50']  || 0;
-    const sc100 = events['ScrollDepth_100'] || 0;
-    const pctMeio = Math.round(sc50  / sc25 * 100);
-    const pctFim  = Math.round(sc100 / sc25 * 100);
-    const t = tom(cScrl), b = badge(cScrl);
-
-    if      (pctFim >= 25) main.push({ icon: '📖', text: `${b}${t}<b>${pctFim}% chegaram ao fim da página.</b> Ótima retenção de conteúdo.`, tipo: 'success', conf: cScrl });
-    else if (pctFim < 10 && cScrl >= 0.25) main.push({ icon: '💡', text: `${b}${t}<b>${pctFim}% chegaram ao fim</b> (${pctMeio}% até a metade).${podaRec ? ' Queda de atenção no meio do conteúdo.' : ''}`, tipo: 'warning', conf: cScrl });
-  }
-
-  // REJEIÇÃO B2B — faixa normal para tráfego pago: 60-85%
-  // Mínimo 50 usuários: bounce é a métrica mais ruidosa, conclusões prematuras são enganosas
-  if (cRej >= 0.08 && bounce !== null && minBounce) {
-    const bp = bounce * 100;
-    const t = tom(cRej), b = badge(cRej);
-    if      (bp < 50)  main.push({ icon: '✅', text: `${b}${t}Rejeição <b>baixa (${bp.toFixed(0)}%).</b> Visitantes estão engajando bem com a página.`, tipo: 'success', conf: cRej });
-    else if (bp > 88)  main.push({ icon: '🚨', text: `${b}${t}Rejeição <b>elevada (${bp.toFixed(0)}%).${podaRec ? '</b> Revisar alinhamento entre anúncio, público e página.' : '</b>'}`, tipo: cRej >= 0.5 ? 'danger' : 'warning', conf: cRej });
-    // Entre 50–88%: faixa normal para B2B com tráfego pago, sem alerta
-  }
-
-  // TEMPO MÉDIO — B2B exige mais leitura: 120s+ excelente, < 30s possível desalinhamento
-  // Mínimo 35 usuários para conclusão confiável
-  if (cTempo >= 0.08 && duration !== null && minDuration) {
-    const m = Math.floor(duration / 60), s = Math.round(duration % 60);
-    const fmt = `${m}m${String(s).padStart(2,'0')}s`;
-    const t = tom(cTempo), b = badge(cTempo);
-    if      (duration >= 120) main.push({ icon: '⏱️', text: `${b}${t}Tempo médio <b>excelente (${fmt}).</b> Visitantes leem o conteúdo com atenção.`, tipo: 'success', conf: cTempo });
-    else if (duration >= 60)  main.push({ icon: '⏱️', text: `${b}${t}Tempo médio <b>bom (${fmt}).</b> Engajamento dentro do esperado para B2B.`, tipo: 'info', conf: cTempo });
-    else if (duration < 30)   main.push({ icon: '⏱️', text: `${b}${t}Tempo médio <b>baixo (${fmt}).${podaRec ? '</b> Possível desalinhamento entre criativo do anúncio e página.' : '</b>'}`, tipo: cTempo >= 0.4 ? 'warning' : 'info', conf: cTempo });
-  }
-
-  // Ordena: danger > warning > success > info, depois pelo score de confiança
-  const prio = { danger: 4, warning: 3, success: 2, info: 1 };
-  main.sort((a, b) => (prio[b.tipo] - prio[a.tipo]) || (b.conf - a.conf));
-
-  const todos = [...rt, ...main];
-  if (todos.length <= rt.length) {
-    const dica = currentDays < 90 ? ` Amplie o período para análises mais ricas.` : '';
-    todos.push({ icon: '✅', text: `Tudo dentro do esperado ${labelPeriodo}.${dica}`, tipo: 'info', conf: 1 });
-  }
-
-  _renderInsights(todos);
+  _renderNarrative(parts, tipo);
 }
 
-function _renderInsights(insights) {
-  const CORES = { success:'#16a34a', warning:'#b45309', danger:'#dc2626', info:'#5b50d6' };
-  const BG    = { success:'rgba(22,163,74,.04)', warning:'rgba(180,83,9,.04)', danger:'rgba(220,38,38,.04)', info:'rgba(91,80,214,.04)' };
-  const LABEL = { success:'Positivo', warning:'Atenção', danger:'Crítico', info:'Análise' };
+function _renderNarrative(parts, tipo) {
+  const BORDER = { success: '#22c35d', warning: '#f59e0b', neutral: 'var(--border)' };
+  const BG     = { success: 'rgba(34,195,93,.05)', warning: 'rgba(245,158,11,.06)', neutral: 'transparent' };
 
-  document.getElementById('insights-list').innerHTML = insights.slice(0, 5).map(i => `
-    <div style="border-radius:10px;overflow:hidden;border:1px solid rgba(0,0,0,.07);">
-      <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 15px;background:${BG[i.tipo]};border-left:3px solid ${CORES[i.tipo]};">
-        <span style="font-size:15px;line-height:1.3;flex-shrink:0;margin-top:3px;opacity:.85">${i.icon}</span>
-        <div style="flex:1;min-width:0;">
-          <span style="font-size:9px;font-weight:800;letter-spacing:.9px;text-transform:uppercase;color:${CORES[i.tipo]};display:block;margin-bottom:4px">${LABEL[i.tipo]}</span>
-          <span style="font-size:13px;color:#221B32;line-height:1.55;font-family:Montserrat,sans-serif">${i.text}</span>
-        </div>
-      </div>
-    </div>`).join('');
+  document.getElementById('insights-narrative').innerHTML = `
+    <div style="border-left:3px solid ${BORDER[tipo] || BORDER.neutral};background:${BG[tipo] || BG.neutral};padding:13px 16px;border-radius:0 8px 8px 0;">
+      <p style="font-size:13px;line-height:1.7;color:var(--text);font-family:var(--font);margin:0;">${parts.join(' ')}</p>
+    </div>`;
 
   const stamp = document.getElementById('insights-stamp');
   stamp.textContent  = 'atualizada às ' + new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
