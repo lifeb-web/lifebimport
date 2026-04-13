@@ -188,6 +188,35 @@
       gap: 6px;
     }
 
+    /* Mobile: scroll horizontal com fade na borda direita */
+    @media (max-width: 639px) {
+      .range-btns-wrap {
+        position: relative;
+        width: 100%;
+      }
+      .range-btns-wrap::after {
+        content: '';
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 40px;
+        background: linear-gradient(to right, transparent, #f0eef8);
+        pointer-events: none;
+        border-radius: 0 6px 6px 0;
+      }
+      .range-btns {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        flex-wrap: nowrap;
+        padding-bottom: 2px;
+        padding-right: 32px;
+      }
+      .range-btns::-webkit-scrollbar { display: none; }
+      .rbtn { white-space: nowrap; flex-shrink: 0; }
+    }
+
     .rbtn {
       background: var(--card);
       border: 1px solid var(--border);
@@ -503,8 +532,7 @@
       header { padding: 0 16px; height: 56px; }
       #dashboard { padding: 16px 16px 24px; }
       .ctrl-bar { flex-direction: column; align-items: flex-start; gap: 10px; }
-      .range-btns { width: 100%; display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; }
-      .rbtn { text-align: center; padding: 9px 6px; min-height: 38px; }
+      .rbtn { padding: 9px 12px; min-height: 38px; }
       .card { padding: 16px 14px; }
       .card-rt { grid-column: span 2; padding: 16px 12px; }
       .rt-num { font-size: 40px; }
@@ -549,11 +577,18 @@
 
   <div class="ctrl-bar">
     <div class="ctrl-title">Visão Geral | <span id="days-label">hoje</span></div>
-    <div class="range-btns">
-      <button class="rbtn active" onclick="setRange(1,this)">Hoje</button>
-      <button class="rbtn" onclick="setRange(7,this)">7 dias</button>
-      <button class="rbtn" onclick="setRange(30,this)">30 dias</button>
-      <button class="rbtn" onclick="setRange(90,this)">90 dias</button>
+    <div class="range-btns-wrap">
+      <div class="range-btns">
+        <button class="rbtn active" onclick="setRange('hoje',this)">Hoje</button>
+        <button class="rbtn" onclick="setRange('ontem',this)">Ontem</button>
+        <button class="rbtn" onclick="setRange(7,this)">7 dias</button>
+        <button class="rbtn" onclick="setRange(14,this)">14 dias</button>
+        <button class="rbtn" onclick="setRange(30,this)">30 dias</button>
+        <button class="rbtn" onclick="setRange('mes',this)">Esse mês</button>
+        <button class="rbtn" onclick="setRange('mespassado',this)">Mês passado</button>
+        <button class="rbtn" onclick="setRange(60,this)">60 dias</button>
+        <button class="rbtn" onclick="setRange(90,this)">90 dias</button>
+      </div>
     </div>
   </div>
 
@@ -801,6 +836,7 @@ function traduzOrigem(s) {
 }
 
 let currentDays   = 1;
+let currentPeriod = resolvePeriod('hoje');
 let chart         = null;
 let realtimeTimer = null;
 let refreshTimer  = null;
@@ -823,13 +859,39 @@ window.addEventListener('load', () => {
 });
 
 // CONTROLES DE DATA
-function setRange(days, btn) {
-  currentDays = days;
+// Converte string de período em {startDate, endDate, days, label}
+function resolvePeriod(range) {
+  const today = new Date();
+  const fmt = d => d.toISOString().slice(0,10);
+  if (range === 'hoje') {
+    return { startDate: fmt(today), endDate: fmt(today), days: 1, label: 'hoje' };
+  }
+  if (range === 'ontem') {
+    const d = new Date(today); d.setDate(d.getDate() - 1);
+    return { startDate: fmt(d), endDate: fmt(d), days: null, label: 'ontem' };
+  }
+  if (range === 'mes') {
+    const start = new Date(today.getFullYear(), today.getMonth(), 1);
+    const daysIntoMonth = today.getDate();
+    return { startDate: fmt(start), endDate: fmt(today), days: daysIntoMonth, label: 'esse mês' };
+  }
+  if (range === 'mespassado') {
+    const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const end   = new Date(today.getFullYear(), today.getMonth(), 0);
+    return { startDate: fmt(start), endDate: fmt(end), days: null, label: 'mês passado' };
+  }
+  // numérico
+  const d = new Date(today); d.setDate(d.getDate() - range + 1);
+  return { startDate: fmt(d), endDate: fmt(today), days: range, label: range + ' dias' };
+}
+
+function setRange(range, btn) {
+  currentPeriod = resolvePeriod(range);
+  currentDays = currentPeriod.days || 30; // fallback para comparativos
   document.querySelectorAll('.rbtn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  const label = days === 1 ? 'hoje' : days + ' dias';
-  document.getElementById('days-label').textContent = label;
-  document.getElementById('chart-badge').textContent = label;
+  document.getElementById('days-label').textContent = currentPeriod.label;
+  document.getElementById('chart-badge').textContent = currentPeriod.label;
   loadAll();
 }
 
@@ -873,12 +935,14 @@ async function loadAll() {
   _skeletonOn();
 
   // Pré-busca events e leads UMA vez (catches individuais para não bloquear se um falhar)
+  // Para períodos com datas explícitas (Ontem, Mês passado), usa currentPeriod; senão usa days
+  const hasExplicitDates = !currentPeriod.days;
   const [evAtual, evDuplo, pLeads, sLeads, cLeads] = await Promise.all([
-    proxy('events', currentDays).catch(() => null),
-    proxy('events', currentDays * 2).catch(() => null),
-    proxy('leads', currentDays, 'pagePath').catch(() => null),
-    proxy('leads', currentDays, 'sessionSourceMedium').catch(() => null),
-    proxy('leads', currentDays, 'region,city').catch(() => null),
+    proxy('events').catch(() => null),
+    hasExplicitDates ? Promise.resolve(null) : proxy('events', currentDays * 2).catch(() => null),
+    proxy('leads', undefined, 'pagePath').catch(() => null),
+    proxy('leads', undefined, 'sessionSourceMedium').catch(() => null),
+    proxy('leads', undefined, 'region,city').catch(() => null),
   ]);
 
   // Se uma versão mais nova já começou, descarta silenciosamente
@@ -900,8 +964,14 @@ async function loadAll() {
 
 // API HELPERS — fetch com CORS (Apps Script retorna access-control-allow-origin: *)
 async function proxy(action, days, dim) {
-  const d = days !== undefined ? days : currentDays;
-  let url = `${PROXY_URL}?action=${action}&days=${d}`;
+  let url;
+  // Se period tem datas explícitas e days não foi passado manualmente, usa startDate/endDate
+  if (days === undefined && currentPeriod && currentPeriod.startDate) {
+    url = `${PROXY_URL}?action=${action}&startDate=${currentPeriod.startDate}&endDate=${currentPeriod.endDate}`;
+  } else {
+    const d = days !== undefined ? days : currentDays;
+    url = `${PROXY_URL}?action=${action}&days=${d}`;
+  }
   if (dim) url += `&dim=${encodeURIComponent(dim)}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -929,9 +999,10 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo) {
   const deltaIds = ['delta-users', 'delta-sessions', 'delta-conv', 'delta-leads'];
 
   try {
+    const hasExplicit = !currentPeriod.days;
     const [dAtual, dDuplo] = await Promise.all([
-      proxy('summary', currentDays),
-      proxy('summary', currentDays * 2),
+      proxy('summary'),
+      hasExplicit ? Promise.resolve(null) : proxy('summary', currentDays * 2),
     ]);
 
     const vAtual  = dAtual.rows?.[0]?.metricValues  ?? [];
