@@ -966,12 +966,15 @@ async function loadAll() {
 // API HELPERS — fetch com CORS (Apps Script retorna access-control-allow-origin: *)
 async function proxy(action, days, dim) {
   let url;
-  // Se period tem datas explícitas e days não foi passado manualmente, usa startDate/endDate
-  if (days === undefined && currentPeriod && currentPeriod.startDate) {
+  if (days !== undefined) {
+    // Chamada com days explícito (ex: período duplo para comparativo)
+    url = `${PROXY_URL}?action=${action}&days=${days}`;
+  } else if (!currentPeriod.days) {
+    // Período sem days (Ontem, Mês passado) — usa startDate/endDate
     url = `${PROXY_URL}?action=${action}&startDate=${currentPeriod.startDate}&endDate=${currentPeriod.endDate}`;
   } else {
-    const d = days !== undefined ? days : currentDays;
-    url = `${PROXY_URL}?action=${action}&days=${d}`;
+    // Período numérico (Hoje, 7, 14, 30, 60, 90 dias, Esse mês) — usa days
+    url = `${PROXY_URL}?action=${action}&days=${currentPeriod.days}`;
   }
   if (dim) url += `&dim=${encodeURIComponent(dim)}`;
   const res = await fetch(url);
