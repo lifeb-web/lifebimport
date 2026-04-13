@@ -592,6 +592,9 @@
       </div>
     </div>
   </div>
+  <div id="hoje-aviso" style="font-size:11px;color:var(--muted);text-align:right;margin-top:4px;margin-bottom:-6px;display:none;">
+    Dados de hoje podem ter atraso de processamento no GA4.
+  </div>
 
   <!-- TOP CARDS — linha principal -->
   <div class="cards-row">
@@ -632,7 +635,7 @@
     <div class="card card-metric accent-red">
       <div class="m-label">Taxa de Rejeição</div>
       <div class="m-val" id="stat-bounce" style="color:var(--red)">—</div>
-      <div class="m-sub">visitantes que saíram sem interagir</div>
+      <div class="m-sub">sessões sem engajamento · métrica auxiliar</div>
     </div>
 
     <div class="card card-metric accent-blue">
@@ -853,6 +856,7 @@ let loadVersion   = 0; // controle de race condition
 })();
 
 window.addEventListener('load', () => {
+  document.getElementById('hoje-aviso').style.display = 'block'; // padrão inicial é "Hoje"
   loadAll();
   fetchRealtime();
   realtimeTimer = setInterval(fetchRealtime, 60_000);
@@ -899,6 +903,7 @@ function setRange(range, btn) {
   btn.classList.add('active');
   document.getElementById('days-label').textContent = currentPeriod.label;
   document.getElementById('chart-badge').textContent = currentPeriod.label;
+  document.getElementById('hoje-aviso').style.display = (range === 'hoje') ? 'block' : 'none';
   loadAll();
 }
 
