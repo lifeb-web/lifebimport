@@ -1029,7 +1029,9 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo, snap, snapDays) {
     const vDuplo  = dDuplo?.rows?.[0]?.metricValues  ?? [];
 
     // Leads = evento Lead_Formulario (usa dados pré-buscados pelo loadAll)
-    const leadsAtual = +(dEvAtual?.rows?.find(r => r.dimensionValues[0].value === 'Lead_Formulario')?.metricValues[0]?.value ?? 0);
+    // Se evAtual veio null (falha no pre-fetch), re-busca para garantir conversão correta
+    const evAtualFinal = dEvAtual ?? await proxy('events', undefined, undefined, snap).catch(() => null);
+    const leadsAtual = +(evAtualFinal?.rows?.find(r => r.dimensionValues[0].value === 'Lead_Formulario')?.metricValues[0]?.value ?? 0);
     const leadsDuplo = +(dEvDuplo?.rows?.find(r => r.dimensionValues[0].value === 'Lead_Formulario')?.metricValues[0]?.value ?? 0);
 
     // Taxa de conversão atual e período anterior
