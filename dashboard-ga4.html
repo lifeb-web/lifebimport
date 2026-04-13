@@ -863,7 +863,13 @@ window.addEventListener('load', () => {
 // Converte string de período em {startDate, endDate, days, label}
 function resolvePeriod(range) {
   const today = new Date();
-  const fmt = d => d.toISOString().slice(0,10);
+  // Usa data local (não UTC) para evitar deslocamento de dia após 21h no Brasil (UTC-3)
+  const fmt = d => {
+    const y  = d.getFullYear();
+    const m  = String(d.getMonth() + 1).padStart(2, '0');
+    const dy = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${dy}`;
+  };
   if (range === 'hoje') {
     return { startDate: fmt(today), endDate: fmt(today), days: 1, label: 'hoje' };
   }
