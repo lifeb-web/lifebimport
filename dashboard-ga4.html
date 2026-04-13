@@ -932,30 +932,34 @@ function _skeletonOff() {
 
 async function loadAll() {
   const myVersion = ++loadVersion;
+  // Snapshot do período no início — garante que todo o carregamento usa o mesmo filtro
+  // mesmo que o usuário troque o filtro enquanto as requisições estão em andamento
+  const snap     = Object.freeze({ ...currentPeriod });
+  const snapDays = currentDays;
   _loadingStart();
   _skeletonOn();
 
   // Pré-busca events e leads UMA vez (catches individuais para não bloquear se um falhar)
-  // Para períodos com datas explícitas (Ontem, Mês passado), usa currentPeriod; senão usa days
-  const hasExplicitDates = !currentPeriod.days;
+  // Usa snap para garantir período consistente em todas as chamadas
+  const hasExplicitDates = !snap.days;
   const [evAtual, evDuplo, pLeads, sLeads, cLeads] = await Promise.all([
-    proxy('events').catch(() => null),
-    hasExplicitDates ? Promise.resolve(null) : proxy('events', currentDays * 2).catch(() => null),
-    proxy('leads', undefined, 'pagePath').catch(() => null),
-    proxy('leads', undefined, 'sessionSourceMedium').catch(() => null),
-    proxy('leads', undefined, 'region,city').catch(() => null),
+    proxy('events', undefined, undefined, snap).catch(() => null),
+    hasExplicitDates ? Promise.resolve(null) : proxy('events', snapDays * 2, undefined, snap).catch(() => null),
+    proxy('leads', undefined, 'pagePath', snap).catch(() => null),
+    proxy('leads', undefined, 'sessionSourceMedium', snap).catch(() => null),
+    proxy('leads', undefined, 'region,city', snap).catch(() => null),
   ]);
 
   // Se uma versão mais nova já começou, descarta silenciosamente
   if (myVersion !== loadVersion) return;
 
   await Promise.allSettled([
-    loadSummaryWithCompare(evAtual, evDuplo),
-    loadChart(),
+    loadSummaryWithCompare(evAtual, evDuplo, snap, snapDays),
+    loadChart(snap, snapDays),
     loadPages(pLeads),
     loadCities(cLeads),
     loadSources(sLeads),
-    loadEvents(evAtual),
+    loadEvents(evAtual, snap),
   ]);
 
   _loadingEnd();
@@ -964,17 +968,19 @@ async function loadAll() {
 }
 
 // API HELPERS — fetch com CORS (Apps Script retorna access-control-allow-origin: *)
-async function proxy(action, days, dim) {
+// snap: snapshot do período capturado no início do loadAll — evita mistura de dados entre filtros
+async function proxy(action, days, dim, snap) {
+  const p = snap || currentPeriod;
   let url;
   if (days !== undefined) {
     // Chamada com days explícito (ex: período duplo para comparativo)
     url = `${PROXY_URL}?action=${action}&days=${days}`;
-  } else if (!currentPeriod.days) {
+  } else if (!p.days) {
     // Período sem days (Ontem, Mês passado) — usa startDate/endDate
-    url = `${PROXY_URL}?action=${action}&startDate=${currentPeriod.startDate}&endDate=${currentPeriod.endDate}`;
+    url = `${PROXY_URL}?action=${action}&startDate=${p.startDate}&endDate=${p.endDate}`;
   } else {
     // Período numérico (Hoje, 7, 14, 30, 60, 90 dias, Esse mês) — usa days
-    url = `${PROXY_URL}?action=${action}&days=${currentPeriod.days}`;
+    url = `${PROXY_URL}?action=${action}&days=${p.days}`;
   }
   if (dim) url += `&dim=${encodeURIComponent(dim)}`;
   const res = await fetch(url);
@@ -999,14 +1005,14 @@ async function fetchRealtime() {
 // Estratégia: 2 fetches paralelos — período atual (days) e período duplo (days*2).
 // Período anterior = dados do dobro MENOS dados do período atual.
 // Ex: 14 dias = 50 visitantes, 7 dias = 30 → anterior = 20, delta = +50%
-async function loadSummaryWithCompare(dEvAtual, dEvDuplo) {
+async function loadSummaryWithCompare(dEvAtual, dEvDuplo, snap, snapDays) {
   const deltaIds = ['delta-users', 'delta-sessions', 'delta-conv', 'delta-leads'];
 
   try {
-    const hasExplicit = !currentPeriod.days;
+    const hasExplicit = !snap.days;
     const [dAtual, dDuplo] = await Promise.all([
-      proxy('summary'),
-      hasExplicit ? Promise.resolve(null) : proxy('summary', currentDays * 2),
+      proxy('summary', undefined, undefined, snap),
+      hasExplicit ? Promise.resolve(null) : proxy('summary', snapDays * 2),
     ]);
 
     const vAtual  = dAtual?.rows?.[0]?.metricValues  ?? [];
@@ -1051,7 +1057,7 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo) {
     deltaIds.forEach((id, i) => {
       const el = document.getElementById(id);
       // Hoje: comparação intradiária não tem sentido — esconde sempre
-      if (currentDays === 1) {
+      if (snapDays === 1) {
         el.textContent   = '';
         el.className     = 'delta-neu';
         el.style.display = 'none';
@@ -1113,13 +1119,13 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo) {
 // GRÁFICO — barras + linha de tendência
 const DIAS_SEMANA = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 
-async function loadChart() {
+async function loadChart(snap, snapDays) {
   const wrap = document.getElementById('visitors-chart')?.parentElement
             ?? document.querySelector('.chart-wrap');
   try {
     wrap.parentElement.querySelectorAll('.chart-aviso').forEach(el => el.remove());
 
-    const d    = await proxy('chart');
+    const d    = await proxy('chart', undefined, undefined, snap);
     const rows = d.rows ?? [];
 
     if (rows.length === 0) {
@@ -1136,7 +1142,7 @@ async function loadChart() {
       wrap.innerHTML = '<canvas id="visitors-chart"></canvas>';
     }
 
-    if (currentDays === 1) {
+    if (snapDays === 1) {
       // Detecta se o proxy retornou dados por hora (novo) ou por data (proxy antigo não atualizado)
       // Hora: valor "0"–"23" (len <= 2). Data: "20240412" (len = 8)
       const primeiroValor = rows[0]?.dimensionValues[0]?.value ?? '';
@@ -1351,10 +1357,10 @@ async function loadSources(leadsData) {
 }
 
 // TABELA — EVENTOS / LEADS com barra de progresso
-async function loadEvents(d) {
+async function loadEvents(d, snap) {
   const tb = document.getElementById('tb-events');
   try {
-    if (!d) d = await proxy('events'); // fallback se chamado sem dados
+    if (!d) d = await proxy('events', undefined, undefined, snap); // fallback se chamado sem dados
     let leadCount = 0;
 
     // Coleta dados para calcular máximo (barra de progresso relativa)
