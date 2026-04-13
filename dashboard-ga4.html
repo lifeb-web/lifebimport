@@ -1268,9 +1268,10 @@ async function loadEvents(d) {
     const counts  = rowsData.map(r => r.count);
     const maxCount = counts.length > 0 ? Math.max(...counts) : 1;
 
-    const rowsHtml = rowsData.map(({ name, count }) => {
+    const rowsHtml = rowsData.flatMap(({ name, count }) => {
+      if (!EVENTOS_META[name]) return []; // ignora eventos fora do mapa
       if (name === 'Lead_Formulario') leadCount = count;
-      const meta = EVENTOS_META[name] ?? { icon: '⚡', nome: name, desc: '' };
+      const meta = EVENTOS_META[name];
       const pct  = maxCount > 0 ? Math.round(count / maxCount * 100) : 0;
       return `<tr>
         <td>
