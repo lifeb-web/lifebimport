@@ -567,6 +567,7 @@
     <div id="last-updated">
       <span id="refresh-dot"></span>
       <span id="clock-live">--:--:--</span>
+      <span id="last-refresh" style="font-size:11px;font-weight:500;color:var(--muted);margin-left:4px"></span>
     </div>
   </div>
 </header>
@@ -750,8 +751,8 @@
 <!-- FOOTER -->
 <footer>
   <strong>Life B</strong> | Painel de Resultados &nbsp;·&nbsp;
-  Atualiza a cada 1 minuto &nbsp;·&nbsp;
-  Dados: Google Analytics 4 &nbsp;·&nbsp;
+  Visitantes ao vivo: 1 min &nbsp;·&nbsp; Dados: 5 min &nbsp;·&nbsp;
+  Google Analytics 4 &nbsp;·&nbsp;
   projetojlbv.com.br
 </footer>
 
@@ -1442,8 +1443,14 @@ function stamp() {
   const dot = document.getElementById('refresh-dot');
   if (dot) {
     dot.classList.remove('flash');
-    void dot.offsetWidth; // força reflow para reiniciar animação
+    void dot.offsetWidth;
     dot.classList.add('flash');
+  }
+  // Mostra hora da última atualização
+  const el = document.getElementById('last-refresh');
+  if (el) {
+    const h = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    el.textContent = `· atualizado ${h}`;
   }
 }
 </script>
