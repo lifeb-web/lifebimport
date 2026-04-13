@@ -655,7 +655,7 @@
             <th title="Endereço da página visitada">Página</th>
             <th title="Pessoas únicas que acessaram essa página">Visitantes</th>
             <th class="mh" title="Total de visitas (uma mesma pessoa pode entrar várias vezes)">Visitas</th>
-            <th class="mh" title="Quantidade de vezes que a página foi carregada na tela">Visualizações</th>
+            <th title="Leads gerados nessa página">Leads</th>
           </tr></thead>
           <tbody id="tb-pages">
             <tr class="empty-row"><td colspan="4">Carregando...</td></tr>
@@ -674,7 +674,7 @@
           <thead><tr>
             <th title="De onde veio o visitante (ex: Facebook Ads, Google, link direto)">De onde veio</th>
             <th title="Pessoas únicas que vieram dessa origem">Visitantes</th>
-            <th class="mh" title="Total de vezes que acessaram vindo dessa origem">Visitas</th>
+            <th title="Leads gerados por essa origem">Leads</th>
           </tr></thead>
           <tbody id="tb-sources">
             <tr class="empty-row"><td colspan="3">Carregando...</td></tr>
@@ -688,20 +688,22 @@
       <div class="card-hd">
         <div class="card-hd-title">Estado / Cidade</div>
       </div>
-      <div class="table-scroll">
+      <div class="table-scroll" style="overflow-x:auto">
         <table>
           <colgroup>
-            <col style="width:38%">
-            <col style="width:42%">
-            <col style="width:20%">
+            <col style="width:28%">
+            <col style="width:40%">
+            <col style="width:16%">
+            <col style="width:16%">
           </colgroup>
           <thead><tr>
             <th>Estado</th>
             <th style="text-align:left">Cidade</th>
             <th title="Pessoas únicas dessa localidade">Visitantes</th>
+            <th title="Leads gerados nessa localidade">Leads</th>
           </tr></thead>
           <tbody id="tb-cities">
-            <tr class="empty-row"><td colspan="3">Carregando...</td></tr>
+            <tr class="empty-row"><td colspan="4">Carregando...</td></tr>
           </tbody>
         </table>
       </div>
@@ -870,10 +872,13 @@ async function loadAll() {
   _loadingStart();
   _skeletonOn();
 
-  // Pré-busca events UMA vez (catches individuais para não bloquear se um falhar)
-  const [evAtual, evDuplo] = await Promise.all([
+  // Pré-busca events e leads UMA vez (catches individuais para não bloquear se um falhar)
+  const [evAtual, evDuplo, pLeads, sLeads, cLeads] = await Promise.all([
     proxy('events', currentDays).catch(() => null),
     proxy('events', currentDays * 2).catch(() => null),
+    proxy('leads', currentDays, 'pagePath').catch(() => null),
+    proxy('leads', currentDays, 'sessionSourceMedium').catch(() => null),
+    proxy('leads', currentDays, 'region,city').catch(() => null),
   ]);
 
   // Se uma versão mais nova já começou, descarta silenciosamente
@@ -882,9 +887,9 @@ async function loadAll() {
   await Promise.allSettled([
     loadSummaryWithCompare(evAtual, evDuplo),
     loadChart(),
-    loadPages(),
-    loadCities(),
-    loadSources(),
+    loadPages(pLeads),
+    loadCities(cLeads),
+    loadSources(sLeads),
     loadEvents(evAtual),
   ]);
 
@@ -894,9 +899,10 @@ async function loadAll() {
 }
 
 // API HELPERS — fetch com CORS (Apps Script retorna access-control-allow-origin: *)
-async function proxy(action, days) {
+async function proxy(action, days, dim) {
   const d = days !== undefined ? days : currentDays;
-  const url = `${PROXY_URL}?action=${action}&days=${d}`;
+  let url = `${PROXY_URL}?action=${action}&days=${d}`;
+  if (dim) url += `&dim=${encodeURIComponent(dim)}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('HTTP ' + res.status);
   const data = await res.json();
@@ -1194,15 +1200,25 @@ async function loadChart() {
   finally { document.querySelector('.chart-wrap')?.classList.remove('chart-loading'); }
 }
 
+// Monta mapa dimensão → contagem de leads a partir do retorno do proxy('leads')
+function buildLeadsMap(d, keyFn) {
+  const map = new Map();
+  if (!d || !d.rows) return map;
+  for (const r of d.rows) map.set(keyFn(r), +r.metricValues[0].value);
+  return map;
+}
+
 // TABELA — POR PÁGINA
-async function loadPages() {
+async function loadPages(leadsData) {
   const tb = document.getElementById('tb-pages');
   try {
+    const leadsMap = buildLeadsMap(leadsData, r => r.dimensionValues[0].value);
     const d = await proxy('pages');
     tb.innerHTML = (d.rows ?? []).map(r => {
       const path = r.dimensionValues[0].value;
-      const [u, s, v] = r.metricValues.map(x => x.value);
+      const [u, s] = r.metricValues.map(x => x.value);
       const legenda = PAGINAS_LEGENDAS[path] || '';
+      const leads = leadsMap.get(path) || 0;
       return `<tr>
         <td class="td-url" title="${esc(path)}" style="overflow:visible;white-space:normal;">
           <span class="pg-legenda">${esc(legenda) || esc(path)}</span>
@@ -1210,43 +1226,50 @@ async function loadPages() {
         </td>
         <td class="num-p">${n(u)}</td>
         <td class="mh">${n(s)}</td>
-        <td class="mh">${n(v)}</td>
+        <td class="num-p">${leads > 0 ? n(leads) : '—'}</td>
       </tr>`;
     }).join('') || emptyRow(4);
   } catch { tb.innerHTML = errRow(4); }
 }
 
 // TABELA — CIDADE / ESTADO
-async function loadCities() {
+async function loadCities(leadsData) {
   const tb = document.getElementById('tb-cities');
   try {
+    const leadsMap = buildLeadsMap(leadsData, r => `${r.dimensionValues[0].value}||${r.dimensionValues[1].value}`);
     const d = await proxy('cities');
     tb.innerHTML = (d.rows ?? []).map(r => {
-      const region = traduzEstado(r.dimensionValues[0].value);
-      const cityRaw = r.dimensionValues[1].value;
-      const city    = (!cityRaw || cityRaw === '(not set)') ? 'Não identificada' : cityRaw;
-      const users  = r.metricValues[0].value;
+      const regionRaw = r.dimensionValues[0].value;
+      const cityRaw   = r.dimensionValues[1].value;
+      const region    = traduzEstado(regionRaw);
+      const city      = (!cityRaw || cityRaw === '(not set)') ? 'Não identificada' : cityRaw;
+      const users     = r.metricValues[0].value;
+      const leads     = leadsMap.get(`${regionRaw}||${cityRaw}`) || 0;
       return `<tr>
         <td>${esc(region)}</td>
         <td class="td-left">${esc(city)}</td>
         <td class="num-p">${n(users)}</td>
+        <td class="num-p">${leads > 0 ? n(leads) : '—'}</td>
       </tr>`;
-    }).join('') || emptyRow(3);
-  } catch { tb.innerHTML = errRow(3); }
+    }).join('') || emptyRow(4);
+  } catch { tb.innerHTML = errRow(4); }
 }
 
 // TABELA — ORIGEM DO TRÁFEGO
-async function loadSources() {
+async function loadSources(leadsData) {
   const tb = document.getElementById('tb-sources');
   try {
+    const leadsMap = buildLeadsMap(leadsData, r => r.dimensionValues[0].value);
     const d = await proxy('sources');
     tb.innerHTML = (d.rows ?? []).map(r => {
-      const src = traduzOrigem(r.dimensionValues[0].value);
-      const [u, s] = r.metricValues.map(x => x.value);
+      const srcRaw = r.dimensionValues[0].value;
+      const src    = traduzOrigem(srcRaw);
+      const [u]    = r.metricValues.map(x => x.value);
+      const leads  = leadsMap.get(srcRaw) || 0;
       return `<tr>
         <td>${esc(src)}</td>
         <td class="num-p">${n(u)}</td>
-        <td class="mh">${n(s)}</td>
+        <td class="num-p">${leads > 0 ? n(leads) : '—'}</td>
       </tr>`;
     }).join('') || emptyRow(3);
   } catch { tb.innerHTML = errRow(3); }
