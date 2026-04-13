@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Life B | Painel de Resultados</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 
   <style>
     :root {
@@ -110,9 +110,29 @@
     }
 
     #last-updated {
-      font-size: 12px;
-      opacity: .65;
-      display: none;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--purple);
+      letter-spacing: .4px;
+      font-family: var(--font);
+    }
+    #refresh-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      opacity: .35;
+      flex-shrink: 0;
+    }
+    #refresh-dot.flash {
+      animation: dot-flash 1.4s ease forwards;
+    }
+    @keyframes dot-flash {
+      0%   { opacity: .35; transform: scale(1);   box-shadow: none; }
+      18%  { opacity: 1;   transform: scale(1.7); box-shadow: 0 0 8px rgba(34,195,93,.55); }
+      100% { opacity: .35; transform: scale(1);   box-shadow: none; }
     }
 
     /* ── FOCUS VISIBLE ───────────────────── */
@@ -295,7 +315,7 @@
     }
 
     .rt-label { font-size: 12px; opacity: .78; font-weight: 500; }
-    .rt-sub   { font-size: 10px; opacity: .6; font-weight: 400; margin-top: 4px; }
+    .rt-sub   { font-size: 11px; opacity: .6; font-weight: 400; margin-top: 4px; }
 
     /* Stat cards */
     .card-stat .s-label {
@@ -315,9 +335,9 @@
     .card-stat .s-sub { font-size: 12px; color: var(--muted); }
 
     /* Comparativo delta */
-    .delta-up  { color: #16a34a; font-size:11px; font-weight:600; }
-    .delta-down { color: #dc2626; font-size:11px; font-weight:600; }
-    .delta-neu  { color: var(--muted); font-size:11px; font-weight:600; }
+    .delta-up   { color: #16a34a; font-size:10px; font-weight:500; opacity:.8; }
+    .delta-down { color: #dc2626; font-size:10px; font-weight:500; opacity:.8; }
+    .delta-neu  { color: var(--muted); font-size:10px; font-weight:500; opacity:.7; }
 
     /* Cards métricas secundárias */
     .card-metric .m-label {
@@ -335,14 +355,11 @@
       margin-bottom: 4px;
     }
     .card-metric .m-sub  { font-size: 12px; color: var(--muted); }
-    .card-metric .m-soon { font-size: 12px; color: var(--muted); font-style: italic; }
-
     .accent-purple  { border-top: 3px solid var(--purple);  background: linear-gradient(180deg,#f8f5fd 0%,#fff 40%); }
     .accent-magenta { border-top: 3px solid var(--magenta); background: linear-gradient(180deg,#fff0f8 0%,#fff 40%); }
     .accent-red     { border-top: 3px solid var(--red);     background: linear-gradient(180deg,#fff5f5 0%,#fff 40%); }
     .accent-blue    { border-top: 3px solid var(--blue);    background: linear-gradient(180deg,#f0f5ff 0%,#fff 40%); }
     .accent-green   { border-top: 3px solid var(--green);   background: linear-gradient(180deg,#f0fbf4 0%,#fff 40%); }
-    .accent-teal    { border-top: 3px solid #0891b2;        background: linear-gradient(180deg,#f0fafd 0%,#fff 40%); }
 
     /* ── CHART ──────────────────────────── */
     .card-chart { margin-bottom: 18px; }
@@ -407,8 +424,6 @@
       vertical-align: middle;
     }
     .s-val, .m-val { transition: opacity .2s ease; }
-    #insights-list  { transition: opacity .2s ease; }
-    #insights-list.fading { opacity: .35; }
 
     /* ── TABLES GRID — MOBILE FIRST ──────── */
     .tables-grid {
@@ -489,7 +504,7 @@
       #dashboard { padding: 16px 16px 24px; }
       .ctrl-bar { flex-direction: column; align-items: flex-start; gap: 10px; }
       .range-btns { width: 100%; display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; }
-      .rbtn { text-align: center; padding: 8px 6px; }
+      .rbtn { text-align: center; padding: 9px 6px; min-height: 38px; }
       .card { padding: 16px 14px; }
       .card-rt { grid-column: span 2; padding: 16px 12px; }
       .rt-num { font-size: 40px; }
@@ -521,7 +536,10 @@
     <div class="h-sub">Painel de Resultados</div>
   </div>
   <div class="h-right">
-    <span id="last-updated"></span>
+    <div id="last-updated">
+      <span id="refresh-dot"></span>
+      <span id="clock-live">--:--:--</span>
+    </div>
   </div>
 </header>
 
@@ -552,21 +570,21 @@
     <div class="card card-stat accent-purple">
       <div class="s-label">Visitantes</div>
       <div class="s-val" id="stat-users">—</div>
-      <div id="delta-users" class="delta-neu">—</div>
+      <div id="delta-users" class="delta-neu" style="display:none"></div>
       <div class="s-sub">pessoas diferentes que acessaram</div>
     </div>
 
     <div class="card card-stat accent-magenta">
       <div class="s-label">Visitas</div>
       <div class="s-val" id="stat-sessions">—</div>
-      <div id="delta-sessions" class="delta-neu">—</div>
+      <div id="delta-sessions" class="delta-neu" style="display:none"></div>
       <div class="s-sub">total de acessos ao site</div>
     </div>
 
     <div class="card card-stat accent-green">
       <div class="s-label">Taxa de Conversão</div>
       <div class="s-val" id="stat-conv">—</div>
-      <div id="delta-conv" class="delta-neu">—</div>
+      <div id="delta-conv" class="delta-neu" style="display:none"></div>
       <div class="s-sub">leads ÷ visitantes</div>
     </div>
 
@@ -590,21 +608,10 @@
     <div class="card card-metric accent-green">
       <div class="m-label">Leads Gerados</div>
       <div class="m-val" id="stat-leads" style="color:var(--green)">—</div>
-      <div id="delta-leads" class="delta-neu">—</div>
+      <div id="delta-leads" class="delta-neu" style="display:none"></div>
       <div class="m-sub">formulários enviados com contato</div>
     </div>
 
-  </div>
-
-  <!-- ANÁLISE INTELIGENTE -->
-  <div class="card" style="margin-bottom:18px;">
-    <div class="card-hd">
-      <div class="card-hd-title">Análises Inteligentes <span style="font-size:9px;font-weight:700;background:linear-gradient(135deg,#704B9B,#E92085);color:#fff;padding:2px 8px;border-radius:20px;letter-spacing:.5px;text-transform:none">IA</span></div>
-      <div class="badge" id="insights-stamp">—</div>
-    </div>
-    <div id="insights-list" style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
-      <div style="color:#6b6484;font-size:13px;font-family:Montserrat,sans-serif;">Carregando análise...</div>
-    </div>
   </div>
 
   <!-- FUNIL DE CONVERSÃO — posição prioritária (mais acionável que o gráfico) -->
@@ -612,17 +619,15 @@
     <div class="card-hd">
       <div class="card-hd-title">Funil de Conversão</div>
     </div>
-    <div class="table-scroll">
-      <table>
-        <thead><tr>
-          <th style="font-size:11px">AÇÃO DO VISITANTE</th>
-          <th style="text-align:right;font-size:11px">TOTAL</th>
-        </tr></thead>
-        <tbody id="tb-events">
-          <tr class="empty-row"><td colspan="2">Carregando...</td></tr>
-        </tbody>
-      </table>
-    </div>
+    <table style="width:100%">
+      <thead><tr>
+        <th style="font-size:11px">AÇÃO DO VISITANTE</th>
+        <th style="text-align:right;font-size:11px">TOTAL</th>
+      </tr></thead>
+      <tbody id="tb-events">
+        <tr class="empty-row"><td colspan="2">Carregando...</td></tr>
+      </tbody>
+    </table>
   </div>
 
   <!-- CHART -->
@@ -650,7 +655,7 @@
             <th title="Endereço da página visitada">Página</th>
             <th title="Pessoas únicas que acessaram essa página">Visitantes</th>
             <th class="mh" title="Total de visitas (uma mesma pessoa pode entrar várias vezes)">Visitas</th>
-            <th class="mh" title="Quantidade de vezes que a página foi carregada na tela">Visualizações</th>
+            <th title="Leads gerados nessa página">Leads</th>
           </tr></thead>
           <tbody id="tb-pages">
             <tr class="empty-row"><td colspan="4">Carregando...</td></tr>
@@ -669,7 +674,7 @@
           <thead><tr>
             <th title="De onde veio o visitante (ex: Facebook Ads, Google, link direto)">De onde veio</th>
             <th title="Pessoas únicas que vieram dessa origem">Visitantes</th>
-            <th class="mh" title="Total de vezes que acessaram vindo dessa origem">Visitas</th>
+            <th title="Leads gerados por essa origem">Leads</th>
           </tr></thead>
           <tbody id="tb-sources">
             <tr class="empty-row"><td colspan="3">Carregando...</td></tr>
@@ -683,20 +688,22 @@
       <div class="card-hd">
         <div class="card-hd-title">Estado / Cidade</div>
       </div>
-      <div class="table-scroll">
+      <div class="table-scroll" style="overflow-x:auto">
         <table>
           <colgroup>
-            <col style="width:38%">
-            <col style="width:42%">
-            <col style="width:20%">
+            <col style="width:28%">
+            <col style="width:40%">
+            <col style="width:16%">
+            <col style="width:16%">
           </colgroup>
           <thead><tr>
             <th>Estado</th>
             <th style="text-align:left">Cidade</th>
             <th title="Pessoas únicas dessa localidade">Visitantes</th>
+            <th title="Leads gerados nessa localidade">Leads</th>
           </tr></thead>
           <tbody id="tb-cities">
-            <tr class="empty-row"><td colspan="3">Carregando...</td></tr>
+            <tr class="empty-row"><td colspan="4">Carregando...</td></tr>
           </tbody>
         </table>
       </div>
@@ -721,9 +728,8 @@ const PROXY_URL = 'https://script.google.com/macros/s/AKfycbxGFDgwJhRVHFUYuOc6KR
 const EVENTOS_META = {
   'Lead_Formulario':      { icon: '🎯', nome: 'Lead gerado',          desc: 'Formulário enviado com nome + telefone' },
   'Abrir_Formulario':     { icon: '📋', nome: 'Formulário aberto',     desc: 'Visitante abriu o formulário de contato' },
-  'Preencheu_Formulario': { icon: '✏️',  nome: 'Formulário preenchido', desc: 'Digitou pelo menos um campo do formulário' },
-  'Abandonou_Formulario': { icon: '❌', nome: 'Abandonou o formulário', desc: 'Preencheu mas fechou sem enviar' },
-  'Pular_Formulario':     { icon: '⏭️',  nome: 'Pulou o formulário',   desc: 'Fechou o formulário sem preencher nada' },
+  'Abandonou_Formulario': { icon: '❌', nome: 'Abandonou o formulário', desc: 'Fechou o formulário sem enviar' },
+  'Pular_Formulario':     { icon: '⏭️',  nome: 'Pulou o formulário',   desc: 'Clicou em "Pular e ir direto para o WhatsApp"' },
   'ScrollDepth_25':       { icon: '👀', nome: 'Rolou 25% da página',   desc: 'Passou do primeiro quarto do conteúdo' },
   'ScrollDepth_50':       { icon: '📖', nome: 'Rolou 50% da página',   desc: 'Chegou na metade do conteúdo' },
   'ScrollDepth_75':       { icon: '🔥', nome: 'Rolou 75% da página',   desc: 'Quase no final, alto engajamento' },
@@ -799,10 +805,17 @@ let chart         = null;
 let realtimeTimer = null;
 let refreshTimer  = null;
 let loadVersion   = 0; // controle de race condition
-let insightsData  = {}; // acumula dados de todos os fetches para análise inteligente
+// Relógio ao vivo — atualiza a cada segundo independente dos dados
+(function startClock() {
+  const update = () => {
+    const el = document.getElementById('clock-live');
+    if (el) el.textContent = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  };
+  update();
+  setInterval(update, 1000);
+})();
 
 window.addEventListener('load', () => {
-  document.getElementById('last-updated').style.display = 'inline';
   loadAll();
   fetchRealtime();
   realtimeTimer = setInterval(fetchRealtime, 10_000);
@@ -841,13 +854,11 @@ function _skeletonOn() {
   });
   ['delta-users','delta-sessions','delta-conv','delta-leads'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) { el.textContent = '—'; el.className = 'delta-neu'; }
+    if (el) { el.textContent = ''; el.className = 'delta-neu'; el.style.display = 'none'; }
   });
-  document.getElementById('insights-list')?.classList.add('fading');
   document.querySelector('.chart-wrap')?.classList.add('chart-loading');
 }
 function _skeletonOff() {
-  document.getElementById('insights-list')?.classList.remove('fading');
   document.querySelector('.chart-wrap')?.classList.remove('chart-loading');
   // Limpa skeletons que não foram substituídos por dados (ex: quando proxy falha)
   ['stat-users','stat-sessions','stat-conv','stat-leads','stat-bounce','stat-duration'].forEach(id => {
@@ -858,14 +869,16 @@ function _skeletonOff() {
 
 async function loadAll() {
   const myVersion = ++loadVersion;
-  insightsData = {}; // limpa dados do filtro anterior — evita análise com dados misturados
   _loadingStart();
   _skeletonOn();
 
-  // Pré-busca events UMA vez (catches individuais para não bloquear se um falhar)
-  const [evAtual, evDuplo] = await Promise.all([
+  // Pré-busca events e leads UMA vez (catches individuais para não bloquear se um falhar)
+  const [evAtual, evDuplo, pLeads, sLeads, cLeads] = await Promise.all([
     proxy('events', currentDays).catch(() => null),
     proxy('events', currentDays * 2).catch(() => null),
+    proxy('leads', currentDays, 'pagePath').catch(() => null),
+    proxy('leads', currentDays, 'sessionSourceMedium').catch(() => null),
+    proxy('leads', currentDays, 'region,city').catch(() => null),
   ]);
 
   // Se uma versão mais nova já começou, descarta silenciosamente
@@ -874,21 +887,22 @@ async function loadAll() {
   await Promise.allSettled([
     loadSummaryWithCompare(evAtual, evDuplo),
     loadChart(),
-    loadPages(),
-    loadCities(),
-    loadSources(),
+    loadPages(pLeads),
+    loadCities(cLeads),
+    loadSources(sLeads),
     loadEvents(evAtual),
   ]);
 
   _loadingEnd();
   _skeletonOff();
-  if (myVersion === loadVersion) { stamp(); generateInsights(); }
+  if (myVersion === loadVersion) { stamp(); }
 }
 
 // API HELPERS — fetch com CORS (Apps Script retorna access-control-allow-origin: *)
-async function proxy(action, days) {
+async function proxy(action, days, dim) {
   const d = days !== undefined ? days : currentDays;
-  const url = `${PROXY_URL}?action=${action}&days=${d}`;
+  let url = `${PROXY_URL}?action=${action}&days=${d}`;
+  if (dim) url += `&dim=${encodeURIComponent(dim)}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('HTTP ' + res.status);
   const data = await res.json();
@@ -902,7 +916,6 @@ async function fetchRealtime() {
     const d = await proxy('realtime');
     const v = +(d.rows?.[0]?.metricValues?.[0]?.value ?? 0);
     document.getElementById('rt-count').textContent = v || '0';
-    insightsData.rtUsers = v;
   } catch {
     document.getElementById('rt-count').textContent = '—';
   }
@@ -962,20 +975,29 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo) {
 
     deltaIds.forEach((id, i) => {
       const el = document.getElementById(id);
-      const d  = deltas[i];
-      if (d === null) {
-        el.textContent  = '—';
-        el.className    = 'delta-neu';
+      // Hoje: comparação intradiária não tem sentido — esconde sempre
+      if (currentDays === 1) {
+        el.textContent   = '';
+        el.className     = 'delta-neu';
+        el.style.display = 'none';
         return;
       }
+      const d = deltas[i];
+      if (d === null) {
+        el.textContent   = '';
+        el.className     = 'delta-neu';
+        el.style.display = 'none';
+        return;
+      }
+      el.style.display = '';
       if (d > 0) {
-        el.textContent = '↑ ' + d + '% vs período anterior';
+        el.textContent = '↑ ' + d + '% vs anterior';
         el.className   = 'delta-up';
       } else if (d < 0) {
-        el.textContent = '↓ ' + Math.abs(d) + '% vs período anterior';
+        el.textContent = '↓ ' + Math.abs(d) + '% vs anterior';
         el.className   = 'delta-down';
       } else {
-        el.textContent = '= igual ao período anterior';
+        el.textContent = '= sem variação';
         el.className   = 'delta-neu';
       }
     });
@@ -996,14 +1018,7 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo) {
       document.getElementById('stat-duration').textContent = '—';
     }
 
-    // Alimenta engine de análise inteligente
-    Object.assign(insightsData, {
-      usersAtual, usersAnt, leadsAtual, leadsAnt, convAtual,
-      bounce:    isNaN(bounce)   ? null : bounce,
-      duration:  isNaN(duration) || duration <= 0 ? null : duration,
-    });
-
-  } catch(err) {
+} catch(err) {
     const msg = err.message || 'Erro';
     ['stat-users','stat-sessions','stat-conv'].forEach(id =>
       document.getElementById(id).textContent = msg
@@ -1012,8 +1027,10 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo) {
       document.getElementById(id).textContent = '—'
     );
     deltaIds.forEach(id => {
-      document.getElementById(id).textContent = '—';
-      document.getElementById(id).className   = 'delta-neu';
+      const el = document.getElementById(id);
+      el.textContent   = '';
+      el.className     = 'delta-neu';
+      el.style.display = 'none';
     });
   }
 }
@@ -1179,63 +1196,80 @@ async function loadChart() {
       }
     }
 
-  } catch(e) { console.error('Chart error:', e); }
+  } catch(e) { /* silently ignore chart errors */ }
   finally { document.querySelector('.chart-wrap')?.classList.remove('chart-loading'); }
 }
 
+// Monta mapa dimensão → contagem de leads a partir do retorno do proxy('leads')
+function buildLeadsMap(d, keyFn) {
+  const map = new Map();
+  if (!d || !d.rows) return map;
+  for (const r of d.rows) map.set(keyFn(r), +r.metricValues[0].value);
+  return map;
+}
+
 // TABELA — POR PÁGINA
-async function loadPages() {
+async function loadPages(leadsData) {
   const tb = document.getElementById('tb-pages');
   try {
+    const leadsMap = buildLeadsMap(leadsData, r => r.dimensionValues[0].value);
     const d = await proxy('pages');
     tb.innerHTML = (d.rows ?? []).map(r => {
       const path = r.dimensionValues[0].value;
-      const [u, s, v] = r.metricValues.map(x => x.value);
+      const [u, s] = r.metricValues.map(x => x.value);
       const legenda = PAGINAS_LEGENDAS[path] || '';
+      const leads = leadsMap.get(path) || 0;
       return `<tr>
         <td class="td-url" title="${esc(path)}" style="overflow:visible;white-space:normal;">
-          <span class="pg-legenda">${legenda || esc(path)}</span>
+          <span class="pg-legenda">${esc(legenda) || esc(path)}</span>
           ${legenda ? `<span class="pg-path">${esc(path)}</span>` : ''}
         </td>
         <td class="num-p">${n(u)}</td>
         <td class="mh">${n(s)}</td>
-        <td class="mh">${n(v)}</td>
+        <td class="num-p">${leads > 0 ? n(leads) : '<span style="font-size:11px;color:var(--muted)">—</span>'}</td>
       </tr>`;
     }).join('') || emptyRow(4);
   } catch { tb.innerHTML = errRow(4); }
 }
 
 // TABELA — CIDADE / ESTADO
-async function loadCities() {
+async function loadCities(leadsData) {
   const tb = document.getElementById('tb-cities');
   try {
+    const leadsMap = buildLeadsMap(leadsData, r => `${r.dimensionValues[0].value}||${r.dimensionValues[1].value}`);
     const d = await proxy('cities');
     tb.innerHTML = (d.rows ?? []).map(r => {
-      const region = traduzEstado(r.dimensionValues[0].value);
-      const cityRaw = r.dimensionValues[1].value;
-      const city    = (!cityRaw || cityRaw === '(not set)') ? 'Não identificada' : cityRaw;
-      const users  = r.metricValues[0].value;
+      const regionRaw = r.dimensionValues[0].value;
+      const cityRaw   = r.dimensionValues[1].value;
+      const region    = traduzEstado(regionRaw);
+      const city      = (!cityRaw || cityRaw === '(not set)') ? 'Não identificada' : cityRaw;
+      const users     = r.metricValues[0].value;
+      const leads     = leadsMap.get(`${regionRaw}||${cityRaw}`) || 0;
       return `<tr>
         <td>${esc(region)}</td>
         <td class="td-left">${esc(city)}</td>
         <td class="num-p">${n(users)}</td>
+        <td class="num-p">${leads > 0 ? n(leads) : '<span style="font-size:11px;color:var(--muted)">—</span>'}</td>
       </tr>`;
-    }).join('') || emptyRow(3);
-  } catch { tb.innerHTML = errRow(3); }
+    }).join('') || emptyRow(4);
+  } catch { tb.innerHTML = errRow(4); }
 }
 
 // TABELA — ORIGEM DO TRÁFEGO
-async function loadSources() {
+async function loadSources(leadsData) {
   const tb = document.getElementById('tb-sources');
   try {
+    const leadsMap = buildLeadsMap(leadsData, r => r.dimensionValues[0].value);
     const d = await proxy('sources');
     tb.innerHTML = (d.rows ?? []).map(r => {
-      const src = traduzOrigem(r.dimensionValues[0].value);
-      const [u, s] = r.metricValues.map(x => x.value);
+      const srcRaw = r.dimensionValues[0].value;
+      const src    = traduzOrigem(srcRaw);
+      const [u]    = r.metricValues.map(x => x.value);
+      const leads  = leadsMap.get(srcRaw) || 0;
       return `<tr>
         <td>${esc(src)}</td>
         <td class="num-p">${n(u)}</td>
-        <td class="mh">${n(s)}</td>
+        <td class="num-p">${leads > 0 ? n(leads) : '<span style="font-size:11px;color:var(--muted)">—</span>'}</td>
       </tr>`;
     }).join('') || emptyRow(3);
   } catch { tb.innerHTML = errRow(3); }
@@ -1257,9 +1291,10 @@ async function loadEvents(d) {
     const counts  = rowsData.map(r => r.count);
     const maxCount = counts.length > 0 ? Math.max(...counts) : 1;
 
-    const rowsHtml = rowsData.map(({ name, count }) => {
+    const rowsHtml = rowsData.flatMap(({ name, count }) => {
+      if (!EVENTOS_META[name]) return []; // ignora eventos fora do mapa
       if (name === 'Lead_Formulario') leadCount = count;
-      const meta = EVENTOS_META[name] ?? { icon: '⚡', nome: name, desc: '' };
+      const meta = EVENTOS_META[name];
       const pct  = maxCount > 0 ? Math.round(count / maxCount * 100) : 0;
       return `<tr>
         <td>
@@ -1280,8 +1315,6 @@ async function loadEvents(d) {
 
     tb.innerHTML = rowsHtml.join('') || emptyRow(2);
 
-    // Alimenta engine de análise inteligente com mapa de eventos
-    insightsData.events = Object.fromEntries(rowsData.map(r => [r.name, r.count]));
 
     // Atualiza card de Leads Gerados
     document.getElementById('stat-leads').textContent = n(leadCount);
@@ -1316,243 +1349,6 @@ async function loadEvents(d) {
 //   Scroll 100%: > 25% ótimo | < 10% queda de retenção
 //   Tempo: > 90s bom | < 30s possível desalinhamento anúncio/página
 
-function _conf(vol, maxVol, dias, maxDias, tw = 1) {
-  const sv = Math.min(vol / maxVol, 1);
-  const st = Math.min(dias / maxDias, 1);
-  return sv * Math.pow(st, tw);
-}
-
-function generateInsights() {
-  const {
-    usersAtual = 0, usersAnt = 0,
-    leadsAtual = 0, leadsAnt = 0,
-    convAtual  = 0,
-    bounce = null, duration = null,
-    events = {}, rtUsers = 0,
-  } = insightsData;
-
-  const labelPeriodo = currentDays === 1 ? 'hoje' : `nos últimos ${currentDays} dias`;
-
-  const abriu = events['Abrir_Formulario'] || 0;
-  const sc25  = events['ScrollDepth_25']   || 0;
-
-  // Scores compostos: cada métrica tem seu próprio denominador de volume E tempo
-  const cConv  = _conf(usersAtual, 80,  currentDays, 21);      // conversão
-  const cTrend = _conf(usersAtual, 50,  currentDays, 14, 2);   // tendência (tempo ao quadrado)
-  const cFunil = _conf(abriu,      40,  currentDays, 14);      // funil formulário
-  const cScrl  = _conf(sc25,       50,  currentDays, 14);      // scroll depth
-  const cRej   = _conf(usersAtual, 120, currentDays, 21);      // rejeição (mais ruidosa)
-  const cTempo = _conf(usersAtual, 60,  currentDays, 14);      // tempo médio
-
-  // Tom textual baseado no score (sem precisar expor números ao usuário)
-  const tom = c => c >= 0.65 ? '' : c >= 0.25 ? 'Tendência: ' : 'Sinal inicial: ';
-
-  // Badge visível quando confiança ainda está crescendo
-  const badge = c => {
-    if (c >= 0.65) return '';
-    if (c >= 0.25) return `<span style="display:inline-block;font-size:9px;font-weight:700;color:#b45309;border:1px solid rgba(180,83,9,.25);border-radius:20px;padding:1px 7px;margin-right:6px;vertical-align:middle;letter-spacing:.4px">AMOSTRA EM CRESCIMENTO</span>`;
-    return `<span style="display:inline-block;font-size:9px;font-weight:700;color:#9ca3af;border:1px solid #d1d5db;border-radius:20px;padding:1px 7px;margin-right:6px;vertical-align:middle;letter-spacing:.4px">SINAL INICIAL</span>`;
-  };
-
-  // Recomendações estruturais só com alta confiança em conversão E período >= 14 dias
-  const podaRec = cConv >= 0.5 && currentDays >= 14;
-
-  // Mínimos absolutos por métrica — B2B, tráfego pago, landing page industria saude/beleza
-  // Bounce e duração são ruidosas: precisam de amostra grande antes de qualquer conclusão
-  const minConv    = usersAtual >= 20;
-  const minBounce  = usersAtual >= 50;
-  const minDuration = usersAtual >= 35;
-  const minTrend   = usersAtual >= 30;
-  const minFunil   = abriu >= 8;
-  const minScroll  = sc25 >= 15;
-
-  const rt = [];    // insights realtime (sempre primeiro)
-  const main = [];  // insights a ordenar por prioridade+confiança
-
-  // REALTIME (sempre no topo, confiança irrelevante)
-  if (rtUsers >= 10) {
-    rt.push({ icon: '🔴', text: `<b>${rtUsers} pessoas no site agora.</b> Pico de tráfego ativo.`, tipo: 'success', conf: 1 });
-  } else if (rtUsers >= 3) {
-    rt.push({ icon: '🟢', text: `<b>${rtUsers} pessoa${rtUsers > 1 ? 's' : ''}</b> navegando agora.`, tipo: 'info', conf: 1 });
-  }
-
-  // SEM DADOS
-  if (usersAtual === 0) {
-    rt.push({ icon: '⏳', text: `Sem visitas registradas ${labelPeriodo}.`, tipo: 'info', conf: 1 });
-    return _renderInsights(rt);
-  }
-
-  // VOLUME MUITO BAIXO — mensagem útil adaptada ao contexto
-  if (usersAtual < 10) {
-    if (currentDays === 1) {
-      const agora = new Date();
-      const hFmt  = String(agora.getHours()).padStart(2,'0') + 'h' + String(agora.getMinutes()).padStart(2,'0');
-      rt.push({ icon: '📊', text: `<b>${usersAtual} visitante${usersAtual !== 1 ? 's' : ''} até às ${hFmt}.</b> Dia em construção — dados acumulando em tempo real.`, tipo: 'info', conf: 1 });
-      if (leadsAtual > 0) {
-        rt.push({ icon: '🎯', text: `<b>${leadsAtual} lead${leadsAtual !== 1 ? 's' : ''}</b> gerado${leadsAtual !== 1 ? 's' : ''} hoje (${convAtual.toFixed(1)}% de conversão). Dia começando bem.`, tipo: 'success', conf: 1 });
-      } else if (abriu > 0) {
-        rt.push({ icon: '📋', text: `<b>${abriu} visitante${abriu !== 1 ? 's' : ''}</b> abriu${abriu > 1 ? 'ram' : ''} o formulário, ainda sem envio.`, tipo: 'info', conf: 1 });
-      }
-      if (sc25 > 0) {
-        rt.push({ icon: '👀', text: `<b>${sc25} visitante${sc25 !== 1 ? 's' : ''}</b> rolou${sc25 > 1 ? 'ram' : ''} pelo menos 25% do conteúdo.`, tipo: 'info', conf: 1 });
-      }
-    } else {
-      rt.push({ icon: 'ℹ️', text: `<b>${usersAtual} visitante${usersAtual !== 1 ? 's' : ''}</b> ${labelPeriodo}. Volume ainda baixo para análise estatística confiável.`, tipo: 'info', conf: 1 });
-      if (leadsAtual > 0) rt.push({ icon: '🎯', text: `<b>${leadsAtual} lead${leadsAtual !== 1 ? 's' : ''}</b> gerado${leadsAtual !== 1 ? 's' : ''} ${labelPeriodo} (${convAtual.toFixed(1)}% de conversão).`, tipo: 'success', conf: 1 });
-    }
-    return _renderInsights(rt);
-  }
-
-  // VOLUME BAIXO PARA O PERÍODO (ex: 16 visitas em 90 dias = 0.18/dia)
-  // Sem análise comportamental — apenas resumo informativo
-  const mediaDiaria = usersAtual / currentDays;
-  if (mediaDiaria < 1.5 && currentDays >= 14) {
-    rt.push({ icon: '📊', text: `<b>${usersAtual} visitantes em ${currentDays} dias</b> (média de ${mediaDiaria.toFixed(1)}/dia). Volume em acumulação — análises comportamentais disponíveis com mais tráfego.`, tipo: 'info', conf: 1 });
-    if (leadsAtual > 0) rt.push({ icon: '🎯', text: `<b>${leadsAtual} lead${leadsAtual !== 1 ? 's' : ''}</b> gerado${leadsAtual !== 1 ? 's' : ''} ${labelPeriodo} (${convAtual.toFixed(1)}% de conversão).`, tipo: 'success', conf: 1 });
-    return _renderInsights(rt);
-  }
-
-  // FILTRO HOJE — resumo ao vivo, sem análise estatística
-  // Dados intradiários não têm comparativo: não há período anterior, bounce e tempo são ruidosos
-  if (currentDays === 1) {
-    const sc75  = events['ScrollDepth_75']  || 0;
-    const sc100 = events['ScrollDepth_100'] || 0;
-    const preencheu = events['Preencheu_Formulario'] || 0;
-
-    rt.push({ icon: '📊', text: `<b>${usersAtual} visitante${usersAtual !== 1 ? 's' : ''}</b> desde meia-noite. Dados acumulando ao longo do dia.`, tipo: 'info', conf: 1 });
-
-    if (leadsAtual > 0) {
-      rt.push({ icon: '🎯', text: `<b>${leadsAtual} lead${leadsAtual !== 1 ? 's' : ''}</b> gerado${leadsAtual !== 1 ? 's' : ''} hoje — ${convAtual.toFixed(1)}% de conversão.`, tipo: 'success', conf: 1 });
-    } else if (abriu > 0) {
-      const pAband = events['Abandonou_Formulario'] || 0;
-      if (pAband > 0) {
-        rt.push({ icon: '📋', text: `<b>${abriu}</b> visitante${abriu !== 1 ? 's' : ''} abriu${abriu > 1 ? 'ram' : ''} o formulário — <b>${pAband}</b> preencheu${pAband > 1 ? 'ram' : ''} mas não enviou.`, tipo: 'warning', conf: 1 });
-      } else {
-        rt.push({ icon: '📋', text: `<b>${abriu}</b> visitante${abriu !== 1 ? 's' : ''} abriu${abriu > 1 ? 'ram' : ''} o formulário. Aguardando envio.`, tipo: 'info', conf: 1 });
-      }
-    }
-
-    if (sc100 > 0) {
-      rt.push({ icon: '✅', text: `<b>${sc100}</b> visitante${sc100 !== 1 ? 's' : ''} leu${sc100 > 1 ? 'ram' : ''} a página inteira hoje.`, tipo: 'success', conf: 1 });
-    } else if (sc75 > 0) {
-      rt.push({ icon: '🔥', text: `<b>${sc75}</b> visitante${sc75 !== 1 ? 's' : ''} chegou${sc75 > 1 ? 'ram' : ''} a 75% do conteúdo. Engajamento alto.`, tipo: 'success', conf: 1 });
-    } else if (sc25 > 0) {
-      rt.push({ icon: '👀', text: `<b>${sc25}</b> visitante${sc25 !== 1 ? 's' : ''} passou${sc25 > 1 ? 'ram' : ''} do primeiro quarto da página.`, tipo: 'info', conf: 1 });
-    }
-
-    return _renderInsights(rt);
-  }
-
-  // TENDÊNCIA DE TRÁFEGO (tempo pesado — precisa de ciclos semanais completos)
-  if (cTrend >= 0.08 && usersAnt > 0 && minTrend) {
-    const delta = Math.round((usersAtual - usersAnt) / usersAnt * 100);
-    const t = tom(cTrend), b = badge(cTrend);
-    if      (delta >= 20)  main.push({ icon: '📈', text: `${b}${t}Tráfego <b>cresceu ${delta}%</b> vs período anterior.${podaRec && delta >= 30 ? ' Campanhas gerando mais alcance.' : ''}`, tipo: 'success', conf: cTrend });
-    else if (delta >= 5)   main.push({ icon: '📊', text: `${b}${t}Tráfego <b>+${delta}%</b> vs período anterior.`, tipo: 'info', conf: cTrend });
-    else if (delta <= -20) main.push({ icon: '📉', text: `${b}${t}Tráfego <b>-${Math.abs(delta)}%</b> vs período anterior.${podaRec ? ' Verificar investimento e frequência dos anúncios.' : ''}`, tipo: podaRec ? 'warning' : 'info', conf: cTrend });
-    else if (delta <= -5)  main.push({ icon: '📉', text: `${b}${t}Tráfego <b>-${Math.abs(delta)}%</b> vs período anterior.`, tipo: 'info', conf: cTrend });
-  }
-
-  // QUALIDADE DO TRÁFEGO (visitantes x leads — só com confiança alta dos dois)
-  const cQual = Math.min(cConv, cTrend);
-  if (cQual >= 0.4 && usersAnt > 0 && leadsAnt > 0 && minConv && minTrend) {
-    const dU = (usersAtual - usersAnt) / usersAnt;
-    const dL = (leadsAtual - leadsAnt) / leadsAnt;
-    if      (dU > 0.1 && dL < -0.1) main.push({ icon: '💡', text: `Tráfego subiu mas leads caíram. Público pode estar <b>menos qualificado.</b>${podaRec ? ' Revisar segmentação e criativos.' : ''}`, tipo: 'warning', conf: cQual });
-    else if (dU < -0.1 && dL > 0.1) main.push({ icon: '🎯', text: `Menos visitas, <b>mais leads.</b> Tráfego mais qualificado que o período anterior.`, tipo: 'success', conf: cQual });
-  }
-
-  // CONVERSÃO B2B — benchmarks para indústria vendendo para farmácias, supermercados e cosméticos
-  // Excelente >= 2% | Saudável 0.5–2% | Abaixo < 0.3% | Crítico com zero leads
-  if (cConv >= 0.08 && minConv) {
-    const t = tom(cConv), b = badge(cConv);
-    if      (convAtual >= 2)   main.push({ icon: '🎯', text: `${b}${t}Conversão <b>excelente: ${convAtual.toFixed(1)}%.</b> Acima de 2% é referência para B2B em tráfego pago.`, tipo: 'success', conf: cConv });
-    else if (convAtual >= 0.5) main.push({ icon: '🎯', text: `${b}${t}Conversão <b>dentro do esperado: ${convAtual.toFixed(1)}%.</b> Faixa normal para B2B com tráfego pago.`, tipo: 'info', conf: cConv });
-    else if (convAtual >= 0.2) main.push({ icon: '⚠️', text: `${b}${t}Conversão <b>abaixo da média: ${convAtual.toFixed(1)}%.${podaRec ? '</b> Revisar CTA e proposta de valor da landing page.' : '</b>'}`, tipo: 'warning', conf: cConv });
-    else if (convAtual > 0)    main.push({ icon: '🚨', text: `${b}${t}Conversão <b>muito baixa: ${convAtual.toFixed(1)}%.${podaRec ? '</b> Revisar alinhamento entre anúncio, página e público-alvo.' : '</b>'}`, tipo: cConv >= 0.5 ? 'danger' : 'warning', conf: cConv });
-    else                       main.push({ icon: '⚠️', text: `${b}${t}Nenhum lead gerado ${labelPeriodo}.${podaRec ? ' Revisar CTA e oferta da página.' : ''}`, tipo: 'warning', conf: cConv });
-  }
-
-  // FUNIL DO FORMULÁRIO (score baseado em aberturas × tempo)
-  if (cFunil >= 0.08 && abriu > 0 && minFunil) {
-    const abandonou = events['Abandonou_Formulario'] || 0;
-    const pulou     = events['Pular_Formulario']     || 0;
-    const pctEnvio  = Math.round(leadsAtual / abriu * 100);
-    const pctAband  = Math.round(abandonou  / abriu * 100);
-    const pctPulou  = Math.round(pulou      / abriu * 100);
-    const t = tom(cFunil), b = badge(cFunil);
-
-    if (pctEnvio >= 20) main.push({ icon: '✅', text: `${b}${t}Funil eficiente: <b>${pctEnvio}% dos que abriram o formulário enviaram.</b>${cFunil >= 0.4 ? ' Boa convicção no momento de conversão.' : ''}`, tipo: 'success', conf: cFunil });
-    if (pctAband >= 30) main.push({ icon: '⚠️', text: `${b}${t}<b>${pctAband}% preencheram mas não enviaram.</b>${cFunil >= 0.65 && podaRec ? ' Possível fricção: campos, confiança ou CTA do botão.' : ''}`, tipo: 'warning', conf: cFunil });
-    if (pctPulou >= 55 && pctEnvio < 15) main.push({ icon: '💡', text: `${b}${t}<b>${pctPulou}% fecharam o formulário sem preencher.</b>${cFunil >= 0.65 && podaRec ? ' Testar abordagem mais suave ou oferta de entrada.' : ''}`, tipo: cFunil >= 0.4 ? 'warning' : 'info', conf: cFunil });
-  }
-
-  // SCROLL DEPTH (score baseado em eventos sc25 × tempo)
-  if (cScrl >= 0.08 && sc25 > 0 && minScroll) {
-    const sc50  = events['ScrollDepth_50']  || 0;
-    const sc100 = events['ScrollDepth_100'] || 0;
-    const pctMeio = Math.round(sc50  / sc25 * 100);
-    const pctFim  = Math.round(sc100 / sc25 * 100);
-    const t = tom(cScrl), b = badge(cScrl);
-
-    if      (pctFim >= 25) main.push({ icon: '📖', text: `${b}${t}<b>${pctFim}% chegaram ao fim da página.</b> Ótima retenção de conteúdo.`, tipo: 'success', conf: cScrl });
-    else if (pctFim < 10 && cScrl >= 0.25) main.push({ icon: '💡', text: `${b}${t}<b>${pctFim}% chegaram ao fim</b> (${pctMeio}% até a metade).${podaRec ? ' Queda de atenção no meio do conteúdo.' : ''}`, tipo: 'warning', conf: cScrl });
-  }
-
-  // REJEIÇÃO B2B — faixa normal para tráfego pago: 60-85%
-  // Mínimo 50 usuários: bounce é a métrica mais ruidosa, conclusões prematuras são enganosas
-  if (cRej >= 0.08 && bounce !== null && minBounce) {
-    const bp = bounce * 100;
-    const t = tom(cRej), b = badge(cRej);
-    if      (bp < 50)  main.push({ icon: '✅', text: `${b}${t}Rejeição <b>baixa (${bp.toFixed(0)}%).</b> Visitantes estão engajando bem com a página.`, tipo: 'success', conf: cRej });
-    else if (bp > 88)  main.push({ icon: '🚨', text: `${b}${t}Rejeição <b>elevada (${bp.toFixed(0)}%).${podaRec ? '</b> Revisar alinhamento entre anúncio, público e página.' : '</b>'}`, tipo: cRej >= 0.5 ? 'danger' : 'warning', conf: cRej });
-    // Entre 50–88%: faixa normal para B2B com tráfego pago, sem alerta
-  }
-
-  // TEMPO MÉDIO — B2B exige mais leitura: 120s+ excelente, < 30s possível desalinhamento
-  // Mínimo 35 usuários para conclusão confiável
-  if (cTempo >= 0.08 && duration !== null && minDuration) {
-    const m = Math.floor(duration / 60), s = Math.round(duration % 60);
-    const fmt = `${m}m${String(s).padStart(2,'0')}s`;
-    const t = tom(cTempo), b = badge(cTempo);
-    if      (duration >= 120) main.push({ icon: '⏱️', text: `${b}${t}Tempo médio <b>excelente (${fmt}).</b> Visitantes leem o conteúdo com atenção.`, tipo: 'success', conf: cTempo });
-    else if (duration >= 60)  main.push({ icon: '⏱️', text: `${b}${t}Tempo médio <b>bom (${fmt}).</b> Engajamento dentro do esperado para B2B.`, tipo: 'info', conf: cTempo });
-    else if (duration < 30)   main.push({ icon: '⏱️', text: `${b}${t}Tempo médio <b>baixo (${fmt}).${podaRec ? '</b> Possível desalinhamento entre criativo do anúncio e página.' : '</b>'}`, tipo: cTempo >= 0.4 ? 'warning' : 'info', conf: cTempo });
-  }
-
-  // Ordena: danger > warning > success > info, depois pelo score de confiança
-  const prio = { danger: 4, warning: 3, success: 2, info: 1 };
-  main.sort((a, b) => (prio[b.tipo] - prio[a.tipo]) || (b.conf - a.conf));
-
-  const todos = [...rt, ...main];
-  if (todos.length <= rt.length) {
-    const dica = currentDays < 90 ? ` Amplie o período para análises mais ricas.` : '';
-    todos.push({ icon: '✅', text: `Tudo dentro do esperado ${labelPeriodo}.${dica}`, tipo: 'info', conf: 1 });
-  }
-
-  _renderInsights(todos);
-}
-
-function _renderInsights(insights) {
-  const CORES = { success:'#16a34a', warning:'#b45309', danger:'#dc2626', info:'#5b50d6' };
-  const BG    = { success:'rgba(22,163,74,.04)', warning:'rgba(180,83,9,.04)', danger:'rgba(220,38,38,.04)', info:'rgba(91,80,214,.04)' };
-  const LABEL = { success:'Positivo', warning:'Atenção', danger:'Crítico', info:'Análise' };
-
-  document.getElementById('insights-list').innerHTML = insights.slice(0, 5).map(i => `
-    <div style="border-radius:10px;overflow:hidden;border:1px solid rgba(0,0,0,.07);">
-      <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 15px;background:${BG[i.tipo]};border-left:3px solid ${CORES[i.tipo]};">
-        <span style="font-size:15px;line-height:1.3;flex-shrink:0;margin-top:3px;opacity:.85">${i.icon}</span>
-        <div style="flex:1;min-width:0;">
-          <span style="font-size:9px;font-weight:800;letter-spacing:.9px;text-transform:uppercase;color:${CORES[i.tipo]};display:block;margin-bottom:4px">${LABEL[i.tipo]}</span>
-          <span style="font-size:13px;color:#221B32;line-height:1.55;font-family:Montserrat,sans-serif">${i.text}</span>
-        </div>
-      </div>
-    </div>`).join('');
-
-  document.getElementById('insights-stamp').textContent =
-    'atualizada às ' + new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
-}
-
 // UTILITÁRIOS
 const n   = v  => v ? (+v).toLocaleString('pt-BR') : '0';
 const esc = s  => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -1571,8 +1367,13 @@ function showError(msg) {
 }
 
 function stamp() {
-  const t = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
-  document.getElementById('last-updated').textContent = `Atualizado às ${t}`;
+  // Pulsa o ponto verde para sinalizar que dados novos chegaram
+  const dot = document.getElementById('refresh-dot');
+  if (dot) {
+    dot.classList.remove('flash');
+    void dot.offsetWidth; // força reflow para reiniciar animação
+    dot.classList.add('flash');
+  }
 }
 </script>
 </body>
