@@ -956,9 +956,9 @@ async function loadAll() {
   await Promise.allSettled([
     loadSummaryWithCompare(evAtual, evDuplo, snap, snapDays),
     loadChart(snap, snapDays),
-    loadPages(pLeads),
-    loadCities(cLeads),
-    loadSources(sLeads),
+    loadPages(pLeads, snap),
+    loadCities(cLeads, snap),
+    loadSources(sLeads, snap),
     loadEvents(evAtual, snap),
   ]);
 
@@ -1290,12 +1290,12 @@ function buildLeadsMap(d, keyFn) {
 }
 
 // TABELA — POR PÁGINA
-async function loadPages(leadsData) {
+async function loadPages(leadsData, snap) {
   const tb = document.getElementById('tb-pages');
   try {
     const leadsMap = buildLeadsMap(leadsData, r => r.dimensionValues[0].value);
-    const d = await proxy('pages');
-    tb.innerHTML = (d.rows ?? []).map(r => {
+    const d = await proxy('pages', undefined, undefined, snap);
+    tb.innerHTML = (d.rows ?? []).filter(r => r.dimensionValues[0].value !== '/dashboard-ga4.html').map(r => {
       const path = r.dimensionValues[0].value;
       const [u, s] = r.metricValues.map(x => x.value);
       const legenda = PAGINAS_LEGENDAS[path] || '';
@@ -1314,11 +1314,11 @@ async function loadPages(leadsData) {
 }
 
 // TABELA — CIDADE / ESTADO
-async function loadCities(leadsData) {
+async function loadCities(leadsData, snap) {
   const tb = document.getElementById('tb-cities');
   try {
     const leadsMap = buildLeadsMap(leadsData, r => `${r.dimensionValues[0].value}||${r.dimensionValues[1].value}`);
-    const d = await proxy('cities');
+    const d = await proxy('cities', undefined, undefined, snap);
     tb.innerHTML = (d.rows ?? []).map(r => {
       const regionRaw = r.dimensionValues[0].value;
       const cityRaw   = r.dimensionValues[1].value;
@@ -1337,11 +1337,11 @@ async function loadCities(leadsData) {
 }
 
 // TABELA — ORIGEM DO TRÁFEGO
-async function loadSources(leadsData) {
+async function loadSources(leadsData, snap) {
   const tb = document.getElementById('tb-sources');
   try {
     const leadsMap = buildLeadsMap(leadsData, r => r.dimensionValues[0].value);
-    const d = await proxy('sources');
+    const d = await proxy('sources', undefined, undefined, snap);
     tb.innerHTML = (d.rows ?? []).map(r => {
       const srcRaw = r.dimensionValues[0].value;
       const src    = traduzOrigem(srcRaw);
