@@ -367,6 +367,17 @@
 <script>
 const PROXY_URL = 'https://script.google.com/macros/s/AKfycbxGFDgwJhRVHFUYuOc6KRpZgRQ8CLyeNocnmIZqVASQSUt6350m11RzSdvJcWSMnTYzyw/exec';
 
+const _log = {
+  error: (ctx, msg, detail) => console.error(`[lifeb][${ctx}]`, msg, detail !== undefined ? detail : ''),
+  warn:  (ctx, msg, detail) => console.warn(`[lifeb][${ctx}]`, msg, detail !== undefined ? detail : ''),
+};
+
+function _metricVal(data, metricName) {
+  if (!data?.metricHeaders || !data?.rows?.[0]?.metricValues) return null;
+  const idx = data.metricHeaders.findIndex(h => h.name === metricName);
+  return idx >= 0 ? data.rows[0].metricValues[idx] : null;
+}
+
 // Mapa completo de eventos com ícone, nome legível e descrição
 const EVENTOS_META = {
   'Lead_Formulario':      { icon: '🎯', nome: 'Lead gerado',          desc: 'Formulário enviado com nome + telefone' },
@@ -411,36 +422,56 @@ function traduzEstado(s) {
 }
 
 // Traduz origens de tráfego
-function traduzOrigem(s) {
-  const map = {
-    '(direct) / (none)'      : 'Acesso Direto',
-    '(not set) / (not set)'  : 'Não identificado',
-    '(not set)'              : 'Não identificado',
-    'google / organic'       : 'Google (orgânico)',
-    'google / cpc'           : 'Google Ads',
-    'facebook / organic'     : 'Facebook (orgânico)',
-    'instagram / organic'    : 'Instagram (orgânico)',
-    'facebook / paid-social' : 'Facebook Ads (anúncio pago)',
-    'instagram / paid-social': 'Instagram Ads (anúncio pago)',
-    'fb / paid'              : 'Facebook Ads (anúncio pago)',
-    'ig / paid'              : 'Instagram Ads (anúncio pago)',
-    'facebook / cpc'         : 'Facebook Ads (anúncio pago)',
-    'instagram / cpc'        : 'Instagram Ads (anúncio pago)',
-    'facebook.com / referral': 'Facebook (link compartilhado)',
-    'instagram.com / referral':'Instagram (link compartilhado)',
-    'whatsapp / referral'    : 'WhatsApp (link compartilhado)',
-    'youtube.com / referral' : 'YouTube (link compartilhado)',
-    'l.facebook.com / referral':'Facebook (link direto)',
-    'l.instagram.com / referral':'Instagram (link compartilhado)',
+function traduzOrigem(raw) {
+  // 1. Normalização básica
+  const s = (raw || '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+  // 2. Mapa exato (chaves já em lowercase) — inclui todos os alias do mapa anterior
+  const exact = {
+    '(direct) / (none)'          : 'Acesso Direto',
+    '(not set) / (not set)'      : 'Não identificado',
+    '(not set)'                  : 'Não identificado',
+    'google / organic'           : 'Google (orgânico)',
+    'google / cpc'               : 'Google Ads',
+    'fb / paid'                  : 'Facebook Ads',
+    'ig / paid'                  : 'Instagram Ads',
+    'whatsapp / referral'        : 'WhatsApp (link compartilhado)',
+    'youtube.com / referral'     : 'YouTube (link compartilhado)',
   };
-  const key = s.toLowerCase();
-  if (map[key]) return map[key];
+  if (exact[s]) return exact[s];
+
+  // 3. Consolidação por família (regex)
+  // Facebook
+  if (/^(facebook|l\.facebook\.com|m\.facebook\.com|facebook\.com)\s*\//.test(s)) {
+    if (/\/(cpc|paid[-\s]?social|paid)/.test(s)) return 'Facebook Ads';
+    if (/\/organic/.test(s))                      return 'Facebook (orgânico)';
+    if (/\/referral/.test(s))                     return 'Facebook (link)';
+    return 'Facebook';
+  }
+  // Instagram
+  if (/^(instagram|l\.instagram\.com|instagram\.com)\s*\//.test(s)) {
+    if (/\/(cpc|paid[-\s]?social|paid)/.test(s)) return 'Instagram Ads';
+    if (/\/organic/.test(s))                     return 'Instagram (orgânico)';
+    if (/\/referral/.test(s))                    return 'Instagram (link)';
+    return 'Instagram';
+  }
+  // WhatsApp
+  if (/^(whatsapp|api\.whatsapp\.com|wa\.me)\s*\//.test(s)) return 'WhatsApp';
+  // YouTube
+  if (/^(youtube\.com|youtu\.be)\s*\//.test(s)) return 'YouTube';
+  // Google (outros)
+  if (/^google\s*\//.test(s)) return 'Google';
+  // eventsmanager / business facebook
+  if (/eventsmanager|business\.facebook/.test(s)) return 'Facebook (gerenciador)';
+
+  // 4. Substituições genéricas de sufixo
   return s
-    .replace('/ referral', ' (link externo)')
-    .replace('/ organic', ' (busca orgânica)')
-    .replace('/ cpc', ' (anúncio pago)')
-    .replace('/ paid', ' (anúncio pago)')
-    .replace('/ paid-social', ' (anúncio pago)');
+    .replace(/\s*\/\s*referral/, ' (link)')
+    .replace(/\s*\/\s*organic/, ' (orgânico)')
+    .replace(/\s*\/\s*cpc/, ' (pago)')
+    .replace(/\s*\/\s*paid[-\s]?social/, ' (pago)')
+    .replace(/\s*\/\s*paid/, ' (pago)')
+    .replace(/\s*\/\s*\(none\)/, '');
 }
 
 let currentDays   = 1;
@@ -524,16 +555,23 @@ function setRange(range, btn) {
 }
 
 // CARREGA TUDO — race condition controlada por versão
+let _inFlight = 0;
+
 function _loadingStart() {
-  const b = document.getElementById('loading-bar');
-  b.style.opacity = '1';
-  b.classList.add('running');
+  if (++_inFlight === 1) {
+    const b = document.getElementById('loading-bar');
+    b.style.opacity = '1';
+    b.classList.add('running');
+  }
 }
 function _loadingEnd() {
-  const b = document.getElementById('loading-bar');
-  b.classList.remove('running');
-  b.style.width = '100%';
-  setTimeout(() => { b.style.opacity = '0'; setTimeout(() => { b.style.width = '0%'; }, 400); }, 200);
+  if (--_inFlight <= 0) {
+    _inFlight = 0; // nunca negativo
+    const b = document.getElementById('loading-bar');
+    b.classList.remove('running');
+    b.style.width = '100%';
+    setTimeout(() => { b.style.opacity = '0'; setTimeout(() => { b.style.width = '0%'; }, 400); }, 200);
+  }
 }
 
 // Skeleton nos valores dos cards enquanto carrega
@@ -566,32 +604,35 @@ async function loadAll() {
   _loadingStart();
   _skeletonOn();
 
-  // Pré-busca events e leads UMA vez (catches individuais para não bloquear se um falhar)
-  // Usa snap para garantir período consistente em todas as chamadas
-  const hasExplicitDates = !snap.days;
-  const [evAtual, evDuplo, pLeads, sLeads, cLeads] = await Promise.all([
-    proxy('events', undefined, undefined, snap).catch(() => null),
-    hasExplicitDates ? Promise.resolve(null) : proxy('events', snapDays * 2, undefined, snap).catch(() => null),
-    proxy('leads', undefined, 'pagePath', snap).catch(() => null),
-    proxy('leads', undefined, 'sessionSourceMedium', snap).catch(() => null),
-    proxy('leads', undefined, 'region,city', snap).catch(() => null),
-  ]);
+  try {
+    // Pré-busca events e leads UMA vez (catches individuais para não bloquear se um falhar)
+    // Usa snap para garantir período consistente em todas as chamadas
+    const hasExplicitDates = !snap.days;
+    const [evAtual, evDuplo, pLeads, sLeads, cLeads] = await Promise.all([
+      proxy('events', undefined, undefined, snap).catch(() => null),
+      hasExplicitDates ? Promise.resolve(null) : proxy('events', snapDays * 2, undefined, snap).catch(() => null),
+      proxy('leads', undefined, 'pagePath', snap).catch(() => null),
+      proxy('leads', undefined, 'sessionSourceMedium', snap).catch(() => null),
+      proxy('leads', undefined, 'region,city', snap).catch(() => null),
+    ]);
 
-  // Se uma versão mais nova já começou, descarta silenciosamente
-  if (myVersion !== loadVersion) return;
+    // Se uma versão mais nova já começou, descarta silenciosamente
+    if (myVersion !== loadVersion) return;
 
-  await Promise.allSettled([
-    loadSummaryWithCompare(evAtual, evDuplo, snap, snapDays),
-    loadChart(snap, snapDays),
-    loadPages(pLeads, snap),
-    loadCities(cLeads, snap),
-    loadSources(sLeads, snap),
-    loadEvents(evAtual, snap),
-  ]);
+    await Promise.allSettled([
+      loadSummaryWithCompare(evAtual, evDuplo, snap, snapDays),
+      loadChart(snap, snapDays),
+      loadPages(pLeads, snap),
+      loadCities(cLeads, snap),
+      loadSources(sLeads, snap),
+      loadEvents(evAtual, snap),
+    ]);
 
-  _loadingEnd();
-  _skeletonOff();
-  if (myVersion === loadVersion) { stamp(); }
+    if (myVersion === loadVersion) { stamp(); }
+  } finally {
+    _loadingEnd();
+    _skeletonOff();
+  }
 }
 
 // API HELPERS — fetch com CORS (Apps Script retorna access-control-allow-origin: *)
@@ -610,8 +651,18 @@ async function proxy(action, days, dim, snap) {
     url = `${PROXY_URL}?action=${action}&days=${p.days}`;
   }
   if (dim) url += `&dim=${encodeURIComponent(dim)}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('HTTP ' + res.status);
+  let res;
+  try {
+    res = await fetch(url);
+  } catch(e) {
+    _log.error('proxy', 'Erro na chamada ao proxy', e);
+    throw e;
+  }
+  if (!res.ok) {
+    const e = new Error('HTTP ' + res.status);
+    _log.error('proxy', 'Erro na chamada ao proxy', e);
+    throw e;
+  }
   const data = await res.json();
   if (data.error) throw new Error(JSON.stringify(data.error));
   return data;
@@ -642,9 +693,6 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo, snap, snapDays) {
       hasExplicit ? Promise.resolve(null) : proxy('summary', snapDays * 2, undefined, snap),
     ]);
 
-    const vAtual  = dAtual?.rows?.[0]?.metricValues  ?? [];
-    const vDuplo  = dDuplo?.rows?.[0]?.metricValues  ?? [];
-
     // Leads = evento Lead_Formulario (usa dados pré-buscados pelo loadAll)
     // Se evAtual veio null (falha no pre-fetch), re-busca para garantir conversão correta
     const evAtualFinal = dEvAtual ?? await proxy('events', undefined, undefined, snap).catch(() => null);
@@ -652,22 +700,22 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo, snap, snapDays) {
     const leadsDuplo = +(dEvDuplo?.rows?.find(r => r.dimensionValues[0].value === 'Lead_Formulario')?.metricValues[0]?.value ?? 0);
 
     // Taxa de conversão atual e período anterior
-    const usersAtual = +(vAtual[0]?.value ?? 0);
-    const usersDuplo = +(vDuplo[0]?.value ?? 0);
+    const usersAtual = +(_metricVal(dAtual, 'activeUsers')?.value ?? 0);
+    const usersDuplo = +(_metricVal(dDuplo, 'activeUsers')?.value ?? 0);
     const usersAnt   = usersDuplo - usersAtual;
     const leadsAnt   = leadsDuplo - leadsAtual;
     const convAtual  = usersAtual > 0 ? (leadsAtual / usersAtual * 100) : 0;
     const convAnt    = usersAnt   > 0 ? (leadsAnt   / usersAnt   * 100) : 0;
 
     // Atualiza valores atuais
-    document.getElementById('stat-users').textContent    = n(vAtual[0]?.value);
-    document.getElementById('stat-sessions').textContent = n(vAtual[1]?.value);
+    document.getElementById('stat-users').textContent    = n(_metricVal(dAtual, 'activeUsers')?.value);
+    document.getElementById('stat-sessions').textContent = n(_metricVal(dAtual, 'sessions')?.value);
     document.getElementById('stat-conv').textContent     = usersAtual > 0 ? convAtual.toFixed(1) + '%' : '—';
 
     // Calcula período anterior = duplo - atual
-    const calcDelta = (iAtual, iDuplo) => {
-      const atual    = +(iAtual?.value ?? 0);
-      const duplo    = +(iDuplo?.value ?? 0);
+    const calcDelta = (vAtualItem, vDuploItem) => {
+      const atual    = +(vAtualItem?.value ?? 0);
+      const duplo    = +(vDuploItem?.value ?? 0);
       const anterior = duplo - atual;
       if (anterior <= 0) return null;
       return Math.round((atual - anterior) / anterior * 100);
@@ -677,8 +725,8 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo, snap, snapDays) {
     const deltaLeads = leadsAnt  > 0 ? Math.round((leadsAtual - leadsAnt) / leadsAnt * 100) : null;
 
     const deltas = [
-      calcDelta(vAtual[0], vDuplo[0]),
-      calcDelta(vAtual[1], vDuplo[1]),
+      calcDelta(_metricVal(dAtual, 'activeUsers'),  _metricVal(dDuplo, 'activeUsers')),
+      calcDelta(_metricVal(dAtual, 'sessions'),      _metricVal(dDuplo, 'sessions')),
       deltaConv,
       deltaLeads,
     ];
@@ -714,9 +762,9 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo, snap, snapDays) {
       }
     });
 
-    // bounceRate e averageSessionDuration (v[3] e v[4] retornados pelo Apps Script)
-    const bounce   = parseFloat(vAtual[3]?.value ?? '');
-    const duration = parseFloat(vAtual[4]?.value ?? '');
+    // bounceRate e averageSessionDuration — via binding semântico
+    const bounce   = parseFloat(_metricVal(dAtual, 'bounceRate')?.value ?? '');
+    const duration = parseFloat(_metricVal(dAtual, 'averageSessionDuration')?.value ?? '');
     if (!isNaN(bounce)) {
       document.getElementById('stat-bounce').textContent = (bounce * 100).toFixed(1) + '%';
     } else {
@@ -731,6 +779,7 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo, snap, snapDays) {
     }
 
 } catch(err) {
+    _log.error('summary', 'Erro ao carregar resumo', err);
     const msg = err.message || 'Erro';
     ['stat-users','stat-sessions','stat-conv'].forEach(id =>
       document.getElementById(id).textContent = msg
@@ -761,6 +810,7 @@ async function loadChart(snap, snapDays) {
     const rows = d.rows ?? [];
 
     if (rows.length === 0) {
+      _log.warn('chart', 'Sem dados no período selecionado');
       if (chart) { chart.destroy(); chart = null; }
       wrap.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;color:#6b6484;font-family:Montserrat,sans-serif;">
         <div style="font-size:32px">📊</div>
@@ -913,7 +963,7 @@ async function loadChart(snap, snapDays) {
       }
     }
 
-  } catch(e) { showError('Erro ao carregar gráfico.'); }
+  } catch(e) { _log.error('chart', 'Erro ao renderizar gráfico', e); showError('Erro ao carregar gráfico.'); }
   finally { document.querySelector('.chart-wrap')?.classList.remove('chart-loading'); }
 }
 
@@ -946,7 +996,7 @@ async function loadPages(leadsData, snap) {
         <td class="num-p">${leads > 0 ? n(leads) : '<span style="font-size:11px;color:var(--muted)">—</span>'}</td>
       </tr>`;
     }).join('') || emptyRow(4);
-  } catch { tb.innerHTML = errRow(4); showError('Erro ao carregar páginas.'); }
+  } catch(e) { _log.error('pages', 'Erro ao carregar páginas', e); tb.innerHTML = errRow(4); showError('Erro ao carregar páginas.'); }
 }
 
 // TABELA — CIDADE / ESTADO
@@ -969,7 +1019,7 @@ async function loadCities(leadsData, snap) {
         <td class="num-p">${leads > 0 ? n(leads) : '<span style="font-size:11px;color:var(--muted)">—</span>'}</td>
       </tr>`;
     }).join('') || emptyRow(4);
-  } catch { tb.innerHTML = errRow(4); showError('Erro ao carregar cidades.'); }
+  } catch(e) { _log.error('cities', 'Erro ao carregar cidades', e); tb.innerHTML = errRow(4); showError('Erro ao carregar cidades.'); }
 }
 
 // TABELA — ORIGEM DO TRÁFEGO
@@ -989,7 +1039,7 @@ async function loadSources(leadsData, snap) {
         <td class="num-p">${leads > 0 ? n(leads) : '<span style="font-size:11px;color:var(--muted)">—</span>'}</td>
       </tr>`;
     }).join('') || emptyRow(3);
-  } catch { tb.innerHTML = errRow(3); showError('Erro ao carregar origens.'); }
+  } catch(e) { _log.error('sources', 'Erro ao carregar origens', e); tb.innerHTML = errRow(3); showError('Erro ao carregar origens.'); }
 }
 
 // TABELA — EVENTOS / LEADS com barra de progresso
@@ -1032,11 +1082,34 @@ async function loadEvents(d, snap) {
 
     tb.innerHTML = rowsHtml.join('') || emptyRow(2);
 
+    // Taxas de etapa do funil (em relação a Abrir_Formulario)
+    const eventMap = {};
+    rowsData.forEach(({ name, count }) => { eventMap[name] = count; });
+    const abrir     = eventMap['Abrir_Formulario']     || 0;
+    const lead      = eventMap['Lead_Formulario']       || 0;
+    const abandonou = eventMap['Abandonou_Formulario']  || 0;
+    const pulou     = eventMap['Pular_Formulario']      || 0;
+    const taxaEnvio    = abrir > 0 ? Math.round(lead      / abrir * 100) : null;
+    const taxaAbandono = abrir > 0 ? Math.round(abandonou / abrir * 100) : null;
+    const taxaPulo     = abrir > 0 ? Math.round(pulou     / abrir * 100) : null;
+    const elRates = document.getElementById('funil-rates');
+    if (elRates) {
+      if (abrir === 0) {
+        elRates.style.display = 'none';
+      } else {
+        elRates.style.display = '';
+        elRates.innerHTML =
+          `<span title="Lead_Formulario / Abrir_Formulario">Envio: <b>${taxaEnvio ?? '—'}%</b></span>` +
+          `<span title="Abandonou_Formulario / Abrir_Formulario">Abandono: <b>${taxaAbandono ?? '—'}%</b></span>` +
+          `<span title="Pular_Formulario / Abrir_Formulario">Pulo: <b>${taxaPulo ?? '—'}%</b></span>`;
+      }
+    }
 
     // Atualiza card de Leads Gerados
     document.getElementById('stat-leads').textContent = n(leadCount);
 
-  } catch {
+  } catch(e) {
+    _log.error('events', 'Erro ao carregar eventos', e);
     tb.innerHTML = errRow(2);
     document.getElementById('stat-leads').textContent = '—';
     showError('Erro ao carregar eventos.');
