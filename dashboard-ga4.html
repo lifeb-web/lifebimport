@@ -1069,7 +1069,7 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo, snap, snapDays) {
     deltaIds.forEach((id, i) => {
       const el = document.getElementById(id);
       // Hoje: comparação intradiária não tem sentido — esconde sempre
-      if (snapDays === 1) {
+          if (isSingleDay) {
         el.textContent   = '';
         el.className     = 'delta-neu';
         el.style.display = 'none';
@@ -1154,7 +1154,10 @@ async function loadChart(snap, snapDays) {
       wrap.innerHTML = '<canvas id="visitors-chart"></canvas>';
     }
 
-    if (snapDays === 1) {
+    // Dia único: "Hoje" (days=1) ou qualquer período com startDate === endDate (ex: Ontem)
+    const isSingleDay = snap.days === 1 || (snap.startDate && snap.endDate && snap.startDate === snap.endDate);
+
+    if (isSingleDay) {
       // Detecta se o proxy retornou dados por hora (novo) ou por data (proxy antigo não atualizado)
       // Hora: valor "0"–"23" (len <= 2). Data: "20240412" (len = 8)
       const primeiroValor = rows[0]?.dimensionValues[0]?.value ?? '';
