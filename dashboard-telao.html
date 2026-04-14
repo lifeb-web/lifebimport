@@ -947,16 +947,18 @@ async function loadChart(snap, snapDays) {
       // MODO 7 / 30 DIAS: gráfico por dia com tendência
       document.getElementById('chart-title').textContent = 'Visitantes por dia';
 
+      const todayStr = fmt(new Date()).replace(/-/g, ''); // YYYYMMDD do dia atual
       const labels = [], values = [], leadsValues = [], bgColors = [], borderColors = [];
       rows.forEach(r => {
-        const s    = r.dimensionValues[0].value; // YYYYMMDD
-        const date = new Date(parseInt(s.slice(0,4)), parseInt(s.slice(4,6))-1, parseInt(s.slice(6,8)));
-        const isWE = date.getDay() === 0 || date.getDay() === 6;
-        labels.push(`${DIAS_SEMANA[date.getDay()]} ${s.slice(6)}/${s.slice(4,6)}`);
+        const s       = r.dimensionValues[0].value; // YYYYMMDD
+        const date    = new Date(parseInt(s.slice(0,4)), parseInt(s.slice(4,6))-1, parseInt(s.slice(6,8)));
+        const isWE    = date.getDay() === 0 || date.getDay() === 6;
+        const isToday = s === todayStr;
+        labels.push(`${DIAS_SEMANA[date.getDay()]} ${s.slice(6)}/${s.slice(4,6)}${isToday ? ' (hoje)' : ''}`);
         values.push(+r.metricValues[0].value);
         leadsValues.push(leadsMap[s] || 0); // chave YYYYMMDD bate com retorno do proxy leads
-        bgColors.push(isWE ? 'rgba(112,75,155,.32)' : 'rgba(112,75,155,.18)');
-        borderColors.push(isWE ? '#9260c8' : '#704B9B');
+        bgColors.push(isToday ? 'rgba(233,32,133,.8)' : isWE ? 'rgba(112,75,155,.32)' : 'rgba(112,75,155,.18)');
+        borderColors.push(isToday ? '#E92085' : isWE ? '#9260c8' : '#704B9B');
       });
 
       const media    = values.map((_, i) => {
