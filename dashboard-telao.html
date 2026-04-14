@@ -674,7 +674,8 @@ async function fetchRealtime() {
     const d = await proxy('realtime');
     const v = +(d.rows?.[0]?.metricValues?.[0]?.value ?? 0);
     document.getElementById('rt-count').textContent = v || '0';
-  } catch {
+  } catch(e) {
+    _log.error('realtime', 'Erro ao carregar tempo real', e);
     document.getElementById('rt-count').textContent = '—';
   }
 }
