@@ -1066,10 +1066,12 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo, snap, snapDays) {
       deltaLeads,
     ];
 
+    const isSingleDay = snap.days === 1 || (snap.startDate && snap.endDate && snap.startDate === snap.endDate);
+
     deltaIds.forEach((id, i) => {
       const el = document.getElementById(id);
-      // Hoje: comparação intradiária não tem sentido — esconde sempre
-          if (isSingleDay) {
+      // Hoje/Ontem: comparação intradiária não tem sentido, esconde sempre
+      if (isSingleDay) {
         el.textContent   = '';
         el.className     = 'delta-neu';
         el.style.display = 'none';
