@@ -33,17 +33,38 @@
     /* HEADER */
     header {
       background:#fff; border-bottom:1px solid #e8e0f0;
-      padding:0 32px; height:58px;
-      display:flex; align-items:center; justify-content:space-between;
+      padding:0 28px; height:58px;
+      display:flex; align-items:center; gap:0;
       box-shadow:0 2px 12px rgba(112,75,155,.22); flex-shrink:0;
     }
-    .h-brand { display:flex; align-items:center; gap:14px; }
+    .h-brand { display:flex; align-items:center; gap:14px; flex-shrink:0; }
     .h-logo-img { height:32px; width:auto; display:block; }
-    .h-divider { width:1px; height:28px; background:rgba(112,75,155,.18); }
+    .h-divider { width:1px; height:28px; background:rgba(112,75,155,.18); flex-shrink:0; }
     .h-tag { font-size:12px; font-weight:700; color:var(--purple); opacity:.7; letter-spacing:.6px; text-transform:uppercase; white-space:nowrap; }
     .h-tag.strong { opacity:1; color:var(--purple); }
-    .h-dot { font-size:14px; color:rgba(112,75,155,.3); font-weight:400; }
-    .h-right { display:flex; align-items:center; gap:10px; }
+    .h-dot { font-size:14px; color:rgba(112,75,155,.3); font-weight:400; flex-shrink:0; }
+    /* Filtros no header */
+    .h-filters {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 28px;
+    }
+    .h-filters-label {
+      font-size:11px; font-weight:700; color:var(--muted);
+      letter-spacing:.4px; text-transform:uppercase;
+      white-space:nowrap; margin-right:4px; flex-shrink:0;
+    }
+    .rbtn {
+      background:transparent; border:1px solid var(--border);
+      padding:4px 10px; border-radius:5px;
+      font-size:11px; font-weight:700; font-family:var(--font);
+      color:var(--muted); cursor:pointer; transition:all .12s; white-space:nowrap;
+    }
+    .rbtn.active { background:var(--purple); color:#fff; border-color:var(--purple); }
+    .rbtn:hover:not(.active) { border-color:var(--purple); color:var(--purple); background:rgba(112,75,155,.06); }
+    .h-right { display:flex; align-items:center; gap:10px; flex-shrink:0; }
     #last-updated { display:flex; align-items:center; gap:10px; font-size:20px; font-weight:800; color:var(--purple); }
     #refresh-dot { width:9px; height:9px; border-radius:50%; background:var(--green); opacity:.35; flex-shrink:0; }
     #refresh-dot.flash { animation:dot-flash 1.4s ease forwards; }
@@ -85,21 +106,12 @@
       border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.04);
     }
 
-    /* CARD FILTROS — top bar */
-    .card-filters {
-      flex: 0 0 222px;
-      padding: 10px 14px;
-      display: flex; flex-direction: column; justify-content: space-between;
-    }
-    .ctrl-title { font-size:12px; font-weight:700; margin-bottom:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .range-btns { display:flex; flex-wrap:wrap; gap:4px; }
-    .rbtn { background:var(--card); border:1px solid var(--border); padding:3px 8px; border-radius:5px; font-size:10px; font-weight:700; font-family:var(--font); color:var(--muted); cursor:pointer; transition:all .12s; }
-    .rbtn.active { background:var(--purple); color:#fff; border-color:var(--purple); }
-    .rbtn:hover:not(.active) { border-color:var(--purple); color:var(--purple); }
+    /* ctrl-title (usado pelo script compartilhado) */
+    .ctrl-title { display:none; }
 
     /* CARD REALTIME — top bar */
     .card-rt {
-      flex: 0 0 162px;
+      flex: 0 0 175px;
       background:linear-gradient(135deg,var(--purple) 0%,#9260c8 100%);
       border:none; border-radius:12px;
       display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -110,7 +122,7 @@
     .rt-live { display:flex; align-items:center; gap:5px; font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.7px; opacity:.82; margin-bottom:2px; }
     .rt-dot  { width:8px; height:8px; background:var(--green); border-radius:50%; animation:blink 1.6s ease-in-out infinite; }
     @keyframes blink { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:.4;transform:scale(.75);} }
-    .rt-num   { font-size:46px; font-weight:800; line-height:1; }
+    .rt-num   { font-size:50px; font-weight:800; line-height:1; }
     .rt-label { font-size:11px; opacity:.85; font-weight:600; }
 
     /* CARDS MÉTRICAS — top bar (flex:1 cada) */
@@ -120,7 +132,7 @@
       display: flex; flex-direction: column; justify-content: center;
     }
     .m-label { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); margin-bottom:3px; }
-    .m-val   { font-size:37px; font-weight:800; line-height:1.05; margin-bottom:2px; transition:opacity .2s; }
+    .m-val   { font-size:40px; font-weight:800; line-height:1.05; margin-bottom:2px; transition:opacity .2s; }
     .m-sub   { font-size:10px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .m-delta { font-size:10px; font-weight:600; margin-bottom:1px; }
     .accent-purple  { border-top:4px solid var(--purple);  background:linear-gradient(180deg,#f8f5fd 0%,#fff 60%); }
@@ -194,6 +206,18 @@
     <span class="h-dot">|</span>
     <span class="h-tag">Google Analytics 4</span>
   </div>
+  <div class="h-filters">
+    <span class="h-filters-label">Período</span>
+    <button class="rbtn active" onclick="setRange('hoje',this)">Hoje</button>
+    <button class="rbtn" onclick="setRange('ontem',this)">Ontem</button>
+    <button class="rbtn" onclick="setRange(7,this)">7 dias</button>
+    <button class="rbtn" onclick="setRange(14,this)">14 dias</button>
+    <button class="rbtn" onclick="setRange(30,this)">30 dias</button>
+    <button class="rbtn" onclick="setRange('mes',this)">Esse mês</button>
+    <button class="rbtn" onclick="setRange('mespassado',this)">Mês passado</button>
+    <button class="rbtn" onclick="setRange(60,this)">60 dias</button>
+    <button class="rbtn" onclick="setRange(90,this)">90 dias</button>
+  </div>
   <div class="h-right">
     <div id="last-updated">
       <span id="refresh-dot"></span>
@@ -207,22 +231,6 @@
 
   <!-- BARRA SUPERIOR: filtros + realtime + 6 cards -->
   <div id="top-bar">
-
-    <div class="card card-filters">
-      <div class="ctrl-title">Visão Geral | <span id="days-label">hoje</span></div>
-      <span id="hoje-aviso" style="display:none"></span>
-      <div class="range-btns">
-        <button class="rbtn active" onclick="setRange('hoje',this)">Hoje</button>
-        <button class="rbtn" onclick="setRange('ontem',this)">Ontem</button>
-        <button class="rbtn" onclick="setRange(7,this)">7 dias</button>
-        <button class="rbtn" onclick="setRange(14,this)">14 dias</button>
-        <button class="rbtn" onclick="setRange(30,this)">30 dias</button>
-        <button class="rbtn" onclick="setRange('mes',this)">Esse mês</button>
-        <button class="rbtn" onclick="setRange('mespassado',this)">Mês passado</button>
-        <button class="rbtn" onclick="setRange(60,this)">60 dias</button>
-        <button class="rbtn" onclick="setRange(90,this)">90 dias</button>
-      </div>
-    </div>
 
     <div class="card card-rt">
       <div class="rt-live"><div class="rt-dot"></div>Ao vivo</div>
@@ -338,6 +346,8 @@
 </div><!-- /#telao-body -->
 
 <!-- Elementos ocultos requeridos pelo script compartilhado -->
+<span id="hoje-aviso" style="display:none"></span>
+<span id="days-label" style="display:none"></span>
 <table style="display:none"><tbody id="tb-events"></tbody></table>
 <div id="error-banner" style="display:none;position:fixed;bottom:16px;right:16px;background:#dc2626;color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999"></div>
 
