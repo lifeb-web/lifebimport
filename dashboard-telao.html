@@ -159,14 +159,16 @@
 
     /* FUNIL (ocupa toda a altura inferior sem scroll) */
     .card-funil { flex:1; display:flex; flex-direction:column; overflow:hidden; min-height:0; }
-    .funil-body { flex:1; display:flex; flex-direction:column; justify-content:space-around; padding:6px 18px 10px; overflow-y:auto; min-height:0; }
-    .funil-row { display:flex; align-items:center; gap:14px; padding:5px 0; border-bottom:1px solid var(--border); }
+    .funil-body { flex:1; display:flex; flex-direction:column; justify-content:space-around; padding:4px 18px 6px; overflow-y:auto; min-height:0; }
+    .funil-row { display:flex; align-items:center; gap:12px; padding:3px 0; border-bottom:1px solid var(--border); }
     .funil-row:last-child { border-bottom:none; }
-    .funil-icon { font-size:20px; flex-shrink:0; width:26px; text-align:center; }
-    .funil-nome { font-size:13px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:155px; max-width:175px; flex-shrink:0; }
-    .funil-bar-wrap { flex:1; height:7px; background:#f0ebf8; border-radius:4px; min-width:0; }
-    .funil-bar { height:100%; background:linear-gradient(90deg,var(--purple),var(--purple-l)); border-radius:4px; transition:width .5s ease; min-width:4px; }
-    .funil-num { font-size:26px; font-weight:800; color:var(--purple); min-width:50px; max-width:70px; text-align:right; white-space:nowrap; overflow:hidden; }
+    .funil-icon { font-size:17px; flex-shrink:0; width:22px; text-align:center; }
+    .funil-nome { font-size:12px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:150px; max-width:170px; flex-shrink:0; }
+    .funil-bar-wrap { flex:1; height:5px; background:#f0ebf8; border-radius:3px; min-width:0; }
+    .funil-bar { height:100%; background:linear-gradient(90deg,var(--purple),var(--purple-l)); border-radius:3px; transition:width .5s ease; min-width:3px; }
+    .funil-num { font-size:22px; font-weight:800; color:var(--purple); min-width:44px; max-width:60px; text-align:right; white-space:nowrap; overflow:hidden; }
+    #funil-rates-telao { flex-shrink:0; margin-top:4px; padding:5px 12px; background:var(--bg); border-radius:6px; font-size:10px; color:var(--muted); display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+    #funil-rates-telao b { color:var(--text); font-weight:700; }
 
     /* GRÁFICO */
     .card-chart { flex:1; display:flex; flex-direction:column; overflow:hidden; min-height:0; }
@@ -305,6 +307,7 @@
         <div class="funil-body" id="funil-telao">
           <div style="text-align:center;color:#c8c2d6;font-size:13px;font-style:italic">Carregando...</div>
         </div>
+        <div id="funil-rates-telao" style="display:none"></div>
       </div>
     </div>
 
@@ -1264,6 +1267,34 @@ window.traduzEstado = function(s) {
           <span class="funil-num">${count.toLocaleString('pt-BR')}</span>
         </div>`;
       }).join('');
+
+      // Taxas de etapa
+      const eventMap = {};
+      allRows.forEach(r => { eventMap[r.name] = r.count; });
+      const abrir     = eventMap['Abrir_Formulario']    || 0;
+      const lead      = eventMap['Lead_Formulario']      || 0;
+      const abandonou = eventMap['Abandonou_Formulario'] || 0;
+      const pulou     = eventMap['Pular_Formulario']     || 0;
+      const elRates   = document.getElementById('funil-rates-telao');
+      if (elRates) {
+        if (abrir === 0) {
+          elRates.style.display = 'none';
+        } else {
+          const taxaEnvio    = Math.round(lead      / abrir * 100);
+          const taxaAbandono = Math.round(abandonou / abrir * 100);
+          const taxaPulo     = Math.round(pulou     / abrir * 100);
+          const pill = (label, val, cor) =>
+            `<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;background:${cor}15;border:1px solid ${cor}40;">
+              <span style="font-size:9px;font-weight:600;color:#6b6484;text-transform:uppercase;letter-spacing:.5px">${label}</span>
+              <b style="font-size:13px;font-weight:800;color:${cor}">${val}%</b>
+            </span>`;
+          elRates.style.display = 'flex';
+          elRates.innerHTML =
+            pill('Envio',    taxaEnvio,    '#22C35D') +
+            pill('Abandono', taxaAbandono, '#dc2626') +
+            pill('Pulo',     taxaPulo,     '#f59e0b');
+        }
+      }
 
     } catch(e) {
       const funil = document.getElementById('funil-telao');
