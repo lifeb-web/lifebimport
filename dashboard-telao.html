@@ -49,7 +49,9 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      padding: 0 28px;
+      padding: 0 24px;
+      overflow: hidden;        /* nunca vaza para fora do header */
+      min-width: 0;
     }
     .h-filters-label {
       font-size:11px; font-weight:700; color:var(--muted);
@@ -60,7 +62,8 @@
       background:transparent; border:1px solid var(--border);
       padding:4px 10px; border-radius:5px;
       font-size:11px; font-weight:700; font-family:var(--font);
-      color:var(--muted); cursor:pointer; transition:all .12s; white-space:nowrap;
+      color:var(--muted); cursor:pointer; transition:all .12s;
+      white-space:nowrap; flex-shrink:0; /* nunca comprime os botões */
     }
     .rbtn.active { background:var(--purple); color:#fff; border-color:var(--purple); }
     .rbtn:hover:not(.active) { border-color:var(--purple); color:var(--purple); background:rgba(112,75,155,.06); }
@@ -128,11 +131,13 @@
     /* CARDS MÉTRICAS — top bar (flex:1 cada) */
     .card-metric {
       flex: 1;
+      min-width: 0;            /* permite comprimir se necessário, evita overflow */
       padding: 10px 14px;
       display: flex; flex-direction: column; justify-content: center;
+      overflow: hidden;
     }
-    .m-label { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); margin-bottom:3px; }
-    .m-val   { font-size:40px; font-weight:800; line-height:1.05; margin-bottom:2px; transition:opacity .2s; }
+    .m-label { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .m-val   { font-size:40px; font-weight:800; line-height:1.05; margin-bottom:2px; transition:opacity .2s; white-space:nowrap; overflow:hidden; }
     .m-sub   { font-size:10px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .m-delta { font-size:10px; font-weight:600; margin-bottom:1px; }
     .accent-purple  { border-top:4px solid var(--purple);  background:linear-gradient(180deg,#f8f5fd 0%,#fff 60%); }
@@ -156,10 +161,10 @@
     .funil-row { display:flex; align-items:center; gap:14px; padding:5px 0; border-bottom:1px solid var(--border); }
     .funil-row:last-child { border-bottom:none; }
     .funil-icon { font-size:20px; flex-shrink:0; width:26px; text-align:center; }
-    .funil-nome { font-size:13px; font-weight:700; color:var(--text); white-space:nowrap; min-width:170px; max-width:185px; flex-shrink:0; }
-    .funil-bar-wrap { flex:1; height:7px; background:#f0ebf8; border-radius:4px; }
+    .funil-nome { font-size:13px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:155px; max-width:175px; flex-shrink:0; }
+    .funil-bar-wrap { flex:1; height:7px; background:#f0ebf8; border-radius:4px; min-width:0; }
     .funil-bar { height:100%; background:linear-gradient(90deg,var(--purple),var(--purple-l)); border-radius:4px; transition:width .5s ease; min-width:4px; }
-    .funil-num { font-size:26px; font-weight:800; color:var(--purple); min-width:52px; text-align:right; }
+    .funil-num { font-size:26px; font-weight:800; color:var(--purple); min-width:50px; max-width:70px; text-align:right; white-space:nowrap; overflow:hidden; }
 
     /* GRÁFICO */
     .card-chart { flex:1; display:flex; flex-direction:column; overflow:hidden; min-height:0; }
@@ -180,10 +185,10 @@
     tbody tr { border-bottom:1px solid var(--border); transition:background .1s; }
     tbody tr:last-child { border-bottom:none; }
     tbody tr:hover { background:#faf8fc; }
-    td { padding:7px 6px; font-weight:500; font-size:13px; }
-    td:not(:first-child) { text-align:right; font-weight:700; font-size:14px; }
-    .pg-legenda { display:block; font-weight:700; font-size:13px; color:var(--text); }
-    .pg-path    { display:block; font-size:9px; color:var(--muted); font-family:monospace; margin-top:1px; }
+    td { padding:7px 6px; font-weight:500; font-size:13px; max-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    td:not(:first-child) { text-align:right; font-weight:700; font-size:14px; max-width:none; white-space:nowrap; }
+    .pg-legenda { display:block; font-weight:700; font-size:13px; color:var(--text); overflow:hidden; text-overflow:ellipsis; }
+    .pg-path    { display:block; font-size:9px; color:var(--muted); font-family:monospace; margin-top:1px; overflow:hidden; text-overflow:ellipsis; }
     .td-url     { max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .num-p      { color:var(--purple); }
     .empty-row td { text-align:center !important; color:#c8c2d6; font-style:italic; font-weight:400; }
