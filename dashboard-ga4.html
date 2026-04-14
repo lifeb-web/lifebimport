@@ -1498,25 +1498,30 @@ async function loadEvents(d, snap) {
     tb.innerHTML = rowsHtml.join('') || emptyRow(2);
 
     // Taxas de etapa do funil (em relação a Abrir_Formulario)
+    // Só exibe pill se o evento realmente disparou no período (GA4 não retorna linhas com count=0)
     const eventMap = {};
     rowsData.forEach(({ name, count }) => { eventMap[name] = count; });
-    const abrir     = eventMap['Abrir_Formulario']     || 0;
-    const lead      = eventMap['Lead_Formulario']       || 0;
-    const abandonou = eventMap['Abandonou_Formulario']  || 0;
-    const pulou     = eventMap['Pular_Formulario']      || 0;
-    const taxaEnvio    = abrir > 0 ? Math.round(lead      / abrir * 100) : null;
-    const taxaAbandono = abrir > 0 ? Math.round(abandonou / abrir * 100) : null;
-    const taxaPulo     = abrir > 0 ? Math.round(pulou     / abrir * 100) : null;
+    const abrir   = eventMap['Abrir_Formulario'] || 0;
     const elRates = document.getElementById('funil-rates');
     if (elRates) {
       if (abrir === 0) {
         elRates.style.display = 'none';
       } else {
-        elRates.style.display = '';
-        elRates.innerHTML =
-          `<span title="Lead_Formulario / Abrir_Formulario">Envio: <b>${taxaEnvio ?? '—'}%</b></span>` +
-          `<span title="Abandonou_Formulario / Abrir_Formulario">Abandono: <b>${taxaAbandono ?? '—'}%</b></span>` +
-          `<span title="Pular_Formulario / Abrir_Formulario">Pulo: <b>${taxaPulo ?? '—'}%</b></span>`;
+        const span = (label, key, title) => {
+          if (!(key in eventMap)) return ''; // evento não disparou no período
+          const val = Math.round(eventMap[key] / abrir * 100);
+          return `<span title="${title}">${label}: <b>${val}%</b></span>`;
+        };
+        const html =
+          span('Envio',    'Lead_Formulario',      'Lead_Formulario / Abrir_Formulario') +
+          span('Abandono', 'Abandonou_Formulario', 'Abandonou_Formulario / Abrir_Formulario') +
+          span('Pulo',     'Pular_Formulario',     'Pular_Formulario / Abrir_Formulario');
+        if (html) {
+          elRates.style.display = '';
+          elRates.innerHTML = html;
+        } else {
+          elRates.style.display = 'none';
+        }
       }
     }
 

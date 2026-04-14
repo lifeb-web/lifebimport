@@ -1251,8 +1251,11 @@ window.traduzEstado = function(s) {
       const funil = document.getElementById('funil-telao');
       if (!funil) return;
 
+      const elRates = document.getElementById('funil-rates-telao');
+
       if (funilRows.length === 0) {
         funil.innerHTML = '<div style="text-align:center;color:#c8c2d6;font-size:13px;font-style:italic;padding:20px 0">Sem dados no período</div>';
+        if (elRates) elRates.style.display = 'none';
         return;
       }
 
@@ -1268,37 +1271,40 @@ window.traduzEstado = function(s) {
         </div>`;
       }).join('');
 
-      // Taxas de etapa
+      // Taxas de etapa — só mostra pill se o evento realmente disparou no período
       const eventMap = {};
       allRows.forEach(r => { eventMap[r.name] = r.count; });
-      const abrir     = eventMap['Abrir_Formulario']    || 0;
-      const lead      = eventMap['Lead_Formulario']      || 0;
-      const abandonou = eventMap['Abandonou_Formulario'] || 0;
-      const pulou     = eventMap['Pular_Formulario']     || 0;
-      const elRates   = document.getElementById('funil-rates-telao');
+      const abrir = eventMap['Abrir_Formulario'] || 0;
       if (elRates) {
         if (abrir === 0) {
           elRates.style.display = 'none';
         } else {
-          const taxaEnvio    = Math.round(lead      / abrir * 100);
-          const taxaAbandono = Math.round(abandonou / abrir * 100);
-          const taxaPulo     = Math.round(pulou     / abrir * 100);
-          const pill = (label, val, cor) =>
-            `<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;background:${cor}15;border:1px solid ${cor}40;">
+          const pill = (label, key, cor) => {
+            if (!(key in eventMap)) return ''; // evento não disparou no período
+            const val = Math.round(eventMap[key] / abrir * 100);
+            return `<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;background:${cor}15;border:1px solid ${cor}40;">
               <span style="font-size:9px;font-weight:600;color:#6b6484;text-transform:uppercase;letter-spacing:.5px">${label}</span>
               <b style="font-size:13px;font-weight:800;color:${cor}">${val}%</b>
             </span>`;
-          elRates.style.display = 'flex';
-          elRates.innerHTML =
-            pill('Envio',    taxaEnvio,    '#22C35D') +
-            pill('Abandono', taxaAbandono, '#dc2626') +
-            pill('Pulo',     taxaPulo,     '#f59e0b');
+          };
+          const html =
+            pill('Envio',    'Lead_Formulario',      '#22C35D') +
+            pill('Abandono', 'Abandonou_Formulario', '#dc2626') +
+            pill('Pulo',     'Pular_Formulario',     '#f59e0b');
+          if (html) {
+            elRates.style.display = 'flex';
+            elRates.innerHTML = html;
+          } else {
+            elRates.style.display = 'none';
+          }
         }
       }
 
     } catch(e) {
       const funil = document.getElementById('funil-telao');
       if (funil) funil.innerHTML = '<div style="text-align:center;color:#c8c2d6;font-size:13px;font-style:italic;padding:20px 0">Sem dados</div>';
+      const elRates = document.getElementById('funil-rates-telao');
+      if (elRates) elRates.style.display = 'none';
     }
   }
 })();
