@@ -1247,18 +1247,20 @@ async function loadChart(snap, snapDays) {
         return;
       }
 
-      // MODO HOJE: gráfico por hora do dia (proxy novo)
+      // MODO HOJE/ONTEM: gráfico por hora do dia
+      const isOntem = snap.label === 'ontem' || (snap.startDate && snap.startDate !== fmt(new Date()));
       document.getElementById('chart-title').textContent = 'Visitantes por hora';
 
-      const horaAtual = new Date().getHours();
-      const horaMap   = {};
+      const horaAtual  = new Date().getHours();
+      const horaLimite = isOntem ? 23 : horaAtual; // Ontem: 24h completas; Hoje: até agora
+      const horaMap    = {};
       rows.forEach(r => { horaMap[parseInt(r.dimensionValues[0].value, 10)] = +r.metricValues[0].value; });
 
       const labels = [], values = [], bgColors = [], borderColors = [];
-      for (let h = 0; h <= horaAtual; h++) {
+      for (let h = 0; h <= horaLimite; h++) {
         labels.push(String(h).padStart(2,'0') + 'h');
         values.push(horaMap[h] || 0);
-        const isNow = h === horaAtual;
+        const isNow = !isOntem && h === horaAtual;
         bgColors.push(isNow    ? 'rgba(233,32,133,.8)'  : 'rgba(112,75,155,.22)');
         borderColors.push(isNow ? '#E92085'               : '#704B9B');
       }
@@ -1285,7 +1287,7 @@ async function loadChart(snap, snapDays) {
                 bodyFont:  { family:'Montserrat', size:12 },
                 padding: 12,
                 callbacks: {
-                  title: items => items[0].label + (parseInt(items[0].label) === horaAtual ? ' (agora)' : ''),
+                  title: items => items[0].label + (!isOntem && parseInt(items[0].label) === horaAtual ? ' (agora)' : ''),
                   label: c => ` ${c.parsed.y} visitante${c.parsed.y !== 1 ? 's' : ''}`,
                 },
               },
@@ -1302,8 +1304,9 @@ async function loadChart(snap, snapDays) {
         const aviso = document.createElement('div');
         aviso.className = 'chart-aviso';
         aviso.style.cssText = 'font-size:11px;color:#6b6484;font-family:Montserrat,sans-serif;text-align:center;margin-top:6px;';
-        const agora = peakHour === horaAtual ? ' (até agora)' : '';
-        aviso.textContent = `Pico hoje: ${String(peakHour).padStart(2,'0')}h com ${maxVal} visitante${maxVal !== 1 ? 's' : ''}${agora}.`;
+        const sufixo = !isOntem && peakHour === horaAtual ? ' (até agora)' : '';
+        const prefixo = isOntem ? 'Pico ontem' : 'Pico hoje';
+        aviso.textContent = `${prefixo}: ${String(peakHour).padStart(2,'0')}h com ${maxVal} visitante${maxVal !== 1 ? 's' : ''}${sufixo}.`;
         wrap.parentElement.appendChild(aviso);
       }
 
