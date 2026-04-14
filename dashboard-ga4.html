@@ -819,6 +819,11 @@ function traduzEstado(s) {
     'State of Roraima':'Roraima','Roraima':'Roraima',
     'Federal District':'Distrito Federal','(not set)':'Não identificado',
   };
+  if (m[s]) return m[s];
+  // GA4 às vezes retorna sem acento — tenta normalizar
+  const norm = v => v.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+  const sn = norm(s);
+  for (const [k, v] of Object.entries(m)) { if (norm(k) === sn) return v; }
   return m[s] || s;
 }
 
@@ -1213,10 +1218,10 @@ async function loadChart(snap, snapDays) {
     const leadsDim    = isSingleDay ? 'hour' : 'date';
 
     const [d, dLeads] = await Promise.all([
-      proxy('chart',  undefined,       undefined, snap),
+      proxy('chart',  undefined,       undefined, snap).catch(() => null),
       proxy('leads',  undefined, leadsDim,         snap).catch(() => null),
     ]);
-    const rows = d.rows ?? [];
+    const rows = d?.rows ?? [];
     const leadsMap = {};
     (dLeads?.rows ?? []).forEach(r => { leadsMap[r.dimensionValues[0].value] = +r.metricValues[0].value; });
 
