@@ -998,12 +998,17 @@ async function loadPages(leadsData, snap) {
   try {
     const leadsMap = buildLeadsMap(leadsData, r => r.dimensionValues[0].value);
     const d = await proxy('pages', undefined, undefined, snap);
-    tb.innerHTML = (d.rows ?? []).filter(r => r.dimensionValues[0].value !== '/dashboard-ga4.html').map(r => {
-      const path = r.dimensionValues[0].value;
-      const [u, s] = r.metricValues.map(x => x.value);
-      const legenda = PAGINAS_LEGENDAS[path] || '';
-      const leads = leadsMap.get(path) || 0;
-      return `<tr>
+    const rows = (d.rows ?? [])
+      .filter(r => r.dimensionValues[0].value !== '/dashboard-ga4.html')
+      .map(r => {
+        const path    = r.dimensionValues[0].value;
+        const [u, s]  = r.metricValues.map(x => x.value);
+        const legenda = PAGINAS_LEGENDAS[path] || '';
+        const leads   = leadsMap.get(path) || 0;
+        return { path, u, s, legenda, leads };
+      })
+      .sort((a, b) => b.leads - a.leads || b.u - a.u); // ordena por leads desc, desempata por visitas
+    tb.innerHTML = rows.map(({ path, u, s, legenda, leads }) => `<tr>
         <td class="td-url" title="${esc(path)}" style="overflow:visible;white-space:normal;">
           <span class="pg-legenda">${esc(legenda) || esc(path)}</span>
           ${legenda ? `<span class="pg-path">${esc(path)}</span>` : ''}
@@ -1011,8 +1016,7 @@ async function loadPages(leadsData, snap) {
         <td class="num-p">${n(u)}</td>
         <td class="mh">${n(s)}</td>
         <td class="num-p">${leads > 0 ? n(leads) : '<span style="font-size:11px;color:var(--muted)">—</span>'}</td>
-      </tr>`;
-    }).join('') || emptyRow(4);
+      </tr>`).join('') || emptyRow(4);
   } catch(e) { _log.error('pages', 'Erro ao carregar páginas', e); tb.innerHTML = errRow(4); showError('Erro ao carregar páginas.'); }
 }
 
@@ -1022,20 +1026,23 @@ async function loadCities(leadsData, snap) {
   try {
     const leadsMap = buildLeadsMap(leadsData, r => `${r.dimensionValues[0].value}||${r.dimensionValues[1].value}`);
     const d = await proxy('cities', undefined, undefined, snap);
-    tb.innerHTML = (d.rows ?? []).map(r => {
-      const regionRaw = r.dimensionValues[0].value;
-      const cityRaw   = r.dimensionValues[1].value;
-      const region    = traduzEstado(regionRaw);
-      const city      = (!cityRaw || cityRaw === '(not set)') ? 'Não identificada' : cityRaw;
-      const users     = r.metricValues[0].value;
-      const leads     = leadsMap.get(`${regionRaw}||${cityRaw}`) || 0;
-      return `<tr>
+    const rows = (d.rows ?? [])
+      .map(r => {
+        const regionRaw = r.dimensionValues[0].value;
+        const cityRaw   = r.dimensionValues[1].value;
+        const region    = traduzEstado(regionRaw);
+        const city      = (!cityRaw || cityRaw === '(not set)') ? 'Não identificada' : cityRaw;
+        const users     = r.metricValues[0].value;
+        const leads     = leadsMap.get(`${regionRaw}||${cityRaw}`) || 0;
+        return { region, city, users, leads };
+      })
+      .sort((a, b) => b.leads - a.leads || b.users - a.users);
+    tb.innerHTML = rows.map(({ region, city, users, leads }) => `<tr>
         <td>${esc(region)}</td>
         <td class="td-left">${esc(city)}</td>
         <td class="num-p">${n(users)}</td>
         <td class="num-p">${leads > 0 ? n(leads) : '<span style="font-size:11px;color:var(--muted)">—</span>'}</td>
-      </tr>`;
-    }).join('') || emptyRow(4);
+      </tr>`).join('') || emptyRow(4);
   } catch(e) { _log.error('cities', 'Erro ao carregar cidades', e); tb.innerHTML = errRow(4); showError('Erro ao carregar cidades.'); }
 }
 
@@ -1045,17 +1052,20 @@ async function loadSources(leadsData, snap) {
   try {
     const leadsMap = buildLeadsMap(leadsData, r => r.dimensionValues[0].value);
     const d = await proxy('sources', undefined, undefined, snap);
-    tb.innerHTML = (d.rows ?? []).map(r => {
-      const srcRaw = r.dimensionValues[0].value;
-      const src    = traduzOrigem(srcRaw);
-      const [u]    = r.metricValues.map(x => x.value);
-      const leads  = leadsMap.get(srcRaw) || 0;
-      return `<tr>
+    const rows = (d.rows ?? [])
+      .map(r => {
+        const srcRaw = r.dimensionValues[0].value;
+        const src    = traduzOrigem(srcRaw);
+        const [u]    = r.metricValues.map(x => x.value);
+        const leads  = leadsMap.get(srcRaw) || 0;
+        return { src, u, leads };
+      })
+      .sort((a, b) => b.leads - a.leads || b.u - a.u);
+    tb.innerHTML = rows.map(({ src, u, leads }) => `<tr>
         <td>${esc(src)}</td>
         <td class="num-p">${n(u)}</td>
         <td class="num-p">${leads > 0 ? n(leads) : '<span style="font-size:11px;color:var(--muted)">—</span>'}</td>
-      </tr>`;
-    }).join('') || emptyRow(3);
+      </tr>`).join('') || emptyRow(3);
   } catch(e) { _log.error('sources', 'Erro ao carregar origens', e); tb.innerHTML = errRow(3); showError('Erro ao carregar origens.'); }
 }
 
@@ -1100,25 +1110,30 @@ async function loadEvents(d, snap) {
     tb.innerHTML = rowsHtml.join('') || emptyRow(2);
 
     // Taxas de etapa do funil (em relação a Abrir_Formulario)
+    // Só exibe pill se o evento realmente disparou no período (GA4 não retorna linhas com count=0)
     const eventMap = {};
     rowsData.forEach(({ name, count }) => { eventMap[name] = count; });
-    const abrir     = eventMap['Abrir_Formulario']     || 0;
-    const lead      = eventMap['Lead_Formulario']       || 0;
-    const abandonou = eventMap['Abandonou_Formulario']  || 0;
-    const pulou     = eventMap['Pular_Formulario']      || 0;
-    const taxaEnvio    = abrir > 0 ? Math.round(lead      / abrir * 100) : null;
-    const taxaAbandono = abrir > 0 ? Math.round(abandonou / abrir * 100) : null;
-    const taxaPulo     = abrir > 0 ? Math.round(pulou     / abrir * 100) : null;
+    const abrir   = eventMap['Abrir_Formulario'] || 0;
     const elRates = document.getElementById('funil-rates');
     if (elRates) {
       if (abrir === 0) {
         elRates.style.display = 'none';
       } else {
-        elRates.style.display = '';
-        elRates.innerHTML =
-          `<span title="Lead_Formulario / Abrir_Formulario">Envio: <b>${taxaEnvio ?? '—'}%</b></span>` +
-          `<span title="Abandonou_Formulario / Abrir_Formulario">Abandono: <b>${taxaAbandono ?? '—'}%</b></span>` +
-          `<span title="Pular_Formulario / Abrir_Formulario">Pulo: <b>${taxaPulo ?? '—'}%</b></span>`;
+        const span = (label, key, title) => {
+          if (!(key in eventMap)) return ''; // evento não disparou no período
+          const val = Math.round(eventMap[key] / abrir * 100);
+          return `<span title="${title}">${label}: <b>${val}%</b></span>`;
+        };
+        const html =
+          span('Envio',    'Lead_Formulario',      'Lead_Formulario / Abrir_Formulario') +
+          span('Abandono', 'Abandonou_Formulario', 'Abandonou_Formulario / Abrir_Formulario') +
+          span('Pulo',     'Pular_Formulario',     'Pular_Formulario / Abrir_Formulario');
+        if (html) {
+          elRates.style.display = '';
+          elRates.innerHTML = html;
+        } else {
+          elRates.style.display = 'none';
+        }
       }
     }
 
