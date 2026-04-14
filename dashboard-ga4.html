@@ -1208,8 +1208,17 @@ async function loadChart(snap, snapDays) {
   try {
     wrap.parentElement.querySelectorAll('.chart-aviso').forEach(el => el.remove());
 
-    const d    = await proxy('chart', undefined, undefined, snap);
+    // Dia único: "Hoje" (days=1) ou qualquer período com startDate === endDate (ex: Ontem)
+    const isSingleDay = snap.days === 1 || (snap.startDate && snap.endDate && snap.startDate === snap.endDate);
+    const leadsDim    = isSingleDay ? 'hour' : 'date';
+
+    const [d, dLeads] = await Promise.all([
+      proxy('chart',  undefined,       undefined, snap),
+      proxy('leads',  undefined, leadsDim,         snap).catch(() => null),
+    ]);
     const rows = d.rows ?? [];
+    const leadsMap = {};
+    (dLeads?.rows ?? []).forEach(r => { leadsMap[r.dimensionValues[0].value] = +r.metricValues[0].value; });
 
     if (rows.length === 0) {
       _log.warn('chart', 'Sem dados no período selecionado');
@@ -1225,9 +1234,6 @@ async function loadChart(snap, snapDays) {
     if (!document.getElementById('visitors-chart')) {
       wrap.innerHTML = '<canvas id="visitors-chart"></canvas>';
     }
-
-    // Dia único: "Hoje" (days=1) ou qualquer período com startDate === endDate (ex: Ontem)
-    const isSingleDay = snap.days === 1 || (snap.startDate && snap.endDate && snap.startDate === snap.endDate);
 
     if (isSingleDay) {
       // Detecta se o proxy retornou dados por hora (novo) ou por data (proxy antigo não atualizado)
@@ -1256,10 +1262,11 @@ async function loadChart(snap, snapDays) {
       const horaMap    = {};
       rows.forEach(r => { horaMap[parseInt(r.dimensionValues[0].value, 10)] = +r.metricValues[0].value; });
 
-      const labels = [], values = [], bgColors = [], borderColors = [];
+      const labels = [], values = [], leadsValues = [], bgColors = [], borderColors = [];
       for (let h = 0; h <= horaLimite; h++) {
         labels.push(String(h).padStart(2,'0') + 'h');
         values.push(horaMap[h] || 0);
+        leadsValues.push(leadsMap[String(h)] || 0);
         const isNow = !isOntem && h === horaAtual;
         bgColors.push(isNow    ? 'rgba(233,32,133,.8)'  : 'rgba(112,75,155,.22)');
         borderColors.push(isNow ? '#E92085'               : '#704B9B');
@@ -1267,16 +1274,29 @@ async function loadChart(snap, snapDays) {
 
       const maxVal   = Math.max(...values, 0);
       const peakHour = values.indexOf(maxVal);
+      const hasLeads = leadsValues.some(v => v > 0);
 
       if (chart) chart.destroy();
       chart = new Chart(
         document.getElementById('visitors-chart').getContext('2d'),
         {
-          data: { labels, datasets: [{
-            type: 'bar', label: 'Visitantes', data: values,
-            backgroundColor: bgColors, borderColor: borderColors,
-            borderWidth: 1.5, borderRadius: 5, borderSkipped: false,
-          }]},
+          data: { labels, datasets: [
+            {
+              type: 'bar', label: 'Visitantes', data: values,
+              backgroundColor: bgColors, borderColor: borderColors,
+              borderWidth: 1.5, borderRadius: 5, borderSkipped: false, order: 2,
+            },
+            ...(hasLeads ? [{
+              type: 'line', label: 'Leads', data: leadsValues,
+              borderColor: 'transparent', backgroundColor: '#E92085',
+              pointBackgroundColor: leadsValues.map(v => v > 0 ? '#E92085' : 'transparent'),
+              pointBorderColor: leadsValues.map(v => v > 0 ? '#fff' : 'transparent'),
+              pointBorderWidth: 1.5,
+              pointRadius: leadsValues.map(v => v > 0 ? 5 : 0),
+              pointHoverRadius: leadsValues.map(v => v > 0 ? 7 : 0),
+              showLine: false, order: 1,
+            }] : []),
+          ]},
           options: {
             responsive: true, maintainAspectRatio: false,
             plugins: {
@@ -1288,7 +1308,9 @@ async function loadChart(snap, snapDays) {
                 padding: 12,
                 callbacks: {
                   title: items => items[0].label + (!isOntem && parseInt(items[0].label) === horaAtual ? ' (agora)' : ''),
-                  label: c => ` ${c.parsed.y} visitante${c.parsed.y !== 1 ? 's' : ''}`,
+                  label: c => c.dataset.label === 'Leads'
+                    ? ` 🎯 ${c.parsed.y} lead${c.parsed.y !== 1 ? 's' : ''}`
+                    : ` ${c.parsed.y} visitante${c.parsed.y !== 1 ? 's' : ''}`,
                 },
               },
             },
@@ -1314,39 +1336,74 @@ async function loadChart(snap, snapDays) {
       // MODO 7 / 30 DIAS: gráfico por dia com tendência
       document.getElementById('chart-title').textContent = 'Visitantes por dia';
 
-      const labels = [], values = [], bgColors = [], borderColors = [];
+      const labels = [], values = [], leadsValues = [], bgColors = [], borderColors = [];
       rows.forEach(r => {
-        const s    = r.dimensionValues[0].value;
+        const s    = r.dimensionValues[0].value; // YYYYMMDD
         const date = new Date(parseInt(s.slice(0,4)), parseInt(s.slice(4,6))-1, parseInt(s.slice(6,8)));
         const isWE = date.getDay() === 0 || date.getDay() === 6;
         labels.push(`${DIAS_SEMANA[date.getDay()]} ${s.slice(6)}/${s.slice(4,6)}`);
         values.push(+r.metricValues[0].value);
+        leadsValues.push(leadsMap[s] || 0); // chave YYYYMMDD bate com retorno do proxy leads
         bgColors.push(isWE ? 'rgba(112,75,155,.32)' : 'rgba(112,75,155,.18)');
         borderColors.push(isWE ? '#9260c8' : '#704B9B');
       });
 
-      const media = values.map((_, i) => {
+      const media    = values.map((_, i) => {
         const j = values.slice(Math.max(0,i-2), i+3);
         return Math.round(j.reduce((a,b)=>a+b,0)/j.length);
       });
+      const hasLeads = leadsValues.some(v => v > 0);
 
       if (chart) chart.destroy();
       chart = new Chart(
         document.getElementById('visitors-chart').getContext('2d'),
         {
           data: { labels, datasets: [
-            { type:'bar',  label:'Visitantes', data:values, backgroundColor:bgColors, borderColor:borderColors, borderWidth:1.5, borderRadius:6, borderSkipped:false, order:2 },
-            { type:'line', label:'Tendência',  data:media,  borderColor:'rgba(112,75,155,.5)', borderWidth:2, borderDash:[5,4], pointRadius:0, fill:false, tension:.4, order:1 },
+            { type:'bar',  label:'Visitantes', data:values, backgroundColor:bgColors, borderColor:borderColors, borderWidth:1.5, borderRadius:6, borderSkipped:false, order:3 },
+            { type:'line', label:'Tendência',  data:media,  borderColor:'rgba(112,75,155,.5)', borderWidth:2, borderDash:[5,4], pointRadius:0, fill:false, tension:.4, order:2 },
+            ...(hasLeads ? [{
+              type:'line', label:'Leads', data:leadsValues,
+              borderColor:'transparent', backgroundColor:'#E92085',
+              pointBackgroundColor: leadsValues.map(v => v > 0 ? '#E92085' : 'transparent'),
+              pointBorderColor:     leadsValues.map(v => v > 0 ? '#fff'    : 'transparent'),
+              pointBorderWidth: 1.5,
+              pointRadius:      leadsValues.map(v => v > 0 ? 5 : 0),
+              pointHoverRadius: leadsValues.map(v => v > 0 ? 7 : 0),
+              showLine: false, order: 1,
+            }] : []),
           ]},
           options: {
             responsive:true, maintainAspectRatio:false,
             plugins: {
-              legend: { display:true, position:'top', align:'end', labels:{ font:{family:'Montserrat',size:11}, color:'#6b6484', boxWidth:14, padding:14, filter: item => item.text !== 'Tendência' || values.length > 3 } },
+              legend: { display:true, position:'top', align:'end', labels:{
+                font:{family:'Montserrat',size:11}, color:'#6b6484', boxWidth:14, padding:14,
+                filter: item => {
+                  if (item.text === 'Tendência') return values.length > 3;
+                  if (item.text === 'Leads')     return hasLeads;
+                  return true;
+                },
+                generateLabels: chart => {
+                  const defs = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                  return defs.map(d => {
+                    if (d.text === 'Leads') {
+                      d.pointStyle = 'circle';
+                      d.fillStyle  = '#E92085';
+                      d.strokeStyle = '#fff';
+                      d.lineWidth = 1.5;
+                    }
+                    return d;
+                  });
+                },
+              }},
               tooltip: {
                 backgroundColor:'#221B32', titleFont:{family:'Montserrat',weight:'700',size:12}, bodyFont:{family:'Montserrat',size:12}, padding:12,
                 callbacks: {
                   title: items => items[0].label,
-                  label: c => c.dataset.type === 'bar' ? ` ${c.parsed.y} visitante${c.parsed.y!==1?'s':''}` : ` média: ${c.parsed.y}`,
+                  label: c => {
+                    if (c.dataset.label === 'Leads')     return ` 🎯 ${c.parsed.y} lead${c.parsed.y!==1?'s':''}`;
+                    if (c.dataset.type  === 'bar')       return ` ${c.parsed.y} visitante${c.parsed.y!==1?'s':''}`;
+                    return ` média: ${c.parsed.y}`;
+                  },
                 },
               },
             },
