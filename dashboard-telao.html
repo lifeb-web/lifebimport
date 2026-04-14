@@ -964,6 +964,16 @@ async function loadChart(snap, snapDays) {
         aviso.style.cssText = 'font-size:11px;color:#6b6484;font-family:Montserrat,sans-serif;text-align:center;margin-top:6px;';
         aviso.textContent = 'O gráfico vai crescer conforme novos dias forem registrados.';
         wrap.parentElement.appendChild(aviso);
+      } else if (values.length > 1) {
+        const maxV   = Math.max(...values);
+        const maxIdx = values.indexOf(maxV);
+        if (maxV > 0) {
+          const aviso = document.createElement('div');
+          aviso.className = 'chart-aviso';
+          aviso.style.cssText = 'font-size:11px;color:#6b6484;font-family:Montserrat,sans-serif;text-align:center;margin-top:6px;';
+          aviso.textContent = `Pico do período: ${labels[maxIdx]} com ${maxV} visitante${maxV !== 1 ? 's' : ''}.`;
+          wrap.parentElement.appendChild(aviso);
+        }
       }
     }
 
