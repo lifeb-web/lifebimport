@@ -909,6 +909,7 @@ async function loadChart(snap, snapDays) {
           ]},
           options: {
             responsive: true, maintainAspectRatio: false,
+            devicePixelRatio: Math.max(Math.ceil(window._telaoScale || 1), window.devicePixelRatio || 1),
             plugins: {
               legend: { display: false },
               tooltip: {
@@ -984,6 +985,7 @@ async function loadChart(snap, snapDays) {
           ]},
           options: {
             responsive:true, maintainAspectRatio:false,
+            devicePixelRatio: Math.max(Math.ceil(window._telaoScale || 1), window.devicePixelRatio || 1),
             plugins: {
               legend: { display:true, position:'top', align:'end', labels:{
                 font:{family:'Montserrat',size:11}, color:'#6b6484', boxWidth:14, padding:14,
@@ -1397,18 +1399,31 @@ window.traduzEstado = function(s) {
 
 <script>
 // Escala o layout 1920×1080 para caber em qualquer tamanho de tela, sem cortar nada
+// Usa zoom (não transform:scale) para re-renderizar em resolução nativa — texto e gráficos nítidos em 4K/2K
 (function scaleToFit() {
-  const PAD = 14; // px de respiro nas bordas da TV
+  const PAD = 14;
   function apply() {
     const sx = (window.innerWidth  - PAD * 2) / 1920;
     const sy = (window.innerHeight - PAD * 2) / 1080;
     const s  = Math.min(sx, sy);
-    document.body.style.transform = 'scale(' + s + ')';
-    // Centraliza se a tela tiver proporção diferente de 16:9
-    const offX = PAD + Math.max(0, (window.innerWidth  - PAD * 2 - 1920 * s) / 2);
-    const offY = PAD + Math.max(0, (window.innerHeight - PAD * 2 - 1080 * s) / 2);
+
+    // zoom re-renderiza em resolução nativa (sharp em 4K/2K)
+    document.body.style.zoom      = s;
+    document.body.style.transform = '';
+
+    // Com zoom, margens são no espaço local do body (dividir por s para converter de CSS px para body px)
+    const offX = PAD / s + Math.max(0, (window.innerWidth  / s - 1920) / 2);
+    const offY = PAD / s + Math.max(0, (window.innerHeight / s - 1080) / 2);
     document.body.style.marginLeft = offX + 'px';
     document.body.style.marginTop  = offY + 'px';
+
+    // Guarda fator para Chart.js renderizar canvas em alta resolução
+    window._telaoScale = s;
+
+    // Se o gráfico já existe, força re-render com novo dpr
+    if (window.chart && typeof window.chart.resize === 'function') {
+      window.chart.resize();
+    }
   }
   apply();
   window.addEventListener('resize', apply);
