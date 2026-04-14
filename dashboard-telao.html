@@ -139,7 +139,7 @@
       overflow: hidden;
     }
     .m-label { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .m-val   { font-size:40px; font-weight:800; line-height:1.05; margin-bottom:2px; transition:opacity .2s; white-space:nowrap; overflow:hidden; }
+    .m-val   { font-size:40px; font-weight:800; line-height:1.05; margin-bottom:2px; transition:opacity .2s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .m-sub   { font-size:10px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .m-delta { font-size:10px; font-weight:600; margin-bottom:1px; }
     .accent-purple  { border-top:4px solid var(--purple);  background:linear-gradient(180deg,#f8f5fd 0%,#fff 60%); }
@@ -159,7 +159,7 @@
 
     /* FUNIL (ocupa toda a altura inferior sem scroll) */
     .card-funil { flex:1; display:flex; flex-direction:column; overflow:hidden; min-height:0; }
-    .funil-body { flex:1; display:flex; flex-direction:column; justify-content:space-around; padding:6px 18px 10px; overflow:hidden; min-height:0; }
+    .funil-body { flex:1; display:flex; flex-direction:column; justify-content:space-around; padding:6px 18px 10px; overflow-y:auto; min-height:0; }
     .funil-row { display:flex; align-items:center; gap:14px; padding:5px 0; border-bottom:1px solid var(--border); }
     .funil-row:last-child { border-bottom:none; }
     .funil-icon { font-size:20px; flex-shrink:0; width:26px; text-align:center; }
@@ -365,7 +365,6 @@
 <div id="error-banner" style="display:none;position:fixed;bottom:16px;right:16px;background:#dc2626;color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999"></div>
 
 <script>
-
 const PROXY_URL = 'https://script.google.com/macros/s/AKfycbxGFDgwJhRVHFUYuOc6KRpZgRQ8CLyeNocnmIZqVASQSUt6350m11RzSdvJcWSMnTYzyw/exec';
 
 // Mapa completo de eventos com ícone, nome legível e descrição
@@ -928,7 +927,7 @@ async function loadPages(leadsData, snap) {
         <td class="num-p">${leads > 0 ? n(leads) : '<span style="font-size:11px;color:var(--muted)">—</span>'}</td>
       </tr>`;
     }).join('') || emptyRow(4);
-  } catch { tb.innerHTML = errRow(4); }
+  } catch { tb.innerHTML = errRow(4); showError('Erro ao carregar páginas.'); }
 }
 
 // TABELA — CIDADE / ESTADO
@@ -951,7 +950,7 @@ async function loadCities(leadsData, snap) {
         <td class="num-p">${leads > 0 ? n(leads) : '<span style="font-size:11px;color:var(--muted)">—</span>'}</td>
       </tr>`;
     }).join('') || emptyRow(4);
-  } catch { tb.innerHTML = errRow(4); }
+  } catch { tb.innerHTML = errRow(4); showError('Erro ao carregar cidades.'); }
 }
 
 // TABELA — ORIGEM DO TRÁFEGO
@@ -971,7 +970,7 @@ async function loadSources(leadsData, snap) {
         <td class="num-p">${leads > 0 ? n(leads) : '<span style="font-size:11px;color:var(--muted)">—</span>'}</td>
       </tr>`;
     }).join('') || emptyRow(3);
-  } catch { tb.innerHTML = errRow(3); }
+  } catch { tb.innerHTML = errRow(3); showError('Erro ao carregar origens.'); }
 }
 
 // TABELA — EVENTOS / LEADS com barra de progresso
@@ -1080,7 +1079,6 @@ function stamp() {
     el.textContent = `· atualizado ${h}`;
   }
 }
-
 </script>
 
 <script>
@@ -1096,6 +1094,7 @@ function stamp() {
 
   async function renderFunilTelao() {
     try {
+      if (typeof currentPeriod === 'undefined') return; // safety: script principal ainda nao carregou
       const snap = Object.freeze({ ...currentPeriod });
       const d = await proxy('events', currentDays, undefined, snap).catch(() => null);
 
