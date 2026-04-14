@@ -1243,11 +1243,12 @@ async function loadChart(snap, snapDays) {
         }
       );
 
-      if (maxVal > 0 && peakHour !== horaAtual) {
+      if (maxVal > 0) {
         const aviso = document.createElement('div');
         aviso.className = 'chart-aviso';
         aviso.style.cssText = 'font-size:11px;color:#6b6484;font-family:Montserrat,sans-serif;text-align:center;margin-top:6px;';
-        aviso.textContent = `Pico hoje: ${String(peakHour).padStart(2,'0')}h com ${maxVal} visitante${maxVal !== 1 ? 's' : ''}.`;
+        const agora = peakHour === horaAtual ? ' (até agora)' : '';
+        aviso.textContent = `Pico hoje: ${String(peakHour).padStart(2,'0')}h com ${maxVal} visitante${maxVal !== 1 ? 's' : ''}${agora}.`;
         wrap.parentElement.appendChild(aviso);
       }
 
@@ -1402,7 +1403,7 @@ async function loadEvents(d, snap) {
     }));
 
     const counts  = rowsData.map(r => r.count);
-    const maxCount = counts.length > 0 ? Math.max(...counts) : 1;
+    const maxCount = Math.max(...counts, 1);
 
     const rowsHtml = rowsData.flatMap(({ name, count }) => {
       if (!EVENTOS_META[name]) return []; // ignora eventos fora do mapa
