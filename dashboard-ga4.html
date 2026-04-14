@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Life B | Painel de Resultados</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
   <style>
     :root {
@@ -527,6 +527,9 @@
     }
     footer strong { color: #fff; }
 
+    /* Coluna extra oculta globalmente (visível somente via JS se necessário) */
+    .mh { display: none; }
+
     /* ── RESPONSIVE — MOBILE ─────────────── */
     @media (max-width: 639px) {
       header { padding: 0 16px; height: 56px; }
@@ -545,7 +548,6 @@
       td { padding: 7px 6px; }
       .td-url { max-width: 130px; }
       .card-metric .m-val { font-size: 22px; }
-      .mh { display: none; }
     }
 
     @media (max-width: 960px) {
@@ -859,7 +861,20 @@ window.addEventListener('load', () => {
   loadAll();
   fetchRealtime();
   realtimeTimer = setInterval(fetchRealtime, 60_000);
-  refreshTimer  = setInterval(loadAll, 300_000);
+  refreshTimer  = setInterval(() => {
+    // Recalcula o período atual — importante na virada de meia-noite
+    const activeBtn = document.querySelector('.rbtn.active');
+    if (activeBtn) {
+      const rangeAttr = activeBtn.getAttribute('onclick').match(/setRange\(([^,]+)/);
+      if (rangeAttr) {
+        const raw = rangeAttr[1].trim().replace(/['"]/g, '');
+        const parsed = isNaN(raw) ? raw : Number(raw);
+        currentPeriod = resolvePeriod(parsed);
+        currentDays = currentPeriod.days || 30;
+      }
+    }
+    loadAll();
+  }, 300_000);
 });
 
 // CONTROLES DE DATA
@@ -882,8 +897,7 @@ function resolvePeriod(range) {
   }
   if (range === 'mes') {
     const start = new Date(today.getFullYear(), today.getMonth(), 1);
-    const daysIntoMonth = today.getDate();
-    return { startDate: fmt(start), endDate: fmt(today), days: daysIntoMonth, label: 'esse mês' };
+    return { startDate: fmt(start), endDate: fmt(today), days: null, label: 'esse mês' };
   }
   if (range === 'mespassado') {
     const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
@@ -1127,6 +1141,7 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo, snap, snapDays) {
       el.className     = 'delta-neu';
       el.style.display = 'none';
     });
+    showError('Erro ao carregar resumo.');
   }
 }
 
@@ -1294,7 +1309,7 @@ async function loadChart(snap, snapDays) {
       }
     }
 
-  } catch(e) { /* silently ignore chart errors */ }
+  } catch(e) { showError('Erro ao carregar gráfico.'); }
   finally { document.querySelector('.chart-wrap')?.classList.remove('chart-loading'); }
 }
 
@@ -1420,6 +1435,7 @@ async function loadEvents(d, snap) {
   } catch {
     tb.innerHTML = errRow(2);
     document.getElementById('stat-leads').textContent = '—';
+    showError('Erro ao carregar eventos.');
   }
 }
 

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=1920">
   <title>Life B | Painel Telão SDR</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     :root {
       --purple:   #704B9B;
@@ -464,7 +464,20 @@ window.addEventListener('load', () => {
   loadAll();
   fetchRealtime();
   realtimeTimer = setInterval(fetchRealtime, 60_000);
-  refreshTimer  = setInterval(loadAll, 300_000);
+  refreshTimer  = setInterval(() => {
+    // Recalcula o período atual — importante na virada de meia-noite
+    const activeBtn = document.querySelector('.rbtn.active');
+    if (activeBtn) {
+      const rangeAttr = activeBtn.getAttribute('onclick').match(/setRange\(([^,]+)/);
+      if (rangeAttr) {
+        const raw = rangeAttr[1].trim().replace(/['"]/g, '');
+        const parsed = isNaN(raw) ? raw : Number(raw);
+        currentPeriod = resolvePeriod(parsed);
+        currentDays = currentPeriod.days || 30;
+      }
+    }
+    loadAll();
+  }, 300_000);
 });
 
 // CONTROLES DE DATA
@@ -487,8 +500,7 @@ function resolvePeriod(range) {
   }
   if (range === 'mes') {
     const start = new Date(today.getFullYear(), today.getMonth(), 1);
-    const daysIntoMonth = today.getDate();
-    return { startDate: fmt(start), endDate: fmt(today), days: daysIntoMonth, label: 'esse mês' };
+    return { startDate: fmt(start), endDate: fmt(today), days: null, label: 'esse mês' };
   }
   if (range === 'mespassado') {
     const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
@@ -732,6 +744,7 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo, snap, snapDays) {
       el.className     = 'delta-neu';
       el.style.display = 'none';
     });
+    showError('Erro ao carregar resumo.');
   }
 }
 
@@ -899,7 +912,7 @@ async function loadChart(snap, snapDays) {
       }
     }
 
-  } catch(e) { /* silently ignore chart errors */ }
+  } catch(e) { showError('Erro ao carregar gráfico.'); }
   finally { document.querySelector('.chart-wrap')?.classList.remove('chart-loading'); }
 }
 
@@ -917,9 +930,14 @@ async function loadPages(leadsData, snap) {
   try {
     const leadsMap = buildLeadsMap(leadsData, r => r.dimensionValues[0].value);
     const d = await proxy('pages', undefined, undefined, snap);
-    tb.innerHTML = (d.rows ?? []).filter(r => r.dimensionValues[0].value !== '/dashboard-ga4.html').map(r => {
+    tb.innerHTML = (d.rows ?? []).filter(r => {
       const path = r.dimensionValues[0].value;
-      const [u, s] = r.metricValues.map(x => x.value);
+      if (path === '/dashboard-ga4.html') return false;
+      if (path === '/dashboard-telao.html') return false;
+      return true;
+    }).map(r => {
+      const path = r.dimensionValues[0].value;
+      const [u] = r.metricValues.map(x => x.value);
       const legenda = PAGINAS_LEGENDAS[path] || '';
       const leads = leadsMap.get(path) || 0;
       return `<tr>
@@ -928,11 +946,10 @@ async function loadPages(leadsData, snap) {
           ${legenda ? `<span class="pg-path">${esc(path)}</span>` : ''}
         </td>
         <td class="num-p">${n(u)}</td>
-        <td class="mh">${n(s)}</td>
         <td class="num-p">${leads > 0 ? n(leads) : '<span style="font-size:11px;color:var(--muted)">—</span>'}</td>
       </tr>`;
-    }).join('') || emptyRow(4);
-  } catch { tb.innerHTML = errRow(4); showError('Erro ao carregar páginas.'); }
+    }).join('') || emptyRow(3);
+  } catch { tb.innerHTML = errRow(3); showError('Erro ao carregar páginas.'); }
 }
 
 // TABELA — CIDADE / ESTADO
@@ -1025,6 +1042,7 @@ async function loadEvents(d, snap) {
   } catch {
     tb.innerHTML = errRow(2);
     document.getElementById('stat-leads').textContent = '—';
+    showError('Erro ao carregar eventos.');
   }
 }
 
@@ -1128,7 +1146,7 @@ window.traduzEstado = function(s) {
     try {
       if (typeof currentPeriod === 'undefined') return; // safety: script principal ainda nao carregou
       const snap = Object.freeze({ ...currentPeriod });
-      const d = await proxy('events', currentDays, undefined, snap).catch(() => null);
+      const d = await proxy('events', undefined, undefined, snap).catch(() => null);
 
       const allRows = (d?.rows ?? []).map(r => ({
         name:  r.dimensionValues[0].value,
