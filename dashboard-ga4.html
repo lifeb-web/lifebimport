@@ -967,6 +967,7 @@ let _inFlight = 0;
 function _loadingStart() {
   if (++_inFlight === 1) {
     const b = document.getElementById('loading-bar');
+    if (!b) return;
     b.style.opacity = '1';
     b.classList.add('running');
   }
@@ -975,6 +976,7 @@ function _loadingEnd() {
   if (--_inFlight <= 0) {
     _inFlight = 0; // nunca negativo
     const b = document.getElementById('loading-bar');
+    if (!b) return;
     b.classList.remove('running');
     b.style.width = '100%';
     setTimeout(() => { b.style.opacity = '0'; setTimeout(() => { b.style.width = '0%'; }, 400); }, 200);
@@ -1143,6 +1145,7 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo, snap, snapDays) {
 
     deltaIds.forEach((id, i) => {
       const el = document.getElementById(id);
+      if (!el) return;
       // Hoje/Ontem: comparação intradiária não tem sentido, esconde sempre
       if (isSingleDay) {
         el.textContent   = '';
@@ -1189,14 +1192,17 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo, snap, snapDays) {
 } catch(err) {
     _log.error('summary', 'Erro ao carregar resumo', err);
     const msg = err.message || 'Erro';
-    ['stat-users','stat-sessions','stat-conv'].forEach(id =>
-      document.getElementById(id).textContent = msg
-    );
-    ['stat-bounce','stat-duration'].forEach(id =>
-      document.getElementById(id).textContent = '—'
-    );
+    ['stat-users','stat-sessions','stat-conv'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = msg;
+    });
+    ['stat-bounce','stat-duration'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = '—';
+    });
     deltaIds.forEach(id => {
       const el = document.getElementById(id);
+      if (!el) return;
       el.textContent   = '';
       el.className     = 'delta-neu';
       el.style.display = 'none';
@@ -1305,6 +1311,7 @@ async function loadChart(snap, snapDays) {
           ]},
           options: {
             responsive: true, maintainAspectRatio: false,
+            devicePixelRatio: window.devicePixelRatio || 1,
             plugins: {
               legend: { display: false },
               tooltip: {
@@ -1382,6 +1389,7 @@ async function loadChart(snap, snapDays) {
           ]},
           options: {
             responsive:true, maintainAspectRatio:false,
+            devicePixelRatio: window.devicePixelRatio || 1,
             plugins: {
               legend: { display:true, position:'top', align:'end', labels:{
                 font:{family:'Montserrat',size:11}, color:'#6b6484', boxWidth:14, padding:14,
@@ -1577,23 +1585,42 @@ async function loadEvents(d, snap) {
     const eventMap = {};
     rowsData.forEach(({ name, count }) => { eventMap[name] = count; });
     const abrir   = eventMap['Abrir_Formulario'] || 0;
+    const isHoje  = snap && (snap.days === 1 || snap.label === 'hoje');
     const elRates = document.getElementById('funil-rates');
     if (elRates) {
       if (abrir === 0) {
         elRates.style.display = 'none';
       } else {
+        // GA4 tem delay de 2-8h para dados intraday: Abandonou pode processar antes de Abrir
+        // da mesma sessão. Quando isso acontece o percentual ficaria acima de 100%, o que
+        // é matematicamente impossível. Limitamos a 100% e sinalizamos quando for "hoje".
         const span = (label, key, title) => {
-          if (!(key in eventMap)) return ''; // evento não disparou no período
-          const val = Math.round(eventMap[key] / abrir * 100);
-          return `<span title="${title}">${label}: <b>${val}%</b></span>`;
+          if (!(key in eventMap)) return '';
+          const raw  = eventMap[key] / abrir * 100;
+          const val  = Math.min(Math.round(raw), 100);
+          const over = raw > 100;
+          const warn = (isHoje && over) ? ' title="Dado parcial: GA4 ainda processando eventos de hoje"' : ` title="${title}"`;
+          const badge = (isHoje && over) ? ' <span style="font-size:10px;opacity:.6">*</span>' : '';
+          return `<span${warn}>${label}: <b>${val}%</b>${badge}</span>`;
         };
         const html =
           span('Envio',    'Lead_Formulario',      'Lead_Formulario / Abrir_Formulario') +
           span('Abandono', 'Abandonou_Formulario', 'Abandonou_Formulario / Abrir_Formulario') +
           span('Pulo',     'Pular_Formulario',     'Pular_Formulario / Abrir_Formulario');
+
+        // Nota de dado parcial quando algum evento ultrapassou 100% em "hoje"
+        const lead = eventMap['Abrir_Formulario'] ? (eventMap['Lead_Formulario'] || 0) : 0;
+        const aband = eventMap['Abandonou_Formulario'] || 0;
+        const pular = eventMap['Pular_Formulario'] || 0;
+        const somaDependentes = lead + aband + pular;
+        const dadoParcial = isHoje && (somaDependentes > abrir);
+        const notaHtml = dadoParcial
+          ? `<span style="display:block;font-size:10px;color:var(--muted);margin-top:4px;">* GA4 ainda processando eventos de hoje. Dados se normalizam em até 8h.</span>`
+          : '';
+
         if (html) {
           elRates.style.display = '';
-          elRates.innerHTML = html;
+          elRates.innerHTML = html + notaHtml;
         } else {
           elRates.style.display = 'none';
         }
@@ -1647,6 +1674,7 @@ const errRow = cols =>
 
 function showError(msg) {
   const el = document.getElementById('error-banner');
+  if (!el) return;
   el.textContent = '⚠ ' + msg;
   el.style.display = 'block';
   setTimeout(() => el.style.display = 'none', 7000);
