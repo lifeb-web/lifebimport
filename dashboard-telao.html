@@ -571,6 +571,7 @@ let _inFlight = 0;
 function _loadingStart() {
   if (++_inFlight === 1) {
     const b = document.getElementById('loading-bar');
+    if (!b) return;
     b.style.opacity = '1';
     b.classList.add('running');
   }
@@ -579,6 +580,7 @@ function _loadingEnd() {
   if (--_inFlight <= 0) {
     _inFlight = 0; // nunca negativo
     const b = document.getElementById('loading-bar');
+    if (!b) return;
     b.classList.remove('running');
     b.style.width = '100%';
     setTimeout(() => { b.style.opacity = '0'; setTimeout(() => { b.style.width = '0%'; }, 400); }, 200);
@@ -747,6 +749,7 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo, snap, snapDays) {
 
     deltaIds.forEach((id, i) => {
       const el = document.getElementById(id);
+      if (!el) return;
       // Hoje/Ontem: comparação intradiária não tem sentido, esconde sempre
       if (isSingleDay) {
         el.textContent   = '';
@@ -793,14 +796,17 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo, snap, snapDays) {
 } catch(err) {
     _log.error('summary', 'Erro ao carregar resumo', err);
     const msg = err.message || 'Erro';
-    ['stat-users','stat-sessions','stat-conv'].forEach(id =>
-      document.getElementById(id).textContent = msg
-    );
-    ['stat-bounce','stat-duration'].forEach(id =>
-      document.getElementById(id).textContent = '—'
-    );
+    ['stat-users','stat-sessions','stat-conv'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = msg;
+    });
+    ['stat-bounce','stat-duration'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = '—';
+    });
     deltaIds.forEach(id => {
       const el = document.getElementById(id);
+      if (!el) return;
       el.textContent   = '';
       el.className     = 'delta-neu';
       el.style.display = 'none';
@@ -1183,15 +1189,18 @@ async function loadEvents(d, snap) {
     const eventMap = {};
     rowsData.forEach(({ name, count }) => { eventMap[name] = count; });
     const abrir   = eventMap['Abrir_Formulario'] || 0;
+    const isHoje  = snap && (snap.days === 1 || snap.label === 'hoje');
     const elRates = document.getElementById('funil-rates');
     if (elRates) {
       if (abrir === 0) {
         elRates.style.display = 'none';
       } else {
         const span = (label, key, title) => {
-          if (!(key in eventMap)) return ''; // evento não disparou no período
-          const val = Math.round(eventMap[key] / abrir * 100);
-          return `<span title="${title}">${label}: <b>${val}%</b></span>`;
+          if (!(key in eventMap)) return '';
+          const raw = eventMap[key] / abrir * 100;
+          const val = Math.min(Math.round(raw), 100);
+          const badge = (isHoje && raw > 100) ? ' *' : '';
+          return `<span title="${title}">${label}: <b>${val}%</b>${badge}</span>`;
         };
         const html =
           span('Envio',    'Lead_Formulario',      'Lead_Formulario / Abrir_Formulario') +
@@ -1253,6 +1262,7 @@ const errRow = cols =>
 
 function showError(msg) {
   const el = document.getElementById('error-banner');
+  if (!el) return;
   el.textContent = '⚠ ' + msg;
   el.style.display = 'block';
   setTimeout(() => el.style.display = 'none', 7000);
@@ -1363,26 +1373,39 @@ window.traduzEstado = function(s) {
       // Taxas de etapa — só mostra pill se o evento realmente disparou no período
       const eventMap = {};
       allRows.forEach(r => { eventMap[r.name] = r.count; });
-      const abrir = eventMap['Abrir_Formulario'] || 0;
+      const abrir  = eventMap['Abrir_Formulario'] || 0;
+      const isHoje = snap && (snap.days === 1 || snap.label === 'hoje');
       if (elRates) {
         if (abrir === 0) {
           elRates.style.display = 'none';
         } else {
+          // GA4 tem delay intraday: Abandonou pode processar antes de Abrir da mesma sessão.
+          // Limitamos o percentual a 100% e mostramos asterisco quando ocorrer no filtro "hoje".
           const pill = (label, key, cor) => {
-            if (!(key in eventMap)) return ''; // evento não disparou no período
-            const val = Math.round(eventMap[key] / abrir * 100);
+            if (!(key in eventMap)) return '';
+            const raw = eventMap[key] / abrir * 100;
+            const val = Math.min(Math.round(raw), 100);
+            const badge = (isHoje && raw > 100) ? '<span style="font-size:9px;opacity:.7"> *</span>' : '';
             return `<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;background:${cor}15;border:1px solid ${cor}40;">
               <span style="font-size:9px;font-weight:600;color:#6b6484;text-transform:uppercase;letter-spacing:.5px">${label}</span>
-              <b style="font-size:13px;font-weight:800;color:${cor}">${val}%</b>
+              <b style="font-size:13px;font-weight:800;color:${cor}">${val}%</b>${badge}
             </span>`;
           };
           const html =
             pill('Envio',    'Lead_Formulario',      '#22C35D') +
             pill('Abandono', 'Abandonou_Formulario', '#dc2626') +
             pill('Pulo',     'Pular_Formulario',     '#f59e0b');
+
+          // Nota de dado parcial quando soma > abrir (GA4 intraday delay)
+          const somaDep = (eventMap['Lead_Formulario'] || 0) + (eventMap['Abandonou_Formulario'] || 0) + (eventMap['Pular_Formulario'] || 0);
+          const notaHtml = (isHoje && somaDep > abrir)
+            ? `<span style="display:block;width:100%;text-align:center;font-size:9px;color:#a89ec0;margin-top:3px;">* GA4 processando eventos de hoje. Atualiza em até 8h.</span>`
+            : '';
+
           if (html) {
             elRates.style.display = 'flex';
-            elRates.innerHTML = html;
+            elRates.style.flexWrap = 'wrap';
+            elRates.innerHTML = html + notaHtml;
           } else {
             elRates.style.display = 'none';
           }
