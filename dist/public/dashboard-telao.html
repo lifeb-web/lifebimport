@@ -571,6 +571,7 @@ let _inFlight = 0;
 function _loadingStart() {
   if (++_inFlight === 1) {
     const b = document.getElementById('loading-bar');
+    if (!b) return;
     b.style.opacity = '1';
     b.classList.add('running');
   }
@@ -579,6 +580,7 @@ function _loadingEnd() {
   if (--_inFlight <= 0) {
     _inFlight = 0; // nunca negativo
     const b = document.getElementById('loading-bar');
+    if (!b) return;
     b.classList.remove('running');
     b.style.width = '100%';
     setTimeout(() => { b.style.opacity = '0'; setTimeout(() => { b.style.width = '0%'; }, 400); }, 200);
@@ -747,6 +749,7 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo, snap, snapDays) {
 
     deltaIds.forEach((id, i) => {
       const el = document.getElementById(id);
+      if (!el) return;
       // Hoje/Ontem: comparação intradiária não tem sentido, esconde sempre
       if (isSingleDay) {
         el.textContent   = '';
@@ -793,14 +796,17 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo, snap, snapDays) {
 } catch(err) {
     _log.error('summary', 'Erro ao carregar resumo', err);
     const msg = err.message || 'Erro';
-    ['stat-users','stat-sessions','stat-conv'].forEach(id =>
-      document.getElementById(id).textContent = msg
-    );
-    ['stat-bounce','stat-duration'].forEach(id =>
-      document.getElementById(id).textContent = '—'
-    );
+    ['stat-users','stat-sessions','stat-conv'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = msg;
+    });
+    ['stat-bounce','stat-duration'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = '—';
+    });
     deltaIds.forEach(id => {
       const el = document.getElementById(id);
+      if (!el) return;
       el.textContent   = '';
       el.className     = 'delta-neu';
       el.style.display = 'none';
@@ -1256,6 +1262,7 @@ const errRow = cols =>
 
 function showError(msg) {
   const el = document.getElementById('error-banner');
+  if (!el) return;
   el.textContent = '⚠ ' + msg;
   el.style.display = 'block';
   setTimeout(() => el.style.display = 'none', 7000);
