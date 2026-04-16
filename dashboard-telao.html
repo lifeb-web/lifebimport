@@ -511,7 +511,7 @@ window.addEventListener('load', () => {
       }
     }
     loadAll();
-  }, 300_000);
+  }, 180_000);
 });
 
 // Formata Date como YYYY-MM-DD usando hora local (evita deslocamento UTC após 21h no Brasil)
@@ -620,10 +620,10 @@ async function loadAll() {
   try {
     // Pré-busca events e leads UMA vez (catches individuais para não bloquear se um falhar)
     // Usa snap para garantir período consistente em todas as chamadas
-    const hasExplicitDates = !snap.days;
+    const shouldCompare = !!snap.days && snap.days !== 1;
     const [evAtual, evDuplo, pLeads, sLeads, cLeads] = await Promise.all([
       proxy('events', undefined, undefined, snap).catch(() => null),
-      hasExplicitDates ? Promise.resolve(null) : proxy('events', snapDays * 2, undefined, snap).catch(() => null),
+      shouldCompare ? proxy('events', snapDays * 2, undefined, snap).catch(() => null) : Promise.resolve(null),
       proxy('leads', undefined, 'pagePath', snap).catch(() => null),
       proxy('leads', undefined, 'sessionSourceMedium', snap).catch(() => null),
       proxy('leads', undefined, 'region,city', snap).catch(() => null),
@@ -631,6 +631,10 @@ async function loadAll() {
 
     // Se uma versão mais nova já começou, descarta silenciosamente
     if (myVersion !== loadVersion) return;
+    window.__lifebTelaoEvents = {
+      key: `${snap.startDate || ''}|${snap.endDate || ''}|${snap.days || ''}|${snap.label || ''}`,
+      data: evAtual,
+    };
 
     await Promise.allSettled([
       loadSummaryWithCompare(evAtual, evDuplo, snap, snapDays),
@@ -701,10 +705,10 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo, snap, snapDays) {
   const deltaIds = ['delta-users', 'delta-sessions', 'delta-conv', 'delta-leads'];
 
   try {
-    const hasExplicit = !snap.days;
+    const shouldCompare = !!snap.days && snap.days !== 1;
     const [dAtual, dDuplo] = await Promise.all([
       proxy('summary', undefined, undefined, snap),
-      hasExplicit ? Promise.resolve(null) : proxy('summary', snapDays * 2, undefined, snap),
+      shouldCompare ? proxy('summary', snapDays * 2, undefined, snap) : Promise.resolve(null),
     ]);
 
     // Leads = evento Lead_Formulario (usa dados pré-buscados pelo loadAll)
@@ -1151,17 +1155,16 @@ async function loadEvents(d, snap) {
     if (!d) d = await proxy('events', undefined, undefined, snap); // fallback se chamado sem dados
     let leadCount = 0;
 
-    // Coleta dados para calcular máximo (barra de progresso relativa)
+    // Coleta apenas eventos exibidos para calcular a barra relativa sem distorção de eventos ocultos
     const rowsData = (d.rows ?? []).map(r => ({
       name:  r.dimensionValues[0].value,
       count: +r.metricValues[0].value,
-    }));
+    })).filter(r => EVENTOS_META[r.name]);
 
     const counts  = rowsData.map(r => r.count);
     const maxCount = Math.max(...counts, 1);
 
     const rowsHtml = rowsData.flatMap(({ name, count }) => {
-      if (!EVENTOS_META[name]) return []; // ignora eventos fora do mapa
       if (name === 'Lead_Formulario') leadCount = count;
       const meta = EVENTOS_META[name];
       const pct  = maxCount > 0 ? Math.round(count / maxCount * 100) : 0;
@@ -1332,7 +1335,9 @@ window.traduzEstado = function(s) {
     try {
       if (typeof currentPeriod === 'undefined') return; // safety: script principal ainda nao carregou
       const snap = Object.freeze({ ...currentPeriod });
-      const d = await proxy('events', undefined, undefined, snap).catch(() => null);
+      const key = `${snap.startDate || ''}|${snap.endDate || ''}|${snap.days || ''}|${snap.label || ''}`;
+      const cached = window.__lifebTelaoEvents;
+      const d = cached?.key === key ? cached.data : await proxy('events', undefined, undefined, snap).catch(() => null);
 
       const allRows = (d?.rows ?? []).map(r => ({
         name:  r.dimensionValues[0].value,
