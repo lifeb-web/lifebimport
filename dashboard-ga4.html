@@ -1463,8 +1463,9 @@ function buildLeadsMap(d, keyFn) {
   return map;
 }
 
-function isDashboardPath(path) {
-  return /dashboard/i.test(path || '');
+function isInternalPath(path) {
+  const p = path || '';
+  return /dashboard/i.test(p) || /^\/rep(\/|$)/i.test(p) || /^\/interno(\/|$)/i.test(p);
 }
 
 // TABELA — POR PÁGINA
@@ -1474,7 +1475,7 @@ async function loadPages(leadsData, snap) {
     const leadsMap = buildLeadsMap(leadsData, r => r.dimensionValues[0].value);
     const d = await proxy('pages', undefined, undefined, snap);
     const rows = (d.rows ?? [])
-      .filter(r => !isDashboardPath(r.dimensionValues[0].value))
+      .filter(r => !isInternalPath(r.dimensionValues[0].value))
       .map(r => {
         const path    = r.dimensionValues[0].value;
         const [u, s]  = r.metricValues.map(x => x.value);
