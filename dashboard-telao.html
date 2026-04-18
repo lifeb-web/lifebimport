@@ -1071,6 +1071,10 @@ function buildLeadsMap(d, keyFn) {
   return map;
 }
 
+function isDashboardPath(path) {
+  return /dashboard/i.test(path || '');
+}
+
 // TABELA — POR PÁGINA
 async function loadPages(leadsData, snap) {
   const tb = document.getElementById('tb-pages');
@@ -1078,7 +1082,7 @@ async function loadPages(leadsData, snap) {
     const leadsMap = buildLeadsMap(leadsData, r => r.dimensionValues[0].value);
     const d = await proxy('pages', undefined, undefined, snap);
     const rows = (d.rows ?? [])
-      .filter(r => r.dimensionValues[0].value !== '/dashboard-ga4.html')
+      .filter(r => !isDashboardPath(r.dimensionValues[0].value))
       .map(r => {
         const path    = r.dimensionValues[0].value;
         const [u, s]  = r.metricValues.map(x => x.value);
