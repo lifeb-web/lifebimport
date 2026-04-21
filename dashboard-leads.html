@@ -724,8 +724,10 @@ function showError(msg) {
   setTimeout(() => el.style.display = 'none', 7000);
 }
 
-// Guarda o timestamp da última modificação da planilha para detectar mudanças
 let _lastSheetModified = null;
+let _pollCount = 0;
+const POLL_INTERVAL_MS  = 60_000;   // verifica a cada 1 min
+const FORCE_RELOAD_POLLS = 3;        // força reload a cada 3 polls (3 min) como fallback
 
 function stamp(iso) {
   const dot = document.getElementById('refresh-dot');
@@ -1002,18 +1004,26 @@ async function loadAllData(summaryData, lm) {
   }
 }
 
-// ── CHECK FOR UPDATES (poll leve — só busca summary para detectar mudança) ────
+// ── CHECK FOR UPDATES ────────────────────────────────────────
+// Lógica:
+//   1. Se lastModified disponível (Apps Script atualizado): recarrega quando planilha muda
+//   2. Fallback: força reload a cada FORCE_RELOAD_POLLS intervalos (~3 min) para garantir dados frescos
+//   3. O timestamp "atualizado HH:MM" sempre usa a hora real da planilha quando disponível
 async function checkForUpdates() {
   if (!LEADS_PROXY || LEADS_PROXY === 'COLE_AQUI_A_URL_DO_APPS_SCRIPT') return;
+  _pollCount++;
   try {
     const sumData = await proxy('summary');
-    const lm = sumData.lastModified || '';
-    const prevLM = _lastSheetModified;
+    const lm      = sumData.lastModified || '';
+    const prevLM  = _lastSheetModified;
     _lastSheetModified = lm;
 
-    // Primeira carga OU planilha foi alterada → recarrega tudo
-    if (prevLM === null || (lm && lm !== prevLM)) {
-      if (prevLM !== null) onSheetChanged();
+    const isFirst      = prevLM === null;
+    const sheetChanged = lm && lm !== prevLM;       // lastModified mudou → planilha alterada
+    const forcedCycle  = _pollCount % FORCE_RELOAD_POLLS === 0; // fallback ~3 min
+
+    if (isFirst || sheetChanged || forcedCycle) {
+      if (sheetChanged && !isFirst) onSheetChanged();
       await loadAllData(sumData, lm);
     }
   } catch(e) {
@@ -1024,7 +1034,7 @@ async function checkForUpdates() {
 // ── INIT ─────────────────────────────────────────────────────
 window.addEventListener('load', () => {
   checkForUpdates();
-  setInterval(checkForUpdates, 60_000);
+  setInterval(checkForUpdates, POLL_INTERVAL_MS);
 });
 </script>
 </body>
