@@ -220,8 +220,8 @@
     }
     @media (min-width: 1024px) {
       .cards-row {
-        grid-template-columns: 200px repeat(6, 1fr);
-        gap: 14px;
+        grid-template-columns: 180px repeat(8, 1fr);
+        gap: 12px;
       }
     }
 
@@ -291,6 +291,8 @@
     .accent-blue    { border-top: 3px solid var(--blue);    background: linear-gradient(180deg,#f0f5ff 0%,#fff 40%); }
     .accent-green   { border-top: 3px solid var(--green);   background: linear-gradient(180deg,#f0fbf4 0%,#fff 40%); }
     .accent-orange  { border-top: 3px solid var(--orange);  background: linear-gradient(180deg,#fffbf0 0%,#fff 40%); }
+    .accent-cyan    { border-top: 3px solid #0891b2;        background: linear-gradient(180deg,#ecfeff 0%,#fff 40%); }
+    .accent-teal    { border-top: 3px solid #0d9488;        background: linear-gradient(180deg,#f0fdfa 0%,#fff 40%); }
 
     /* FUNIS ROW */
     .funnel-row {
@@ -532,7 +534,7 @@
 <div id="dashboard">
   <div id="error-banner"></div>
 
-  <!-- 6 CARDS -->
+  <!-- 9 CARDS -->
   <div class="cards-row">
 
     <!-- 1. Total de Leads -->
@@ -583,6 +585,20 @@
       <div class="s-label">Potencial em Aberto</div>
       <div class="s-val" id="card-potencial" style="color:var(--magenta)">—</div>
       <div class="s-sub">pipeline ativo (pode virar receita)</div>
+    </div>
+
+    <!-- 8. Investimento ADS -->
+    <div class="card card-stat accent-cyan">
+      <div class="s-label">Investimento ADS</div>
+      <div class="s-val" id="card-ads" style="color:#0891b2">—</div>
+      <div class="s-sub">total investido</div>
+    </div>
+
+    <!-- 9. ROAS -->
+    <div class="card card-stat accent-teal">
+      <div class="s-label">ROAS</div>
+      <div class="s-val" id="card-roas" style="color:#0d9488">—</div>
+      <div class="s-sub">receita / investimento</div>
     </div>
 
   </div><!-- /.cards-row -->
@@ -973,17 +989,33 @@ function renderFechados(data) {
   }
 }
 
+// ── ADS ──────────────────────────────────────────────────────
+function renderAds(data, receita) {
+  try {
+    const inv = (data && data.investimento) ? +data.investimento : 0;
+    const el = id => document.getElementById(id);
+    if (el('card-ads')) el('card-ads').textContent = inv > 0 ? cur(inv) : '—';
+    const rec = receita != null ? +receita : 0;
+    if (el('card-roas')) {
+      el('card-roas').textContent = (inv > 0 && rec > 0) ? (rec / inv).toFixed(2) + 'x' : '—';
+    }
+  } catch(err) {
+    _log.error('ads', 'Erro ao renderizar ads', err);
+  }
+}
+
 // ── LOAD ALL DATA (only called when sheet changed) ───────────
 async function loadAllData(summaryData, lm) {
   _loadingStart();
   try {
     renderSummary(summaryData);
 
-    const [rFunnel, rByRep, rActive, rClosed] = await Promise.allSettled([
+    const [rFunnel, rByRep, rActive, rClosed, rAds] = await Promise.allSettled([
       proxy('funnel'),
       proxy('by_rep'),
       proxy('active'),
       proxy('closed'),
+      proxy('ads'),
     ]);
 
     if (rFunnel.status === 'fulfilled')  renderFunnel(rFunnel.value);
@@ -997,6 +1029,8 @@ async function loadAllData(summaryData, lm) {
 
     if (rClosed.status === 'fulfilled')  renderFechados(rClosed.value);
     else _log.error('loadAll', 'closed falhou', rClosed.reason);
+
+    renderAds(rAds.status === 'fulfilled' ? rAds.value : null, summaryData.receita);
 
     stamp(lm);
   } finally {
