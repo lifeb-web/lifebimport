@@ -65,34 +65,38 @@
     #config-warning { display:none; background:#fff8e1; border-bottom:2px solid #ffc107; padding:6px 28px; font-size:11px; color:#7a5700; flex-shrink:0; }
 
     /* LAYOUT PRINCIPAL */
+    body { display:flex; flex-direction:column; }
     #telao-body {
-      height: calc(1080px - 58px);
-      display: grid;
-      grid-template-columns: 380px 1fr 390px;
-      gap: 10px;
-      padding: 10px 14px 10px;
-      overflow: hidden;
-    }
-
-    /* COLUNA ESQUERDA: cards + funil SDR */
-    #col-left {
+      flex: 1;
       display: flex;
       flex-direction: column;
+      padding: 8px 14px 10px;
       gap: 8px;
       overflow: hidden;
       min-height: 0;
     }
 
-    /* CARDS GRID 2x3 na coluna esquerda */
-    .cards-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px;
+    /* FAIXA DE CARDS — row completo no topo */
+    #telao-cards {
+      display: flex;
+      flex-direction: row;
+      gap: 8px;
+      height: 88px;
       flex-shrink: 0;
     }
 
-    /* COLUNA CENTRO: chart + funil vendedor */
-    #col-center {
+    /* ÁREA PRINCIPAL — 3 colunas */
+    #telao-main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 300px 1fr 410px;
+      gap: 8px;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* COLUNA FUNNELS */
+    #col-funnels {
       display: flex;
       flex-direction: column;
       gap: 8px;
@@ -100,8 +104,16 @@
       min-height: 0;
     }
 
-    /* COLUNA DIREITA: tabelas */
-    #col-right {
+    /* COLUNA CHART */
+    #col-chart {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* COLUNA TABLES */
+    #col-tables {
       display: flex;
       flex-direction: column;
       gap: 8px;
@@ -115,29 +127,31 @@
       border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.04);
     }
 
-    /* CARD RT (total de leads) */
+    /* CARD RT (total de leads) — flex 1.4 na faixa de cards */
     .card-rt {
+      flex: 1.4;
       background:linear-gradient(135deg,var(--purple) 0%,#9260c8 100%);
       border:none; border-radius:12px;
       display:flex; flex-direction:column; align-items:center; justify-content:center;
-      color:#fff; text-align:center; padding:10px 8px;
+      color:#fff; text-align:center; padding:8px 8px;
       position:relative; overflow:hidden;
     }
-    .card-rt::after { content:''; position:absolute; width:70px; height:70px; background:rgba(255,255,255,.07); border-radius:50%; bottom:-18px; right:-18px; }
-    .rt-icon  { font-size:18px; margin-bottom:2px; }
-    .rt-num   { font-size:38px; font-weight:800; line-height:1; }
+    .card-rt::after { content:''; position:absolute; width:60px; height:60px; background:rgba(255,255,255,.07); border-radius:50%; bottom:-14px; right:-14px; }
+    .rt-icon  { font-size:16px; margin-bottom:1px; }
+    .rt-num   { font-size:32px; font-weight:800; line-height:1; }
     .rt-label { font-size:10px; opacity:.85; font-weight:600; margin-top:2px; }
-    .rt-sub   { font-size:9px; opacity:.6; margin-top:1px; }
+    .rt-sub   { font-size:8px; opacity:.6; margin-top:1px; }
 
-    /* CARDS MÉTRICAS */
+    /* CARDS MÉTRICAS — flex 1 na faixa de cards */
     .card-metric {
-      padding: 10px 12px;
+      flex: 1;
+      padding: 8px 12px;
       display: flex; flex-direction: column; justify-content: center;
       overflow: hidden;
     }
-    .m-label { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .m-val   { font-size:30px; font-weight:800; line-height:1.05; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .m-sub   { font-size:9px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .m-label { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .m-val   { font-size:26px; font-weight:800; line-height:1.05; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .m-sub   { font-size:8px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .accent-purple  { border-top:4px solid var(--purple);  background:linear-gradient(180deg,#f8f5fd 0%,#fff 60%); }
     .accent-magenta { border-top:4px solid var(--magenta); background:linear-gradient(180deg,#fff0f8 0%,#fff 60%); }
     .accent-red     { border-top:4px solid var(--red);     background:linear-gradient(180deg,#fff5f5 0%,#fff 60%); }
@@ -167,7 +181,7 @@
     .funil-num { font-size:20px; font-weight:800; color:var(--purple); min-width:36px; text-align:right; }
 
     /* GRÁFICO */
-    .card-chart { flex:1.6; display:flex; flex-direction:column; overflow:hidden; min-height:0; }
+    .card-chart { flex:1; display:flex; flex-direction:column; overflow:hidden; min-height:0; }
     .chart-body { flex:1; padding:8px 12px 6px; min-height:0; display:flex; flex-direction:column; }
     .chart-wrap { flex:1; position:relative; min-height:0; }
 
@@ -240,167 +254,152 @@
 
 <div id="telao-body">
 
-  <!-- COLUNA ESQUERDA: cards 2x3 + funil SDR -->
-  <div id="col-left">
+  <!-- FAIXA DE CARDS — 7 cards em linha única -->
+  <div id="telao-cards">
 
-    <div class="cards-grid">
-
-      <!-- Total de Leads -->
-      <div class="card card-rt">
-        <div class="rt-icon">&#128203;</div>
-        <div class="rt-num" id="card-total">—</div>
-        <div class="rt-label">Total de Leads</div>
-        <div class="rt-sub" id="card-total-range">planilha SDR</div>
-      </div>
-
-      <!-- Qualificados -->
-      <div class="card card-metric accent-purple">
-        <div class="m-label">Qualificados</div>
-        <div class="m-val" id="card-qualif" style="color:var(--purple)">—</div>
-        <div class="m-sub">pelo SDR</div>
-      </div>
-
-      <!-- Em Tratativa -->
-      <div class="card card-metric accent-blue">
-        <div class="m-label">Em Tratativa</div>
-        <div class="m-val" id="card-tratativa" style="color:var(--blue)">—</div>
-        <div class="m-sub">com vendedor</div>
-      </div>
-
-      <!-- Fechamentos -->
-      <div class="card card-metric accent-green">
-        <div class="m-label">Fechamentos</div>
-        <div class="m-val" id="card-fechados" style="color:var(--green)">—</div>
-        <div class="m-sub">contratos</div>
-      </div>
-
-      <!-- Receita -->
-      <div class="card card-metric accent-purple">
-        <div class="m-label">Receita</div>
-        <div class="m-val" id="card-receita" style="color:var(--purple);font-size:22px">—</div>
-        <div class="m-sub">fechado</div>
-      </div>
-
-      <!-- Taxa de Conversão -->
-      <div class="card card-metric accent-orange">
-        <div class="m-label">Conversão</div>
-        <div class="m-val" id="card-conv" style="color:var(--orange);font-size:22px">—</div>
-        <div class="m-sub">fech. / qualif. SDR</div>
-      </div>
-
-      <!-- Potencial em Aberto -->
-      <div class="card card-metric accent-magenta" style="grid-column:span 2">
-        <div class="m-label">Potencial em Aberto</div>
-        <div class="m-val" id="card-potencial" style="color:var(--magenta);font-size:22px">—</div>
-        <div class="m-sub">pipeline ativo — pode virar receita</div>
-      </div>
-
-    </div><!-- /.cards-grid -->
-
-    <!-- Funil SDR -->
-    <div class="card card-funil" style="flex:1">
-      <div class="card-hd">
-        <div class="card-hd-title">Funil SDR</div>
-        <span class="badge" id="sdr-total-badge">—</span>
-      </div>
-      <div class="funil-body" id="funil-sdr">
-        <div style="text-align:center;color:#c8c2d6;font-size:12px;font-style:italic">Carregando...</div>
-      </div>
+    <div class="card card-rt">
+      <div class="rt-icon">&#128203;</div>
+      <div class="rt-num" id="card-total">—</div>
+      <div class="rt-label">Total de Leads</div>
+      <div class="rt-sub">planilha SDR</div>
     </div>
 
-  </div><!-- /#col-left -->
+    <div class="card card-metric accent-purple">
+      <div class="m-label">Qualificados</div>
+      <div class="m-val" id="card-qualif" style="color:var(--purple)">—</div>
+      <div class="m-sub">pelo SDR</div>
+    </div>
 
-  <!-- COLUNA CENTRO: chart + funil vendedor -->
-  <div id="col-center">
+    <div class="card card-metric accent-blue">
+      <div class="m-label">Em Tratativa</div>
+      <div class="m-val" id="card-tratativa" style="color:var(--blue)">—</div>
+      <div class="m-sub">com vendedor</div>
+    </div>
 
-    <!-- Chart -->
-    <div class="card card-chart">
-      <div class="card-hd">
-        <div class="card-hd-title">Leads por Dia</div>
-        <span class="badge" id="chart-total-badge">—</span>
-      </div>
-      <div class="chart-body">
-        <div class="chart-wrap">
-          <canvas id="leads-chart"></canvas>
+    <div class="card card-metric accent-green">
+      <div class="m-label">Fechamentos</div>
+      <div class="m-val" id="card-fechados" style="color:var(--green)">—</div>
+      <div class="m-sub">contratos</div>
+    </div>
+
+    <div class="card card-metric accent-purple">
+      <div class="m-label">Receita Total</div>
+      <div class="m-val" id="card-receita" style="color:var(--purple);font-size:20px">—</div>
+      <div class="m-sub">fechado</div>
+    </div>
+
+    <div class="card card-metric accent-orange">
+      <div class="m-label">Conversão</div>
+      <div class="m-val" id="card-conv" style="color:var(--orange)">—</div>
+      <div class="m-sub">fech. / qualif. SDR</div>
+    </div>
+
+    <div class="card card-metric accent-magenta" style="flex:1.3">
+      <div class="m-label">Potencial em Aberto</div>
+      <div class="m-val" id="card-potencial" style="color:var(--magenta);font-size:20px">—</div>
+      <div class="m-sub">pipeline ativo</div>
+    </div>
+
+  </div><!-- /#telao-cards -->
+
+  <!-- ÁREA PRINCIPAL -->
+  <div id="telao-main">
+
+    <!-- COLUNA FUNNELS -->
+    <div id="col-funnels">
+
+      <div class="card card-funil">
+        <div class="card-hd">
+          <div class="card-hd-title">Funil SDR</div>
+          <span class="badge" id="sdr-total-badge">—</span>
+        </div>
+        <div class="funil-body" id="funil-sdr">
+          <div style="text-align:center;color:#c8c2d6;font-size:12px;font-style:italic">Carregando...</div>
         </div>
       </div>
-    </div>
 
-    <!-- Funil Vendedor -->
-    <div class="card card-funil" style="flex:0.9">
-      <div class="card-hd">
-        <div class="card-hd-title">Funil Vendedor</div>
-        <span class="badge" id="vend-total-badge">—</span>
+      <div class="card card-funil">
+        <div class="card-hd">
+          <div class="card-hd-title">Funil Vendedor</div>
+          <span class="badge" id="vend-total-badge">—</span>
+        </div>
+        <div class="funil-body" id="funil-vend">
+          <div style="text-align:center;color:#c8c2d6;font-size:12px;font-style:italic">Carregando...</div>
+        </div>
       </div>
-      <div class="funil-body" id="funil-vend">
-        <div style="text-align:center;color:#c8c2d6;font-size:12px;font-style:italic">Carregando...</div>
+
+    </div><!-- /#col-funnels -->
+
+    <!-- COLUNA CHART -->
+    <div id="col-chart">
+      <div class="card card-chart">
+        <div class="card-hd">
+          <div class="card-hd-title">Leads por Dia</div>
+          <span class="badge" id="chart-total-badge">—</span>
+        </div>
+        <div class="chart-body">
+          <div class="chart-wrap">
+            <canvas id="leads-chart"></canvas>
+          </div>
+        </div>
       </div>
-    </div>
+    </div><!-- /#col-chart -->
 
-  </div><!-- /#col-center -->
+    <!-- COLUNA TABLES -->
+    <div id="col-tables">
 
-  <!-- COLUNA DIREITA: tabelas -->
-  <div id="col-right">
-
-    <!-- Por Representante -->
-    <div class="card card-table" style="flex:0.85">
-      <div class="card-hd">
-        <div class="card-hd-title">Por Representante</div>
-      </div>
-      <div class="table-scroll table-body">
-        <table>
-          <thead>
-            <tr>
+      <div class="card card-table" style="flex:0.8">
+        <div class="card-hd">
+          <div class="card-hd-title">Por Representante</div>
+        </div>
+        <div class="table-scroll table-body">
+          <table>
+            <thead><tr>
               <th>Rep</th><th>Tot.</th><th>Ag.</th><th>Cont.</th><th>Neg.</th><th>Fech.</th><th>Receita</th>
-            </tr>
-          </thead>
-          <tbody id="tb-reps">
-            <tr class="empty-row"><td colspan="7">Carregando...</td></tr>
-          </tbody>
-        </table>
+            </tr></thead>
+            <tbody id="tb-reps">
+              <tr class="empty-row"><td colspan="7">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
 
-    <!-- Leads Ativos -->
-    <div class="card card-table" style="flex:1.3">
-      <div class="card-hd">
-        <div class="card-hd-title">Leads Ativos</div>
-        <span class="badge" id="ativos-badge">—</span>
-      </div>
-      <div class="table-scroll table-body">
-        <table>
-          <thead>
-            <tr>
+      <div class="card card-table" style="flex:1.4">
+        <div class="card-hd">
+          <div class="card-hd-title">Leads Ativos</div>
+          <span class="badge" id="ativos-badge">—</span>
+        </div>
+        <div class="table-scroll table-body">
+          <table>
+            <thead><tr>
               <th>Empresa</th><th class="td-left" style="text-align:left">Rep</th><th class="td-left" style="text-align:left">Status</th><th>Potencial</th>
-            </tr>
-          </thead>
-          <tbody id="tb-ativos">
-            <tr class="empty-row"><td colspan="4">Carregando...</td></tr>
-          </tbody>
-        </table>
+            </tr></thead>
+            <tbody id="tb-ativos">
+              <tr class="empty-row"><td colspan="4">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
 
-    <!-- Fechamentos -->
-    <div class="card card-table" style="flex:0.85">
-      <div class="card-hd">
-        <div class="card-hd-title">Fechamentos</div>
-      </div>
-      <div class="table-scroll table-body">
-        <table>
-          <thead>
-            <tr>
+      <div class="card card-table" style="flex:0.8">
+        <div class="card-hd">
+          <div class="card-hd-title">Fechamentos</div>
+        </div>
+        <div class="table-scroll table-body">
+          <table>
+            <thead><tr>
               <th>Empresa</th><th class="td-left" style="text-align:left">Rep</th><th>Valor</th><th>Dias</th><th class="td-left" style="text-align:left">Data</th>
-            </tr>
-          </thead>
-          <tbody id="tb-fechados">
-            <tr class="empty-row"><td colspan="5">Carregando...</td></tr>
-          </tbody>
-        </table>
+            </tr></thead>
+            <tbody id="tb-fechados">
+              <tr class="empty-row"><td colspan="5">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
 
-  </div><!-- /#col-right -->
+    </div><!-- /#col-tables -->
+
+  </div><!-- /#telao-main -->
 
 </div><!-- /#telao-body -->
 
