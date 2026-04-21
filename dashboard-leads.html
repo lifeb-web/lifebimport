@@ -6,7 +6,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Life B | Painel de Leads</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
   <style>
     :root {
@@ -392,8 +391,8 @@
 
     /* CHART */
     .card-chart { margin-bottom: 16px; }
-    .chart-wrap { position: relative; height: 260px; }
-    @media (min-width: 640px) { .chart-wrap { height: 300px; } }
+    .chart-wrap { position: relative; height: 220px; }
+    @media (min-width: 640px) { .chart-wrap { height: 250px; } }
 
     /* TABLES ROW */
     .tables-row {
@@ -540,7 +539,7 @@
       <div class="rt-icon">&#128203;</div>
       <div class="rt-num" id="card-total">—</div>
       <div class="rt-label">Total de Leads</div>
-      <div class="rt-sub" id="card-total-range">carregando...</div>
+      <div class="rt-sub">leads registrados</div>
     </div>
 
     <!-- 2. Qualificados SDR -->
@@ -607,17 +606,6 @@
 
   </div><!-- /.funnel-row -->
 
-  <!-- CHART -->
-  <div class="card card-chart">
-    <div class="card-hd">
-      <div class="card-hd-title">Leads por Dia</div>
-      <span class="badge" id="chart-total-badge">—</span>
-    </div>
-    <div class="chart-wrap">
-      <canvas id="leads-chart"></canvas>
-    </div>
-  </div>
-
   <!-- TABLES -->
   <div class="tables-row">
 
@@ -657,14 +645,13 @@
           <thead>
             <tr>
               <th>Empresa</th>
-              <th class="td-left" style="text-align:left">Cidade</th>
               <th class="td-left" style="text-align:left">Rep</th>
               <th class="td-left" style="text-align:left">Status</th>
-              <th>Pot.</th>
+              <th>Potencial</th>
             </tr>
           </thead>
           <tbody id="tb-ativos">
-            <tr class="empty-row"><td colspan="5">Carregando...</td></tr>
+            <tr class="empty-row"><td colspan="4">Carregando...</td></tr>
           </tbody>
         </table>
       </div>
@@ -680,7 +667,6 @@
           <thead>
             <tr>
               <th>Empresa</th>
-              <th class="td-left" style="text-align:left">Cidade</th>
               <th class="td-left" style="text-align:left">Rep</th>
               <th>Valor</th>
               <th>Dias</th>
@@ -688,7 +674,7 @@
             </tr>
           </thead>
           <tbody id="tb-fechados">
-            <tr class="empty-row"><td colspan="6">Carregando...</td></tr>
+            <tr class="empty-row"><td colspan="5">Carregando...</td></tr>
           </tbody>
         </table>
       </div>
@@ -844,123 +830,6 @@ async function proxy(action) {
   return data;
 }
 
-// ── CHART ────────────────────────────────────────────────────
-let leadsChart = null;
-
-function renderChart(data) {
-  try {
-    const labels  = (data.labels  || []).map(d => {
-      const [y, m, day] = d.split('-');
-      return `${day}/${m}`;
-    });
-    const totals  = data.total   || [];
-    const fechado = data.fechado || [];
-
-    // Média móvel 7 dias
-    const ma7 = totals.map((_, i) => {
-      const start = Math.max(0, i - 6);
-      const slice = totals.slice(start, i + 1);
-      return slice.reduce((a, b) => a + b, 0) / slice.length;
-    });
-
-    // Pontos de fechamento (scatter)
-    const fechScatter = data.labels.map((d, i) => ({ x: labels[i], y: fechado[i] > 0 ? totals[i] : null }))
-      .filter(p => p.y !== null);
-
-    const ctx = document.getElementById('leads-chart');
-    if (!ctx) return;
-
-    if (leadsChart) { leadsChart.destroy(); leadsChart = null; }
-
-    leadsChart = new Chart(ctx, {
-      data: {
-        labels: labels,
-        datasets: [
-          {
-            type: 'bar',
-            label: 'Leads',
-            data: totals,
-            backgroundColor: 'rgba(112,75,155,.7)',
-            borderRadius: 4,
-            borderSkipped: false,
-            order: 2,
-          },
-          {
-            type: 'line',
-            label: 'Média 7d',
-            data: ma7,
-            borderColor: '#E92085',
-            borderWidth: 2.5,
-            pointRadius: 0,
-            tension: 0.4,
-            fill: false,
-            order: 1,
-          },
-          {
-            type: 'scatter',
-            label: 'Fechamento',
-            data: fechScatter,
-            backgroundColor: '#22C35D',
-            pointStyle: 'star',
-            pointRadius: 10,
-            pointHoverRadius: 13,
-            order: 0,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        plugins: {
-          legend: { display: true, position: 'top', labels: { font: { family: 'Montserrat', size: 11, weight: '600' }, boxWidth: 14, usePointStyle: true } },
-          tooltip: {
-            callbacks: {
-              title: ctx => ctx[0]?.label ? ctx[0].label : '',
-              afterBody: items => {
-                const i = items[0]?.dataIndex;
-                if (i === undefined) return [];
-                const f = fechado[i];
-                return f > 0 ? [`⭐ ${f} fechamento(s)`] : [];
-              },
-            },
-            backgroundColor: 'rgba(34,27,50,.92)',
-            titleFont: { family: 'Montserrat', size: 12, weight: '700' },
-            bodyFont:  { family: 'Montserrat', size: 11 },
-            padding: 10,
-          },
-        },
-        scales: {
-          x: {
-            ticks: { font: { family: 'Montserrat', size: 10 }, maxRotation: 45 },
-            grid: { display: false },
-          },
-          y: {
-            beginAtZero: true,
-            ticks: { font: { family: 'Montserrat', size: 10 }, precision: 0 },
-            grid: { color: 'rgba(0,0,0,.06)' },
-          },
-        },
-      },
-    });
-
-    // Update total badge
-    const total = totals.reduce((a, b) => a + b, 0);
-    const badge = document.getElementById('chart-total-badge');
-    if (badge) badge.textContent = n(total) + ' leads';
-
-    // Atualiza range de datas dinâmico no card Total
-    const range = document.getElementById('card-total-range');
-    if (range && data.labels && data.labels.length) {
-      const fmtBR = d => { const [, m, day] = d.split('-'); return `${+day}/${+m}`; };
-      range.textContent = fmtBR(data.labels[0]) + ' a ' + fmtBR(data.labels[data.labels.length - 1]);
-    }
-
-  } catch(err) {
-    _log.error('chart', 'Erro ao renderizar gráfico', err);
-  }
-}
-
 // ── FUNIL BARRAS ─────────────────────────────────────────────
 function renderFunilBar(containerId, items, total) {
   const el = document.getElementById(containerId);
@@ -982,11 +851,8 @@ function renderFunilBar(containerId, items, total) {
 
 function renderSummary(data) {
   try {
-    const { sdr = {}, vend = {}, receita = 0, pipeline = 0, total = 0, media_dias = 0, lastModified = '' } = data;
+    const { sdr = {}, vend = {}, receita = 0, total = 0, media_dias = 0 } = data;
     const el = id => document.getElementById(id);
-
-    // Detecta mudança na planilha e dispara indicadores visuais
-    updateSheetTimestamp(lastModified);
 
     if (el('card-total'))    el('card-total').textContent    = n(total);
     if (el('card-qualif'))   el('card-qualif').textContent   = n(sdr.qualif || 0);
@@ -1077,11 +943,10 @@ function renderAtivos(data) {
     if (!tbody) return;
     const leads = data.leads || [];
     if (badge) badge.textContent = n(leads.length);
-    if (!leads.length) { tbody.innerHTML = emptyRow(5); return; }
+    if (!leads.length) { tbody.innerHTML = emptyRow(4); return; }
     tbody.innerHTML = leads.map(l => `
       <tr>
         <td title="${esc(l.empresa)}">${esc(l.empresa || l.nome || '—')}</td>
-        <td class="td-left">${esc(l.cidade || '—')}</td>
         <td class="td-left">${esc(l.rep)}</td>
         <td class="td-left">${statusBadge(l.status)}</td>
         <td>${l.pot ? cur(l.pot) : '—'}</td>
@@ -1089,7 +954,7 @@ function renderAtivos(data) {
   } catch(err) {
     _log.error('ativos', 'Erro ao renderizar ativos', err);
     const tbody = document.getElementById('tb-ativos');
-    if (tbody) tbody.innerHTML = errRow(5);
+    if (tbody) tbody.innerHTML = errRow(4);
   }
 }
 
@@ -1098,40 +963,37 @@ function renderFechados(data) {
     const tbody = document.getElementById('tb-fechados');
     if (!tbody) return;
     const f = data.fechamentos || [];
-    if (!f.length) { tbody.innerHTML = emptyRow(6); return; }
-    tbody.innerHTML = f.map(c => `
+    if (!f.length) { tbody.innerHTML = emptyRow(5); return; }
+    tbody.innerHTML = f.map(c => {
+      const dataBR = c.data_f ? (() => { const [y,m,d] = c.data_f.split('-'); return `${d}/${m}/${y.slice(2)}`; })() : '—';
+      return `
       <tr>
         <td title="${esc(c.empresa)}">${esc(c.empresa || c.nome || '—')}</td>
-        <td class="td-left">${esc(c.cidade || '—')}</td>
         <td class="td-left">${esc(c.rep)}</td>
         <td>${cur(c.valor)}</td>
         <td>${c.dias ? n(c.dias) + 'd' : '—'}</td>
-        <td class="td-left">${c.data_f ? esc(c.data_f.slice(5).replace('-','/')) : '—'}</td>
-      </tr>`).join('');
+        <td class="td-left">${esc(dataBR)}</td>
+      </tr>`;
+    }).join('');
   } catch(err) {
     _log.error('fechados', 'Erro ao renderizar fechados', err);
     const tbody = document.getElementById('tb-fechados');
-    if (tbody) tbody.innerHTML = errRow(6);
+    if (tbody) tbody.innerHTML = errRow(5);
   }
 }
 
-// ── LOAD ALL ─────────────────────────────────────────────────
-async function loadAll() {
-  if (LEADS_PROXY === 'COLE_AQUI_A_URL_DO_APPS_SCRIPT' || !LEADS_PROXY) return;
-
+// ── LOAD ALL DATA (only called when sheet changed) ───────────
+async function loadAllData(summaryData) {
   _loadingStart();
   try {
-    const [rSummary, rByRep, rFunnel, rActive, rClosed, rChart] = await Promise.allSettled([
-      proxy('summary'),
-      proxy('by_rep'),
+    renderSummary(summaryData);
+
+    const [rFunnel, rByRep, rActive, rClosed] = await Promise.allSettled([
       proxy('funnel'),
+      proxy('by_rep'),
       proxy('active'),
       proxy('closed'),
-      proxy('chart'),
     ]);
-
-    if (rSummary.status === 'fulfilled') renderSummary(rSummary.value);
-    else _log.error('loadAll', 'summary falhou', rSummary.reason);
 
     if (rFunnel.status === 'fulfilled')  renderFunnel(rFunnel.value);
     else _log.error('loadAll', 'funnel falhou', rFunnel.reason);
@@ -1145,19 +1007,34 @@ async function loadAll() {
     if (rClosed.status === 'fulfilled')  renderFechados(rClosed.value);
     else _log.error('loadAll', 'closed falhou', rClosed.reason);
 
-    if (rChart.status === 'fulfilled')   renderChart(rChart.value);
-    else _log.error('loadAll', 'chart falhou', rChart.reason);
-
     stamp();
   } finally {
     _loadingEnd();
   }
 }
 
+// ── CHECK FOR UPDATES (poll light — só busca summary para ver se planilha mudou) ──
+async function checkForUpdates() {
+  if (!LEADS_PROXY || LEADS_PROXY === 'COLE_AQUI_A_URL_DO_APPS_SCRIPT') return;
+  try {
+    const sumData = await proxy('summary');
+    const lm = sumData.lastModified || '';
+    const prevLM = _lastSheetModified;
+    updateSheetTimestamp(lm);
+
+    // Primeira carga OU planilha foi alterada → recarrega tudo
+    if (prevLM === null || (lm && lm !== prevLM)) {
+      await loadAllData(sumData);
+    }
+  } catch(e) {
+    _log.error('check', 'Erro ao verificar planilha', e);
+  }
+}
+
 // ── INIT ─────────────────────────────────────────────────────
 window.addEventListener('load', () => {
-  loadAll();
-  setInterval(loadAll, 60_000);
+  checkForUpdates();
+  setInterval(checkForUpdates, 60_000);
 });
 </script>
 </body>
