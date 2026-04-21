@@ -130,6 +130,44 @@
       100% { opacity: .35; transform: scale(1);   box-shadow: none; }
     }
 
+    /* SHEET UPDATE INDICATOR */
+    #sheet-updated {
+      font-size: 11px; font-weight: 600; color: var(--muted);
+      padding: 2px 8px; border-radius: 20px;
+      transition: color .3s, background .3s;
+      white-space: nowrap;
+    }
+    #sheet-updated.changed {
+      color: var(--green);
+      background: rgba(34,195,93,.12);
+      animation: sheet-pulse 4s ease forwards;
+    }
+    @keyframes sheet-pulse {
+      0%,10% { color: var(--green); background: rgba(34,195,93,.18); }
+      100%   { color: var(--muted); background: transparent; }
+    }
+
+    /* NEW UPDATE BANNER */
+    #new-update-banner {
+      display: none;
+      position: fixed; top: 64px; left: 50%; transform: translateX(-50%) translateY(-6px);
+      background: var(--green); color: #fff;
+      padding: 8px 22px; border-radius: 0 0 12px 12px;
+      font-family: var(--font); font-weight: 700; font-size: 13px;
+      z-index: 9999; pointer-events: none; white-space: nowrap;
+      box-shadow: 0 4px 16px rgba(34,195,93,.4);
+    }
+    #new-update-banner.show {
+      display: block;
+      animation: banner-drop 4.5s ease forwards;
+    }
+    @keyframes banner-drop {
+      0%   { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+      12%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+      78%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+      100% { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+    }
+
     /* CONFIG WARNING */
     #config-warning {
       display: none;
@@ -476,6 +514,7 @@
     <div class="h-sub">PAINEL DE LEADS &nbsp;·&nbsp; PROJETO SDR</div>
   </div>
   <div class="h-right">
+    <span id="sheet-updated" title="Última alteração na planilha de leads"></span>
     <div id="last-updated">
       <span id="refresh-dot"></span>
       <span id="clock-live">--:--:--</span>
@@ -483,6 +522,8 @@
     </div>
   </div>
 </header>
+
+<div id="new-update-banner">🟢 Planilha atualizada</div>
 
 <div id="config-warning">
   &#9888; Configure a URL do proxy: defina <code>LEADS_PROXY</code> com a URL do Apps Script deployado.
@@ -665,7 +706,7 @@
 
 <script>
 // ── CONFIGURAÇÃO ─────────────────────────────────────────────
-const LEADS_PROXY = 'COLE_AQUI_A_URL_DO_APPS_SCRIPT';
+const LEADS_PROXY = 'https://script.google.com/macros/s/AKfycbyq9KJgWTRoALEEVf8Pu_I82GT0-tTK5yXNg-RsYHj4ywK6Grg9z_jG1-IcTW3LMXfNBg/exec';
 
 // ── LOG ──────────────────────────────────────────────────────
 const _log = {
@@ -689,13 +730,50 @@ function showError(msg) {
   setTimeout(() => el.style.display = 'none', 7000);
 }
 
+// Guarda o timestamp da última modificação da planilha para detectar mudanças
+let _lastSheetModified = null;
+
 function stamp() {
   const dot = document.getElementById('refresh-dot');
   if (dot) { dot.classList.remove('flash'); void dot.offsetWidth; dot.classList.add('flash'); }
   const el = document.getElementById('last-refresh');
   if (el) {
     const h = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    el.textContent = `· atualizado ${h}`;
+    el.textContent = `· painel ${h}`;
+  }
+}
+
+function updateSheetTimestamp(iso) {
+  if (!iso) return;
+  const el = document.getElementById('sheet-updated');
+  if (!el) return;
+
+  // Formata "HH:MM:SS" do ISO "yyyy-MM-ddTHH:mm:ss"
+  const time = iso.length >= 19 ? iso.slice(11, 19) : iso;
+
+  const changed = _lastSheetModified && iso !== _lastSheetModified;
+  _lastSheetModified = iso;
+
+  el.textContent = `📋 planilha ${time}`;
+
+  if (changed) {
+    // Flash no indicador
+    el.classList.remove('changed');
+    void el.offsetWidth;
+    el.classList.add('changed');
+
+    // Banner flutuante
+    const banner = document.getElementById('new-update-banner');
+    if (banner) {
+      banner.classList.remove('show');
+      void banner.offsetWidth;
+      banner.classList.add('show');
+      setTimeout(() => banner.classList.remove('show'), 4600);
+    }
+
+    // Flash mais intenso no dot
+    const dot = document.getElementById('refresh-dot');
+    if (dot) { dot.classList.remove('flash'); void dot.offsetWidth; dot.classList.add('flash'); }
   }
 }
 
@@ -904,8 +982,11 @@ function renderFunilBar(containerId, items, total) {
 
 function renderSummary(data) {
   try {
-    const { sdr = {}, vend = {}, receita = 0, pipeline = 0, total = 0, media_dias = 0 } = data;
+    const { sdr = {}, vend = {}, receita = 0, pipeline = 0, total = 0, media_dias = 0, lastModified = '' } = data;
     const el = id => document.getElementById(id);
+
+    // Detecta mudança na planilha e dispara indicadores visuais
+    updateSheetTimestamp(lastModified);
 
     if (el('card-total'))    el('card-total').textContent    = n(total);
     if (el('card-qualif'))   el('card-qualif').textContent   = n(sdr.qualif || 0);
