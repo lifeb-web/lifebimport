@@ -688,20 +688,26 @@
   <!-- TABLES -->
   <div class="tables-grid">
 
-    <!-- Pages -->
+    <!-- Cities -->
     <div class="card">
       <div class="card-hd">
-        <div class="card-hd-title">Por Página</div>
+        <div class="card-hd-title">Estado / Cidade</div>
       </div>
-      <div class="table-scroll">
+      <div class="table-scroll" style="overflow-x:auto">
         <table>
+          <colgroup>
+            <col style="width:28%">
+            <col style="width:40%">
+            <col style="width:16%">
+            <col style="width:16%">
+          </colgroup>
           <thead><tr>
-            <th title="Endereço da página visitada">Página</th>
-            <th title="Pessoas únicas que acessaram essa página">Visitantes</th>
-            <th class="mh" title="Total de visitas (uma mesma pessoa pode entrar várias vezes)">Visitas</th>
-            <th title="Leads gerados nessa página">Leads</th>
+            <th>Estado</th>
+            <th style="text-align:left">Cidade</th>
+            <th title="Pessoas únicas dessa localidade">Visitantes</th>
+            <th title="Leads gerados nessa localidade">Leads</th>
           </tr></thead>
-          <tbody id="tb-pages">
+          <tbody id="tb-cities">
             <tr class="empty-row"><td colspan="4">Carregando...</td></tr>
           </tbody>
         </table>
@@ -727,26 +733,20 @@
       </div>
     </div>
 
-    <!-- Cities -->
+    <!-- Pages -->
     <div class="card">
       <div class="card-hd">
-        <div class="card-hd-title">Estado / Cidade</div>
+        <div class="card-hd-title">Por Página</div>
       </div>
-      <div class="table-scroll" style="overflow-x:auto">
+      <div class="table-scroll">
         <table>
-          <colgroup>
-            <col style="width:28%">
-            <col style="width:40%">
-            <col style="width:16%">
-            <col style="width:16%">
-          </colgroup>
           <thead><tr>
-            <th>Estado</th>
-            <th style="text-align:left">Cidade</th>
-            <th title="Pessoas únicas dessa localidade">Visitantes</th>
-            <th title="Leads gerados nessa localidade">Leads</th>
+            <th title="Endereço da página visitada">Página</th>
+            <th title="Pessoas únicas que acessaram essa página">Visitantes</th>
+            <th class="mh" title="Total de visitas (uma mesma pessoa pode entrar várias vezes)">Visitas</th>
+            <th title="Leads gerados nessa página">Leads</th>
           </tr></thead>
-          <tbody id="tb-cities">
+          <tbody id="tb-pages">
             <tr class="empty-row"><td colspan="4">Carregando...</td></tr>
           </tbody>
         </table>
@@ -797,6 +797,7 @@ const PAGINAS_LEGENDAS = {
   '/direto/':        'Pg. Direta - só WhatsApp',
   '/video1/':        'Página com Vídeo - Supermercado',
   '/video1-direto/': 'Vídeo + WhatsApp Direto',
+  '/video2/':        'Página com Vídeo - Farmácia',
   '/rmk/':           'Remarketing - foco em objeção',
   '/contato/':       'Contato via Consultor',
 };
@@ -867,8 +868,8 @@ function traduzOrigem(raw) {
   if (/^(youtube\.com|youtu\.be)\s*\//.test(s)) return 'YouTube';
   // Google (outros)
   if (/^google\s*\//.test(s)) return 'Google';
-  // eventsmanager / business facebook
-  if (/eventsmanager|business\.facebook/.test(s)) return 'Facebook (gerenciador)';
+  // eventsmanager / business facebook — agrupa como Facebook orgânico
+  if (/eventsmanager|business\.facebook/.test(s)) return 'Facebook';
 
   // 4. Substituições genéricas de sufixo
   return s
@@ -1472,18 +1473,37 @@ function isInternalPath(path) {
 async function loadPages(leadsData, snap) {
   const tb = document.getElementById('tb-pages');
   try {
-    const leadsMap = buildLeadsMap(leadsData, r => r.dimensionValues[0].value);
+    // Normaliza path: garante barra final (/video2 → /video2/)
+    const normPath = p => (p && !p.endsWith('/') ? p + '/' : (p || '/'));
+
+    // Mapa de leads com paths normalizados, acumulando se houver duplicata
+    const leadsMap = new Map();
+    if (leadsData?.rows) {
+      for (const r of leadsData.rows) {
+        const k = normPath(r.dimensionValues[0].value);
+        leadsMap.set(k, (leadsMap.get(k) || 0) + (+r.metricValues[0].value));
+      }
+    }
+
     const d = await proxy('pages', undefined, undefined, snap);
-    const rows = (d.rows ?? [])
-      .filter(r => !isInternalPath(r.dimensionValues[0].value))
-      .map(r => {
-        const path    = r.dimensionValues[0].value;
-        const [u, s]  = r.metricValues.map(x => x.value);
-        const legenda = PAGINAS_LEGENDAS[path] || '';
-        const leads   = leadsMap.get(path) || 0;
-        return { path, u, s, legenda, leads };
-      })
-      .sort((a, b) => b.leads - a.leads || b.u - a.u); // ordena por leads desc, desempata por visitas
+
+    // Agrega rows com o mesmo path normalizado (ex: /video2 e /video2/ viram uma linha)
+    const pageMap = new Map();
+    for (const r of (d.rows ?? [])) {
+      const rawPath = r.dimensionValues[0].value;
+      if (isInternalPath(rawPath)) continue;
+      const path = normPath(rawPath);
+      const [u, s] = r.metricValues.map(x => +x.value);
+      if (pageMap.has(path)) {
+        const ex = pageMap.get(path);
+        ex.u += u;
+        ex.s += s;
+      } else {
+        pageMap.set(path, { path, u, s, legenda: PAGINAS_LEGENDAS[path] || '', leads: leadsMap.get(path) || 0 });
+      }
+    }
+
+    const rows = [...pageMap.values()].sort((a, b) => b.leads - a.leads || b.u - a.u);
     tb.innerHTML = rows.map(({ path, u, s, legenda, leads }) => `<tr>
         <td class="td-url" title="${esc(path)}" style="overflow:visible;white-space:normal;">
           <span class="pg-legenda">${esc(legenda) || esc(path)}</span>
@@ -1528,15 +1548,24 @@ async function loadSources(leadsData, snap) {
   try {
     const leadsMap = buildLeadsMap(leadsData, r => r.dimensionValues[0].value);
     const d = await proxy('sources', undefined, undefined, snap);
-    const rows = (d.rows ?? [])
-      .map(r => {
-        const srcRaw = r.dimensionValues[0].value;
-        const src    = traduzOrigem(srcRaw);
-        const [u]    = r.metricValues.map(x => x.value);
-        const leads  = leadsMap.get(srcRaw) || 0;
-        return { src, u, leads };
-      })
-      .sort((a, b) => b.leads - a.leads || b.u - a.u);
+
+    // Traduz e agrega por nome traduzido (evita duplicatas como "Facebook" + "Facebook Ads" virado "Facebook" duas vezes)
+    const merged = new Map();
+    for (const r of (d.rows ?? [])) {
+      const srcRaw = r.dimensionValues[0].value;
+      const src    = traduzOrigem(srcRaw);
+      const u      = +r.metricValues[0].value;
+      const leads  = leadsMap.get(srcRaw) || 0;
+      if (merged.has(src)) {
+        const ex = merged.get(src);
+        ex.u += u;
+        ex.leads += leads;
+      } else {
+        merged.set(src, { src, u, leads });
+      }
+    }
+
+    const rows = [...merged.values()].sort((a, b) => b.leads - a.leads || b.u - a.u);
     tb.innerHTML = rows.map(({ src, u, leads }) => `<tr>
         <td>${esc(src)}</td>
         <td class="num-p">${n(u)}</td>
