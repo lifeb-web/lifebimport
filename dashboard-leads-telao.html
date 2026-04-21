@@ -53,6 +53,14 @@
     #refresh-dot.flash { animation:dot-flash 1.4s ease forwards; }
     @keyframes dot-flash { 0%{opacity:.35;transform:scale(1);box-shadow:none;} 18%{opacity:1;transform:scale(1.7);box-shadow:0 0 8px rgba(34,195,93,.6);} 100%{opacity:.35;transform:scale(1);box-shadow:none;} }
 
+    #sheet-updated { font-size:13px; font-weight:600; color:var(--muted); padding:3px 10px; border-radius:20px; transition:color .3s,background .3s; white-space:nowrap; }
+    #sheet-updated.changed { color:var(--green); background:rgba(34,195,93,.12); animation:sheet-pulse 4s ease forwards; }
+    @keyframes sheet-pulse { 0%,10%{color:var(--green);background:rgba(34,195,93,.18);}100%{color:var(--muted);background:transparent;} }
+
+    #new-update-banner { display:none; position:fixed; top:68px; left:50%; transform:translateX(-50%) translateY(-6px); background:var(--green); color:#fff; padding:10px 28px; border-radius:0 0 14px 14px; font-family:var(--font); font-weight:700; font-size:16px; z-index:9999; pointer-events:none; white-space:nowrap; box-shadow:0 6px 24px rgba(34,195,93,.45); }
+    #new-update-banner.show { display:block; animation:banner-drop 4.5s ease forwards; }
+    @keyframes banner-drop { 0%{opacity:0;transform:translateX(-50%) translateY(-14px);}12%{opacity:1;transform:translateX(-50%) translateY(0);}78%{opacity:1;transform:translateX(-50%) translateY(0);}100%{opacity:0;transform:translateX(-50%) translateY(-14px);} }
+
     /* CONFIG WARNING */
     #config-warning { display:none; background:#fff8e1; border-bottom:2px solid #ffc107; padding:6px 28px; font-size:11px; color:#7a5700; flex-shrink:0; }
 
@@ -216,6 +224,7 @@
     <span class="h-dot">|</span>
   </div>
   <div class="h-right">
+    <span id="sheet-updated" title="Última alteração na planilha de leads"></span>
     <div id="last-updated">
       <span id="refresh-dot"></span>
       <span id="clock-live">--:--:--</span>
@@ -223,6 +232,8 @@
     </div>
   </div>
 </header>
+
+<div id="new-update-banner">🟢 Planilha atualizada</div>
 
 <div id="config-warning">
   &#9888; Configure a URL do proxy: defina <code>LEADS_PROXY</code> com a URL do Apps Script deployado.
@@ -396,7 +407,8 @@
 
 <script>
 // ── CONFIGURAÇÃO ─────────────────────────────────────────────
-const LEADS_PROXY = 'COLE_AQUI_A_URL_DO_APPS_SCRIPT';
+const LEADS_PROXY = 'https://script.google.com/macros/s/AKfycbyq9KJgWTRoALEEVf8Pu_I82GT0-tTK5yXNg-RsYHj4ywK6Grg9z_jG1-IcTW3LMXfNBg/exec';
+let _lastSheetModified = null;
 
 // ── LOG ──────────────────────────────────────────────────────
 const _log = {
@@ -426,7 +438,32 @@ function stamp() {
   const el = document.getElementById('last-refresh');
   if (el) {
     const h = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    el.textContent = `· atualizado ${h}`;
+    el.textContent = `· painel ${h}`;
+  }
+}
+
+function updateSheetTimestamp(iso) {
+  if (!iso) return;
+  const el = document.getElementById('sheet-updated');
+  if (!el) return;
+  const time = iso.slice(11, 19);
+  const changed = _lastSheetModified && iso !== _lastSheetModified;
+  _lastSheetModified = iso;
+  el.textContent = `📋 planilha ${time}`;
+  if (changed) {
+    el.classList.remove('changed');
+    void el.offsetWidth;
+    el.classList.add('changed');
+    setTimeout(() => el.classList.remove('changed'), 4500);
+    const banner = document.getElementById('new-update-banner');
+    if (banner) {
+      banner.classList.remove('show');
+      void banner.offsetWidth;
+      banner.classList.add('show');
+      setTimeout(() => banner.classList.remove('show'), 4500);
+    }
+    const dot = document.getElementById('refresh-dot');
+    if (dot) { dot.classList.remove('flash'); void dot.offsetWidth; dot.classList.add('flash'); }
   }
 }
 
@@ -637,7 +674,8 @@ function renderFunilBar(containerId, items, total) {
 
 function renderSummary(data) {
   try {
-    const { sdr = {}, vend = {}, receita = 0, total = 0, media_dias = 0 } = data;
+    const { sdr = {}, vend = {}, receita = 0, total = 0, media_dias = 0, lastModified = '' } = data;
+    if (lastModified) updateSheetTimestamp(lastModified);
     const el = id => document.getElementById(id);
 
     if (el('card-total'))    el('card-total').textContent    = n(total);
