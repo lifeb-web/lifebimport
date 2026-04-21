@@ -414,6 +414,9 @@
 // ── CONFIGURAÇÃO ─────────────────────────────────────────────
 const LEADS_PROXY = 'https://script.google.com/macros/s/AKfycbyq9KJgWTRoALEEVf8Pu_I82GT0-tTK5yXNg-RsYHj4ywK6Grg9z_jG1-IcTW3LMXfNBg/exec';
 let _lastSheetModified = null;
+let _pollCount = 0;
+const POLL_INTERVAL_MS  = 60_000;
+const FORCE_RELOAD_POLLS = 3;
 
 // ── LOG ──────────────────────────────────────────────────────
 const _log = {
@@ -807,17 +810,22 @@ async function loadAllData(summaryData, lm) {
   }
 }
 
-// ── CHECK FOR UPDATES (poll leve — só busca summary) ─────────
+// ── CHECK FOR UPDATES ────────────────────────────────────────
 async function checkForUpdates() {
   if (!LEADS_PROXY || LEADS_PROXY === 'COLE_AQUI_A_URL_DO_APPS_SCRIPT') return;
+  _pollCount++;
   try {
     const sumData = await proxy('summary');
-    const lm = sumData.lastModified || '';
-    const prevLM = _lastSheetModified;
+    const lm      = sumData.lastModified || '';
+    const prevLM  = _lastSheetModified;
     _lastSheetModified = lm;
 
-    if (prevLM === null || (lm && lm !== prevLM)) {
-      if (prevLM !== null) onSheetChanged();
+    const isFirst      = prevLM === null;
+    const sheetChanged = lm && lm !== prevLM;
+    const forcedCycle  = _pollCount % FORCE_RELOAD_POLLS === 0;
+
+    if (isFirst || sheetChanged || forcedCycle) {
+      if (sheetChanged && !isFirst) onSheetChanged();
       await loadAllData(sumData, lm);
     }
   } catch(e) {
@@ -828,7 +836,7 @@ async function checkForUpdates() {
 // ── INIT ─────────────────────────────────────────────────────
 window.addEventListener('load', () => {
   checkForUpdates();
-  setInterval(checkForUpdates, 60_000);
+  setInterval(checkForUpdates, POLL_INTERVAL_MS);
 });
 
 // ── ESCALA TELÃO (zoom 1920×1080 → viewport real) ────────────
