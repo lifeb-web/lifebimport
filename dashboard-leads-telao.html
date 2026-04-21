@@ -224,7 +224,6 @@
     <span class="h-dot">|</span>
   </div>
   <div class="h-right">
-    <span id="sheet-updated" title="Última alteração na planilha de leads"></span>
     <div id="last-updated">
       <span id="refresh-dot"></span>
       <span id="clock-live">--:--:--</span>
@@ -287,6 +286,13 @@
         <div class="m-label">Conversão</div>
         <div class="m-val" id="card-conv" style="color:var(--orange);font-size:22px">—</div>
         <div class="m-sub">fech. / qualif. SDR</div>
+      </div>
+
+      <!-- Potencial em Aberto -->
+      <div class="card card-metric accent-magenta" style="grid-column:span 2">
+        <div class="m-label">Potencial em Aberto</div>
+        <div class="m-val" id="card-potencial" style="color:var(--magenta);font-size:22px">—</div>
+        <div class="m-sub">pipeline ativo — pode virar receita</div>
       </div>
 
     </div><!-- /.cards-grid -->
@@ -419,7 +425,7 @@ const _log = {
 // ── UTILITÁRIOS ──────────────────────────────────────────────
 const esc = s  => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 const n   = v  => (v == null || v === '') ? '0' : (+v).toLocaleString('pt-BR');
-const cur = v  => 'R$' + (+(v || 0)).toLocaleString('pt-BR', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+const cur = v  => 'R$ ' + (+(v || 0)).toLocaleString('pt-BR', {minimumFractionDigits: 0, maximumFractionDigits: 0});
 
 const emptyRow = cols => `<tr class="empty-row"><td colspan="${cols}">Sem dados</td></tr>`;
 const errRow   = cols => `<tr class="err-row"><td colspan="${cols}">Erro</td></tr>`;
@@ -432,38 +438,25 @@ function showError(msg) {
   setTimeout(() => el.style.display = 'none', 7000);
 }
 
-function stamp() {
+function stamp(iso) {
   const dot = document.getElementById('refresh-dot');
   if (dot) { dot.classList.remove('flash'); void dot.offsetWidth; dot.classList.add('flash'); }
   const el = document.getElementById('last-refresh');
   if (el) {
-    const h = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    el.textContent = `· painel ${h}`;
+    const h = iso && iso.length >= 16
+      ? iso.slice(11, 16)
+      : new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    el.textContent = `· atualizado ${h}`;
   }
 }
 
-function updateSheetTimestamp(iso) {
-  if (!iso) return;
-  const el = document.getElementById('sheet-updated');
-  if (!el) return;
-  const time = iso.slice(11, 19);
-  const changed = _lastSheetModified && iso !== _lastSheetModified;
-  _lastSheetModified = iso;
-  el.textContent = `📋 planilha ${time}`;
-  if (changed) {
-    el.classList.remove('changed');
-    void el.offsetWidth;
-    el.classList.add('changed');
-    setTimeout(() => el.classList.remove('changed'), 4500);
-    const banner = document.getElementById('new-update-banner');
-    if (banner) {
-      banner.classList.remove('show');
-      void banner.offsetWidth;
-      banner.classList.add('show');
-      setTimeout(() => banner.classList.remove('show'), 4500);
-    }
-    const dot = document.getElementById('refresh-dot');
-    if (dot) { dot.classList.remove('flash'); void dot.offsetWidth; dot.classList.add('flash'); }
+function onSheetChanged() {
+  const banner = document.getElementById('new-update-banner');
+  if (banner) {
+    banner.classList.remove('show');
+    void banner.offsetWidth;
+    banner.classList.add('show');
+    setTimeout(() => banner.classList.remove('show'), 4600);
   }
 }
 
@@ -656,7 +649,7 @@ function renderFunilBar(containerId, items, total) {
 
 function renderSummary(data) {
   try {
-    const { sdr = {}, vend = {}, receita = 0, total = 0, media_dias = 0 } = data;
+    const { sdr = {}, vend = {}, receita = 0, pipeline = 0, total = 0, media_dias = 0 } = data;
     const el = id => document.getElementById(id);
 
     if (el('card-total'))    el('card-total').textContent    = n(total);
@@ -674,6 +667,8 @@ function renderSummary(data) {
     const qualif = sdr.qualif || 0;
     const conv = qualif > 0 ? ((fechados / qualif) * 100).toFixed(1) + '%' : '—';
     if (el('card-conv')) el('card-conv').textContent = conv;
+
+    if (el('card-potencial')) el('card-potencial').textContent = cur(pipeline);
   } catch(err) {
     _log.error('summary', 'Erro ao renderizar summary', err);
   }
@@ -714,7 +709,7 @@ function renderReps(data) {
   try {
     const tbody = document.getElementById('tb-reps');
     if (!tbody) return;
-    const reps = data.reps || [];
+    const reps = (data.reps || []).filter(r => r.rep !== 'Sem vendedor');
     if (!reps.length) { tbody.innerHTML = emptyRow(7); return; }
     tbody.innerHTML = reps.map(r => `
       <tr>
@@ -741,6 +736,7 @@ function renderAtivos(data) {
     const leads = data.leads || [];
     if (badge) badge.textContent = n(leads.length);
     if (!leads.length) { tbody.innerHTML = emptyRow(4); return; }
+    leads.sort((a, b) => (b.pot || 0) - (a.pot || 0));
     tbody.innerHTML = leads.map(l => `
       <tr>
         <td title="${esc(l.empresa)}">${esc(l.empresa || l.nome || '—')}</td>
@@ -778,7 +774,7 @@ function renderFechados(data) {
 
 // ── LOAD ALL ─────────────────────────────────────────────────
 // ── LOAD ALL DATA (só quando planilha mudar) ─────────────────
-async function loadAllData(summaryData) {
+async function loadAllData(summaryData, lm) {
   _loadingStart();
   try {
     renderSummary(summaryData);
@@ -806,7 +802,7 @@ async function loadAllData(summaryData) {
     if (rChart.status === 'fulfilled')   renderChart(rChart.value);
     else _log.error('loadAll', 'chart falhou', rChart.reason);
 
-    stamp();
+    stamp(lm);
   } finally {
     _loadingEnd();
   }
@@ -819,10 +815,11 @@ async function checkForUpdates() {
     const sumData = await proxy('summary');
     const lm = sumData.lastModified || '';
     const prevLM = _lastSheetModified;
-    updateSheetTimestamp(lm);
+    _lastSheetModified = lm;
 
     if (prevLM === null || (lm && lm !== prevLM)) {
-      await loadAllData(sumData);
+      if (prevLM !== null) onSheetChanged();
+      await loadAllData(sumData, lm);
     }
   } catch(e) {
     _log.error('check', 'Erro ao verificar planilha', e);
