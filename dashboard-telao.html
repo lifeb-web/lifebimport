@@ -1135,7 +1135,7 @@ async function loadCities(leadsData, snap) {
         const regionRaw = r.dimensionValues[0].value;
         const cityRaw   = r.dimensionValues[1].value;
         const region    = traduzEstado(regionRaw);
-        const city      = (!cityRaw || cityRaw === '(not set)') ? 'Não identificada' : cityRaw;
+        const city      = (!cityRaw || cityRaw === '(not set)' || /^\d{5,}/.test(cityRaw)) ? 'Não identificada' : cityRaw;
         const users     = r.metricValues[0].value;
         const leads     = leadsMap.get(`${regionRaw}||${cityRaw}`) || 0;
         return { region, city, users, leads };
