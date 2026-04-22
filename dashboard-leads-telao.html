@@ -390,7 +390,7 @@
             </colgroup>
             <thead><tr>
               <th class="td-left" style="text-align:left">Nome / Empresa</th>
-              <th style="text-align:right">Entrada</th>
+              <th style="text-align:center">Entrada</th>
               <th style="text-align:center">Status SDR</th>
             </tr></thead>
             <tbody id="tb-latest">
@@ -766,16 +766,17 @@ function renderLatest(data) {
     const leads = (data.leads || []).slice(0, 10);
     if (!leads.length) { tbody.innerHTML = emptyRow(3); return; }
     tbody.innerHTML = leads.map(l => {
-      const nome    = toTitleCase(l.empresa || l.nome) || '—';
-      const entrada = (() => {
+      const nome = toTitleCase(l.empresa || l.nome) || '—';
+      const entradaHtml = (() => {
         if (!l.data) return '—';
         const [y, m, d] = l.data.split('-');
-        const dataFmt = `${d}/${m}`;
-        return l.hora ? `${dataFmt} - ${l.hora}` : dataFmt;
+        const datePart = `${d}/${m}`;
+        if (!l.hora) return datePart;
+        return `<div style="display:flex;justify-content:space-between;align-items:center;gap:2px"><span>${datePart}</span><span style="opacity:.4">-</span><span>${esc(l.hora)}</span></div>`;
       })();
       return `<tr>
         <td class="td-left" title="${esc(nome)}">${esc(nome)}</td>
-        <td style="text-align:right;font-weight:400">${esc(entrada)}</td>
+        <td style="font-weight:400;overflow:visible">${entradaHtml}</td>
         <td style="text-align:center">${statusBadgeSdr(l.status_sdr || l.status_vend)}</td>
       </tr>`;
     }).join('');
