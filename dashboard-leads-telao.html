@@ -457,6 +457,7 @@
 const LEADS_PROXY = 'https://script.google.com/macros/s/AKfycbyq9KJgWTRoALEEVf8Pu_I82GT0-tTK5yXNg-RsYHj4ywK6Grg9z_jG1-IcTW3LMXfNBg/exec';
 let _lastSheetModified = null;
 let _pollCount = 0;
+let _isLoading = false;
 const POLL_INTERVAL_MS  = 60_000;
 const FORCE_RELOAD_POLLS = 3;
 
@@ -839,6 +840,8 @@ async function loadAllData(summaryData, lm) {
 // ── CHECK FOR UPDATES ────────────────────────────────────────
 async function checkForUpdates() {
   if (!LEADS_PROXY || LEADS_PROXY === 'COLE_AQUI_A_URL_DO_APPS_SCRIPT') return;
+  if (_isLoading) return;
+  _isLoading = true;
   _pollCount++;
   try {
     const sumData = await proxy('summary');
@@ -856,6 +859,8 @@ async function checkForUpdates() {
     }
   } catch(e) {
     _log.error('check', 'Erro ao verificar planilha', e);
+  } finally {
+    _isLoading = false;
   }
 }
 
