@@ -368,8 +368,31 @@
 
     </div><!-- /#col-center -->
 
-    <!-- COLUNA DIREITA — Fechamentos + Por Representante -->
+    <!-- COLUNA DIREITA — Últimos Leads + Fechamentos + Por Representante -->
     <div id="col-ativos">
+
+      <div class="card card-table" style="flex:0.7">
+        <div class="card-hd">
+          <div class="card-hd-title">Últimos Leads</div>
+        </div>
+        <div class="table-scroll table-body">
+          <table style="table-layout:fixed;width:100%;font-size:11px">
+            <colgroup>
+              <col style="width:36%">
+              <col style="width:32%">
+              <col style="width:32%">
+            </colgroup>
+            <thead><tr>
+              <th class="td-left" style="text-align:left">Nome / Empresa</th>
+              <th style="text-align:center">Entrada</th>
+              <th style="text-align:center">Status SDR</th>
+            </tr></thead>
+            <tbody id="tb-latest">
+              <tr class="empty-row"><td colspan="3">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       <div class="card card-table" style="flex:1.6">
         <div class="card-hd">
@@ -394,7 +417,7 @@
         </div>
       </div>
 
-      <div class="card card-table" style="flex:1">
+      <div class="card card-table" style="flex:0.6">
         <div class="card-hd">
           <div class="card-hd-title">Por Representante</div>
         </div>
@@ -720,6 +743,33 @@ function renderFechados(data) {
   }
 }
 
+function renderLatest(data) {
+  try {
+    const tbody = document.getElementById('tb-latest');
+    if (!tbody) return;
+    const leads = (data.leads || []).slice(0, 5);
+    if (!leads.length) { tbody.innerHTML = emptyRow(3); return; }
+    tbody.innerHTML = leads.map(l => {
+      const nome    = toTitleCase(l.empresa || l.nome) || '—';
+      const entrada = (() => {
+        if (!l.data) return '—';
+        const [y, m, d] = l.data.split('-');
+        const dataFmt = `${d}/${m}`;
+        return l.hora ? `${dataFmt} ${l.hora}` : dataFmt;
+      })();
+      return `<tr>
+        <td class="td-left" title="${esc(nome)}">${esc(nome)}</td>
+        <td style="text-align:center">${esc(entrada)}</td>
+        <td style="text-align:center">${statusBadge(l.status_sdr || l.status_vend)}</td>
+      </tr>`;
+    }).join('');
+  } catch(err) {
+    _log.error('latest', 'Erro ao renderizar últimos leads', err);
+    const tbody = document.getElementById('tb-latest');
+    if (tbody) tbody.innerHTML = errRow(3);
+  }
+}
+
 // ── LOAD ALL ─────────────────────────────────────────────────
 // ── LOAD ALL DATA (só quando planilha mudar) ─────────────────
 async function loadAllData(summaryData, lm) {
@@ -727,12 +777,13 @@ async function loadAllData(summaryData, lm) {
   try {
     renderSummary(summaryData);
 
-    const [rFunnel, rByRep, rActive, rClosed, rAds] = await Promise.allSettled([
+    const [rFunnel, rByRep, rActive, rClosed, rAds, rLatest] = await Promise.allSettled([
       proxy('funnel'),
       proxy('by_rep'),
       proxy('active'),
       proxy('closed'),
       proxy('ads'),
+      proxy('latest'),
     ]);
 
     if (rFunnel.status === 'fulfilled')  renderFunnel(rFunnel.value);
@@ -746,6 +797,9 @@ async function loadAllData(summaryData, lm) {
 
     if (rClosed.status === 'fulfilled')  renderFechados(rClosed.value);
     else _log.error('loadAll', 'closed falhou', rClosed.reason);
+
+    if (rLatest.status === 'fulfilled')  renderLatest(rLatest.value);
+    else _log.error('loadAll', 'latest falhou', rLatest.reason);
 
     renderAds(rAds.status === 'fulfilled' ? rAds.value : null, summaryData.receita);
 
