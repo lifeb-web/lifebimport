@@ -144,7 +144,7 @@
     .card-metric {
       flex: 1;
       padding: 8px 12px;
-      display: flex; flex-direction: column; justify-content: center;
+      display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
       overflow: hidden;
     }
     .m-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -157,7 +157,8 @@
     .accent-green   { border-top:4px solid var(--green);   background:linear-gradient(180deg,#f0fbf4 0%,#fff 60%); }
     .accent-orange  { border-top:4px solid var(--orange);  background:linear-gradient(180deg,#fffbf0 0%,#fff 60%); }
     .accent-cyan    { border-top:4px solid #0891b2;        background:linear-gradient(180deg,#ecfeff 0%,#fff 60%); }
-    .accent-teal    { border-top:4px solid #0d9488;        background:linear-gradient(180deg,#f0fdfa 0%,#fff 60%); }
+    .accent-teal      { border-top:4px solid #0d9488;        background:linear-gradient(180deg,#f0fdfa 0%,#fff 60%); }
+    .accent-highlight { border-top:6px solid var(--purple);  background:linear-gradient(180deg,#ede9fe 0%,#fff 50%); flex:1.3 !important; }
 
     /* CARD HEADER */
     .card-hd { display:flex; align-items:center; justify-content:space-between; padding:10px 14px 8px; border-bottom:2px solid var(--border); flex-shrink:0; }
@@ -278,9 +279,9 @@
       <div class="m-sub">pedidos realizados</div>
     </div>
 
-    <div class="card card-metric accent-purple">
+    <div class="card card-metric accent-highlight">
       <div class="m-label">Receita Total</div>
-      <div class="m-val" id="card-receita" style="color:var(--purple);font-size:20px">—</div>
+      <div class="m-val" id="card-receita" style="color:var(--purple);font-size:26px">—</div>
       <div class="m-sub">fechado</div>
     </div>
 
@@ -349,11 +350,11 @@
         <div class="table-scroll table-body">
           <table style="table-layout:fixed;width:100%;font-size:11px">
             <colgroup>
-              <col style="width:30%">
+              <col style="width:33%">
               <col style="width:25%">
-              <col style="width:11%">
-              <col style="width:18%">
-              <col style="width:16%">
+              <col style="width:10%">
+              <col style="width:15%">
+              <col style="width:17%">
             </colgroup>
             <thead><tr>
               <th>Empresa</th><th class="td-left" style="text-align:left">Cidade / UF</th><th class="td-left" style="text-align:left">Rep</th><th class="td-left" style="text-align:left">Status</th><th>Potencial</th>
@@ -439,7 +440,10 @@ const errRow   = cols => `<tr class="err-row"><td colspan="${cols}">Erro</td></t
 
 function toTitleCase(s) {
   if (!s) return s;
-  return String(s).toLowerCase().replace(/(?:^|\s)\S/g, c => c.toUpperCase());
+  const lower = new Set(['de','do','da','dos','das','e','em','com','a','o','as','os','no','na','nos','nas','ao','aos','por','com']);
+  return String(s).toLowerCase().split(' ').map((w, i) =>
+    (i > 0 && lower.has(w)) ? w : w.charAt(0).toUpperCase() + w.slice(1)
+  ).join(' ');
 }
 
 function showError(msg) {
@@ -583,7 +587,7 @@ function renderSummary(data) {
     if (el('card-total'))    el('card-total').textContent    = n(total);
     if (el('card-qualif'))   el('card-qualif').textContent   = n(sdr.qualif || 0);
 
-    const tratativa = (vend.ag_cont || 0) + (vend.em_cont || 0) + (vend.em_neg || 0);
+    const tratativa = (vend.ag_cont || 0) + (vend.em_cont || 0) + (vend.reun || 0) + (vend.em_neg || 0);
     if (el('card-tratativa')) el('card-tratativa').textContent = n(tratativa);
 
     const fechados = vend.fechado || 0;
@@ -608,7 +612,7 @@ function renderFunnel(data) {
 
     const sdrBadge = document.getElementById('sdr-total-badge');
     if (sdrBadge) sdrBadge.textContent = n(total) + ' leads';
-    const totalVend = (vend.ag_cont||0)+(vend.em_cont||0)+(vend.em_neg||0)+(vend.fechado||0)+(vend.perdido||0);
+    const totalVend = (vend.ag_cont||0)+(vend.em_cont||0)+(vend.reun||0)+(vend.em_neg||0)+(vend.fechado||0)+(vend.perdido||0);
     const vendBadge = document.getElementById('vend-total-badge');
     if (vendBadge) vendBadge.textContent = n(totalVend) + ' com vendedor';
 
