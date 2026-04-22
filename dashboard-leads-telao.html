@@ -215,6 +215,7 @@
     .badge-sdr-qual { background:#f0fdf4; color:#16a34a; }
     .badge-sdr-sem  { background:#f9fafb; color:#9ca3af; }
     .badge-sdr-fora { background:#fff1f2; color:#e11d48; }
+    .badge-sdr-nao  { background:#f3f4f6; color:#6b7280; }
 
     /* Skeleton */
     @keyframes skel-shine { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
@@ -520,6 +521,7 @@ function statusBadgeSdr(s) {
   if (st === 'Qualificado')          return `<span class="status-badge badge-sdr-qual">${esc(st)}</span>`;
   if (st === 'Sem retorno SDR')      return `<span class="status-badge badge-sdr-sem">${esc(st)}</span>`;
   if (st === 'Fora do perfil')       return `<span class="status-badge badge-sdr-fora">${esc(st)}</span>`;
+  if (st === 'Não identificado')     return `<span class="status-badge badge-sdr-nao">${esc(st)}</span>`;
   return `<span class="status-badge badge-sdr-sem">${esc(st) || '—'}</span>`;
 }
 
@@ -542,8 +544,8 @@ function _loadingStart() {
   }
 }
 function _loadingEnd() {
-  if (--_inFlight <= 0) {
-    _inFlight = 0;
+  _inFlight = Math.max(0, _inFlight - 1);
+  if (_inFlight === 0) {
     const b = document.getElementById('loading-bar');
     if (!b) return;
     b.classList.remove('running');
@@ -559,7 +561,8 @@ function _loadingEnd() {
     if (el) el.textContent = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
   };
   update();
-  setInterval(update, 1000);
+  const _clockInterval = setInterval(update, 1000);
+  window.addEventListener('beforeunload', () => clearInterval(_clockInterval));
 })();
 
 // ── CONFIG WARNING ───────────────────────────────────────────
