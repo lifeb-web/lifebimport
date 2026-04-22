@@ -390,6 +390,7 @@
     .funil-bar.bar-orange  { background: linear-gradient(90deg, var(--orange), #fcd34d); }
     .funil-bar.bar-blue    { background: linear-gradient(90deg, var(--blue), #60a5fa); }
     .funil-bar.bar-magenta { background: linear-gradient(90deg, var(--magenta), #f472b6); }
+    .funil-bar.bar-purple  { background: linear-gradient(90deg, var(--purple), var(--purple-l)); }
     .funil-num {
       font-size: 18px;
       font-weight: 800;
@@ -718,7 +719,7 @@
 
 <footer>
   <strong>Life B</strong> | Painel de Leads &nbsp;·&nbsp;
-  Dados: 1 min &nbsp;·&nbsp; Planilha de Leads &nbsp;·&nbsp;
+  Atualização em tempo real &nbsp;·&nbsp; Planilha de Leads &nbsp;·&nbsp;
   projetojlbv.com.br
 </footer>
 
@@ -869,7 +870,7 @@ function renderSummary(data) {
     if (el('card-total'))    el('card-total').textContent    = n(total);
     if (el('card-qualif'))   el('card-qualif').textContent   = n(sdr.qualif || 0);
 
-    const tratativa = (vend.ag_cont || 0) + (vend.em_cont || 0) + (vend.em_neg || 0);
+    const tratativa = (vend.ag_cont || 0) + (vend.em_cont || 0) + (vend.reun || 0) + (vend.em_neg || 0);
     if (el('card-tratativa')) el('card-tratativa').textContent = n(tratativa);
 
     const fechados = vend.fechado || 0;
@@ -915,11 +916,12 @@ function renderFunnel(data) {
     ], total);
 
     renderFunilBar('funil-vend', [
-      { label: 'Aguardando contato', value: vend.ag_cont || 0, barClass: 'bar-orange' },
-      { label: 'Em contato',         value: vend.em_cont || 0, barClass: 'bar-blue'   },
-      { label: 'Em negociação',      value: vend.em_neg  || 0, barClass: 'bar-magenta'},
-      { label: 'Fechado',            value: vend.fechado || 0, barClass: 'bar-green'  },
-      { label: 'Perdido',            value: vend.perdido || 0, barClass: 'bar-red'    },
+      { label: 'Aguardando contato', value: vend.ag_cont || 0, barClass: 'bar-orange'  },
+      { label: 'Em contato',         value: vend.em_cont || 0, barClass: 'bar-blue'    },
+      { label: 'Reunião agendada',   value: vend.reun    || 0, barClass: 'bar-purple'  },
+      { label: 'Em negociação',      value: vend.em_neg  || 0, barClass: 'bar-magenta' },
+      { label: 'Fechado',            value: vend.fechado || 0, barClass: 'bar-green'   },
+      { label: 'Perdido',            value: vend.perdido || 0, barClass: 'bar-red'     },
     ], totalVend || 1);
 
   } catch(err) {
