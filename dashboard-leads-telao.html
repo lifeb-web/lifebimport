@@ -240,6 +240,7 @@
     <span class="h-dot">|</span>
     <span class="h-tag">Planilha Life B</span>
     <span class="h-dot">|</span>
+    <span id="header-period" class="h-tag" style="display:none;opacity:.7"></span>
   </div>
   <div class="h-right">
     <div id="last-updated">
@@ -661,6 +662,15 @@ function renderSummary(data) {
     if (el('card-conv')) el('card-conv').textContent = conv;
 
     if (el('card-potencial')) el('card-potencial').textContent = cur(pipeline);
+
+    const periodEl = document.getElementById('header-period');
+    if (periodEl && data.firstDate) {
+      const meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+      const [,m,d] = data.firstDate.split('-').map(Number);
+      periodEl.textContent = `${d} ${meses[m-1]} – hoje`;
+      periodEl.style.display = '';
+    }
+
   } catch(err) {
     _log.error('summary', 'Erro ao renderizar summary', err);
   }
