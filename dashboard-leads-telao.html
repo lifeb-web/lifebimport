@@ -87,7 +87,7 @@
     #telao-main {
       flex: 1;
       display: grid;
-      grid-template-columns: 18fr 48fr 34fr;
+      grid-template-columns: 21fr 45fr 34fr;
       gap: 8px;
       overflow: hidden;
       min-height: 0;
@@ -170,7 +170,7 @@
     .funil-body { flex:1; display:flex; flex-direction:column; justify-content:space-evenly; padding:4px 14px 6px; overflow:hidden; min-height:0; }
     .funil-item { display:flex; align-items:center; gap:10px; padding:3px 0; border-bottom:1px solid var(--border); flex-shrink:1; min-height:0; }
     .funil-item:last-child { border-bottom:none; }
-    .funil-nome { font-size:11px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:110px; max-width:130px; flex-shrink:0; }
+    .funil-nome { font-size:11px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:120px; max-width:145px; flex-shrink:0; }
     .funil-bar-wrap { flex:1; height:5px; background:#f0ebf8; border-radius:3px; min-width:0; }
     .funil-bar { height:100%; background:linear-gradient(90deg,var(--purple),var(--purple-l)); border-radius:3px; transition:width .5s ease; min-width:3px; }
     .funil-bar.bar-green   { background:linear-gradient(90deg,var(--green),#5dde8b); }
@@ -178,6 +178,7 @@
     .funil-bar.bar-orange  { background:linear-gradient(90deg,var(--orange),#fcd34d); }
     .funil-bar.bar-blue    { background:linear-gradient(90deg,var(--blue),#60a5fa); }
     .funil-bar.bar-magenta { background:linear-gradient(90deg,var(--magenta),#f472b6); }
+    .funil-bar.bar-purple  { background:linear-gradient(90deg,var(--purple),var(--purple-l)); }
     .funil-num { font-size:20px; font-weight:800; color:var(--purple); min-width:36px; text-align:right; }
 
     /* TABELAS */
@@ -229,7 +230,7 @@
     <span class="h-dot">|</span>
     <span class="h-tag">Projeto SDR</span>
     <span class="h-dot">|</span>
-    <span class="h-tag">Life B Import</span>
+    <span class="h-tag">Planilha Life B</span>
     <span class="h-dot">|</span>
   </div>
   <div class="h-right">
@@ -348,11 +349,11 @@
         <div class="table-scroll table-body">
           <table style="table-layout:fixed;width:100%;font-size:11px">
             <colgroup>
-              <col style="width:24%">
-              <col style="width:31%">
-              <col style="width:10%">
-              <col style="width:16%">
-              <col style="width:19%">
+              <col style="width:22%">
+              <col style="width:29%">
+              <col style="width:14%">
+              <col style="width:14%">
+              <col style="width:21%">
             </colgroup>
             <thead><tr>
               <th>Empresa</th><th class="td-left" style="text-align:left">Cidade / UF</th><th class="td-left" style="text-align:left">Rep</th><th class="td-left" style="text-align:left">Status</th><th>Potencial</th>
@@ -376,7 +377,7 @@
         <div class="table-scroll table-body">
           <table>
             <thead><tr>
-              <th>Empresa</th><th class="td-left" style="text-align:left">Rep</th><th class="td-left" style="text-align:left">Valor</th><th>Dias</th><th class="td-left" style="text-align:left">Data</th>
+              <th>Empresa</th><th class="td-left" style="text-align:left">Rep</th><th>Valor</th><th>Dias</th><th class="td-left" style="text-align:left">Data</th>
             </tr></thead>
             <tbody id="tb-fechados">
               <tr class="empty-row"><td colspan="5">Carregando...</td></tr>
@@ -408,7 +409,7 @@
 </div><!-- /#telao-body -->
 
 <footer>
-  <strong>Life B</strong> | Painel de Leads &nbsp;·&nbsp; Dados: 1 min &nbsp;·&nbsp; Planilha de Leads
+  <strong>Life B</strong> | Painel de Leads &nbsp;·&nbsp; Atualização em tempo real &nbsp;·&nbsp; Planilha de Leads
 </footer>
 
 <!-- Elementos ocultos requeridos -->
@@ -616,12 +617,13 @@ function renderFunnel(data) {
     ].filter(i => i.value > 0), total);
 
     renderFunilBar('funil-vend', [
-      { label: 'Aguardando contato', value: vend.ag_cont || 0, barClass: 'bar-orange' },
-      { label: 'Em contato',         value: vend.em_cont || 0, barClass: 'bar-blue'   },
-      { label: 'Em negociação',      value: vend.em_neg  || 0, barClass: 'bar-magenta'},
-      { label: 'Fechado',            value: vend.fechado || 0, barClass: 'bar-green'  },
-      { label: 'Perdido',            value: vend.perdido || 0, barClass: 'bar-red'    },
-    ].filter(i => i.value > 0), totalVend || 1);
+      { label: 'Aguardando contato', value: vend.ag_cont || 0, barClass: 'bar-orange'  },
+      { label: 'Em contato',         value: vend.em_cont || 0, barClass: 'bar-blue'    },
+      { label: 'Reunião agendada',   value: vend.reun    || 0, barClass: 'bar-purple'  },
+      { label: 'Em negociação',      value: vend.em_neg  || 0, barClass: 'bar-magenta' },
+      { label: 'Fechado',            value: vend.fechado || 0, barClass: 'bar-green'   },
+      { label: 'Perdido',            value: vend.perdido || 0, barClass: 'bar-red'     },
+    ], totalVend || 1);
 
   } catch(err) {
     _log.error('funnel', 'Erro ao renderizar funil', err);
