@@ -282,13 +282,13 @@
     <div class="card card-metric accent-green">
       <div class="m-label">Fechamentos</div>
       <div class="m-val" id="card-fechados" style="color:var(--green)">—</div>
-      <div class="m-sub">pedidos realizados</div>
+      <div class="m-sub" id="card-fechados-sub">contratos</div>
     </div>
 
     <div class="card card-metric accent-highlight">
       <div class="m-label">Receita Total</div>
       <div class="m-val" id="card-receita" style="color:var(--purple);font-size:26px">—</div>
-      <div class="m-sub">fechado</div>
+      <div class="m-sub" id="card-receita-sub">aguardando dados</div>
     </div>
 
     <div class="card card-metric accent-orange">
@@ -476,7 +476,7 @@ const errRow   = cols => `<tr class="err-row"><td colspan="${cols}">Erro</td></t
 
 function toTitleCase(s) {
   if (!s) return s;
-  const lower = new Set(['de','do','da','dos','das','e','em','com','a','o','as','os','no','na','nos','nas','ao','aos','por','com']);
+  const lower = new Set(['de','do','da','dos','das','e','em','a','o','as','os','no','na','nos','nas','ao','aos','por']);
   return String(s).toLowerCase().split(' ').map((w, i) =>
     (i > 0 && lower.has(w)) ? w : w.charAt(0).toUpperCase() + w.slice(1)
   ).join(' ');
@@ -638,8 +638,15 @@ function renderSummary(data) {
 
     const fechados = vend.fechado || 0;
     if (el('card-fechados')) el('card-fechados').textContent = n(fechados);
+    if (el('card-fechados-sub')) {
+      const perdidos = vend.perdido || 0;
+      el('card-fechados-sub').textContent = perdidos > 0 ? `${n(perdidos)} perdido${perdidos > 1 ? 's' : ''}` : 'nenhum perdido';
+    }
 
-    if (el('card-receita'))  el('card-receita').textContent  = cur(receita);
+    if (el('card-receita')) el('card-receita').textContent = cur(receita);
+    if (el('card-receita-sub') && fechados > 0) {
+      el('card-receita-sub').textContent = `média ${cur(Math.round(receita / fechados))} · ${media_dias}d p/ fechar`;
+    }
 
     // Taxa de conversão: fechados / qualificados
     const qualif = sdr.qualif || 0;
@@ -746,7 +753,7 @@ function renderFechados(data) {
     if (!f.length) { tbody.innerHTML = emptyRow(5); return; }
     tbody.innerHTML = f.map(c => `
       <tr>
-        <td title="${esc(toTitleCase(c.empresa || c.nome))}">${esc(toTitleCase(c.empresa || c.nome) || '—')}</td>
+        <td title="${esc(toTitleCase(c.empresa || c.nome) || '—')}">${esc(toTitleCase(c.empresa || c.nome) || '—')}</td>
         <td class="td-left">${esc(c.rep)}</td>
         <td style="text-align:right">${cur(c.valor)}</td>
         <td style="text-align:right">${c.dias ? n(c.dias) + 'd' : '—'}</td>
