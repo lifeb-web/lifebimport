@@ -657,11 +657,12 @@
               <th>Cont.</th>
               <th>Neg.</th>
               <th>Fech.</th>
+              <th>Perd.</th>
               <th>Receita</th>
             </tr>
           </thead>
           <tbody id="tb-reps">
-            <tr class="empty-row"><td colspan="7">Carregando...</td></tr>
+            <tr class="empty-row"><td colspan="8">Carregando...</td></tr>
           </tbody>
         </table>
       </div>
@@ -740,6 +741,11 @@ const cur = v  => 'R$ ' + (+(v || 0)).toLocaleString('pt-BR', {minimumFractionDi
 
 const emptyRow = cols => `<tr class="empty-row"><td colspan="${cols}">Sem dados</td></tr>`;
 const errRow   = cols => `<tr class="err-row"><td colspan="${cols}">Erro ao carregar</td></tr>`;
+
+function toTitleCase(s) {
+  if (!s) return s;
+  return String(s).toLowerCase().replace(/(?:^|\s)\S/g, c => c.toUpperCase());
+}
 
 function showError(msg) {
   const el = document.getElementById('error-banner');
@@ -934,7 +940,7 @@ function renderReps(data) {
     const tbody = document.getElementById('tb-reps');
     if (!tbody) return;
     const reps = (data.reps || []).filter(r => r.rep !== 'Sem vendedor');
-    if (!reps.length) { tbody.innerHTML = emptyRow(7); return; }
+    if (!reps.length) { tbody.innerHTML = emptyRow(8); return; }
     tbody.innerHTML = reps.map(r => `
       <tr>
         <td>${esc(r.rep)}</td>
@@ -943,12 +949,13 @@ function renderReps(data) {
         <td>${n(r.em_cont)}</td>
         <td>${n(r.em_neg)}</td>
         <td>${n(r.fechado)}</td>
+        <td>${n(r.perdido || 0)}</td>
         <td>${cur(r.receita)}</td>
       </tr>`).join('');
   } catch(err) {
     _log.error('reps', 'Erro ao renderizar reps', err);
     const tbody = document.getElementById('tb-reps');
-    if (tbody) tbody.innerHTML = errRow(7);
+    if (tbody) tbody.innerHTML = errRow(8);
   }
 }
 
@@ -961,13 +968,15 @@ function renderAtivos(data) {
     if (badge) badge.textContent = n(leads.length);
     if (!leads.length) { tbody.innerHTML = emptyRow(4); return; }
     leads.sort((a, b) => (b.pot || 0) - (a.pot || 0));
-    tbody.innerHTML = leads.map(l => `
-      <tr>
-        <td title="${esc(l.empresa)}">${esc(l.empresa || l.nome || '—')}</td>
+    tbody.innerHTML = leads.map(l => {
+      const empresa = toTitleCase(l.empresa || l.nome) || '—';
+      return `<tr>
+        <td title="${esc(empresa)}">${esc(empresa)}</td>
         <td class="td-left">${esc(l.rep)}</td>
         <td class="td-left">${statusBadge(l.status)}</td>
         <td>${l.pot ? cur(l.pot) : '—'}</td>
-      </tr>`).join('');
+      </tr>`;
+    }).join('');
   } catch(err) {
     _log.error('ativos', 'Erro ao renderizar ativos', err);
     const tbody = document.getElementById('tb-ativos');
@@ -982,10 +991,11 @@ function renderFechados(data) {
     const f = data.fechamentos || [];
     if (!f.length) { tbody.innerHTML = emptyRow(5); return; }
     tbody.innerHTML = f.map(c => {
+      const empresa = toTitleCase(c.empresa || c.nome) || '—';
       const dataBR = c.data_f ? (() => { const [y,m,d] = c.data_f.split('-'); return `${d}/${m}/${y.slice(2)}`; })() : '—';
       return `
       <tr>
-        <td title="${esc(c.empresa)}">${esc(c.empresa || c.nome || '—')}</td>
+        <td title="${esc(empresa)}">${esc(empresa)}</td>
         <td class="td-left">${esc(c.rep)}</td>
         <td>${cur(c.valor)}</td>
         <td>${c.dias ? n(c.dias) + 'd' : '—'}</td>
