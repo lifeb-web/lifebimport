@@ -394,10 +394,10 @@
         <div class="table-scroll table-body">
           <table>
             <thead><tr>
-              <th>Rep</th><th>Tot.</th><th>Ag.</th><th>Cont.</th><th>Neg.</th><th>Fech.</th><th>Perd.</th><th>Receita</th>
+              <th>Rep</th><th>Tot.</th><th>Ag.</th><th>Cont.</th><th>Reun.</th><th>Neg.</th><th>Fech.</th><th>Perd.</th><th>Receita</th>
             </tr></thead>
             <tbody id="tb-reps">
-              <tr class="empty-row"><td colspan="8">Carregando...</td></tr>
+              <tr class="empty-row"><td colspan="9">Carregando...</td></tr>
             </tbody>
           </table>
         </div>
@@ -644,13 +644,14 @@ function renderReps(data) {
     const tbody = document.getElementById('tb-reps');
     if (!tbody) return;
     const reps = (data.reps || []).filter(r => r.rep !== 'Sem vendedor');
-    if (!reps.length) { tbody.innerHTML = emptyRow(8); return; }
+    if (!reps.length) { tbody.innerHTML = emptyRow(9); return; }
     tbody.innerHTML = reps.map(r => `
       <tr>
         <td>${esc(r.rep)}</td>
         <td>${n(r.total)}</td>
         <td>${n(r.ag_cont)}</td>
         <td>${n(r.em_cont)}</td>
+        <td>${n(r.reun || 0)}</td>
         <td>${n(r.em_neg)}</td>
         <td>${n(r.fechado)}</td>
         <td>${n(r.perdido || 0)}</td>
@@ -659,7 +660,7 @@ function renderReps(data) {
   } catch(err) {
     _log.error('reps', 'Erro ao renderizar reps', err);
     const tbody = document.getElementById('tb-reps');
-    if (tbody) tbody.innerHTML = errRow(8);
+    if (tbody) tbody.innerHTML = errRow(9);
   }
 }
 
