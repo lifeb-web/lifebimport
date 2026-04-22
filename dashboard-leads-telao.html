@@ -79,7 +79,7 @@
       display: flex;
       flex-direction: row;
       gap: 8px;
-      height: 96px;
+      height: 112px;
       flex-shrink: 0;
     }
 
@@ -87,7 +87,7 @@
     #telao-main {
       flex: 1;
       display: grid;
-      grid-template-columns: 22fr 30fr 48fr;
+      grid-template-columns: 20fr 42fr 38fr;
       gap: 8px;
       overflow: hidden;
       min-height: 0;
@@ -337,8 +337,37 @@
 
     </div><!-- /#col-funnels -->
 
-    <!-- COLUNA CENTRO — Por Representante + Fechamentos -->
+    <!-- COLUNA CENTRO — Leads Ativos -->
     <div id="col-center">
+
+      <div class="card card-table" style="flex:1">
+        <div class="card-hd">
+          <div class="card-hd-title">Leads Ativos</div>
+          <span class="badge" id="ativos-badge">—</span>
+        </div>
+        <div class="table-scroll table-body">
+          <table style="table-layout:fixed;width:100%">
+            <colgroup>
+              <col style="width:28%">
+              <col style="width:18%">
+              <col style="width:14%">
+              <col style="width:26%">
+              <col style="width:14%">
+            </colgroup>
+            <thead><tr>
+              <th>Empresa</th><th class="td-left" style="text-align:left">Cidade</th><th class="td-left" style="text-align:left">Rep</th><th class="td-left" style="text-align:left">Status</th><th>Potencial</th>
+            </tr></thead>
+            <tbody id="tb-ativos">
+              <tr class="empty-row"><td colspan="5">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /#col-center -->
+
+    <!-- COLUNA DIREITA — Por Representante + Fechamentos -->
+    <div id="col-ativos">
 
       <div class="card card-table" style="flex:1">
         <div class="card-hd">
@@ -366,28 +395,6 @@
               <th>Empresa</th><th class="td-left" style="text-align:left">Rep</th><th>Valor</th><th>Dias</th><th class="td-left" style="text-align:left">Data</th>
             </tr></thead>
             <tbody id="tb-fechados">
-              <tr class="empty-row"><td colspan="5">Carregando...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-    </div><!-- /#col-center -->
-
-    <!-- COLUNA ATIVOS — Leads Ativos altura total -->
-    <div id="col-ativos">
-
-      <div class="card card-table" style="flex:1">
-        <div class="card-hd">
-          <div class="card-hd-title">Leads Ativos</div>
-          <span class="badge" id="ativos-badge">—</span>
-        </div>
-        <div class="table-scroll table-body">
-          <table>
-            <thead><tr>
-              <th>Empresa</th><th class="td-left" style="text-align:left">Cidade</th><th class="td-left" style="text-align:left">Rep</th><th class="td-left" style="text-align:left">Status</th><th>Potencial</th>
-            </tr></thead>
-            <tbody id="tb-ativos">
               <tr class="empty-row"><td colspan="5">Carregando...</td></tr>
             </tbody>
           </table>
@@ -650,16 +657,18 @@ function renderAtivos(data) {
     if (!tbody) return;
     const leads = data.leads || [];
     if (badge) badge.textContent = n(leads.length);
-    if (!leads.length) { tbody.innerHTML = emptyRow(4); return; }
+    if (!leads.length) { tbody.innerHTML = emptyRow(5); return; }
     leads.sort((a, b) => (b.pot || 0) - (a.pot || 0));
-    tbody.innerHTML = leads.map(l => `
-      <tr>
+    tbody.innerHTML = leads.map(l => {
+      const cidade = (l.cidade && !/^\d{5}/.test(l.cidade)) ? l.cidade : '—';
+      return `<tr>
         <td title="${esc(l.empresa)}">${esc(l.empresa || l.nome || '—')}</td>
-        <td class="td-left">${esc(l.cidade || '—')}</td>
+        <td class="td-left">${esc(cidade)}</td>
         <td class="td-left">${esc(l.rep)}</td>
         <td class="td-left">${statusBadge(l.status)}</td>
         <td>${l.pot ? cur(l.pot) : '—'}</td>
-      </tr>`).join('');
+      </tr>`;
+    }).join('');
   } catch(err) {
     _log.error('ativos', 'Erro ao renderizar ativos', err);
     const tbody = document.getElementById('tb-ativos');
