@@ -384,7 +384,7 @@
             </colgroup>
             <thead><tr>
               <th class="td-left" style="text-align:left">Nome / Empresa</th>
-              <th style="text-align:center">Entrada</th>
+              <th class="td-left" style="text-align:left">Entrada</th>
               <th style="text-align:center">Status SDR</th>
             </tr></thead>
             <tbody id="tb-latest">
@@ -747,7 +747,7 @@ function renderLatest(data) {
   try {
     const tbody = document.getElementById('tb-latest');
     if (!tbody) return;
-    const leads = (data.leads || []).slice(0, 5);
+    const leads = (data.leads || []).slice(0, 4);
     if (!leads.length) { tbody.innerHTML = emptyRow(3); return; }
     tbody.innerHTML = leads.map(l => {
       const nome    = toTitleCase(l.empresa || l.nome) || '—';
@@ -755,11 +755,11 @@ function renderLatest(data) {
         if (!l.data) return '—';
         const [y, m, d] = l.data.split('-');
         const dataFmt = `${d}/${m}`;
-        return l.hora ? `${dataFmt} ${l.hora}` : dataFmt;
+        return l.hora ? `${dataFmt} - ${l.hora}` : dataFmt;
       })();
       return `<tr>
         <td class="td-left" title="${esc(nome)}">${esc(nome)}</td>
-        <td style="text-align:center">${esc(entrada)}</td>
+        <td class="td-left" style="font-weight:400">${esc(entrada)}</td>
         <td style="text-align:center">${statusBadge(l.status_sdr || l.status_vend)}</td>
       </tr>`;
     }).join('');
