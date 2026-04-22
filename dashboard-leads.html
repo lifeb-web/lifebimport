@@ -432,6 +432,8 @@
     .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .table-scroll::-webkit-scrollbar { height: 3px; }
     .table-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .ts-wrap { position: relative; }
+    .ts-wrap::after { content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 22px; background: linear-gradient(to right, transparent, #fff); pointer-events: none; opacity: var(--ts-fade, 0); transition: opacity .2s; }
 
     table { width: 100%; border-collapse: collapse; }
     thead tr { border-bottom: 2px solid var(--border); }
@@ -519,6 +521,7 @@
       .card-stat .s-val { font-size: 26px; }
       .h-sub { display: none; }
       #last-updated { font-size: 11px; }
+      #header-period { font-size: 9px; padding: 2px 7px; letter-spacing: .2px; }
       .funil-nome { min-width: 100px; max-width: 110px; }
     }
     @media (max-width: 960px) {
@@ -659,25 +662,27 @@
       <div class="card-hd">
         <div class="card-hd-title">Por Representante</div>
       </div>
-      <div class="table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>Rep</th>
-              <th>Total</th>
-              <th>Ag.</th>
-              <th>Cont.</th>
-              <th>Reun.</th>
-              <th>Neg.</th>
-              <th>Fech.</th>
-              <th>Perd.</th>
-              <th>Receita</th>
-            </tr>
-          </thead>
-          <tbody id="tb-reps">
-            <tr class="empty-row"><td colspan="9">Carregando...</td></tr>
-          </tbody>
-        </table>
+      <div class="ts-wrap">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Rep</th>
+                <th>Total</th>
+                <th>Ag.</th>
+                <th>Cont.</th>
+                <th>Reun.</th>
+                <th>Neg.</th>
+                <th>Fech.</th>
+                <th>Perd.</th>
+                <th>Receita</th>
+              </tr>
+            </thead>
+            <tbody id="tb-reps">
+              <tr class="empty-row"><td colspan="9">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -686,22 +691,49 @@
       <div class="card-hd">
         <div class="card-hd-title">Últimos Leads</div>
       </div>
-      <div class="table-scroll">
-        <table style="table-layout:fixed;width:100%;min-width:400px;font-size:11px">
-          <colgroup>
-            <col style="width:140px">
-            <col style="width:80px">
-            <col style="width:180px">
-          </colgroup>
-          <thead><tr>
-            <th class="td-left" style="text-align:left">Nome / Empresa</th>
-            <th style="text-align:center">Entrada</th>
-            <th style="text-align:center">Status SDR</th>
-          </tr></thead>
-          <tbody id="tb-latest">
-            <tr class="empty-row"><td colspan="3">Carregando...</td></tr>
-          </tbody>
-        </table>
+      <div class="ts-wrap">
+        <div class="table-scroll">
+          <table style="table-layout:fixed;width:100%;min-width:400px;font-size:11px">
+            <colgroup>
+              <col style="width:140px">
+              <col style="width:80px">
+              <col style="width:180px">
+            </colgroup>
+            <thead><tr>
+              <th class="td-left" style="text-align:left">Nome / Empresa</th>
+              <th style="text-align:center">Entrada</th>
+              <th style="text-align:center">Status SDR</th>
+            </tr></thead>
+            <tbody id="tb-latest">
+              <tr class="empty-row"><td colspan="3">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fechamentos -->
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-hd-title">Fechamentos</div>
+      </div>
+      <div class="ts-wrap">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Empresa</th>
+                <th class="td-left" style="text-align:left">Rep</th>
+                <th>Valor</th>
+                <th>Dias</th>
+                <th class="td-left" style="text-align:left">Data</th>
+              </tr>
+            </thead>
+            <tbody id="tb-fechados">
+              <tr class="empty-row"><td colspan="5">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -711,43 +743,22 @@
         <div class="card-hd-title">Leads Ativos</div>
         <span class="badge" id="ativos-badge">—</span>
       </div>
-      <div class="table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>Empresa</th>
-              <th class="td-left" style="text-align:left">Rep</th>
-              <th class="td-left" style="text-align:left">Status</th>
-              <th>Potencial</th>
-            </tr>
-          </thead>
-          <tbody id="tb-ativos">
-            <tr class="empty-row"><td colspan="4">Carregando...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Fechamentos -->
-    <div class="card">
-      <div class="card-hd">
-        <div class="card-hd-title">Fechamentos</div>
-      </div>
-      <div class="table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>Empresa</th>
-              <th class="td-left" style="text-align:left">Rep</th>
-              <th>Valor</th>
-              <th>Dias</th>
-              <th class="td-left" style="text-align:left">Data</th>
-            </tr>
-          </thead>
-          <tbody id="tb-fechados">
-            <tr class="empty-row"><td colspan="5">Carregando...</td></tr>
-          </tbody>
-        </table>
+      <div class="ts-wrap">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Empresa</th>
+                <th class="td-left" style="text-align:left">Rep</th>
+                <th class="td-left" style="text-align:left">Status</th>
+                <th>Potencial</th>
+              </tr>
+            </thead>
+            <tbody id="tb-ativos">
+              <tr class="empty-row"><td colspan="4">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -1149,9 +1160,25 @@ async function loadAllData(summaryData, lm) {
     renderAds(rAds.status === 'fulfilled' ? rAds.value : null, summaryData.receita);
 
     stamp(lm);
+    initScrollHints();
   } finally {
     _loadingEnd();
   }
+}
+
+function initScrollHints() {
+  document.querySelectorAll('.ts-wrap').forEach(wrap => {
+    const el = wrap.querySelector('.table-scroll');
+    if (!el) return;
+    const check = () => {
+      const scrollable = el.scrollWidth > el.clientWidth + 2;
+      const atEnd = el.scrollLeft >= el.scrollWidth - el.clientWidth - 2;
+      wrap.style.setProperty('--ts-fade', (!scrollable || atEnd) ? '0' : '1');
+    };
+    check();
+    el.addEventListener('scroll', check, { passive: true });
+    new ResizeObserver(check).observe(el);
+  });
 }
 
 // ── CHECK FOR UPDATES ────────────────────────────────────────
