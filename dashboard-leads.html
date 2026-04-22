@@ -275,6 +275,9 @@
     .rt-sub   { font-size: 11px; opacity: .6; font-weight: 400; margin-top: 4px; }
 
     /* Stat cards */
+    .card-stat {
+      display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: center;
+    }
     .card-stat .s-label {
       font-size: 11px;
       font-weight: 700;
@@ -298,7 +301,8 @@
     .accent-green   { border-top: 3px solid var(--green);   background: linear-gradient(180deg,#f0fbf4 0%,#fff 40%); }
     .accent-orange  { border-top: 3px solid var(--orange);  background: linear-gradient(180deg,#fffbf0 0%,#fff 40%); }
     .accent-cyan    { border-top: 3px solid #0891b2;        background: linear-gradient(180deg,#ecfeff 0%,#fff 40%); }
-    .accent-teal    { border-top: 3px solid #0d9488;        background: linear-gradient(180deg,#f0fdfa 0%,#fff 40%); }
+    .accent-teal      { border-top: 3px solid #0d9488;        background: linear-gradient(180deg,#f0fdfa 0%,#fff 40%); }
+    .accent-highlight { border-top: 5px solid var(--purple);  background: linear-gradient(180deg,#ede9fe 0%,#fff 50%); }
 
     /* FUNIS ROW */
     .funnel-row {
@@ -576,9 +580,9 @@
     </div>
 
     <!-- 5. Receita Total -->
-    <div class="card card-stat accent-purple">
+    <div class="card card-stat accent-highlight">
       <div class="s-label">Receita Total</div>
-      <div class="s-val" id="card-receita" style="color:var(--purple)">—</div>
+      <div class="s-val" id="card-receita" style="color:var(--purple);font-size:32px">—</div>
       <div class="s-sub" id="card-receita-sub">média — / contrato</div>
     </div>
 
@@ -910,7 +914,7 @@ function renderFunnel(data) {
     const sdrBadge = document.getElementById('sdr-total-badge');
     if (sdrBadge) sdrBadge.textContent = n(total) + ' leads';
     const vendBadge = document.getElementById('vend-total-badge');
-    const totalVend = (vend.ag_cont||0)+(vend.em_cont||0)+(vend.em_neg||0)+(vend.fechado||0)+(vend.perdido||0);
+    const totalVend = (vend.ag_cont||0)+(vend.em_cont||0)+(vend.reun||0)+(vend.em_neg||0)+(vend.fechado||0)+(vend.perdido||0);
     if (vendBadge) vendBadge.textContent = n(totalVend) + ' com vendedor';
 
     renderFunilBar('funil-sdr', [
