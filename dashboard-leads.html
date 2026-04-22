@@ -610,7 +610,7 @@
     <div class="card card-stat accent-cyan">
       <div class="s-label">Investimento ADS</div>
       <div class="s-val" id="card-ads" style="color:#0891b2">—</div>
-      <div class="s-sub">total investido</div>
+      <div class="s-sub" id="card-ads-sub">total investido</div>
     </div>
 
     <!-- 9. ROAS -->
@@ -1064,6 +1064,9 @@ function renderAds(data, receita) {
     const inv = (data && data.investimento) ? +data.investimento : 0;
     const el = id => document.getElementById(id);
     if (el('card-ads')) el('card-ads').textContent = inv > 0 ? cur(inv) : '—';
+    if (el('card-ads-sub')) {
+      el('card-ads-sub').textContent = (data && data.ultimaData) ? `atualiz. ${data.ultimaData}` : 'total investido';
+    }
     const rec = receita != null ? +receita : 0;
     if (el('card-roas')) {
       el('card-roas').textContent = (inv > 0 && rec > 0) ? (rec / inv).toFixed(2) + 'x' : '—';
