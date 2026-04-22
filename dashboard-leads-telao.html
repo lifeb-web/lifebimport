@@ -348,14 +348,14 @@
         <div class="table-scroll table-body">
           <table style="table-layout:fixed;width:100%">
             <colgroup>
-              <col style="width:28%">
-              <col style="width:18%">
-              <col style="width:14%">
+              <col style="width:26%">
+              <col style="width:22%">
+              <col style="width:12%">
               <col style="width:26%">
               <col style="width:14%">
             </colgroup>
             <thead><tr>
-              <th>Empresa</th><th class="td-left" style="text-align:left">Cidade</th><th class="td-left" style="text-align:left">Rep</th><th class="td-left" style="text-align:left">Status</th><th>Potencial</th>
+              <th>Empresa</th><th class="td-left" style="text-align:left">Cidade / UF</th><th class="td-left" style="text-align:left">Rep</th><th class="td-left" style="text-align:left">Status</th><th>Potencial</th>
             </tr></thead>
             <tbody id="tb-ativos">
               <tr class="empty-row"><td colspan="5">Carregando...</td></tr>
@@ -366,8 +366,24 @@
 
     </div><!-- /#col-center -->
 
-    <!-- COLUNA DIREITA — Por Representante + Fechamentos -->
+    <!-- COLUNA DIREITA — Fechamentos + Por Representante -->
     <div id="col-ativos">
+
+      <div class="card card-table" style="flex:1.6">
+        <div class="card-hd">
+          <div class="card-hd-title">Fechamentos</div>
+        </div>
+        <div class="table-scroll table-body">
+          <table>
+            <thead><tr>
+              <th>Empresa</th><th class="td-left" style="text-align:left">Rep</th><th>Valor</th><th>Dias</th><th class="td-left" style="text-align:left">Data</th>
+            </tr></thead>
+            <tbody id="tb-fechados">
+              <tr class="empty-row"><td colspan="5">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       <div class="card card-table" style="flex:1">
         <div class="card-hd">
@@ -380,22 +396,6 @@
             </tr></thead>
             <tbody id="tb-reps">
               <tr class="empty-row"><td colspan="7">Carregando...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="card card-table" style="flex:1.4">
-        <div class="card-hd">
-          <div class="card-hd-title">Fechamentos</div>
-        </div>
-        <div class="table-scroll table-body">
-          <table>
-            <thead><tr>
-              <th>Empresa</th><th class="td-left" style="text-align:left">Rep</th><th>Valor</th><th>Dias</th><th class="td-left" style="text-align:left">Data</th>
-            </tr></thead>
-            <tbody id="tb-fechados">
-              <tr class="empty-row"><td colspan="5">Carregando...</td></tr>
             </tbody>
           </table>
         </div>
@@ -660,10 +660,10 @@ function renderAtivos(data) {
     if (!leads.length) { tbody.innerHTML = emptyRow(5); return; }
     leads.sort((a, b) => (b.pot || 0) - (a.pot || 0));
     tbody.innerHTML = leads.map(l => {
-      const cidade = l.cidade || '—';
+      const cidadeUF = [l.cidade, l.estado].filter(v => v && v.trim()).join(' - ') || '—';
       return `<tr>
         <td title="${esc(l.empresa)}">${esc(l.empresa || l.nome || '—')}</td>
-        <td class="td-left">${esc(cidade)}</td>
+        <td class="td-left" title="${esc(cidadeUF)}">${esc(cidadeUF)}</td>
         <td class="td-left">${esc(l.rep)}</td>
         <td class="td-left">${statusBadge(l.status)}</td>
         <td>${l.pot ? cur(l.pot) : '—'}</td>
