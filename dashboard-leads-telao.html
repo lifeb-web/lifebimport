@@ -353,8 +353,8 @@
       <div class="card card-table" style="flex:1">
         <div class="card-hd">
           <div class="card-hd-title">Leads Ativos</div>
-          <div style="display:flex;align-items:center;gap:6px;min-width:0">
-            <div id="ativos-reps-container" style="display:flex;align-items:center;gap:6px"></div>
+          <div style="display:flex;align-items:center;gap:10px;min-width:0">
+            <span id="ativos-reps-summary" style="font-size:10px;font-weight:600;color:var(--muted);letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></span>
             <span class="badge" id="ativos-badge">—</span>
           </div>
         </div>
@@ -385,7 +385,10 @@
       <div class="card card-table" style="flex:none">
         <div class="card-hd">
           <div class="card-hd-title">Últimos Leads</div>
-          <span id="latest-media-dia" class="badge" style="white-space:nowrap"></span>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span id="latest-hoje" class="badge" style="white-space:nowrap"></span>
+            <span id="latest-media-dia" class="badge" style="white-space:nowrap"></span>
+          </div>
         </div>
         <div class="table-scroll table-body" style="max-height:178px;overflow-y:auto;flex:none">
           <table style="table-layout:fixed;width:100%;font-size:11px">
@@ -671,6 +674,9 @@ function renderSummary(data) {
     const repsDiasEl = document.getElementById('reps-media-dias');
     if (repsDiasEl && media_dias > 0) repsDiasEl.textContent = `TEMPO MÉDIO DE FECHAMENTO: ${media_dias} DIAS`;
 
+    const hojeEl = document.getElementById('latest-hoje');
+    if (hojeEl) hojeEl.textContent = `HOJE: ${data.todayCount || 0}`;
+
     const mediaEl = document.getElementById('latest-media-dia');
     if (mediaEl && data.firstDate && total > 0) {
       const inicio = new Date(data.firstDate + 'T00:00:00');
@@ -754,12 +760,11 @@ function renderAtivos(data) {
     if (!tbody) return;
     const leads = data.leads || [];
     if (badge) badge.textContent = `TOTAL: ${n(leads.length)} ATIVOS`;
-    const repsContainer = document.getElementById('ativos-reps-container');
-    if (repsContainer) {
+    const repSummary = document.getElementById('ativos-reps-summary');
+    if (repSummary) {
       const counts = {};
       leads.forEach(l => { const r = (l.rep || '').toUpperCase(); if (r) counts[r] = (counts[r] || 0) + 1; });
-      repsContainer.innerHTML = Object.entries(counts).sort((a,b) => b[1]-a[1])
-        .map(([r,c]) => `<span class="badge">${r}: ${c}</span>`).join('');
+      repSummary.textContent = Object.entries(counts).sort((a,b) => b[1]-a[1]).map(([r,c]) => `${r}: ${c}`).join(' | ');
     }
     if (!leads.length) { tbody.innerHTML = emptyRow(5); return; }
     leads.sort((a, b) => (b.pot || 0) - (a.pot || 0));
