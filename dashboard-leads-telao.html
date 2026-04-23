@@ -385,6 +385,7 @@
       <div class="card card-table" style="flex:none">
         <div class="card-hd">
           <div class="card-hd-title">Últimos Leads</div>
+          <span id="latest-media-dia" style="font-size:9px;font-weight:600;color:var(--muted);letter-spacing:.3px;white-space:nowrap"></span>
         </div>
         <div class="table-scroll table-body" style="max-height:178px;overflow-y:auto;flex:none">
           <table style="table-layout:fixed;width:100%;font-size:11px">
@@ -664,6 +665,14 @@ function renderSummary(data) {
     if (el('card-conv')) el('card-conv').textContent = conv;
 
     if (el('card-potencial')) el('card-potencial').textContent = cur(pipeline);
+
+    const mediaEl = document.getElementById('latest-media-dia');
+    if (mediaEl && data.firstDate && total > 0) {
+      const inicio = new Date(data.firstDate + 'T00:00:00');
+      const dias = Math.max(1, Math.ceil((Date.now() - inicio.getTime()) / 86400000));
+      const media = (total / dias).toFixed(1);
+      mediaEl.textContent = `MÉDIA: ${media} LEADS/DIA`;
+    }
 
     const periodEl = document.getElementById('header-period');
     if (periodEl && data.firstDate) {
