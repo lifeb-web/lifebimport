@@ -353,8 +353,8 @@
       <div class="card card-table" style="flex:1">
         <div class="card-hd">
           <div class="card-hd-title">Leads Ativos</div>
-          <div style="display:flex;align-items:center;gap:10px;min-width:0">
-            <span id="ativos-reps-summary" style="font-size:10px;font-weight:600;color:var(--muted);letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></span>
+          <div style="display:flex;align-items:center;gap:6px;min-width:0">
+            <div id="ativos-reps-container" style="display:flex;align-items:center;gap:6px"></div>
             <span class="badge" id="ativos-badge">—</span>
           </div>
         </div>
@@ -754,11 +754,12 @@ function renderAtivos(data) {
     if (!tbody) return;
     const leads = data.leads || [];
     if (badge) badge.textContent = `TOTAL: ${n(leads.length)} ATIVOS`;
-    const repSummary = document.getElementById('ativos-reps-summary');
-    if (repSummary) {
+    const repsContainer = document.getElementById('ativos-reps-container');
+    if (repsContainer) {
       const counts = {};
       leads.forEach(l => { const r = (l.rep || '').toUpperCase(); if (r) counts[r] = (counts[r] || 0) + 1; });
-      repSummary.textContent = Object.entries(counts).sort((a,b) => b[1]-a[1]).map(([r,c]) => `${r}: ${c}`).join(' | ');
+      repsContainer.innerHTML = Object.entries(counts).sort((a,b) => b[1]-a[1])
+        .map(([r,c]) => `<span class="badge">${r}: ${c}</span>`).join('');
     }
     if (!leads.length) { tbody.innerHTML = emptyRow(5); return; }
     leads.sort((a, b) => (b.pot || 0) - (a.pot || 0));
