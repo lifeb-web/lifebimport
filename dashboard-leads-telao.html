@@ -385,7 +385,7 @@
       <div class="card card-table" style="flex:none">
         <div class="card-hd">
           <div class="card-hd-title">Últimos Leads</div>
-          <span id="latest-media-dia" style="font-size:9px;font-weight:600;color:var(--muted);letter-spacing:.3px;white-space:nowrap"></span>
+          <span id="latest-media-dia" class="badge" style="white-space:nowrap"></span>
         </div>
         <div class="table-scroll table-body" style="max-height:178px;overflow-y:auto;flex:none">
           <table style="table-layout:fixed;width:100%;font-size:11px">
@@ -409,6 +409,7 @@
       <div class="card card-table" style="flex:1.3">
         <div class="card-hd">
           <div class="card-hd-title">Fechamentos</div>
+          <span id="fechados-cac" class="badge" style="white-space:nowrap"></span>
         </div>
         <div class="table-scroll table-body" style="max-height:178px;overflow-y:auto;flex:none">
           <table style="table-layout:fixed;width:100%;font-size:11px">
@@ -857,6 +858,13 @@ async function loadAllData(summaryData, lm) {
     else _log.error('loadAll', 'latest falhou', rLatest.reason);
 
     renderAds(rAds.status === 'fulfilled' ? rAds.value : null, summaryData.receita);
+
+    const cacEl = document.getElementById('fechados-cac');
+    if (cacEl) {
+      const inv = rAds.status === 'fulfilled' && rAds.value ? +rAds.value.investimento || 0 : 0;
+      const nFech = rClosed.status === 'fulfilled' ? (rClosed.value.fechamentos || []).length : 0;
+      cacEl.textContent = (inv > 0 && nFech > 0) ? `CAC MÉDIO: ${cur(Math.round(inv / nFech))}` : '';
+    }
 
     stamp(lm);
   } finally {
