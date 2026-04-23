@@ -668,6 +668,7 @@
     <div class="card">
       <div class="card-hd">
         <div class="card-hd-title">Por Representante</div>
+        <span id="reps-media-dias" class="badge" style="white-space:nowrap"></span>
       </div>
       <div class="ts-wrap ts-reps">
         <div class="table-scroll">
@@ -696,6 +697,7 @@
     <div class="card">
       <div class="card-hd">
         <div class="card-hd-title">Últimos Leads</div>
+        <span id="latest-media-dia" class="badge" style="white-space:nowrap"></span>
       </div>
       <div class="ts-wrap">
         <div class="table-scroll">
@@ -722,6 +724,7 @@
     <div class="card">
       <div class="card-hd">
         <div class="card-hd-title">Fechamentos</div>
+        <span id="fechados-cac" class="badge" style="white-space:nowrap"></span>
       </div>
       <div class="ts-wrap ts-fechados">
         <div class="table-scroll">
@@ -747,7 +750,10 @@
     <div class="card">
       <div class="card-hd">
         <div class="card-hd-title">Leads Ativos</div>
-        <span class="badge" id="ativos-badge">—</span>
+        <div style="display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden">
+          <span id="ativos-reps-summary" style="font-size:8px;font-weight:600;color:var(--muted);letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px"></span>
+          <span class="badge" id="ativos-badge">—</span>
+        </div>
       </div>
       <div class="ts-wrap ts-ativos">
         <div class="table-scroll">
@@ -945,7 +951,7 @@ function renderSummary(data) {
     if (el('card-total'))    el('card-total').textContent    = n(total);
     if (el('card-qualif'))   el('card-qualif').textContent   = n(sdr.qualif || 0);
 
-    const tratativa = (vend.ag_cont || 0) + (vend.em_cont || 0) + (vend.reun || 0) + (vend.em_neg || 0);
+    const tratativa = (vend.ag_cont || 0) + (vend.em_cont || 0) + (vend.em_neg || 0);
     if (el('card-tratativa')) el('card-tratativa').textContent = n(tratativa);
 
     const fechados = vend.fechado || 0;
@@ -966,6 +972,16 @@ function renderSummary(data) {
     if (el('card-conv')) el('card-conv').textContent = conv;
 
     if (el('card-potencial')) el('card-potencial').textContent = cur(pipeline);
+
+    const repsDiasEl = document.getElementById('reps-media-dias');
+    if (repsDiasEl && media_dias > 0) repsDiasEl.textContent = `FECH: ${media_dias}d`;
+
+    const mediaEl = document.getElementById('latest-media-dia');
+    if (mediaEl && data.firstDate && total > 0) {
+      const inicio = new Date(data.firstDate + 'T00:00:00');
+      const dias = Math.max(1, Math.ceil((Date.now() - inicio.getTime()) / 86400000));
+      mediaEl.textContent = `${(total / dias).toFixed(1)}/DIA`;
+    }
 
     const periodEl = document.getElementById('header-period');
     if (periodEl && data.firstDate) {
@@ -1041,7 +1057,13 @@ function renderAtivos(data) {
     const badge  = document.getElementById('ativos-badge');
     if (!tbody) return;
     const leads = data.leads || [];
-    if (badge) badge.textContent = n(leads.length);
+    if (badge) badge.textContent = `TOTAL: ${n(leads.length)} ATIVOS`;
+    const repSum = document.getElementById('ativos-reps-summary');
+    if (repSum) {
+      const counts = {};
+      leads.forEach(l => { const r = (l.rep || '').toUpperCase(); if (r && r !== '—') counts[r] = (counts[r] || 0) + 1; });
+      repSum.textContent = Object.entries(counts).sort((a,b) => b[1]-a[1]).map(([r,c]) => `${r}: ${c}`).join(' | ');
+    }
     if (!leads.length) { tbody.innerHTML = emptyRow(4); return; }
     leads.sort((a, b) => (b.pot || 0) - (a.pot || 0));
     tbody.innerHTML = leads.map(l => {
@@ -1162,6 +1184,13 @@ async function loadAllData(summaryData, lm) {
     else _log.error('loadAll', 'latest falhou', rLatest.reason);
 
     renderAds(rAds.status === 'fulfilled' ? rAds.value : null, summaryData.receita);
+
+    const cacEl = document.getElementById('fechados-cac');
+    if (cacEl) {
+      const inv = rAds.status === 'fulfilled' && rAds.value ? +rAds.value.investimento || 0 : 0;
+      const nFech = rClosed.status === 'fulfilled' ? (rClosed.value.fechamentos || []).length : 0;
+      cacEl.textContent = (inv > 0 && nFech > 0) ? `CAC: ${cur(Math.round(inv / nFech))}` : '';
+    }
 
     stamp(lm);
     initScrollHints();
