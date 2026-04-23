@@ -388,6 +388,7 @@
           <div style="display:flex;align-items:center;gap:6px">
             <span id="latest-hoje" class="badge" style="white-space:nowrap"></span>
             <span id="latest-media-dia" class="badge" style="white-space:nowrap"></span>
+            <span id="latest-cpl" class="badge" style="white-space:nowrap"></span>
           </div>
         </div>
         <div class="table-scroll table-body" style="max-height:178px;overflow-y:auto;flex:none">
@@ -869,11 +870,18 @@ async function loadAllData(summaryData, lm) {
 
     renderAds(rAds.status === 'fulfilled' ? rAds.value : null, summaryData.receita);
 
+    const inv = rAds.status === 'fulfilled' && rAds.value ? +rAds.value.investimento || 0 : 0;
+
     const cacEl = document.getElementById('fechados-cac');
     if (cacEl) {
-      const inv = rAds.status === 'fulfilled' && rAds.value ? +rAds.value.investimento || 0 : 0;
       const nFech = rClosed.status === 'fulfilled' ? (rClosed.value.fechamentos || []).length : 0;
       cacEl.textContent = (inv > 0 && nFech > 0) ? `CAC MÉDIO: ${cur(Math.round(inv / nFech))}` : '';
+    }
+
+    const cplEl = document.getElementById('latest-cpl');
+    if (cplEl) {
+      const nLeads = summaryData.total || 0;
+      cplEl.textContent = (inv > 0 && nLeads > 0) ? `CPL: ${cur(Math.round(inv / nLeads))}` : '';
     }
 
     stamp(lm);
