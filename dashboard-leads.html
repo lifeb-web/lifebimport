@@ -587,8 +587,8 @@
     <div class="card card-rt">
       <div class="rt-icon">&#128203;</div>
       <div class="rt-num" id="card-total">—</div>
-      <div class="rt-label">Total de Leads</div>
-      <div class="rt-sub">leads registrados</div>
+      <div class="rt-label">Total de Leads Registrados</div>
+      <div class="rt-sub" id="rt-cpl-sdr">CPL LEAD QUALIFICADO SDR: —</div>
     </div>
 
     <!-- 2. Qualificados SDR -->
@@ -1246,6 +1246,15 @@ async function loadAllData(summaryData, lm) {
       const inv = rAds.status === 'fulfilled' && rAds.value ? +rAds.value.investimento || 0 : 0;
       const nFech = rClosed.status === 'fulfilled' ? (rClosed.value.fechamentos || []).length : 0;
       cacEl.textContent = (inv > 0 && nFech > 0) ? `CAC: ${cur(Math.round(inv / nFech))}` : '';
+    }
+
+    const rtCplSdr = document.getElementById('rt-cpl-sdr');
+    if (rtCplSdr) {
+      const inv = rAds.status === 'fulfilled' && rAds.value ? +rAds.value.investimento || 0 : 0;
+      const qualif = (summaryData.sdr || {}).qualif || 0;
+      rtCplSdr.textContent = (inv > 0 && qualif > 0)
+        ? `CPL LEAD QUALIFICADO SDR: ${cur(Math.round(inv / qualif))}`
+        : 'CPL LEAD QUALIFICADO SDR: —';
     }
 
     stamp(lm);
