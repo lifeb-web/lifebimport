@@ -515,6 +515,14 @@
     }
     footer strong { color: #fff; }
 
+    /* ATIVOS — highlight de linha por status vendedor */
+    .row-ag-cont { background: rgba(220,38,38,.07); }
+    .row-ag-cont td:first-child { border-left: 3px solid rgba(220,38,38,.35); }
+    .row-em-cont { background: rgba(217,119,6,.07); }
+    .row-em-cont td:first-child { border-left: 3px solid rgba(217,119,6,.35); }
+    .row-em-neg  { background: rgba(22,163,74,.07); }
+    .row-em-neg  td:first-child { border-left: 3px solid rgba(22,163,74,.35); }
+
     /* RESPONSIVE MOBILE */
     @media (max-width: 639px) {
       header { position: fixed; top: 0; left: 0; right: 0; padding: 0 16px; height: 56px; overflow: visible; }
@@ -749,28 +757,48 @@
       </div>
     </div>
 
-    <!-- Leads Ativos -->
+    <!-- Leads Ativos — Iramar -->
     <div class="card">
       <div class="card-hd">
-        <div class="card-hd-title">Leads Ativos</div>
-        <div style="display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden">
-          <span id="ativos-reps-summary" style="font-size:8px;font-weight:600;color:var(--muted);letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px"></span>
-          <span class="badge" id="ativos-badge">—</span>
-        </div>
+        <div class="card-hd-title">Iramar</div>
+        <span class="badge" id="ativos-badge-iramar">—</span>
       </div>
       <div class="ts-wrap ts-ativos">
         <div class="table-scroll">
           <table>
             <thead>
               <tr>
-                <th>Empresa</th>
-                <th class="td-left" style="text-align:left">Rep</th>
+                <th class="td-left" style="text-align:left">Empresa</th>
                 <th class="td-left" style="text-align:left">Status</th>
                 <th>Potencial</th>
               </tr>
             </thead>
-            <tbody id="tb-ativos">
-              <tr class="empty-row"><td colspan="4">Carregando...</td></tr>
+            <tbody id="tb-ativos-iramar">
+              <tr class="empty-row"><td colspan="3">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Leads Ativos — Natanael -->
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-hd-title">Natanael</div>
+        <span class="badge" id="ativos-badge-natanael">—</span>
+      </div>
+      <div class="ts-wrap ts-ativos">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th class="td-left" style="text-align:left">Empresa</th>
+                <th class="td-left" style="text-align:left">Status</th>
+                <th>Potencial</th>
+              </tr>
+            </thead>
+            <tbody id="tb-ativos-natanael">
+              <tr class="empty-row"><td colspan="3">Carregando...</td></tr>
             </tbody>
           </table>
         </div>
@@ -1055,34 +1083,42 @@ function renderReps(data) {
 }
 
 function renderAtivos(data) {
-  try {
-    const tbody  = document.getElementById('tb-ativos');
-    const badge  = document.getElementById('ativos-badge');
-    if (!tbody) return;
-    const leads = data.leads || [];
-    if (badge) badge.textContent = `TOTAL: ${n(leads.length)} ATIVOS`;
-    const repSum = document.getElementById('ativos-reps-summary');
-    if (repSum) {
-      const counts = {};
-      leads.forEach(l => { const r = (l.rep || '').toUpperCase(); if (r && r !== '—') counts[r] = (counts[r] || 0) + 1; });
-      repSum.textContent = Object.entries(counts).sort((a,b) => b[1]-a[1]).map(([r,c]) => `${r}: ${c}`).join(' | ');
-    }
-    if (!leads.length) { tbody.innerHTML = emptyRow(4); return; }
-    leads.sort((a, b) => (b.pot || 0) - (a.pot || 0));
-    tbody.innerHTML = leads.map(l => {
-      const empresa = toTitleCase(l.empresa || l.nome) || '—';
-      return `<tr>
-        <td title="${esc(empresa)}">${esc(empresa)}</td>
-        <td class="td-left">${esc(l.rep)}</td>
-        <td class="td-left">${statusBadge(l.status)}</td>
-        <td>${l.pot ? cur(l.pot) : '—'}</td>
-      </tr>`;
-    }).join('');
-  } catch(err) {
-    _log.error('ativos', 'Erro ao renderizar ativos', err);
-    const tbody = document.getElementById('tb-ativos');
-    if (tbody) tbody.innerHTML = errRow(4);
+  const leads = data.leads || [];
+
+  function rowClass(status) {
+    if (status === 'Aguardando contato') return 'row-ag-cont';
+    if (status === 'Em contato')         return 'row-em-cont';
+    if (status === 'Em negociação')      return 'row-em-neg';
+    return '';
   }
+
+  function renderRepCard(repName, tbodyId, badgeId) {
+    try {
+      const tbody = document.getElementById(tbodyId);
+      const badge = document.getElementById(badgeId);
+      if (!tbody) return;
+      const repLeads = leads
+        .filter(l => (l.rep || '').toUpperCase() === repName)
+        .sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+      if (badge) badge.textContent = `${n(repLeads.length)} ATIVOS`;
+      if (!repLeads.length) { tbody.innerHTML = emptyRow(3); return; }
+      tbody.innerHTML = repLeads.map(l => {
+        const empresa = toTitleCase(l.empresa || l.nome) || '—';
+        return `<tr class="${rowClass(l.status)}">
+          <td class="td-left" title="${esc(empresa)}">${esc(empresa)}</td>
+          <td class="td-left">${statusBadge(l.status)}</td>
+          <td>${l.pot ? cur(l.pot) : '—'}</td>
+        </tr>`;
+      }).join('');
+    } catch(err) {
+      _log.error('ativos', `Erro ao renderizar ativos (${repName})`, err);
+      const tbody = document.getElementById(tbodyId);
+      if (tbody) tbody.innerHTML = errRow(3);
+    }
+  }
+
+  renderRepCard('IRAMAR',   'tb-ativos-iramar',   'ativos-badge-iramar');
+  renderRepCard('NATANAEL', 'tb-ativos-natanael', 'ativos-badge-natanael');
 }
 
 function renderFechados(data) {
