@@ -522,6 +522,10 @@
     .row-em-cont td:first-child { border-left: 3px solid rgba(217,119,6,.35); }
     .row-em-neg  { background: rgba(22,163,74,.07); }
     .row-em-neg  td:first-child { border-left: 3px solid rgba(22,163,74,.35); }
+    /* badges internos — mesma paleta da linha */
+    .badge-row-red   { background: rgba(220,38,38,.15);  color: #b91c1c; }
+    .badge-row-amber { background: rgba(217,119,6,.15);  color: #b45309; }
+    .badge-row-green { background: rgba(22,163,74,.15);  color: #15803d; }
 
     /* RESPONSIVE MOBILE */
     @media (max-width: 639px) {
@@ -770,7 +774,7 @@
               <tr>
                 <th class="td-left" style="text-align:left">Empresa</th>
                 <th class="td-left" style="text-align:left">Status</th>
-                <th>Potencial</th>
+                <th>Entrada</th>
               </tr>
             </thead>
             <tbody id="tb-ativos-iramar">
@@ -794,7 +798,7 @@
               <tr>
                 <th class="td-left" style="text-align:left">Empresa</th>
                 <th class="td-left" style="text-align:left">Status</th>
-                <th>Potencial</th>
+                <th>Entrada</th>
               </tr>
             </thead>
             <tbody id="tb-ativos-natanael">
@@ -1082,6 +1086,13 @@ function renderReps(data) {
   }
 }
 
+function statusBadgeAtivos(s) {
+  if (s === 'Aguardando contato') return `<span class="status-badge badge-row-red">${esc(s)}</span>`;
+  if (s === 'Em contato')         return `<span class="status-badge badge-row-amber">${esc(s)}</span>`;
+  if (s === 'Em negociação')      return `<span class="status-badge badge-row-green">${esc(s)}</span>`;
+  return `<span class="status-badge" style="background:#f3f4f6;color:#6b7280">${esc(s) || '—'}</span>`;
+}
+
 function renderAtivos(data) {
   const leads = data.leads || [];
 
@@ -1092,6 +1103,12 @@ function renderAtivos(data) {
     return '';
   }
 
+  function fmtEntrada(d) {
+    if (!d) return '—';
+    const p = d.split('-');
+    return p.length === 3 ? `${p[2]}/${p[1]}/${p[0].slice(2)}` : d;
+  }
+
   function renderRepCard(repName, tbodyId, badgeId) {
     try {
       const tbody = document.getElementById(tbodyId);
@@ -1099,15 +1116,15 @@ function renderAtivos(data) {
       if (!tbody) return;
       const repLeads = leads
         .filter(l => (l.rep || '').toUpperCase() === repName)
-        .sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+        .sort((a, b) => (a.data || '').localeCompare(b.data || ''));
       if (badge) badge.textContent = `${n(repLeads.length)} ATIVOS`;
       if (!repLeads.length) { tbody.innerHTML = emptyRow(3); return; }
       tbody.innerHTML = repLeads.map(l => {
         const empresa = toTitleCase(l.empresa || l.nome) || '—';
         return `<tr class="${rowClass(l.status)}">
           <td class="td-left" title="${esc(empresa)}">${esc(empresa)}</td>
-          <td class="td-left">${statusBadge(l.status)}</td>
-          <td>${l.pot ? cur(l.pot) : '—'}</td>
+          <td class="td-left">${statusBadgeAtivos(l.status)}</td>
+          <td style="white-space:nowrap;font-size:11px;color:var(--muted)">${fmtEntrada(l.data)}</td>
         </tr>`;
       }).join('');
     } catch(err) {
