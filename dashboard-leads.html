@@ -1116,7 +1116,12 @@ function renderAtivos(data) {
       if (!tbody) return;
       const repLeads = leads
         .filter(l => (l.rep || '').toUpperCase() === repName)
-        .sort((a, b) => (a.data || '').localeCompare(b.data || ''));
+        .sort((a, b) => {
+          const pa = a.status === 'Aguardando contato' ? 0 : 1;
+          const pb = b.status === 'Aguardando contato' ? 0 : 1;
+          if (pa !== pb) return pa - pb;
+          return (a.data || '').localeCompare(b.data || '');
+        });
       if (badge) badge.textContent = `${n(repLeads.length)} ATIVOS`;
       if (!repLeads.length) { tbody.innerHTML = emptyRow(3); return; }
       tbody.innerHTML = repLeads.map(l => {
