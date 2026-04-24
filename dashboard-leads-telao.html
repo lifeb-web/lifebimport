@@ -366,13 +366,14 @@
         <div class="table-scroll table-body">
           <table style="table-layout:fixed;width:100%;font-size:11px">
             <colgroup>
-              <col style="width:35%">
-              <col style="width:30%">
+              <col style="width:27%">
               <col style="width:22%">
+              <col style="width:22%">
+              <col style="width:16%">
               <col style="width:13%">
             </colgroup>
             <thead><tr>
-              <th>Empresa</th><th class="td-left" style="text-align:left">Cidade / UF</th><th style="text-align:center">Status</th><th style="text-align:right">Potencial</th>
+              <th>Empresa</th><th class="td-left" style="text-align:left">Cidade / UF</th><th style="text-align:center">Status</th><th style="text-align:right">Potencial</th><th style="text-align:right">Entrada</th>
             </tr></thead>
             <tbody id="tb-ativos-iramar">
               <tr class="empty-row"><td colspan="4">Carregando...</td></tr>
@@ -392,13 +393,14 @@
         <div class="table-scroll table-body">
           <table style="table-layout:fixed;width:100%;font-size:11px">
             <colgroup>
-              <col style="width:35%">
-              <col style="width:30%">
+              <col style="width:27%">
               <col style="width:22%">
+              <col style="width:22%">
+              <col style="width:16%">
               <col style="width:13%">
             </colgroup>
             <thead><tr>
-              <th>Empresa</th><th class="td-left" style="text-align:left">Cidade / UF</th><th style="text-align:center">Status</th><th style="text-align:right">Potencial</th>
+              <th>Empresa</th><th class="td-left" style="text-align:left">Cidade / UF</th><th style="text-align:center">Status</th><th style="text-align:right">Potencial</th><th style="text-align:right">Entrada</th>
             </tr></thead>
             <tbody id="tb-ativos-natanael">
               <tr class="empty-row"><td colspan="4">Carregando...</td></tr>
@@ -794,6 +796,12 @@ function statusBadgeAtivos(s) {
 function renderAtivos(data) {
   const leads = data.leads || [];
 
+  function fmtEntrada(d) {
+    if (!d) return '—';
+    const p = d.split('-');
+    return p.length === 3 ? `${p[2]}/${p[1]}/${p[0].slice(2)}` : d;
+  }
+
   function renderRepCard(repName, tbodyId, badgeId, negId) {
     try {
       const tbody = document.getElementById(tbodyId);
@@ -808,7 +816,7 @@ function renderAtivos(data) {
         const neg = repLeads.filter(l => l.status === 'Em negociação').length;
         negEl.textContent = `NEGOCIANDO: ${n(neg)}`;
       }
-      if (!repLeads.length) { tbody.innerHTML = emptyRow(4); return; }
+      if (!repLeads.length) { tbody.innerHTML = emptyRow(5); return; }
       tbody.innerHTML = repLeads.map(l => {
         const empresa   = toTitleCase(l.empresa || l.nome) || '—';
         const cidadeFmt = toTitleCase(l.cidade);
@@ -818,12 +826,13 @@ function renderAtivos(data) {
           <td class="td-left" title="${esc(cidadeUF)}">${esc(cidadeUF)}</td>
           <td style="text-align:center">${statusBadgeAtivos(l.status)}</td>
           <td style="text-align:right">${l.pot ? cur(l.pot) : '—'}</td>
+          <td style="text-align:right;white-space:nowrap;color:var(--muted)">${fmtEntrada(l.data)}</td>
         </tr>`;
       }).join('');
     } catch(err) {
       _log.error('ativos', `Erro ao renderizar ativos (${repName})`, err);
       const tbody = document.getElementById(tbodyId);
-      if (tbody) tbody.innerHTML = errRow(4);
+      if (tbody) tbody.innerHTML = errRow(5);
     }
   }
 
