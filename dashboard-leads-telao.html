@@ -207,6 +207,9 @@
     .badge-ag-cont  { background:#fef3c7; color:#92400e; }
     .badge-em-cont  { background:#dbeafe; color:#1e40af; }
     .badge-em-neg   { background:#ede9fe; color:#5b21b6; }
+    .badge-row-red   { background:rgba(220,38,38,.15);  color:#b91c1c; }
+    .badge-row-amber { background:rgba(217,119,6,.15);  color:#b45309; }
+    .badge-row-green { background:rgba(22,163,74,.15);  color:#15803d; }
     .badge-fechado  { background:#dcfce7; color:#15803d; }
     .badge-perdido  { background:#fee2e2; color:#991b1b; }
     /* SDR badges — versão discreta */
@@ -349,31 +352,56 @@
 
     </div><!-- /#col-funnels -->
 
-    <!-- COLUNA CENTRO — Leads Ativos -->
+    <!-- COLUNA CENTRO — Leads Ativos por representante -->
     <div id="col-center">
 
-      <div class="card card-table" style="flex:1">
+      <div class="card card-table" style="flex:1;min-height:0">
         <div class="card-hd">
-          <div class="card-hd-title">Leads Ativos</div>
-          <div style="display:flex;align-items:center;gap:6px;min-width:0">
-            <div id="ativos-reps-container" style="display:flex;align-items:center;gap:6px"></div>
-            <span class="badge" id="ativos-badge">—</span>
+          <div class="card-hd-title">Leads Ativos — Iramar</div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="badge" id="ativos-neg-iramar">—</span>
+            <span class="badge" id="ativos-badge-iramar">—</span>
           </div>
         </div>
         <div class="table-scroll table-body">
           <table style="table-layout:fixed;width:100%;font-size:11px">
             <colgroup>
+              <col style="width:35%">
               <col style="width:30%">
-              <col style="width:27%">
-              <col style="width:10%">
               <col style="width:22%">
-              <col style="width:11%">
+              <col style="width:13%">
             </colgroup>
             <thead><tr>
-              <th>Empresa</th><th class="td-left" style="text-align:left">Cidade / UF</th><th class="td-left" style="text-align:left">Rep</th><th style="text-align:center">Status</th><th style="text-align:right">Potencial</th>
+              <th>Empresa</th><th class="td-left" style="text-align:left">Cidade / UF</th><th style="text-align:center">Status</th><th style="text-align:right">Potencial</th>
             </tr></thead>
-            <tbody id="tb-ativos">
-              <tr class="empty-row"><td colspan="5">Carregando...</td></tr>
+            <tbody id="tb-ativos-iramar">
+              <tr class="empty-row"><td colspan="4">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card card-table" style="flex:1;min-height:0">
+        <div class="card-hd">
+          <div class="card-hd-title">Leads Ativos — Natanael</div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="badge" id="ativos-neg-natanael">—</span>
+            <span class="badge" id="ativos-badge-natanael">—</span>
+          </div>
+        </div>
+        <div class="table-scroll table-body">
+          <table style="table-layout:fixed;width:100%;font-size:11px">
+            <colgroup>
+              <col style="width:35%">
+              <col style="width:30%">
+              <col style="width:22%">
+              <col style="width:13%">
+            </colgroup>
+            <thead><tr>
+              <th>Empresa</th><th class="td-left" style="text-align:left">Cidade / UF</th><th style="text-align:center">Status</th><th style="text-align:right">Potencial</th>
+            </tr></thead>
+            <tbody id="tb-ativos-natanael">
+              <tr class="empty-row"><td colspan="4">Carregando...</td></tr>
             </tbody>
           </table>
         </div>
@@ -756,39 +784,51 @@ function renderReps(data) {
   }
 }
 
+function statusBadgeAtivos(s) {
+  if (s === 'Aguardando contato') return `<span class="status-badge badge-row-red">${esc(s)}</span>`;
+  if (s === 'Em contato')         return `<span class="status-badge badge-row-amber">${esc(s)}</span>`;
+  if (s === 'Em negociação')      return `<span class="status-badge badge-row-green">${esc(s)}</span>`;
+  return `<span class="status-badge" style="background:#f3f4f6;color:#6b7280">${esc(s) || '—'}</span>`;
+}
+
 function renderAtivos(data) {
-  try {
-    const tbody  = document.getElementById('tb-ativos');
-    const badge  = document.getElementById('ativos-badge');
-    if (!tbody) return;
-    const leads = data.leads || [];
-    if (badge) badge.textContent = `TOTAL: ${n(leads.length)} ATIVOS`;
-    const repsContainer = document.getElementById('ativos-reps-container');
-    if (repsContainer) {
-      const counts = {};
-      leads.forEach(l => { const r = (l.rep || '').toUpperCase(); if (r) counts[r] = (counts[r] || 0) + 1; });
-      repsContainer.innerHTML = Object.entries(counts).sort((a,b) => b[1]-a[1])
-        .map(([r,c]) => `<span class="badge">${r}: ${c}</span>`).join('');
+  const leads = data.leads || [];
+
+  function renderRepCard(repName, tbodyId, badgeId, negId) {
+    try {
+      const tbody = document.getElementById(tbodyId);
+      const badge = document.getElementById(badgeId);
+      const negEl = document.getElementById(negId);
+      if (!tbody) return;
+      const repLeads = leads
+        .filter(l => (l.rep || '').toUpperCase() === repName)
+        .sort((a, b) => (a.data || '').localeCompare(b.data || ''));
+      if (badge) badge.textContent = `TOTAL: ${n(repLeads.length)} ATIVOS`;
+      if (negEl) {
+        const neg = repLeads.filter(l => l.status === 'Em negociação').length;
+        negEl.textContent = `NEGOCIANDO: ${n(neg)}`;
+      }
+      if (!repLeads.length) { tbody.innerHTML = emptyRow(4); return; }
+      tbody.innerHTML = repLeads.map(l => {
+        const empresa   = toTitleCase(l.empresa || l.nome) || '—';
+        const cidadeFmt = toTitleCase(l.cidade);
+        const cidadeUF  = [cidadeFmt, l.estado].filter(v => v && v.trim()).join(' - ') || '—';
+        return `<tr>
+          <td title="${esc(empresa)}">${esc(empresa)}</td>
+          <td class="td-left" title="${esc(cidadeUF)}">${esc(cidadeUF)}</td>
+          <td style="text-align:center">${statusBadgeAtivos(l.status)}</td>
+          <td style="text-align:right">${l.pot ? cur(l.pot) : '—'}</td>
+        </tr>`;
+      }).join('');
+    } catch(err) {
+      _log.error('ativos', `Erro ao renderizar ativos (${repName})`, err);
+      const tbody = document.getElementById(tbodyId);
+      if (tbody) tbody.innerHTML = errRow(4);
     }
-    if (!leads.length) { tbody.innerHTML = emptyRow(5); return; }
-    leads.sort((a, b) => (b.pot || 0) - (a.pot || 0));
-    tbody.innerHTML = leads.map(l => {
-      const empresa  = toTitleCase(l.empresa || l.nome) || '—';
-      const cidadeFmt = toTitleCase(l.cidade);
-      const cidadeUF = [cidadeFmt, l.estado].filter(v => v && v.trim()).join(' - ') || '—';
-      return `<tr>
-        <td title="${esc(empresa)}">${esc(empresa)}</td>
-        <td class="td-left" title="${esc(cidadeUF)}">${esc(cidadeUF)}</td>
-        <td class="td-left">${esc(l.rep)}</td>
-        <td style="text-align:center">${statusBadge(l.status)}</td>
-        <td style="text-align:right">${l.pot ? cur(l.pot) : '—'}</td>
-      </tr>`;
-    }).join('');
-  } catch(err) {
-    _log.error('ativos', 'Erro ao renderizar ativos', err);
-    const tbody = document.getElementById('tb-ativos');
-    if (tbody) tbody.innerHTML = errRow(5);
   }
+
+  renderRepCard('IRAMAR',   'tb-ativos-iramar',   'ativos-badge-iramar',   'ativos-neg-iramar');
+  renderRepCard('NATANAEL', 'tb-ativos-natanael', 'ativos-badge-natanael', 'ativos-neg-natanael');
 }
 
 function renderFechados(data) {
