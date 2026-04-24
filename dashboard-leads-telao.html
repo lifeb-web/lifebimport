@@ -224,6 +224,8 @@
     /* FOOTER */
     footer { background:var(--purple); color:rgba(255,255,255,.65); text-align:center; padding:10px 28px; font-size:11px; flex-shrink:0; }
     footer strong { color:#fff; }
+    .vend-txt-sm { display:none; }
+    @media (max-width:1400px) { .vend-txt-lg { display:none; } .vend-txt-sm { display:inline; } }
   </style>
 </head>
 <body>
@@ -707,7 +709,7 @@ function renderFunnel(data) {
     if (sdrBadge) sdrBadge.textContent = n(total) + ' leads';
     const totalVend = (vend.ag_cont||0)+(vend.em_cont||0)+(vend.reun||0)+(vend.em_neg||0)+(vend.fechado||0)+(vend.perdido||0);
     const vendBadge = document.getElementById('vend-total-badge');
-    if (vendBadge) vendBadge.textContent = n(totalVend) + ' c/ vendedor';
+    if (vendBadge) vendBadge.innerHTML = `${n(totalVend)} <span class="vend-txt-lg">com vendedor</span><span class="vend-txt-sm">c/ vendedor</span>`;
 
     renderFunilBar('funil-sdr', [
       { label: 'Aguardando abordagem', value: sdr.ag_abord || 0, barClass: 'bar-orange' },
