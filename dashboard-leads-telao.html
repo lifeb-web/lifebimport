@@ -359,6 +359,8 @@
         <div class="card-hd">
           <div class="card-hd-title">Leads Ativos — Iramar</div>
           <div style="display:flex;align-items:center;gap:6px">
+            <span class="badge" id="ativos-ag-iramar">—</span>
+            <span class="badge" id="ativos-cont-iramar">—</span>
             <span class="badge" id="ativos-neg-iramar">—</span>
             <span class="badge" id="ativos-badge-iramar">—</span>
           </div>
@@ -386,6 +388,8 @@
         <div class="card-hd">
           <div class="card-hd-title">Leads Ativos — Natanael</div>
           <div style="display:flex;align-items:center;gap:6px">
+            <span class="badge" id="ativos-ag-natanael">—</span>
+            <span class="badge" id="ativos-cont-natanael">—</span>
             <span class="badge" id="ativos-neg-natanael">—</span>
             <span class="badge" id="ativos-badge-natanael">—</span>
           </div>
@@ -802,20 +806,21 @@ function renderAtivos(data) {
     return p.length === 3 ? `${p[2]}/${p[1]}/${p[0].slice(2)}` : d;
   }
 
-  function renderRepCard(repName, tbodyId, badgeId, negId) {
+  function renderRepCard(repName, tbodyId, badgeId, negId, agId, contId) {
     try {
-      const tbody = document.getElementById(tbodyId);
-      const badge = document.getElementById(badgeId);
-      const negEl = document.getElementById(negId);
+      const tbody  = document.getElementById(tbodyId);
+      const badge  = document.getElementById(badgeId);
+      const negEl  = document.getElementById(negId);
+      const agEl   = document.getElementById(agId);
+      const contEl = document.getElementById(contId);
       if (!tbody) return;
       const repLeads = leads
         .filter(l => (l.rep || '').toUpperCase() === repName)
         .sort((a, b) => (a.data || '').localeCompare(b.data || ''));
-      if (badge) badge.textContent = `TOTAL: ${n(repLeads.length)} ATIVOS`;
-      if (negEl) {
-        const neg = repLeads.filter(l => l.status === 'Em negociação').length;
-        negEl.textContent = `NEGOCIANDO: ${n(neg)}`;
-      }
+      if (badge)  badge.textContent  = `TOTAL: ${n(repLeads.length)} ATIVOS`;
+      if (agEl)   agEl.textContent   = `AGUARDANDO: ${n(repLeads.filter(l => l.status === 'Aguardando contato').length)}`;
+      if (contEl) contEl.textContent = `EM CONTATO: ${n(repLeads.filter(l => l.status === 'Em contato').length)}`;
+      if (negEl)  negEl.textContent  = `NEGOCIANDO: ${n(repLeads.filter(l => l.status === 'Em negociação').length)}`;
       if (!repLeads.length) { tbody.innerHTML = emptyRow(5); return; }
       tbody.innerHTML = repLeads.map(l => {
         const empresa   = toTitleCase(l.empresa || l.nome) || '—';
@@ -836,8 +841,8 @@ function renderAtivos(data) {
     }
   }
 
-  renderRepCard('IRAMAR',   'tb-ativos-iramar',   'ativos-badge-iramar',   'ativos-neg-iramar');
-  renderRepCard('NATANAEL', 'tb-ativos-natanael', 'ativos-badge-natanael', 'ativos-neg-natanael');
+  renderRepCard('IRAMAR',   'tb-ativos-iramar',   'ativos-badge-iramar',   'ativos-neg-iramar',   'ativos-ag-iramar',   'ativos-cont-iramar');
+  renderRepCard('NATANAEL', 'tb-ativos-natanael', 'ativos-badge-natanael', 'ativos-neg-natanael', 'ativos-ag-natanael', 'ativos-cont-natanael');
 }
 
 function renderFechados(data) {
