@@ -963,7 +963,7 @@ async function proxy(action) {
 function renderFunilBar(containerId, items, total) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  if (!total) { el.innerHTML = emptyRow(1).replace('<tr class="empty-row"><td colspan="1">','<div style="color:#c8c2d6;font-style:italic;font-size:13px;text-align:center">').replace('</td></tr>','</div>'); return; }
+  if (!total) { el.innerHTML = '<div style="color:#c8c2d6;font-style:italic;font-size:13px;text-align:center">Sem dados</div>'; return; }
 
   el.innerHTML = items.map(item => {
     const pct = total > 0 ? Math.round(item.value / total * 100) : 0;
@@ -1082,7 +1082,7 @@ function renderReps(data) {
   } catch(err) {
     _log.error('reps', 'Erro ao renderizar reps', err);
     const tbody = document.getElementById('tb-reps');
-    if (tbody) tbody.innerHTML = errRow(9);
+    if (tbody) tbody.innerHTML = errRow(8);
   }
 }
 
@@ -1155,7 +1155,7 @@ function renderFechados(data) {
       return `
       <tr>
         <td title="${esc(empresa)}">${esc(empresa)}</td>
-        <td class="td-left">${esc(c.rep)}</td>
+        <td class="td-left">${esc(toTitleCase(c.rep) || c.rep)}</td>
         <td>${cur(c.valor)}</td>
         <td>${c.dias ? n(c.dias) + 'd' : '—'}</td>
         <td class="td-left">${esc(dataBR)}</td>

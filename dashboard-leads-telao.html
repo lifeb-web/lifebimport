@@ -25,7 +25,7 @@
     }
     *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
     html { width:100%; height:100vh; overflow:hidden; background:var(--bg); }
-    body { width:100%; height:100vh; overflow:hidden; font-family:var(--font); background:var(--bg); color:var(--text); }
+    body { width:100%; height:100vh; overflow:hidden; font-family:var(--font); background:var(--bg); color:var(--text); display:flex; flex-direction:column; }
 
     /* LOADING BAR */
     #loading-bar { position:fixed; top:0; left:0; height:3px; width:0%; background:linear-gradient(90deg,var(--purple),var(--magenta)); z-index:9999; transition:width .2s,opacity .4s; pointer-events:none; }
@@ -63,7 +63,6 @@
     #config-warning { display:none; background:#fff8e1; border-bottom:2px solid #ffc107; padding:6px 28px; font-size:11px; color:#7a5700; flex-shrink:0; }
 
     /* LAYOUT PRINCIPAL */
-    body { display:flex; flex-direction:column; }
     #telao-body {
       flex: 1;
       display: flex;
@@ -378,7 +377,7 @@
               <th>Empresa</th><th class="td-left" style="text-align:left">Cidade / UF</th><th style="text-align:center">Status</th><th style="text-align:right">Potencial</th><th style="text-align:right">Entrada</th>
             </tr></thead>
             <tbody id="tb-ativos-iramar">
-              <tr class="empty-row"><td colspan="4">Carregando...</td></tr>
+              <tr class="empty-row"><td colspan="5">Carregando...</td></tr>
             </tbody>
           </table>
         </div>
@@ -407,7 +406,7 @@
               <th>Empresa</th><th class="td-left" style="text-align:left">Cidade / UF</th><th style="text-align:center">Status</th><th style="text-align:right">Potencial</th><th style="text-align:right">Entrada</th>
             </tr></thead>
             <tbody id="tb-ativos-natanael">
-              <tr class="empty-row"><td colspan="4">Carregando...</td></tr>
+              <tr class="empty-row"><td colspan="5">Carregando...</td></tr>
             </tbody>
           </table>
         </div>
@@ -786,7 +785,7 @@ function renderReps(data) {
   } catch(err) {
     _log.error('reps', 'Erro ao renderizar reps', err);
     const tbody = document.getElementById('tb-reps');
-    if (tbody) tbody.innerHTML = errRow(9);
+    if (tbody) tbody.innerHTML = errRow(8);
   }
 }
 
@@ -856,14 +855,18 @@ function renderFechados(data) {
     if (!tbody) return;
     const f = data.fechamentos || [];
     if (!f.length) { tbody.innerHTML = emptyRow(5); return; }
-    tbody.innerHTML = f.map(c => `
-      <tr>
-        <td title="${esc(toTitleCase(c.empresa || c.nome) || '—')}">${esc(toTitleCase(c.empresa || c.nome) || '—')}</td>
-        <td class="td-left">${esc(c.rep)}</td>
+    tbody.innerHTML = f.map(c => {
+      const empresa = esc(toTitleCase(c.empresa || c.nome) || '—');
+      const rep     = esc(toTitleCase(c.rep) || c.rep);
+      const dataBR  = c.data_f ? (() => { const [y,m,d] = c.data_f.split('-'); return `${d}/${m}/${y.slice(2)}`; })() : '—';
+      return `<tr>
+        <td title="${empresa}">${empresa}</td>
+        <td class="td-left">${rep}</td>
         <td style="text-align:right">${cur(c.valor)}</td>
         <td style="text-align:right">${c.dias ? n(c.dias) + 'd' : '—'}</td>
-        <td style="text-align:right">${c.data_f ? (() => { const [y,m,d] = c.data_f.split('-'); return `${d}/${m}/${y.slice(2)}`; })() : '—'}</td>
-      </tr>`).join('');
+        <td style="text-align:right">${dataBR}</td>
+      </tr>`;
+    }).join('');
   } catch(err) {
     _log.error('fechados', 'Erro ao renderizar fechados', err);
     const tbody = document.getElementById('tb-fechados');
@@ -899,7 +902,6 @@ function renderLatest(data) {
   }
 }
 
-// ── LOAD ALL ─────────────────────────────────────────────────
 // ── LOAD ALL DATA (só quando planilha mudar) ─────────────────
 async function loadAllData(summaryData, lm) {
   _loadingStart();
