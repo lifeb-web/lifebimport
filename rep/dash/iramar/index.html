@@ -1419,8 +1419,10 @@ function histVerMenos() {
 }
 
 // ── FETCH & POLL ──────────────────────────────────────────────
-let _isLoading = false;
-let _firstLoad = true;
+let _isLoading  = false;
+let _firstLoad  = true;
+let _retryCount = 0;
+const MAX_RETRIES = 2;
 const CACHE_KEY = 'lifeb_cache_' + REP_NAME;
 
 async function loadData() {
@@ -1463,17 +1465,38 @@ async function loadData() {
     _rawLeads = newLeads;
     if (changed && !hasPending) renderLeads(_rawLeads);
     flashDot();
-    _firstLoad = false;
+    _firstLoad  = false;
+    _retryCount = 0;
     const err = document.getElementById('error-banner');
     if (err) err.style.display = 'none';
   } catch(e) {
-    const err = document.getElementById('error-banner');
-    if (err) { err.textContent='Não foi possível carregar os dados. Verifique sua conexão.'; err.style.display='block'; }
-    if (_firstLoad) { const l=document.getElementById('leads-list'); if(l) l.innerHTML=''; }
+    // Retry silently before surfacing any error
+    if (_retryCount < MAX_RETRIES) {
+      _retryCount++;
+      _isLoading = false;
+      loadEnd();
+      setTimeout(loadData, 4000 * _retryCount);
+      return;
+    }
+    _retryCount = 0;
+    // Only show error banner when there is no data to display
+    if (!_rawLeads.length) {
+      const err = document.getElementById('error-banner');
+      if (err) { err.textContent='Não foi possível carregar os dados. Verifique sua conexão.'; err.style.display='block'; }
+      if (_firstLoad) { const l=document.getElementById('leads-list'); if(l) l.innerHTML=''; }
+    }
+    // When cached data is already on screen, fail silently — data stays visible
   } finally { _isLoading=false; loadEnd(); }
 }
 
-document.addEventListener('DOMContentLoaded', () => { loadData(); setInterval(loadData, POLL_MS); });
+document.addEventListener('DOMContentLoaded', () => {
+  loadData();
+  setInterval(loadData, POLL_MS);
+  // Auto-refresh when rep returns to the tab after leaving it in background
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') { _retryCount = 0; loadData(); }
+  });
+});
 </script>
 </body>
 </html>
