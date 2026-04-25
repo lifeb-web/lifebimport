@@ -490,47 +490,45 @@ function showUndoToast(msg, undoData, ms=8000) {
   _toastTimer = setTimeout(() => { el.classList.remove('show'); _undoPending = null; }, ms);
 }
 
-async function undoLast() {
+function undoLast() {
   if (!_undoPending) return;
   const pending = _undoPending;
   _undoPending = null;
   const el = document.getElementById('toast');
   if (el) el.classList.remove('show');
-  try {
-    if (pending.isMulti) {
-      // Revert both STATUS_VENDEDOR and the extra campo (Fechado/Perdido undo)
-      for (const { row, campo, valor } of pending.actions) {
-        const res = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
-          body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo, valor: String(valor) }) });
-        const data = await res.json();
-        if (!data.ok) throw new Error(data.error);
-      }
-      // Restore lead to active list with reverted status
-      if (pending.leadSnapshot) {
-        const snap = { ...pending.leadSnapshot };
-        const statusAction = pending.actions.find(a => a.campo === 'STATUS_VENDEDOR');
-        if (statusAction) snap.status = statusAction.valor;
-        if (!_rawLeads.find(l => l.row === snap.row)) _rawLeads.push(snap);
-      }
-    } else {
-      const { row, campo, valor } = pending;
-      const res = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
-        body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo, valor: String(valor) }) });
-      const data = await res.json();
-      if (!data.ok) throw new Error(data.error);
+
+  function applyField(lead, campo, valor) {
+    if      (campo === 'STATUS_VENDEDOR')  lead.status      = valor;
+    else if (campo === 'OBS_VENDEDOR')     lead.obs         = valor;
+    else if (campo === 'VALOR_POTENCIAL')  lead.pot         = parseFloat(valor) || 0;
+    else if (campo === 'VALOR_FECHADO')    lead.valor_fech  = parseFloat(valor) || 0;
+    else if (campo === 'MOTIVO_PERDA')     lead.motivo_perd = valor;
+    else if (campo === 'DATA_FECH')        lead.data_f      = valor;
+  }
+
+  const actions = pending.isMulti ? pending.actions : [{ row: pending.row, campo: pending.campo, valor: pending.valor }];
+
+  // Optimistic: apply all reverts to _rawLeads immediately
+  if (pending.isMulti && pending.leadSnapshot) {
+    // Lead was removed from active list — restore it with reverted fields
+    const snap = { ...pending.leadSnapshot };
+    for (const { campo, valor } of actions) applyField(snap, campo, valor);
+    if (!_rawLeads.find(l => l.row === snap.row)) _rawLeads.push(snap);
+  } else {
+    for (const { row, campo, valor } of actions) {
       const lead = _rawLeads.find(l => l.row === row);
-      if (lead) {
-        if      (campo === 'STATUS_VENDEDOR')  lead.status      = valor;
-        else if (campo === 'OBS_VENDEDOR')     lead.obs         = valor;
-        else if (campo === 'VALOR_POTENCIAL')  lead.pot         = parseFloat(valor) || 0;
-        else if (campo === 'VALOR_FECHADO')    lead.valor_fech  = parseFloat(valor) || 0;
-        else if (campo === 'MOTIVO_PERDA')     lead.motivo_perd = valor;
-      }
+      if (lead) applyField(lead, campo, valor);
     }
-    renderLeads(_rawLeads);
-    showToast('Desfeito ✓');
-  } catch(err) {
-    showToast('Erro ao desfazer — tente novamente');
+  }
+
+  renderLeads(_rawLeads);
+  showToast('Desfeito ✓');
+
+  // POST all reverts in background
+  for (const { row, campo, valor } of actions) {
+    fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo, valor: String(valor) }) })
+      .catch(() => {});
   }
 }
 
@@ -811,13 +809,20 @@ async function saveObs(row) {
   }
   if (fbEl) fbEl.textContent = '';
 
-  // In concluding mode, don't overwrite the status undo toast — conclude silently
+  // In concluding mode, merge obs into the pending undo and conclude
   const card = document.querySelector(`.lead-card[data-row="${row}"]`);
   const isConcluding = card && card.classList.contains('concluding');
-  if (!isConcluding) showUndoToast('Observação salva ✓', { row, campo:'OBS_VENDEDOR', valor:oldObs });
-
-  // If concluding, animate card away now
-  if (isConcluding) concludeCard(row);
+  if (!isConcluding) {
+    showUndoToast('Observação salva ✓', { isMulti:true, leadSnapshot:null, actions:[{ row, campo:'OBS_VENDEDOR', valor:oldObs }] });
+  } else {
+    // Append obs undo to whatever is already pending for this card
+    if (_pendingUndoByRow[row]) {
+      _pendingUndoByRow[row].data.actions.push({ row, campo:'OBS_VENDEDOR', valor:oldObs });
+    } else {
+      _pendingUndoByRow[row] = { msg:'Observação salva ✓', data:{ isMulti:true, leadSnapshot:null, actions:[{ row, campo:'OBS_VENDEDOR', valor:oldObs }] } };
+    }
+    concludeCard(row);
+  }
 
   // background POST
   try {
@@ -909,7 +914,10 @@ async function saveStatusExtra(row) {
       const n = parseFloat(raw.replace(/[^\d,.-]/g,'').replace(',','.'));
       if (!isNaN(n) && n > 0) {
         const lead2 = _rawLeads.find(l => l.row === row);
+        const oldPot = lead2 ? String(lead2.pot || 0) : '0';
         if (lead2) lead2.pot = n;
+        // Add valor potencial to the pending undo so it gets reverted together with status
+        if (_pendingUndoByRow[row]) _pendingUndoByRow[row].data.actions.push({ row, campo:'VALOR_POTENCIAL', valor:oldPot });
         fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
           body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'VALOR_POTENCIAL', valor:String(n) }) });
       }
@@ -1064,8 +1072,8 @@ async function confirmStatusChange(row) {
     return; // POST fires only after valor/motivo is confirmed in saveStatusExtra
   }
 
-  // Defer undo toast — show only when card actually concludes (after rep finishes obs)
-  _pendingUndoByRow[row] = { msg:'Status atualizado ✓', data:{ row, campo:'STATUS_VENDEDOR', valor:oldStatus } };
+  // Defer undo toast — always multi-action so more fields can be appended later
+  _pendingUndoByRow[row] = { msg:'Status atualizado ✓', data:{ isMulti:true, leadSnapshot:null, actions:[{ row, campo:'STATUS_VENDEDOR', valor:oldStatus }] } };
 
   if (valor === 'Em negociação') {
     // Show optional valor potencial prompt before concluding mode
