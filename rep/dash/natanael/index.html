@@ -479,15 +479,18 @@ function setLeadTs(row) {
   const el = document.getElementById('ts-' + row);
   if (el) el.textContent = getLeadTs(row);
 }
-function getLeadTs(row) {
+function getLeadTs(row, dataEntrada) {
   const ts = _tsMap[row];
-  if (!ts) return '';
-  const d = new Date(ts);
-  const day = String(d.getDate()).padStart(2,'0');
-  const mon = String(d.getMonth()+1).padStart(2,'0');
-  const h   = String(d.getHours()).padStart(2,'0');
-  const m   = String(d.getMinutes()).padStart(2,'0');
-  return `Atualizado: ${day}/${mon} - ${h}:${m}`;
+  if (ts) {
+    const d = new Date(ts);
+    const day = String(d.getDate()).padStart(2,'0');
+    const mon = String(d.getMonth()+1).padStart(2,'0');
+    const h   = String(d.getHours()).padStart(2,'0');
+    const m   = String(d.getMinutes()).padStart(2,'0');
+    return `Atualizado: ${day}/${mon} - ${h}:${m}`;
+  }
+  if (dataEntrada) return `Entrada: ${fmtData(dataEntrada)}`;
+  return '';
 }
 
 // ── WA OVERLAY NO PAINEL DE CONTATO ──────────────────────────
@@ -1479,7 +1482,7 @@ function renderLeads(leads, highlightRow) {
               ${options}
             </select>
           </div>
-          <div class="lc-last-updated" id="ts-${l.row}">${getLeadTs(l.row)}</div>
+          <div class="lc-last-updated" id="ts-${l.row}">${getLeadTs(l.row, l.data)}</div>
           <div class="lc-confirm" id="conf-${l.row}">
             <div class="lc-confirm-icon" id="conf-icon-${l.row}">📋</div>
             <div class="lc-confirm-msg">Mudar para <strong id="conf-status-${l.row}"></strong>?</div>
