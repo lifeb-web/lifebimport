@@ -506,8 +506,10 @@ const LEADS_PROXY = 'https://script.google.com/macros/s/AKfycbyq9KJgWTRoALEEVf8P
 let _lastSheetModified = null;
 let _pollCount = 0;
 let _isLoading = false;
-const POLL_INTERVAL_MS  = 60_000;
-const FORCE_RELOAD_POLLS = 3;
+let _lastSuccessfulLoad = Date.now();
+const POLL_INTERVAL_MS   = 60_000;
+const FORCE_RELOAD_POLLS = 1;   // telão: recarrega a cada poll
+const AUTO_RELOAD_MS     = 35 * 60 * 1000; // auto-reload se sem dados por 35 min
 
 // ── LOG ──────────────────────────────────────────────────────
 const _log = {
@@ -908,7 +910,7 @@ async function loadAllData(summaryData, lm) {
     const [rFunnel, rByRep, rActive, rClosed, rAds, rLatest] = await Promise.allSettled([
       proxy('funnel'),
       proxy('by_rep'),
-      proxy('active'),
+      proxy('active_all'),
       proxy('closed'),
       proxy('ads'),
       proxy('latest'),
@@ -921,7 +923,7 @@ async function loadAllData(summaryData, lm) {
     else _log.error('loadAll', 'by_rep falhou', rByRep.reason);
 
     if (rActive.status === 'fulfilled')  renderAtivos(rActive.value);
-    else _log.error('loadAll', 'active falhou', rActive.reason);
+    else { _log.error('loadAll', 'active_all falhou', rActive.reason); renderAtivos({ leads: [] }); }
 
     if (rClosed.status === 'fulfilled')  renderFechados(rClosed.value);
     else _log.error('loadAll', 'closed falhou', rClosed.reason);
@@ -946,6 +948,7 @@ async function loadAllData(summaryData, lm) {
     }
 
     stamp(lm);
+    _lastSuccessfulLoad = Date.now(); // watchdog: marca última carga bem-sucedida
   } finally {
     _loadingEnd();
   }
@@ -973,6 +976,7 @@ async function checkForUpdates() {
     }
   } catch(e) {
     _log.error('check', 'Erro ao verificar planilha', e);
+    setTimeout(() => { if (!_isLoading) checkForUpdates(); }, 15000); // retry após 15s
   } finally {
     _isLoading = false;
   }
@@ -982,6 +986,13 @@ async function checkForUpdates() {
 window.addEventListener('load', () => {
   checkForUpdates();
   setInterval(checkForUpdates, POLL_INTERVAL_MS);
+  // Watchdog: auto-reload da página se sem dados por 35 min (fallback máximo)
+  setInterval(() => {
+    if (Date.now() - _lastSuccessfulLoad > AUTO_RELOAD_MS) {
+      _log.warn('watchdog', 'sem dados por 35min — recarregando página');
+      location.reload();
+    }
+  }, 60_000);
 });
 
 document.addEventListener('visibilitychange', () => {
