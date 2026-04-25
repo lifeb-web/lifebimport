@@ -820,9 +820,15 @@ function renderAtivos(data) {
       const agEl   = document.getElementById(agId);
       const contEl = document.getElementById(contId);
       if (!tbody) return;
+      const ORDEM_STATUS = { 'Aguardando contato': 0, 'Em contato': 1, 'Em negociação': 2 };
       const repLeads = leads
         .filter(l => (l.rep || '').toUpperCase() === repName)
-        .sort((a, b) => (a.data || '').localeCompare(b.data || ''));
+        .sort((a, b) => {
+          const oa = ORDEM_STATUS[a.status] !== undefined ? ORDEM_STATUS[a.status] : 9;
+          const ob = ORDEM_STATUS[b.status] !== undefined ? ORDEM_STATUS[b.status] : 9;
+          if (oa !== ob) return oa - ob;
+          return (a.data || '').localeCompare(b.data || ''); // mais antigo primeiro dentro do grupo
+        });
       if (badge)  badge.textContent  = `TOTAL: ${n(repLeads.length)} ATIVOS`;
       if (agEl)   agEl.textContent   = `AGUARDANDO: ${n(repLeads.filter(l => l.status === 'Aguardando contato').length)}`;
       if (contEl) contEl.textContent = `EM CONTATO: ${n(repLeads.filter(l => l.status === 'Em contato').length)}`;
