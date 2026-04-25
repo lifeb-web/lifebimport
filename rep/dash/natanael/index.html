@@ -452,22 +452,40 @@ function showUndoToast(msg, undoData, ms=8000) {
 
 async function undoLast() {
   if (!_undoPending) return;
-  const { row, campo, valor } = _undoPending;
+  const pending = _undoPending;
   _undoPending = null;
   const el = document.getElementById('toast');
   if (el) el.classList.remove('show');
   try {
-    const res  = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo, valor: String(valor) }) });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error);
-    const lead = _rawLeads.find(l => l.row === row);
-    if (lead) {
-      if      (campo === 'STATUS_VENDEDOR')  lead.status      = valor;
-      else if (campo === 'OBS_VENDEDOR')     lead.obs         = valor;
-      else if (campo === 'VALOR_POTENCIAL')  lead.pot         = parseFloat(valor) || 0;
-      else if (campo === 'VALOR_FECHADO')    lead.valor_fech  = parseFloat(valor) || 0;
-      else if (campo === 'MOTIVO_PERDA')     lead.motivo_perd = valor;
+    if (pending.isMulti) {
+      // Revert both STATUS_VENDEDOR and the extra campo (Fechado/Perdido undo)
+      for (const { row, campo, valor } of pending.actions) {
+        const res = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
+          body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo, valor: String(valor) }) });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+      }
+      // Restore lead to active list with reverted status
+      if (pending.leadSnapshot) {
+        const snap = { ...pending.leadSnapshot };
+        const statusAction = pending.actions.find(a => a.campo === 'STATUS_VENDEDOR');
+        if (statusAction) snap.status = statusAction.valor;
+        if (!_rawLeads.find(l => l.row === snap.row)) _rawLeads.push(snap);
+      }
+    } else {
+      const { row, campo, valor } = pending;
+      const res = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
+        body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo, valor: String(valor) }) });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+      const lead = _rawLeads.find(l => l.row === row);
+      if (lead) {
+        if      (campo === 'STATUS_VENDEDOR')  lead.status      = valor;
+        else if (campo === 'OBS_VENDEDOR')     lead.obs         = valor;
+        else if (campo === 'VALOR_POTENCIAL')  lead.pot         = parseFloat(valor) || 0;
+        else if (campo === 'VALOR_FECHADO')    lead.valor_fech  = parseFloat(valor) || 0;
+        else if (campo === 'MOTIVO_PERDA')     lead.motivo_perd = valor;
+      }
     }
     renderLeads(_rawLeads);
     showToast('Desfeito ✓');
@@ -556,6 +574,32 @@ function toggleExpand(btn) {
   btn.setAttribute('aria-expanded', expanding);
 }
 
+// ── LINK CONFIRM (WA / Maps) ─────────────────────────────────────
+function openLinkConfirm(btn) {
+  const url  = btn.dataset.url;
+  if (!url) return;
+  const card   = btn.closest('.lead-card, .hist-card');
+  const prefix = card && card.classList.contains('hist-card') ? 'hlc' : 'lc';
+  const confId = card ? (prefix + '-' + card.dataset.row) : null;
+  const conf   = confId ? document.getElementById(confId) : null;
+  if (!conf) { window.open(url, '_blank', 'noopener,noreferrer'); return; }
+  const lbl = conf.querySelector('.lc-confirm-msg strong');
+  if (lbl) lbl.textContent = btn.classList.contains('wa') ? 'WhatsApp' : 'Google Maps';
+  conf.dataset.pending = url;
+  conf.classList.add('visible');
+}
+function closeLinkConfirm(id) {
+  const conf = document.getElementById(id);
+  if (conf) conf.classList.remove('visible');
+}
+function doConfirmLink(id) {
+  const conf = document.getElementById(id);
+  if (!conf) return;
+  const url = conf.dataset.pending;
+  conf.classList.remove('visible');
+  if (url) window.open(url, '_blank', 'noopener,noreferrer');
+}
+
 // ── CONTACT PANEL ─────────────────────────────────────────────
 function toggleContact(btn, row) {
   const panel = document.getElementById('cp-' + row);
@@ -588,23 +632,30 @@ async function savePot(row) {
   if (isNaN(n) || n < 0) { showToast('Valor inválido'); return; }
   const lead   = _rawLeads.find(l => l.row === row);
   const oldPot = lead ? String(lead.pot || 0) : '0';
+
+  // optimistic: update UI immediately
+  if (lead) lead.pot = n;
+  const disp  = document.getElementById('pot-disp-' + row);
+  const iWrap = document.getElementById('pot-input-wrap-' + row);
+  const potEl = disp ? disp.querySelector('.lc-pot') : null;
+  if (potEl) potEl.innerHTML = (n > 0 ? esc(cur(n)) : '<span class="lc-pot-no-val">–</span>') + ` <span class="lc-pot-edit-icon">${SVG_EDIT}</span>`;
+  if (disp)  disp.style.display  = '';
+  if (iWrap) iWrap.style.display = 'none';
+  showUndoToast('Valor potencial atualizado ✓', { row, campo:'VALOR_POTENCIAL', valor:oldPot });
+
+  // background POST
   try {
     const res  = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
       body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'VALOR_POTENCIAL', valor:String(n) }) });
     const data = await res.json();
     if (!data.ok) throw new Error(data.error);
-    if (lead) lead.pot = n;
-    const disp  = document.getElementById('pot-disp-' + row);
-    const iWrap = document.getElementById('pot-input-wrap-' + row);
-    const potEl = disp ? disp.querySelector('.lc-pot') : null;
-    if (potEl) {
-      potEl.innerHTML = (n > 0 ? esc(cur(n)) : '<span class="lc-pot-no-val">–</span>') +
-        ` <span class="lc-pot-edit-icon">${SVG_EDIT}</span>`;
-    }
-    if (disp)  disp.style.display  = '';
-    if (iWrap) iWrap.style.display = 'none';
-    showUndoToast('Valor potencial atualizado ✓', { row, campo:'VALOR_POTENCIAL', valor:oldPot });
-  } catch(err) { showToast('Erro ao salvar — tente novamente'); }
+  } catch(_) {
+    // revert
+    if (lead) lead.pot = parseFloat(oldPot) || 0;
+    const oldN = parseFloat(oldPot) || 0;
+    if (potEl) potEl.innerHTML = (oldN > 0 ? esc(cur(oldN)) : '<span class="lc-pot-no-val">–</span>') + ` <span class="lc-pot-edit-icon">${SVG_EDIT}</span>`;
+    showToast('Erro ao salvar — alteração revertida');
+  }
 }
 function potKeyDown(e, row) {
   if (e.key === 'Enter')  { e.preventDefault(); savePot(row); }
@@ -636,31 +687,38 @@ async function saveObs(row) {
   const ta   = document.getElementById('obs-' + row);
   const fbEl = document.getElementById('obs-fb-' + row);
   const rep  = document.getElementById('obsr-' + row);
-  const btn  = ta ? ta.closest('.obsr-edit-wrap').querySelector('.lc-obs-save') : null;
   if (!ta) return;
   const valor  = ta.value.trim();
   const oldObs = rep ? (rep.dataset.saved || '') : '';
-  if (btn) btn.classList.add('saving');
-  if (fbEl) { fbEl.textContent = 'Salvando…'; fbEl.className = 'lc-obs-fb'; }
+
+  // optimistic: show new text immediately
+  const lead = _rawLeads.find(l => l.row === row);
+  if (lead) lead.obs = valor;
+  if (rep) {
+    rep.dataset.saved = valor;
+    rep.classList.remove('editing');
+    const viewDiv = rep.querySelector('.obsr-view');
+    if (viewDiv) viewDiv.innerHTML = buildObsViewHtml(row, valor);
+  }
+  if (fbEl) fbEl.textContent = '';
+  showUndoToast('Observação salva ✓', { row, campo:'OBS_VENDEDOR', valor:oldObs });
+
+  // background POST
   try {
     const res  = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
       body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'OBS_VENDEDOR', valor }) });
     const data = await res.json();
     if (!data.ok) throw new Error(data.error);
-    const lead = _rawLeads.find(l => l.row === row);
-    if (lead) lead.obs = valor;
+  } catch(_) {
+    // revert
+    if (lead) lead.obs = oldObs;
     if (rep) {
-      rep.dataset.saved = valor;
-      rep.classList.remove('editing');
+      rep.dataset.saved = oldObs;
       const viewDiv = rep.querySelector('.obsr-view');
-      if (viewDiv) viewDiv.innerHTML = buildObsViewHtml(row, valor);
+      if (viewDiv) viewDiv.innerHTML = buildObsViewHtml(row, oldObs);
     }
-    if (fbEl) fbEl.textContent = '';
-    showUndoToast('Observação salva ✓', { row, campo:'OBS_VENDEDOR', valor:oldObs });
-  } catch(err) {
-    if (fbEl) { fbEl.textContent = '✗ Não foi possível salvar.'; fbEl.className = 'lc-obs-fb err'; setTimeout(()=>{ if(fbEl) fbEl.textContent=''; }, 4000); }
-    showToast('Erro ao salvar — tente novamente');
-  } finally { if (btn) btn.classList.remove('saving'); }
+    showToast('Erro ao salvar — alteração revertida');
+  }
 }
 
 // ── PROMPT FECHADO / PERDIDO ───────────────────────────────────
@@ -698,7 +756,6 @@ function skipStatusPrompt(row) {
 async function saveStatusExtra(row) {
   const prompt = document.getElementById('sp-' + row);
   const input  = document.getElementById('sp-input-' + row);
-  const btn    = prompt ? prompt.querySelector('.lc-sp-save') : null;
   if (!prompt || !input) return;
   const tipo  = prompt.dataset.tipo;
   const raw   = input.value.trim();
@@ -715,25 +772,46 @@ async function saveStatusExtra(row) {
   const oldExtra = tipo === 'fechado'
     ? String(lead2 ? lead2.valor_fech  || 0  : 0)
     : (lead2 ? lead2.motivo_perd || '' : '');
-  if (btn) btn.classList.add('saving');
+  const oldStatus = prompt.dataset.oldStatus || '';
+  const newStatus = tipo === 'fechado' ? 'Fechado' : 'Perdido';
+
+  // Optimistic: update cache
+  if (lead2 && tipo === 'fechado')  lead2.valor_fech  = writeVal;
+  if (lead2 && tipo === 'perdido')  lead2.motivo_perd = writeVal;
+
+  // Save snapshot then remove from active list (won't reappear on next render/poll)
+  const leadSnapshot = lead2 ? { ...lead2 } : null;
+  const removeIdx = _rawLeads.findIndex(l => l.row === row);
+  if (removeIdx >= 0) _rawLeads.splice(removeIdx, 1);
+
+  prompt.classList.remove('visible');
+
+  // Multi-action undo: reverts both the status AND the extra campo in the spreadsheet
+  showUndoToast(tipo === 'fechado' ? 'Fechamento registrado ✓' : 'Motivo registrado ✓', {
+    isMulti: true,
+    leadSnapshot,
+    actions: [
+      { row, campo: 'STATUS_VENDEDOR', valor: oldStatus },
+      { row, campo, valor: oldExtra }
+    ]
+  });
+
+  const card = document.querySelector(`.lead-card[data-row="${row}"]`);
+  if (card) { card.classList.add('going-down'); setTimeout(() => renderLeads(_rawLeads, row), 1350); }
+
+  // Two sequential POSTs: status first, then valor/motivo
   try {
-    const res  = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
+    const r1 = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'STATUS_VENDEDOR', valor:newStatus }) });
+    const d1 = await r1.json();
+    if (!d1.ok) throw new Error(d1.error);
+    const r2 = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
       body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo, valor }) });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error);
-    // update cache
-    const lead = _rawLeads.find(l => l.row === row);
-    if (lead && tipo === 'fechado')  lead.valor_fech   = writeVal;
-    if (lead && tipo === 'perdido')  lead.motivo_perd  = writeVal;
-    prompt.classList.remove('visible');
-    showUndoToast(tipo === 'fechado' ? 'Fechamento registrado ✓' : 'Motivo registrado ✓',
-      { row, campo, valor: oldExtra });
-    // re-sort card to history position
-    const card = document.querySelector(`.lead-card[data-row="${row}"]`);
-    if (card) { card.classList.add('going-down'); setTimeout(() => renderLeads(_rawLeads, row), 1350); }
-  } catch(err) {
-    showToast('Erro ao salvar — tente novamente');
-  } finally { if (btn) btn.classList.remove('saving'); }
+    const d2 = await r2.json();
+    if (!d2.ok) throw new Error(d2.error);
+  } catch(_) {
+    showToast('Erro ao registrar — verifique conexão');
+  }
 }
 function spKeyDown(e, row) {
   if (e.key === 'Enter') { e.preventDefault(); saveStatusExtra(row); }
@@ -770,43 +848,40 @@ async function confirmStatusChange(row) {
   if (!valor) return;
   conf.classList.remove('visible');
 
-  const sel      = document.querySelector(`.lc-select[data-row="${row}"]`);
-  const fbEl     = document.getElementById('fb-' + row);
+  const sel       = document.querySelector(`.lc-select[data-row="${row}"]`);
   const oldStatus = sel ? sel.dataset.original : '';
 
-  if (sel) { sel.value = valor; sel.className = 'lc-select ' + statusClass(valor); sel.classList.add('saving'); }
-  if (fbEl) { fbEl.textContent = 'Salvando…'; fbEl.className = 'lc-feedback'; }
+  // optimistic: update UI immediately
+  if (sel) { sel.value = valor; sel.className = 'lc-select ' + statusClass(valor); sel.dataset.original = valor; }
+  const card = sel ? sel.closest('.lead-card') : document.querySelector(`.lead-card[data-row="${row}"]`);
+  if (card) { card.classList.remove('ag','cont','neg'); const bc = borderClass(valor); if (bc) card.classList.add(bc); }
+  const raw = _rawLeads.find(l => l.row === row);
+  if (raw) raw.status = valor;
+
+  if (valor === 'Fechado' || valor === 'Perdido') {
+    // Store old status in prompt so saveStatusExtra can include it in the POST and undo
+    const prompt = document.getElementById('sp-' + row);
+    if (prompt) prompt.dataset.oldStatus = oldStatus;
+    showStatusPrompt(row, valor);
+    return; // POST fires only after valor/motivo is confirmed in saveStatusExtra
+  }
+
+  // Non-Fechado/Perdido: animate to new position and POST immediately
+  if (card) card.classList.add('going-down');
+  setTimeout(() => renderLeads(_rawLeads, row), 1350);
+  showUndoToast('Status atualizado ✓', { row, campo:'STATUS_VENDEDOR', valor:oldStatus });
 
   try {
     const res  = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
       body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'STATUS_VENDEDOR', valor }) });
     const data = await res.json();
     if (!data.ok) throw new Error(data.error);
-
-    if (sel) { sel.className = 'lc-select ' + statusClass(valor); sel.dataset.original = valor; }
-    const card = sel ? sel.closest('.lead-card') : document.querySelector(`.lead-card[data-row="${row}"]`);
-    if (card) { card.classList.remove('ag','cont','neg'); const bc = borderClass(valor); if (bc) card.classList.add(bc); }
-    if (fbEl) { fbEl.textContent = '✓ Salvo'; fbEl.className = 'lc-feedback ok'; }
-
-    const raw = _rawLeads.find(l => l.row === row);
-    if (raw) raw.status = valor;
-
-    if (valor === 'Fechado' || valor === 'Perdido') {
-      showStatusPrompt(row, valor);
-    } else {
-      if (card) card.classList.add('going-down');
-      setTimeout(() => renderLeads(_rawLeads, row), 1350);
-    }
-    showUndoToast('Status atualizado ✓', { row, campo:'STATUS_VENDEDOR', valor:oldStatus });
-  } catch(err) {
-    if (sel) { sel.value = sel.dataset.original; sel.className = 'lc-select ' + statusClass(sel.dataset.original); }
-    if (fbEl) {
-      fbEl.textContent = '✗ Não foi possível salvar.';
-      fbEl.className = 'lc-feedback err';
-      setTimeout(() => { if (fbEl) fbEl.textContent=''; }, 4000);
-    }
-    showToast('Erro ao salvar — tente novamente');
-  } finally { if (sel) sel.classList.remove('saving'); }
+  } catch(_) {
+    if (raw) raw.status = oldStatus;
+    if (sel) { sel.value = oldStatus; sel.className = 'lc-select ' + statusClass(oldStatus); sel.dataset.original = oldStatus; }
+    renderLeads(_rawLeads);
+    showToast('Erro ao salvar — alteração revertida');
+  }
 }
 
 // ── RENDER LEADS ──────────────────────────────────────────────
@@ -920,8 +995,8 @@ function renderLeads(leads, highlightRow) {
           ${l.data   ? `<span class="lc-tag">📅 ${esc(fmtData(l.data))}</span>` : ''}
           <div class="lc-meta-btns">
             ${hasContact ? `<button class="lc-icon-btn contact" onclick="toggleContact(this,${l.row})" title="Dados do contato" aria-expanded="false">${SVG_PERSON}</button>` : ''}
-            ${wa         ? `<a class="lc-icon-btn wa"   href="https://wa.me/${wa}" target="_blank" rel="noopener" title="WhatsApp">${SVG_WA}</a>` : ''}
-            ${mapLink    ? `<a class="lc-icon-btn maps" href="${esc(mapLink)}" target="_blank" rel="noopener" title="Ver no Google Maps">${SVG_PIN}</a>` : ''}
+            ${wa         ? `<button class="lc-icon-btn wa"   data-url="https://wa.me/${wa}" onclick="openLinkConfirm(this)" title="WhatsApp">${SVG_WA}</button>` : ''}
+            ${mapLink    ? `<button class="lc-icon-btn maps" data-url="${esc(mapLink)}" onclick="openLinkConfirm(this)" title="Ver no Google Maps">${SVG_PIN}</button>` : ''}
           </div>
         </div>
         <div class="lc-contact-panel" id="cp-${l.row}">${cpRows.join('')}</div>
@@ -943,6 +1018,13 @@ function renderLeads(leads, highlightRow) {
           <input class="lc-sp-input" id="sp-input-${l.row}" type="text" onkeydown="spKeyDown(event,${l.row})">
           <div class="lc-sp-footer">
             <button class="lc-sp-save" onclick="saveStatusExtra(${l.row})">Salvar e concluir</button>
+          </div>
+        </div>
+        <div class="lc-confirm" id="lc-${l.row}">
+          <div class="lc-confirm-msg">Abrir <strong></strong>?</div>
+          <div class="lc-confirm-actions">
+            <button class="lc-confirm-cancel" onclick="closeLinkConfirm('lc-${l.row}')">Cancelar</button>
+            <button class="lc-confirm-ok"     onclick="doConfirmLink('lc-${l.row}')">Abrir</button>
           </div>
         </div>
       </div>
@@ -1068,11 +1150,11 @@ function renderHistorico() {
     const valorMeta  = l.status==='Fechado' && l.valor>0 ? cur(l.valor) : '';
     const motivoMeta = l.status==='Perdido' && l.motivo ? l.motivo : '';
     const wa         = fmtWA(l.whatsapp);
-    return `<div class="hist-card ${bClass}">
+    return `<div class="hist-card ${bClass}" data-row="${l.row}">
       <div class="hist-top">
         <div class="hist-empresa">${empresa}</div>
         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-          ${wa ? `<a class="lc-icon-btn wa" href="https://wa.me/${wa}" target="_blank" rel="noopener" title="WhatsApp" style="width:26px;height:26px;">${SVG_WA}</a>` : ''}
+          ${wa ? `<button class="lc-icon-btn wa" data-url="https://wa.me/${wa}" onclick="openLinkConfirm(this)" title="WhatsApp" style="width:26px;height:26px;border:none;">${SVG_WA}</button>` : ''}
           <span class="hist-badge ${badge}">${esc(l.status)}</span>
         </div>
       </div>
@@ -1083,6 +1165,13 @@ function renderHistorico() {
         ${valorMeta  ? `<span class="lc-tag">💰 ${esc(valorMeta)}</span>` : ''}
         ${motivoMeta ? `<span class="lc-tag">❌ ${esc(motivoMeta)}</span>` : ''}
       </div>
+      ${wa ? `<div class="lc-confirm" id="hlc-${l.row}" style="margin-top:8px;">
+        <div class="lc-confirm-msg">Abrir <strong>WhatsApp</strong>?</div>
+        <div class="lc-confirm-actions">
+          <button class="lc-confirm-cancel" onclick="closeLinkConfirm('hlc-${l.row}')">Cancelar</button>
+          <button class="lc-confirm-ok"     onclick="doConfirmLink('hlc-${l.row}')">Abrir</button>
+        </div>
+      </div>` : ''}
     </div>`;
   }).join('');
 }
@@ -1101,8 +1190,18 @@ async function loadData() {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     if (data.error) throw new Error(data.error);
-    _rawLeads = data.leads || [];
-    renderLeads(_rawLeads);
+    const newLeads = data.leads || [];
+    // If a status prompt is visible, preserve that lead so it doesn't vanish mid-fill
+    _rawLeads.forEach(existing => {
+      if (!newLeads.find(nl => nl.row === existing.row)) {
+        const prompt = document.getElementById('sp-' + existing.row);
+        if (prompt && prompt.classList.contains('visible')) newLeads.push(existing);
+      }
+    });
+    const hasPending = !!document.querySelector('.lc-status-prompt.visible');
+    const changed    = _firstLoad || JSON.stringify(newLeads) !== JSON.stringify(_rawLeads);
+    _rawLeads = newLeads;
+    if (changed && !hasPending) renderLeads(_rawLeads);
     flashDot();
     _firstLoad = false;
     const err = document.getElementById('error-banner');
