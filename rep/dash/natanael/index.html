@@ -179,6 +179,7 @@
     .lc-sp-input:focus { border-color:var(--purple); }
     .lc-sp-footer { display:flex; gap:6px; margin-top:7px; justify-content:flex-end; }
 
+    .lc-sp-sel { appearance:none; -webkit-appearance:none; cursor:pointer; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%236b6484'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:28px; }
     .lc-sp-save { padding:7px 16px; border-radius:8px; background:var(--purple); color:#fff; border:none; font-family:var(--font); font-size:11px; font-weight:700; cursor:pointer; transition:background .15s; }
     .lc-sp-save:hover   { background:#5c3d82; }
     .lc-sp-save:active  { transform:scale(.96); }
@@ -731,17 +732,21 @@ function showStatusPrompt(row, status) {
   if (!prompt) return;
   const lbl   = prompt.querySelector('.lc-sp-label');
   const input = document.getElementById('sp-input-' + row);
+  const sel   = document.getElementById('sp-sel-' + row);
   if (status === 'Fechado') {
     if (lbl)   lbl.textContent = '💰 Qual foi o valor do fechamento?';
-    if (input) { input.type = 'text'; input.inputMode = 'numeric'; input.placeholder = 'Ex: 5000'; input.value = ''; }
+    if (input) { input.value = ''; input.style.display = ''; }
+    if (sel)   sel.style.display = 'none';
     prompt.dataset.tipo = 'fechado';
+    if (input) { input.focus(); }
   } else if (status === 'Perdido') {
     if (lbl)   lbl.textContent = '❌ Qual o motivo da perda?';
-    if (input) { input.type = 'text'; input.inputMode = 'text'; input.placeholder = 'Ex: Preço alto, concorrência…'; input.value = ''; }
+    if (input) input.style.display = 'none';
+    if (sel)   { sel.value = ''; sel.style.display = ''; }
     prompt.dataset.tipo = 'perdido';
+    if (sel) sel.focus();
   }
   prompt.classList.add('visible');
-  if (input) input.focus();
 }
 function skipStatusPrompt(row) {
   const prompt = document.getElementById('sp-' + row);
@@ -759,15 +764,23 @@ function skipStatusPrompt(row) {
 }
 async function saveStatusExtra(row) {
   const prompt = document.getElementById('sp-' + row);
-  const input  = document.getElementById('sp-input-' + row);
-  if (!prompt || !input) return;
+  if (!prompt) return;
   const tipo  = prompt.dataset.tipo;
-  const raw   = input.value.trim();
-  if (!raw) { showToast('Por favor, preencha o campo'); input.focus(); return; }
+  const input = document.getElementById('sp-input-' + row);
+  const sel   = document.getElementById('sp-sel-' + row);
+  // For fechado: read text input. For perdido: read select dropdown.
+  const raw = tipo === 'perdido'
+    ? (sel ? sel.value.trim() : '')
+    : (input ? input.value.trim() : '');
+  if (!raw) {
+    showToast(tipo === 'perdido' ? 'Selecione o motivo da perda' : 'Por favor, preencha o campo');
+    if (tipo === 'perdido' && sel) sel.focus(); else if (input) input.focus();
+    return;
+  }
   let campo, valor, writeVal;
   if (tipo === 'fechado') {
     const n = parseFloat(raw.replace(/[^\d,.-]/g,'').replace(',','.'));
-    if (isNaN(n) || n < 0) { showToast('Valor inválido'); input.focus(); return; }
+    if (isNaN(n) || n < 0) { showToast('Valor inválido'); if (input) input.focus(); return; }
     campo = 'VALOR_FECHADO'; valor = String(n); writeVal = n;
   } else {
     campo = 'MOTIVO_PERDA'; valor = raw; writeVal = raw;
@@ -1019,7 +1032,16 @@ function renderLeads(leads, highlightRow) {
         </div>
         <div class="lc-status-prompt" id="sp-${l.row}">
           <div class="lc-sp-label"></div>
-          <input class="lc-sp-input" id="sp-input-${l.row}" type="text" onkeydown="spKeyDown(event,${l.row})">
+          <input class="lc-sp-input" id="sp-input-${l.row}" type="text" inputmode="numeric" placeholder="Ex: 5000" onkeydown="spKeyDown(event,${l.row})">
+          <select class="lc-sp-input lc-sp-sel" id="sp-sel-${l.row}" style="display:none">
+            <option value="">Selecione o motivo…</option>
+            <option>Sem interesse</option>
+            <option>Sem retorno</option>
+            <option>Restrição de pagamento</option>
+            <option>Já possui fornecedor</option>
+            <option>Fora do perfil</option>
+            <option>Outro</option>
+          </select>
           <div class="lc-sp-footer">
             <button class="lc-sp-save" onclick="saveStatusExtra(${l.row})">Salvar e concluir</button>
           </div>
