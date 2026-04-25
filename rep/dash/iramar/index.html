@@ -19,314 +19,261 @@
       --bg:      #f4f2f8;
       --card:    #ffffff;
       --border:  #e8e4f0;
+      --shadow:  rgba(112,75,155,.12);
       --font:    'Montserrat', sans-serif;
     }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { overflow-x: hidden; }
-    body {
-      font-family: var(--font);
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      -webkit-tap-highlight-color: transparent;
-    }
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    html { overflow-x:hidden; }
+    body { font-family:var(--font); background:var(--bg); color:var(--text); min-height:100vh; -webkit-tap-highlight-color:transparent; }
 
-    /* ── LOADING BAR ─────────────────────────────────────── */
-    #loading-bar {
-      position: fixed; top: 0; left: 0; height: 3px; width: 0%;
-      background: linear-gradient(90deg, var(--purple), var(--magenta));
-      z-index: 9999; opacity: 0; pointer-events: none;
-    }
-    #loading-bar.running {
-      animation: loadbar 1.8s ease-in-out infinite;
-    }
-    @keyframes loadbar {
-      0%   { width: 0%;   opacity: 1; }
-      60%  { width: 80%;  opacity: 1; }
-      100% { width: 100%; opacity: 0; }
-    }
+    /* LOADING BAR */
+    #loading-bar { position:fixed; top:0; left:0; height:3px; width:0%; background:linear-gradient(90deg,var(--purple),var(--magenta)); z-index:9999; opacity:0; pointer-events:none; }
+    #loading-bar.running { animation:loadbar 1.8s ease-in-out infinite; }
+    @keyframes loadbar { 0%{width:0%;opacity:1;} 60%{width:80%;opacity:1;} 100%{width:100%;opacity:0;} }
 
-    /* ── HEADER ──────────────────────────────────────────── */
-    header {
-      background: #fff;
-      border-bottom: 1px solid var(--border);
-      padding: 0 16px;
-      height: 58px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      box-shadow: 0 2px 12px rgba(112,75,155,.15);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-    .h-brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
-    .h-logo  { height: 28px; width: auto; flex-shrink: 0; }
-    .h-sep   { width: 1px; height: 24px; background: rgba(112,75,155,.25); flex-shrink: 0; }
-    .h-rep   {
-      font-size: 13px; font-weight: 800; color: var(--purple);
-      letter-spacing: .4px; text-transform: uppercase;
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    }
-    .h-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-    #refresh-dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: var(--green); opacity: .35; flex-shrink: 0;
-    }
-    #refresh-dot.flash { animation: dot-flash 1.4s ease forwards; }
-    @keyframes dot-flash {
-      0%   { opacity: .35; transform: scale(1); }
-      18%  { opacity: 1;   transform: scale(1.8); box-shadow: 0 0 8px rgba(34,195,93,.6); }
-      100% { opacity: .35; transform: scale(1); }
-    }
-    #last-sync { font-size: 11px; font-weight: 600; color: var(--muted); }
+    /* HEADER */
+    header { background:#fff; border-bottom:1px solid var(--border); padding:0 16px; height:58px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 2px 14px var(--shadow); position:sticky; top:0; z-index:100; }
+    .h-brand { display:flex; align-items:center; gap:10px; min-width:0; }
+    .h-logo  { height:28px; width:auto; flex-shrink:0; }
+    .h-sep   { width:1px; height:24px; background:rgba(112,75,155,.25); flex-shrink:0; }
+    .h-rep   { font-size:13px; font-weight:800; color:var(--purple); letter-spacing:.4px; text-transform:uppercase; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .h-right { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+    #refresh-dot { width:8px; height:8px; border-radius:50%; background:var(--green); opacity:.35; flex-shrink:0; }
+    #refresh-dot.flash { animation:dot-flash 1.4s ease forwards; }
+    @keyframes dot-flash { 0%{opacity:.35;transform:scale(1);} 18%{opacity:1;transform:scale(1.8);box-shadow:0 0 8px rgba(34,195,93,.6);} 100%{opacity:.35;transform:scale(1);} }
+    #last-sync { font-size:11px; font-weight:600; color:var(--muted); }
 
-    /* ── MAIN ────────────────────────────────────────────── */
-    main { padding: 14px 14px 48px; max-width: 680px; margin: 0 auto; }
+    /* MAIN */
+    main { padding:14px 14px 56px; max-width:680px; margin:0 auto; }
 
-    /* ── SUMMARY / FILTROS ───────────────────────────────── */
-    .summary-strip {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 6px;
-      margin-bottom: 14px;
-    }
-    .sum-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 10px 6px;
-      text-align: center;
-      cursor: pointer;
-      transition: transform .12s, box-shadow .12s, border-color .15s;
-      user-select: none;
-    }
-    .sum-card:active { transform: scale(.96); }
-    .sum-card:hover  { box-shadow: 0 2px 10px rgba(112,75,155,.12); }
-    .sum-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; color: var(--muted); margin-bottom: 3px; }
-    .sum-val   { font-size: 22px; font-weight: 800; line-height: 1; }
-    .sum-card.s-ag   { border-top: 3px solid var(--red); }
-    .sum-card.s-cont { border-top: 3px solid var(--amber); }
-    .sum-card.s-neg  { border-top: 3px solid var(--emerald); }
-    .sum-card.s-tot  { border-top: 3px solid var(--purple); }
-    .sum-card.s-ag   .sum-val { color: var(--red); }
-    .sum-card.s-cont .sum-val { color: var(--amber); }
-    .sum-card.s-neg  .sum-val { color: var(--emerald); }
-    .sum-card.s-tot  .sum-val { color: var(--purple); }
+    /* SUMMARY / FILTROS */
+    .summary-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:12px; }
+    .sum-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:10px 6px; text-align:center; cursor:pointer; user-select:none; transition:transform .12s, box-shadow .12s; }
+    .sum-card:active { transform:scale(.95); }
+    .sum-label { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; color:var(--muted); margin-bottom:3px; }
+    .sum-val   { font-size:22px; font-weight:800; line-height:1; }
+    .sum-card.s-ag   { border-top:3px solid var(--red); }
+    .sum-card.s-cont { border-top:3px solid var(--amber); }
+    .sum-card.s-neg  { border-top:3px solid var(--emerald); }
+    .sum-card.s-tot  { border-top:3px solid var(--purple); }
+    .sum-card.s-ag   .sum-val { color:var(--red); }
+    .sum-card.s-cont .sum-val { color:var(--amber); }
+    .sum-card.s-neg  .sum-val { color:var(--emerald); }
+    .sum-card.s-tot  .sum-val { color:var(--purple); }
+    .sum-card.active { transform:scale(1.04); }
+    .sum-card.s-ag.active   { box-shadow:0 0 0 2px var(--red),     0 4px 14px rgba(220,38,38,.2); }
+    .sum-card.s-cont.active { box-shadow:0 0 0 2px var(--amber),   0 4px 14px rgba(217,119,6,.2); }
+    .sum-card.s-neg.active  { box-shadow:0 0 0 2px var(--emerald), 0 4px 14px rgba(22,163,74,.2); }
 
-    /* filtro ativo */
-    .sum-card.active {
-      box-shadow: 0 0 0 2px currentColor, 0 3px 12px rgba(0,0,0,.12);
-    }
-    .sum-card.s-ag.active   { box-shadow: 0 0 0 2px var(--red),     0 3px 12px rgba(220,38,38,.2); }
-    .sum-card.s-cont.active { box-shadow: 0 0 0 2px var(--amber),   0 3px 12px rgba(217,119,6,.2); }
-    .sum-card.s-neg.active  { box-shadow: 0 0 0 2px var(--emerald), 0 3px 12px rgba(22,163,74,.2); }
+    /* FILTER BAR */
+    #filter-bar { display:none; align-items:center; gap:8px; margin-bottom:10px; font-size:12px; font-weight:600; color:var(--muted); }
+    #filter-bar.visible { display:flex; }
+    #filter-clear { background:none; border:1px solid var(--border); border-radius:20px; padding:3px 10px; font-family:var(--font); font-size:11px; font-weight:700; color:var(--muted); cursor:pointer; transition:background .12s; }
+    #filter-clear:hover { background:var(--border); }
 
-    /* ── FILTRO BADGE ────────────────────────────────────── */
-    #filter-bar {
-      display: none;
-      align-items: center; gap: 8px;
-      margin-bottom: 10px;
-      font-size: 12px; font-weight: 600; color: var(--muted);
-    }
-    #filter-bar.visible { display: flex; }
-    #filter-clear {
-      background: none; border: 1px solid var(--border); border-radius: 20px;
-      padding: 3px 10px; font-family: var(--font); font-size: 11px; font-weight: 700;
-      color: var(--muted); cursor: pointer; transition: background .12s;
-    }
-    #filter-clear:hover { background: var(--border); }
+    /* ERROR BANNER */
+    #error-banner { display:none; background:#fff0f5; border:1px solid #ffc0d8; border-radius:10px; padding:12px 16px; color:#b0134a; font-size:13px; margin-bottom:12px; }
 
-    /* ── ERROR BANNER ────────────────────────────────────── */
-    #error-banner {
-      display: none;
-      background: #fff0f5; border: 1px solid #ffc0d8;
-      border-radius: 10px; padding: 12px 16px;
-      color: #b0134a; font-size: 13px; margin-bottom: 14px;
-    }
+    /* LEAD CARD */
+    .lead-card { background:var(--card); border:1px solid var(--border); border-radius:14px; margin-bottom:10px; box-shadow:0 1px 6px rgba(0,0,0,.05); overflow:hidden; transition:box-shadow .15s; }
+    .lead-card:hover { box-shadow:0 3px 14px rgba(0,0,0,.09); }
+    .lead-card.ag   { border-left:4px solid var(--red); }
+    .lead-card.cont { border-left:4px solid var(--amber); }
+    .lead-card.neg  { border-left:4px solid var(--emerald); }
 
-    /* ── LEAD CARD ───────────────────────────────────────── */
-    .lead-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      margin-bottom: 10px;
-      box-shadow: 0 1px 6px rgba(0,0,0,.05);
-      overflow: hidden;
-      transition: box-shadow .15s;
+    @keyframes going-down {
+      0%   { opacity:1;   transform:scale(1);     box-shadow:0 1px 6px rgba(0,0,0,.05); }
+      20%  { opacity:1;   transform:scale(1.015); box-shadow:0 0 0 3px var(--purple),0 6px 20px rgba(112,75,155,.3); }
+      80%  { opacity:.65; transform:scale(.99);   box-shadow:0 0 0 2px var(--purple),0 2px 8px rgba(112,75,155,.15); }
+      100% { opacity:.35; transform:scale(1);     box-shadow:0 1px 6px rgba(0,0,0,.05); }
     }
-    .lead-card:hover { box-shadow: 0 3px 14px rgba(0,0,0,.08); }
-    .lead-card.ag   { border-left: 4px solid var(--red); }
-    .lead-card.cont { border-left: 4px solid var(--amber); }
-    .lead-card.neg  { border-left: 4px solid var(--emerald); }
+    .lead-card.going-down { animation:going-down 1.3s cubic-bezier(.4,0,.2,1) forwards; pointer-events:none; }
+    @keyframes just-placed { 0%{box-shadow:0 0 0 2px var(--purple),0 4px 16px rgba(112,75,155,.25);} 100%{box-shadow:0 1px 6px rgba(0,0,0,.05);} }
+    .lead-card.just-placed { animation:just-placed .9s ease-out; }
 
-    /* card body */
-    .lc-body { padding: 14px 14px 8px; }
+    .lc-body { padding:14px 14px 8px; }
 
-    /* top: empresa + potencial */
-    .lc-top {
-      display: flex; align-items: flex-start;
-      justify-content: space-between; gap: 8px; margin-bottom: 8px;
-    }
-    .lc-empresa {
-      font-size: 15px; font-weight: 800; color: var(--text);
-      line-height: 1.2; flex: 1; min-width: 0;
-      word-break: break-word;
-    }
-    .lc-pot {
-      font-size: 13px; font-weight: 700; color: var(--purple);
-      white-space: nowrap; flex-shrink: 0;
-    }
+    /* empresa + pot */
+    .lc-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:2px; }
+    .lc-empresa { font-size:15px; font-weight:800; color:var(--text); line-height:1.2; flex:1; min-width:0; word-break:break-word; }
+    .lc-nome { font-size:11px; font-weight:600; color:var(--muted); margin-bottom:8px; line-height:1.3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
-    /* meta: tags + botões */
-    .lc-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
-    .lc-tag  {
-      font-size: 10px; font-weight: 600; color: var(--muted);
-      background: var(--bg); border-radius: 6px; padding: 3px 8px;
-      white-space: nowrap;
-    }
-    .lc-meta-spacer { flex: 1; min-width: 4px; }
+    /* valor potencial inline edit */
+    .lc-pot-wrap { flex-shrink:0; }
+    .lc-pot { font-size:13px; font-weight:700; color:var(--purple); white-space:nowrap; cursor:pointer; border-radius:6px; padding:2px 5px; transition:background .12s; display:inline-flex; align-items:center; gap:4px; }
+    .lc-pot:hover { background:rgba(112,75,155,.1); }
+    .lc-pot-no-val { font-size:12px; font-weight:600; color:var(--muted); }
+    .lc-pot-edit-icon { opacity:.5; }
+    .lc-pot-input-wrap { display:none; }
+    .lc-pot-input { width:110px; padding:4px 8px; border-radius:8px; border:2px solid var(--purple); font-family:var(--font); font-size:13px; font-weight:700; color:var(--purple); background:#fff; outline:none; }
+    .lc-pot-actions { display:flex; gap:4px; margin-top:4px; justify-content:flex-end; }
+    .lc-pot-save, .lc-pot-cancel { padding:3px 10px; border-radius:6px; border:none; font-family:var(--font); font-size:11px; font-weight:700; cursor:pointer; transition:transform .1s; }
+    .lc-pot-save   { background:var(--purple); color:#fff; }
+    .lc-pot-cancel { background:var(--border);  color:var(--muted); }
+    .lc-pot-save:active, .lc-pot-cancel:active { transform:scale(.93); }
 
-    /* icon buttons */
-    .lc-icon-btn {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 32px; height: 32px; border-radius: 50%;
-      border: none; cursor: pointer; flex-shrink: 0;
-      transition: transform .12s, box-shadow .12s;
-      text-decoration: none; outline: none;
-    }
-    .lc-icon-btn:active { transform: scale(.88); }
-    .lc-icon-btn.wa    { background: #e6f9ee; color: #16a34a; }
-    .lc-icon-btn.wa:hover  { background: #d1f5e0; box-shadow: 0 2px 8px rgba(22,163,74,.3); }
-    .lc-icon-btn.maps  { background: rgba(112,75,155,.1); color: var(--purple); }
-    .lc-icon-btn.maps:hover { background: rgba(112,75,155,.18); box-shadow: 0 2px 8px rgba(112,75,155,.25); }
+    /* meta tags + icon buttons */
+    .lc-meta { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+    .lc-tag  { font-size:10px; font-weight:600; color:var(--muted); background:var(--bg); border-radius:6px; padding:3px 8px; white-space:nowrap; }
+    .lc-meta-spacer { flex:1; min-width:2px; }
 
-    /* status select */
-    .lc-status-wrap { position: relative; }
-    .lc-select {
-      width: 100%; appearance: none; -webkit-appearance: none;
-      padding: 10px 36px 10px 14px; border-radius: 10px;
-      border: 2px solid var(--border); font-family: var(--font);
-      font-size: 13px; font-weight: 700; cursor: pointer;
-      transition: border-color .15s, background .15s, color .15s;
-      background-color: var(--bg); color: var(--text); outline: none;
-    }
-    .lc-select:focus { border-color: var(--purple); }
-    .lc-select.s-ag   { background: rgba(220,38,38,.07);  border-color: rgba(220,38,38,.4);  color: #b91c1c; }
-    .lc-select.s-cont { background: rgba(217,119,6,.07);  border-color: rgba(217,119,6,.4);  color: #92400e; }
-    .lc-select.s-neg  { background: rgba(22,163,74,.07);  border-color: rgba(22,163,74,.4);  color: #15803d; }
-    .lc-select.s-fech { background: rgba(22,163,74,.12);  border-color: rgba(22,163,74,.5);  color: #15803d; }
-    .lc-select.s-perd { background: rgba(220,38,38,.07);  border-color: rgba(220,38,38,.3);  color: #991b1b; }
-    .lc-select.saving { opacity: .6; pointer-events: none; }
-    .lc-status-wrap::after {
-      content: '▾'; position: absolute; right: 12px; top: 50%;
-      transform: translateY(-50%); font-size: 13px; color: var(--muted); pointer-events: none;
-    }
+    .lc-icon-btn { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:50%; border:none; cursor:pointer; flex-shrink:0; transition:transform .12s, box-shadow .12s, background .15s; text-decoration:none; outline:none; }
+    .lc-icon-btn:active { transform:scale(.88); }
+    .lc-icon-btn.contact { background:rgba(112,75,155,.1); color:var(--purple); }
+    .lc-icon-btn.contact:hover  { background:rgba(112,75,155,.18); box-shadow:0 2px 8px var(--shadow); }
+    .lc-icon-btn.contact.active { background:var(--purple); color:#fff; }
+    .lc-icon-btn.wa    { background:#e6f9ee; color:#16a34a; }
+    .lc-icon-btn.wa:hover   { background:#d1f5e0; box-shadow:0 2px 8px rgba(22,163,74,.3); }
+    .lc-icon-btn.maps  { background:rgba(112,75,155,.1); color:var(--purple); }
+    .lc-icon-btn.maps:hover { background:rgba(112,75,155,.18); box-shadow:0 2px 8px var(--shadow); }
 
-    /* feedback status */
-    .lc-feedback {
-      font-size: 11px; font-weight: 600; min-height: 16px;
-      padding: 2px 2px 0; transition: opacity .3s;
-    }
-    .lc-feedback.ok  { color: #16a34a; }
-    .lc-feedback.err { color: var(--red); }
+    /* CONTACT PANEL */
+    @keyframes panel-in { from{opacity:0;transform:translateY(-4px);} to{opacity:1;transform:translateY(0);} }
+    .lc-contact-panel { background:#faf8fd; border:1px solid var(--border); border-radius:10px; padding:4px 12px; margin-bottom:10px; display:none; animation:panel-in .18s ease; }
+    .lcp-row { display:flex; align-items:flex-start; gap:8px; padding:7px 0; }
+    .lcp-row + .lcp-row { border-top:1px solid var(--border); }
+    .lcp-icon  { font-size:14px; flex-shrink:0; line-height:1.5; }
+    .lcp-info  { flex:1; min-width:0; }
+    .lcp-label { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; color:var(--muted); }
+    .lcp-val   { font-size:12px; font-weight:600; color:var(--text); word-break:break-word; line-height:1.4; }
+    .lcp-tel   { font-size:13px; font-weight:700; color:var(--purple); text-decoration:none; line-height:1.4; }
+    .lcp-tel:hover { text-decoration:underline; }
 
-    /* ── EXPAND TOGGLE ───────────────────────────────────── */
-    .lc-toggle {
-      width: 100%; padding: 7px 14px; border-top: 1px solid var(--border);
-      background: none; border-left: none; border-right: none; border-bottom: none;
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
-      gap: 4px; font-family: var(--font); font-size: 10px; font-weight: 700;
-      color: var(--muted); letter-spacing: .4px; text-transform: uppercase;
-      transition: background .12s, color .12s;
-    }
-    .lc-toggle:hover { background: var(--bg); color: var(--purple); }
-    .lc-toggle .ti { font-size: 11px; transition: transform .2s; display: inline-block; }
-    .lead-card.expanded .lc-toggle .ti { transform: rotate(180deg); }
-    .lead-card.expanded .lc-toggle     { color: var(--purple); }
+    /* STATUS SELECT */
+    .lc-status-wrap { position:relative; }
+    .lc-select { width:100%; appearance:none; -webkit-appearance:none; padding:10px 36px 10px 14px; border-radius:10px; border:2px solid var(--border); font-family:var(--font); font-size:13px; font-weight:700; cursor:pointer; transition:border-color .15s, background .15s, color .15s; background-color:var(--bg); color:var(--text); outline:none; }
+    .lc-select:focus { border-color:var(--purple); }
+    .lc-select.s-ag   { background:rgba(220,38,38,.07);  border-color:rgba(220,38,38,.4);  color:#b91c1c; }
+    .lc-select.s-cont { background:rgba(217,119,6,.07);  border-color:rgba(217,119,6,.4);  color:#92400e; }
+    .lc-select.s-neg  { background:rgba(22,163,74,.07);  border-color:rgba(22,163,74,.4);  color:#15803d; }
+    .lc-select.s-fech { background:rgba(22,163,74,.12);  border-color:rgba(22,163,74,.5);  color:#15803d; }
+    .lc-select.s-perd { background:rgba(220,38,38,.07);  border-color:rgba(220,38,38,.3);  color:#991b1b; }
+    .lc-select.saving { opacity:.6; pointer-events:none; }
+    .lc-status-wrap::after { content:'▾'; position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:13px; color:var(--muted); pointer-events:none; }
+    .lc-feedback { font-size:11px; font-weight:600; min-height:16px; padding:2px 2px 0; }
+    .lc-feedback.ok  { color:#16a34a; }
+    .lc-feedback.err { color:var(--red); }
 
-    /* ── EXPANDED SECTION ────────────────────────────────── */
-    .lc-expand { display: none; padding: 12px 14px 14px; border-top: 1px solid var(--border); }
-    .lead-card.expanded .lc-expand { display: block; }
+    /* STATUS CONFIRMATION */
+    .lc-confirm { display:none; background:#f9f6ff; border:1px solid rgba(112,75,155,.3); border-radius:10px; padding:10px 12px; margin-top:6px; animation:panel-in .18s ease; }
+    .lc-confirm.visible { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .lc-confirm-msg { font-size:12px; font-weight:600; color:var(--text); flex:1; min-width:120px; line-height:1.45; }
+    .lc-confirm-msg strong { color:var(--purple); }
+    .lc-confirm-sub { display:block; font-size:10px; font-weight:600; color:var(--muted); margin-top:2px; }
+    .lc-confirm-actions { display:flex; gap:6px; flex-shrink:0; }
+    .lc-confirm-ok { padding:7px 14px; border-radius:8px; background:var(--purple); color:#fff; border:none; font-family:var(--font); font-size:11px; font-weight:700; cursor:pointer; transition:background .15s, transform .1s; }
+    .lc-confirm-ok:hover { background:#5c3d82; }
+    .lc-confirm-ok:active { transform:scale(.95); }
+    .lc-confirm-cancel { padding:7px 12px; border-radius:8px; border:1.5px solid var(--border); background:none; font-family:var(--font); font-size:11px; font-weight:700; color:var(--muted); cursor:pointer; transition:background .12s; }
+    .lc-confirm-cancel:hover { background:var(--bg); }
 
-    .lc-detail { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
-    .lc-detail-row { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; }
-    .lc-d-icon  { font-size: 13px; flex-shrink: 0; line-height: 1.5; }
-    .lc-d-label { font-weight: 700; color: var(--muted); min-width: 56px; flex-shrink: 0; line-height: 1.5; font-size: 11px; }
-    .lc-d-val   { font-weight: 500; color: var(--text); word-break: break-word; line-height: 1.5; }
+    /* PROMPT FECHADO / PERDIDO */
+    .lc-status-prompt { display:none; background:#f9f6ff; border:1px solid rgba(112,75,155,.25); border-radius:10px; padding:10px 12px; margin-top:8px; animation:panel-in .2s ease; }
+    .lc-status-prompt.visible { display:block; }
+    .lc-sp-label { font-size:10px; font-weight:700; color:var(--purple); text-transform:uppercase; letter-spacing:.3px; margin-bottom:6px; }
+    .lc-sp-input { width:100%; padding:9px 12px; border-radius:8px; border:1.5px solid var(--border); font-family:var(--font); font-size:13px; color:var(--text); background:#fff; outline:none; transition:border-color .15s; }
+    .lc-sp-input:focus { border-color:var(--purple); }
+    .lc-sp-footer { display:flex; gap:6px; margin-top:7px; justify-content:flex-end; }
+    .lc-sp-skip { padding:7px 12px; border-radius:8px; border:1.5px solid var(--border); background:none; font-family:var(--font); font-size:11px; font-weight:700; color:var(--muted); cursor:pointer; }
+    .lc-sp-skip:hover { background:var(--border); }
+    .lc-sp-save { padding:7px 16px; border-radius:8px; background:var(--purple); color:#fff; border:none; font-family:var(--font); font-size:11px; font-weight:700; cursor:pointer; transition:background .15s; }
+    .lc-sp-save:hover   { background:#5c3d82; }
+    .lc-sp-save:active  { transform:scale(.96); }
+    .lc-sp-save.saving  { opacity:.6; pointer-events:none; }
 
-    /* obs SDR (somente leitura) */
-    .lc-obs-sdr {
-      background: #fdf8ff; border: 1px solid #e4d9f0;
-      border-radius: 8px; padding: 8px 12px; margin-bottom: 12px;
-      font-size: 11px; color: var(--muted); line-height: 1.5;
-    }
-    .lc-obs-sdr-label {
-      font-size: 10px; font-weight: 700; color: var(--purple);
-      text-transform: uppercase; letter-spacing: .3px; margin-bottom: 4px;
-    }
+    /* EXPAND TOGGLE */
+    .lc-toggle { width:100%; padding:7px 14px; border-top:1px solid var(--border); background:none; border-left:none; border-right:none; border-bottom:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; font-family:var(--font); font-size:10px; font-weight:700; color:var(--muted); letter-spacing:.4px; text-transform:uppercase; transition:background .12s, color .12s; }
+    .lc-toggle:hover { background:var(--bg); color:var(--purple); }
+    .lc-toggle .ti { font-size:11px; transition:transform .2s; display:inline-block; }
+    .lead-card.expanded .lc-toggle .ti { transform:rotate(180deg); }
+    .lead-card.expanded .lc-toggle { color:var(--purple); }
 
-    /* divisor */
-    .lc-divider { border: none; border-top: 1px dashed var(--border); margin: 10px 0 12px; }
+    /* EXPANDED SECTION */
+    .lc-expand { display:none; padding:12px 14px 14px; border-top:1px solid var(--border); }
+    .lead-card.expanded .lc-expand { display:block; }
 
-    /* obs rep (editável) */
-    .lc-obs-label { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .3px; margin-bottom: 6px; }
-    .lc-obs-textarea {
-      width: 100%; padding: 10px 12px; border-radius: 10px;
-      border: 1.5px solid var(--border); font-family: var(--font);
-      font-size: 13px; color: var(--text); resize: vertical; min-height: 72px;
-      background: var(--bg); outline: none; line-height: 1.5;
-      transition: border-color .15s, background .15s;
-    }
-    .lc-obs-textarea:focus { border-color: var(--purple); background: #fff; }
-    .lc-obs-footer { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 8px; }
-    .lc-obs-fb { font-size: 11px; font-weight: 600; flex: 1; }
-    .lc-obs-fb.ok  { color: #16a34a; }
-    .lc-obs-fb.err { color: var(--red); }
-    .lc-obs-save {
-      padding: 8px 18px; border-radius: 8px;
-      background: var(--purple); color: #fff; border: none;
-      cursor: pointer; font-family: var(--font); font-size: 12px;
-      font-weight: 700; letter-spacing: .3px;
-      transition: background .15s, transform .1s;
-    }
-    .lc-obs-save:hover  { background: #5c3d82; }
-    .lc-obs-save:active { transform: scale(.96); }
-    .lc-obs-save.saving { opacity: .6; pointer-events: none; }
+    .lc-obs-sdr { background:#fdf8ff; border:1px solid #e4d9f0; border-radius:8px; padding:8px 12px; margin-bottom:12px; }
+    .lc-obs-sdr-label { font-size:9px; font-weight:700; color:var(--purple); text-transform:uppercase; letter-spacing:.3px; margin-bottom:4px; }
+    .lc-obs-sdr-text  { font-size:12px; color:var(--muted); line-height:1.5; white-space:pre-wrap; word-break:break-word; }
 
-    /* ── EMPTY STATE ─────────────────────────────────────── */
-    .empty-state { text-align: center; padding: 48px 24px; color: var(--muted); font-size: 14px; }
-    .empty-state strong { display: block; font-size: 20px; margin-bottom: 8px; color: var(--purple); }
+    .lc-divider { border:none; border-top:1px dashed var(--border); margin:10px 0 12px; }
+    .lc-obs-label { font-size:9px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.3px; margin-bottom:8px; }
 
-    /* ── SKELETON ────────────────────────────────────────── */
+    .obsr-text { font-size:12px; color:var(--text); line-height:1.6; background:var(--bg); border-radius:8px; padding:8px 10px; margin-bottom:6px; white-space:pre-wrap; word-break:break-word; }
+    .obsr-edit-btn { display:inline-flex; align-items:center; gap:4px; padding:5px 12px; border-radius:8px; border:1.5px solid var(--border); background:none; font-family:var(--font); font-size:11px; font-weight:700; color:var(--muted); cursor:pointer; transition:border-color .12s, color .12s; }
+    .obsr-edit-btn:hover { border-color:var(--purple); color:var(--purple); }
+    .obsr-add-btn { width:100%; padding:9px 14px; border-radius:10px; border:1.5px dashed var(--border); background:none; font-family:var(--font); font-size:12px; font-weight:600; color:var(--muted); cursor:pointer; transition:border-color .12s, color .12s, background .12s; text-align:center; }
+    .obsr-add-btn:hover { border-color:var(--purple); color:var(--purple); background:rgba(112,75,155,.04); }
+    .obsr-edit-wrap { display:none; }
+    .lc-obs-rep.editing .obsr-view      { display:none; }
+    .lc-obs-rep.editing .obsr-edit-wrap { display:block; }
+    .lc-obs-textarea { width:100%; padding:10px 12px; border-radius:10px; border:1.5px solid var(--border); font-family:var(--font); font-size:13px; color:var(--text); resize:vertical; min-height:72px; background:var(--bg); outline:none; line-height:1.5; transition:border-color .15s, background .15s; }
+    .lc-obs-textarea:focus { border-color:var(--purple); background:#fff; }
+    .lc-obs-footer { display:flex; align-items:center; justify-content:flex-end; gap:6px; margin-top:8px; }
+    .lc-obs-fb { font-size:11px; font-weight:600; flex:1; }
+    .lc-obs-fb.ok  { color:#16a34a; }
+    .lc-obs-fb.err { color:var(--red); }
+    .obsr-cancel-btn { padding:8px 14px; border-radius:8px; border:1.5px solid var(--border); background:none; font-family:var(--font); font-size:12px; font-weight:700; color:var(--muted); cursor:pointer; }
+    .obsr-cancel-btn:hover { background:var(--bg); }
+    .lc-obs-save { padding:8px 18px; border-radius:8px; background:var(--purple); color:#fff; border:none; cursor:pointer; font-family:var(--font); font-size:12px; font-weight:700; letter-spacing:.3px; transition:background .15s, transform .1s; }
+    .lc-obs-save:hover   { background:#5c3d82; }
+    .lc-obs-save:active  { transform:scale(.96); }
+    .lc-obs-save.saving  { opacity:.6; pointer-events:none; }
+
+    /* SHOW MORE */
+    .show-more-btn { width:100%; padding:12px 20px; border-radius:12px; border:1.5px dashed rgba(112,75,155,.3); background:none; font-family:var(--font); font-size:12px; font-weight:700; color:var(--purple); cursor:pointer; margin-bottom:10px; transition:background .15s, border-color .15s; text-align:center; display:block; }
+    .show-more-btn:hover { background:rgba(112,75,155,.06); border-color:rgba(112,75,155,.5); }
+
+    /* HISTÓRICO */
+    .historico-section { margin-top:6px; }
+    .hist-header { width:100%; padding:12px 16px; border-radius:12px; background:var(--card); border:1px solid var(--border); display:flex; align-items:center; gap:10px; cursor:pointer; font-family:var(--font); text-align:left; box-shadow:0 1px 4px rgba(0,0,0,.04); transition:background .12s; }
+    .hist-header:hover { background:#faf8fd; }
+    .hist-title   { font-size:12px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; }
+    .hist-counts  { font-size:11px; font-weight:600; color:var(--muted); flex:1; }
+    .hist-chevron { font-size:12px; color:var(--muted); transition:transform .2s; display:inline-block; }
+    .historico-section.open .hist-chevron { transform:rotate(180deg); }
+    .hist-body { padding-top:8px; display:none; }
+    .historico-section.open .hist-body { display:block; }
+    .hist-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:8px; box-shadow:0 1px 4px rgba(0,0,0,.04); }
+    .hist-card.fech { border-left:4px solid var(--emerald); }
+    .hist-card.perd { border-left:4px solid var(--muted); opacity:.8; }
+    .hist-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:2px; }
+    .hist-empresa { font-size:13px; font-weight:800; color:var(--text); flex:1; min-width:0; word-break:break-word; }
+    .hist-badge { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; border-radius:20px; padding:2px 8px; flex-shrink:0; }
+    .hist-badge.b-fech { background:rgba(22,163,74,.12); color:#15803d; }
+    .hist-badge.b-perd { background:rgba(107,100,132,.12); color:var(--muted); }
+    .hist-nome { font-size:10px; font-weight:600; color:var(--muted); margin-bottom:5px; }
+    .hist-meta { display:flex; gap:5px; flex-wrap:wrap; }
+
+    /* EMPTY */
+    .empty-state { text-align:center; padding:48px 24px; color:var(--muted); font-size:14px; }
+    .empty-state strong { display:block; font-size:20px; margin-bottom:8px; color:var(--purple); }
+
+    /* SKELETON */
     @keyframes skel-shine { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
-    .skel {
-      background: linear-gradient(90deg,#e8e4f0 25%,#d0cae6 50%,#e8e4f0 75%);
-      background-size: 200% 100%; animation: skel-shine 1.4s linear infinite; border-radius: 6px;
-    }
-    .skel-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 10px; }
-    .skel-line { height: 14px; margin-bottom: 8px; }
-    .skel-line.w80 { width: 80%; }
-    .skel-line.w50 { width: 50%; }
-    .skel-btn  { height: 42px; border-radius: 10px; }
+    .skel { background:linear-gradient(90deg,#e8e4f0 25%,#d0cae6 50%,#e8e4f0 75%); background-size:200% 100%; animation:skel-shine 1.4s linear infinite; border-radius:6px; }
+    .skel-card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:10px; }
+    .skel-line { height:14px; margin-bottom:8px; }
+    .skel-line.w80 { width:80%; } .skel-line.w50 { width:50%; }
+    .skel-btn  { height:42px; border-radius:10px; }
 
-    /* ── TOAST ───────────────────────────────────────────── */
-    #toast {
-      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(16px);
-      background: #1f1635; color: #fff; padding: 10px 20px; border-radius: 24px;
-      font-size: 13px; font-weight: 600; opacity: 0; transition: opacity .25s, transform .25s;
-      pointer-events: none; white-space: nowrap; z-index: 9999; max-width: calc(100vw - 32px);
-    }
-    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    /* TOAST */
+    #toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(16px); background:#1f1635; color:#fff; padding:10px 20px; border-radius:24px; font-size:13px; font-weight:600; opacity:0; transition:opacity .25s, transform .25s; pointer-events:none; white-space:nowrap; z-index:9999; max-width:calc(100vw - 32px); }
+    #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 
-    /* ── DESKTOP ─────────────────────────────────────────── */
-    @media (min-width: 640px) {
-      main { padding: 20px 24px 56px; }
-      .summary-strip { gap: 10px; }
-      .sum-val { font-size: 26px; }
-      .lc-empresa { font-size: 16px; }
-      .lc-select  { font-size: 14px; padding: 11px 36px 11px 14px; }
-      .lc-detail-row { font-size: 13px; }
+    /* DESKTOP */
+    @media (min-width:640px) {
+      main { padding:20px 24px 60px; }
+      .summary-strip { gap:10px; }
+      .sum-val { font-size:26px; }
+      .lc-empresa { font-size:16px; }
+      .lc-select { font-size:14px; padding:11px 36px 11px 14px; }
+      .lcp-val, .lcp-tel { font-size:13px; }
+    }
+    @media (max-width:360px) {
+      .lc-icon-btn { width:28px; height:28px; }
+      .sum-val { font-size:20px; }
+      .lc-empresa { font-size:14px; }
     }
   </style>
 </head>
@@ -350,7 +297,7 @@
   <div id="error-banner"></div>
 
   <div class="summary-strip">
-    <div class="sum-card s-ag" data-filter="Aguardando contato" onclick="toggleFilter(this)">
+    <div class="sum-card s-ag"   data-filter="Aguardando contato" onclick="toggleFilter(this)">
       <div class="sum-label">Aguardando</div>
       <div class="sum-val" id="sum-ag">—</div>
     </div>
@@ -358,11 +305,11 @@
       <div class="sum-label">Em Contato</div>
       <div class="sum-val" id="sum-cont">—</div>
     </div>
-    <div class="sum-card s-neg" data-filter="Em negociação" onclick="toggleFilter(this)">
+    <div class="sum-card s-neg"  data-filter="Em negociação" onclick="toggleFilter(this)">
       <div class="sum-label">Negociando</div>
       <div class="sum-val" id="sum-neg">—</div>
     </div>
-    <div class="sum-card s-tot" data-filter="" onclick="toggleFilter(this)">
+    <div class="sum-card s-tot"  data-filter="" onclick="toggleFilter(this)">
       <div class="sum-label">Total Ativo</div>
       <div class="sum-val" id="sum-tot">—</div>
     </div>
@@ -373,8 +320,17 @@
     <button id="filter-clear" onclick="clearFilter()">✕ limpar</button>
   </div>
 
-  <div id="error-banner2" style="display:none;background:#fff0f5;border:1px solid #ffc0d8;border-radius:10px;padding:12px 16px;color:#b0134a;font-size:13px;margin-bottom:14px"></div>
   <div id="leads-list"></div>
+  <div id="show-more-wrap"></div>
+
+  <div class="historico-section" id="historico-section">
+    <button class="hist-header" onclick="toggleHistorico()" aria-expanded="false">
+      <span class="hist-title">Histórico</span>
+      <span class="hist-counts" id="hist-counts">fechados e perdidos</span>
+      <span class="hist-chevron">▾</span>
+    </button>
+    <div class="hist-body" id="hist-body"></div>
+  </div>
 </main>
 
 <div id="toast"></div>
@@ -384,10 +340,11 @@ const PROXY_URL = 'https://script.google.com/macros/s/AKfycbyq9KJgWTRoALEEVf8Pu_
 const REP_NAME  = 'IRAMAR';
 const REP_TOKEN = 'c4e09a0994b803ab35d43f3c';
 const POLL_MS   = 60_000;
+const LIMIT     = 8;
 
 const STATUS_LIST = ['Aguardando contato','Em contato','Em negociação','Fechado','Perdido'];
 
-// ── UTILS ────────────────────────────────────────────────────
+// ── UTILS ─────────────────────────────────────────────────────
 const esc = s => String(s == null ? '' : s)
   .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
@@ -398,7 +355,7 @@ const cur = v => v > 0
 function toTitleCase(s) {
   if (!s) return s;
   const lower = new Set(['de','do','da','dos','das','e','em','com','a','o','as','os','no','na','nos','nas','ao','aos','por']);
-  return String(s).toLowerCase().split(' ').map((w, i) =>
+  return String(s).toLowerCase().split(' ').map((w,i) =>
     (i > 0 && lower.has(w)) ? w : w.charAt(0).toUpperCase() + w.slice(1)
   ).join(' ');
 }
@@ -409,14 +366,25 @@ function fmtData(d) {
   return p.length === 3 ? `${p[2]}/${p[1]}/${p[0].slice(2)}` : d;
 }
 
+function fmtPhone(num) {
+  const d = String(num || '').replace(/\D/g, '');
+  if (!d) return { display:'', tel:'' };
+  const withCC = d.startsWith('55') ? d : '55' + d;
+  const local  = d.startsWith('55') ? d.slice(2) : d;
+  let display  = local;
+  if (local.length === 11) display = `(${local.slice(0,2)}) ${local.slice(2,3)} ${local.slice(3,7)}-${local.slice(7)}`;
+  else if (local.length === 10) display = `(${local.slice(0,2)}) ${local.slice(2,6)}-${local.slice(6)}`;
+  return { display, tel:'+' + withCC };
+}
+
 function fmtWA(num) {
-  const digits = String(num || '').replace(/\D/g, '');
-  if (!digits) return '';
-  return digits.startsWith('55') ? digits : '55' + digits;
+  const d = String(num || '').replace(/\D/g, '');
+  if (!d) return '';
+  return d.startsWith('55') ? d : '55' + d;
 }
 
 function buildMapsUrl(empresa, cidade, estado) {
-  const parts = [empresa, cidade, estado].map(v => String(v || '').trim()).filter(Boolean);
+  const parts = [empresa, cidade, estado].map(v => String(v||'').trim()).filter(Boolean);
   return parts.length ? 'https://maps.google.com/?q=' + encodeURIComponent(parts.join(', ')) : '';
 }
 
@@ -428,7 +396,6 @@ function statusClass(s) {
   if (s === 'Perdido')            return 's-perd';
   return '';
 }
-
 function borderClass(s) {
   if (s === 'Aguardando contato') return 'ag';
   if (s === 'Em contato')         return 'cont';
@@ -436,28 +403,29 @@ function borderClass(s) {
   return '';
 }
 
-// ── SVG ICONS ────────────────────────────────────────────────
-const SVG_WA = `<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>`;
+// ── SVG ICONS ─────────────────────────────────────────────────
+const SVG_WA     = `<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>`;
+const SVG_PIN    = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>`;
+const SVG_PERSON = `<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
+const SVG_EDIT   = `<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>`;
 
-const SVG_PIN = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>`;
-
-// ── LOADING BAR ──────────────────────────────────────────────
+// ── LOADING BAR ────────────────────────────────────────────────
 let _inFlight = 0;
 function loadStart() {
   if (++_inFlight !== 1) return;
   const b = document.getElementById('loading-bar');
-  if (b) { b.style.opacity = '1'; b.classList.add('running'); }
+  if (b) { b.style.opacity='1'; b.classList.add('running'); }
 }
 function loadEnd() {
   _inFlight = Math.max(0, _inFlight - 1);
   if (_inFlight > 0) return;
   const b = document.getElementById('loading-bar');
-  if (b) { b.classList.remove('running'); b.style.opacity = '0'; }
+  if (b) { b.classList.remove('running'); b.style.opacity='0'; }
 }
 
-// ── TOAST ────────────────────────────────────────────────────
+// ── TOAST ──────────────────────────────────────────────────────
 let _toastTimer;
-function showToast(msg, ms = 2600) {
+function showToast(msg, ms=2600) {
   const el = document.getElementById('toast');
   if (!el) return;
   el.textContent = msg;
@@ -466,22 +434,19 @@ function showToast(msg, ms = 2600) {
   _toastTimer = setTimeout(() => el.classList.remove('show'), ms);
 }
 
-// ── REFRESH DOT ──────────────────────────────────────────────
+// ── REFRESH DOT ────────────────────────────────────────────────
 function flashDot() {
   const dot  = document.getElementById('refresh-dot');
   const sync = document.getElementById('last-sync');
   if (dot) { dot.classList.remove('flash'); void dot.offsetWidth; dot.classList.add('flash'); }
-  if (sync) {
-    const now = new Date();
-    sync.textContent = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
-  }
+  if (sync) { const n = new Date(); sync.textContent = String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0'); }
 }
 
-// ── SKELETON ─────────────────────────────────────────────────
+// ── SKELETON ──────────────────────────────────────────────────
 function showSkeletons(n) {
   const list = document.getElementById('leads-list');
   if (!list) return;
-  list.innerHTML = Array.from({length: n}, () => `
+  list.innerHTML = Array.from({length:n}, () => `
     <div class="skel-card">
       <div class="skel skel-line w80"></div>
       <div class="skel skel-line w50"></div>
@@ -489,25 +454,20 @@ function showSkeletons(n) {
     </div>`).join('');
 }
 
-// ── FILTRO ───────────────────────────────────────────────────
+// ── FILTRO ─────────────────────────────────────────────────────
 let _activeFilter = null;
-
 function toggleFilter(card) {
   const filter = card.dataset.filter;
-  if (!filter || _activeFilter === filter) {
-    clearFilter();
-    return;
-  }
+  if (!filter || _activeFilter === filter) { clearFilter(); return; }
   _activeFilter = filter;
   document.querySelectorAll('.sum-card').forEach(c => c.classList.remove('active'));
   card.classList.add('active');
-  const bar   = document.getElementById('filter-bar');
-  const label = document.getElementById('filter-label');
-  if (bar)   bar.classList.add('visible');
-  if (label) label.textContent = 'Filtrando: ' + filter;
+  const bar = document.getElementById('filter-bar');
+  const lbl = document.getElementById('filter-label');
+  if (bar) bar.classList.add('visible');
+  if (lbl) lbl.textContent = 'Mostrando: ' + filter;
   applyFilter();
 }
-
 function clearFilter() {
   _activeFilter = null;
   document.querySelectorAll('.sum-card').forEach(c => c.classList.remove('active'));
@@ -515,20 +475,23 @@ function clearFilter() {
   if (bar) bar.classList.remove('visible');
   applyFilter();
 }
-
 function applyFilter() {
-  document.querySelectorAll('.lead-card').forEach(card => {
-    if (!_activeFilter) {
-      card.style.display = '';
-      return;
-    }
+  const wrap = document.getElementById('show-more-wrap');
+  document.querySelectorAll('#leads-list .lead-card').forEach(card => {
+    if (!_activeFilter) { card.style.display=''; return; }
     const sel = card.querySelector('.lc-select');
-    const status = sel ? sel.dataset.original : '';
-    card.style.display = (status === _activeFilter) ? '' : 'none';
+    card.style.display = (sel && sel.dataset.original === _activeFilter) ? '' : 'none';
   });
+  if (wrap) wrap.style.display = _activeFilter ? 'none' : '';
 }
 
-// ── TOGGLE EXPAND ────────────────────────────────────────────
+// ── SHOW ALL ──────────────────────────────────────────────────
+let _showAll  = false;
+let _rawLeads = [];
+let _allLeads = [];
+function showAll() { _showAll = true; renderLeads(_rawLeads); }
+
+// ── EXPAND TOGGLE ─────────────────────────────────────────────
 function toggleExpand(btn) {
   const card = btn.closest('.lead-card');
   if (!card) return;
@@ -539,16 +502,263 @@ function toggleExpand(btn) {
   btn.setAttribute('aria-expanded', expanding);
 }
 
-// ── RENDER LEADS ─────────────────────────────────────────────
-let _allLeads = [];
+// ── CONTACT PANEL ─────────────────────────────────────────────
+function toggleContact(btn, row) {
+  const panel = document.getElementById('cp-' + row);
+  if (!panel) return;
+  const isOpen = panel.style.display === 'block';
+  panel.style.display = isOpen ? 'none' : 'block';
+  btn.classList.toggle('active', !isOpen);
+  btn.setAttribute('aria-expanded', !isOpen);
+}
 
-function renderLeads(leads) {
+// ── VALOR POTENCIAL INLINE EDIT ────────────────────────────────
+function startPotEdit(row) {
+  const disp  = document.getElementById('pot-disp-' + row);
+  const iWrap = document.getElementById('pot-input-wrap-' + row);
+  const input = document.getElementById('pot-input-' + row);
+  if (disp)  disp.style.display  = 'none';
+  if (iWrap) iWrap.style.display = 'block';
+  if (input) { input.focus(); input.select(); }
+}
+function cancelPotEdit(row) {
+  const disp  = document.getElementById('pot-disp-' + row);
+  const iWrap = document.getElementById('pot-input-wrap-' + row);
+  if (disp)  disp.style.display  = '';
+  if (iWrap) iWrap.style.display = 'none';
+}
+async function savePot(row) {
+  const input = document.getElementById('pot-input-' + row);
+  if (!input) return;
+  const n = parseFloat(input.value.replace(/[^\d,.-]/g,'').replace(',','.'));
+  if (isNaN(n) || n < 0) { showToast('Valor inválido'); return; }
+  try {
+    const res  = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'VALOR_POTENCIAL', valor:String(n) }) });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    const lead = _rawLeads.find(l => l.row === row);
+    if (lead) lead.pot = n;
+    const disp  = document.getElementById('pot-disp-' + row);
+    const iWrap = document.getElementById('pot-input-wrap-' + row);
+    const potEl = disp ? disp.querySelector('.lc-pot') : null;
+    if (potEl) {
+      // rebuild pot display
+      potEl.innerHTML = (n > 0 ? esc(cur(n)) : '<span class="lc-pot-no-val">R$ —</span>') +
+        ` <span class="lc-pot-edit-icon">${SVG_EDIT}</span>`;
+    }
+    if (disp)  disp.style.display  = '';
+    if (iWrap) iWrap.style.display = 'none';
+    showToast('Valor potencial atualizado ✓');
+  } catch(err) { showToast('Erro ao salvar — tente novamente'); }
+}
+function potKeyDown(e, row) {
+  if (e.key === 'Enter')  { e.preventDefault(); savePot(row); }
+  if (e.key === 'Escape') cancelPotEdit(row);
+}
+
+// ── OBS REP VIEW/EDIT ──────────────────────────────────────────
+function buildObsViewHtml(row, obs) {
+  if (obs && obs.trim())
+    return `<div class="obsr-text" id="obsr-text-${row}">${esc(obs)}</div>
+            <button class="obsr-edit-btn" onclick="toggleObsEdit(${row})">${SVG_EDIT} Editar</button>`;
+  return `<button class="obsr-add-btn" onclick="toggleObsEdit(${row})">＋ Adicionar observação</button>`;
+}
+function toggleObsEdit(row) {
+  const rep = document.getElementById('obsr-' + row);
+  if (!rep) return;
+  rep.classList.add('editing');
+  const ta = document.getElementById('obs-' + row);
+  if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+}
+function cancelObsEdit(row) {
+  const rep = document.getElementById('obsr-' + row);
+  if (!rep) return;
+  const ta = document.getElementById('obs-' + row);
+  if (ta) ta.value = rep.dataset.saved || '';
+  rep.classList.remove('editing');
+}
+async function saveObs(row) {
+  const ta   = document.getElementById('obs-' + row);
+  const fbEl = document.getElementById('obs-fb-' + row);
+  const rep  = document.getElementById('obsr-' + row);
+  const btn  = ta ? ta.closest('.obsr-edit-wrap').querySelector('.lc-obs-save') : null;
+  if (!ta) return;
+  const valor = ta.value.trim();
+  if (btn) btn.classList.add('saving');
+  if (fbEl) { fbEl.textContent = 'Salvando…'; fbEl.className = 'lc-obs-fb'; }
+  try {
+    const res  = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'OBS_VENDEDOR', valor }) });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    const lead = _rawLeads.find(l => l.row === row);
+    if (lead) lead.obs = valor;
+    if (rep) {
+      rep.dataset.saved = valor;
+      rep.classList.remove('editing');
+      const viewDiv = rep.querySelector('.obsr-view');
+      if (viewDiv) viewDiv.innerHTML = buildObsViewHtml(row, valor);
+    }
+    if (fbEl) fbEl.textContent = '';
+    showToast('Observação salva ✓');
+  } catch(err) {
+    if (fbEl) { fbEl.textContent = '✗ Não foi possível salvar.'; fbEl.className = 'lc-obs-fb err'; setTimeout(()=>{ if(fbEl) fbEl.textContent=''; }, 4000); }
+    showToast('Erro ao salvar — tente novamente');
+  } finally { if (btn) btn.classList.remove('saving'); }
+}
+
+// ── PROMPT FECHADO / PERDIDO ───────────────────────────────────
+function showStatusPrompt(row, status) {
+  const prompt = document.getElementById('sp-' + row);
+  if (!prompt) return;
+  const lbl   = prompt.querySelector('.lc-sp-label');
+  const input = document.getElementById('sp-input-' + row);
+  if (status === 'Fechado') {
+    if (lbl)   lbl.textContent = '💰 Qual foi o valor do fechamento?';
+    if (input) { input.type = 'text'; input.inputMode = 'numeric'; input.placeholder = 'Ex: 5000'; input.value = ''; }
+    prompt.dataset.tipo = 'fechado';
+  } else if (status === 'Perdido') {
+    if (lbl)   lbl.textContent = '❌ Qual o motivo da perda?';
+    if (input) { input.type = 'text'; input.inputMode = 'text'; input.placeholder = 'Ex: Preço alto, concorrência…'; input.value = ''; }
+    prompt.dataset.tipo = 'perdido';
+  }
+  prompt.classList.add('visible');
+  if (input) input.focus();
+}
+function skipStatusPrompt(row) {
+  const prompt = document.getElementById('sp-' + row);
+  if (prompt) prompt.classList.remove('visible');
+  // trigger re-sort animation after prompt is dismissed
+  const raw = _rawLeads.find(l => l.row === row);
+  const status = raw ? raw.status : null;
+  if (status === 'Fechado' || status === 'Perdido') {
+    const card = document.querySelector(`.lead-card[data-row="${row}"]`);
+    if (card) {
+      card.classList.add('going-down');
+      setTimeout(() => renderLeads(_rawLeads, row), 1350);
+    }
+  }
+}
+async function saveStatusExtra(row) {
+  const prompt = document.getElementById('sp-' + row);
+  const input  = document.getElementById('sp-input-' + row);
+  const btn    = prompt ? prompt.querySelector('.lc-sp-save') : null;
+  if (!prompt || !input) return;
+  const tipo  = prompt.dataset.tipo;
+  const raw   = input.value.trim();
+  if (!raw) { showToast('Por favor, preencha o campo'); input.focus(); return; }
+  let campo, valor, writeVal;
+  if (tipo === 'fechado') {
+    const n = parseFloat(raw.replace(/[^\d,.-]/g,'').replace(',','.'));
+    if (isNaN(n) || n < 0) { showToast('Valor inválido'); input.focus(); return; }
+    campo = 'VALOR_FECHADO'; valor = String(n); writeVal = n;
+  } else {
+    campo = 'MOTIVO_PERDA'; valor = raw; writeVal = raw;
+  }
+  if (btn) btn.classList.add('saving');
+  try {
+    const res  = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo, valor }) });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    // update cache
+    const lead = _rawLeads.find(l => l.row === row);
+    if (lead && tipo === 'fechado')  lead.valor_fech   = writeVal;
+    if (lead && tipo === 'perdido')  lead.motivo_perd  = writeVal;
+    prompt.classList.remove('visible');
+    showToast(tipo === 'fechado' ? 'Fechamento registrado ✓' : 'Motivo registrado ✓');
+    // re-sort card to history position
+    const card = document.querySelector(`.lead-card[data-row="${row}"]`);
+    if (card) { card.classList.add('going-down'); setTimeout(() => renderLeads(_rawLeads, row), 1350); }
+  } catch(err) {
+    showToast('Erro ao salvar — tente novamente');
+  } finally { if (btn) btn.classList.remove('saving'); }
+}
+function spKeyDown(e, row) {
+  if (e.key === 'Enter')  { e.preventDefault(); saveStatusExtra(row); }
+  if (e.key === 'Escape') skipStatusPrompt(row);
+}
+
+// ── UPDATE STATUS ─────────────────────────────────────────────
+function onStatusChange(e) {
+  const sel   = e.target;
+  const row   = parseInt(sel.dataset.row, 10);
+  const valor = sel.value;
+
+  // revert select visual until confirmed
+  sel.value     = sel.dataset.original;
+  sel.className = 'lc-select ' + statusClass(sel.dataset.original);
+
+  // show inline confirmation
+  const conf = document.getElementById('conf-' + row);
+  if (!conf) return;
+  const lbl = document.getElementById('conf-status-' + row);
+  if (lbl) lbl.textContent = valor;
+  conf.dataset.pending = valor;
+  conf.classList.add('visible');
+}
+
+function cancelStatusChange(row) {
+  const conf = document.getElementById('conf-' + row);
+  if (conf) conf.classList.remove('visible');
+}
+
+async function confirmStatusChange(row) {
+  const conf = document.getElementById('conf-' + row);
+  if (!conf) return;
+  const valor = conf.dataset.pending;
+  if (!valor) return;
+  conf.classList.remove('visible');
+
+  const sel  = document.querySelector(`.lc-select[data-row="${row}"]`);
+  const fbEl = document.getElementById('fb-' + row);
+
+  if (sel) { sel.value = valor; sel.className = 'lc-select ' + statusClass(valor); sel.classList.add('saving'); }
+  if (fbEl) { fbEl.textContent = 'Salvando…'; fbEl.className = 'lc-feedback'; }
+
+  try {
+    const res  = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'STATUS_VENDEDOR', valor }) });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+
+    if (sel) { sel.className = 'lc-select ' + statusClass(valor); sel.dataset.original = valor; }
+    const card = sel ? sel.closest('.lead-card') : document.querySelector(`.lead-card[data-row="${row}"]`);
+    if (card) { card.classList.remove('ag','cont','neg'); const bc = borderClass(valor); if (bc) card.classList.add(bc); }
+    if (fbEl) { fbEl.textContent = '✓ Salvo'; fbEl.className = 'lc-feedback ok'; }
+
+    const raw = _rawLeads.find(l => l.row === row);
+    if (raw) raw.status = valor;
+
+    if (valor === 'Fechado' || valor === 'Perdido') {
+      showStatusPrompt(row, valor);
+    } else {
+      if (card) card.classList.add('going-down');
+      setTimeout(() => renderLeads(_rawLeads, row), 1350);
+    }
+    showToast('Status atualizado ✓');
+  } catch(err) {
+    if (sel) { sel.value = sel.dataset.original; sel.className = 'lc-select ' + statusClass(sel.dataset.original); }
+    if (fbEl) {
+      fbEl.textContent = '✗ Não foi possível salvar.';
+      fbEl.className = 'lc-feedback err';
+      setTimeout(() => { if (fbEl) fbEl.textContent=''; }, 4000);
+    }
+    showToast('Erro ao salvar — tente novamente');
+  } finally { if (sel) sel.classList.remove('saving'); }
+}
+
+// ── RENDER LEADS ──────────────────────────────────────────────
+function renderLeads(leads, highlightRow) {
   const list = document.getElementById('leads-list');
+  const wrap = document.getElementById('show-more-wrap');
   if (!list) return;
 
-  // preserve expand states + obs drafts before re-render
+  // preserve UI state
   const expandedRows = new Set();
-  const obsDrafts = {};
+  const obsDrafts    = {};
+  const contactOpen  = new Set();
   list.querySelectorAll('.lead-card').forEach(c => {
     const row = c.dataset.row;
     if (c.classList.contains('expanded')) {
@@ -556,205 +766,253 @@ function renderLeads(leads) {
       const ta = document.getElementById('obs-' + row);
       if (ta) obsDrafts[row] = ta.value;
     }
+    const cp = document.getElementById('cp-' + row);
+    if (cp && cp.style.display === 'block') contactOpen.add(row);
   });
 
   _allLeads = leads
-    .filter(l => (l.rep || '').toUpperCase() === REP_NAME)
-    .sort((a, b) => {
+    .filter(l => (l.rep||'').toUpperCase() === REP_NAME)
+    .sort((a,b) => {
       const pa = a.status === 'Aguardando contato' ? 0 : 1;
       const pb = b.status === 'Aguardando contato' ? 0 : 1;
       if (pa !== pb) return pa - pb;
-      return (a.data || '').localeCompare(b.data || '');
+      return (a.data||'').localeCompare(b.data||'');
     });
 
-  // update counters
-  document.getElementById('sum-ag').textContent   = _allLeads.filter(l => l.status === 'Aguardando contato').length;
-  document.getElementById('sum-cont').textContent = _allLeads.filter(l => l.status === 'Em contato').length;
-  document.getElementById('sum-neg').textContent  = _allLeads.filter(l => l.status === 'Em negociação').length;
+  document.getElementById('sum-ag').textContent   = _allLeads.filter(l=>l.status==='Aguardando contato').length;
+  document.getElementById('sum-cont').textContent = _allLeads.filter(l=>l.status==='Em contato').length;
+  document.getElementById('sum-neg').textContent  = _allLeads.filter(l=>l.status==='Em negociação').length;
   document.getElementById('sum-tot').textContent  = _allLeads.length;
 
   if (!_allLeads.length) {
     list.innerHTML = `<div class="empty-state"><strong>Tudo em dia!</strong>Nenhum lead ativo no momento.</div>`;
+    if (wrap) wrap.innerHTML = '';
     return;
   }
 
-  list.innerHTML = _allLeads.map(l => {
-    const empresa  = esc(toTitleCase(l.empresa || l.nome) || '—');
-    const cidadeUF = [toTitleCase(l.cidade), (l.estado || '').toUpperCase()].filter(v => v && v.trim()).join(' · ');
+  const visible = _showAll ? _allLeads : _allLeads.slice(0, LIMIT);
+
+  list.innerHTML = visible.map(l => {
+    const empresa  = esc(toTitleCase(l.empresa||l.nome)||'—');
+    const nomeRaw  = toTitleCase(l.nome||'');
+    const nomeEmp  = toTitleCase(l.empresa||'');
+    const showNome = nomeRaw && nomeRaw.toLowerCase() !== nomeEmp.toLowerCase();
+    const cidadeUF = [toTitleCase(l.cidade),(l.estado||'').toUpperCase()].filter(v=>v&&v.trim()).join(' · ');
     const sClass   = statusClass(l.status);
     const bClass   = borderClass(l.status);
     const pot      = l.pot > 0 ? cur(l.pot) : '';
     const wa       = fmtWA(l.whatsapp);
-    const mapLink  = buildMapsUrl(l.empresa || l.nome, l.cidade, l.estado);
+    const mapLink  = buildMapsUrl(l.empresa||l.nome, l.cidade, l.estado);
+    const phone    = fmtPhone(l.whatsapp);
     const options  = STATUS_LIST.map(s =>
-      `<option value="${esc(s)}"${s === l.status ? ' selected' : ''}>${esc(s)}</option>`
+      `<option value="${esc(s)}"${s===l.status?' selected':''}>${esc(s)}</option>`
     ).join('');
+    const contato  = toTitleCase(l.contato||'');
+    const cnpj     = l.cnpj||'';
+    const endereco = toTitleCase(l.endereco||'');
 
-    // detail rows
-    const contato  = toTitleCase(l.contato  || '') || '';
-    const cnpj     = l.cnpj     || '';
-    const endereco = toTitleCase(l.endereco || '') || '';
-    const detailRows = [
-      contato  ? `<div class="lc-detail-row"><span class="lc-d-icon">👤</span><span class="lc-d-label">Contato</span><span class="lc-d-val">${esc(contato)}</span></div>` : '',
-      cnpj     ? `<div class="lc-detail-row"><span class="lc-d-icon">📋</span><span class="lc-d-label">CNPJ</span><span class="lc-d-val">${esc(cnpj)}</span></div>` : '',
-      endereco ? `<div class="lc-detail-row"><span class="lc-d-icon">🏠</span><span class="lc-d-label">Endereço</span><span class="lc-d-val">${esc(endereco)}</span></div>` : '',
-    ].filter(Boolean).join('');
+    // contact panel rows
+    const cpRows = [];
+    if (nomeRaw)
+      cpRows.push(`<div class="lcp-row"><span class="lcp-icon">👤</span><div class="lcp-info"><div class="lcp-label">Contato principal</div><div class="lcp-val">${esc(nomeRaw)}</div></div></div>`);
+    if (contato && contato.toLowerCase() !== nomeRaw.toLowerCase())
+      cpRows.push(`<div class="lcp-row"><span class="lcp-icon">👥</span><div class="lcp-info"><div class="lcp-label">Contato empresa</div><div class="lcp-val">${esc(contato)}</div></div></div>`);
+    if (phone.display)
+      cpRows.push(`<div class="lcp-row"><span class="lcp-icon">📱</span><div class="lcp-info"><div class="lcp-label">Telefone</div><a class="lcp-tel" href="tel:${esc(phone.tel)}">${esc(phone.display)}</a></div></div>`);
+    if (endereco) {
+      const endFull = [endereco, cidadeUF ? cidadeUF.replace(' · ',' — ') : ''].filter(Boolean).join(', ');
+      cpRows.push(`<div class="lcp-row"><span class="lcp-icon">🏠</span><div class="lcp-info"><div class="lcp-label">Endereço</div><div class="lcp-val">${esc(endFull)}</div></div></div>`);
+    }
+    if (cnpj)
+      cpRows.push(`<div class="lcp-row"><span class="lcp-icon">📋</span><div class="lcp-info"><div class="lcp-label">CNPJ</div><div class="lcp-val">${esc(cnpj)}</div></div></div>`);
+    const hasContact = cpRows.length > 0;
 
-    // obs SDR block
-    const obsSdrHtml = l.obs_sdr
-      ? `<div class="lc-obs-sdr">
-           <div class="lc-obs-sdr-label">Observação do SDR</div>
-           ${esc(l.obs_sdr)}
-         </div>`
-      : '';
-
-    const hasDivider = (detailRows || obsSdrHtml) ? '<hr class="lc-divider">' : '';
+    const obsViewHtml = buildObsViewHtml(l.row, l.obs||'');
 
     return `
     <div class="lead-card ${bClass}" data-row="${l.row}">
       <div class="lc-body">
         <div class="lc-top">
           <div class="lc-empresa">${empresa}</div>
-          ${pot ? `<div class="lc-pot">${pot}</div>` : ''}
+          <div class="lc-pot-wrap" id="pot-wrap-${l.row}">
+            <div id="pot-disp-${l.row}">
+              <div class="lc-pot" onclick="startPotEdit(${l.row})" title="Clique para editar o valor potencial">
+                ${pot ? esc(pot) : '<span class="lc-pot-no-val">R$ —</span>'}
+                <span class="lc-pot-edit-icon">${SVG_EDIT}</span>
+              </div>
+            </div>
+            <div class="lc-pot-input-wrap" id="pot-input-wrap-${l.row}">
+              <input class="lc-pot-input" id="pot-input-${l.row}" type="text" inputmode="numeric"
+                value="${l.pot > 0 ? l.pot : ''}" placeholder="0" onkeydown="potKeyDown(event,${l.row})">
+              <div class="lc-pot-actions">
+                <button class="lc-pot-cancel" onclick="cancelPotEdit(${l.row})">Cancelar</button>
+                <button class="lc-pot-save"   onclick="savePot(${l.row})">OK</button>
+              </div>
+            </div>
+          </div>
         </div>
+        ${showNome ? `<div class="lc-nome">— ${esc(nomeRaw)}</div>` : ''}
         <div class="lc-meta">
           ${cidadeUF ? `<span class="lc-tag">📍 ${esc(cidadeUF)}</span>` : ''}
           ${l.data   ? `<span class="lc-tag">📅 ${esc(fmtData(l.data))}</span>` : ''}
           <span class="lc-meta-spacer"></span>
-          ${wa      ? `<a class="lc-icon-btn wa" href="https://wa.me/${wa}" target="_blank" rel="noopener" title="Abrir WhatsApp">${SVG_WA}</a>` : ''}
-          ${mapLink ? `<a class="lc-icon-btn maps" href="${esc(mapLink)}" target="_blank" rel="noopener" title="Ver no Google Maps">${SVG_PIN}</a>` : ''}
+          ${hasContact ? `<button class="lc-icon-btn contact" onclick="toggleContact(this,${l.row})" title="Dados do contato" aria-expanded="false">${SVG_PERSON}</button>` : ''}
+          ${wa       ? `<a class="lc-icon-btn wa"   href="https://wa.me/${wa}" target="_blank" rel="noopener" title="WhatsApp">${SVG_WA}</a>` : ''}
+          ${mapLink  ? `<a class="lc-icon-btn maps" href="${esc(mapLink)}" target="_blank" rel="noopener" title="Ver no Google Maps">${SVG_PIN}</a>` : ''}
         </div>
+        <div class="lc-contact-panel" id="cp-${l.row}">${cpRows.join('')}</div>
         <div class="lc-status-wrap">
           <select class="lc-select ${sClass}" data-row="${l.row}" data-original="${esc(l.status)}" aria-label="Status do lead">
             ${options}
           </select>
         </div>
         <div class="lc-feedback" id="fb-${l.row}"></div>
+        <div class="lc-confirm" id="conf-${l.row}">
+          <div class="lc-confirm-msg">Mudar para <strong id="conf-status-${l.row}"></strong>?<span class="lc-confirm-sub">Lead vai ao final da fila.</span></div>
+          <div class="lc-confirm-actions">
+            <button class="lc-confirm-cancel" onclick="cancelStatusChange(${l.row})">Cancelar</button>
+            <button class="lc-confirm-ok"     onclick="confirmStatusChange(${l.row})">Confirmar</button>
+          </div>
+        </div>
+        <div class="lc-status-prompt" id="sp-${l.row}">
+          <div class="lc-sp-label"></div>
+          <input class="lc-sp-input" id="sp-input-${l.row}" type="text" onkeydown="spKeyDown(event,${l.row})">
+          <div class="lc-sp-footer">
+            <button class="lc-sp-skip" onclick="skipStatusPrompt(${l.row})">Pular</button>
+            <button class="lc-sp-save" onclick="saveStatusExtra(${l.row})">Registrar</button>
+          </div>
+        </div>
       </div>
       <button class="lc-toggle" onclick="toggleExpand(this)" aria-expanded="false">
         <span class="tt">mais</span>&nbsp;<span class="ti">▾</span>
       </button>
       <div class="lc-expand">
-        ${detailRows ? `<div class="lc-detail">${detailRows}</div>` : ''}
-        ${obsSdrHtml}
-        ${hasDivider}
+        ${l.obs_sdr ? `<div class="lc-obs-sdr"><div class="lc-obs-sdr-label">Observação do SDR</div><div class="lc-obs-sdr-text">${esc(l.obs_sdr)}</div></div>` : ''}
+        <hr class="lc-divider">
         <div class="lc-obs-label">Minha observação</div>
-        <textarea class="lc-obs-textarea" id="obs-${l.row}" maxlength="1000"
-          placeholder="Escreva sua observação sobre este lead…">${esc(l.obs || '')}</textarea>
-        <div class="lc-obs-footer">
-          <span class="lc-obs-fb" id="obs-fb-${l.row}"></span>
-          <button class="lc-obs-save" onclick="saveObs(${l.row})">Salvar</button>
+        <div class="lc-obs-rep" id="obsr-${l.row}" data-saved="${esc(l.obs||'')}">
+          <div class="obsr-view">${obsViewHtml}</div>
+          <div class="obsr-edit-wrap" id="obsr-edit-${l.row}">
+            <textarea class="lc-obs-textarea" id="obs-${l.row}" maxlength="1000"
+              placeholder="Escreva sua observação sobre este lead…">${esc(l.obs||'')}</textarea>
+            <div class="lc-obs-footer">
+              <span class="lc-obs-fb" id="obs-fb-${l.row}"></span>
+              <button class="obsr-cancel-btn" onclick="cancelObsEdit(${l.row})">Cancelar</button>
+              <button class="lc-obs-save"     onclick="saveObs(${l.row})">Salvar</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>`;
   }).join('');
 
+  // show-more button
+  if (wrap) {
+    if (!_showAll && _allLeads.length > LIMIT) {
+      const rem = _allLeads.length - LIMIT;
+      wrap.innerHTML = `<button class="show-more-btn" onclick="showAll()">Ver mais ${rem} lead${rem!==1?'s':''} ▾</button>`;
+    } else { wrap.innerHTML = ''; }
+  }
+
   // bind events
   list.querySelectorAll('.lc-select').forEach(sel => sel.addEventListener('change', onStatusChange));
 
-  // restore expand states + obs drafts
+  // restore states
   expandedRows.forEach(row => {
     const card = list.querySelector(`.lead-card[data-row="${row}"]`);
     if (!card) return;
     card.classList.add('expanded');
     const btn = card.querySelector('.lc-toggle');
-    if (btn) { btn.querySelector('.tt').textContent = 'menos'; btn.setAttribute('aria-expanded','true'); }
+    if (btn) { btn.querySelector('.tt').textContent='menos'; btn.setAttribute('aria-expanded','true'); }
     const ta = document.getElementById('obs-' + row);
     if (ta && obsDrafts[row] !== undefined) ta.value = obsDrafts[row];
   });
+  contactOpen.forEach(row => {
+    const cp  = document.getElementById('cp-' + row);
+    const btn = list.querySelector(`.lead-card[data-row="${row}"] .lc-icon-btn.contact`);
+    if (cp)  cp.style.display = 'block';
+    if (btn) { btn.classList.add('active'); btn.setAttribute('aria-expanded','true'); }
+  });
 
-  // re-apply active filter
+  // highlight recently moved card
+  if (highlightRow) {
+    const moved = list.querySelector(`.lead-card[data-row="${highlightRow}"]`);
+    if (moved) {
+      moved.classList.add('just-placed');
+      moved.addEventListener('animationend', () => moved.classList.remove('just-placed'), { once:true });
+    }
+  }
+
   applyFilter();
 }
 
-// ── UPDATE STATUS ────────────────────────────────────────────
-async function onStatusChange(e) {
-  const sel   = e.target;
-  const row   = parseInt(sel.dataset.row, 10);
-  const valor = sel.value;
-  const fbEl  = document.getElementById('fb-' + row);
+// ── HISTÓRICO ─────────────────────────────────────────────────
+let _history    = null;
+let _histLoaded = false;
 
-  sel.classList.add('saving');
-  if (fbEl) { fbEl.textContent = 'Salvando…'; fbEl.className = 'lc-feedback'; }
+function toggleHistorico() {
+  const section = document.getElementById('historico-section');
+  if (!section) return;
+  const opening = !section.classList.contains('open');
+  section.classList.toggle('open');
+  const btn = section.querySelector('.hist-header');
+  if (btn) btn.setAttribute('aria-expanded', opening);
+  if (opening && !_histLoaded) loadHistorico();
+}
 
+async function loadHistorico() {
+  const body = document.getElementById('hist-body');
+  if (!body) return;
+  body.innerHTML = `<div style="padding:16px;text-align:center;color:var(--muted);font-size:12px;font-weight:600">Carregando…</div>`;
   try {
-    const res  = await fetch(PROXY_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ token: REP_TOKEN, row, rep: REP_NAME, campo: 'STATUS_VENDEDOR', valor }),
-    });
+    const res  = await fetch(PROXY_URL + '?action=rep_history');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
-    if (!data.ok) throw new Error(data.error || 'Erro desconhecido');
-
-    sel.className = 'lc-select ' + statusClass(valor);
-    sel.dataset.original = valor;
-    const card = sel.closest('.lead-card');
-    if (card) {
-      card.classList.remove('ag', 'cont', 'neg');
-      const bc = borderClass(valor);
-      if (bc) card.classList.add(bc);
-    }
-    if (fbEl) {
-      fbEl.textContent = '✓ Salvo';
-      fbEl.className = 'lc-feedback ok';
-      setTimeout(() => { if (fbEl) fbEl.textContent = ''; }, 2500);
-    }
-    applyFilter();
-    showToast('Status atualizado ✓');
-  } catch (err) {
-    sel.value = sel.dataset.original;
-    sel.className = 'lc-select ' + statusClass(sel.dataset.original);
-    if (fbEl) {
-      fbEl.textContent = '✗ Não foi possível salvar.';
-      fbEl.className = 'lc-feedback err';
-      setTimeout(() => { if (fbEl) fbEl.textContent = ''; }, 4000);
-    }
-    showToast('Erro ao salvar — tente novamente');
-  } finally {
-    sel.classList.remove('saving');
+    _history    = (data.history||[]).filter(l => (l.rep||'').toUpperCase() === REP_NAME);
+    _histLoaded = true;
+    renderHistorico();
+  } catch(err) {
+    if (body) body.innerHTML = `<div style="padding:16px;color:#b0134a;font-size:12px">Não foi possível carregar o histórico.</div>`;
   }
 }
 
-// ── SAVE OBS ─────────────────────────────────────────────────
-async function saveObs(row) {
-  const textarea = document.getElementById('obs-' + row);
-  const fbEl     = document.getElementById('obs-fb-' + row);
-  const expand   = textarea && textarea.closest('.lc-expand');
-  const btn      = expand ? expand.querySelector('.lc-obs-save') : null;
-  if (!textarea) return;
-
-  const valor = textarea.value.trim();
-  if (btn) btn.classList.add('saving');
-  if (fbEl) { fbEl.textContent = 'Salvando…'; fbEl.className = 'lc-obs-fb'; }
-
-  try {
-    const res  = await fetch(PROXY_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ token: REP_TOKEN, row, rep: REP_NAME, campo: 'OBS_VENDEDOR', valor }),
-    });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error || 'Erro desconhecido');
-
-    if (fbEl) {
-      fbEl.textContent = '✓ Observação salva';
-      fbEl.className = 'lc-obs-fb ok';
-      setTimeout(() => { if (fbEl) fbEl.textContent = ''; }, 3000);
-    }
-    showToast('Observação salva ✓');
-  } catch (err) {
-    if (fbEl) {
-      fbEl.textContent = '✗ Não foi possível salvar.';
-      fbEl.className = 'lc-obs-fb err';
-      setTimeout(() => { if (fbEl) fbEl.textContent = ''; }, 4000);
-    }
-    showToast('Erro ao salvar — tente novamente');
-  } finally {
-    if (btn) btn.classList.remove('saving');
-  }
+function renderHistorico() {
+  const body   = document.getElementById('hist-body');
+  const counts = document.getElementById('hist-counts');
+  if (!body) return;
+  const h      = _history || [];
+  const nFech  = h.filter(l=>l.status==='Fechado').length;
+  const nPerd  = h.filter(l=>l.status==='Perdido').length;
+  if (counts) counts.textContent = nFech+' fechado'+(nFech!==1?'s':'')+(nPerd?' · '+nPerd+' perdido'+(nPerd!==1?'s':''):'');
+  if (!h.length) { body.innerHTML=`<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px">Nenhum histórico ainda.</div>`; return; }
+  body.innerHTML = h.map(l => {
+    const empresa  = esc(toTitleCase(l.empresa||l.nome)||'—');
+    const nomeRaw  = toTitleCase(l.nome||'');
+    const nomeEmp  = toTitleCase(l.empresa||'');
+    const showNome = nomeRaw && nomeRaw.toLowerCase() !== nomeEmp.toLowerCase();
+    const cidadeUF = [toTitleCase(l.cidade),(l.estado||'').toUpperCase()].filter(v=>v&&v.trim()).join(' · ');
+    const bClass   = l.status==='Fechado' ? 'fech' : 'perd';
+    const badge    = l.status==='Fechado' ? 'b-fech' : 'b-perd';
+    const dataMeta = l.data_f ? '📅 '+fmtData(l.data_f) : (l.data ? '📅 '+fmtData(l.data) : '');
+    const valorMeta = l.status==='Fechado' && l.valor>0 ? cur(l.valor) : '';
+    const motivoMeta = l.status==='Perdido' && l.motivo ? l.motivo : '';
+    return `<div class="hist-card ${bClass}">
+      <div class="hist-top">
+        <div class="hist-empresa">${empresa}</div>
+        <span class="hist-badge ${badge}">${esc(l.status)}</span>
+      </div>
+      ${showNome ? `<div class="hist-nome">— ${esc(nomeRaw)}</div>` : ''}
+      <div class="hist-meta">
+        ${cidadeUF  ? `<span class="lc-tag">📍 ${esc(cidadeUF)}</span>` : ''}
+        ${dataMeta  ? `<span class="lc-tag">${esc(dataMeta)}</span>` : ''}
+        ${valorMeta ? `<span class="lc-tag">💰 ${esc(valorMeta)}</span>` : ''}
+        ${motivoMeta ? `<span class="lc-tag">❌ ${esc(motivoMeta)}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
 }
 
-// ── FETCH & POLL ─────────────────────────────────────────────
+// ── FETCH & POLL ──────────────────────────────────────────────
 let _isLoading = false;
 let _firstLoad = true;
 
@@ -768,31 +1026,20 @@ async function loadData() {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     if (data.error) throw new Error(data.error);
-    renderLeads(data.leads || []);
+    _rawLeads = data.leads || [];
+    renderLeads(_rawLeads);
     flashDot();
     _firstLoad = false;
-    const errEl = document.getElementById('error-banner');
-    if (errEl) errEl.style.display = 'none';
-  } catch (err) {
-    const errEl = document.getElementById('error-banner');
-    if (errEl) {
-      errEl.textContent = 'Não foi possível carregar os dados. Verifique sua conexão.';
-      errEl.style.display = 'block';
-    }
-    if (_firstLoad) {
-      const list = document.getElementById('leads-list');
-      if (list) list.innerHTML = '';
-    }
-  } finally {
-    _isLoading = false;
-    loadEnd();
-  }
+    const err = document.getElementById('error-banner');
+    if (err) err.style.display = 'none';
+  } catch(e) {
+    const err = document.getElementById('error-banner');
+    if (err) { err.textContent='Não foi possível carregar os dados. Verifique sua conexão.'; err.style.display='block'; }
+    if (_firstLoad) { const l=document.getElementById('leads-list'); if(l) l.innerHTML=''; }
+  } finally { _isLoading=false; loadEnd(); }
 }
 
-window.addEventListener('load', () => {
-  loadData();
-  setInterval(loadData, POLL_MS);
-});
+window.addEventListener('load', () => { loadData(); setInterval(loadData, POLL_MS); });
 </script>
 </body>
 </html>
