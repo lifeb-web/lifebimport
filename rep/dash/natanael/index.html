@@ -1123,6 +1123,10 @@ async function loadHistorico() {
     const data = await res.json();
     _history    = (data.history||[]).filter(l => (l.rep||'').toUpperCase() === REP_NAME);
     _histLoaded = true;
+    // debug: shows whatsapp field in console to diagnose missing WA buttons
+    console.log('[History] total:', _history.length,
+      '| com WA:', _history.filter(l=>l.whatsapp).length,
+      '| sample:', _history.slice(0,3).map(l=>({empresa:l.empresa, wa:l.whatsapp})));
     renderHistorico();
   } catch(err) {
     if (body) body.innerHTML = `<div style="padding:16px;color:#b0134a;font-size:12px">Não foi possível carregar o histórico.</div>`;
@@ -1138,7 +1142,11 @@ function renderHistorico() {
   const nPerd  = h.filter(l=>l.status==='Perdido').length;
   if (counts) counts.textContent = nFech+' fechado'+(nFech!==1?'s':'')+(nPerd?' · '+nPerd+' perdido'+(nPerd!==1?'s':''):'');
   if (!h.length) { body.innerHTML=`<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px">Nenhum histórico ainda.</div>`; return; }
-  body.innerHTML = h.map(l => {
+  const semWA = h.filter(l => !fmtWA(l.whatsapp)).length;
+  const diagHtml = semWA === h.length
+    ? `<div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:8px 12px;font-size:11px;font-weight:600;color:#b45309;margin-bottom:8px;">⚠️ WhatsApp não está chegando nesta lista (${h.length}/${h.length} sem WA). Verifique se o proxy foi reimplantado no Apps Script.</div>`
+    : '';
+  body.innerHTML = diagHtml + h.map(l => {
     const empresa    = esc(toTitleCase(l.empresa||l.nome)||'—');
     const nomeRaw    = toTitleCase(l.nome||'');
     const nomeEmp    = toTitleCase(l.empresa||'');
