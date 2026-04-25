@@ -115,6 +115,10 @@
     .lc-pot-save   { background:var(--purple); color:#fff; }
     .lc-pot-cancel { background:var(--border);  color:var(--muted); }
     .lc-pot-save:active, .lc-pot-cancel:active { transform:scale(.93); }
+    .lc-pot-pfx-wrap { position:relative; }
+    .lc-pot-pfx-wrap::before { content:'R$'; position:absolute; left:8px; top:50%; transform:translateY(-50%); font-size:12px; font-weight:700; color:var(--purple); pointer-events:none; }
+    .lc-pot-pfx-wrap .lc-pot-input { padding-left:26px; }
+    .lc-pot-preview { font-size:11px; font-weight:700; color:var(--purple); text-align:right; min-height:14px; padding:2px 0 1px; }
 
     /* meta tags + icon buttons */
     .lc-meta { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
@@ -189,6 +193,12 @@
     .lc-sp-label { font-size:10px; font-weight:700; color:var(--purple); text-transform:uppercase; letter-spacing:.3px; margin-bottom:6px; }
     .lc-sp-sublabel { font-size:10px; font-weight:700; color:var(--purple); text-transform:uppercase; letter-spacing:.3px; margin:8px 0 5px; }
     .lc-sp-date-wrap { margin-top:2px; }
+    .lc-sp-row { display:flex; gap:8px; align-items:flex-start; }
+    .lc-sp-row .lc-sp-date-wrap { flex:1; margin-top:0; min-width:0; }
+    .lc-sp-pfx-wrap { position:relative; flex:1.5; min-width:0; }
+    .lc-sp-pfx-wrap::before { content:'R$'; position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:13px; font-weight:700; color:var(--muted); pointer-events:none; z-index:1; }
+    .lc-sp-pfx-wrap .lc-sp-input { padding-left:30px; }
+    .lc-sp-val-preview { font-size:12px; font-weight:700; color:var(--purple); min-height:14px; padding:3px 0 2px; }
     .lc-sp-input { width:100%; padding:9px 12px; border-radius:8px; border:1.5px solid var(--border); font-family:var(--font); font-size:13px; color:var(--text); background:#fff; outline:none; transition:border-color .15s; }
     .lc-sp-input:focus { border-color:var(--purple); }
     .lc-sp-footer { display:flex; gap:6px; margin-top:7px; justify-content:flex-end; }
@@ -402,9 +412,11 @@ const STATUS_LIST = ['Aguardando contato','Em contato','Em negociação','Fechad
 const esc = s => String(s == null ? '' : s)
   .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
-const cur = v => v > 0
-  ? 'R$ ' + (+v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0})
-  : '';
+const cur = v => {
+  if (!(v > 0)) return '';
+  try { return 'R$ ' + (+v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0}); }
+  catch(_) { return 'R$ ' + Math.round(+v).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
+};
 
 function toTitleCase(s) {
   if (!s) return s;
@@ -434,6 +446,19 @@ function fmtCNPJ(s) {
   const d = String(s || '').replace(/\D/g, '');
   if (d.length !== 14) return s || '';
   return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8,12)}-${d.slice(12)}`;
+}
+
+function spPreview(input, row) {
+  const el = document.getElementById('sp-preview-' + row);
+  if (!el) return;
+  const n = parseFloat(input.value.trim().replace(/[^\d,.-]/g,'').replace(',','.'));
+  el.textContent = !isNaN(n) && n > 0 ? cur(n) : '';
+}
+function potPreview(input, row) {
+  const el = document.getElementById('pot-preview-' + row);
+  if (!el) return;
+  const n = parseFloat(input.value.trim().replace(/[^\d,.-]/g,'').replace(',','.'));
+  el.textContent = !isNaN(n) && n > 0 ? cur(n) : '';
 }
 
 function fmtWA(num) {
@@ -793,15 +818,19 @@ function startPotEdit(row) {
   const disp  = document.getElementById('pot-disp-' + row);
   const iWrap = document.getElementById('pot-input-wrap-' + row);
   const input = document.getElementById('pot-input-' + row);
+  const prev  = document.getElementById('pot-preview-' + row);
   if (disp)  disp.style.display  = 'none';
   if (iWrap) iWrap.style.display = 'block';
+  if (prev) { const lead = _rawLeads.find(l => l.row === row); prev.textContent = lead && lead.pot > 0 ? cur(lead.pot) : ''; }
   if (input) { input.focus(); input.select(); }
 }
 function cancelPotEdit(row) {
   const disp  = document.getElementById('pot-disp-' + row);
   const iWrap = document.getElementById('pot-input-wrap-' + row);
+  const prev  = document.getElementById('pot-preview-' + row);
   if (disp)  disp.style.display  = '';
   if (iWrap) iWrap.style.display = 'none';
+  if (prev)  prev.textContent    = '';
 }
 async function savePot(row) {
   const input = document.getElementById('pot-input-' + row);
@@ -921,13 +950,17 @@ function showStatusPrompt(row, status) {
   if (!prompt) return;
   const lbl      = prompt.querySelector('.lc-sp-label');
   const input    = document.getElementById('sp-input-' + row);
+  const pfxWrap  = document.getElementById('sp-pfx-wrap-' + row);
   const sel      = document.getElementById('sp-sel-' + row);
   const dateWrap = document.getElementById('sp-date-wrap-' + row);
   const dateIn   = document.getElementById('sp-date-' + row);
   const skipBtn  = document.getElementById('sp-skip-' + row);
+  const preview  = document.getElementById('sp-preview-' + row);
   if (status === 'Fechado') {
     if (lbl)      lbl.textContent = '💰 Qual foi o valor do fechamento?';
-    if (input)    { input.value = ''; input.placeholder = 'Ex: 5000'; input.style.display = ''; }
+    if (pfxWrap)  pfxWrap.style.display = '';
+    if (input)    { input.value = ''; input.style.display = ''; }
+    if (preview)  preview.textContent = '';
     if (sel)      sel.style.display = 'none';
     if (dateWrap) dateWrap.style.display = '';
     if (dateIn)   dateIn.value = '';
@@ -936,7 +969,8 @@ function showStatusPrompt(row, status) {
     if (input) input.focus();
   } else if (status === 'Perdido') {
     if (lbl)      lbl.textContent = '❌ Qual o motivo da perda?';
-    if (input)    input.style.display = 'none';
+    if (pfxWrap)  pfxWrap.style.display = 'none';
+    if (preview)  preview.textContent = '';
     if (sel)      { sel.value = ''; sel.style.display = ''; }
     if (dateWrap) dateWrap.style.display = 'none';
     if (skipBtn)  skipBtn.style.display = 'none';
@@ -944,7 +978,9 @@ function showStatusPrompt(row, status) {
     if (sel) sel.focus();
   } else if (status === 'negociacao') {
     if (lbl)      lbl.textContent = '💰 Valor potencial (opcional)';
-    if (input)    { input.value = ''; input.placeholder = 'Ex: 5000'; input.style.display = ''; }
+    if (pfxWrap)  pfxWrap.style.display = '';
+    if (input)    { input.value = ''; input.style.display = ''; }
+    if (preview)  preview.textContent = '';
     if (sel)      sel.style.display = 'none';
     if (dateWrap) dateWrap.style.display = 'none';
     if (skipBtn)  skipBtn.style.display = '';
@@ -1301,8 +1337,11 @@ function renderLeads(leads, highlightRow) {
               </div>
             </div>
             <div class="lc-pot-input-wrap" id="pot-input-wrap-${l.row}">
-              <input class="lc-pot-input" id="pot-input-${l.row}" type="text" inputmode="numeric"
-                value="${l.pot > 0 ? l.pot : ''}" placeholder="0" onkeydown="potKeyDown(event,${l.row})">
+              <div class="lc-pot-pfx-wrap">
+                <input class="lc-pot-input" id="pot-input-${l.row}" type="text" inputmode="decimal"
+                  value="${l.pot > 0 ? l.pot : ''}" placeholder="0,00" onkeydown="potKeyDown(event,${l.row})" oninput="potPreview(this,${l.row})">
+              </div>
+              <div class="lc-pot-preview" id="pot-preview-${l.row}"></div>
               <div class="lc-pot-actions">
                 <button class="lc-pot-cancel" onclick="cancelPotEdit(${l.row})">Cancelar</button>
                 <button class="lc-pot-save"   onclick="savePot(${l.row})">OK</button>
@@ -1350,7 +1389,15 @@ function renderLeads(leads, highlightRow) {
         </div>
         <div class="lc-status-prompt" id="sp-${l.row}">
           <div class="lc-sp-label"></div>
-          <input class="lc-sp-input" id="sp-input-${l.row}" type="text" inputmode="numeric" placeholder="Ex: 5000" onkeydown="spKeyDown(event,${l.row})">
+          <div class="lc-sp-row">
+            <div class="lc-sp-pfx-wrap" id="sp-pfx-wrap-${l.row}">
+              <input class="lc-sp-input" id="sp-input-${l.row}" type="text" inputmode="decimal" placeholder="0,00" onkeydown="spKeyDown(event,${l.row})" oninput="spPreview(this,${l.row})">
+            </div>
+            <div class="lc-sp-date-wrap" id="sp-date-wrap-${l.row}" style="display:none">
+              <input class="lc-sp-input" id="sp-date-${l.row}" type="date" onkeydown="spKeyDown(event,${l.row})">
+            </div>
+          </div>
+          <div class="lc-sp-val-preview" id="sp-preview-${l.row}"></div>
           <select class="lc-sp-input lc-sp-sel" id="sp-sel-${l.row}" style="display:none">
             <option value="">Selecione o motivo…</option>
             <option>Sem interesse</option>
@@ -1360,10 +1407,6 @@ function renderLeads(leads, highlightRow) {
             <option>Fora do perfil</option>
             <option>Outro</option>
           </select>
-          <div class="lc-sp-date-wrap" id="sp-date-wrap-${l.row}" style="display:none">
-            <div class="lc-sp-sublabel">📅 Data do fechamento</div>
-            <input class="lc-sp-input" id="sp-date-${l.row}" type="date" onkeydown="spKeyDown(event,${l.row})">
-          </div>
           <div class="lc-sp-footer">
             <button class="lc-sp-skip" id="sp-skip-${l.row}" style="display:none" onclick="skipPotPrompt(${l.row})">Pular</button>
             <button class="lc-sp-save" onclick="saveStatusExtra(${l.row})">Salvar</button>
