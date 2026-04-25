@@ -142,7 +142,9 @@
     .lcp-val   { font-size:12px; font-weight:600; color:var(--text); word-break:break-word; line-height:1.4; }
     .lcp-tel   { font-size:13px; font-weight:700; color:var(--purple); text-decoration:none; line-height:1.4; }
     .lcp-tel:hover { text-decoration:underline; }
-    .lcp-wa-btn { background:none; border:none; padding:0; cursor:pointer; font-family:inherit; display:flex; align-items:center; gap:5px; }
+    .lcp-wa-btn  { background:none; border:none; padding:0; cursor:pointer; font-family:inherit; display:flex; align-items:center; gap:5px; }
+    .lcp-name-btn { background:none; border:none; padding:0; cursor:pointer; font-family:inherit; font-size:12px; font-weight:600; color:var(--text); text-align:left; line-height:1.4; word-break:break-word; }
+    .lcp-name-btn:hover { text-decoration:underline; }
     .lcp-wa-overlay { display:none; flex-direction:column; align-items:center; padding:10px 4px 6px; gap:8px; text-align:center; animation:panel-in .18s ease; }
     .lcp-wac-icon  { font-size:20px; }
     .lcp-wac-msg   { font-size:12px; font-weight:700; color:var(--text); line-height:1.45; }
@@ -1254,14 +1256,21 @@ function renderLeads(leads, highlightRow) {
 
     // contact panel rows
     const cpRows = [];
-    if (nomeRaw)
-      cpRows.push(`<div class="lcp-row"><span class="lcp-icon">👤</span><div class="lcp-info"><div class="lcp-label">Contato principal</div><div class="lcp-val">${esc(nomeRaw)}</div></div></div>`);
-    if (contato && contato.toLowerCase() !== nomeRaw.toLowerCase())
-      cpRows.push(`<div class="lcp-row"><span class="lcp-icon">👥</span><div class="lcp-info"><div class="lcp-label">Contato empresa</div><div class="lcp-val">${esc(contato)}</div></div></div>`);
+    const waNum  = fmtWA(l.whatsapp);
+    if (nomeRaw) {
+      const nameEl = waNum
+        ? `<button class="lcp-name-btn" data-wa="${esc(waNum)}" data-display="${esc(phone.display)}" data-name="${esc(nomeRaw)}" onclick="openContactWa(this,${l.row})">${esc(nomeRaw)}</button>`
+        : `<div class="lcp-val">${esc(nomeRaw)}</div>`;
+      cpRows.push(`<div class="lcp-row"><span class="lcp-icon">👤</span><div class="lcp-info"><div class="lcp-label">Contato principal</div>${nameEl}</div></div>`);
+    }
+    if (contato && contato.toLowerCase() !== nomeRaw.toLowerCase()) {
+      const contatoEl = waNum
+        ? `<button class="lcp-name-btn" data-wa="${esc(waNum)}" data-display="${esc(phone.display)}" data-name="${esc(contato)}" onclick="openContactWa(this,${l.row})">${esc(contato)}</button>`
+        : `<div class="lcp-val">${esc(contato)}</div>`;
+      cpRows.push(`<div class="lcp-row"><span class="lcp-icon">👥</span><div class="lcp-info"><div class="lcp-label">Contato empresa</div>${contatoEl}</div></div>`);
+    }
     if (phone.display) {
-      const waNum      = fmtWA(l.whatsapp);
-      const contactName = nomeRaw || contato || '';
-      cpRows.push(`<div class="lcp-row"><span class="lcp-icon">📱</span><div class="lcp-info"><div class="lcp-label">Telefone / WhatsApp</div><button class="lcp-tel lcp-wa-btn" data-wa="${esc(waNum)}" data-display="${esc(phone.display)}" data-name="${esc(contactName)}" onclick="openContactWa(this,${l.row})">💬 ${esc(phone.display)}</button></div></div>`);
+      cpRows.push(`<div class="lcp-row"><span class="lcp-icon">📱</span><div class="lcp-info"><div class="lcp-label">Telefone / WhatsApp</div><button class="lcp-tel lcp-wa-btn" data-wa="${esc(waNum)}" data-display="${esc(phone.display)}" data-name="${esc(nomeRaw||contato||'')}" onclick="openContactWa(this,${l.row})">💬 ${esc(phone.display)}</button></div></div>`);
     }
     if (endereco) {
       const endFull = [endereco, cidadeUF ? cidadeUF.replace(' · ',' — ') : ''].filter(Boolean).join(', ');
