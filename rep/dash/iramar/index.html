@@ -392,7 +392,7 @@
 <script>
 const PROXY_URL = 'https://script.google.com/macros/s/AKfycbyq9KJgWTRoALEEVf8Pu_I82GT0-tTK5yXNg-RsYHj4ywK6Grg9z_jG1-IcTW3LMXfNBg/exec';
 const REP_NAME  = 'IRAMAR';
-const REP_TOKEN = 'c4e09a0994b803ab35d43f3c';
+const REP_TOKEN = 'd0e817db520c063b14be0b04a7e0';
 const POLL_MS   = 60_000;
 const LIMIT     = 8;
 
@@ -1213,7 +1213,6 @@ function renderLeads(leads, highlightRow) {
   // priority 0 = first; statuses not in map get 9 (sorted last by date)
   const STATUS_PRIO = { 'Aguardando contato': 0, 'Em contato': 1, 'Em negociação': 2 };
   _allLeads = leads
-    .filter(l => (l.rep||'').toUpperCase() === REP_NAME)
     .sort((a, b) => {
       const pa = STATUS_PRIO[a.status] ?? 9;
       const pb = STATUS_PRIO[b.status] ?? 9;
@@ -1503,15 +1502,11 @@ async function loadHistorico() {
   if (!body) return;
   body.innerHTML = `<div style="padding:16px;text-align:center;color:var(--muted);font-size:12px;font-weight:600">Carregando…</div>`;
   try {
-    const res  = await fetch(PROXY_URL + '?action=rep_history');
+    const res  = await fetch(PROXY_URL + '?action=rep_history&rep=' + REP_NAME + '&token=' + REP_TOKEN);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
-    _history    = (data.history||[]).filter(l => (l.rep||'').toUpperCase() === REP_NAME);
+    _history    = data.history || [];
     _histLoaded = true;
-    // debug: shows whatsapp field in console to diagnose missing WA buttons
-    console.log('[History] total:', _history.length,
-      '| com WA:', _history.filter(l=>l.whatsapp).length,
-      '| sample:', _history.slice(0,3).map(l=>({empresa:l.empresa, wa:l.whatsapp})));
     renderHistorico();
   } catch(err) {
     if (body) body.innerHTML = `<div style="padding:16px;color:#b0134a;font-size:12px">Não foi possível carregar o histórico.</div>`;
@@ -1634,7 +1629,7 @@ async function loadData() {
       } catch(_) { showSkeletons(3); }
     }
 
-    const res  = await fetch(PROXY_URL + '?action=active');
+    const res  = await fetch(PROXY_URL + '?action=active&rep=' + REP_NAME + '&token=' + REP_TOKEN);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     if (data.error) throw new Error(data.error);
@@ -1690,3 +1685,4 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+                                                                                                                                                                                                                                                                                                           
