@@ -5,7 +5,10 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Life B | Natanael</title>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap"></noscript>
   <style>
     :root {
       --purple:  #704B9B;
@@ -1188,18 +1191,36 @@ function renderHistorico() {
 // ── FETCH & POLL ──────────────────────────────────────────────
 let _isLoading = false;
 let _firstLoad = true;
+const CACHE_KEY = 'lifeb_cache_' + REP_NAME;
 
 async function loadData() {
   if (_isLoading) return;
   _isLoading = true;
   loadStart();
   try {
-    if (_firstLoad) showSkeletons(3);
+    if (_firstLoad) {
+      // Show cached leads instantly before the API responds
+      try {
+        const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+        if (cached && cached.leads && cached.leads.length) {
+          _rawLeads  = cached.leads;
+          _firstLoad = false;
+          renderLeads(_rawLeads);
+        } else {
+          showSkeletons(3);
+        }
+      } catch(_) { showSkeletons(3); }
+    }
+
     const res  = await fetch(PROXY_URL + '?action=active');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     if (data.error) throw new Error(data.error);
     const newLeads = data.leads || [];
+
+    // Persist fresh data for next page load (instant display)
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ leads: newLeads, ts: Date.now() })); } catch(_) {}
+
     // If a status prompt is visible, preserve that lead so it doesn't vanish mid-fill
     _rawLeads.forEach(existing => {
       if (!newLeads.find(nl => nl.row === existing.row)) {
@@ -1222,7 +1243,7 @@ async function loadData() {
   } finally { _isLoading=false; loadEnd(); }
 }
 
-window.addEventListener('load', () => { loadData(); setInterval(loadData, POLL_MS); });
+document.addEventListener('DOMContentLoaded', () => { loadData(); setInterval(loadData, POLL_MS); });
 </script>
 </body>
 </html>
