@@ -468,6 +468,7 @@ function loadEnd() {
 // ── TOAST + UNDO ───────────────────────────────────────────────
 let _toastTimer;
 let _undoPending = null;
+const _pendingUndoByRow = {}; // deferred undo toasts — shown when card concludes
 
 function showToast(msg, ms=2600) {
   const el = document.getElementById('toast');
@@ -637,6 +638,12 @@ function clearObs(row) {
 function concludeCard(row) {
   const card = document.querySelector(`.lead-card[data-row="${row}"]`);
   if (!card) return;
+  // Show deferred undo toast now that the rep finished the obs step
+  if (_pendingUndoByRow[row]) {
+    const { msg, data } = _pendingUndoByRow[row];
+    delete _pendingUndoByRow[row];
+    showUndoToast(msg, data);
+  }
   card.classList.add('going-down');
   setTimeout(() => renderLeads(_rawLeads, row), 700);
 }
@@ -963,9 +970,12 @@ async function saveStatusExtra(row) {
     { row, campo: 'VALOR_POTENCIAL', valor: oldPot }
   ];
   if (tipo === 'fechado') undoActions.push({ row, campo: 'DATA_FECH', valor: oldDataF });
-  showUndoToast(tipo === 'fechado' ? 'Fechamento registrado ✓' : 'Motivo registrado ✓', {
-    isMulti: true, leadSnapshot, actions: undoActions
-  });
+
+  // Defer undo toast — show only when card concludes (after rep finishes obs step)
+  _pendingUndoByRow[row] = {
+    msg: tipo === 'fechado' ? 'Fechamento registrado ✓' : 'Motivo registrado ✓',
+    data: { isMulti: true, leadSnapshot, actions: undoActions }
+  };
 
   // Give rep a moment to add obs before the card disappears
   enterConcludingMode(row);
@@ -1054,7 +1064,8 @@ async function confirmStatusChange(row) {
     return; // POST fires only after valor/motivo is confirmed in saveStatusExtra
   }
 
-  showUndoToast('Status atualizado ✓', { row, campo:'STATUS_VENDEDOR', valor:oldStatus });
+  // Defer undo toast — show only when card actually concludes (after rep finishes obs)
+  _pendingUndoByRow[row] = { msg:'Status atualizado ✓', data:{ row, campo:'STATUS_VENDEDOR', valor:oldStatus } };
 
   if (valor === 'Em negociação') {
     // Show optional valor potencial prompt before concluding mode
