@@ -941,13 +941,17 @@ function _loadingEnd() {
 
 // ── PROXY ────────────────────────────────────────────────────
 async function proxy(action) {
-  const url = LEADS_PROXY + '?action=' + action;
+  const url  = LEADS_PROXY + '?action=' + action;
+  const ctrl = new AbortController();
+  const tid  = setTimeout(() => ctrl.abort(), 25000);
   let res;
   try {
-    res = await fetch(url);
+    res = await fetch(url, { signal: ctrl.signal });
   } catch(e) {
     _log.error('proxy', 'Erro na chamada ao proxy', e);
     throw e;
+  } finally {
+    clearTimeout(tid);
   }
   if (!res.ok) {
     const e = new Error('HTTP ' + res.status);
@@ -963,7 +967,7 @@ async function proxy(action) {
 function renderFunilBar(containerId, items, total) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  if (!total) { el.innerHTML = '<div style="color:#c8c2d6;font-style:italic;font-size:13px;text-align:center">Sem dados</div>'; return; }
+  if (!total) { el.innerHTML = emptyRow(1).replace('<tr class="empty-row"><td colspan="1">','<div style="color:#c8c2d6;font-style:italic;font-size:13px;text-align:center">').replace('</td></tr>','</div>'); return; }
 
   el.innerHTML = items.map(item => {
     const pct = total > 0 ? Math.round(item.value / total * 100) : 0;
@@ -1082,7 +1086,7 @@ function renderReps(data) {
   } catch(err) {
     _log.error('reps', 'Erro ao renderizar reps', err);
     const tbody = document.getElementById('tb-reps');
-    if (tbody) tbody.innerHTML = errRow(8);
+    if (tbody) tbody.innerHTML = errRow(9);
   }
 }
 
@@ -1116,12 +1120,7 @@ function renderAtivos(data) {
       if (!tbody) return;
       const repLeads = leads
         .filter(l => (l.rep || '').toUpperCase() === repName)
-        .sort((a, b) => {
-          const pa = a.status === 'Aguardando contato' ? 0 : 1;
-          const pb = b.status === 'Aguardando contato' ? 0 : 1;
-          if (pa !== pb) return pa - pb;
-          return (a.data || '').localeCompare(b.data || '');
-        });
+        .sort((a, b) => (a.data || '').localeCompare(b.data || ''));
       if (badge) badge.textContent = `${n(repLeads.length)} ATIVOS`;
       if (!repLeads.length) { tbody.innerHTML = emptyRow(3); return; }
       tbody.innerHTML = repLeads.map(l => {
@@ -1155,7 +1154,7 @@ function renderFechados(data) {
       return `
       <tr>
         <td title="${esc(empresa)}">${esc(empresa)}</td>
-        <td class="td-left">${esc(toTitleCase(c.rep) || c.rep)}</td>
+        <td class="td-left">${esc(c.rep)}</td>
         <td>${cur(c.valor)}</td>
         <td>${c.dias ? n(c.dias) + 'd' : '—'}</td>
         <td class="td-left">${esc(dataBR)}</td>
@@ -1319,6 +1318,13 @@ async function checkForUpdates() {
 window.addEventListener('load', () => {
   checkForUpdates();
   setInterval(checkForUpdates, POLL_INTERVAL_MS);
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    _lastSheetModified = null; // força reload completo ao retornar à aba
+    if (!_isLoading) checkForUpdates();
+  }
 });
 </script>
 </body>
