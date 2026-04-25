@@ -25,7 +25,7 @@
     }
     *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
     html { width:100%; height:100vh; overflow:hidden; background:var(--bg); }
-    body { width:100%; height:100vh; overflow:hidden; font-family:var(--font); background:var(--bg); color:var(--text); }
+    body { width:100%; height:100vh; overflow:hidden; font-family:var(--font); background:var(--bg); color:var(--text); display:flex; flex-direction:column; }
 
     /* LOADING BAR */
     #loading-bar { position:fixed; top:0; left:0; height:3px; width:0%; background:linear-gradient(90deg,var(--purple),var(--magenta)); z-index:9999; transition:width .2s,opacity .4s; pointer-events:none; }
@@ -63,7 +63,6 @@
     #config-warning { display:none; background:#fff8e1; border-bottom:2px solid #ffc107; padding:6px 28px; font-size:11px; color:#7a5700; flex-shrink:0; }
 
     /* LAYOUT PRINCIPAL */
-    body { display:flex; flex-direction:column; }
     #telao-body {
       flex: 1;
       display: flex;
@@ -227,8 +226,6 @@
     /* FOOTER */
     footer { background:var(--purple); color:rgba(255,255,255,.65); text-align:center; padding:10px 28px; font-size:11px; flex-shrink:0; }
     footer strong { color:#fff; }
-    .vend-txt-sm { display:none; }
-    @media (max-width:1400px) { .vend-txt-lg { display:none; } .vend-txt-sm { display:inline; } }
   </style>
 </head>
 <body>
@@ -342,8 +339,7 @@
 
       <div class="card card-funil">
         <div class="card-hd">
-          <div class="card-hd-title">Funil Vendedor <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;opacity:.6">(Status Vendedor)</span></div>
-          <span class="badge" id="vend-total-badge">—</span>
+          <div class="card-hd-title">Funil Vendedor</div>
         </div>
         <div class="funil-body" id="funil-vend">
           <div style="text-align:center;color:#c8c2d6;font-size:12px;font-style:italic">Carregando...</div>
@@ -378,7 +374,7 @@
               <th>Empresa</th><th class="td-left" style="text-align:left">Cidade / UF</th><th style="text-align:center">Status</th><th style="text-align:right">Potencial</th><th style="text-align:right">Entrada</th>
             </tr></thead>
             <tbody id="tb-ativos-iramar">
-              <tr class="empty-row"><td colspan="4">Carregando...</td></tr>
+              <tr class="empty-row"><td colspan="5">Carregando...</td></tr>
             </tbody>
           </table>
         </div>
@@ -407,7 +403,7 @@
               <th>Empresa</th><th class="td-left" style="text-align:left">Cidade / UF</th><th style="text-align:center">Status</th><th style="text-align:right">Potencial</th><th style="text-align:right">Entrada</th>
             </tr></thead>
             <tbody id="tb-ativos-natanael">
-              <tr class="empty-row"><td colspan="4">Carregando...</td></tr>
+              <tr class="empty-row"><td colspan="5">Carregando...</td></tr>
             </tbody>
           </table>
         </div>
@@ -449,7 +445,10 @@
       <div class="card card-table" style="flex:1.3">
         <div class="card-hd">
           <div class="card-hd-title">Fechamentos</div>
-          <span id="fechados-cac" class="badge" style="white-space:nowrap"></span>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span id="fechados-media-dias" class="badge" style="white-space:nowrap"></span>
+            <span id="fechados-cac" class="badge" style="white-space:nowrap"></span>
+          </div>
         </div>
         <div class="table-scroll table-body" style="max-height:178px;overflow-y:auto;flex:none">
           <table style="table-layout:fixed;width:100%;font-size:11px">
@@ -473,7 +472,7 @@
       <div class="card card-table" style="flex:0.6">
         <div class="card-hd">
           <div class="card-hd-title">Funil Por Representante</div>
-          <span id="reps-media-dias" class="badge" style="white-space:nowrap"></span>
+          <div id="reps-conv-container" style="display:flex;align-items:center;gap:6px"></div>
         </div>
         <div class="table-scroll table-body" style="max-height:178px;overflow-y:auto;flex:none">
           <table>
@@ -714,8 +713,8 @@ function renderSummary(data) {
 
     if (el('card-potencial')) el('card-potencial').textContent = cur(pipeline);
 
-    const repsDiasEl = document.getElementById('reps-media-dias');
-    if (repsDiasEl && media_dias > 0) repsDiasEl.textContent = `TEMPO MÉDIO DE FECHAMENTO: ${media_dias} DIAS`;
+    const fechadosMediaEl = document.getElementById('fechados-media-dias');
+    if (fechadosMediaEl) fechadosMediaEl.textContent = media_dias > 0 ? `TEMPO MÉDIO: ${media_dias} DIAS` : '';
 
     const hojeEl = document.getElementById('latest-hoje');
     if (hojeEl) hojeEl.textContent = `HOJE: ${data.todayCount || 0}`;
@@ -746,10 +745,11 @@ function renderFunnel(data) {
     const { sdr = {}, vend = {}, total = 0 } = data;
 
     const sdrBadge = document.getElementById('sdr-total-badge');
-    if (sdrBadge) sdrBadge.textContent = n(total) + ' leads';
+    if (sdrBadge) {
+      const taxaQualif = total > 0 ? ((sdr.qualif || 0) / total * 100).toFixed(1) + '% QUALIFICAÇÃO' : '—';
+      sdrBadge.textContent = taxaQualif;
+    }
     const totalVend = (vend.ag_cont||0)+(vend.em_cont||0)+(vend.reun||0)+(vend.em_neg||0)+(vend.fechado||0)+(vend.perdido||0);
-    const vendBadge = document.getElementById('vend-total-badge');
-    if (vendBadge) vendBadge.innerHTML = `${n(totalVend)} <span class="vend-txt-lg">com vendedor</span><span class="vend-txt-sm">c/ vendedor</span>`;
 
     renderFunilBar('funil-sdr', [
       { label: 'Aguardando abordagem', value: sdr.ag_abord || 0, barClass: 'bar-orange' },
@@ -778,6 +778,13 @@ function renderReps(data) {
     if (!tbody) return;
     const reps = (data.reps || []).filter(r => r.rep !== 'Sem vendedor');
     if (!reps.length) { tbody.innerHTML = emptyRow(8); return; }
+    const convContainer = document.getElementById('reps-conv-container');
+    if (convContainer) {
+      convContainer.innerHTML = reps.map(r => {
+        const conv = r.total > 0 ? ((r.fechado / r.total) * 100).toFixed(1) + '%' : '—';
+        return `<span class="badge">${esc(r.rep)}: ${conv}</span>`;
+      }).join('');
+    }
     tbody.innerHTML = reps.map(r => `
       <tr>
         <td>${esc(r.rep)}</td>
@@ -792,7 +799,7 @@ function renderReps(data) {
   } catch(err) {
     _log.error('reps', 'Erro ao renderizar reps', err);
     const tbody = document.getElementById('tb-reps');
-    if (tbody) tbody.innerHTML = errRow(9);
+    if (tbody) tbody.innerHTML = errRow(8);
   }
 }
 
@@ -820,14 +827,14 @@ function renderAtivos(data) {
       const agEl   = document.getElementById(agId);
       const contEl = document.getElementById(contId);
       if (!tbody) return;
-      const ORDEM_STATUS = { 'Aguardando contato': 0, 'Em contato': 1, 'Em negociação': 2 };
       const repLeads = leads
         .filter(l => (l.rep || '').toUpperCase() === repName)
         .sort((a, b) => {
-          const oa = ORDEM_STATUS[a.status] !== undefined ? ORDEM_STATUS[a.status] : 9;
-          const ob = ORDEM_STATUS[b.status] !== undefined ? ORDEM_STATUS[b.status] : 9;
+          const ORDEM = { 'Aguardando contato': 0, 'Em contato': 1, 'Em negociação': 2 };
+          const oa = ORDEM[a.status] !== undefined ? ORDEM[a.status] : 9;
+          const ob = ORDEM[b.status] !== undefined ? ORDEM[b.status] : 9;
           if (oa !== ob) return oa - ob;
-          return (a.data || '').localeCompare(b.data || ''); // mais antigo primeiro dentro do grupo
+          return (a.data || '').localeCompare(b.data || '');
         });
       if (badge)  badge.textContent  = `TOTAL: ${n(repLeads.length)} ATIVOS`;
       if (agEl)   agEl.textContent   = `AGUARDANDO: ${n(repLeads.filter(l => l.status === 'Aguardando contato').length)}`;
@@ -863,14 +870,18 @@ function renderFechados(data) {
     if (!tbody) return;
     const f = data.fechamentos || [];
     if (!f.length) { tbody.innerHTML = emptyRow(5); return; }
-    tbody.innerHTML = f.map(c => `
-      <tr>
-        <td title="${esc(toTitleCase(c.empresa || c.nome) || '—')}">${esc(toTitleCase(c.empresa || c.nome) || '—')}</td>
-        <td class="td-left">${esc(c.rep)}</td>
+    tbody.innerHTML = f.map(c => {
+      const empresa = esc(toTitleCase(c.empresa || c.nome) || '—');
+      const rep     = esc(toTitleCase(c.rep) || c.rep);
+      const dataBR  = c.data_f ? (() => { const [y,m,d] = c.data_f.split('-'); return `${d}/${m}/${y.slice(2)}`; })() : '—';
+      return `<tr>
+        <td title="${empresa}">${empresa}</td>
+        <td class="td-left">${rep}</td>
         <td style="text-align:right">${cur(c.valor)}</td>
         <td style="text-align:right">${c.dias ? n(c.dias) + 'd' : '—'}</td>
-        <td style="text-align:right">${c.data_f ? (() => { const [y,m,d] = c.data_f.split('-'); return `${d}/${m}/${y.slice(2)}`; })() : '—'}</td>
-      </tr>`).join('');
+        <td style="text-align:right">${dataBR}</td>
+      </tr>`;
+    }).join('');
   } catch(err) {
     _log.error('fechados', 'Erro ao renderizar fechados', err);
     const tbody = document.getElementById('tb-fechados');
@@ -906,7 +917,6 @@ function renderLatest(data) {
   }
 }
 
-// ── LOAD ALL ─────────────────────────────────────────────────
 // ── LOAD ALL DATA (só quando planilha mudar) ─────────────────
 async function loadAllData(summaryData, lm) {
   _loadingStart();
@@ -954,7 +964,7 @@ async function loadAllData(summaryData, lm) {
     }
 
     stamp(lm);
-    _lastSuccessfulLoad = Date.now(); // watchdog: marca última carga bem-sucedida
+    _lastSuccessfulLoad = Date.now();
   } finally {
     _loadingEnd();
   }
@@ -982,7 +992,7 @@ async function checkForUpdates() {
     }
   } catch(e) {
     _log.error('check', 'Erro ao verificar planilha', e);
-    setTimeout(() => { if (!_isLoading) checkForUpdates(); }, 15000); // retry após 15s
+    setTimeout(() => { if (!_isLoading) checkForUpdates(); }, 15000);
   } finally {
     _isLoading = false;
   }
@@ -992,7 +1002,6 @@ async function checkForUpdates() {
 window.addEventListener('load', () => {
   checkForUpdates();
   setInterval(checkForUpdates, POLL_INTERVAL_MS);
-  // Watchdog: auto-reload da página se sem dados por 35 min (fallback máximo)
   setInterval(() => {
     if (Date.now() - _lastSuccessfulLoad > AUTO_RELOAD_MS) {
       _log.warn('watchdog', 'sem dados por 35min — recarregando página');
@@ -1003,7 +1012,7 @@ window.addEventListener('load', () => {
 
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) {
-    _lastSheetModified = null; // força reload completo ao retornar à aba
+    _lastSheetModified = null;
     if (!_isLoading) checkForUpdates();
   }
 });
