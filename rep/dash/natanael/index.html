@@ -1062,6 +1062,33 @@ function skipStatusPrompt(row) {
     }
   }
 }
+function _revertOptimisticClose(row) {
+  const undoData = _pendingUndoByRow[row];
+  if (undoData && undoData.data) {
+    const snap    = undoData.data.leadSnapshot;
+    const actions = undoData.data.actions || [];
+    const tsAct   = actions.find(a => a.campo === 'TIMESTAMP');
+    if (tsAct) {
+      if (tsAct.valor) _tsMap[row] = parseInt(tsAct.valor); else delete _tsMap[row];
+      try { localStorage.setItem(TS_KEY, JSON.stringify(_tsMap)); } catch(_) {}
+    }
+    if (snap && !_rawLeads.find(l => l.row === row)) {
+      const restored = { ...snap };
+      actions.forEach(function({ campo, valor }) {
+        if      (campo === 'STATUS_VENDEDOR') restored.status      = valor;
+        else if (campo === 'VALOR_FECHADO')   restored.valor_fech  = parseFloat(valor) || 0;
+        else if (campo === 'VALOR_POTENCIAL') restored.pot         = parseFloat(valor) || 0;
+        else if (campo === 'MOTIVO_PERDA')    restored.motivo_perd = valor;
+        else if (campo === 'DATA_FECH')       restored.data_f      = valor;
+      });
+      _rawLeads.push(restored);
+    }
+    if (_history && _history[0] && _history[0].row === row) _history.shift();
+  }
+  delete _pendingUndoByRow[row];
+  renderLeads(_rawLeads);
+}
+
 async function saveStatusExtra(row) {
   const prompt   = document.getElementById('sp-' + row);
   if (!prompt) return;
@@ -1161,7 +1188,10 @@ async function saveStatusExtra(row) {
       const d = await r.json();
       if (!d.ok) throw new Error(d.error);
       if (d.ts) { _tsMap[row] = d.ts; try{localStorage.setItem(TS_KEY,JSON.stringify(_tsMap));}catch(_){} }
-    } catch(_) { showToast('Erro ao registrar — verifique conexão'); }
+    } catch(_) {
+      _revertOptimisticClose(row);
+      showToast('Erro ao registrar — verifique conexão');
+    }
     return;
   }
 
@@ -1203,7 +1233,10 @@ async function saveStatusExtra(row) {
     const d = await r.json();
     if (!d.ok) throw new Error(d.error);
     if (d.ts) { _tsMap[row] = d.ts; try{localStorage.setItem(TS_KEY,JSON.stringify(_tsMap));}catch(_){} }
-  } catch(_) { showToast('Erro ao registrar — verifique conexão'); }
+  } catch(_) {
+    _revertOptimisticClose(row);
+    showToast('Erro ao registrar — verifique conexão');
+  }
 }
 function spKeyDown(e, row) {
   if (e.key === 'Enter') { e.preventDefault(); saveStatusExtra(row); }
