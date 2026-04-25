@@ -91,7 +91,7 @@
       80%  { opacity:.65; transform:scale(.99);   box-shadow:0 0 0 2px var(--purple),0 2px 8px rgba(112,75,155,.15); }
       100% { opacity:.35; transform:scale(1);     box-shadow:0 1px 6px rgba(0,0,0,.05); }
     }
-    .lead-card.going-down { animation:going-down 1.3s cubic-bezier(.4,0,.2,1) forwards; pointer-events:none; }
+    .lead-card.going-down { animation:going-down 0.65s cubic-bezier(.4,0,.2,1) forwards; pointer-events:none; }
     @keyframes just-placed { 0%{box-shadow:0 0 0 2px var(--purple),0 4px 16px rgba(112,75,155,.25);} 100%{box-shadow:0 1px 6px rgba(0,0,0,.05);} }
     .lead-card.just-placed { animation:just-placed .9s ease-out; }
 
@@ -182,10 +182,11 @@
     .lc-sp-footer { display:flex; gap:6px; margin-top:7px; justify-content:flex-end; }
 
     .lc-sp-sel { appearance:none; -webkit-appearance:none; cursor:pointer; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%236b6484'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:28px; }
-    .lc-sp-save { padding:7px 16px; border-radius:8px; background:var(--purple); color:#fff; border:none; font-family:var(--font); font-size:11px; font-weight:700; cursor:pointer; transition:background .15s; }
+    .lc-sp-save { padding:7px 16px; border-radius:8px; background:var(--purple); color:#fff; border:none; font-family:var(--font); font-size:11px; font-weight:700; cursor:pointer; transition:background .15s; touch-action:manipulation; }
     .lc-sp-save:hover   { background:#5c3d82; }
     .lc-sp-save:active  { transform:scale(.96); }
     .lc-sp-save.saving  { opacity:.6; pointer-events:none; }
+    .lc-sp-skip { padding:7px 14px; border-radius:8px; border:1.5px solid var(--border); background:none; font-family:var(--font); font-size:11px; font-weight:700; color:var(--muted); cursor:pointer; touch-action:manipulation; }
 
     /* EXPAND TOGGLE */
     .lc-toggle { width:100%; padding:7px 14px; border-top:1px solid var(--border); background:none; border-left:none; border-right:none; border-bottom:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; font-family:var(--font); font-size:10px; font-weight:700; color:var(--muted); letter-spacing:.4px; text-transform:uppercase; transition:background .12s, color .12s; }
@@ -221,8 +222,11 @@
     .lc-obs-fb.err { color:var(--red); }
     .obsr-cancel-btn { padding:8px 14px; border-radius:8px; border:1.5px solid var(--border); background:none; font-family:var(--font); font-size:12px; font-weight:700; color:var(--muted); cursor:pointer; }
     .obsr-cancel-btn:hover { background:var(--bg); }
-    .lc-obs-conclude { display:none; padding:8px 14px; border-radius:8px; border:1.5px solid var(--border); background:none; font-family:var(--font); font-size:12px; font-weight:700; color:var(--muted); cursor:pointer; }
+    .lc-obs-conclude { display:none; padding:8px 14px; border-radius:8px; border:1.5px solid var(--border); background:none; font-family:var(--font); font-size:12px; font-weight:700; color:var(--muted); cursor:pointer; touch-action:manipulation; }
     .lc-obs-conclude:hover { background:var(--bg); }
+    .lc-obs-clear { display:none; padding:8px 14px; border-radius:8px; border:1.5px solid var(--border); background:none; font-family:var(--font); font-size:12px; font-weight:700; color:var(--muted); cursor:pointer; touch-action:manipulation; }
+    .lc-obs-clear:hover { background:var(--bg); }
+    .lead-card.concluding .lc-obs-clear { display:inline-flex; align-items:center; }
     .lc-obs-save { padding:8px 18px; border-radius:8px; background:var(--purple); color:#fff; border:none; cursor:pointer; font-family:var(--font); font-size:12px; font-weight:700; letter-spacing:.3px; transition:background .15s, transform .1s; }
     .lc-obs-save:hover   { background:#5c3d82; }
     .lc-obs-save:active  { transform:scale(.96); }
@@ -615,18 +619,26 @@ function enterConcludingMode(row) {
   // Change save button label
   const saveBtn = document.getElementById('obs-save-' + row);
   if (saveBtn) saveBtn.textContent = 'Salvar e concluir';
-  // Focus textarea
+  // Focus textarea and scroll to make it visible above the mobile keyboard
   const ta = document.getElementById('obs-' + row);
   if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
-  // Scroll obs into view
-  const editWrap = document.getElementById('obsr-edit-' + row);
-  if (editWrap) setTimeout(() => editWrap.scrollIntoView({ behavior:'smooth', block:'nearest' }), 80);
+  const scrollObs = () => {
+    const editWrap = document.getElementById('obsr-edit-' + row);
+    if (!editWrap) return;
+    editWrap.scrollIntoView({ behavior:'smooth', block:'center' });
+  };
+  setTimeout(scrollObs, 80);
+  setTimeout(scrollObs, 380); // re-scroll after mobile keyboard has finished opening
+}
+function clearObs(row) {
+  const ta = document.getElementById('obs-' + row);
+  if (ta) { ta.value = ''; ta.focus(); }
 }
 function concludeCard(row) {
   const card = document.querySelector(`.lead-card[data-row="${row}"]`);
   if (!card) return;
   card.classList.add('going-down');
-  setTimeout(() => renderLeads(_rawLeads, row), 1350);
+  setTimeout(() => renderLeads(_rawLeads, row), 700);
 }
 
 // ── EXPAND TOGGLE ─────────────────────────────────────────────
@@ -826,12 +838,14 @@ function showStatusPrompt(row, status) {
   const sel      = document.getElementById('sp-sel-' + row);
   const dateWrap = document.getElementById('sp-date-wrap-' + row);
   const dateIn   = document.getElementById('sp-date-' + row);
+  const skipBtn  = document.getElementById('sp-skip-' + row);
   if (status === 'Fechado') {
     if (lbl)      lbl.textContent = '💰 Qual foi o valor do fechamento?';
-    if (input)    { input.value = ''; input.style.display = ''; }
+    if (input)    { input.value = ''; input.placeholder = 'Ex: 5000'; input.style.display = ''; }
     if (sel)      sel.style.display = 'none';
-    if (dateWrap) { dateWrap.style.display = ''; }
+    if (dateWrap) dateWrap.style.display = '';
     if (dateIn)   dateIn.value = '';
+    if (skipBtn)  skipBtn.style.display = 'none';
     prompt.dataset.tipo = 'fechado';
     if (input) input.focus();
   } else if (status === 'Perdido') {
@@ -839,10 +853,24 @@ function showStatusPrompt(row, status) {
     if (input)    input.style.display = 'none';
     if (sel)      { sel.value = ''; sel.style.display = ''; }
     if (dateWrap) dateWrap.style.display = 'none';
+    if (skipBtn)  skipBtn.style.display = 'none';
     prompt.dataset.tipo = 'perdido';
     if (sel) sel.focus();
+  } else if (status === 'negociacao') {
+    if (lbl)      lbl.textContent = '💰 Valor potencial (opcional)';
+    if (input)    { input.value = ''; input.placeholder = 'Ex: 5000'; input.style.display = ''; }
+    if (sel)      sel.style.display = 'none';
+    if (dateWrap) dateWrap.style.display = 'none';
+    if (skipBtn)  skipBtn.style.display = '';
+    prompt.dataset.tipo = 'negociacao';
+    if (input) input.focus();
   }
   prompt.classList.add('visible');
+}
+function skipPotPrompt(row) {
+  const prompt = document.getElementById('sp-' + row);
+  if (prompt) prompt.classList.remove('visible');
+  enterConcludingMode(row);
 }
 function skipStatusPrompt(row) {
   const prompt = document.getElementById('sp-' + row);
@@ -854,7 +882,7 @@ function skipStatusPrompt(row) {
     const card = document.querySelector(`.lead-card[data-row="${row}"]`);
     if (card) {
       card.classList.add('going-down');
-      setTimeout(() => renderLeads(_rawLeads, row), 1350);
+      setTimeout(() => renderLeads(_rawLeads, row), 700);
     }
   }
 }
@@ -865,6 +893,24 @@ async function saveStatusExtra(row) {
   const input    = document.getElementById('sp-input-' + row);
   const sel      = document.getElementById('sp-sel-' + row);
   const dateIn   = document.getElementById('sp-date-' + row);
+
+  // Em negociação — optional valor potencial, then concluding mode
+  if (tipo === 'negociacao') {
+    const raw = input ? input.value.trim() : '';
+    prompt.classList.remove('visible');
+    if (raw) {
+      const n = parseFloat(raw.replace(/[^\d,.-]/g,'').replace(',','.'));
+      if (!isNaN(n) && n > 0) {
+        const lead2 = _rawLeads.find(l => l.row === row);
+        if (lead2) lead2.pot = n;
+        fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
+          body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'VALOR_POTENCIAL', valor:String(n) }) });
+      }
+    }
+    enterConcludingMode(row);
+    return;
+  }
+
   // For fechado: read text input. For perdido: read select dropdown.
   const raw = tipo === 'perdido'
     ? (sel ? sel.value.trim() : '')
@@ -1008,9 +1054,16 @@ async function confirmStatusChange(row) {
     return; // POST fires only after valor/motivo is confirmed in saveStatusExtra
   }
 
-  // Non-Fechado/Perdido: give rep a moment to add obs before re-sorting
   showUndoToast('Status atualizado ✓', { row, campo:'STATUS_VENDEDOR', valor:oldStatus });
-  enterConcludingMode(row);
+
+  if (valor === 'Em negociação') {
+    // Show optional valor potencial prompt before concluding mode
+    const prompt = document.getElementById('sp-' + row);
+    if (prompt) prompt.dataset.oldStatus = oldStatus;
+    showStatusPrompt(row, 'negociacao');
+  } else {
+    enterConcludingMode(row);
+  }
 
   try {
     const res  = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
@@ -1171,7 +1224,8 @@ function renderLeads(leads, highlightRow) {
             <input class="lc-sp-input" id="sp-date-${l.row}" type="date" onkeydown="spKeyDown(event,${l.row})">
           </div>
           <div class="lc-sp-footer">
-            <button class="lc-sp-save" onclick="saveStatusExtra(${l.row})">Salvar e concluir</button>
+            <button class="lc-sp-skip" id="sp-skip-${l.row}" style="display:none" onclick="skipPotPrompt(${l.row})">Pular</button>
+            <button class="lc-sp-save" onclick="saveStatusExtra(${l.row})">Salvar</button>
           </div>
         </div>
         <div class="lc-confirm" id="lc-${l.row}">
@@ -1198,8 +1252,9 @@ function renderLeads(leads, highlightRow) {
             <div class="lc-obs-footer">
               <span class="lc-obs-fb" id="obs-fb-${l.row}"></span>
               <button class="obsr-cancel-btn"  id="obs-cancel-${l.row}"   onclick="cancelObsEdit(${l.row})">Cancelar</button>
-              <button class="lc-obs-conclude"  id="obs-conclude-${l.row}" onclick="concludeCard(${l.row})">Pular →</button>
-              <button class="lc-obs-save"      id="obs-save-${l.row}"     onclick="saveObs(${l.row})">Salvar</button>
+              <button class="lc-obs-clear"    id="obs-clear-${l.row}"   onclick="clearObs(${l.row})">Limpar</button>
+              <button class="lc-obs-conclude" id="obs-conclude-${l.row}" onclick="concludeCard(${l.row})">Pular →</button>
+              <button class="lc-obs-save"     id="obs-save-${l.row}"     onclick="saveObs(${l.row})">Salvar</button>
             </div>
           </div>
         </div>
