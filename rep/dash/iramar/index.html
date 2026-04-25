@@ -1750,7 +1750,7 @@ let _isLoading  = false;
 let _firstLoad  = true;
 let _retryCount = 0;
 const MAX_RETRIES = 2;
-const CACHE_KEY = 'lifeb_cache_' + REP_NAME;
+const CACHE_KEY = 'lifeb_cache_IRAMAR';
 
 async function loadData() {
   if (_isLoading) return;
@@ -1761,11 +1761,13 @@ async function loadData() {
       // Show cached leads instantly before the API responds
       try {
         const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
-        if (cached && cached.leads && cached.leads.length) {
+        // Validate rep matches — prevents showing another rep's leads from a stale/shared cache
+        if (cached && cached.rep === REP_NAME && cached.leads && cached.leads.length) {
           _rawLeads  = cached.leads;
           _firstLoad = false;
           renderLeads(_rawLeads);
         } else {
+          if (cached && cached.rep !== REP_NAME) localStorage.removeItem(CACHE_KEY);
           showSkeletons(3);
         }
       } catch(_) { showSkeletons(3); }
@@ -1777,8 +1779,8 @@ async function loadData() {
     if (data.error) throw new Error(data.error);
     const newLeads = data.leads || [];
 
-    // Persist fresh data for next page load (instant display)
-    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ leads: newLeads, ts: Date.now() })); } catch(_) {}
+    // Persist fresh data with rep tag to prevent cross-rep cache reads
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ rep: REP_NAME, leads: newLeads, ts: Date.now() })); } catch(_) {}
 
     // If a status prompt is visible, preserve that lead so it doesn't vanish mid-fill
     _rawLeads.forEach(existing => {
