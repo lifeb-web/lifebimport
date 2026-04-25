@@ -271,12 +271,13 @@
     .hist-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:8px; box-shadow:0 1px 4px rgba(0,0,0,.04); }
     .hist-card.fech { border-left:4px solid var(--emerald); }
     .hist-card.perd { border-left:4px solid #ef4444; }
-    .hist-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:2px; }
-    .hist-empresa { font-size:13px; font-weight:800; color:var(--text); flex:1; min-width:0; word-break:break-word; }
+    .hist-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:5px; }
+    .hist-empresa { font-size:13px; font-weight:800; color:var(--text); word-break:break-word; }
+    .hist-top-left { flex:1; min-width:0; }
     .hist-badge { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; border-radius:20px; padding:2px 8px; flex-shrink:0; }
     .hist-badge.b-fech { background:rgba(22,163,74,.12); color:#15803d; }
     .hist-badge.b-perd { background:rgba(239,68,68,.12); color:#dc2626; }
-    .hist-nome { font-size:10px; font-weight:600; color:var(--muted); margin-bottom:5px; }
+    .hist-nome { font-size:10px; font-weight:600; color:var(--muted); margin-top:1px; }
     .hist-meta { display:flex; gap:5px; flex-wrap:wrap; }
 
     /* EMPTY */
@@ -1341,13 +1342,15 @@ function _histCardHtml(l) {
   const wa         = fmtWA(l.whatsapp);
   return `<div class="hist-card ${bClass}" data-row="${l.row}">
     <div class="hist-top">
-      <div class="hist-empresa">${empresa}</div>
+      <div class="hist-top-left">
+        <div class="hist-empresa">${empresa}</div>
+        ${showNome ? `<div class="hist-nome">${esc(nomeRaw)}</div>` : ''}
+      </div>
       <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
         ${wa ? `<button class="lc-icon-btn wa" data-url="https://wa.me/${wa}" onclick="openLinkConfirm(this)" title="WhatsApp" style="width:26px;height:26px;border:none;">${SVG_WA}</button>` : ''}
         <span class="hist-badge ${badge}">${esc(l.status)}</span>
       </div>
     </div>
-    ${showNome ? `<div class="hist-nome">${esc(nomeRaw)}</div>` : ''}
     <div class="hist-meta">
       ${cidadeUF   ? `<span class="lc-tag">📍 ${esc(cidadeUF)}</span>` : ''}
       ${dataMeta   ? `<span class="lc-tag">${esc(dataMeta)}</span>` : ''}
