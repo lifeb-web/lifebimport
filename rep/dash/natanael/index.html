@@ -253,6 +253,21 @@
     .hist-pagination { display:flex; justify-content:center; gap:8px; padding:8px 0 4px; }
     .hist-pg-btn { padding:8px 20px; border-radius:20px; border:1.5px solid var(--border); background:var(--card); font-family:var(--font); font-size:12px; font-weight:700; color:var(--purple); cursor:pointer; transition:background .12s; touch-action:manipulation; }
     .hist-pg-btn:hover { background:#f3eeff; border-color:rgba(112,75,155,.3); }
+    .hist-tab-cards { display:flex; gap:8px; padding-top:4px; }
+    .hist-tab-card { flex:1; padding:14px 10px; border-radius:14px; border:1.5px solid var(--border); background:var(--card); display:flex; flex-direction:column; align-items:center; gap:5px; cursor:pointer; font-family:var(--font); transition:background .15s; touch-action:manipulation; box-shadow:0 1px 4px rgba(0,0,0,.04); }
+    .hist-tab-card.fech { border-color:rgba(22,163,74,.3); }
+    .hist-tab-card.perd { border-color:rgba(239,68,68,.3); }
+    .hist-tab-card.fech:hover { background:rgba(22,163,74,.06); }
+    .hist-tab-card.perd:hover { background:rgba(239,68,68,.06); }
+    .hist-tab-icon  { font-size:20px; }
+    .hist-tab-label { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.4px; }
+    .hist-tab-card.fech .hist-tab-label { color:#15803d; }
+    .hist-tab-card.perd .hist-tab-label { color:#dc2626; }
+    .hist-tab-count { font-size:22px; font-weight:800; line-height:1; }
+    .hist-tab-card.fech .hist-tab-count { color:#15803d; }
+    .hist-tab-card.perd .hist-tab-count { color:#dc2626; }
+    .hist-back-btn { display:inline-flex; align-items:center; gap:5px; padding:4px 0 10px; background:none; border:none; font-family:var(--font); font-size:12px; font-weight:700; color:var(--muted); cursor:pointer; touch-action:manipulation; }
+    .hist-back-btn:hover { color:var(--purple); }
     .hist-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:8px; box-shadow:0 1px 4px rgba(0,0,0,.04); }
     .hist-card.fech { border-left:4px solid var(--emerald); }
     .hist-card.perd { border-left:4px solid #ef4444; }
@@ -879,11 +894,13 @@ async function saveStatusExtra(row) {
     : (lead2 ? lead2.motivo_perd || '' : '');
   const oldDataF  = lead2 ? (lead2.data_f || '') : '';
   const oldStatus = prompt.dataset.oldStatus || '';
+  const oldPot    = lead2 ? String(lead2.pot || 0) : '0';
   const newStatus = tipo === 'fechado' ? 'Fechado' : 'Perdido';
 
   // Optimistic: update cache
   if (lead2 && tipo === 'fechado') { lead2.valor_fech = writeVal; lead2.data_f = dataFech; }
   if (lead2 && tipo === 'perdido')   lead2.motivo_perd = writeVal;
+  if (lead2) lead2.pot = 0; // zero valor potencial
 
   // Save snapshot then remove from active list (won't reappear on next render/poll)
   const leadSnapshot = lead2 ? { ...lead2 } : null;
@@ -892,10 +909,11 @@ async function saveStatusExtra(row) {
 
   prompt.classList.remove('visible');
 
-  // Multi-action undo: reverts status, valor/motivo, and data_fech in the spreadsheet
+  // Multi-action undo: reverts status, valor/motivo, data_fech, and valor_potencial
   const undoActions = [
     { row, campo: 'STATUS_VENDEDOR', valor: oldStatus },
-    { row, campo, valor: oldExtra }
+    { row, campo, valor: oldExtra },
+    { row, campo: 'VALOR_POTENCIAL', valor: oldPot }
   ];
   if (tipo === 'fechado') undoActions.push({ row, campo: 'DATA_FECH', valor: oldDataF });
   showUndoToast(tipo === 'fechado' ? 'Fechamento registrado ✓' : 'Motivo registrado ✓', {
@@ -905,7 +923,7 @@ async function saveStatusExtra(row) {
   // Give rep a moment to add obs before the card disappears
   enterConcludingMode(row);
 
-  // Sequential POSTs: status → valor/motivo → data (only for fechado)
+  // Sequential POSTs: status → valor/motivo → data (fechado) → zerar valor potencial
   try {
     const r1 = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
       body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'STATUS_VENDEDOR', valor:newStatus }) });
@@ -920,6 +938,10 @@ async function saveStatusExtra(row) {
         body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'DATA_FECH', valor:dataFech }) });
       const d3 = await r3.json();
       if (!d3.ok) throw new Error(d3.error);
+    }
+    if (parseFloat(oldPot) > 0) {
+      fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
+        body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'VALOR_POTENCIAL', valor:'0' }) });
     }
   } catch(_) {
     showToast('Erro ao registrar — verifique conexão');
@@ -1236,6 +1258,7 @@ function renderLeads(leads, highlightRow) {
 let _history    = null;
 let _histLoaded = false;
 let _histPage   = 1;
+let _histTab    = null; // null | 'fechados' | 'perdidos'
 const HIST_PAGE_SIZE = 5;
 
 function toggleHistorico() {
@@ -1250,10 +1273,12 @@ function toggleHistorico() {
     _setupHistAutoCollapse();
   } else {
     _teardownHistObserver();
+    _histTab = null; _histPage = 1;
   }
 }
 function _teardownHistObserver() {
   if (window._histObserver) { window._histObserver.disconnect(); window._histObserver = null; }
+  if (window._histCollapseTimer) { clearTimeout(window._histCollapseTimer); window._histCollapseTimer = null; }
 }
 function _setupHistAutoCollapse() {
   _teardownHistObserver();
@@ -1264,16 +1289,21 @@ function _setupHistAutoCollapse() {
     const entry = entries[0];
     if (!entry.isIntersecting) {
       wasHidden = true;
+      if (window._histCollapseTimer) { clearTimeout(window._histCollapseTimer); window._histCollapseTimer = null; }
     } else if (wasHidden) {
-      const sec = document.getElementById('historico-section');
-      if (sec && sec.classList.contains('open')) {
-        sec.classList.remove('open');
-        const b = sec.querySelector('.hist-header');
-        if (b) b.setAttribute('aria-expanded', 'false');
-      }
-      _teardownHistObserver();
+      // Leads list visible again — wait 3s before collapsing (rep may just be scrolling past)
+      window._histCollapseTimer = setTimeout(function() {
+        const sec = document.getElementById('historico-section');
+        if (sec && sec.classList.contains('open')) {
+          sec.classList.remove('open');
+          const b = sec.querySelector('.hist-header');
+          if (b) b.setAttribute('aria-expanded', 'false');
+          _histTab = null; _histPage = 1;
+        }
+        _teardownHistObserver();
+      }, 3000);
     }
-  }, { threshold: 0.1 });
+  }, { threshold: 0.6 });
   window._histObserver.observe(leadsList);
 }
 
@@ -1297,71 +1327,90 @@ async function loadHistorico() {
   }
 }
 
+function _histCardHtml(l) {
+  const empresa    = esc(toTitleCase(l.empresa||l.nome)||'—');
+  const nomeRaw    = toTitleCase(l.nome||'');
+  const nomeEmp    = toTitleCase(l.empresa||'');
+  const showNome   = nomeRaw && nomeRaw.toLowerCase() !== nomeEmp.toLowerCase();
+  const cidadeUF   = [toTitleCase(l.cidade),(l.estado||'').toUpperCase()].filter(v=>v&&v.trim()).join(' · ');
+  const bClass     = l.status==='Fechado' ? 'fech' : 'perd';
+  const badge      = l.status==='Fechado' ? 'b-fech' : 'b-perd';
+  const dataMeta   = l.data_f ? '📅 '+fmtData(l.data_f) : (l.data ? '📅 '+fmtData(l.data) : '');
+  const valorMeta  = l.status==='Fechado' && l.valor>0 ? cur(l.valor) : '';
+  const motivoMeta = l.status==='Perdido' && l.motivo ? l.motivo : '';
+  const wa         = fmtWA(l.whatsapp);
+  return `<div class="hist-card ${bClass}" data-row="${l.row}">
+    <div class="hist-top">
+      <div class="hist-empresa">${empresa}</div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+        ${wa ? `<button class="lc-icon-btn wa" data-url="https://wa.me/${wa}" onclick="openLinkConfirm(this)" title="WhatsApp" style="width:26px;height:26px;border:none;">${SVG_WA}</button>` : ''}
+        <span class="hist-badge ${badge}">${esc(l.status)}</span>
+      </div>
+    </div>
+    ${showNome ? `<div class="hist-nome">${esc(nomeRaw)}</div>` : ''}
+    <div class="hist-meta">
+      ${cidadeUF   ? `<span class="lc-tag">📍 ${esc(cidadeUF)}</span>` : ''}
+      ${dataMeta   ? `<span class="lc-tag">${esc(dataMeta)}</span>` : ''}
+      ${valorMeta  ? `<span class="lc-tag">💰 ${esc(valorMeta)}</span>` : ''}
+      ${motivoMeta ? `<span class="lc-tag">❌ ${esc(motivoMeta)}</span>` : ''}
+    </div>
+    ${wa ? `<div class="lc-confirm" id="hlc-${l.row}" style="margin-top:8px;">
+      <div class="lc-confirm-msg">Abrir <strong>WhatsApp</strong>?</div>
+      <div class="lc-confirm-actions">
+        <button class="lc-confirm-cancel" onclick="closeLinkConfirm('hlc-${l.row}')">Cancelar</button>
+        <button class="lc-confirm-ok"     onclick="doConfirmLink('hlc-${l.row}')">Abrir</button>
+      </div>
+    </div>` : ''}
+  </div>`;
+}
+function setHistTab(tab) {
+  _histTab = tab; _histPage = 1;
+  renderHistorico();
+}
 function renderHistorico() {
   const body   = document.getElementById('hist-body');
   const counts = document.getElementById('hist-counts');
   if (!body) return;
-  const h      = _history || [];
-  const nFech  = h.filter(l=>l.status==='Fechado').length;
-  const nPerd  = h.filter(l=>l.status==='Perdido').length;
+  const h     = _history || [];
+  const nFech = h.filter(l=>l.status==='Fechado').length;
+  const nPerd = h.filter(l=>l.status==='Perdido').length;
   if (counts) counts.textContent = nFech+' fechado'+(nFech!==1?'s':'')+(nPerd?' · '+nPerd+' perdido'+(nPerd!==1?'s':''):'');
   if (!h.length) { body.innerHTML=`<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px">Nenhum histórico ainda.</div>`; return; }
   const semWA = h.filter(l => !fmtWA(l.whatsapp)).length;
   const diagHtml = semWA === h.length
     ? `<div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:8px 12px;font-size:11px;font-weight:600;color:#b45309;margin-bottom:8px;">⚠️ WhatsApp não está chegando nesta lista (${h.length}/${h.length} sem WA). Verifique se o proxy foi reimplantado no Apps Script.</div>`
     : '';
-  const visible  = h.slice(0, _histPage * HIST_PAGE_SIZE);
-  const hasMore  = h.length > visible.length;
-  const remaining = h.length - visible.length;
-  const cards = visible.map(l => {
-    const empresa    = esc(toTitleCase(l.empresa||l.nome)||'—');
-    const nomeRaw    = toTitleCase(l.nome||'');
-    const nomeEmp    = toTitleCase(l.empresa||'');
-    const showNome   = nomeRaw && nomeRaw.toLowerCase() !== nomeEmp.toLowerCase();
-    const cidadeUF   = [toTitleCase(l.cidade),(l.estado||'').toUpperCase()].filter(v=>v&&v.trim()).join(' · ');
-    const bClass     = l.status==='Fechado' ? 'fech' : 'perd';
-    const badge      = l.status==='Fechado' ? 'b-fech' : 'b-perd';
-    const dataMeta   = l.data_f ? '📅 '+fmtData(l.data_f) : (l.data ? '📅 '+fmtData(l.data) : '');
-    const valorMeta  = l.status==='Fechado' && l.valor>0 ? cur(l.valor) : '';
-    const motivoMeta = l.status==='Perdido' && l.motivo ? l.motivo : '';
-    const wa         = fmtWA(l.whatsapp);
-    return `<div class="hist-card ${bClass}" data-row="${l.row}">
-      <div class="hist-top">
-        <div class="hist-empresa">${empresa}</div>
-        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-          ${wa ? `<button class="lc-icon-btn wa" data-url="https://wa.me/${wa}" onclick="openLinkConfirm(this)" title="WhatsApp" style="width:26px;height:26px;border:none;">${SVG_WA}</button>` : ''}
-          <span class="hist-badge ${badge}">${esc(l.status)}</span>
-        </div>
-      </div>
-      ${showNome ? `<div class="hist-nome">${esc(nomeRaw)}</div>` : ''}
-      <div class="hist-meta">
-        ${cidadeUF   ? `<span class="lc-tag">📍 ${esc(cidadeUF)}</span>` : ''}
-        ${dataMeta   ? `<span class="lc-tag">${esc(dataMeta)}</span>` : ''}
-        ${valorMeta  ? `<span class="lc-tag">💰 ${esc(valorMeta)}</span>` : ''}
-        ${motivoMeta ? `<span class="lc-tag">❌ ${esc(motivoMeta)}</span>` : ''}
-      </div>
-      ${wa ? `<div class="lc-confirm" id="hlc-${l.row}" style="margin-top:8px;">
-        <div class="lc-confirm-msg">Abrir <strong>WhatsApp</strong>?</div>
-        <div class="lc-confirm-actions">
-          <button class="lc-confirm-cancel" onclick="closeLinkConfirm('hlc-${l.row}')">Cancelar</button>
-          <button class="lc-confirm-ok"     onclick="doConfirmLink('hlc-${l.row}')">Abrir</button>
-        </div>
-      </div>` : ''}
+  // No tab selected: show two category cards
+  if (!_histTab) {
+    body.innerHTML = diagHtml + `<div class="hist-tab-cards">
+      <button class="hist-tab-card fech" onclick="setHistTab('fechados')">
+        <span class="hist-tab-icon">✅</span>
+        <span class="hist-tab-label">Fechados</span>
+        <span class="hist-tab-count">${nFech}</span>
+      </button>
+      <button class="hist-tab-card perd" onclick="setHistTab('perdidos')">
+        <span class="hist-tab-icon">❌</span>
+        <span class="hist-tab-label">Perdidos</span>
+        <span class="hist-tab-count">${nPerd}</span>
+      </button>
     </div>`;
-  }).join('');
+    return;
+  }
+  // Tab selected: filter and paginate
+  const filtered = h.filter(l => _histTab === 'fechados' ? l.status==='Fechado' : l.status==='Perdido');
+  const visible  = filtered.slice(0, _histPage * HIST_PAGE_SIZE);
+  const hasMore  = filtered.length > visible.length;
+  const backBtn  = `<button class="hist-back-btn" onclick="setHistTab(null)">← Voltar</button>`;
+  const cards    = visible.map(_histCardHtml).join('');
   const pagination = (hasMore || _histPage > 1) ? `<div class="hist-pagination">
     ${_histPage > 1 ? `<button class="hist-pg-btn" onclick="histVerMenos()">▲ Ver menos</button>` : ''}
-    ${hasMore ? `<button class="hist-pg-btn" onclick="histVerMais()">Ver mais ${remaining} ▼</button>` : ''}
+    ${hasMore       ? `<button class="hist-pg-btn" onclick="histVerMais()">Ver mais ▾</button>` : ''}
   </div>` : '';
-  body.innerHTML = diagHtml + cards + pagination;
+  body.innerHTML = diagHtml + backBtn + cards + pagination;
 }
-function histVerMais() {
-  _histPage++;
-  renderHistorico();
-}
+function histVerMais() { _histPage++; renderHistorico(); }
 function histVerMenos() {
-  _histPage = 1;
-  renderHistorico();
+  _histPage = 1; renderHistorico();
   const hdr = document.querySelector('.hist-header');
   if (hdr) hdr.scrollIntoView({ behavior:'smooth', block:'nearest' });
 }
