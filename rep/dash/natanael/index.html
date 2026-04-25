@@ -1154,19 +1154,13 @@ async function saveStatusExtra(row) {
     ]}};
     enterConcludingMode(row);
     try {
-      const r1 = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
-        body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'STATUS_VENDEDOR', valor:'Fechado' }) });
-      const d1 = await r1.json(); if (!d1.ok) throw new Error(d1.error);
-      const r2 = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
-        body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'VALOR_FECHADO', valor:String(storedN) }) });
-      const d2 = await r2.json(); if (!d2.ok) throw new Error(d2.error);
-      const r3 = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
-        body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'DATA_FECH', valor:dataFech }) });
-      const d3 = await r3.json(); if (!d3.ok) throw new Error(d3.error);
-      if (parseFloat(oldPot) > 0) {
-        fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
-          body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'VALOR_POTENCIAL', valor:'0' }) });
-      }
+      const updates = { STATUS_VENDEDOR:'Fechado', VALOR_FECHADO:storedN, DATA_FECH:dataFech };
+      if (parseFloat(oldPot) > 0) updates.VALOR_POTENCIAL = 0;
+      const r = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
+        body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, action:'update_lead', updates }) });
+      const d = await r.json();
+      if (!d.ok) throw new Error(d.error);
+      if (d.ts) { _tsMap[row] = d.ts; try{localStorage.setItem(TS_KEY,JSON.stringify(_tsMap));}catch(_){} }
     } catch(_) { showToast('Erro ao registrar — verifique conexão'); }
     return;
   }
@@ -1202,16 +1196,13 @@ async function saveStatusExtra(row) {
   ]}};
   enterConcludingMode(row);
   try {
-    const r1 = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'STATUS_VENDEDOR', valor:'Perdido' }) });
-    const d1 = await r1.json(); if (!d1.ok) throw new Error(d1.error);
-    const r2 = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'MOTIVO_PERDA', valor:raw }) });
-    const d2 = await r2.json(); if (!d2.ok) throw new Error(d2.error);
-    if (parseFloat(oldPot) > 0) {
-      fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
-        body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'VALOR_POTENCIAL', valor:'0' }) });
-    }
+    const updates = { STATUS_VENDEDOR:'Perdido', MOTIVO_PERDA:raw };
+    if (parseFloat(oldPot) > 0) updates.VALOR_POTENCIAL = 0;
+    const r = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, action:'update_lead', updates }) });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error);
+    if (d.ts) { _tsMap[row] = d.ts; try{localStorage.setItem(TS_KEY,JSON.stringify(_tsMap));}catch(_){} }
   } catch(_) { showToast('Erro ao registrar — verifique conexão'); }
 }
 function spKeyDown(e, row) {
@@ -1806,6 +1797,12 @@ async function loadData() {
     const data = await res.json();
     if (data.error) throw new Error(data.error);
     const newLeads = data.leads || [];
+
+    // Merge server timestamps into _tsMap (prefer whichever is more recent)
+    newLeads.forEach(function(l) {
+      if (l.ts_vend && l.ts_vend > (_tsMap[l.row] || 0)) _tsMap[l.row] = l.ts_vend;
+    });
+    try { localStorage.setItem(TS_KEY, JSON.stringify(_tsMap)); } catch(_) {}
 
     // Persist fresh data with rep tag to prevent cross-rep cache reads
     try { localStorage.setItem(CACHE_KEY, JSON.stringify({ rep: REP_NAME, leads: newLeads, ts: Date.now() })); } catch(_) {}
