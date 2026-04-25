@@ -193,10 +193,10 @@
     .lc-status-prompt.visible { display:block; }
     .lc-sp-label { font-size:10px; font-weight:700; color:var(--purple); text-transform:uppercase; letter-spacing:.3px; margin-bottom:6px; }
     .lc-sp-sublabel { font-size:10px; font-weight:700; color:var(--purple); text-transform:uppercase; letter-spacing:.3px; margin:8px 0 5px; }
-    .lc-sp-date-wrap { margin-top:2px; }
-    .lc-sp-row { display:flex; gap:8px; align-items:flex-start; }
-    .lc-sp-row .lc-sp-date-wrap { flex:1; margin-top:0; min-width:0; }
-    .lc-sp-pfx-wrap { position:relative; flex:1.5; min-width:0; }
+    .lc-sp-date-wrap { width:100%; }
+    .lc-sp-date-wrap .lc-sp-input { width:100%; }
+    .lc-sp-row { display:block; }
+    .lc-sp-pfx-wrap { position:relative; width:100%; }
     .lc-sp-pfx-wrap::before { content:'R$'; position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:13px; font-weight:700; color:var(--muted); pointer-events:none; z-index:1; }
     .lc-sp-pfx-wrap .lc-sp-input { padding-left:30px; }
     .lc-sp-val-preview { font-size:12px; font-weight:700; color:var(--purple); min-height:14px; padding:3px 0 2px; }
@@ -1013,10 +1013,14 @@ function showStatusPrompt(row, status) {
     if (input)    { input.value = ''; input.style.display = ''; }
     if (preview)  preview.textContent = '';
     if (sel)      sel.style.display = 'none';
-    if (dateWrap) dateWrap.style.display = '';
+    if (dateWrap) dateWrap.style.display = 'none';
     if (dateIn)   dateIn.value = '';
     if (skipBtn)  skipBtn.style.display = 'none';
     prompt.dataset.tipo = 'fechado';
+    prompt.dataset.step = 'valor';
+    prompt.dataset.valorFech = '';
+    const saveBtn = prompt.querySelector('.lc-sp-save');
+    if (saveBtn) saveBtn.textContent = 'Avançar →';
     if (input) input.focus();
   } else if (status === 'Perdido') {
     if (lbl)      lbl.textContent = '❌ Qual o motivo da perda?';
@@ -1087,105 +1091,127 @@ async function saveStatusExtra(row) {
     return;
   }
 
-  // For fechado: read text input. For perdido: read select dropdown.
-  const raw = tipo === 'perdido'
-    ? (sel ? sel.value.trim() : '')
-    : (input ? input.value.trim() : '');
-  if (!raw) {
-    showToast(tipo === 'perdido' ? 'Selecione o motivo da perda' : 'Por favor, preencha o campo');
-    if (tipo === 'perdido' && sel) sel.focus(); else if (input) input.focus();
-    return;
-  }
-  let campo, valor, writeVal;
-  let dataFech = '';
+  // Fechado — dois passos separados: primeiro valor, depois data
   if (tipo === 'fechado') {
-    const n = parseFloat(raw.replace(/[^\d,.-]/g,'').replace(',','.'));
-    if (isNaN(n) || n < 0) { showToast('Valor inválido'); if (input) input.focus(); return; }
-    dataFech = dateIn ? dateIn.value.trim() : '';
-    if (!dataFech) {
-      showToast('Informe a data do fechamento');
-      if (dateIn) dateIn.focus();
+    const step       = prompt.dataset.step || 'valor';
+    const pfxWrapEl  = document.getElementById('sp-pfx-wrap-' + row);
+    const dateWrapEl = document.getElementById('sp-date-wrap-' + row);
+    const previewEl  = document.getElementById('sp-preview-' + row);
+
+    if (step === 'valor') {
+      const raw = input ? input.value.trim() : '';
+      const n   = parseFloat((raw).replace(/[^\d,.-]/g,'').replace(',','.'));
+      if (!raw || isNaN(n) || n <= 0) { showToast('Informe o valor do fechamento'); if (input) input.focus(); return; }
+      // Guarda valor e avança para passo da data
+      prompt.dataset.valorFech = String(n);
+      prompt.dataset.step      = 'data';
+      if (pfxWrapEl) pfxWrapEl.style.display = 'none';
+      if (previewEl) previewEl.textContent    = '';
+      if (dateWrapEl) dateWrapEl.style.display = '';
+      const lbl     = prompt.querySelector('.lc-sp-label');
+      const saveBtn = prompt.querySelector('.lc-sp-save');
+      if (lbl)     lbl.textContent    = '📅 Data do fechamento?';
+      if (saveBtn) saveBtn.textContent = 'Salvar';
+      // Pré-preenche com hoje para o rep não precisar navegar o calendário
+      if (dateIn) {
+        const today = new Date();
+        dateIn.value = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+        dateIn.focus();
+      }
       return;
     }
-    campo = 'VALOR_FECHADO'; valor = String(n); writeVal = n;
-  } else {
-    campo = 'MOTIVO_PERDA'; valor = raw; writeVal = raw;
+
+    // step === 'data': valida data e salva tudo
+    const storedN  = parseFloat(prompt.dataset.valorFech || '0');
+    const dataFech = dateIn ? dateIn.value.trim() : '';
+    if (!dataFech) { showToast('Informe a data do fechamento'); if (dateIn) dateIn.focus(); return; }
+
+    const lead2      = _rawLeads.find(l => l.row === row);
+    const oldExtra   = String(lead2 ? lead2.valor_fech || 0 : 0);
+    const oldDataF   = lead2 ? (lead2.data_f || '') : '';
+    const oldStatus  = prompt.dataset.oldStatus || '';
+    const oldPot     = lead2 ? String(lead2.pot || 0) : '0';
+    const prevPend   = _pendingUndoByRow[row];
+    const oldTs      = prevPend && prevPend.data && prevPend.data.actions
+      ? ((prevPend.data.actions.find(a => a.campo === 'TIMESTAMP') || {}).valor || '') : '';
+    setLeadTs(row);
+    if (lead2) { lead2.valor_fech = storedN; lead2.data_f = dataFech; lead2.pot = 0; }
+    const leadSnapshot = lead2 ? { ...lead2 } : null;
+    const removeIdx    = _rawLeads.findIndex(l => l.row === row);
+    if (removeIdx >= 0) _rawLeads.splice(removeIdx, 1);
+    if (_history !== null && leadSnapshot) {
+      _history.unshift(leadSnapshot);
+      const histSec = document.getElementById('historico-section');
+      if (histSec && histSec.classList.contains('open')) renderHistorico();
+    }
+    prompt.classList.remove('visible');
+    _pendingUndoByRow[row] = { msg: 'Fechamento registrado ✓', data: { isMulti: true, leadSnapshot, actions: [
+      { row, campo: 'STATUS_VENDEDOR', valor: oldStatus },
+      { row, campo: 'VALOR_FECHADO',   valor: oldExtra  },
+      { row, campo: 'VALOR_POTENCIAL', valor: oldPot    },
+      { row, campo: 'TIMESTAMP',       valor: oldTs     },
+      { row, campo: 'DATA_FECH',       valor: oldDataF  }
+    ]}};
+    enterConcludingMode(row);
+    try {
+      const r1 = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
+        body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'STATUS_VENDEDOR', valor:'Fechado' }) });
+      const d1 = await r1.json(); if (!d1.ok) throw new Error(d1.error);
+      const r2 = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
+        body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'VALOR_FECHADO', valor:String(storedN) }) });
+      const d2 = await r2.json(); if (!d2.ok) throw new Error(d2.error);
+      const r3 = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
+        body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'DATA_FECH', valor:dataFech }) });
+      const d3 = await r3.json(); if (!d3.ok) throw new Error(d3.error);
+      if (parseFloat(oldPot) > 0) {
+        fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
+          body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'VALOR_POTENCIAL', valor:'0' }) });
+      }
+    } catch(_) { showToast('Erro ao registrar — verifique conexão'); }
+    return;
   }
+
+  // Perdido — lê motivo do select
+  const raw = sel ? sel.value.trim() : '';
+  if (!raw) { showToast('Selecione o motivo da perda'); if (sel) sel.focus(); return; }
   const lead2     = _rawLeads.find(l => l.row === row);
-  const oldExtra  = tipo === 'fechado'
-    ? String(lead2 ? lead2.valor_fech  || 0  : 0)
-    : (lead2 ? lead2.motivo_perd || '' : '');
+  const oldExtra  = lead2 ? lead2.motivo_perd || '' : '';
   const oldDataF  = lead2 ? (lead2.data_f || '') : '';
   const oldStatus = prompt.dataset.oldStatus || '';
   const oldPot    = lead2 ? String(lead2.pot || 0) : '0';
-  const newStatus = tipo === 'fechado' ? 'Fechado' : 'Perdido';
-  // Recover old timestamp from pending undo set up by confirmStatusChange
   const prevPending = _pendingUndoByRow[row];
   const oldTs = prevPending && prevPending.data && prevPending.data.actions
-    ? ((prevPending.data.actions.find(a => a.campo === 'TIMESTAMP') || {}).valor || '')
-    : '';
+    ? ((prevPending.data.actions.find(a => a.campo === 'TIMESTAMP') || {}).valor || '') : '';
   setLeadTs(row);
-
-  // Optimistic: update cache
-  if (lead2 && tipo === 'fechado') { lead2.valor_fech = writeVal; lead2.data_f = dataFech; }
-  if (lead2 && tipo === 'perdido')   lead2.motivo_perd = writeVal;
-  if (lead2) lead2.pot = 0; // zero valor potencial
-
-  // Save snapshot then remove from active list (won't reappear on next render/poll)
+  if (lead2) { lead2.motivo_perd = raw; lead2.pot = 0; }
   const leadSnapshot = lead2 ? { ...lead2 } : null;
-  const removeIdx = _rawLeads.findIndex(l => l.row === row);
+  const removeIdx    = _rawLeads.findIndex(l => l.row === row);
   if (removeIdx >= 0) _rawLeads.splice(removeIdx, 1);
-
-  // Add to history client-side immediately so rep sees it there without waiting for server
   if (_history !== null && leadSnapshot) {
     _history.unshift(leadSnapshot);
     const histSec = document.getElementById('historico-section');
     if (histSec && histSec.classList.contains('open')) renderHistorico();
   }
-
   prompt.classList.remove('visible');
-
-  // Multi-action undo: reverts status, valor/motivo, data_fech, valor_potencial, and timestamp
-  const undoActions = [
+  _pendingUndoByRow[row] = { msg: 'Motivo registrado ✓', data: { isMulti: true, leadSnapshot, actions: [
     { row, campo: 'STATUS_VENDEDOR', valor: oldStatus },
-    { row, campo, valor: oldExtra },
-    { row, campo: 'VALOR_POTENCIAL', valor: oldPot },
-    { row, campo: 'TIMESTAMP', valor: oldTs }
-  ];
-  if (tipo === 'fechado') undoActions.push({ row, campo: 'DATA_FECH', valor: oldDataF });
-
-  // Defer undo toast — show only when card concludes (after rep finishes obs step)
-  _pendingUndoByRow[row] = {
-    msg: tipo === 'fechado' ? 'Fechamento registrado ✓' : 'Motivo registrado ✓',
-    data: { isMulti: true, leadSnapshot, actions: undoActions }
-  };
-
-  // Give rep a moment to add obs before the card disappears
+    { row, campo: 'MOTIVO_PERDA',    valor: oldExtra  },
+    { row, campo: 'VALOR_POTENCIAL', valor: oldPot    },
+    { row, campo: 'TIMESTAMP',       valor: oldTs     }
+  ]}};
   enterConcludingMode(row);
-
-  // Sequential POSTs: status → valor/motivo → data (fechado) → zerar valor potencial
   try {
     const r1 = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'STATUS_VENDEDOR', valor:newStatus }) });
-    const d1 = await r1.json();
-    if (!d1.ok) throw new Error(d1.error);
+      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'STATUS_VENDEDOR', valor:'Perdido' }) });
+    const d1 = await r1.json(); if (!d1.ok) throw new Error(d1.error);
     const r2 = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo, valor }) });
-    const d2 = await r2.json();
-    if (!d2.ok) throw new Error(d2.error);
-    if (tipo === 'fechado' && dataFech) {
-      const r3 = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
-        body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'DATA_FECH', valor:dataFech }) });
-      const d3 = await r3.json();
-      if (!d3.ok) throw new Error(d3.error);
-    }
+      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'MOTIVO_PERDA', valor:raw }) });
+    const d2 = await r2.json(); if (!d2.ok) throw new Error(d2.error);
     if (parseFloat(oldPot) > 0) {
       fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
         body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'VALOR_POTENCIAL', valor:'0' }) });
     }
-  } catch(_) {
-    showToast('Erro ao registrar — verifique conexão');
-  }
+  } catch(_) { showToast('Erro ao registrar — verifique conexão'); }
 }
 function spKeyDown(e, row) {
   if (e.key === 'Enter') { e.preventDefault(); saveStatusExtra(row); }
