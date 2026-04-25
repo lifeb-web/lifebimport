@@ -742,7 +742,10 @@ function renderFunnel(data) {
     const { sdr = {}, vend = {}, total = 0 } = data;
 
     const sdrBadge = document.getElementById('sdr-total-badge');
-    if (sdrBadge) sdrBadge.textContent = n(total) + ' leads';
+    if (sdrBadge) {
+      const taxaQualif = total > 0 ? ((sdr.qualif || 0) / total * 100).toFixed(1) + '% qualif.' : '—';
+      sdrBadge.textContent = taxaQualif;
+    }
     const totalVend = (vend.ag_cont||0)+(vend.em_cont||0)+(vend.reun||0)+(vend.em_neg||0)+(vend.fechado||0)+(vend.perdido||0);
     const vendBadge = document.getElementById('vend-total-badge');
     if (vendBadge) vendBadge.innerHTML = `${n(totalVend)} <span class="vend-txt-lg">com vendedor</span><span class="vend-txt-sm">c/ vendedor</span>`;
