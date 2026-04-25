@@ -38,7 +38,7 @@
     /* HEADER */
     header { background:#fff; border-bottom:1px solid var(--border); padding:0 16px; height:58px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 2px 14px var(--shadow); position:sticky; top:0; z-index:100; }
     .h-brand { display:flex; align-items:center; gap:10px; min-width:0; }
-    .h-logo  { height:30px; width:auto; flex-shrink:0; max-width:100px; object-fit:contain; }
+    .h-logo  { height:30px; width:auto; flex-shrink:0; max-width:100px; object-fit:contain; cursor:pointer; }
     .h-sep   { width:1px; height:24px; background:rgba(112,75,155,.25); flex-shrink:0; }
     .h-rep   { font-size:13px; font-weight:800; color:var(--purple); letter-spacing:.4px; text-transform:uppercase; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .h-right { display:flex; align-items:center; gap:8px; flex-shrink:0; }
@@ -347,7 +347,7 @@
 
 <header>
   <div class="h-brand">
-    <img class="h-logo" src="https://projetojlbv.com.br/assets/img/logo-lifeb.png" alt="Life B" onerror="this.style.display='none'">
+    <img class="h-logo" src="https://projetojlbv.com.br/assets/img/logo-lifeb.png" alt="Life B" onerror="this.style.display='none'" onclick="location.reload()">
     <div class="h-sep"></div>
     <span class="h-rep">Natanael</span>
   </div>
@@ -1823,7 +1823,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.visibilityState === 'visible') { _retryCount = 0; loadData(); }
   });
   // Fechar histórico ao interagir com a área de leads (filtros, cards, etc.)
+  // Guard: se o target foi removido do DOM pelo próprio onclick (ex: setHistTab re-renderiza body),
+  // não colapsa — o usuário clicou dentro do histórico mesmo.
   document.querySelector('main').addEventListener('click', function(e) {
+    if (!document.contains(e.target)) return;
     if (!e.target.closest('#historico-section')) collapseHistorico();
   });
 });
