@@ -1580,6 +1580,16 @@ let _histPage   = 1;
 let _histTab    = null; // null | 'fechados' | 'perdidos'
 const HIST_PAGE_SIZE = 5;
 
+function collapseHistorico() {
+  const sec = document.getElementById('historico-section');
+  if (!sec || !sec.classList.contains('open')) return;
+  sec.classList.remove('open');
+  const btn = sec.querySelector('.hist-header');
+  if (btn) btn.setAttribute('aria-expanded', 'false');
+  _histTab = null; _histPage = 1;
+  _teardownHistObserver();
+}
+
 function toggleHistorico() {
   const section = document.getElementById('historico-section');
   if (!section) return;
@@ -1611,15 +1621,8 @@ function _setupHistAutoCollapse() {
       wasHidden = true;
       if (window._histCollapseTimer) { clearTimeout(window._histCollapseTimer); window._histCollapseTimer = null; }
     } else if (wasHidden) {
-      // Leads list visible again — wait 3s before collapsing (rep may just be scrolling past)
       window._histCollapseTimer = setTimeout(function() {
-        const sec = document.getElementById('historico-section');
-        if (sec && sec.classList.contains('open')) {
-          sec.classList.remove('open');
-          const b = sec.querySelector('.hist-header');
-          if (b) b.setAttribute('aria-expanded', 'false');
-          _histTab = null; _histPage = 1;
-        }
+        collapseHistorico();
         _teardownHistObserver();
       }, 3000);
     }
@@ -1816,9 +1819,12 @@ async function loadData() {
 document.addEventListener('DOMContentLoaded', () => {
   loadData();
   setInterval(loadData, POLL_MS);
-  // Auto-refresh when rep returns to the tab after leaving it in background
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') { _retryCount = 0; loadData(); }
+  });
+  // Fechar histórico ao interagir com a área de leads (filtros, cards, etc.)
+  document.querySelector('main').addEventListener('click', function(e) {
+    if (!e.target.closest('#historico-section')) collapseHistorico();
   });
 });
 </script>
