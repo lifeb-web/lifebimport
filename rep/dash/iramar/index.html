@@ -1407,10 +1407,9 @@ function renderLeads(leads, highlightRow) {
   const visible = toShow.slice(0, _visibleCount);
 
   list.innerHTML = visible.map(l => {
-    const empresa  = esc(toTitleCase(l.empresa||l.nome)||'—');
     const nomeRaw  = toTitleCase(l.nome||'');
     const nomeEmp  = toTitleCase(l.empresa||'');
-    const showNome = nomeRaw && nomeRaw.toLowerCase() !== nomeEmp.toLowerCase();
+    const titulo   = esc(nomeEmp || nomeRaw || '—');
     const cidadeUF = [toTitleCase(l.cidade),(l.estado||'').toUpperCase()].filter(v=>v&&v.trim()).join(' · ');
     const sClass   = statusClass(l.status);
     const bClass   = borderClass(l.status);
@@ -1421,7 +1420,8 @@ function renderLeads(leads, highlightRow) {
     const options  = STATUS_LIST.map(s =>
       `<option value="${esc(s)}"${s===l.status?' selected':''}>${esc(s)}</option>`
     ).join('');
-    const contato  = toTitleCase(l.contato||'');
+    const contato   = toTitleCase(l.contato||'');
+    const subtitulo = nomeEmp && contato && contato.toLowerCase() !== nomeEmp.toLowerCase() ? contato : '';
     const cnpj     = l.cnpj||'';
     const endereco = toTitleCase(l.endereco||'');
 
@@ -1457,7 +1457,7 @@ function renderLeads(leads, highlightRow) {
     <div class="lead-card ${bClass}" data-row="${l.row}">
       <div class="lc-body">
         <div class="lc-top">
-          <div class="lc-empresa">${empresa}</div>
+          <div class="lc-empresa">${titulo}</div>
           <div class="lc-pot-wrap" id="pot-wrap-${l.row}">
             <div id="pot-disp-${l.row}">
               <div class="lc-pot" onclick="startPotEdit(${l.row})" title="Clique para editar o valor potencial">
@@ -1478,7 +1478,7 @@ function renderLeads(leads, highlightRow) {
             </div>
           </div>
         </div>
-        ${showNome ? `<div class="lc-nome">${esc(nomeRaw)}</div>` : ''}
+        ${subtitulo ? `<div class="lc-nome">${esc(subtitulo)}</div>` : ''}
         <div class="lc-meta">
           ${cidadeUF ? `<span class="lc-tag">📍 ${esc(cidadeUF)}</span>` : ''}
           ${l.data   ? `<span class="lc-tag">📅 ${esc(fmtData(l.data))}</span>` : ''}
@@ -1699,10 +1699,11 @@ async function loadHistorico() {
 }
 
 function _histCardHtml(l) {
-  const empresa    = esc(toTitleCase(l.empresa||l.nome)||'—');
   const nomeRaw    = toTitleCase(l.nome||'');
   const nomeEmp    = toTitleCase(l.empresa||'');
-  const showNome   = nomeRaw && nomeRaw.toLowerCase() !== nomeEmp.toLowerCase();
+  const nomeContatoH = toTitleCase(l.contato||'');
+  const titulo     = esc(nomeEmp || nomeRaw || '—');
+  const subtitulo  = nomeEmp && nomeContatoH && nomeContatoH.toLowerCase() !== nomeEmp.toLowerCase() ? nomeContatoH : '';
   const cidadeUF   = [toTitleCase(l.cidade),(l.estado||'').toUpperCase()].filter(v=>v&&v.trim()).join(' · ');
   const bClass     = l.status==='Fechado' ? 'fech' : 'perd';
   const badge      = l.status==='Fechado' ? 'b-fech' : 'b-perd';
@@ -1713,8 +1714,8 @@ function _histCardHtml(l) {
   return `<div class="hist-card ${bClass}" data-row="${l.row}">
     <div class="hist-top">
       <div class="hist-top-left">
-        <div class="hist-empresa">${empresa}</div>
-        ${showNome ? `<div class="hist-nome">${esc(nomeRaw)}</div>` : ''}
+        <div class="hist-empresa">${titulo}</div>
+        ${subtitulo ? `<div class="hist-nome">${esc(subtitulo)}</div>` : ''}
       </div>
       <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
         ${wa ? `<button class="lc-icon-btn wa" data-url="https://wa.me/${wa}" onclick="openLinkConfirm(this)" title="WhatsApp" style="width:26px;height:26px;border:none;">${SVG_WA}</button>` : ''}
