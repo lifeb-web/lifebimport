@@ -153,7 +153,8 @@
     .lc-last-updated { font-size:10px; color:var(--muted); padding:2px 2px 0; min-height:14px; }
 
     /* STATUS SELECT */
-    .lc-status-wrap { position:relative; }
+    .lc-status-wrap { }
+    .lc-sel-wrap { position:relative; }
     .lc-select { width:100%; appearance:none; -webkit-appearance:none; padding:10px 36px 10px 14px; border-radius:10px; border:2px solid var(--border); font-family:var(--font); font-size:13px; font-weight:700; cursor:pointer; transition:border-color .15s, background .15s, color .15s; background-color:var(--bg); color:var(--text); outline:none; }
     .lc-select:focus { border-color:var(--purple); }
     .lc-select.s-ag   { background:rgba(220,38,38,.07);  border-color:rgba(220,38,38,.4);  color:#b91c1c; }
@@ -162,7 +163,7 @@
     .lc-select.s-fech { background:rgba(22,163,74,.12);  border-color:rgba(22,163,74,.5);  color:#15803d; }
     .lc-select.s-perd { background:rgba(220,38,38,.07);  border-color:rgba(220,38,38,.3);  color:#991b1b; }
     .lc-select.saving { opacity:.6; pointer-events:none; }
-    .lc-status-wrap::after { content:'▾'; position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:13px; color:var(--muted); pointer-events:none; }
+    .lc-sel-wrap::after { content:'▾'; position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:13px; color:var(--muted); pointer-events:none; }
     .lc-feedback { font-size:11px; font-weight:600; min-height:16px; padding:2px 2px 0; }
     .lc-feedback.ok  { color:#16a34a; }
     .lc-feedback.err { color:var(--red); }
@@ -1317,12 +1318,14 @@ function renderLeads(leads, highlightRow) {
           </div>` : ''}
         </div>
         <div class="lc-status-wrap">
-          <select class="lc-select ${sClass}" data-row="${l.row}" data-original="${esc(l.status)}" aria-label="Status do lead">
-            ${options}
-          </select>
+          <div class="lc-sel-wrap">
+            <select class="lc-select ${sClass}" data-row="${l.row}" data-original="${esc(l.status)}" aria-label="Status do lead">
+              ${options}
+            </select>
+          </div>
+          <div class="lc-last-updated" id="ts-${l.row}">${getLeadTs(l.row)}</div>
         </div>
         <div class="lc-feedback" id="fb-${l.row}"></div>
-        <div class="lc-last-updated" id="ts-${l.row}">${getLeadTs(l.row)}</div>
         <div class="lc-confirm" id="conf-${l.row}">
           <div class="lc-confirm-msg">Mudar para <strong id="conf-status-${l.row}"></strong>?<span class="lc-confirm-sub" id="conf-sub-${l.row}">Lead vai ao final da fila.</span></div>
           <div class="lc-confirm-actions">
