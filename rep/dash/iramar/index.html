@@ -508,19 +508,22 @@ function toggleFilter(card) {
   const lbl = document.getElementById('filter-label');
   if (bar) bar.classList.add('visible');
   if (lbl) lbl.textContent = 'Mostrando: ' + filter;
-  applyFilter();
+  // re-render with full lead list so filter sees all leads, not just the visible page
+  if (_rawLeads.length) renderLeads(_rawLeads);
 }
 function clearFilter() {
   _activeFilter = null;
   document.querySelectorAll('.sum-card').forEach(c => c.classList.remove('active'));
   const bar = document.getElementById('filter-bar');
   if (bar) bar.classList.remove('visible');
-  applyFilter();
+  // re-render restores _visibleCount pagination
+  if (_rawLeads.length) renderLeads(_rawLeads);
 }
+// called at end of every renderLeads — works with any status string automatically
 function applyFilter() {
   const wrap = document.getElementById('show-more-wrap');
   document.querySelectorAll('#leads-list .lead-card').forEach(card => {
-    if (!_activeFilter) { card.style.display=''; return; }
+    if (!_activeFilter) { card.style.display = ''; return; }
     const sel = card.querySelector('.lc-select');
     card.style.display = (sel && sel.dataset.original === _activeFilter) ? '' : 'none';
   });
@@ -819,13 +822,15 @@ function renderLeads(leads, highlightRow) {
     if (cp && cp.style.display === 'block') contactOpen.add(row);
   });
 
+  // priority 0 = first; statuses not in map get 9 (sorted last by date)
+  const STATUS_PRIO = { 'Aguardando contato': 0, 'Em contato': 1, 'Em negociação': 2 };
   _allLeads = leads
     .filter(l => (l.rep||'').toUpperCase() === REP_NAME)
-    .sort((a,b) => {
-      const pa = a.status === 'Aguardando contato' ? 0 : 1;
-      const pb = b.status === 'Aguardando contato' ? 0 : 1;
+    .sort((a, b) => {
+      const pa = STATUS_PRIO[a.status] ?? 9;
+      const pb = STATUS_PRIO[b.status] ?? 9;
       if (pa !== pb) return pa - pb;
-      return (a.data||'').localeCompare(b.data||'');
+      return (a.data || '').localeCompare(b.data || '');
     });
 
   document.getElementById('sum-ag').textContent   = _allLeads.filter(l=>l.status==='Aguardando contato').length;
