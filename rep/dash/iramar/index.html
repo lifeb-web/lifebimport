@@ -175,6 +175,8 @@
     .lc-status-prompt { display:none; background:#f9f6ff; border:1px solid rgba(112,75,155,.25); border-radius:10px; padding:10px 12px; margin-top:8px; animation:panel-in .2s ease; }
     .lc-status-prompt.visible { display:block; }
     .lc-sp-label { font-size:10px; font-weight:700; color:var(--purple); text-transform:uppercase; letter-spacing:.3px; margin-bottom:6px; }
+    .lc-sp-sublabel { font-size:10px; font-weight:700; color:var(--purple); text-transform:uppercase; letter-spacing:.3px; margin:8px 0 5px; }
+    .lc-sp-date-wrap { margin-top:2px; }
     .lc-sp-input { width:100%; padding:9px 12px; border-radius:8px; border:1.5px solid var(--border); font-family:var(--font); font-size:13px; color:var(--text); background:#fff; outline:none; transition:border-color .15s; }
     .lc-sp-input:focus { border-color:var(--purple); }
     .lc-sp-footer { display:flex; gap:6px; margin-top:7px; justify-content:flex-end; }
@@ -628,9 +630,24 @@ function openLinkConfirm(btn) {
   if (!url) return;
   const card   = btn.closest('.lead-card, .hist-card');
   const prefix = card && card.classList.contains('hist-card') ? 'hlc' : 'lc';
-  const confId = card ? (prefix + '-' + card.dataset.row) : null;
+  const row    = card ? card.dataset.row : null;
+  const confId = row ? (prefix + '-' + row) : null;
   const conf   = confId ? document.getElementById(confId) : null;
   if (!conf) { window.open(url, '_blank', 'noopener,noreferrer'); return; }
+  // Close contact panel if open
+  if (row) {
+    const cp = document.getElementById('cp-' + row);
+    if (cp && cp.style.display === 'block') {
+      cp.style.display = 'none';
+      const infoBtn = card.querySelector('.lc-icon-btn.info');
+      if (infoBtn) { infoBtn.classList.remove('active'); infoBtn.setAttribute('aria-expanded','false'); }
+    }
+    // Close status prompt and status confirm if open
+    const sp = document.getElementById('sp-' + row);
+    if (sp) sp.classList.remove('visible');
+    const statusConf = document.getElementById('conf-' + row);
+    if (statusConf) statusConf.classList.remove('visible');
+  }
   const lbl = conf.querySelector('.lc-confirm-msg strong');
   if (lbl) lbl.textContent = btn.classList.contains('wa') ? 'WhatsApp' : 'Google Maps';
   conf.dataset.pending = url;
@@ -656,6 +673,15 @@ function toggleContact(btn, row) {
   panel.style.display = isOpen ? 'none' : 'block';
   btn.classList.toggle('active', !isOpen);
   btn.setAttribute('aria-expanded', !isOpen);
+  // Opening info: close link confirm and status dialogs on same card
+  if (!isOpen) {
+    const lc = document.getElementById('lc-' + row);
+    if (lc) lc.classList.remove('visible');
+    const sp = document.getElementById('sp-' + row);
+    if (sp) sp.classList.remove('visible');
+    const sc = document.getElementById('conf-' + row);
+    if (sc) sc.classList.remove('visible');
+  }
 }
 
 // ── VALOR POTENCIAL INLINE EDIT ────────────────────────────────
@@ -777,21 +803,26 @@ async function saveObs(row) {
 
 // ── PROMPT FECHADO / PERDIDO ───────────────────────────────────
 function showStatusPrompt(row, status) {
-  const prompt = document.getElementById('sp-' + row);
+  const prompt   = document.getElementById('sp-' + row);
   if (!prompt) return;
-  const lbl   = prompt.querySelector('.lc-sp-label');
-  const input = document.getElementById('sp-input-' + row);
-  const sel   = document.getElementById('sp-sel-' + row);
+  const lbl      = prompt.querySelector('.lc-sp-label');
+  const input    = document.getElementById('sp-input-' + row);
+  const sel      = document.getElementById('sp-sel-' + row);
+  const dateWrap = document.getElementById('sp-date-wrap-' + row);
+  const dateIn   = document.getElementById('sp-date-' + row);
   if (status === 'Fechado') {
-    if (lbl)   lbl.textContent = '💰 Qual foi o valor do fechamento?';
-    if (input) { input.value = ''; input.style.display = ''; }
-    if (sel)   sel.style.display = 'none';
+    if (lbl)      lbl.textContent = '💰 Qual foi o valor do fechamento?';
+    if (input)    { input.value = ''; input.style.display = ''; }
+    if (sel)      sel.style.display = 'none';
+    if (dateWrap) { dateWrap.style.display = ''; }
+    if (dateIn)   dateIn.value = '';
     prompt.dataset.tipo = 'fechado';
-    if (input) { input.focus(); }
+    if (input) input.focus();
   } else if (status === 'Perdido') {
-    if (lbl)   lbl.textContent = '❌ Qual o motivo da perda?';
-    if (input) input.style.display = 'none';
-    if (sel)   { sel.value = ''; sel.style.display = ''; }
+    if (lbl)      lbl.textContent = '❌ Qual o motivo da perda?';
+    if (input)    input.style.display = 'none';
+    if (sel)      { sel.value = ''; sel.style.display = ''; }
+    if (dateWrap) dateWrap.style.display = 'none';
     prompt.dataset.tipo = 'perdido';
     if (sel) sel.focus();
   }
@@ -812,11 +843,12 @@ function skipStatusPrompt(row) {
   }
 }
 async function saveStatusExtra(row) {
-  const prompt = document.getElementById('sp-' + row);
+  const prompt   = document.getElementById('sp-' + row);
   if (!prompt) return;
-  const tipo  = prompt.dataset.tipo;
-  const input = document.getElementById('sp-input-' + row);
-  const sel   = document.getElementById('sp-sel-' + row);
+  const tipo     = prompt.dataset.tipo;
+  const input    = document.getElementById('sp-input-' + row);
+  const sel      = document.getElementById('sp-sel-' + row);
+  const dateIn   = document.getElementById('sp-date-' + row);
   // For fechado: read text input. For perdido: read select dropdown.
   const raw = tipo === 'perdido'
     ? (sel ? sel.value.trim() : '')
@@ -827,23 +859,31 @@ async function saveStatusExtra(row) {
     return;
   }
   let campo, valor, writeVal;
+  let dataFech = '';
   if (tipo === 'fechado') {
     const n = parseFloat(raw.replace(/[^\d,.-]/g,'').replace(',','.'));
     if (isNaN(n) || n < 0) { showToast('Valor inválido'); if (input) input.focus(); return; }
+    dataFech = dateIn ? dateIn.value.trim() : '';
+    if (!dataFech) {
+      showToast('Informe a data do fechamento');
+      if (dateIn) dateIn.focus();
+      return;
+    }
     campo = 'VALOR_FECHADO'; valor = String(n); writeVal = n;
   } else {
     campo = 'MOTIVO_PERDA'; valor = raw; writeVal = raw;
   }
-  const lead2    = _rawLeads.find(l => l.row === row);
-  const oldExtra = tipo === 'fechado'
+  const lead2     = _rawLeads.find(l => l.row === row);
+  const oldExtra  = tipo === 'fechado'
     ? String(lead2 ? lead2.valor_fech  || 0  : 0)
     : (lead2 ? lead2.motivo_perd || '' : '');
+  const oldDataF  = lead2 ? (lead2.data_f || '') : '';
   const oldStatus = prompt.dataset.oldStatus || '';
   const newStatus = tipo === 'fechado' ? 'Fechado' : 'Perdido';
 
   // Optimistic: update cache
-  if (lead2 && tipo === 'fechado')  lead2.valor_fech  = writeVal;
-  if (lead2 && tipo === 'perdido')  lead2.motivo_perd = writeVal;
+  if (lead2 && tipo === 'fechado') { lead2.valor_fech = writeVal; lead2.data_f = dataFech; }
+  if (lead2 && tipo === 'perdido')   lead2.motivo_perd = writeVal;
 
   // Save snapshot then remove from active list (won't reappear on next render/poll)
   const leadSnapshot = lead2 ? { ...lead2 } : null;
@@ -852,20 +892,20 @@ async function saveStatusExtra(row) {
 
   prompt.classList.remove('visible');
 
-  // Multi-action undo: reverts both the status AND the extra campo in the spreadsheet
+  // Multi-action undo: reverts status, valor/motivo, and data_fech in the spreadsheet
+  const undoActions = [
+    { row, campo: 'STATUS_VENDEDOR', valor: oldStatus },
+    { row, campo, valor: oldExtra }
+  ];
+  if (tipo === 'fechado') undoActions.push({ row, campo: 'DATA_FECH', valor: oldDataF });
   showUndoToast(tipo === 'fechado' ? 'Fechamento registrado ✓' : 'Motivo registrado ✓', {
-    isMulti: true,
-    leadSnapshot,
-    actions: [
-      { row, campo: 'STATUS_VENDEDOR', valor: oldStatus },
-      { row, campo, valor: oldExtra }
-    ]
+    isMulti: true, leadSnapshot, actions: undoActions
   });
 
   // Give rep a moment to add obs before the card disappears
   enterConcludingMode(row);
 
-  // Two sequential POSTs: status first, then valor/motivo
+  // Sequential POSTs: status → valor/motivo → data (only for fechado)
   try {
     const r1 = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
       body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'STATUS_VENDEDOR', valor:newStatus }) });
@@ -875,6 +915,12 @@ async function saveStatusExtra(row) {
       body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo, valor }) });
     const d2 = await r2.json();
     if (!d2.ok) throw new Error(d2.error);
+    if (tipo === 'fechado' && dataFech) {
+      const r3 = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
+        body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'DATA_FECH', valor:dataFech }) });
+      const d3 = await r3.json();
+      if (!d3.ok) throw new Error(d3.error);
+    }
   } catch(_) {
     showToast('Erro ao registrar — verifique conexão');
   }
@@ -892,6 +938,13 @@ function onStatusChange(e) {
   // revert select visual until confirmed
   sel.value     = sel.dataset.original;
   sel.className = 'lc-select ' + statusClass(sel.dataset.original);
+
+  // Close any open status prompt (e.g. Fechado valor field) before showing new confirm
+  const sp = document.getElementById('sp-' + row);
+  if (sp) sp.classList.remove('visible');
+  // Close link confirm if open
+  const lc = document.getElementById('lc-' + row);
+  if (lc) lc.classList.remove('visible');
 
   // show inline confirmation
   const conf = document.getElementById('conf-' + row);
@@ -1090,6 +1143,10 @@ function renderLeads(leads, highlightRow) {
             <option>Fora do perfil</option>
             <option>Outro</option>
           </select>
+          <div class="lc-sp-date-wrap" id="sp-date-wrap-${l.row}" style="display:none">
+            <div class="lc-sp-sublabel">📅 Data do fechamento</div>
+            <input class="lc-sp-input" id="sp-date-${l.row}" type="date" onkeydown="spKeyDown(event,${l.row})">
+          </div>
           <div class="lc-sp-footer">
             <button class="lc-sp-save" onclick="saveStatusExtra(${l.row})">Salvar e concluir</button>
           </div>
