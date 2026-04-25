@@ -655,39 +655,35 @@ function toggleFilter(card) {
   const filter = card.dataset.filter;
   if (!filter || _activeFilter === filter) { clearFilter(); return; }
   _activeFilter = filter;
+  _visibleCount = LIMIT;
   document.querySelectorAll('.sum-card').forEach(c => c.classList.remove('active'));
   card.classList.add('active');
   const bar = document.getElementById('filter-bar');
   const lbl = document.getElementById('filter-label');
   if (bar) bar.classList.add('visible');
   if (lbl) lbl.textContent = 'Mostrando: ' + filter;
-  // re-render with full lead list so filter sees all leads, not just the visible page
   if (_rawLeads.length) renderLeads(_rawLeads);
 }
 function clearFilter() {
   _activeFilter = null;
+  _visibleCount = LIMIT;
   document.querySelectorAll('.sum-card').forEach(c => c.classList.remove('active'));
   const bar = document.getElementById('filter-bar');
   if (bar) bar.classList.remove('visible');
-  // re-render restores _visibleCount pagination
   if (_rawLeads.length) renderLeads(_rawLeads);
 }
-// called at end of every renderLeads — works with any status string automatically
-function applyFilter() {
-  const wrap = document.getElementById('show-more-wrap');
-  document.querySelectorAll('#leads-list .lead-card').forEach(card => {
-    if (!_activeFilter) { card.style.display = ''; return; }
-    const sel = card.querySelector('.lc-select');
-    card.style.display = (sel && sel.dataset.original === _activeFilter) ? '' : 'none';
-  });
-  if (wrap) wrap.style.display = _activeFilter ? 'none' : '';
-}
+// no-op: filtering is now handled in renderLeads (JS slice of filtered set)
+function applyFilter() {}
 
 // ── PAGINATION ────────────────────────────────────────────────
 let _visibleCount = LIMIT;
 let _rawLeads     = [];
 let _allLeads     = [];
-function showMore() { _visibleCount = Math.min(_visibleCount + LIMIT, _allLeads.length); renderLeads(_rawLeads); }
+function showMore() {
+  const total = (_activeFilter ? _allLeads.filter(l => l.status === _activeFilter) : _allLeads).length;
+  _visibleCount = Math.min(_visibleCount + LIMIT, total);
+  renderLeads(_rawLeads);
+}
 function showLess() {
   _visibleCount = Math.max(LIMIT, _visibleCount - LIMIT);
   renderLeads(_rawLeads);
@@ -1127,6 +1123,7 @@ async function saveStatusExtra(row) {
     if (!dataFech) { showToast('Informe a data do fechamento'); if (dateIn) dateIn.focus(); return; }
 
     const lead2      = _rawLeads.find(l => l.row === row);
+    if (lead2) lead2.status = 'Fechado'; // update otimista do status, só agora que o form foi completado
     const oldExtra   = String(lead2 ? lead2.valor_fech || 0 : 0);
     const oldDataF   = lead2 ? (lead2.data_f || '') : '';
     const oldStatus  = prompt.dataset.oldStatus || '';
@@ -1175,6 +1172,7 @@ async function saveStatusExtra(row) {
   const raw = sel ? sel.value.trim() : '';
   if (!raw) { showToast('Selecione o motivo da perda'); if (sel) sel.focus(); return; }
   const lead2     = _rawLeads.find(l => l.row === row);
+  if (lead2) lead2.status = 'Perdido'; // update otimista do status, só agora que o form foi completado
   const oldExtra  = lead2 ? lead2.motivo_perd || '' : '';
   const oldDataF  = lead2 ? (lead2.data_f || '') : '';
   const oldStatus = prompt.dataset.oldStatus || '';
@@ -1287,20 +1285,22 @@ async function confirmStatusChange(row) {
   const sel       = document.querySelector(`.lc-select[data-row="${row}"]`);
   const oldStatus = sel ? sel.dataset.original : '';
 
-  // optimistic: update UI immediately
+  if (valor === 'Fechado' || valor === 'Perdido') {
+    // NÃO atualiza UI nem _rawLeads aqui — o rep ainda precisa completar o formulário.
+    // Se abandonar sem preencher, o status exibido permanece o original.
+    // O update otimista acontece em saveStatusExtra após o formulário completo.
+    const prompt = document.getElementById('sp-' + row);
+    if (prompt) prompt.dataset.oldStatus = oldStatus;
+    showStatusPrompt(row, valor);
+    return;
+  }
+
+  // Para outros status: update otimista imediato
   if (sel) { sel.value = valor; sel.className = 'lc-select ' + statusClass(valor); sel.dataset.original = valor; }
   const card = sel ? sel.closest('.lead-card') : document.querySelector(`.lead-card[data-row="${row}"]`);
   if (card) { card.classList.remove('ag','cont','neg'); const bc = borderClass(valor); if (bc) card.classList.add(bc); }
   const raw = _rawLeads.find(l => l.row === row);
   if (raw) raw.status = valor;
-
-  if (valor === 'Fechado' || valor === 'Perdido') {
-    // Store old status in prompt so saveStatusExtra can include it in the POST and undo
-    const prompt = document.getElementById('sp-' + row);
-    if (prompt) prompt.dataset.oldStatus = oldStatus;
-    showStatusPrompt(row, valor);
-    return; // POST fires only after valor/motivo is confirmed in saveStatusExtra
-  }
 
   // Capture old timestamp before updating it
   const oldTs = _tsMap[row] ? String(_tsMap[row]) : '';
@@ -1376,8 +1376,8 @@ function renderLeads(leads, highlightRow) {
     return;
   }
 
-  // when filter active render all so applyFilter() can show/hide from full set
-  const visible = _activeFilter ? _allLeads : _allLeads.slice(0, _visibleCount);
+  const toShow  = _activeFilter ? _allLeads.filter(l => l.status === _activeFilter) : _allLeads;
+  const visible = toShow.slice(0, _visibleCount);
 
   list.innerHTML = visible.map(l => {
     const empresa  = esc(toTitleCase(l.empresa||l.nome)||'—');
@@ -1553,13 +1553,12 @@ function renderLeads(leads, highlightRow) {
 
   // show-more / show-less buttons
   if (wrap) {
-    const total = _allLeads.length;
+    const total = toShow.length;
     if (total <= LIMIT) {
       wrap.innerHTML = '';
     } else {
       const canMore = _visibleCount < total;
       const canLess = _visibleCount > LIMIT;
-      const nextBatch = canMore ? Math.min(LIMIT, total - _visibleCount) : 0;
       let btns = '';
       if (canLess) btns += `<button class="show-less-btn" onclick="showLess()">▴ Ver menos</button>`;
       if (canMore) btns += `<button class="show-more-btn" onclick="showMore()">Ver mais ▾</button>`;
