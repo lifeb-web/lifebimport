@@ -115,7 +115,7 @@
     /* meta tags + icon buttons */
     .lc-meta { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
     .lc-tag  { font-size:10px; font-weight:600; color:var(--muted); background:var(--bg); border-radius:6px; padding:3px 8px; white-space:nowrap; }
-    .lc-meta-spacer { flex:1; min-width:2px; }
+    .lc-meta-btns { display:flex; gap:10px; align-items:center; flex-shrink:0; margin-left:auto; }
 
     .lc-icon-btn { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:50%; border:none; cursor:pointer; flex-shrink:0; transition:transform .12s, box-shadow .12s, background .15s; text-decoration:none; outline:none; }
     .lc-icon-btn:active { transform:scale(.88); }
@@ -907,10 +907,11 @@ function renderLeads(leads, highlightRow) {
         <div class="lc-meta">
           ${cidadeUF ? `<span class="lc-tag">📍 ${esc(cidadeUF)}</span>` : ''}
           ${l.data   ? `<span class="lc-tag">📅 ${esc(fmtData(l.data))}</span>` : ''}
-          <span class="lc-meta-spacer"></span>
-          ${hasContact ? `<button class="lc-icon-btn contact" onclick="toggleContact(this,${l.row})" title="Dados do contato" aria-expanded="false">${SVG_PERSON}</button>` : ''}
-          ${wa       ? `<a class="lc-icon-btn wa"   href="https://wa.me/${wa}" target="_blank" rel="noopener" title="WhatsApp">${SVG_WA}</a>` : ''}
-          ${mapLink  ? `<a class="lc-icon-btn maps" href="${esc(mapLink)}" target="_blank" rel="noopener" title="Ver no Google Maps">${SVG_PIN}</a>` : ''}
+          <div class="lc-meta-btns">
+            ${hasContact ? `<button class="lc-icon-btn contact" onclick="toggleContact(this,${l.row})" title="Dados do contato" aria-expanded="false">${SVG_PERSON}</button>` : ''}
+            ${wa         ? `<a class="lc-icon-btn wa"   href="https://wa.me/${wa}" target="_blank" rel="noopener" title="WhatsApp">${SVG_WA}</a>` : ''}
+            ${mapLink    ? `<a class="lc-icon-btn maps" href="${esc(mapLink)}" target="_blank" rel="noopener" title="Ver no Google Maps">${SVG_PIN}</a>` : ''}
+          </div>
         </div>
         <div class="lc-contact-panel" id="cp-${l.row}">${cpRows.join('')}</div>
         <div class="lc-status-wrap">
