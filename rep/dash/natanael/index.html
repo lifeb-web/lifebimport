@@ -219,10 +219,17 @@
     .lc-obs-fb.err { color:var(--red); }
     .obsr-cancel-btn { padding:8px 14px; border-radius:8px; border:1.5px solid var(--border); background:none; font-family:var(--font); font-size:12px; font-weight:700; color:var(--muted); cursor:pointer; }
     .obsr-cancel-btn:hover { background:var(--bg); }
+    .lc-obs-conclude { display:none; padding:8px 14px; border-radius:8px; border:1.5px solid var(--border); background:none; font-family:var(--font); font-size:12px; font-weight:700; color:var(--muted); cursor:pointer; }
+    .lc-obs-conclude:hover { background:var(--bg); }
     .lc-obs-save { padding:8px 18px; border-radius:8px; background:var(--purple); color:#fff; border:none; cursor:pointer; font-family:var(--font); font-size:12px; font-weight:700; letter-spacing:.3px; transition:background .15s, transform .1s; }
     .lc-obs-save:hover   { background:#5c3d82; }
     .lc-obs-save:active  { transform:scale(.96); }
     .lc-obs-save.saving  { opacity:.6; pointer-events:none; }
+    /* obs concluding mode: banner above textarea */
+    .obs-conclude-banner { display:none; background:rgba(112,75,155,.07); border:1px solid rgba(112,75,155,.2); border-radius:8px; padding:7px 12px; margin-bottom:8px; font-size:11px; font-weight:700; color:var(--purple); }
+    .lead-card.concluding .obs-conclude-banner { display:block; }
+    .lead-card.concluding .obsr-cancel-btn    { display:none; }
+    .lead-card.concluding .lc-obs-conclude    { display:inline-flex; align-items:center; }
 
     /* SHOW MORE / LESS */
     .show-more-btn { width:100%; padding:12px 20px; border-radius:12px; border:1.5px dashed rgba(112,75,155,.3); background:none; font-family:var(--font); font-size:12px; font-weight:700; color:var(--purple); cursor:pointer; margin-bottom:6px; transition:background .15s, border-color .15s; text-align:center; display:block; }
@@ -568,6 +575,37 @@ function showLess() {
   }
 }
 
+// ── CONCLUDING MODE (obs step after status change) ─────────────
+function enterConcludingMode(row) {
+  const card = document.querySelector(`.lead-card[data-row="${row}"]`);
+  if (!card) return;
+  card.classList.add('concluding');
+  // Auto-expand
+  if (!card.classList.contains('expanded')) {
+    card.classList.add('expanded');
+    const btn = card.querySelector('.lc-toggle');
+    if (btn) { const tt=btn.querySelector('.tt'); if(tt) tt.textContent='menos'; btn.setAttribute('aria-expanded','true'); }
+  }
+  // Enter obs edit mode
+  const rep = document.getElementById('obsr-' + row);
+  if (rep && !rep.classList.contains('editing')) rep.classList.add('editing');
+  // Change save button label
+  const saveBtn = document.getElementById('obs-save-' + row);
+  if (saveBtn) saveBtn.textContent = 'Salvar e concluir';
+  // Focus textarea
+  const ta = document.getElementById('obs-' + row);
+  if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+  // Scroll obs into view
+  const editWrap = document.getElementById('obsr-edit-' + row);
+  if (editWrap) setTimeout(() => editWrap.scrollIntoView({ behavior:'smooth', block:'nearest' }), 80);
+}
+function concludeCard(row) {
+  const card = document.querySelector(`.lead-card[data-row="${row}"]`);
+  if (!card) return;
+  card.classList.add('going-down');
+  setTimeout(() => renderLeads(_rawLeads, row), 1350);
+}
+
 // ── EXPAND TOGGLE ─────────────────────────────────────────────
 function toggleExpand(btn) {
   const card = btn.closest('.lead-card');
@@ -706,7 +744,14 @@ async function saveObs(row) {
     if (viewDiv) viewDiv.innerHTML = buildObsViewHtml(row, valor);
   }
   if (fbEl) fbEl.textContent = '';
-  showUndoToast('Observação salva ✓', { row, campo:'OBS_VENDEDOR', valor:oldObs });
+
+  // In concluding mode, don't overwrite the status undo toast — conclude silently
+  const card = document.querySelector(`.lead-card[data-row="${row}"]`);
+  const isConcluding = card && card.classList.contains('concluding');
+  if (!isConcluding) showUndoToast('Observação salva ✓', { row, campo:'OBS_VENDEDOR', valor:oldObs });
+
+  // If concluding, animate card away now
+  if (isConcluding) concludeCard(row);
 
   // background POST
   try {
@@ -715,7 +760,6 @@ async function saveObs(row) {
     const data = await res.json();
     if (!data.ok) throw new Error(data.error);
   } catch(_) {
-    // revert
     if (lead) lead.obs = oldObs;
     if (rep) {
       rep.dataset.saved = oldObs;
@@ -813,8 +857,8 @@ async function saveStatusExtra(row) {
     ]
   });
 
-  const card = document.querySelector(`.lead-card[data-row="${row}"]`);
-  if (card) { card.classList.add('going-down'); setTimeout(() => renderLeads(_rawLeads, row), 1350); }
+  // Give rep a moment to add obs before the card disappears
+  enterConcludingMode(row);
 
   // Two sequential POSTs: status first, then valor/motivo
   try {
@@ -883,10 +927,9 @@ async function confirmStatusChange(row) {
     return; // POST fires only after valor/motivo is confirmed in saveStatusExtra
   }
 
-  // Non-Fechado/Perdido: animate to new position and POST immediately
-  if (card) card.classList.add('going-down');
-  setTimeout(() => renderLeads(_rawLeads, row), 1350);
+  // Non-Fechado/Perdido: give rep a moment to add obs before re-sorting
   showUndoToast('Status atualizado ✓', { row, campo:'STATUS_VENDEDOR', valor:oldStatus });
+  enterConcludingMode(row);
 
   try {
     const res  = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
@@ -1064,12 +1107,14 @@ function renderLeads(leads, highlightRow) {
         <div class="lc-obs-rep" id="obsr-${l.row}" data-saved="${esc(l.obs||'')}">
           <div class="obsr-view">${obsViewHtml}</div>
           <div class="obsr-edit-wrap" id="obsr-edit-${l.row}">
+            <div class="obs-conclude-banner">📝 Registre uma observação antes de concluir</div>
             <textarea class="lc-obs-textarea" id="obs-${l.row}" maxlength="1000"
               placeholder="Escreva sua observação sobre este lead…">${esc(l.obs||'')}</textarea>
             <div class="lc-obs-footer">
               <span class="lc-obs-fb" id="obs-fb-${l.row}"></span>
-              <button class="obsr-cancel-btn" onclick="cancelObsEdit(${l.row})">Cancelar</button>
-              <button class="lc-obs-save"     onclick="saveObs(${l.row})">Salvar</button>
+              <button class="obsr-cancel-btn"  id="obs-cancel-${l.row}"   onclick="cancelObsEdit(${l.row})">Cancelar</button>
+              <button class="lc-obs-conclude"  id="obs-conclude-${l.row}" onclick="concludeCard(${l.row})">Pular →</button>
+              <button class="lc-obs-save"      id="obs-save-${l.row}"     onclick="saveObs(${l.row})">Salvar</button>
             </div>
           </div>
         </div>
@@ -1250,7 +1295,7 @@ async function loadData() {
         if (prompt && prompt.classList.contains('visible')) newLeads.push(existing);
       }
     });
-    const hasPending = !!document.querySelector('.lc-status-prompt.visible');
+    const hasPending = !!document.querySelector('.lc-status-prompt.visible, .lead-card.concluding');
     const changed    = _firstLoad || JSON.stringify(newLeads) !== JSON.stringify(_rawLeads);
     _rawLeads = newLeads;
     if (changed && !hasPending) renderLeads(_rawLeads);
