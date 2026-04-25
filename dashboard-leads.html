@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="robots" content="noindex, nofollow">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Life B | Painel de Leads</title>
+  <title>Life B | Dashboard Leads Mobile</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <style>
@@ -1121,9 +1121,10 @@ function renderAtivos(data) {
       const repLeads = leads
         .filter(l => (l.rep || '').toUpperCase() === repName)
         .sort((a, b) => {
-          const pa = a.status === 'Aguardando contato' ? 0 : 1;
-          const pb = b.status === 'Aguardando contato' ? 0 : 1;
-          if (pa !== pb) return pa - pb;
+          const ORDEM = { 'Aguardando contato': 0, 'Em contato': 1, 'Em negociação': 2 };
+          const oa = ORDEM[a.status] !== undefined ? ORDEM[a.status] : 9;
+          const ob = ORDEM[b.status] !== undefined ? ORDEM[b.status] : 9;
+          if (oa !== ob) return oa - ob;
           return (a.data || '').localeCompare(b.data || '');
         });
       if (badge) badge.textContent = `${n(repLeads.length)} ATIVOS`;
@@ -1227,7 +1228,7 @@ async function loadAllData(summaryData, lm) {
     const [rFunnel, rByRep, rActive, rClosed, rAds, rLatest] = await Promise.allSettled([
       proxy('funnel'),
       proxy('by_rep'),
-      proxy('active'),
+      proxy('active_all'),
       proxy('closed'),
       proxy('ads'),
       proxy('latest'),
@@ -1240,7 +1241,7 @@ async function loadAllData(summaryData, lm) {
     else _log.error('loadAll', 'by_rep falhou', rByRep.reason);
 
     if (rActive.status === 'fulfilled')  renderAtivos(rActive.value);
-    else _log.error('loadAll', 'active falhou', rActive.reason);
+    else { _log.error('loadAll', 'active_all falhou', rActive.reason); renderAtivos({ leads: [] }); }
 
     if (rClosed.status === 'fulfilled')  renderFechados(rClosed.value);
     else _log.error('loadAll', 'closed falhou', rClosed.reason);
