@@ -1421,7 +1421,7 @@ function renderLeads(leads, highlightRow) {
       `<option value="${esc(s)}"${s===l.status?' selected':''}>${esc(s)}</option>`
     ).join('');
     const contato   = toTitleCase(l.contato||'');
-    const subtitulo = nomeEmp && contato && contato.toLowerCase() !== nomeEmp.toLowerCase() ? contato : '';
+    const subtitulo = nomeEmp && nomeRaw && nomeRaw.toLowerCase() !== nomeEmp.toLowerCase() ? nomeRaw : '';
     const cnpj     = l.cnpj||'';
     const endereco = toTitleCase(l.endereco||'');
 
@@ -1701,9 +1701,8 @@ async function loadHistorico() {
 function _histCardHtml(l) {
   const nomeRaw    = toTitleCase(l.nome||'');
   const nomeEmp    = toTitleCase(l.empresa||'');
-  const nomeContatoH = toTitleCase(l.contato||'');
   const titulo     = esc(nomeEmp || nomeRaw || '—');
-  const subtitulo  = nomeEmp && nomeContatoH && nomeContatoH.toLowerCase() !== nomeEmp.toLowerCase() ? nomeContatoH : '';
+  const subtitulo  = nomeEmp && nomeRaw && nomeRaw.toLowerCase() !== nomeEmp.toLowerCase() ? nomeRaw : '';
   const cidadeUF   = [toTitleCase(l.cidade),(l.estado||'').toUpperCase()].filter(v=>v&&v.trim()).join(' · ');
   const bClass     = l.status==='Fechado' ? 'fech' : 'perd';
   const badge      = l.status==='Fechado' ? 'b-fech' : 'b-perd';
