@@ -142,6 +142,15 @@
     .lcp-val   { font-size:12px; font-weight:600; color:var(--text); word-break:break-word; line-height:1.4; }
     .lcp-tel   { font-size:13px; font-weight:700; color:var(--purple); text-decoration:none; line-height:1.4; }
     .lcp-tel:hover { text-decoration:underline; }
+    .lcp-wa-btn { background:none; border:none; padding:0; cursor:pointer; font-family:inherit; display:flex; align-items:center; gap:5px; }
+    .lcp-wa-overlay { display:none; flex-direction:column; align-items:center; padding:10px 4px 6px; gap:8px; text-align:center; animation:panel-in .18s ease; }
+    .lcp-wac-icon  { font-size:20px; }
+    .lcp-wac-msg   { font-size:12px; font-weight:700; color:var(--text); line-height:1.45; }
+    .lcp-wac-num   { font-size:13px; font-weight:700; color:var(--purple); }
+    .lcp-wac-btns  { display:flex; gap:8px; }
+    .lcp-wac-cancel { padding:6px 14px; border-radius:8px; border:1px solid var(--border); background:#fff; color:var(--muted); font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; }
+    .lcp-wac-open   { padding:6px 14px; border-radius:8px; border:none; background:#16a34a; color:#fff; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; }
+    .lc-last-updated { font-size:10px; color:var(--muted); padding:2px 2px 0; min-height:14px; }
 
     /* STATUS SELECT */
     .lc-status-wrap { position:relative; }
@@ -418,11 +427,64 @@ function fmtPhone(num) {
   else if (local.length === 10) display = `(${local.slice(0,2)}) ${local.slice(2,6)}-${local.slice(6)}`;
   return { display, tel:'+' + withCC };
 }
+function fmtCNPJ(s) {
+  const d = String(s || '').replace(/\D/g, '');
+  if (d.length !== 14) return s || '';
+  return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8,12)}-${d.slice(12)}`;
+}
 
 function fmtWA(num) {
   const d = String(num || '').replace(/\D/g, '');
   if (!d) return '';
   return d.startsWith('55') ? d : '55' + d;
+}
+
+// ── TIMESTAMP DA ÚLTIMA ATUALIZAÇÃO ───────────────────────────
+const TS_KEY = 'lifeb_ts_' + 'IRAMAR';
+let _tsMap = {};
+try { _tsMap = JSON.parse(localStorage.getItem(TS_KEY) || '{}'); } catch(_) {}
+
+function setLeadTs(row) {
+  _tsMap[row] = Date.now();
+  try { localStorage.setItem(TS_KEY, JSON.stringify(_tsMap)); } catch(_) {}
+  const el = document.getElementById('ts-' + row);
+  if (el) el.textContent = getLeadTs(row);
+}
+function getLeadTs(row) {
+  const ts = _tsMap[row];
+  if (!ts) return '';
+  const d = new Date(ts);
+  const day = String(d.getDate()).padStart(2,'0');
+  const mon = String(d.getMonth()+1).padStart(2,'0');
+  const h   = String(d.getHours()).padStart(2,'0');
+  const m   = String(d.getMinutes()).padStart(2,'0');
+  return `Atualizado: ${day}/${mon} - ${h}:${m}`;
+}
+
+// ── WA OVERLAY NO PAINEL DE CONTATO ──────────────────────────
+const _contactWaUrl = {};
+function openContactWa(btn, row) {
+  const rows = document.getElementById('lcp-rows-' + row);
+  const ov   = document.getElementById('lcp-wac-' + row);
+  if (!ov) return;
+  _contactWaUrl[row] = 'https://wa.me/' + btn.dataset.wa;
+  const msg = document.getElementById('lcp-wac-msg-' + row);
+  const num = document.getElementById('lcp-wac-num-' + row);
+  if (msg) msg.textContent = btn.dataset.name ? `Abrir WhatsApp com ${btn.dataset.name}?` : 'Abrir WhatsApp?';
+  if (num) num.textContent = btn.dataset.display;
+  if (rows) rows.style.display = 'none';
+  ov.style.display = 'flex';
+}
+function closeContactWa(row) {
+  const rows = document.getElementById('lcp-rows-' + row);
+  const ov   = document.getElementById('lcp-wac-' + row);
+  if (rows) rows.style.display = '';
+  if (ov)   ov.style.display   = 'none';
+}
+function doContactWa(row) {
+  const url = _contactWaUrl[row];
+  closeContactWa(row);
+  if (url) window.open(url, '_blank');
 }
 
 function buildMapsUrl(empresa, cidade, estado) {
@@ -504,6 +566,11 @@ function undoLast() {
     else if (campo === 'VALOR_FECHADO')    lead.valor_fech  = parseFloat(valor) || 0;
     else if (campo === 'MOTIVO_PERDA')     lead.motivo_perd = valor;
     else if (campo === 'DATA_FECH')        lead.data_f      = valor;
+    else if (campo === 'TIMESTAMP') {
+      if (valor) _tsMap[lead.row] = parseInt(valor);
+      else delete _tsMap[lead.row];
+      try { localStorage.setItem(TS_KEY, JSON.stringify(_tsMap)); } catch(_) {}
+    }
   }
 
   const actions = pending.isMulti ? pending.actions : [{ row: pending.row, campo: pending.campo, valor: pending.valor }];
@@ -524,8 +591,9 @@ function undoLast() {
   renderLeads(_rawLeads);
   showToast('Desfeito ✓');
 
-  // POST all reverts in background
+  // POST all reverts in background (skip client-side-only fields)
   for (const { row, campo, valor } of actions) {
+    if (campo === 'TIMESTAMP') continue;
     fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
       body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo, valor: String(valor) }) })
       .catch(() => {});
@@ -748,6 +816,7 @@ async function savePot(row) {
   if (potEl) potEl.innerHTML = (n > 0 ? esc(cur(n)) : '<span class="lc-pot-no-val">–</span>') + ` <span class="lc-pot-edit-icon">${SVG_EDIT}</span>`;
   if (disp)  disp.style.display  = '';
   if (iWrap) iWrap.style.display = 'none';
+  setLeadTs(row);
   showUndoToast('Valor potencial atualizado ✓', { row, campo:'VALOR_POTENCIAL', valor:oldPot });
 
   // background POST
@@ -808,6 +877,8 @@ async function saveObs(row) {
     if (viewDiv) viewDiv.innerHTML = buildObsViewHtml(row, valor);
   }
   if (fbEl) fbEl.textContent = '';
+
+  setLeadTs(row);
 
   // In concluding mode, merge obs into the pending undo and conclude
   const card = document.querySelector(`.lead-card[data-row="${row}"]`);
@@ -916,12 +987,12 @@ async function saveStatusExtra(row) {
         const lead2 = _rawLeads.find(l => l.row === row);
         const oldPot = lead2 ? String(lead2.pot || 0) : '0';
         if (lead2) lead2.pot = n;
-        // Add valor potencial to the pending undo so it gets reverted together with status
         if (_pendingUndoByRow[row]) _pendingUndoByRow[row].data.actions.push({ row, campo:'VALOR_POTENCIAL', valor:oldPot });
         fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
           body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'VALOR_POTENCIAL', valor:String(n) }) });
       }
     }
+    setLeadTs(row);
     enterConcludingMode(row);
     return;
   }
@@ -958,6 +1029,12 @@ async function saveStatusExtra(row) {
   const oldStatus = prompt.dataset.oldStatus || '';
   const oldPot    = lead2 ? String(lead2.pot || 0) : '0';
   const newStatus = tipo === 'fechado' ? 'Fechado' : 'Perdido';
+  // Recover old timestamp from pending undo set up by confirmStatusChange
+  const prevPending = _pendingUndoByRow[row];
+  const oldTs = prevPending && prevPending.data && prevPending.data.actions
+    ? ((prevPending.data.actions.find(a => a.campo === 'TIMESTAMP') || {}).valor || '')
+    : '';
+  setLeadTs(row);
 
   // Optimistic: update cache
   if (lead2 && tipo === 'fechado') { lead2.valor_fech = writeVal; lead2.data_f = dataFech; }
@@ -971,11 +1048,12 @@ async function saveStatusExtra(row) {
 
   prompt.classList.remove('visible');
 
-  // Multi-action undo: reverts status, valor/motivo, data_fech, and valor_potencial
+  // Multi-action undo: reverts status, valor/motivo, data_fech, valor_potencial, and timestamp
   const undoActions = [
     { row, campo: 'STATUS_VENDEDOR', valor: oldStatus },
     { row, campo, valor: oldExtra },
-    { row, campo: 'VALOR_POTENCIAL', valor: oldPot }
+    { row, campo: 'VALOR_POTENCIAL', valor: oldPot },
+    { row, campo: 'TIMESTAMP', valor: oldTs }
   ];
   if (tipo === 'fechado') undoActions.push({ row, campo: 'DATA_FECH', valor: oldDataF });
 
@@ -1038,6 +1116,10 @@ function onStatusChange(e) {
   if (!conf) return;
   const lbl = document.getElementById('conf-status-' + row);
   if (lbl) lbl.textContent = valor;
+  const sub = document.getElementById('conf-sub-' + row);
+  if (sub) sub.textContent = (valor === 'Fechado' || valor === 'Perdido')
+    ? 'Sai da fila, vai ao histórico.'
+    : 'Lead vai ao final da fila.';
   conf.dataset.pending = valor;
   conf.classList.add('visible');
 }
@@ -1072,8 +1154,15 @@ async function confirmStatusChange(row) {
     return; // POST fires only after valor/motivo is confirmed in saveStatusExtra
   }
 
+  // Capture old timestamp before updating it
+  const oldTs = _tsMap[row] ? String(_tsMap[row]) : '';
+  setLeadTs(row);
+
   // Defer undo toast — always multi-action so more fields can be appended later
-  _pendingUndoByRow[row] = { msg:'Status atualizado ✓', data:{ isMulti:true, leadSnapshot:null, actions:[{ row, campo:'STATUS_VENDEDOR', valor:oldStatus }] } };
+  _pendingUndoByRow[row] = { msg:'Status atualizado ✓', data:{ isMulti:true, leadSnapshot:null, actions:[
+    { row, campo:'STATUS_VENDEDOR', valor:oldStatus },
+    { row, campo:'TIMESTAMP', valor:oldTs }
+  ]}};
 
   if (valor === 'Em negociação') {
     // Show optional valor potencial prompt before concluding mode
@@ -1168,14 +1257,17 @@ function renderLeads(leads, highlightRow) {
       cpRows.push(`<div class="lcp-row"><span class="lcp-icon">👤</span><div class="lcp-info"><div class="lcp-label">Contato principal</div><div class="lcp-val">${esc(nomeRaw)}</div></div></div>`);
     if (contato && contato.toLowerCase() !== nomeRaw.toLowerCase())
       cpRows.push(`<div class="lcp-row"><span class="lcp-icon">👥</span><div class="lcp-info"><div class="lcp-label">Contato empresa</div><div class="lcp-val">${esc(contato)}</div></div></div>`);
-    if (phone.display)
-      cpRows.push(`<div class="lcp-row"><span class="lcp-icon">📱</span><div class="lcp-info"><div class="lcp-label">Telefone</div><a class="lcp-tel" href="tel:${esc(phone.tel)}">${esc(phone.display)}</a></div></div>`);
+    if (phone.display) {
+      const waNum      = fmtWA(l.whatsapp);
+      const contactName = nomeRaw || contato || '';
+      cpRows.push(`<div class="lcp-row"><span class="lcp-icon">📱</span><div class="lcp-info"><div class="lcp-label">Telefone / WhatsApp</div><button class="lcp-tel lcp-wa-btn" data-wa="${esc(waNum)}" data-display="${esc(phone.display)}" data-name="${esc(contactName)}" onclick="openContactWa(this,${l.row})">💬 ${esc(phone.display)}</button></div></div>`);
+    }
     if (endereco) {
       const endFull = [endereco, cidadeUF ? cidadeUF.replace(' · ',' — ') : ''].filter(Boolean).join(', ');
       cpRows.push(`<div class="lcp-row"><span class="lcp-icon">🏠</span><div class="lcp-info"><div class="lcp-label">Endereço</div><div class="lcp-val">${esc(endFull)}</div></div></div>`);
     }
     if (cnpj)
-      cpRows.push(`<div class="lcp-row"><span class="lcp-icon">📋</span><div class="lcp-info"><div class="lcp-label">CNPJ</div><div class="lcp-val">${esc(cnpj)}</div></div></div>`);
+      cpRows.push(`<div class="lcp-row"><span class="lcp-icon">📋</span><div class="lcp-info"><div class="lcp-label">CNPJ</div><div class="lcp-val">${esc(fmtCNPJ(cnpj))}</div></div></div>`);
     const hasContact = cpRows.length > 0;
 
     const obsViewHtml = buildObsViewHtml(l.row, l.obs||'');
@@ -1212,15 +1304,27 @@ function renderLeads(leads, highlightRow) {
             ${mapLink    ? `<button class="lc-icon-btn maps" data-url="${esc(mapLink)}" onclick="openLinkConfirm(this)" title="Ver no Google Maps">${SVG_PIN}</button>` : ''}
           </div>
         </div>
-        <div class="lc-contact-panel" id="cp-${l.row}">${cpRows.join('')}</div>
+        <div class="lc-contact-panel" id="cp-${l.row}">
+          <div id="lcp-rows-${l.row}">${cpRows.join('')}</div>
+          ${wa ? `<div class="lcp-wa-overlay" id="lcp-wac-${l.row}">
+            <div class="lcp-wac-icon">💬</div>
+            <div class="lcp-wac-msg" id="lcp-wac-msg-${l.row}"></div>
+            <div class="lcp-wac-num" id="lcp-wac-num-${l.row}"></div>
+            <div class="lcp-wac-btns">
+              <button class="lcp-wac-cancel" onclick="closeContactWa(${l.row})">Cancelar</button>
+              <button class="lcp-wac-open"   onclick="doContactWa(${l.row})">Abrir WhatsApp</button>
+            </div>
+          </div>` : ''}
+        </div>
         <div class="lc-status-wrap">
           <select class="lc-select ${sClass}" data-row="${l.row}" data-original="${esc(l.status)}" aria-label="Status do lead">
             ${options}
           </select>
         </div>
         <div class="lc-feedback" id="fb-${l.row}"></div>
+        <div class="lc-last-updated" id="ts-${l.row}">${getLeadTs(l.row)}</div>
         <div class="lc-confirm" id="conf-${l.row}">
-          <div class="lc-confirm-msg">Mudar para <strong id="conf-status-${l.row}"></strong>?<span class="lc-confirm-sub">Lead vai ao final da fila.</span></div>
+          <div class="lc-confirm-msg">Mudar para <strong id="conf-status-${l.row}"></strong>?<span class="lc-confirm-sub" id="conf-sub-${l.row}">Lead vai ao final da fila.</span></div>
           <div class="lc-confirm-actions">
             <button class="lc-confirm-cancel" onclick="cancelStatusChange(${l.row})">Cancelar</button>
             <button class="lc-confirm-ok"     onclick="confirmStatusChange(${l.row})">Confirmar</button>
