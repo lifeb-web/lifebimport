@@ -174,17 +174,18 @@
     .lc-feedback.ok  { color:#16a34a; }
     .lc-feedback.err { color:var(--red); }
 
-    /* STATUS CONFIRMATION */
-    .lc-confirm { display:none; background:#f9f6ff; border:1px solid rgba(112,75,155,.3); border-radius:10px; padding:10px 12px; margin-top:6px; animation:panel-in .18s ease; }
-    .lc-confirm.visible { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-    .lc-confirm-msg { font-size:12px; font-weight:600; color:var(--text); flex:1; min-width:120px; line-height:1.45; }
+    /* CONFIRMAÇÕES (status, link, histórico) */
+    .lc-confirm { display:none; flex-direction:column; align-items:center; gap:7px; text-align:center; background:rgba(112,75,155,.07); border:1.5px solid rgba(112,75,155,.28); border-radius:12px; padding:16px 14px 12px; animation:panel-in .18s ease; }
+    .lc-confirm.visible { display:flex; }
+    .lc-confirm-icon { font-size:28px; line-height:1; }
+    .lc-confirm-msg { font-size:13px; font-weight:700; color:var(--text); line-height:1.45; }
     .lc-confirm-msg strong { color:var(--purple); }
-    .lc-confirm-sub { display:block; font-size:10px; font-weight:600; color:var(--muted); margin-top:2px; }
-    .lc-confirm-actions { display:flex; gap:6px; flex-shrink:0; }
-    .lc-confirm-ok { padding:7px 14px; border-radius:8px; background:var(--purple); color:#fff; border:none; font-family:var(--font); font-size:11px; font-weight:700; cursor:pointer; transition:background .15s, transform .1s; }
+    .lc-confirm-sub { font-size:10px; font-weight:600; color:var(--muted); margin-top:-3px; }
+    .lc-confirm-actions { display:flex; gap:8px; width:100%; margin-top:4px; }
+    .lc-confirm-ok { flex:2; padding:10px 14px; border-radius:9px; background:var(--purple); color:#fff; border:none; font-family:var(--font); font-size:12px; font-weight:700; cursor:pointer; transition:background .15s, transform .1s; touch-action:manipulation; }
     .lc-confirm-ok:hover { background:#5c3d82; }
     .lc-confirm-ok:active { transform:scale(.95); }
-    .lc-confirm-cancel { padding:7px 12px; border-radius:8px; border:1.5px solid var(--border); background:none; font-family:var(--font); font-size:11px; font-weight:700; color:var(--muted); cursor:pointer; transition:background .12s; }
+    .lc-confirm-cancel { flex:1; padding:10px 10px; border-radius:9px; border:1.5px solid var(--border); background:none; font-family:var(--font); font-size:12px; font-weight:700; color:var(--muted); cursor:pointer; transition:background .12s; touch-action:manipulation; }
     .lc-confirm-cancel:hover { background:var(--bg); }
 
     /* PROMPT FECHADO / PERDIDO */
@@ -753,32 +754,74 @@ function toggleExpand(btn) {
   btn.setAttribute('aria-expanded', expanding);
 }
 
+// ── FECHAR UI DE OUTROS CARDS ────────────────────────────────────
+function closeOtherCardUi(exceptRow) {
+  const er = String(exceptRow);
+  // Painéis de contato
+  document.querySelectorAll('.lc-contact-panel').forEach(panel => {
+    const row = panel.id.replace('cp-', '');
+    if (row === er || panel.style.display !== 'block') return;
+    panel.style.display = 'none';
+    closeContactWa(parseInt(row));
+    const btn = document.querySelector(`.lead-card[data-row="${row}"] .lc-icon-btn.contact`);
+    if (btn) { btn.classList.remove('active'); btn.setAttribute('aria-expanded','false'); }
+  });
+  // Confirmações abertas
+  document.querySelectorAll('.lc-confirm.visible').forEach(el => {
+    const m = el.id.match(/(\d+)$/);
+    if (!m || m[1] === er) return;
+    el.classList.remove('visible');
+    if (el.id.startsWith('conf-')) {
+      const sw = document.getElementById('selwrap-' + m[1]);
+      const ts = document.getElementById('ts-' + m[1]);
+      if (sw) sw.style.display = '';
+      if (ts) ts.style.display = '';
+    }
+  });
+  // Prompts de fechado/perdido/negociação
+  document.querySelectorAll('.lc-status-prompt.visible').forEach(el => {
+    if (el.id.replace('sp-','') !== er) el.classList.remove('visible');
+  });
+}
+
 // ── LINK CONFIRM (WA / Maps) ─────────────────────────────────────
 function openLinkConfirm(btn) {
   const url  = btn.dataset.url;
   if (!url) return;
   const card   = btn.closest('.lead-card, .hist-card');
-  const prefix = card && card.classList.contains('hist-card') ? 'hlc' : 'lc';
+  const isHist = card && card.classList.contains('hist-card');
+  const prefix = isHist ? 'hlc' : 'lc';
   const row    = card ? card.dataset.row : null;
   const confId = row ? (prefix + '-' + row) : null;
   const conf   = confId ? document.getElementById(confId) : null;
   if (!conf) { window.open(url, '_blank', 'noopener,noreferrer'); return; }
-  // Close contact panel if open
-  if (row) {
+  // Fechar UI de outros cards (só em leads ativos, não histórico)
+  if (row && !isHist) closeOtherCardUi(row);
+  // Fechar painel de contato e status do mesmo card
+  if (row && !isHist) {
     const cp = document.getElementById('cp-' + row);
     if (cp && cp.style.display === 'block') {
       cp.style.display = 'none';
       const infoBtn = card.querySelector('.lc-icon-btn.info');
       if (infoBtn) { infoBtn.classList.remove('active'); infoBtn.setAttribute('aria-expanded','false'); }
     }
-    // Close status prompt and status confirm if open
     const sp = document.getElementById('sp-' + row);
     if (sp) sp.classList.remove('visible');
     const statusConf = document.getElementById('conf-' + row);
-    if (statusConf) statusConf.classList.remove('visible');
+    if (statusConf) {
+      statusConf.classList.remove('visible');
+      const sw = document.getElementById('selwrap-' + row);
+      const ts = document.getElementById('ts-' + row);
+      if (sw) sw.style.display = '';
+      if (ts) ts.style.display = '';
+    }
   }
+  // Definir ícone e rótulo
+  const isWa = btn.classList.contains('wa');
+  const icon = conf.querySelector('.lc-confirm-icon');
+  if (icon) icon.textContent = isWa ? '💬' : '📍';
   const lbl = conf.querySelector('.lc-confirm-msg strong');
-  if (lbl) lbl.textContent = btn.classList.contains('wa') ? 'WhatsApp' : 'Google Maps';
+  if (lbl) lbl.textContent = isWa ? 'WhatsApp' : 'Google Maps';
   conf.dataset.pending = url;
   conf.classList.add('visible');
 }
@@ -802,14 +845,22 @@ function toggleContact(btn, row) {
   panel.style.display = isOpen ? 'none' : 'block';
   btn.classList.toggle('active', !isOpen);
   btn.setAttribute('aria-expanded', !isOpen);
-  // Opening info: close link confirm and status dialogs on same card
   if (!isOpen) {
+    // Abrindo: fechar UI de outros cards primeiro
+    closeOtherCardUi(row);
+    // Fechar confirms e prompts do mesmo card
     const lc = document.getElementById('lc-' + row);
     if (lc) lc.classList.remove('visible');
     const sp = document.getElementById('sp-' + row);
     if (sp) sp.classList.remove('visible');
     const sc = document.getElementById('conf-' + row);
-    if (sc) sc.classList.remove('visible');
+    if (sc) {
+      sc.classList.remove('visible');
+      const sw = document.getElementById('selwrap-' + row);
+      const ts = document.getElementById('ts-' + row);
+      if (sw) sw.style.display = '';
+      if (ts) ts.style.display = '';
+    }
   }
 }
 
@@ -1146,41 +1197,66 @@ function onStatusChange(e) {
   const row   = parseInt(sel.dataset.row, 10);
   const valor = sel.value;
 
-  // revert select visual until confirmed
+  // Fechar UI de outros cards
+  closeOtherCardUi(row);
+
+  // Reverter select visualmente até confirmar
   sel.value     = sel.dataset.original;
   sel.className = 'lc-select ' + statusClass(sel.dataset.original);
 
-  // Close any open status prompt (e.g. Fechado valor field) before showing new confirm
+  // Fechar prompt e link confirm do mesmo card
   const sp = document.getElementById('sp-' + row);
   if (sp) sp.classList.remove('visible');
-  // Close link confirm if open
   const lc = document.getElementById('lc-' + row);
   if (lc) lc.classList.remove('visible');
 
-  // show inline confirmation
+  // Esconder select e timestamp — confirmação ocupa o lugar
+  const selWrap = document.getElementById('selwrap-' + row);
+  const tsEl    = document.getElementById('ts-' + row);
+  if (selWrap) selWrap.style.display = 'none';
+  if (tsEl)    tsEl.style.display    = 'none';
+
+  // Montar confirmação
   const conf = document.getElementById('conf-' + row);
   if (!conf) return;
-  const lbl = document.getElementById('conf-status-' + row);
+  const lbl  = document.getElementById('conf-status-' + row);
   if (lbl) lbl.textContent = valor;
-  const sub = document.getElementById('conf-sub-' + row);
+  const sub  = document.getElementById('conf-sub-' + row);
   if (sub) sub.textContent = (valor === 'Fechado' || valor === 'Perdido')
     ? 'Sai da fila, vai ao histórico.'
     : 'Lead vai ao final da fila.';
+  const icon = document.getElementById('conf-icon-' + row);
+  if (icon) {
+    if      (valor === 'Fechado')          icon.textContent = '✅';
+    else if (valor === 'Perdido')          icon.textContent = '❌';
+    else if (valor === 'Em negociação')    icon.textContent = '🤝';
+    else if (valor === 'Em contato')       icon.textContent = '📞';
+    else                                   icon.textContent = '⏳';
+  }
   conf.dataset.pending = valor;
   conf.classList.add('visible');
 }
 
 function cancelStatusChange(row) {
-  const conf = document.getElementById('conf-' + row);
-  if (conf) conf.classList.remove('visible');
+  const conf    = document.getElementById('conf-' + row);
+  const selWrap = document.getElementById('selwrap-' + row);
+  const tsEl    = document.getElementById('ts-' + row);
+  if (conf)    conf.classList.remove('visible');
+  if (selWrap) selWrap.style.display = '';
+  if (tsEl)    tsEl.style.display    = '';
 }
 
 async function confirmStatusChange(row) {
-  const conf = document.getElementById('conf-' + row);
+  const conf    = document.getElementById('conf-' + row);
   if (!conf) return;
-  const valor = conf.dataset.pending;
+  const valor   = conf.dataset.pending;
   if (!valor) return;
   conf.classList.remove('visible');
+  // Restaurar select e timestamp
+  const selWrap = document.getElementById('selwrap-' + row);
+  const tsEl    = document.getElementById('ts-' + row);
+  if (selWrap) selWrap.style.display = '';
+  if (tsEl)    tsEl.style.display    = '';
 
   const sel       = document.querySelector(`.lc-select[data-row="${row}"]`);
   const oldStatus = sel ? sel.dataset.original : '';
@@ -1372,21 +1448,23 @@ function renderLeads(leads, highlightRow) {
           </div>` : ''}
         </div>
         <div class="lc-status-wrap">
-          <div class="lc-sel-wrap">
+          <div class="lc-sel-wrap" id="selwrap-${l.row}">
             <select class="lc-select ${sClass}" data-row="${l.row}" data-original="${esc(l.status)}" aria-label="Status do lead">
               ${options}
             </select>
           </div>
           <div class="lc-last-updated" id="ts-${l.row}">${getLeadTs(l.row)}</div>
-        </div>
-        <div class="lc-feedback" id="fb-${l.row}"></div>
-        <div class="lc-confirm" id="conf-${l.row}">
-          <div class="lc-confirm-msg">Mudar para <strong id="conf-status-${l.row}"></strong>?<span class="lc-confirm-sub" id="conf-sub-${l.row}">Lead vai ao final da fila.</span></div>
-          <div class="lc-confirm-actions">
-            <button class="lc-confirm-cancel" onclick="cancelStatusChange(${l.row})">Cancelar</button>
-            <button class="lc-confirm-ok"     onclick="confirmStatusChange(${l.row})">Confirmar</button>
+          <div class="lc-confirm" id="conf-${l.row}">
+            <div class="lc-confirm-icon" id="conf-icon-${l.row}">📋</div>
+            <div class="lc-confirm-msg">Mudar para <strong id="conf-status-${l.row}"></strong>?</div>
+            <div class="lc-confirm-sub" id="conf-sub-${l.row}">Lead vai ao final da fila.</div>
+            <div class="lc-confirm-actions">
+              <button class="lc-confirm-cancel" onclick="cancelStatusChange(${l.row})">Cancelar</button>
+              <button class="lc-confirm-ok"     onclick="confirmStatusChange(${l.row})">Confirmar</button>
+            </div>
           </div>
         </div>
+        <div class="lc-feedback" id="fb-${l.row}"></div>
         <div class="lc-status-prompt" id="sp-${l.row}">
           <div class="lc-sp-label"></div>
           <div class="lc-sp-row">
@@ -1412,8 +1490,9 @@ function renderLeads(leads, highlightRow) {
             <button class="lc-sp-save" onclick="saveStatusExtra(${l.row})">Salvar</button>
           </div>
         </div>
-        <div class="lc-confirm" id="lc-${l.row}">
-          <div class="lc-confirm-msg">Abrir <strong></strong>?</div>
+        <div class="lc-confirm" id="lc-${l.row}" style="margin-top:6px;">
+          <div class="lc-confirm-icon" id="lc-icon-${l.row}">🔗</div>
+          <div class="lc-confirm-msg">Abrir <strong id="lc-lbl-${l.row}"></strong>?</div>
           <div class="lc-confirm-actions">
             <button class="lc-confirm-cancel" onclick="closeLinkConfirm('lc-${l.row}')">Cancelar</button>
             <button class="lc-confirm-ok"     onclick="doConfirmLink('lc-${l.row}')">Abrir</button>
@@ -1594,6 +1673,7 @@ function _histCardHtml(l) {
       ${motivoMeta ? `<span class="lc-tag">❌ ${esc(motivoMeta)}</span>` : ''}
     </div>
     ${wa ? `<div class="lc-confirm" id="hlc-${l.row}" style="margin-top:8px;">
+      <div class="lc-confirm-icon">💬</div>
       <div class="lc-confirm-msg">Abrir <strong>WhatsApp</strong>?</div>
       <div class="lc-confirm-actions">
         <button class="lc-confirm-cancel" onclick="closeLinkConfirm('hlc-${l.row}')">Cancelar</button>
