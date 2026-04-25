@@ -535,7 +535,15 @@ let _visibleCount = LIMIT;
 let _rawLeads     = [];
 let _allLeads     = [];
 function showMore() { _visibleCount = Math.min(_visibleCount + LIMIT, _allLeads.length); renderLeads(_rawLeads); }
-function showLess() { _visibleCount = LIMIT; renderLeads(_rawLeads); }
+function showLess() {
+  _visibleCount = Math.max(LIMIT, _visibleCount - LIMIT);
+  renderLeads(_rawLeads);
+  const list = document.getElementById('leads-list');
+  if (list) {
+    const y = list.getBoundingClientRect().top + window.scrollY - 72;
+    window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+  }
+}
 
 // ── EXPAND TOGGLE ─────────────────────────────────────────────
 function toggleExpand(btn) {
@@ -972,7 +980,7 @@ function renderLeads(leads, highlightRow) {
       const nextBatch = canMore ? Math.min(LIMIT, total - _visibleCount) : 0;
       let btns = '';
       if (canLess) btns += `<button class="show-less-btn" onclick="showLess()">▴ Ver menos</button>`;
-      if (canMore) btns += `<button class="show-more-btn" onclick="showMore()">Ver mais ${nextBatch} lead${nextBatch!==1?'s':''} ▾</button>`;
+      if (canMore) btns += `<button class="show-more-btn" onclick="showMore()">Ver mais ▾</button>`;
       wrap.innerHTML = btns;
     }
   }
