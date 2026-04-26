@@ -687,7 +687,9 @@ function undoLast() {
     else if (campo === 'MOTIVO_PERDA')     lead.motivo_perd = valor;
     else if (campo === 'DATA_FECH')        lead.data_f      = valor;
     else if (campo === 'TIMESTAMP') {
-      if (valor) _tsMap[lead.row] = parseInt(valor);
+      const ts = valor ? parseInt(valor) : 0;
+      lead.ts_vend = ts;
+      if (ts) _tsMap[lead.row] = ts;
       else delete _tsMap[lead.row];
       try { localStorage.setItem(TS_KEY, JSON.stringify(_tsMap)); } catch(_) {}
     }
@@ -1460,7 +1462,7 @@ async function confirmStatusChange(row) {
   const card = sel ? sel.closest('.lead-card') : document.querySelector(`.lead-card[data-row="${row}"]`);
   if (card) { card.classList.remove('ag','cont','neg'); const bc = borderClass(valor); if (bc) card.classList.add(bc); }
   const raw = _rawLeads.find(l => l.row === row);
-  if (raw) raw.status = valor;
+  if (raw) { raw.status = valor; raw.ts_vend = Date.now(); }
 
   // Capture old timestamp before updating it
   const oldTs = _tsMap[row] ? String(_tsMap[row]) : '';
