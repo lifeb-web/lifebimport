@@ -349,9 +349,10 @@
       .lc-empresa { font-size:16px; }
       .lc-select { font-size:14px; padding:11px 36px 11px 14px; }
       .lcp-val, .lcp-tel { font-size:13px; }
-      /* busca inline no header (desktop) */
-      .search-hd-wrap { display:flex; flex:1; justify-content:center; padding:0 16px; }
-      #search-hd-input { width:100%; max-width:220px; padding:7px 14px; border-radius:10px; border:1.5px solid var(--border); font-family:var(--font); font-size:13px; font-weight:600; color:var(--text); background:var(--bg); outline:none; transition:border-color .15s,background .15s; text-align:center; letter-spacing:.5px; }
+      /* busca inline no header (desktop) — centralizada absolutamente */
+      .search-hd-wrap { position:absolute; left:50%; transform:translateX(-50%); display:flex; align-items:center; }
+      #search-hd-input { width:200px; padding:7px 14px; border-radius:10px; border:1.5px solid var(--border); font-family:var(--font); font-size:13px; font-weight:600; color:var(--text); background:var(--bg); outline:none; transition:border-color .15s,background .15s; text-align:center; letter-spacing:.5px; }
+      #search-hd-input::placeholder { font-weight:400; color:var(--muted); opacity:.55; font-size:12px; letter-spacing:0; }
       #search-hd-input:focus { border-color:var(--purple); background:#fff; }
       #search-hd-input.has-query { border-color:var(--purple); background:#f9f6ff; }
       #search-btn { display:none; }
@@ -759,7 +760,14 @@ function handleSearch(val) {
   const hdInp = document.getElementById('search-hd-input');
   if (hdInp) hdInp.classList.toggle('has-query', _searchQuery.length === 4);
   if (_rawLeads.length) renderLeads(_rawLeads);
-  if (_history !== null) renderHistorico();
+  if (_searchQuery.length === 4) {
+    const sec = document.getElementById('historico-section');
+    if (sec && !sec.classList.contains('open')) sec.classList.add('open');
+    if (!_histLoaded) loadHistorico();
+    else renderHistorico();
+  } else if (_history !== null) {
+    renderHistorico();
+  }
 }
 
 // ── PAGINATION ────────────────────────────────────────────────
