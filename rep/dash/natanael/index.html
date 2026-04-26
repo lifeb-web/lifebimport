@@ -325,6 +325,9 @@
     .toast-undo-btn { background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.3); color:#fff; border-radius:12px; padding:3px 10px; font-family:var(--font); font-size:11px; font-weight:700; cursor:pointer; flex-shrink:0; }
     .toast-undo-btn:hover { background:rgba(255,255,255,.28); }
 
+    /* busca desktop — escondido no mobile */
+    .search-hd-wrap { display:none; }
+
     /* BUSCA */
     #search-btn { background:none; border:none; cursor:pointer; padding:6px; border-radius:8px; color:var(--muted); display:flex; align-items:center; justify-content:center; transition:color .15s,background .15s; flex-shrink:0; }
     #search-btn:hover { color:var(--purple); background:rgba(112,75,155,.08); }
@@ -339,12 +342,20 @@
 
     /* DESKTOP */
     @media (min-width:640px) {
+      body { zoom: 1.25; }
       main { padding:20px 24px 60px; }
       .summary-strip { gap:10px; }
       .sum-val { font-size:26px; }
       .lc-empresa { font-size:16px; }
       .lc-select { font-size:14px; padding:11px 36px 11px 14px; }
       .lcp-val, .lcp-tel { font-size:13px; }
+      /* busca inline no header (desktop) */
+      .search-hd-wrap { display:flex; flex:1; justify-content:center; padding:0 16px; }
+      #search-hd-input { width:100%; max-width:220px; padding:7px 14px; border-radius:10px; border:1.5px solid var(--border); font-family:var(--font); font-size:13px; font-weight:600; color:var(--text); background:var(--bg); outline:none; transition:border-color .15s,background .15s; text-align:center; letter-spacing:.5px; }
+      #search-hd-input:focus { border-color:var(--purple); background:#fff; }
+      #search-hd-input.has-query { border-color:var(--purple); background:#f9f6ff; }
+      #search-btn { display:none; }
+      #search-bar  { display:none !important; }
     }
     @media (max-width:360px) {
       .lc-icon-btn { width:28px; height:28px; }
@@ -362,6 +373,13 @@
     <img class="h-logo" src="https://projetojlbv.com.br/assets/img/logo-lifeb.png" alt="Life B" onerror="this.style.display='none'" onclick="location.reload()">
     <div class="h-sep"></div>
     <span class="h-rep">Natanael</span>
+  </div>
+  <div class="search-hd-wrap">
+    <input id="search-hd-input" type="tel" inputmode="numeric" maxlength="4"
+      placeholder="🔍  últ. 4 dígitos"
+      oninput="handleSearch(this.value)"
+      onkeydown="if(event.key==='Escape'){this.value='';handleSearch('');}"
+      autocomplete="off" spellcheck="false">
   </div>
   <div class="h-right">
     <span id="last-sync"></span>
@@ -726,8 +744,10 @@ function closeSearch() {
   const btn = document.getElementById('search-btn');
   if (bar) bar.classList.remove('visible');
   if (btn) btn.classList.remove('active');
-  const inp = document.getElementById('search-input');
-  if (inp) inp.value = '';
+  const inp   = document.getElementById('search-input');
+  const hdInp = document.getElementById('search-hd-input');
+  if (inp)   inp.value = '';
+  if (hdInp) { hdInp.value = ''; hdInp.classList.remove('has-query'); }
   if (_searchQuery) {
     _searchQuery = '';
     if (_rawLeads.length) renderLeads(_rawLeads);
@@ -736,6 +756,8 @@ function closeSearch() {
 }
 function handleSearch(val) {
   _searchQuery = _digitsOnly(val).slice(0, 4);
+  const hdInp = document.getElementById('search-hd-input');
+  if (hdInp) hdInp.classList.toggle('has-query', _searchQuery.length === 4);
   if (_rawLeads.length) renderLeads(_rawLeads);
   if (_history !== null) renderHistorico();
 }
