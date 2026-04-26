@@ -1,0 +1,2068 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Life B | Robert Teste</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap"></noscript>
+  <style>
+    :root {
+      --purple:  #704B9B;
+      --magenta: #E92085;
+      --green:   #22C35D;
+      --red:     #dc2626;
+      --amber:   #d97706;
+      --emerald: #16a34a;
+      --text:    #221B32;
+      --muted:   #6b6484;
+      --bg:      #f4f2f8;
+      --card:    #ffffff;
+      --border:  #e8e4f0;
+      --shadow:  rgba(112,75,155,.12);
+      --font:    'Montserrat', sans-serif;
+    }
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    html { overflow-x:hidden; touch-action:pan-x pan-y; }
+    body { font-family:var(--font); background:var(--bg); color:var(--text); min-height:100vh; -webkit-tap-highlight-color:transparent; touch-action:pan-x pan-y; }
+    button, a, select, input, textarea { touch-action:manipulation; }
+
+    /* LOADING BAR */
+    #loading-bar { position:fixed; top:0; left:0; height:3px; width:0%; background:linear-gradient(90deg,var(--purple),var(--magenta)); z-index:9999; opacity:0; pointer-events:none; }
+    #loading-bar.running { animation:loadbar 1.8s ease-in-out infinite; }
+    @keyframes loadbar { 0%{width:0%;opacity:1;} 60%{width:80%;opacity:1;} 100%{width:100%;opacity:0;} }
+
+    /* HEADER */
+    header { background:#fff; border-bottom:1px solid var(--border); padding:0 16px; height:58px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 2px 14px var(--shadow); position:sticky; top:0; z-index:100; }
+    .h-brand { display:flex; align-items:center; gap:10px; min-width:0; }
+    .h-logo  { height:30px; width:auto; flex-shrink:0; max-width:100px; object-fit:contain; cursor:pointer; }
+    .h-sep   { width:1px; height:24px; background:rgba(112,75,155,.25); flex-shrink:0; }
+    .h-rep   { font-size:13px; font-weight:800; color:var(--purple); letter-spacing:.4px; text-transform:uppercase; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .h-right { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+    #refresh-dot { width:8px; height:8px; border-radius:50%; background:var(--green); opacity:.35; flex-shrink:0; }
+    #refresh-dot.flash { animation:dot-flash 1.4s ease forwards; }
+    @keyframes dot-flash { 0%{opacity:.35;transform:scale(1);} 18%{opacity:1;transform:scale(1.8);box-shadow:0 0 8px rgba(34,195,93,.6);} 100%{opacity:.35;transform:scale(1);} }
+    #last-sync { font-size:11px; font-weight:600; color:var(--muted); }
+
+    /* MAIN */
+    main { padding:14px 14px 56px; max-width:680px; margin:0 auto; }
+
+    /* SUMMARY / FILTROS */
+    .summary-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:12px; }
+    .sum-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:10px 6px; text-align:center; cursor:pointer; user-select:none; transition:transform .12s, box-shadow .12s; }
+    .sum-card:active { transform:scale(.95); }
+    .sum-label { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; color:var(--muted); margin-bottom:3px; }
+    .sum-val   { font-size:22px; font-weight:800; line-height:1; }
+    .sum-card.s-ag   { border-top:3px solid var(--red); }
+    .sum-card.s-cont { border-top:3px solid var(--amber); }
+    .sum-card.s-neg  { border-top:3px solid var(--emerald); }
+    .sum-card.s-tot  { border-top:3px solid var(--purple); }
+    .sum-card.s-ag   .sum-val { color:var(--red); }
+    .sum-card.s-cont .sum-val { color:var(--amber); }
+    .sum-card.s-neg  .sum-val { color:var(--emerald); }
+    .sum-card.s-tot  .sum-val { color:var(--purple); }
+    .sum-card.active { transform:scale(1.04); }
+    .sum-card.s-ag.active   { box-shadow:0 0 0 2px var(--red),     0 4px 14px rgba(220,38,38,.2); }
+    .sum-card.s-cont.active { box-shadow:0 0 0 2px var(--amber),   0 4px 14px rgba(217,119,6,.2); }
+    .sum-card.s-neg.active  { box-shadow:0 0 0 2px var(--emerald), 0 4px 14px rgba(22,163,74,.2); }
+
+    /* FILTER BAR */
+    #filter-bar { display:none; align-items:center; gap:8px; margin-bottom:10px; font-size:12px; font-weight:600; color:var(--muted); }
+    #filter-bar.visible { display:flex; }
+    #filter-clear { background:rgba(112,75,155,.1); border:1.5px solid rgba(112,75,155,.35); border-radius:20px; padding:4px 12px; font-family:var(--font); font-size:11px; font-weight:700; color:var(--purple); cursor:pointer; transition:background .12s,border-color .12s; }
+    #filter-clear:hover { background:rgba(112,75,155,.18); border-color:var(--purple); }
+
+    /* ERROR BANNER */
+    #error-banner { display:none; background:#fff0f5; border:1px solid #ffc0d8; border-radius:10px; padding:12px 16px; color:#b0134a; font-size:13px; margin-bottom:12px; }
+
+    /* LEAD CARD */
+    .lead-card { background:var(--card); border:1px solid var(--border); border-radius:14px; margin-bottom:10px; box-shadow:0 1px 6px rgba(0,0,0,.05); overflow:hidden; transition:box-shadow .15s; }
+    .lead-card:hover { box-shadow:0 3px 14px rgba(0,0,0,.09); }
+    .lead-card.ag   { border-left:4px solid var(--red); }
+    .lead-card.cont { border-left:4px solid var(--amber); }
+    .lead-card.neg  { border-left:4px solid var(--emerald); }
+
+    @keyframes going-down {
+      0%   { opacity:1;   transform:scale(1);     box-shadow:0 1px 6px rgba(0,0,0,.05); }
+      20%  { opacity:1;   transform:scale(1.015); box-shadow:0 0 0 3px var(--purple),0 6px 20px rgba(112,75,155,.3); }
+      80%  { opacity:.65; transform:scale(.99);   box-shadow:0 0 0 2px var(--purple),0 2px 8px rgba(112,75,155,.15); }
+      100% { opacity:.35; transform:scale(1);     box-shadow:0 1px 6px rgba(0,0,0,.05); }
+    }
+    .lead-card.going-down { animation:going-down 0.65s cubic-bezier(.4,0,.2,1) forwards; pointer-events:none; }
+    @keyframes just-placed { 0%{box-shadow:0 0 0 2px var(--purple),0 4px 16px rgba(112,75,155,.25);} 100%{box-shadow:0 1px 6px rgba(0,0,0,.05);} }
+    .lead-card.just-placed { animation:just-placed .9s ease-out; }
+
+    .lc-body { padding:14px 14px 8px; }
+
+    /* empresa + pot */
+    .lc-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:2px; }
+    .lc-empresa { font-size:15px; font-weight:800; color:var(--text); line-height:1.2; flex:1; min-width:0; word-break:break-word; }
+    .lc-nome { font-size:11px; font-weight:600; color:var(--muted); margin-bottom:8px; line-height:1.3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+    /* valor potencial inline edit */
+    .lc-pot-wrap { flex-shrink:0; }
+    .lc-pot { font-size:13px; font-weight:700; color:var(--purple); white-space:nowrap; cursor:pointer; border-radius:6px; padding:2px 5px; transition:background .12s; display:inline-flex; align-items:center; gap:4px; }
+    .lc-pot:hover { background:rgba(112,75,155,.1); }
+    .lc-pot-no-val { font-size:12px; font-weight:600; color:var(--muted); }
+    .lc-pot-edit-icon { opacity:.5; }
+    .lc-pot-input-wrap { display:none; }
+    .lc-pot-input { width:110px; padding:4px 8px; border-radius:8px; border:2px solid var(--purple); font-family:var(--font); font-size:13px; font-weight:700; color:var(--purple); background:#fff; outline:none; }
+    .lc-pot-actions { display:flex; gap:4px; margin-top:4px; justify-content:flex-end; }
+    .lc-pot-save, .lc-pot-cancel { padding:3px 10px; border-radius:6px; border:none; font-family:var(--font); font-size:11px; font-weight:700; cursor:pointer; transition:transform .1s; }
+    .lc-pot-save   { background:var(--purple); color:#fff; }
+    .lc-pot-cancel { background:var(--border);  color:var(--muted); }
+    .lc-pot-save:active, .lc-pot-cancel:active { transform:scale(.93); }
+    .lc-pot-pfx-wrap { position:relative; }
+    .lc-pot-pfx-wrap::before { content:'R$'; position:absolute; left:8px; top:50%; transform:translateY(-50%); font-size:12px; font-weight:700; color:var(--purple); pointer-events:none; }
+    .lc-pot-pfx-wrap .lc-pot-input { padding-left:26px; }
+    .lc-pot-preview { font-size:11px; font-weight:700; color:var(--purple); text-align:right; min-height:14px; padding:2px 0 1px; }
+
+    /* meta tags + icon buttons */
+    .lc-meta { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+    .lc-tag  { font-size:10px; font-weight:600; color:var(--muted); background:var(--bg); border-radius:6px; padding:3px 8px; white-space:nowrap; }
+    .lc-meta-btns { display:flex; gap:10px; align-items:center; flex-shrink:0; margin-left:auto; }
+
+    .lc-icon-btn { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:50%; border:none; cursor:pointer; flex-shrink:0; transition:transform .12s, box-shadow .12s, background .15s; text-decoration:none; outline:none; }
+    .lc-icon-btn:active { transform:scale(.88); }
+    .lc-icon-btn.contact { background:rgba(112,75,155,.1); color:var(--purple); }
+    .lc-icon-btn.contact:hover  { background:rgba(112,75,155,.18); box-shadow:0 2px 8px var(--shadow); }
+    .lc-icon-btn.contact.active { background:var(--purple); color:#fff; }
+    .lc-icon-btn.wa    { background:#e6f9ee; color:#16a34a; }
+    .lc-icon-btn.wa:hover   { background:#d1f5e0; box-shadow:0 2px 8px rgba(22,163,74,.3); }
+    .lc-icon-btn.maps  { background:rgba(112,75,155,.1); color:var(--purple); }
+    .lc-icon-btn.maps:hover { background:rgba(112,75,155,.18); box-shadow:0 2px 8px var(--shadow); }
+
+    /* CONTACT PANEL */
+    @keyframes panel-in { from{opacity:0;transform:translateY(-4px);} to{opacity:1;transform:translateY(0);} }
+    .lc-contact-panel { background:#faf8fd; border:1px solid var(--border); border-radius:10px; padding:4px 12px; margin-bottom:10px; display:none; animation:panel-in .18s ease; }
+    .lcp-row { display:flex; align-items:flex-start; gap:8px; padding:7px 0; }
+    .lcp-row + .lcp-row { border-top:1px solid var(--border); }
+    .lcp-icon  { font-size:14px; flex-shrink:0; line-height:1.5; }
+    .lcp-info  { flex:1; min-width:0; }
+    .lcp-label { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; color:var(--muted); }
+    .lcp-val   { font-size:12px; font-weight:600; color:var(--text); word-break:break-word; line-height:1.4; }
+    .lcp-tel   { font-size:13px; font-weight:700; color:var(--purple); text-decoration:none; line-height:1.4; }
+    .lcp-tel:hover { text-decoration:underline; }
+    .lcp-wa-btn  { background:none; border:none; padding:0; cursor:pointer; font-family:inherit; display:flex; align-items:center; gap:5px; }
+    .lcp-name-btn { background:none; border:none; padding:0; cursor:pointer; font-family:inherit; font-size:12px; font-weight:600; color:var(--text); text-align:left; line-height:1.4; word-break:break-word; }
+    .lcp-name-btn:hover { text-decoration:underline; }
+    .lcp-copyable { cursor:pointer; border-radius:8px; margin:-2px -6px; padding-left:6px; padding-right:6px; transition:background .2s; -webkit-tap-highlight-color:transparent; user-select:none; }
+    .lcp-copyable:active { background:rgba(112,75,155,.08); }
+    .lcp-copy-flash { background:rgba(22,163,74,.07) !important; transition:background .1s !important; }
+    .lcp-wa-overlay { display:none; flex-direction:column; align-items:center; padding:10px 4px 6px; gap:8px; text-align:center; animation:panel-in .18s ease; }
+    .lcp-wac-icon  { font-size:20px; }
+    .lcp-wac-msg   { font-size:12px; font-weight:700; color:var(--text); line-height:1.45; }
+    .lcp-wac-num   { font-size:13px; font-weight:700; color:var(--purple); }
+    .lcp-wac-btns  { display:flex; gap:8px; }
+    .lcp-wac-cancel { padding:6px 14px; border-radius:8px; border:1px solid var(--border); background:#fff; color:var(--muted); font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; }
+    .lcp-wac-open   { padding:6px 14px; border-radius:8px; border:none; background:#16a34a; color:#fff; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; }
+    .lc-last-updated { font-size:10px; color:var(--muted); padding:5px 2px 0; min-height:14px; }
+
+    /* STATUS SELECT */
+    .lc-status-wrap { }
+    .lc-sel-wrap { position:relative; }
+    .lc-select { width:100%; appearance:none; -webkit-appearance:none; padding:10px 36px 10px 14px; border-radius:10px; border:2px solid var(--border); font-family:var(--font); font-size:13px; font-weight:700; cursor:pointer; transition:border-color .15s, background .15s, color .15s; background-color:var(--bg); color:var(--text); outline:none; }
+    .lc-select:focus { border-color:var(--purple); }
+    .lc-select.s-ag   { background:rgba(220,38,38,.07);  border-color:rgba(220,38,38,.4);  color:#b91c1c; }
+    .lc-select.s-cont { background:rgba(217,119,6,.07);  border-color:rgba(217,119,6,.4);  color:#92400e; }
+    .lc-select.s-neg  { background:rgba(22,163,74,.07);  border-color:rgba(22,163,74,.4);  color:#15803d; }
+    .lc-select.s-fech { background:rgba(22,163,74,.12);  border-color:rgba(22,163,74,.5);  color:#15803d; }
+    .lc-select.s-perd { background:rgba(220,38,38,.07);  border-color:rgba(220,38,38,.3);  color:#991b1b; }
+    .lc-select.saving { opacity:.6; pointer-events:none; }
+    .lc-sel-wrap::after { content:'▾'; position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:13px; color:var(--muted); pointer-events:none; }
+    .lc-feedback { font-size:11px; font-weight:600; min-height:16px; padding:2px 2px 0; }
+    .lc-feedback.ok  { color:#16a34a; }
+    .lc-feedback.err { color:var(--red); }
+
+    /* CONFIRMAÇÕES (status, link, histórico) */
+    .lc-confirm { display:none; flex-direction:column; align-items:center; gap:7px; text-align:center; background:rgba(112,75,155,.07); border:1.5px solid rgba(112,75,155,.28); border-radius:12px; padding:16px 14px 12px; animation:panel-in .18s ease; }
+    .lc-confirm.visible { display:flex; }
+    .lc-confirm-icon { font-size:28px; line-height:1; }
+    .lc-confirm-msg { font-size:13px; font-weight:700; color:var(--text); line-height:1.45; }
+    .lc-confirm-msg strong { color:var(--purple); }
+    .lc-confirm-sub { font-size:10px; font-weight:600; color:var(--muted); margin-top:-3px; }
+    .lc-confirm-actions { display:flex; gap:8px; width:100%; margin-top:4px; }
+    .lc-confirm-ok { flex:2; padding:10px 14px; border-radius:9px; background:var(--purple); color:#fff; border:none; font-family:var(--font); font-size:12px; font-weight:700; cursor:pointer; transition:background .15s, transform .1s; touch-action:manipulation; }
+    .lc-confirm-ok:hover { background:#5c3d82; }
+    .lc-confirm-ok:active { transform:scale(.95); }
+    .lc-confirm-cancel { flex:1; padding:10px 10px; border-radius:9px; border:1.5px solid var(--border); background:none; font-family:var(--font); font-size:12px; font-weight:700; color:var(--muted); cursor:pointer; transition:background .12s; touch-action:manipulation; }
+    .lc-confirm-cancel:hover { background:var(--bg); }
+
+    /* PROMPT FECHADO / PERDIDO */
+    .lc-status-prompt { display:none; background:#f9f6ff; border:1px solid rgba(112,75,155,.25); border-radius:10px; padding:10px 12px; margin-top:8px; animation:panel-in .2s ease; }
+    .lc-status-prompt.visible { display:block; }
+    .lc-sp-label { font-size:10px; font-weight:700; color:var(--purple); text-transform:uppercase; letter-spacing:.3px; margin-bottom:6px; }
+    .lc-sp-sublabel { font-size:10px; font-weight:700; color:var(--purple); text-transform:uppercase; letter-spacing:.3px; margin:8px 0 5px; }
+    .lc-sp-date-wrap { width:100%; }
+    .lc-sp-date-wrap .lc-sp-input { width:100%; }
+    .lc-sp-row { display:block; }
+    .lc-sp-pfx-wrap { position:relative; width:100%; }
+    .lc-sp-pfx-wrap::before { content:'R$'; position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:13px; font-weight:700; color:var(--muted); pointer-events:none; z-index:1; }
+    .lc-sp-pfx-wrap .lc-sp-input { padding-left:30px; }
+    .lc-sp-val-preview { font-size:12px; font-weight:700; color:var(--purple); min-height:14px; padding:3px 0 2px; }
+    .lc-sp-input { width:100%; padding:9px 12px; border-radius:8px; border:1.5px solid var(--border); font-family:var(--font); font-size:13px; color:var(--text); background:#fff; outline:none; transition:border-color .15s; }
+    .lc-sp-input:focus { border-color:var(--purple); }
+    .lc-sp-footer { display:flex; gap:6px; margin-top:7px; justify-content:flex-end; }
+
+    .lc-sp-sel { appearance:none; -webkit-appearance:none; cursor:pointer; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%236b6484'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:28px; }
+    .lc-sp-save { padding:7px 16px; border-radius:8px; background:var(--purple); color:#fff; border:none; font-family:var(--font); font-size:11px; font-weight:700; cursor:pointer; transition:background .15s; touch-action:manipulation; }
+    .lc-sp-save:hover   { background:#5c3d82; }
+    .lc-sp-save:active  { transform:scale(.96); }
+    .lc-sp-save.saving  { opacity:.6; pointer-events:none; }
+    .lc-sp-skip { padding:7px 14px; border-radius:8px; border:1.5px solid var(--border); background:none; font-family:var(--font); font-size:11px; font-weight:700; color:var(--muted); cursor:pointer; touch-action:manipulation; }
+
+    /* EXPAND TOGGLE */
+    .lc-toggle { width:100%; padding:7px 14px; border-top:1px solid var(--border); background:none; border-left:none; border-right:none; border-bottom:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; font-family:var(--font); font-size:10px; font-weight:700; color:var(--muted); letter-spacing:.4px; text-transform:uppercase; transition:background .12s, color .12s; }
+    .lc-toggle:hover { background:var(--bg); color:var(--purple); }
+    .lc-toggle .ti { font-size:11px; transition:transform .2s; display:inline-block; }
+    .lead-card.expanded .lc-toggle .ti { transform:rotate(180deg); }
+    .lead-card.expanded .lc-toggle { color:var(--purple); }
+
+    /* EXPANDED SECTION */
+    .lc-expand { display:none; padding:12px 14px 14px; border-top:1px solid var(--border); }
+    .lead-card.expanded .lc-expand { display:block; }
+
+    .lc-obs-sdr { background:#fdf8ff; border:1px solid #e4d9f0; border-radius:8px; padding:8px 12px; margin-bottom:12px; }
+    .lc-obs-sdr-label { font-size:9px; font-weight:700; color:var(--purple); text-transform:uppercase; letter-spacing:.3px; margin-bottom:4px; }
+    .lc-obs-sdr-text  { font-size:12px; color:var(--muted); line-height:1.5; white-space:pre-wrap; word-break:break-word; }
+
+    .lc-divider { border:none; border-top:1px dashed var(--border); margin:10px 0 12px; }
+    .lc-obs-label { font-size:9px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.3px; margin-bottom:8px; }
+
+    .obsr-text { font-size:12px; color:var(--text); line-height:1.6; background:var(--bg); border-radius:8px; padding:8px 10px; margin-bottom:6px; white-space:pre-wrap; word-break:break-word; }
+    .obsr-edit-btn { display:inline-flex; align-items:center; gap:4px; padding:5px 12px; border-radius:8px; border:1.5px solid var(--border); background:none; font-family:var(--font); font-size:11px; font-weight:700; color:var(--muted); cursor:pointer; transition:border-color .12s, color .12s; }
+    .obsr-edit-btn:hover { border-color:var(--purple); color:var(--purple); }
+    .obsr-add-btn { width:100%; padding:9px 14px; border-radius:10px; border:1.5px dashed var(--border); background:none; font-family:var(--font); font-size:12px; font-weight:600; color:var(--muted); cursor:pointer; transition:border-color .12s, color .12s, background .12s; text-align:center; }
+    .obsr-add-btn:hover { border-color:var(--purple); color:var(--purple); background:rgba(112,75,155,.04); }
+    .obsr-edit-wrap { display:none; }
+    .lc-obs-rep.editing .obsr-view      { display:none; }
+    .lc-obs-rep.editing .obsr-edit-wrap { display:block; }
+    .lc-obs-textarea { width:100%; padding:10px 12px; border-radius:10px; border:1.5px solid var(--border); font-family:var(--font); font-size:13px; color:var(--text); resize:vertical; min-height:72px; background:var(--bg); outline:none; line-height:1.5; transition:border-color .15s, background .15s; }
+    .lc-obs-textarea:focus { border-color:var(--purple); background:#fff; }
+    .lc-obs-footer { display:flex; align-items:center; justify-content:flex-end; gap:6px; margin-top:8px; }
+    .lc-obs-fb { font-size:11px; font-weight:600; flex:1; }
+    .lc-obs-fb.ok  { color:#16a34a; }
+    .lc-obs-fb.err { color:var(--red); }
+    .obsr-cancel-btn { padding:8px 14px; border-radius:8px; border:1.5px solid var(--border); background:none; font-family:var(--font); font-size:12px; font-weight:700; color:var(--muted); cursor:pointer; }
+    .obsr-cancel-btn:hover { background:var(--bg); }
+    .lc-obs-conclude { display:none; padding:8px 14px; border-radius:8px; border:1.5px solid var(--border); background:none; font-family:var(--font); font-size:12px; font-weight:700; color:var(--muted); cursor:pointer; touch-action:manipulation; }
+    .lc-obs-conclude:hover { background:var(--bg); }
+    .lc-obs-clear { display:none; padding:8px 14px; border-radius:8px; border:1.5px solid var(--border); background:none; font-family:var(--font); font-size:12px; font-weight:700; color:var(--muted); cursor:pointer; touch-action:manipulation; }
+    .lc-obs-clear:hover { background:var(--bg); }
+    .lead-card.concluding .lc-obs-clear { display:inline-flex; align-items:center; }
+    .lc-obs-save { padding:8px 18px; border-radius:8px; background:var(--purple); color:#fff; border:none; cursor:pointer; font-family:var(--font); font-size:12px; font-weight:700; letter-spacing:.3px; transition:background .15s, transform .1s; }
+    .lc-obs-save:hover   { background:#5c3d82; }
+    .lc-obs-save:active  { transform:scale(.96); }
+    .lc-obs-save.saving  { opacity:.6; pointer-events:none; }
+    /* obs concluding mode: banner above textarea */
+    .obs-conclude-banner { display:none; background:rgba(112,75,155,.07); border:1px solid rgba(112,75,155,.2); border-radius:8px; padding:7px 12px; margin-bottom:8px; font-size:11px; font-weight:700; color:var(--purple); }
+    .lead-card.concluding .obs-conclude-banner { display:block; }
+    .lead-card.concluding .obsr-cancel-btn    { display:none; }
+    .lead-card.concluding .lc-obs-conclude    { display:inline-flex; align-items:center; }
+
+    /* SHOW MORE / LESS */
+    .show-more-btn { width:100%; padding:12px 20px; border-radius:12px; border:1.5px dashed rgba(112,75,155,.3); background:none; font-family:var(--font); font-size:12px; font-weight:700; color:var(--purple); cursor:pointer; margin-bottom:6px; transition:background .15s, border-color .15s; text-align:center; display:block; }
+    .show-more-btn:hover { background:rgba(112,75,155,.06); border-color:rgba(112,75,155,.5); }
+    .show-less-btn { width:100%; padding:9px 20px; border-radius:12px; border:1.5px solid rgba(112,75,155,.15); background:none; font-family:var(--font); font-size:11px; font-weight:700; color:var(--muted); cursor:pointer; margin-bottom:10px; transition:background .15s, border-color .15s; text-align:center; display:block; }
+    .show-less-btn:hover { background:rgba(112,75,155,.04); border-color:rgba(112,75,155,.3); }
+
+    /* HISTÓRICO */
+    .historico-section { margin-top:18px; }
+    .hist-header { width:100%; padding:14px 18px; border-radius:14px; background:linear-gradient(135deg,rgba(112,75,155,.09) 0%,rgba(112,75,155,.04) 100%); border:1.5px solid rgba(112,75,155,.28); display:flex; align-items:center; gap:10px; cursor:pointer; font-family:var(--font); text-align:left; box-shadow:0 2px 10px rgba(112,75,155,.1); transition:background .15s,box-shadow .15s; }
+    .hist-header:hover { background:linear-gradient(135deg,rgba(112,75,155,.15) 0%,rgba(112,75,155,.08) 100%); box-shadow:0 4px 14px rgba(112,75,155,.16); }
+    .hist-icon    { font-size:16px; flex-shrink:0; }
+    .hist-title   { font-size:12px; font-weight:800; color:var(--purple); text-transform:uppercase; letter-spacing:.5px; }
+    .hist-counts  { font-size:11px; font-weight:700; color:var(--purple); opacity:.7; flex:1; }
+    .hist-chevron { font-size:14px; color:var(--purple); transition:transform .2s; display:inline-block; }
+    .historico-section.open .hist-chevron { transform:rotate(180deg); }
+    .hist-body { padding-top:10px; display:none; }
+    .historico-section.open .hist-body { display:block; }
+    .hist-pagination { display:flex; justify-content:center; gap:8px; padding:8px 0 4px; }
+    .hist-pg-btn { padding:8px 20px; border-radius:20px; border:1.5px solid var(--border); background:var(--card); font-family:var(--font); font-size:12px; font-weight:700; color:var(--purple); cursor:pointer; transition:background .12s; touch-action:manipulation; }
+    .hist-pg-btn:hover { background:#f3eeff; border-color:rgba(112,75,155,.3); }
+    .hist-tab-cards { display:flex; gap:8px; padding-top:4px; }
+    .hist-tab-card { flex:1; padding:14px 10px; border-radius:14px; border:1.5px solid var(--border); background:var(--card); display:flex; flex-direction:column; align-items:center; gap:5px; cursor:pointer; font-family:var(--font); transition:background .15s; touch-action:manipulation; box-shadow:0 1px 4px rgba(0,0,0,.04); }
+    .hist-tab-card.fech { border-color:rgba(22,163,74,.3); }
+    .hist-tab-card.perd { border-color:rgba(239,68,68,.3); }
+    .hist-tab-card.fech:hover { background:rgba(22,163,74,.06); }
+    .hist-tab-card.perd:hover { background:rgba(239,68,68,.06); }
+    .hist-tab-icon  { font-size:20px; }
+    .hist-tab-label { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.4px; }
+    .hist-tab-card.fech .hist-tab-label { color:#15803d; }
+    .hist-tab-card.perd .hist-tab-label { color:#dc2626; }
+    .hist-tab-count { font-size:22px; font-weight:800; line-height:1; }
+    .hist-tab-card.fech .hist-tab-count { color:#15803d; }
+    .hist-tab-card.perd .hist-tab-count { color:#dc2626; }
+    .hist-back-btn { display:inline-flex; align-items:center; gap:5px; padding:4px 0 10px; background:none; border:none; font-family:var(--font); font-size:12px; font-weight:700; color:var(--muted); cursor:pointer; touch-action:manipulation; }
+    .hist-back-btn:hover { color:var(--purple); }
+    .hist-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:8px; box-shadow:0 1px 4px rgba(0,0,0,.04); }
+    .hist-card.fech { border-left:4px solid var(--emerald); }
+    .hist-card.perd { border-left:4px solid #ef4444; }
+    .hist-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:5px; }
+    .hist-empresa { font-size:13px; font-weight:800; color:var(--text); word-break:break-word; }
+    .hist-top-left { flex:1; min-width:0; }
+    .hist-badge { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; border-radius:20px; padding:2px 8px; flex-shrink:0; }
+    .hist-badge.b-fech { background:rgba(22,163,74,.12); color:#15803d; }
+    .hist-badge.b-perd { background:rgba(239,68,68,.12); color:#dc2626; }
+    .hist-nome { font-size:10px; font-weight:600; color:var(--muted); margin-top:1px; }
+    .hist-meta { display:flex; gap:5px; flex-wrap:wrap; }
+
+    /* EMPTY */
+    .empty-state { text-align:center; padding:48px 24px; color:var(--muted); font-size:14px; }
+    .empty-state strong { display:block; font-size:20px; margin-bottom:8px; color:var(--purple); }
+
+    /* SKELETON */
+    @keyframes skel-shine { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
+    .skel { background:linear-gradient(90deg,#e8e4f0 25%,#d0cae6 50%,#e8e4f0 75%); background-size:200% 100%; animation:skel-shine 1.4s linear infinite; border-radius:6px; }
+    .skel-card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:10px; }
+    .skel-line { height:14px; margin-bottom:8px; }
+    .skel-line.w80 { width:80%; } .skel-line.w50 { width:50%; }
+    .skel-btn  { height:42px; border-radius:10px; }
+
+    /* TOAST */
+    #toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(16px); background:#1f1635; color:#fff; padding:10px 20px; border-radius:24px; font-size:13px; font-weight:600; opacity:0; transition:opacity .25s, transform .25s; pointer-events:none; white-space:nowrap; z-index:9999; max-width:calc(100vw - 32px); display:flex; align-items:center; gap:6px; }
+    #toast.show { opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto; }
+    .toast-undo-btn { background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.3); color:#fff; border-radius:12px; padding:3px 10px; font-family:var(--font); font-size:11px; font-weight:700; cursor:pointer; flex-shrink:0; }
+    .toast-undo-btn:hover { background:rgba(255,255,255,.28); }
+
+    /* busca desktop — escondido no mobile */
+    .search-hd-wrap { display:none; }
+
+    /* BUSCA */
+    #search-btn { background:none; border:none; cursor:pointer; padding:6px; border-radius:8px; color:var(--muted); display:flex; align-items:center; justify-content:center; transition:color .15s,background .15s; flex-shrink:0; }
+    #search-btn:hover { color:var(--purple); background:rgba(112,75,155,.08); }
+    #search-btn.active { color:var(--purple); }
+    #search-bar { display:none; position:sticky; top:58px; z-index:99; background:#fff; border-bottom:1px solid var(--border); padding:8px 16px; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+    #search-bar.visible { display:block; }
+    .sb-inner { display:flex; align-items:center; gap:8px; max-width:680px; margin:0 auto; }
+    #search-input { flex:1; padding:9px 14px; border-radius:10px; border:2px solid var(--border); font-family:var(--font); font-size:15px; font-weight:600; color:var(--text); background:var(--bg); outline:none; transition:border-color .15s; letter-spacing:.5px; }
+    #search-input:focus { border-color:var(--purple); background:#fff; }
+    #search-close { background:none; border:none; cursor:pointer; padding:6px 8px; font-size:17px; line-height:1; color:var(--muted); border-radius:8px; transition:color .15s; flex-shrink:0; }
+    #search-close:hover { color:var(--purple); }
+
+    /* DESKTOP */
+    @media (min-width:640px) {
+      body { zoom: 1.25; }
+      main { padding:20px 24px 60px; }
+      .summary-strip { gap:10px; }
+      .sum-val { font-size:26px; }
+      .lc-empresa { font-size:16px; }
+      .lc-select { font-size:14px; padding:11px 36px 11px 14px; }
+      .lcp-val, .lcp-tel { font-size:13px; }
+      /* busca inline no header (desktop) — centralizada absolutamente */
+      .search-hd-wrap { position:absolute; left:50%; transform:translateX(-50%); display:flex; align-items:center; }
+      #search-hd-input { width:200px; padding:7px 14px; border-radius:10px; border:1.5px solid var(--border); font-family:var(--font); font-size:13px; font-weight:600; color:var(--text); background:var(--bg); outline:none; transition:border-color .15s,background .15s; text-align:center; letter-spacing:.5px; }
+      #search-hd-input::placeholder { font-weight:400; color:var(--muted); opacity:.55; font-size:12px; letter-spacing:0; }
+      #search-hd-input:focus { border-color:var(--purple); background:#fff; }
+      #search-hd-input.has-query { border-color:var(--purple); background:#f9f6ff; }
+      #search-btn { display:none; }
+      #search-bar  { display:none !important; }
+    }
+    @media (max-width:360px) {
+      .lc-icon-btn { width:28px; height:28px; }
+      .sum-val { font-size:20px; }
+      .lc-empresa { font-size:14px; }
+    }
+  </style>
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <script>
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    OneSignalDeferred.push(async function(OneSignal) {
+      await OneSignal.init({
+        appId: '84b302ec-0b90-48d4-b755-2bce662e6769',
+      });
+      OneSignal.User.addTags({ rep: 'ROBERT_TESTE' });
+    });
+  </script>
+</head>
+<body>
+
+<div id="loading-bar"></div>
+
+<header>
+  <div class="h-brand">
+    <img class="h-logo" src="https://projetojlbv.com.br/assets/img/logo-lifeb.png" alt="Life B" onerror="this.style.display='none'" onclick="location.reload()">
+    <div class="h-sep"></div>
+    <span class="h-rep">Robert Teste</span>
+  </div>
+  <div class="search-hd-wrap">
+    <input id="search-hd-input" type="tel" inputmode="numeric" maxlength="4"
+      placeholder="🔍  últ. 4 dígitos"
+      oninput="handleSearch(this.value)"
+      onkeydown="if(event.key==='Escape'){this.value='';handleSearch('');}"
+      autocomplete="off" spellcheck="false">
+  </div>
+  <div class="h-right">
+    <span id="last-sync"></span>
+    <div id="refresh-dot"></div>
+    <button id="search-btn" onclick="toggleSearch()" title="Buscar por telefone" aria-label="Buscar">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </button>
+  </div>
+</header>
+<div id="search-bar">
+  <div class="sb-inner">
+    <input id="search-input" type="tel" inputmode="numeric" maxlength="4"
+      placeholder="últ. 4 dígitos do celular"
+      oninput="handleSearch(this.value)"
+      onkeydown="if(event.key==='Escape')closeSearch()"
+      onblur="setTimeout(function(){if(!document.getElementById('search-input').value)closeSearch();},150)"
+      autocomplete="off" spellcheck="false">
+    <button id="search-close" onclick="closeSearch()" title="Fechar">✕</button>
+  </div>
+</div>
+
+<main>
+  <div id="error-banner"></div>
+
+  <div class="summary-strip">
+    <div class="sum-card s-ag"   data-filter="Aguardando contato" onclick="toggleFilter(this)">
+      <div class="sum-label">Aguardando</div>
+      <div class="sum-val" id="sum-ag">—</div>
+    </div>
+    <div class="sum-card s-cont" data-filter="Em contato" onclick="toggleFilter(this)">
+      <div class="sum-label">Em Contato</div>
+      <div class="sum-val" id="sum-cont">—</div>
+    </div>
+    <div class="sum-card s-neg"  data-filter="Em negociação" onclick="toggleFilter(this)">
+      <div class="sum-label">Negociando</div>
+      <div class="sum-val" id="sum-neg">—</div>
+    </div>
+    <div class="sum-card s-tot"  data-filter="" onclick="toggleFilter(this)">
+      <div class="sum-label">Total Ativo</div>
+      <div class="sum-val" id="sum-tot">—</div>
+    </div>
+  </div>
+
+  <div id="filter-bar">
+    <span id="filter-label"></span>
+    <button id="filter-clear" onclick="clearFilter()">✕ limpar</button>
+  </div>
+
+  <div id="leads-list"></div>
+  <div id="show-more-wrap"></div>
+
+  <div class="historico-section" id="historico-section">
+    <button class="hist-header" onclick="toggleHistorico()" aria-expanded="false">
+      <span class="hist-icon">🗂️</span>
+      <span class="hist-title">Histórico</span>
+      <span class="hist-counts" id="hist-counts">fechados e perdidos</span>
+      <span class="hist-chevron">▾</span>
+    </button>
+    <div class="hist-body" id="hist-body"></div>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+const PROXY_URL = 'https://script.google.com/macros/s/AKfycbyq9KJgWTRoALEEVf8Pu_I82GT0-tTK5yXNg-RsYHj4ywK6Grg9z_jG1-IcTW3LMXfNBg/exec';
+const REP_NAME  = 'ROBERT_TESTE';
+const REP_TOKEN = 'lifeb_teste_2026_rt';
+const POLL_MS   = 60_000;
+const LIMIT     = 8;
+
+const STATUS_LIST = ['Aguardando contato','Em contato','Em negociação','Fechado','Perdido'];
+
+// ── UTILS ─────────────────────────────────────────────────────
+const esc = s => String(s == null ? '' : s)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+const cur = v => {
+  if (!(v > 0)) return '';
+  try { return 'R$ ' + (+v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0}); }
+  catch(_) { return 'R$ ' + Math.round(+v).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
+};
+
+function toTitleCase(s) {
+  if (!s) return s;
+  const lower = new Set(['de','do','da','dos','das','e','em','com','a','o','as','os','no','na','nos','nas','ao','aos','por']);
+  return String(s).toLowerCase().split(' ').map((w,i) =>
+    (i > 0 && lower.has(w)) ? w : w.charAt(0).toUpperCase() + w.slice(1)
+  ).join(' ');
+}
+
+function fmtData(d) {
+  if (!d) return '';
+  const p = d.split('-');
+  return p.length === 3 ? `${p[2]}/${p[1]}/${p[0].slice(2)}` : d;
+}
+
+function fmtPhone(num) {
+  const d = String(num || '').replace(/\D/g, '');
+  if (!d) return { display:'', tel:'' };
+  const withCC = d.startsWith('55') ? d : '55' + d;
+  const local  = d.startsWith('55') ? d.slice(2) : d;
+  let display  = local;
+  if (local.length === 11) display = `(${local.slice(0,2)}) ${local.slice(2,3)} ${local.slice(3,7)}-${local.slice(7)}`;
+  else if (local.length === 10) display = `(${local.slice(0,2)}) ${local.slice(2,6)}-${local.slice(6)}`;
+  return { display, tel:'+' + withCC };
+}
+function fmtCNPJ(s) {
+  const d = String(s || '').replace(/\D/g, '');
+  if (d.length !== 14) return s || '';
+  return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8,12)}-${d.slice(12)}`;
+}
+
+function spPreview(input, row) {
+  const el = document.getElementById('sp-preview-' + row);
+  if (!el) return;
+  const n = parseFloat(input.value.trim().replace(/[^\d,.-]/g,'').replace(',','.'));
+  el.textContent = !isNaN(n) && n > 0 ? cur(n) : '';
+}
+function potPreview(input, row) {
+  const el = document.getElementById('pot-preview-' + row);
+  if (!el) return;
+  const n = parseFloat(input.value.trim().replace(/[^\d,.-]/g,'').replace(',','.'));
+  el.textContent = !isNaN(n) && n > 0 ? cur(n) : '';
+}
+
+function fmtWA(num) {
+  const d = String(num || '').replace(/\D/g, '');
+  if (!d) return '';
+  return d.startsWith('55') ? d : '55' + d;
+}
+
+// ── TIMESTAMP DA ÚLTIMA ATUALIZAÇÃO ───────────────────────────
+const TS_KEY = 'lifeb_ts_' + 'ROBERT_TESTE';
+let _tsMap = {};
+try { _tsMap = JSON.parse(localStorage.getItem(TS_KEY) || '{}'); } catch(_) {}
+
+function setLeadTs(row) {
+  _tsMap[row] = Date.now();
+  try { localStorage.setItem(TS_KEY, JSON.stringify(_tsMap)); } catch(_) {}
+  const el = document.getElementById('ts-' + row);
+  if (el) el.textContent = getLeadTs(row);
+}
+function getLeadTs(row, dataEntrada, tsServidor) {
+  const tsLocal  = _tsMap[row] || 0;
+  const tsRemoto = tsServidor  || 0;
+  const ts       = Math.max(tsLocal, tsRemoto);
+  if (ts) {
+    const d = new Date(ts);
+    const day = String(d.getDate()).padStart(2,'0');
+    const mon = String(d.getMonth()+1).padStart(2,'0');
+    const h   = String(d.getHours()).padStart(2,'0');
+    const m   = String(d.getMinutes()).padStart(2,'0');
+    return `Atualizado: ${day}/${mon} - ${h}:${m}`;
+  }
+  if (dataEntrada) return `Entrada: ${fmtData(dataEntrada)}`;
+  return '';
+}
+
+// ── COPIAR CAMPO DO PAINEL DE CONTATO ────────────────────────
+function copyLcp(el) {
+  const text = el.dataset.copy || '';
+  const val  = el.querySelector('.lcp-val');
+  if (!val) return;
+  const orig = val.innerHTML;
+  const flash = function() {
+    val.innerHTML = '<span style="color:#16a34a;font-weight:700;">✓ Copiado!</span>';
+    el.classList.add('lcp-copy-flash');
+    setTimeout(function() { val.innerHTML = orig; el.classList.remove('lcp-copy-flash'); }, 1500);
+  };
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(flash).catch(function() {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.cssText = 'position:fixed;opacity:0;';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); flash(); } catch(_) {}
+      document.body.removeChild(ta);
+    });
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.cssText = 'position:fixed;opacity:0;';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); flash(); } catch(_) {}
+    document.body.removeChild(ta);
+  }
+}
+
+// ── WA OVERLAY NO PAINEL DE CONTATO ──────────────────────────
+const _contactWaUrl = {};
+function openContactWa(btn, row) {
+  const rows = document.getElementById('lcp-rows-' + row);
+  const ov   = document.getElementById('lcp-wac-' + row);
+  if (!ov) return;
+  _contactWaUrl[row] = 'https://wa.me/' + btn.dataset.wa;
+  const msg = document.getElementById('lcp-wac-msg-' + row);
+  const num = document.getElementById('lcp-wac-num-' + row);
+  if (msg) msg.textContent = btn.dataset.name ? `Abrir WhatsApp com ${btn.dataset.name}?` : 'Abrir WhatsApp?';
+  if (num) num.textContent = btn.dataset.display;
+  if (rows) rows.style.display = 'none';
+  ov.style.display = 'flex';
+}
+function closeContactWa(row) {
+  const rows = document.getElementById('lcp-rows-' + row);
+  const ov   = document.getElementById('lcp-wac-' + row);
+  if (rows) rows.style.display = '';
+  if (ov)   ov.style.display   = 'none';
+}
+function doContactWa(row) {
+  const url = _contactWaUrl[row];
+  closeContactWa(row);
+  if (url) window.open(url, '_blank');
+}
+
+function buildMapsUrl(empresa, cidade, estado) {
+  const parts = [empresa, cidade, estado].map(v => String(v||'').trim()).filter(Boolean);
+  return parts.length ? 'https://maps.google.com/?q=' + encodeURIComponent(parts.join(', ')) : '';
+}
+
+function statusClass(s) {
+  if (s === 'Aguardando contato') return 's-ag';
+  if (s === 'Em contato')         return 's-cont';
+  if (s === 'Em negociação')      return 's-neg';
+  if (s === 'Fechado')            return 's-fech';
+  if (s === 'Perdido')            return 's-perd';
+  return '';
+}
+function borderClass(s) {
+  if (s === 'Aguardando contato') return 'ag';
+  if (s === 'Em contato')         return 'cont';
+  if (s === 'Em negociação')      return 'neg';
+  return '';
+}
+
+// ── SVG ICONS ─────────────────────────────────────────────────
+const SVG_WA     = `<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>`;
+const SVG_PIN    = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>`;
+const SVG_PERSON = `<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
+const SVG_EDIT   = `<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>`;
+
+// ── LOADING BAR ────────────────────────────────────────────────
+let _inFlight = 0;
+function loadStart() {
+  if (++_inFlight !== 1) return;
+  const b = document.getElementById('loading-bar');
+  if (b) { b.style.opacity='1'; b.classList.add('running'); }
+}
+function loadEnd() {
+  _inFlight = Math.max(0, _inFlight - 1);
+  if (_inFlight > 0) return;
+  const b = document.getElementById('loading-bar');
+  if (b) { b.classList.remove('running'); b.style.opacity='0'; }
+}
+
+// ── TOAST + UNDO ───────────────────────────────────────────────
+let _toastTimer;
+let _undoPending = null;
+const _pendingUndoByRow = {}; // deferred undo toasts — shown when card concludes
+
+function showToast(msg, ms=2600) {
+  const el = document.getElementById('toast');
+  if (!el) return;
+  _undoPending = null;
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), ms);
+}
+
+function showUndoToast(msg, undoData, ms=8000) {
+  const el = document.getElementById('toast');
+  if (!el) return;
+  _undoPending = undoData;
+  el.innerHTML = `<span>${esc(msg)}</span><button class="toast-undo-btn" onclick="undoLast()">↩ Desfazer</button>`;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { el.classList.remove('show'); _undoPending = null; }, ms);
+}
+
+function undoLast() {
+  if (!_undoPending) return;
+  const pending = _undoPending;
+  _undoPending = null;
+  const el = document.getElementById('toast');
+  if (el) el.classList.remove('show');
+
+  function applyField(lead, campo, valor) {
+    if      (campo === 'STATUS_VENDEDOR')  lead.status      = valor;
+    else if (campo === 'OBS_VENDEDOR')     lead.obs         = valor;
+    else if (campo === 'VALOR_POTENCIAL')  lead.pot         = parseFloat(valor) || 0;
+    else if (campo === 'VALOR_FECHADO')    lead.valor_fech  = parseFloat(valor) || 0;
+    else if (campo === 'MOTIVO_PERDA')     lead.motivo_perd = valor;
+    else if (campo === 'DATA_FECH')        lead.data_f      = valor;
+    else if (campo === 'TIMESTAMP') {
+      if (valor) _tsMap[lead.row] = parseInt(valor);
+      else delete _tsMap[lead.row];
+      try { localStorage.setItem(TS_KEY, JSON.stringify(_tsMap)); } catch(_) {}
+    }
+  }
+
+  const actions = pending.isMulti ? pending.actions : [{ row: pending.row, campo: pending.campo, valor: pending.valor }];
+
+  // Optimistic: apply all reverts to _rawLeads immediately
+  if (pending.isMulti && pending.leadSnapshot) {
+    // Lead was removed from active list — restore it with reverted fields
+    const snap = { ...pending.leadSnapshot };
+    for (const { campo, valor } of actions) applyField(snap, campo, valor);
+    if (!_rawLeads.find(l => l.row === snap.row)) _rawLeads.push(snap);
+  } else {
+    for (const { row, campo, valor } of actions) {
+      const lead = _rawLeads.find(l => l.row === row);
+      if (lead) applyField(lead, campo, valor);
+    }
+  }
+
+  renderLeads(_rawLeads);
+  showToast('Desfeito ✓');
+
+  // POST all reverts in background (skip client-side-only fields)
+  for (const { row, campo, valor } of actions) {
+    if (campo === 'TIMESTAMP') continue;
+    fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo, valor: String(valor) }) })
+      .catch(() => {});
+  }
+}
+
+// ── REFRESH DOT ────────────────────────────────────────────────
+function flashDot() {
+  const dot  = document.getElementById('refresh-dot');
+  const sync = document.getElementById('last-sync');
+  if (dot) { dot.classList.remove('flash'); void dot.offsetWidth; dot.classList.add('flash'); }
+  if (sync) { const n = new Date(); sync.textContent = String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0'); }
+}
+
+// ── SKELETON ──────────────────────────────────────────────────
+function showSkeletons(n) {
+  const list = document.getElementById('leads-list');
+  if (!list) return;
+  list.innerHTML = Array.from({length:n}, () => `
+    <div class="skel-card">
+      <div class="skel skel-line w80"></div>
+      <div class="skel skel-line w50"></div>
+      <div class="skel skel-btn"></div>
+    </div>`).join('');
+}
+
+// ── FILTRO ─────────────────────────────────────────────────────
+let _activeFilter = null;
+function toggleFilter(card) {
+  const filter = card.dataset.filter;
+  if (!filter || _activeFilter === filter) { clearFilter(); return; }
+  _activeFilter = filter;
+  _visibleCount = LIMIT;
+  document.querySelectorAll('.sum-card').forEach(c => c.classList.remove('active'));
+  card.classList.add('active');
+  const bar = document.getElementById('filter-bar');
+  const lbl = document.getElementById('filter-label');
+  if (bar) bar.classList.add('visible');
+  if (lbl) lbl.textContent = 'Mostrando: ' + filter;
+  if (_rawLeads.length) renderLeads(_rawLeads);
+}
+function clearFilter() {
+  _activeFilter = null;
+  _visibleCount = LIMIT;
+  document.querySelectorAll('.sum-card').forEach(c => c.classList.remove('active'));
+  const bar = document.getElementById('filter-bar');
+  if (bar) bar.classList.remove('visible');
+  if (_rawLeads.length) renderLeads(_rawLeads);
+}
+// no-op: filtering is now handled in renderLeads (JS slice of filtered set)
+function applyFilter() {}
+
+// ── BUSCA POR TELEFONE ─────────────────────────────────────────
+let _searchQuery = '';
+function _digitsOnly(s) { return String(s || '').replace(/\D/g, ''); }
+function _matchesSearch(l) {
+  const q = _searchQuery;
+  if (q.length !== 4) return true;
+  return _digitsOnly(l.whatsapp).endsWith(q) || _digitsOnly(l.contato).endsWith(q);
+}
+function toggleSearch() {
+  const bar = document.getElementById('search-bar');
+  const btn = document.getElementById('search-btn');
+  if (!bar) return;
+  if (bar.classList.contains('visible')) { closeSearch(); return; }
+  bar.classList.add('visible');
+  if (btn) btn.classList.add('active');
+  const inp = document.getElementById('search-input');
+  if (inp) { inp.value = ''; inp.focus(); }
+}
+function closeSearch() {
+  const bar = document.getElementById('search-bar');
+  const btn = document.getElementById('search-btn');
+  if (bar) bar.classList.remove('visible');
+  if (btn) btn.classList.remove('active');
+  const inp   = document.getElementById('search-input');
+  const hdInp = document.getElementById('search-hd-input');
+  if (inp)   inp.value = '';
+  if (hdInp) { hdInp.value = ''; hdInp.classList.remove('has-query'); }
+  if (_searchQuery) {
+    _searchQuery = '';
+    if (_rawLeads.length) renderLeads(_rawLeads);
+    if (_history !== null) renderHistorico();
+  }
+}
+function handleSearch(val) {
+  _searchQuery = _digitsOnly(val).slice(0, 4);
+  const hdInp = document.getElementById('search-hd-input');
+  if (hdInp) hdInp.classList.toggle('has-query', _searchQuery.length === 4);
+  if (_rawLeads.length) renderLeads(_rawLeads);
+  if (_searchQuery.length === 4) {
+    const sec = document.getElementById('historico-section');
+    if (sec && !sec.classList.contains('open')) sec.classList.add('open');
+    if (!_histLoaded) loadHistorico();
+    else renderHistorico();
+  } else if (_history !== null) {
+    renderHistorico();
+  }
+}
+
+// ── PAGINATION ────────────────────────────────────────────────
+let _visibleCount = LIMIT;
+let _rawLeads     = [];
+let _allLeads     = [];
+
+function showMore() {
+  _visibleCount += LIMIT;
+  renderLeads(_rawLeads);
+}
+function showLess() {
+  _visibleCount = LIMIT;
+  renderLeads(_rawLeads);
+  const list = document.getElementById('leads-list');
+  if (list) list.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── CONCLUDING MODE (obs step after status change) ─────────────
+function enterConcludingMode(row) {
+  const card = document.querySelector(`.lead-card[data-row="${row}"]`);
+  if (!card) return;
+  card.classList.add('concluding');
+  // Auto-expand
+  if (!card.classList.contains('expanded')) {
+    card.classList.add('expanded');
+    const btn = card.querySelector('.lc-toggle');
+    if (btn) { const tt=btn.querySelector('.tt'); if(tt) tt.textContent='menos'; btn.setAttribute('aria-expanded','true'); }
+  }
+  // Enter obs edit mode
+  const rep = document.getElementById('obsr-' + row);
+  if (rep && !rep.classList.contains('editing')) rep.classList.add('editing');
+  // Change save button label
+  const saveBtn = document.getElementById('obs-save-' + row);
+  if (saveBtn) saveBtn.textContent = 'Salvar e concluir';
+  // Focus textarea and scroll to make it visible above the mobile keyboard
+  const ta = document.getElementById('obs-' + row);
+  if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+  const scrollObs = () => {
+    const editWrap = document.getElementById('obsr-edit-' + row);
+    if (!editWrap) return;
+    editWrap.scrollIntoView({ behavior:'smooth', block:'center' });
+  };
+  setTimeout(scrollObs, 80);
+  setTimeout(scrollObs, 380); // re-scroll after mobile keyboard has finished opening
+}
+function clearObs(row) {
+  const ta = document.getElementById('obs-' + row);
+  if (ta) { ta.value = ''; ta.focus(); }
+}
+function concludeCard(row) {
+  const card = document.querySelector(`.lead-card[data-row="${row}"]`);
+  if (!card) return;
+  // Show deferred undo toast now that the rep finished the obs step
+  if (_pendingUndoByRow[row]) {
+    const { msg, data } = _pendingUndoByRow[row];
+    delete _pendingUndoByRow[row];
+    showUndoToast(msg, data);
+  }
+  card.classList.add('going-down');
+  setTimeout(() => renderLeads(_rawLeads, row), 700);
+}
+
+// ── EXPAND TOGGLE ─────────────────────────────────────────────
+function toggleExpand(btn) {
+  const card = btn.closest('.lead-card');
+  if (!card) return;
+  const expanding = !card.classList.contains('expanded');
+  card.classList.toggle('expanded');
+  const txt = btn.querySelector('.tt');
+  if (txt) txt.textContent = expanding ? 'menos' : 'mais';
+  btn.setAttribute('aria-expanded', expanding);
+}
+
+// ── FECHAR UI DE OUTROS CARDS ────────────────────────────────────
+function closeOtherCardUi(exceptRow) {
+  const er = String(exceptRow);
+  // Painéis de contato
+  document.querySelectorAll('.lc-contact-panel').forEach(panel => {
+    const row = panel.id.replace('cp-', '');
+    if (row === er || panel.style.display !== 'block') return;
+    panel.style.display = 'none';
+    closeContactWa(parseInt(row));
+    const btn = document.querySelector(`.lead-card[data-row="${row}"] .lc-icon-btn.contact`);
+    if (btn) { btn.classList.remove('active'); btn.setAttribute('aria-expanded','false'); }
+  });
+  // Confirmações abertas
+  document.querySelectorAll('.lc-confirm.visible').forEach(el => {
+    const m = el.id.match(/(\d+)$/);
+    if (!m || m[1] === er) return;
+    el.classList.remove('visible');
+    if (el.id.startsWith('conf-')) {
+      const sw = document.getElementById('selwrap-' + m[1]);
+      const ts = document.getElementById('ts-' + m[1]);
+      if (sw) sw.style.display = '';
+      if (ts) ts.style.display = '';
+    }
+  });
+  // Prompts de fechado/perdido/negociação
+  document.querySelectorAll('.lc-status-prompt.visible').forEach(el => {
+    if (el.id.replace('sp-','') !== er) el.classList.remove('visible');
+  });
+}
+
+// ── LINK CONFIRM (WA / Maps) ─────────────────────────────────────
+function openLinkConfirm(btn) {
+  const url  = btn.dataset.url;
+  if (!url) return;
+  const card   = btn.closest('.lead-card, .hist-card');
+  const isHist = card && card.classList.contains('hist-card');
+  const prefix = isHist ? 'hlc' : 'lc';
+  const row    = card ? card.dataset.row : null;
+  const confId = row ? (prefix + '-' + row) : null;
+  const conf   = confId ? document.getElementById(confId) : null;
+  if (!conf) { window.open(url, '_blank', 'noopener,noreferrer'); return; }
+  // Fechar UI de outros cards (só em leads ativos, não histórico)
+  if (row && !isHist) closeOtherCardUi(row);
+  // Fechar painel de contato e status do mesmo card
+  if (row && !isHist) {
+    const cp = document.getElementById('cp-' + row);
+    if (cp && cp.style.display === 'block') {
+      cp.style.display = 'none';
+      const infoBtn = card.querySelector('.lc-icon-btn.info');
+      if (infoBtn) { infoBtn.classList.remove('active'); infoBtn.setAttribute('aria-expanded','false'); }
+    }
+    const sp = document.getElementById('sp-' + row);
+    if (sp) sp.classList.remove('visible');
+    const statusConf = document.getElementById('conf-' + row);
+    if (statusConf) {
+      statusConf.classList.remove('visible');
+      const sw = document.getElementById('selwrap-' + row);
+      const ts = document.getElementById('ts-' + row);
+      if (sw) sw.style.display = '';
+      if (ts) ts.style.display = '';
+    }
+  }
+  // Definir ícone e rótulo
+  const isWa = btn.classList.contains('wa');
+  const icon = conf.querySelector('.lc-confirm-icon');
+  if (icon) icon.textContent = isWa ? '💬' : '📍';
+  const lbl = conf.querySelector('.lc-confirm-msg strong');
+  if (lbl) lbl.textContent = isWa ? 'WhatsApp' : 'Google Maps';
+  conf.dataset.pending = url;
+  conf.classList.add('visible');
+}
+function closeLinkConfirm(id) {
+  const conf = document.getElementById(id);
+  if (conf) conf.classList.remove('visible');
+}
+function doConfirmLink(id) {
+  const conf = document.getElementById(id);
+  if (!conf) return;
+  const url = conf.dataset.pending;
+  conf.classList.remove('visible');
+  if (url) window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+// ── CONTACT PANEL ─────────────────────────────────────────────
+function toggleContact(btn, row) {
+  const panel = document.getElementById('cp-' + row);
+  if (!panel) return;
+  const isOpen = panel.style.display === 'block';
+  panel.style.display = isOpen ? 'none' : 'block';
+  btn.classList.toggle('active', !isOpen);
+  btn.setAttribute('aria-expanded', !isOpen);
+  if (!isOpen) {
+    // Abrindo: fechar UI de outros cards primeiro
+    closeOtherCardUi(row);
+    // Fechar confirms e prompts do mesmo card
+    const lc = document.getElementById('lc-' + row);
+    if (lc) lc.classList.remove('visible');
+    const sp = document.getElementById('sp-' + row);
+    if (sp) sp.classList.remove('visible');
+    const sc = document.getElementById('conf-' + row);
+    if (sc) {
+      sc.classList.remove('visible');
+      const sw = document.getElementById('selwrap-' + row);
+      const ts = document.getElementById('ts-' + row);
+      if (sw) sw.style.display = '';
+      if (ts) ts.style.display = '';
+    }
+  }
+}
+
+// ── VALOR POTENCIAL INLINE EDIT ────────────────────────────────
+function startPotEdit(row) {
+  const disp  = document.getElementById('pot-disp-' + row);
+  const iWrap = document.getElementById('pot-input-wrap-' + row);
+  const input = document.getElementById('pot-input-' + row);
+  const prev  = document.getElementById('pot-preview-' + row);
+  if (disp)  disp.style.display  = 'none';
+  if (iWrap) iWrap.style.display = 'block';
+  if (prev) { const lead = _rawLeads.find(l => l.row === row); prev.textContent = lead && lead.pot > 0 ? cur(lead.pot) : ''; }
+  if (input) { input.focus(); input.select(); }
+}
+function cancelPotEdit(row) {
+  const disp  = document.getElementById('pot-disp-' + row);
+  const iWrap = document.getElementById('pot-input-wrap-' + row);
+  const prev  = document.getElementById('pot-preview-' + row);
+  if (disp)  disp.style.display  = '';
+  if (iWrap) iWrap.style.display = 'none';
+  if (prev)  prev.textContent    = '';
+}
+async function savePot(row) {
+  const input = document.getElementById('pot-input-' + row);
+  if (!input) return;
+  const n = parseFloat(input.value.replace(/[^\d,.-]/g,'').replace(',','.'));
+  if (isNaN(n) || n < 0) { showToast('Valor inválido'); return; }
+  const lead   = _rawLeads.find(l => l.row === row);
+  const oldPot = lead ? String(lead.pot || 0) : '0';
+
+  // optimistic: update UI immediately
+  if (lead) lead.pot = n;
+  const disp  = document.getElementById('pot-disp-' + row);
+  const iWrap = document.getElementById('pot-input-wrap-' + row);
+  const potEl = disp ? disp.querySelector('.lc-pot') : null;
+  if (potEl) potEl.innerHTML = (n > 0 ? esc(cur(n)) : '<span class="lc-pot-no-val">–</span>') + ` <span class="lc-pot-edit-icon">${SVG_EDIT}</span>`;
+  if (disp)  disp.style.display  = '';
+  if (iWrap) iWrap.style.display = 'none';
+  setLeadTs(row);
+  showUndoToast('Valor potencial atualizado ✓', { row, campo:'VALOR_POTENCIAL', valor:oldPot });
+
+  // background POST
+  try {
+    const res  = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'VALOR_POTENCIAL', valor:String(n) }) });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+  } catch(_) {
+    // revert
+    if (lead) lead.pot = parseFloat(oldPot) || 0;
+    const oldN = parseFloat(oldPot) || 0;
+    if (potEl) potEl.innerHTML = (oldN > 0 ? esc(cur(oldN)) : '<span class="lc-pot-no-val">–</span>') + ` <span class="lc-pot-edit-icon">${SVG_EDIT}</span>`;
+    showToast('Erro ao salvar — alteração revertida');
+  }
+}
+function potKeyDown(e, row) {
+  if (e.key === 'Enter')  { e.preventDefault(); savePot(row); }
+  if (e.key === 'Escape') cancelPotEdit(row);
+}
+
+// ── OBS REP VIEW/EDIT ──────────────────────────────────────────
+function buildObsViewHtml(row, obs) {
+  if (obs && obs.trim())
+    return `<div class="obsr-text" id="obsr-text-${row}">${esc(obs)}</div>
+            <button class="obsr-edit-btn" onclick="toggleObsEdit(${row})">${SVG_EDIT} Editar</button>`;
+  return `<button class="obsr-add-btn" onclick="toggleObsEdit(${row})">＋ Adicionar observação</button>`;
+}
+function toggleObsEdit(row) {
+  const rep = document.getElementById('obsr-' + row);
+  if (!rep) return;
+  rep.classList.add('editing');
+  const ta = document.getElementById('obs-' + row);
+  if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+}
+function cancelObsEdit(row) {
+  const rep = document.getElementById('obsr-' + row);
+  if (!rep) return;
+  const ta = document.getElementById('obs-' + row);
+  if (ta) ta.value = rep.dataset.saved || '';
+  rep.classList.remove('editing');
+}
+async function saveObs(row) {
+  const ta   = document.getElementById('obs-' + row);
+  const fbEl = document.getElementById('obs-fb-' + row);
+  const rep  = document.getElementById('obsr-' + row);
+  if (!ta) return;
+  const valor  = ta.value.trim();
+  const oldObs = rep ? (rep.dataset.saved || '') : '';
+
+  // optimistic: show new text immediately
+  const lead = _rawLeads.find(l => l.row === row);
+  if (lead) lead.obs = valor;
+  if (rep) {
+    rep.dataset.saved = valor;
+    rep.classList.remove('editing');
+    const viewDiv = rep.querySelector('.obsr-view');
+    if (viewDiv) viewDiv.innerHTML = buildObsViewHtml(row, valor);
+  }
+  if (fbEl) fbEl.textContent = '';
+
+  setLeadTs(row);
+
+  // In concluding mode, merge obs into the pending undo and conclude
+  const card = document.querySelector(`.lead-card[data-row="${row}"]`);
+  const isConcluding = card && card.classList.contains('concluding');
+  if (!isConcluding) {
+    showUndoToast('Observação salva ✓', { isMulti:true, leadSnapshot:null, actions:[{ row, campo:'OBS_VENDEDOR', valor:oldObs }] });
+  } else {
+    // Append obs undo to whatever is already pending for this card
+    if (_pendingUndoByRow[row]) {
+      _pendingUndoByRow[row].data.actions.push({ row, campo:'OBS_VENDEDOR', valor:oldObs });
+    } else {
+      _pendingUndoByRow[row] = { msg:'Observação salva ✓', data:{ isMulti:true, leadSnapshot:null, actions:[{ row, campo:'OBS_VENDEDOR', valor:oldObs }] } };
+    }
+    concludeCard(row);
+  }
+
+  // background POST
+  try {
+    const res  = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'OBS_VENDEDOR', valor }) });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+  } catch(_) {
+    if (lead) lead.obs = oldObs;
+    if (rep) {
+      rep.dataset.saved = oldObs;
+      const viewDiv = rep.querySelector('.obsr-view');
+      if (viewDiv) viewDiv.innerHTML = buildObsViewHtml(row, oldObs);
+    }
+    showToast('Erro ao salvar — alteração revertida');
+  }
+}
+
+// ── PROMPT FECHADO / PERDIDO ───────────────────────────────────
+function showStatusPrompt(row, status) {
+  const prompt   = document.getElementById('sp-' + row);
+  if (!prompt) return;
+  const lbl      = prompt.querySelector('.lc-sp-label');
+  const input    = document.getElementById('sp-input-' + row);
+  const pfxWrap  = document.getElementById('sp-pfx-wrap-' + row);
+  const sel      = document.getElementById('sp-sel-' + row);
+  const dateWrap = document.getElementById('sp-date-wrap-' + row);
+  const dateIn   = document.getElementById('sp-date-' + row);
+  const skipBtn  = document.getElementById('sp-skip-' + row);
+  const preview  = document.getElementById('sp-preview-' + row);
+  if (status === 'Fechado') {
+    if (lbl)      lbl.textContent = '💰 Qual foi o valor do fechamento?';
+    if (pfxWrap)  pfxWrap.style.display = '';
+    if (input)    { input.value = ''; input.style.display = ''; }
+    if (preview)  preview.textContent = '';
+    if (sel)      sel.style.display = 'none';
+    if (dateWrap) dateWrap.style.display = 'none';
+    if (dateIn)   dateIn.value = '';
+    if (skipBtn)  skipBtn.style.display = 'none';
+    prompt.dataset.tipo = 'fechado';
+    prompt.dataset.step = 'valor';
+    prompt.dataset.valorFech = '';
+    const saveBtn = prompt.querySelector('.lc-sp-save');
+    if (saveBtn) saveBtn.textContent = 'Avançar →';
+    if (input) input.focus();
+  } else if (status === 'Perdido') {
+    if (lbl)      lbl.textContent = '❌ Qual o motivo da perda?';
+    if (pfxWrap)  pfxWrap.style.display = 'none';
+    if (preview)  preview.textContent = '';
+    if (sel)      { sel.value = ''; sel.style.display = ''; }
+    if (dateWrap) dateWrap.style.display = 'none';
+    if (skipBtn)  skipBtn.style.display = 'none';
+    prompt.dataset.tipo = 'perdido';
+    if (sel) sel.focus();
+  } else if (status === 'negociacao') {
+    if (lbl)      lbl.textContent = '💰 Valor potencial (opcional)';
+    if (pfxWrap)  pfxWrap.style.display = '';
+    if (input)    { input.value = ''; input.style.display = ''; }
+    if (preview)  preview.textContent = '';
+    if (sel)      sel.style.display = 'none';
+    if (dateWrap) dateWrap.style.display = 'none';
+    if (skipBtn)  skipBtn.style.display = '';
+    prompt.dataset.tipo = 'negociacao';
+    if (input) input.focus();
+  }
+  prompt.classList.add('visible');
+}
+function skipPotPrompt(row) {
+  const prompt = document.getElementById('sp-' + row);
+  if (prompt) prompt.classList.remove('visible');
+  enterConcludingMode(row);
+}
+function skipStatusPrompt(row) {
+  const prompt = document.getElementById('sp-' + row);
+  if (prompt) prompt.classList.remove('visible');
+  // trigger re-sort animation after prompt is dismissed
+  const raw = _rawLeads.find(l => l.row === row);
+  const status = raw ? raw.status : null;
+  if (status === 'Fechado' || status === 'Perdido') {
+    const card = document.querySelector(`.lead-card[data-row="${row}"]`);
+    if (card) {
+      card.classList.add('going-down');
+      setTimeout(() => renderLeads(_rawLeads, row), 700);
+    }
+  }
+}
+function _revertOptimisticClose(row) {
+  const undoData = _pendingUndoByRow[row];
+  if (undoData && undoData.data) {
+    const snap    = undoData.data.leadSnapshot;
+    const actions = undoData.data.actions || [];
+    const tsAct   = actions.find(a => a.campo === 'TIMESTAMP');
+    if (tsAct) {
+      if (tsAct.valor) _tsMap[row] = parseInt(tsAct.valor); else delete _tsMap[row];
+      try { localStorage.setItem(TS_KEY, JSON.stringify(_tsMap)); } catch(_) {}
+    }
+    if (snap && !_rawLeads.find(l => l.row === row)) {
+      const restored = { ...snap };
+      actions.forEach(function({ campo, valor }) {
+        if      (campo === 'STATUS_VENDEDOR') restored.status      = valor;
+        else if (campo === 'VALOR_FECHADO')   restored.valor_fech  = parseFloat(valor) || 0;
+        else if (campo === 'VALOR_POTENCIAL') restored.pot         = parseFloat(valor) || 0;
+        else if (campo === 'MOTIVO_PERDA')    restored.motivo_perd = valor;
+        else if (campo === 'DATA_FECH')       restored.data_f      = valor;
+      });
+      _rawLeads.push(restored);
+    }
+    if (_history && _history[0] && _history[0].row === row) _history.shift();
+  }
+  delete _pendingUndoByRow[row];
+  renderLeads(_rawLeads);
+}
+
+async function saveStatusExtra(row) {
+  const prompt   = document.getElementById('sp-' + row);
+  if (!prompt) return;
+  const tipo     = prompt.dataset.tipo;
+  const input    = document.getElementById('sp-input-' + row);
+  const sel      = document.getElementById('sp-sel-' + row);
+  const dateIn   = document.getElementById('sp-date-' + row);
+
+  // Em negociação — optional valor potencial, then concluding mode
+  if (tipo === 'negociacao') {
+    const raw = input ? input.value.trim() : '';
+    prompt.classList.remove('visible');
+    if (raw) {
+      const n = parseFloat(raw.replace(/[^\d,.-]/g,'').replace(',','.'));
+      if (!isNaN(n) && n > 0) {
+        const lead2 = _rawLeads.find(l => l.row === row);
+        const oldPot = lead2 ? String(lead2.pot || 0) : '0';
+        if (lead2) lead2.pot = n;
+        if (_pendingUndoByRow[row]) _pendingUndoByRow[row].data.actions.push({ row, campo:'VALOR_POTENCIAL', valor:oldPot });
+        fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
+          body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'VALOR_POTENCIAL', valor:String(n) }) });
+      }
+    }
+    setLeadTs(row);
+    enterConcludingMode(row);
+    return;
+  }
+
+  // Fechado — dois passos separados: primeiro valor, depois data
+  if (tipo === 'fechado') {
+    const step       = prompt.dataset.step || 'valor';
+    const pfxWrapEl  = document.getElementById('sp-pfx-wrap-' + row);
+    const dateWrapEl = document.getElementById('sp-date-wrap-' + row);
+    const previewEl  = document.getElementById('sp-preview-' + row);
+
+    if (step === 'valor') {
+      const raw = input ? input.value.trim() : '';
+      const n   = parseFloat((raw).replace(/[^\d,.-]/g,'').replace(',','.'));
+      if (!raw || isNaN(n) || n <= 0) { showToast('Informe o valor do fechamento'); if (input) input.focus(); return; }
+      // Guarda valor e avança para passo da data
+      prompt.dataset.valorFech = String(n);
+      prompt.dataset.step      = 'data';
+      if (pfxWrapEl) pfxWrapEl.style.display = 'none';
+      if (previewEl) previewEl.textContent    = '';
+      if (dateWrapEl) dateWrapEl.style.display = '';
+      const lbl     = prompt.querySelector('.lc-sp-label');
+      const saveBtn = prompt.querySelector('.lc-sp-save');
+      if (lbl)     lbl.textContent    = '📅 Data do fechamento?';
+      if (saveBtn) saveBtn.textContent = 'Salvar';
+      // Pré-preenche com hoje para o rep não precisar navegar o calendário
+      if (dateIn) {
+        const today = new Date();
+        dateIn.value = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+        dateIn.focus();
+      }
+      return;
+    }
+
+    // step === 'data': valida data e salva tudo
+    const storedN  = parseFloat(prompt.dataset.valorFech || '0');
+    const dataFech = dateIn ? dateIn.value.trim() : '';
+    if (!dataFech) { showToast('Informe a data do fechamento'); if (dateIn) dateIn.focus(); return; }
+
+    const lead2      = _rawLeads.find(l => l.row === row);
+    if (lead2) lead2.status = 'Fechado'; // update otimista do status, só agora que o form foi completado
+    const oldExtra   = String(lead2 ? lead2.valor_fech || 0 : 0);
+    const oldDataF   = lead2 ? (lead2.data_f || '') : '';
+    const oldStatus  = prompt.dataset.oldStatus || '';
+    const oldPot     = lead2 ? String(lead2.pot || 0) : '0';
+    const prevPend   = _pendingUndoByRow[row];
+    const oldTs      = prevPend && prevPend.data && prevPend.data.actions
+      ? ((prevPend.data.actions.find(a => a.campo === 'TIMESTAMP') || {}).valor || '') : '';
+    setLeadTs(row);
+    if (lead2) { lead2.valor_fech = storedN; lead2.data_f = dataFech; lead2.pot = 0; }
+    const leadSnapshot = lead2 ? { ...lead2 } : null;
+    const removeIdx    = _rawLeads.findIndex(l => l.row === row);
+    if (removeIdx >= 0) _rawLeads.splice(removeIdx, 1);
+    if (_history !== null && leadSnapshot) {
+      _history.unshift(leadSnapshot);
+      const histSec = document.getElementById('historico-section');
+      if (histSec && histSec.classList.contains('open')) renderHistorico();
+    }
+    prompt.classList.remove('visible');
+    _pendingUndoByRow[row] = { msg: 'Fechamento registrado ✓', data: { isMulti: true, leadSnapshot, actions: [
+      { row, campo: 'STATUS_VENDEDOR', valor: oldStatus },
+      { row, campo: 'VALOR_FECHADO',   valor: oldExtra  },
+      { row, campo: 'VALOR_POTENCIAL', valor: oldPot    },
+      { row, campo: 'TIMESTAMP',       valor: oldTs     },
+      { row, campo: 'DATA_FECH',       valor: oldDataF  }
+    ]}};
+    enterConcludingMode(row);
+    try {
+      const updates = { STATUS_VENDEDOR:'Fechado', VALOR_FECHADO:storedN, DATA_FECH:dataFech };
+      if (parseFloat(oldPot) > 0) updates.VALOR_POTENCIAL = 0;
+      const r = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
+        body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, action:'update_lead', updates }) });
+      const d = await r.json();
+      if (!d.ok) throw new Error(d.error);
+      if (d.ts) { _tsMap[row] = d.ts; try{localStorage.setItem(TS_KEY,JSON.stringify(_tsMap));}catch(_){} }
+    } catch(_) {
+      _revertOptimisticClose(row);
+      showToast('Erro ao registrar — verifique conexão');
+    }
+    return;
+  }
+
+  // Perdido — lê motivo do select
+  const raw = sel ? sel.value.trim() : '';
+  if (!raw) { showToast('Selecione o motivo da perda'); if (sel) sel.focus(); return; }
+  const lead2     = _rawLeads.find(l => l.row === row);
+  if (lead2) lead2.status = 'Perdido'; // update otimista do status, só agora que o form foi completado
+  const oldExtra  = lead2 ? lead2.motivo_perd || '' : '';
+  const oldDataF  = lead2 ? (lead2.data_f || '') : '';
+  const oldStatus = prompt.dataset.oldStatus || '';
+  const oldPot    = lead2 ? String(lead2.pot || 0) : '0';
+  const prevPending = _pendingUndoByRow[row];
+  const oldTs = prevPending && prevPending.data && prevPending.data.actions
+    ? ((prevPending.data.actions.find(a => a.campo === 'TIMESTAMP') || {}).valor || '') : '';
+  setLeadTs(row);
+  if (lead2) { lead2.motivo_perd = raw; lead2.pot = 0; }
+  const leadSnapshot = lead2 ? { ...lead2 } : null;
+  const removeIdx    = _rawLeads.findIndex(l => l.row === row);
+  if (removeIdx >= 0) _rawLeads.splice(removeIdx, 1);
+  if (_history !== null && leadSnapshot) {
+    _history.unshift(leadSnapshot);
+    const histSec = document.getElementById('historico-section');
+    if (histSec && histSec.classList.contains('open')) renderHistorico();
+  }
+  prompt.classList.remove('visible');
+  _pendingUndoByRow[row] = { msg: 'Motivo registrado ✓', data: { isMulti: true, leadSnapshot, actions: [
+    { row, campo: 'STATUS_VENDEDOR', valor: oldStatus },
+    { row, campo: 'MOTIVO_PERDA',    valor: oldExtra  },
+    { row, campo: 'VALOR_POTENCIAL', valor: oldPot    },
+    { row, campo: 'TIMESTAMP',       valor: oldTs     }
+  ]}};
+  enterConcludingMode(row);
+  try {
+    const updates = { STATUS_VENDEDOR:'Perdido', MOTIVO_PERDA:raw };
+    if (parseFloat(oldPot) > 0) updates.VALOR_POTENCIAL = 0;
+    const r = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, action:'update_lead', updates }) });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error);
+    if (d.ts) { _tsMap[row] = d.ts; try{localStorage.setItem(TS_KEY,JSON.stringify(_tsMap));}catch(_){} }
+  } catch(_) {
+    _revertOptimisticClose(row);
+    showToast('Erro ao registrar — verifique conexão');
+  }
+}
+function spKeyDown(e, row) {
+  if (e.key === 'Enter') { e.preventDefault(); saveStatusExtra(row); }
+}
+
+// ── UPDATE STATUS ─────────────────────────────────────────────
+function onStatusChange(e) {
+  const sel   = e.target;
+  const row   = parseInt(sel.dataset.row, 10);
+  const valor = sel.value;
+
+  // Fechar UI de outros cards
+  closeOtherCardUi(row);
+
+  // Reverter select visualmente até confirmar
+  sel.value     = sel.dataset.original;
+  sel.className = 'lc-select ' + statusClass(sel.dataset.original);
+
+  // Fechar prompt e link confirm do mesmo card
+  const sp = document.getElementById('sp-' + row);
+  if (sp) sp.classList.remove('visible');
+  const lc = document.getElementById('lc-' + row);
+  if (lc) lc.classList.remove('visible');
+
+  // Esconder select e timestamp — confirmação ocupa o lugar
+  const selWrap = document.getElementById('selwrap-' + row);
+  const tsEl    = document.getElementById('ts-' + row);
+  if (selWrap) selWrap.style.display = 'none';
+  if (tsEl)    tsEl.style.display    = 'none';
+
+  // Montar confirmação
+  const conf = document.getElementById('conf-' + row);
+  if (!conf) return;
+  const lbl  = document.getElementById('conf-status-' + row);
+  if (lbl) lbl.textContent = valor;
+  const sub  = document.getElementById('conf-sub-' + row);
+  if (sub) sub.textContent = (valor === 'Fechado' || valor === 'Perdido')
+    ? 'Sai da fila, vai ao histórico.'
+    : 'Lead vai ao final da fila.';
+  const icon = document.getElementById('conf-icon-' + row);
+  if (icon) {
+    if      (valor === 'Fechado')          icon.textContent = '✅';
+    else if (valor === 'Perdido')          icon.textContent = '❌';
+    else if (valor === 'Em negociação')    icon.textContent = '🤝';
+    else if (valor === 'Em contato')       icon.textContent = '📞';
+    else                                   icon.textContent = '⏳';
+  }
+  conf.dataset.pending = valor;
+  conf.classList.add('visible');
+}
+
+function cancelStatusChange(row) {
+  const conf    = document.getElementById('conf-' + row);
+  const selWrap = document.getElementById('selwrap-' + row);
+  const tsEl    = document.getElementById('ts-' + row);
+  if (conf)    conf.classList.remove('visible');
+  if (selWrap) selWrap.style.display = '';
+  if (tsEl)    tsEl.style.display    = '';
+}
+
+async function confirmStatusChange(row) {
+  const conf    = document.getElementById('conf-' + row);
+  if (!conf) return;
+  const valor   = conf.dataset.pending;
+  if (!valor) return;
+  conf.classList.remove('visible');
+  // Restaurar select e timestamp
+  const selWrap = document.getElementById('selwrap-' + row);
+  const tsEl    = document.getElementById('ts-' + row);
+  if (selWrap) selWrap.style.display = '';
+  if (tsEl)    tsEl.style.display    = '';
+
+  const sel       = document.querySelector(`.lc-select[data-row="${row}"]`);
+  const oldStatus = sel ? sel.dataset.original : '';
+
+  if (valor === 'Fechado' || valor === 'Perdido') {
+    // NÃO atualiza UI nem _rawLeads aqui — o rep ainda precisa completar o formulário.
+    // Se abandonar sem preencher, o status exibido permanece o original.
+    // O update otimista acontece em saveStatusExtra após o formulário completo.
+    const prompt = document.getElementById('sp-' + row);
+    if (prompt) prompt.dataset.oldStatus = oldStatus;
+    showStatusPrompt(row, valor);
+    return;
+  }
+
+  // Para outros status: update otimista imediato
+  if (sel) { sel.value = valor; sel.className = 'lc-select ' + statusClass(valor); sel.dataset.original = valor; }
+  const card = sel ? sel.closest('.lead-card') : document.querySelector(`.lead-card[data-row="${row}"]`);
+  if (card) { card.classList.remove('ag','cont','neg'); const bc = borderClass(valor); if (bc) card.classList.add(bc); }
+  const raw = _rawLeads.find(l => l.row === row);
+  if (raw) raw.status = valor;
+
+  // Capture old timestamp before updating it
+  const oldTs = _tsMap[row] ? String(_tsMap[row]) : '';
+  setLeadTs(row);
+
+  // Defer undo toast — always multi-action so more fields can be appended later
+  _pendingUndoByRow[row] = { msg:'Status atualizado ✓', data:{ isMulti:true, leadSnapshot:null, actions:[
+    { row, campo:'STATUS_VENDEDOR', valor:oldStatus },
+    { row, campo:'TIMESTAMP', valor:oldTs }
+  ]}};
+
+  if (valor === 'Em negociação') {
+    // Show optional valor potencial prompt before concluding mode
+    const prompt = document.getElementById('sp-' + row);
+    if (prompt) prompt.dataset.oldStatus = oldStatus;
+    showStatusPrompt(row, 'negociacao');
+  } else {
+    enterConcludingMode(row);
+  }
+
+  try {
+    const res  = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'STATUS_VENDEDOR', valor }) });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+  } catch(_) {
+    if (raw) raw.status = oldStatus;
+    if (sel) { sel.value = oldStatus; sel.className = 'lc-select ' + statusClass(oldStatus); sel.dataset.original = oldStatus; }
+    renderLeads(_rawLeads);
+    showToast('Erro ao salvar — alteração revertida');
+  }
+}
+
+// ── RENDER LEADS ──────────────────────────────────────────────
+function renderLeads(leads, highlightRow) {
+  const list = document.getElementById('leads-list');
+  const wrap = document.getElementById('show-more-wrap');
+  if (!list) return;
+
+  // preserve UI state
+  const expandedRows = new Set();
+  const obsDrafts    = {};
+  const contactOpen  = new Set();
+  list.querySelectorAll('.lead-card').forEach(c => {
+    const row = c.dataset.row;
+    if (c.classList.contains('expanded')) {
+      expandedRows.add(row);
+      const ta = document.getElementById('obs-' + row);
+      if (ta) obsDrafts[row] = ta.value;
+    }
+    const cp = document.getElementById('cp-' + row);
+    if (cp && cp.style.display === 'block') contactOpen.add(row);
+  });
+
+  // priority 0 = first; statuses not in map get 9 (sorted last by date)
+  const STATUS_PRIO = { 'Aguardando contato': 0, 'Em contato': 1, 'Em negociação': 2 };
+  _allLeads = leads
+    .sort((a, b) => {
+      const pa = STATUS_PRIO[a.status] ?? 9;
+      const pb = STATUS_PRIO[b.status] ?? 9;
+      if (pa !== pb) return pa - pb;
+      return (a.data || '').localeCompare(b.data || '');
+    });
+
+  document.getElementById('sum-ag').textContent   = _allLeads.filter(l=>l.status==='Aguardando contato').length;
+  document.getElementById('sum-cont').textContent = _allLeads.filter(l=>l.status==='Em contato').length;
+  document.getElementById('sum-neg').textContent  = _allLeads.filter(l=>l.status==='Em negociação').length;
+  document.getElementById('sum-tot').textContent  = _allLeads.length;
+
+  // sync filter bar (status filter + busca por telefone)
+  (function() {
+    const bar = document.getElementById('filter-bar');
+    const lbl = document.getElementById('filter-label');
+    const clr = document.getElementById('filter-clear');
+    if (!bar || !lbl || !clr) return;
+    const parts = [];
+    if (_activeFilter) parts.push('Mostrando: ' + _activeFilter);
+    if (_searchQuery.length === 4) parts.push('🔍 ****' + _searchQuery);
+    if (parts.length) {
+      bar.classList.add('visible');
+      lbl.textContent = parts.join(' · ');
+      clr.onclick = function() { clearFilter(); closeSearch(); };
+    } else {
+      bar.classList.remove('visible');
+    }
+  })();
+
+  if (!_allLeads.length) {
+    list.innerHTML = `<div class="empty-state"><strong>Tudo em dia!</strong>Nenhum lead ativo no momento.</div>`;
+    if (wrap) wrap.innerHTML = '';
+    return;
+  }
+
+  let toShow = _activeFilter ? _allLeads.filter(l => l.status === _activeFilter) : _allLeads;
+  const searchActive = _searchQuery.length === 4;
+  if (searchActive) toShow = toShow.filter(_matchesSearch);
+  if (searchActive && !toShow.length) {
+    list.innerHTML = `<div class="empty-state"><strong>Sem resultado</strong>Nenhum lead com final ****${esc(_searchQuery)}.</div>`;
+    if (wrap) wrap.innerHTML = '';
+    return;
+  }
+  const visible = searchActive ? toShow : toShow.slice(0, _visibleCount);
+
+  list.innerHTML = visible.map(l => {
+    const nomeRaw  = toTitleCase(l.nome||'');
+    const nomeEmp  = toTitleCase(l.empresa||'');
+    const titulo   = esc(nomeEmp || nomeRaw || '—');
+    const cidadeUF = [toTitleCase(l.cidade),(l.estado||'').toUpperCase()].filter(v=>v&&v.trim()).join(' · ');
+    const sClass   = statusClass(l.status);
+    const bClass   = borderClass(l.status);
+    const pot      = l.pot > 0 ? cur(l.pot) : '';
+    const wa       = fmtWA(l.whatsapp);
+    const mapLink  = buildMapsUrl(l.empresa||l.nome, l.cidade, l.estado);
+    const phone    = fmtPhone(l.whatsapp);
+    const options  = STATUS_LIST.map(s =>
+      `<option value="${esc(s)}"${s===l.status?' selected':''}>${esc(s)}</option>`
+    ).join('');
+    const contato   = toTitleCase(l.contato||'');
+    const subtitulo = nomeEmp && nomeRaw && nomeRaw.toLowerCase() !== nomeEmp.toLowerCase() ? nomeRaw : '';
+    const cnpj     = l.cnpj||'';
+    const endereco = toTitleCase(l.endereco||'');
+
+    // contact panel rows
+    const cpRows = [];
+    const waNum  = fmtWA(l.whatsapp);
+    if (nomeRaw) {
+      const nameEl = waNum
+        ? `<button class="lcp-name-btn" data-wa="${esc(waNum)}" data-display="${esc(phone.display)}" data-name="${esc(nomeRaw)}" onclick="openContactWa(this,${l.row})">${esc(nomeRaw)}</button>`
+        : `<div class="lcp-val">${esc(nomeRaw)}</div>`;
+      cpRows.push(`<div class="lcp-row"><span class="lcp-icon">👤</span><div class="lcp-info"><div class="lcp-label">Contato principal</div>${nameEl}</div></div>`);
+    }
+    if (contato && contato.toLowerCase() !== nomeRaw.toLowerCase()) {
+      const contatoEl = waNum
+        ? `<button class="lcp-name-btn" data-wa="${esc(waNum)}" data-display="${esc(phone.display)}" data-name="${esc(contato)}" onclick="openContactWa(this,${l.row})">${esc(contato)}</button>`
+        : `<div class="lcp-val">${esc(contato)}</div>`;
+      cpRows.push(`<div class="lcp-row"><span class="lcp-icon">👥</span><div class="lcp-info"><div class="lcp-label">Contato empresa</div>${contatoEl}</div></div>`);
+    }
+    if (phone.display) {
+      cpRows.push(`<div class="lcp-row"><span class="lcp-icon">📱</span><div class="lcp-info"><div class="lcp-label">Telefone / WhatsApp</div><button class="lcp-tel lcp-wa-btn" data-wa="${esc(waNum)}" data-display="${esc(phone.display)}" data-name="${esc(nomeRaw||contato||'')}" onclick="openContactWa(this,${l.row})">💬 ${esc(phone.display)}</button></div></div>`);
+    }
+    if (endereco) {
+      const endFull = [endereco, cidadeUF ? cidadeUF.replace(' · ',' — ') : ''].filter(Boolean).join(', ');
+      cpRows.push(`<div class="lcp-row lcp-copyable" data-copy="${esc(endFull)}" onclick="copyLcp(this)"><span class="lcp-icon">🏠</span><div class="lcp-info"><div class="lcp-label">Endereço · toque para copiar</div><div class="lcp-val">${esc(endFull)}</div></div></div>`);
+    }
+    if (cnpj)
+      cpRows.push(`<div class="lcp-row lcp-copyable" data-copy="${esc(fmtCNPJ(cnpj))}" onclick="copyLcp(this)"><span class="lcp-icon">📋</span><div class="lcp-info"><div class="lcp-label">CNPJ · toque para copiar</div><div class="lcp-val">${esc(fmtCNPJ(cnpj))}</div></div></div>`);
+    const hasContact = cpRows.length > 0;
+
+    const obsViewHtml = buildObsViewHtml(l.row, l.obs||'');
+
+    return `
+    <div class="lead-card ${bClass}" data-row="${l.row}">
+      <div class="lc-body">
+        <div class="lc-top">
+          <div class="lc-empresa">${titulo}</div>
+          <div class="lc-pot-wrap" id="pot-wrap-${l.row}">
+            <div id="pot-disp-${l.row}">
+              <div class="lc-pot" onclick="startPotEdit(${l.row})" title="Clique para editar o valor potencial">
+                ${pot ? esc(pot) : '<span class="lc-pot-no-val">–</span>'}
+                <span class="lc-pot-edit-icon">${SVG_EDIT}</span>
+              </div>
+            </div>
+            <div class="lc-pot-input-wrap" id="pot-input-wrap-${l.row}">
+              <div class="lc-pot-pfx-wrap">
+                <input class="lc-pot-input" id="pot-input-${l.row}" type="text" inputmode="decimal"
+                  value="${l.pot > 0 ? l.pot : ''}" placeholder="0,00" onkeydown="potKeyDown(event,${l.row})" oninput="potPreview(this,${l.row})">
+              </div>
+              <div class="lc-pot-preview" id="pot-preview-${l.row}"></div>
+              <div class="lc-pot-actions">
+                <button class="lc-pot-cancel" onclick="cancelPotEdit(${l.row})">Cancelar</button>
+                <button class="lc-pot-save"   onclick="savePot(${l.row})">OK</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        ${subtitulo ? `<div class="lc-nome">${esc(subtitulo)}</div>` : ''}
+        <div class="lc-meta">
+          ${cidadeUF ? `<span class="lc-tag">📍 ${esc(cidadeUF)}</span>` : ''}
+          ${l.data   ? `<span class="lc-tag">📅 ${esc(fmtData(l.data))}</span>` : ''}
+          <div class="lc-meta-btns">
+            ${hasContact ? `<button class="lc-icon-btn contact" onclick="toggleContact(this,${l.row})" title="Dados do contato" aria-expanded="false">${SVG_PERSON}</button>` : ''}
+            ${wa         ? `<button class="lc-icon-btn wa"   data-url="https://wa.me/${wa}" onclick="openLinkConfirm(this)" title="WhatsApp">${SVG_WA}</button>` : ''}
+            ${mapLink    ? `<button class="lc-icon-btn maps" data-url="${esc(mapLink)}" onclick="openLinkConfirm(this)" title="Ver no Google Maps">${SVG_PIN}</button>` : ''}
+          </div>
+        </div>
+        <div class="lc-contact-panel" id="cp-${l.row}">
+          <div id="lcp-rows-${l.row}">${cpRows.join('')}</div>
+          ${wa ? `<div class="lcp-wa-overlay" id="lcp-wac-${l.row}">
+            <div class="lcp-wac-icon">💬</div>
+            <div class="lcp-wac-msg" id="lcp-wac-msg-${l.row}"></div>
+            <div class="lcp-wac-num" id="lcp-wac-num-${l.row}"></div>
+            <div class="lcp-wac-btns">
+              <button class="lcp-wac-cancel" onclick="closeContactWa(${l.row})">Cancelar</button>
+              <button class="lcp-wac-open"   onclick="doContactWa(${l.row})">Abrir WhatsApp</button>
+            </div>
+          </div>` : ''}
+        </div>
+        <div class="lc-status-wrap">
+          <div class="lc-sel-wrap" id="selwrap-${l.row}">
+            <select class="lc-select ${sClass}" data-row="${l.row}" data-original="${esc(l.status)}" aria-label="Status do lead">
+              ${options}
+            </select>
+          </div>
+          <div class="lc-last-updated" id="ts-${l.row}">${getLeadTs(l.row, l.data, l.ts_vend)}</div>
+          <div class="lc-confirm" id="conf-${l.row}">
+            <div class="lc-confirm-icon" id="conf-icon-${l.row}">📋</div>
+            <div class="lc-confirm-msg">Mudar para <strong id="conf-status-${l.row}"></strong>?</div>
+            <div class="lc-confirm-sub" id="conf-sub-${l.row}">Lead vai ao final da fila.</div>
+            <div class="lc-confirm-actions">
+              <button class="lc-confirm-cancel" onclick="cancelStatusChange(${l.row})">Cancelar</button>
+              <button class="lc-confirm-ok"     onclick="confirmStatusChange(${l.row})">Confirmar</button>
+            </div>
+          </div>
+        </div>
+        <div class="lc-feedback" id="fb-${l.row}"></div>
+        <div class="lc-status-prompt" id="sp-${l.row}">
+          <div class="lc-sp-label"></div>
+          <div class="lc-sp-row">
+            <div class="lc-sp-pfx-wrap" id="sp-pfx-wrap-${l.row}">
+              <input class="lc-sp-input" id="sp-input-${l.row}" type="text" inputmode="decimal" placeholder="0,00" onkeydown="spKeyDown(event,${l.row})" oninput="spPreview(this,${l.row})">
+            </div>
+            <div class="lc-sp-date-wrap" id="sp-date-wrap-${l.row}" style="display:none">
+              <input class="lc-sp-input" id="sp-date-${l.row}" type="date" onkeydown="spKeyDown(event,${l.row})">
+            </div>
+          </div>
+          <div class="lc-sp-val-preview" id="sp-preview-${l.row}"></div>
+          <select class="lc-sp-input lc-sp-sel" id="sp-sel-${l.row}" style="display:none">
+            <option value="">Selecione o motivo…</option>
+            <option>Sem interesse</option>
+            <option>Sem retorno</option>
+            <option>Restrição de pagamento</option>
+            <option>Já possui fornecedor</option>
+            <option>Fora do perfil</option>
+            <option>Outro</option>
+          </select>
+          <div class="lc-sp-footer">
+            <button class="lc-sp-skip" id="sp-skip-${l.row}" style="display:none" onclick="skipPotPrompt(${l.row})">Pular</button>
+            <button class="lc-sp-save" onclick="saveStatusExtra(${l.row})">Salvar</button>
+          </div>
+        </div>
+        <div class="lc-confirm" id="lc-${l.row}" style="margin-top:6px;">
+          <div class="lc-confirm-icon" id="lc-icon-${l.row}">🔗</div>
+          <div class="lc-confirm-msg">Abrir <strong id="lc-lbl-${l.row}"></strong>?</div>
+          <div class="lc-confirm-actions">
+            <button class="lc-confirm-cancel" onclick="closeLinkConfirm('lc-${l.row}')">Cancelar</button>
+            <button class="lc-confirm-ok"     onclick="doConfirmLink('lc-${l.row}')">Abrir</button>
+          </div>
+        </div>
+      </div>
+      <button class="lc-toggle" onclick="toggleExpand(this)" aria-expanded="false">
+        <span class="tt">mais</span>&nbsp;<span class="ti">▾</span>
+      </button>
+      <div class="lc-expand">
+        ${l.obs_sdr ? `<div class="lc-obs-sdr"><div class="lc-obs-sdr-label">Observação do SDR</div><div class="lc-obs-sdr-text">${esc(l.obs_sdr)}</div></div>` : ''}
+        <hr class="lc-divider">
+        <div class="lc-obs-label">Minha observação</div>
+        <div class="lc-obs-rep" id="obsr-${l.row}" data-saved="${esc(l.obs||'')}">
+          <div class="obsr-view">${obsViewHtml}</div>
+          <div class="obsr-edit-wrap" id="obsr-edit-${l.row}">
+            <div class="obs-conclude-banner">📝 Registre uma observação antes de concluir</div>
+            <textarea class="lc-obs-textarea" id="obs-${l.row}" maxlength="1000"
+              placeholder="Escreva sua observação sobre este lead…">${esc(l.obs||'')}</textarea>
+            <div class="lc-obs-footer">
+              <span class="lc-obs-fb" id="obs-fb-${l.row}"></span>
+              <button class="obsr-cancel-btn"  id="obs-cancel-${l.row}"   onclick="cancelObsEdit(${l.row})">Cancelar</button>
+              <button class="lc-obs-clear"    id="obs-clear-${l.row}"   onclick="clearObs(${l.row})">Limpar</button>
+              <button class="lc-obs-conclude" id="obs-conclude-${l.row}" onclick="concludeCard(${l.row})">Pular →</button>
+              <button class="lc-obs-save"     id="obs-save-${l.row}"     onclick="saveObs(${l.row})">Salvar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // botões ver mais / ver menos
+  if (wrap) {
+    const filtered2 = _activeFilter
+      ? _allLeads.filter(l => l.status === _activeFilter && _matchesSearch(l))
+      : _allLeads.filter(l => _matchesSearch(l));
+    const hasMore2 = !searchActive && _visibleCount < filtered2.length;
+    const hasLess2 = !searchActive && _visibleCount > LIMIT;
+    wrap.innerHTML = (hasMore2 || hasLess2) ? `<div class="show-more-row">
+      ${hasLess2 ? `<button class="show-less-btn" onclick="showLess()">▲ Ver menos</button>` : ''}
+      ${hasMore2 ? `<button class="show-more-btn" onclick="showMore()">Ver mais ▾</button>` : ''}
+    </div>` : '';
+  }
+
+  // bind events
+  list.querySelectorAll('.lc-select').forEach(sel => sel.addEventListener('change', onStatusChange));
+
+  // restore states
+  expandedRows.forEach(row => {
+    const card = list.querySelector(`.lead-card[data-row="${row}"]`);
+    if (!card) return;
+    card.classList.add('expanded');
+    const btn = card.querySelector('.lc-toggle');
+    if (btn) { btn.querySelector('.tt').textContent='menos'; btn.setAttribute('aria-expanded','true'); }
+    const ta = document.getElementById('obs-' + row);
+    if (ta && obsDrafts[row] !== undefined) ta.value = obsDrafts[row];
+  });
+  contactOpen.forEach(row => {
+    const cp  = document.getElementById('cp-' + row);
+    const btn = list.querySelector(`.lead-card[data-row="${row}"] .lc-icon-btn.contact`);
+    if (cp)  cp.style.display = 'block';
+    if (btn) { btn.classList.add('active'); btn.setAttribute('aria-expanded','true'); }
+  });
+
+  // highlight recently moved card
+  if (highlightRow) {
+    const moved = list.querySelector(`.lead-card[data-row="${highlightRow}"]`);
+    if (moved) {
+      moved.classList.add('just-placed');
+      moved.addEventListener('animationend', () => moved.classList.remove('just-placed'), { once:true });
+    }
+  }
+
+  applyFilter();
+}
+
+// ── HISTÓRICO ─────────────────────────────────────────────────
+let _history    = null;
+let _histLoaded = false;
+let _histPage   = 1;
+let _histTab    = null; // null | 'fechados' | 'perdidos'
+const HIST_PAGE_SIZE = 5;
+
+function collapseHistorico() {
+  const sec = document.getElementById('historico-section');
+  if (!sec || !sec.classList.contains('open')) return;
+  sec.classList.remove('open');
+  const btn = sec.querySelector('.hist-header');
+  if (btn) btn.setAttribute('aria-expanded', 'false');
+  _histTab = null; _histPage = 1;
+  _teardownHistObserver();
+}
+
+function toggleHistorico() {
+  const section = document.getElementById('historico-section');
+  if (!section) return;
+  const opening = !section.classList.contains('open');
+  section.classList.toggle('open');
+  const btn = section.querySelector('.hist-header');
+  if (btn) btn.setAttribute('aria-expanded', opening);
+  if (opening) {
+    if (!_histLoaded) loadHistorico();
+    else renderHistorico();
+    _setupHistAutoCollapse();
+  } else {
+    _teardownHistObserver();
+    _histTab = null; _histPage = 1;
+  }
+}
+function _teardownHistObserver() {
+  if (window._histObserver) { window._histObserver.disconnect(); window._histObserver = null; }
+  if (window._histCollapseTimer) { clearTimeout(window._histCollapseTimer); window._histCollapseTimer = null; }
+}
+function _setupHistAutoCollapse() {
+  _teardownHistObserver();
+  const leadsList = document.getElementById('leads-list');
+  if (!leadsList) return;
+  let wasHidden = false;
+  window._histObserver = new IntersectionObserver(function(entries) {
+    const entry = entries[0];
+    if (!entry.isIntersecting) {
+      wasHidden = true;
+      if (window._histCollapseTimer) { clearTimeout(window._histCollapseTimer); window._histCollapseTimer = null; }
+    } else if (wasHidden) {
+      window._histCollapseTimer = setTimeout(function() {
+        collapseHistorico();
+        _teardownHistObserver();
+      }, 3000);
+    }
+  }, { threshold: 0.6 });
+  window._histObserver.observe(leadsList);
+}
+
+async function loadHistorico() {
+  const body = document.getElementById('hist-body');
+  if (!body) return;
+  body.innerHTML = `<div style="padding:16px;text-align:center;color:var(--muted);font-size:12px;font-weight:600">Carregando…</div>`;
+  try {
+    const res  = await fetch(PROXY_URL + '?action=rep_history&rep=' + REP_NAME + '&token=' + REP_TOKEN);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    _history    = data.history || [];
+    _histLoaded = true;
+    renderHistorico();
+  } catch(err) {
+    if (body) body.innerHTML = `<div style="padding:16px;color:#b0134a;font-size:12px">Não foi possível carregar o histórico.</div>`;
+  }
+}
+
+function _histCardHtml(l) {
+  const nomeRaw    = toTitleCase(l.nome||'');
+  const nomeEmp    = toTitleCase(l.empresa||'');
+  const titulo     = esc(nomeEmp || nomeRaw || '—');
+  const subtitulo  = nomeEmp && nomeRaw && nomeRaw.toLowerCase() !== nomeEmp.toLowerCase() ? nomeRaw : '';
+  const cidadeUF   = [toTitleCase(l.cidade),(l.estado||'').toUpperCase()].filter(v=>v&&v.trim()).join(' · ');
+  const bClass     = l.status==='Fechado' ? 'fech' : 'perd';
+  const badge      = l.status==='Fechado' ? 'b-fech' : 'b-perd';
+  const dataMeta   = l.data_f ? '📅 '+fmtData(l.data_f) : (l.data ? '📅 '+fmtData(l.data) : '');
+  const valorMeta  = l.status==='Fechado' && (l.valor_fech>0||l.valor>0) ? cur(l.valor_fech||l.valor) : '';
+  const motivoMeta = l.status==='Perdido' && (l.motivo_perd||l.motivo) ? (l.motivo_perd||l.motivo) : '';
+  const wa         = fmtWA(l.whatsapp);
+  return `<div class="hist-card ${bClass}" data-row="${l.row}">
+    <div class="hist-top">
+      <div class="hist-top-left">
+        <div class="hist-empresa">${titulo}</div>
+        ${subtitulo ? `<div class="hist-nome">${esc(subtitulo)}</div>` : ''}
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+        ${wa ? `<button class="lc-icon-btn wa" data-url="https://wa.me/${wa}" onclick="openLinkConfirm(this)" title="WhatsApp" style="width:26px;height:26px;border:none;">${SVG_WA}</button>` : ''}
+        <span class="hist-badge ${badge}">${esc(l.status)}</span>
+      </div>
+    </div>
+    <div class="hist-meta">
+      ${cidadeUF   ? `<span class="lc-tag">📍 ${esc(cidadeUF)}</span>` : ''}
+      ${dataMeta   ? `<span class="lc-tag">${esc(dataMeta)}</span>` : ''}
+      ${valorMeta  ? `<span class="lc-tag">💰 ${esc(valorMeta)}</span>` : ''}
+      ${motivoMeta ? `<span class="lc-tag">❌ ${esc(motivoMeta)}</span>` : ''}
+    </div>
+    ${wa ? `<div class="lc-confirm" id="hlc-${l.row}" style="margin-top:8px;">
+      <div class="lc-confirm-icon">💬</div>
+      <div class="lc-confirm-msg">Abrir <strong>WhatsApp</strong>?</div>
+      <div class="lc-confirm-actions">
+        <button class="lc-confirm-cancel" onclick="closeLinkConfirm('hlc-${l.row}')">Cancelar</button>
+        <button class="lc-confirm-ok"     onclick="doConfirmLink('hlc-${l.row}')">Abrir</button>
+      </div>
+    </div>` : ''}
+  </div>`;
+}
+function setHistTab(tab) {
+  _histTab = tab; _histPage = 1;
+  renderHistorico();
+}
+function renderHistorico() {
+  const body   = document.getElementById('hist-body');
+  const counts = document.getElementById('hist-counts');
+  const sec    = document.getElementById('historico-section');
+  if (!body) return;
+  const h     = _history || [];
+  const nFech = h.filter(l=>l.status==='Fechado').length;
+  const nPerd = h.filter(l=>l.status==='Perdido').length;
+
+  // modo busca: mostra todos os matches (fechados e perdidos juntos), abre seção
+  if (_searchQuery.length === 4) {
+    const matches = h.filter(_matchesSearch);
+    if (counts) counts.textContent = matches.length
+      ? matches.length + ' resultado' + (matches.length !== 1 ? 's' : '') + ' no histórico'
+      : 'nenhum no histórico';
+    if (matches.length) {
+      if (sec) sec.classList.add('open');
+      body.innerHTML = matches.map(_histCardHtml).join('');
+    } else {
+      body.innerHTML = `<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px">Nenhum resultado no histórico.</div>`;
+    }
+    return;
+  }
+
+  if (counts) counts.textContent = nFech+' fechado'+(nFech!==1?'s':'')+(nPerd?' · '+nPerd+' perdido'+(nPerd!==1?'s':''):'');
+  if (!h.length) { body.innerHTML=`<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px">Nenhum histórico ainda.</div>`; return; }
+  const semWA = h.filter(l => !fmtWA(l.whatsapp)).length;
+  const diagHtml = semWA === h.length
+    ? `<div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:8px 12px;font-size:11px;font-weight:600;color:#b45309;margin-bottom:8px;">⚠️ WhatsApp não está chegando nesta lista (${h.length}/${h.length} sem WA). Verifique se o proxy foi reimplantado no Apps Script.</div>`
+    : '';
+  // No tab selected: show two category cards
+  if (!_histTab) {
+    body.innerHTML = diagHtml + `<div class="hist-tab-cards">
+      <button class="hist-tab-card fech" onclick="setHistTab('fechados')">
+        <span class="hist-tab-icon">✅</span>
+        <span class="hist-tab-label">Fechados</span>
+        <span class="hist-tab-count">${nFech}</span>
+      </button>
+      <button class="hist-tab-card perd" onclick="setHistTab('perdidos')">
+        <span class="hist-tab-icon">❌</span>
+        <span class="hist-tab-label">Perdidos</span>
+        <span class="hist-tab-count">${nPerd}</span>
+      </button>
+    </div>`;
+    return;
+  }
+  // Tab selected: filter and paginate
+  const filtered = h.filter(l => _histTab === 'fechados' ? l.status==='Fechado' : l.status==='Perdido')
+    .sort((a, b) => {
+      const da = a.data_f || '';
+      const db = b.data_f || '';
+      if (da && db) return db.localeCompare(da);
+      if (da) return -1;
+      if (db) return 1;
+      return (b.row || 0) - (a.row || 0);
+    });
+  const visible  = filtered.slice(0, _histPage * HIST_PAGE_SIZE);
+  const hasMore  = filtered.length > visible.length;
+  const backBtn  = `<button class="hist-back-btn" onclick="setHistTab(null)">← Voltar</button>`;
+  const cards    = visible.map(_histCardHtml).join('');
+  const pagination = (hasMore || _histPage > 1) ? `<div class="hist-pagination">
+    ${_histPage > 1 ? `<button class="hist-pg-btn" onclick="histVerMenos()">▲ Ver menos</button>` : ''}
+    ${hasMore       ? `<button class="hist-pg-btn" onclick="histVerMais()">Ver mais ▾</button>` : ''}
+  </div>` : '';
+  body.innerHTML = diagHtml + backBtn + cards + pagination;
+}
+function histVerMais() { _histPage++; renderHistorico(); }
+function histVerMenos() {
+  _histPage = 1; renderHistorico();
+  const hdr = document.querySelector('.hist-header');
+  if (hdr) hdr.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+// ── FETCH & POLL ──────────────────────────────────────────────
+let _isLoading  = false;
+let _firstLoad  = true;
+let _retryCount = 0;
+const MAX_RETRIES = 2;
+const CACHE_KEY = 'lifeb_cache_ROBERT_TESTE';
+
+async function loadData() {
+  if (_isLoading) return;
+  _isLoading = true;
+  loadStart();
+  try {
+    if (_firstLoad) {
+      // Show cached leads instantly before the API responds
+      try {
+        const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+        // Validate rep matches — prevents showing another rep's leads from a stale/shared cache
+        if (cached && cached.rep === REP_NAME && cached.leads && cached.leads.length) {
+          _rawLeads  = cached.leads;
+          _firstLoad = false;
+          renderLeads(_rawLeads);
+        } else {
+          if (cached && cached.rep !== REP_NAME) localStorage.removeItem(CACHE_KEY);
+          showSkeletons(3);
+        }
+      } catch(_) { showSkeletons(3); }
+    }
+
+    const res  = await fetch(PROXY_URL + '?action=active&rep=' + REP_NAME + '&token=' + REP_TOKEN);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    const newLeads = data.leads || [];
+
+    // Merge server timestamps into _tsMap (prefer whichever is more recent)
+    newLeads.forEach(function(l) {
+      if (l.ts_vend && l.ts_vend > (_tsMap[l.row] || 0)) _tsMap[l.row] = l.ts_vend;
+    });
+    try { localStorage.setItem(TS_KEY, JSON.stringify(_tsMap)); } catch(_) {}
+
+    // Persist fresh data with rep tag to prevent cross-rep cache reads
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ rep: REP_NAME, leads: newLeads, ts: Date.now() })); } catch(_) {}
+
+    // If a status prompt is visible, preserve that lead so it doesn't vanish mid-fill
+    _rawLeads.forEach(existing => {
+      if (!newLeads.find(nl => nl.row === existing.row)) {
+        const prompt = document.getElementById('sp-' + existing.row);
+        if (prompt && prompt.classList.contains('visible')) newLeads.push(existing);
+      }
+    });
+    const hasPending = !!document.querySelector('.lc-status-prompt.visible, .lead-card.concluding');
+    const changed    = _firstLoad || JSON.stringify(newLeads) !== JSON.stringify(_rawLeads);
+    _rawLeads = newLeads;
+    if (changed && !hasPending) renderLeads(_rawLeads);
+    flashDot();
+    _firstLoad  = false;
+    _retryCount = 0;
+    const err = document.getElementById('error-banner');
+    if (err) err.style.display = 'none';
+  } catch(e) {
+    // Retry silently before surfacing any error
+    if (_retryCount < MAX_RETRIES) {
+      _retryCount++;
+      _isLoading = false;
+      loadEnd();
+      setTimeout(loadData, 4000 * _retryCount);
+      return;
+    }
+    _retryCount = 0;
+    // Only show error banner when there is no data to display
+    if (!_rawLeads.length) {
+      const err = document.getElementById('error-banner');
+      if (err) { err.textContent='Não foi possível carregar os dados. Verifique sua conexão.'; err.style.display='block'; }
+      if (_firstLoad) { const l=document.getElementById('leads-list'); if(l) l.innerHTML=''; }
+    }
+    // When cached data is already on screen, fail silently — data stays visible
+  } finally { _isLoading=false; loadEnd(); }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadData();
+  setInterval(loadData, POLL_MS);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') { _retryCount = 0; loadData(); }
+  });
+  // Fechar histórico ao interagir com a área de leads (filtros, cards, etc.)
+  // Guard: se o target foi removido do DOM pelo próprio onclick (ex: setHistTab re-renderiza body),
+  // não colapsa — o usuário clicou dentro do histórico mesmo.
+  document.querySelector('main').addEventListener('click', function(e) {
+    if (!document.contains(e.target)) return;
+    if (!e.target.closest('#historico-section')) collapseHistorico();
+  });
+});
+</script>
+</body>
+</html>
