@@ -1522,12 +1522,14 @@ function renderLeads(leads, highlightRow) {
     if (cp && cp.style.display === 'block') contactOpen.add(row);
   });
 
-  // Aguardando contato sempre primeiro; demais por último toque (menos recente = topo)
+  // Aguardando contato sempre primeiro, FIFO puro por data (ts_vend irrelevante — nunca contatado)
+  // Demais: menos recentemente tratado primeiro (fila de trabalho)
   _allLeads = leads
     .sort((a, b) => {
       const pa = a.status === 'Aguardando contato' ? 0 : 1;
       const pb = b.status === 'Aguardando contato' ? 0 : 1;
       if (pa !== pb) return pa - pb;
+      if (pa === 0) return (a.data || '').localeCompare(b.data || '');
       const ta = _tsMap[a.row] || a.ts_vend || 0;
       const tb = _tsMap[b.row] || b.ts_vend || 0;
       if (ta !== tb) return ta - tb;
