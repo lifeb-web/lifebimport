@@ -718,9 +718,16 @@ function undoLast() {
   }, 60);
   showToast('Desfeito ✓');
 
-  // POST all reverts in background (skip client-side-only fields)
+  // POST all reverts in background
   for (const { row, campo, valor } of actions) {
-    if (campo === 'TIMESTAMP') continue;
+    if (campo === 'TIMESTAMP') {
+      // Reverte TIMESTAMP_VEND no servidor pro valor antigo — mantém posição correta na fila após poll.
+      // Só envia se havia timestamp real (leads nunca tocados têm valor vazio — sort ignora ts_vend neles).
+      if (valor) fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
+        body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'TIMESTAMP_VEND', valor: String(valor) }) })
+        .catch(() => {});
+      continue;
+    }
     fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
       body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo, valor: String(valor) }) })
       .catch(() => {});
