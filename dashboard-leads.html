@@ -1040,7 +1040,10 @@ function renderFunnel(data) {
     const { sdr = {}, vend = {}, total = 0 } = data;
 
     const sdrBadge = document.getElementById('sdr-total-badge');
-    if (sdrBadge) sdrBadge.textContent = n(total) + ' leads';
+    if (sdrBadge) {
+      const taxaQualif = total > 0 ? ((sdr.qualif || 0) / total * 100).toFixed(1) + '% QUALIFICAÇÃO' : '—';
+      sdrBadge.textContent = taxaQualif;
+    }
     const vendBadge = document.getElementById('vend-total-badge');
     const totalVend = (vend.ag_cont||0)+(vend.em_cont||0)+(vend.reun||0)+(vend.em_neg||0)+(vend.fechado||0)+(vend.perdido||0);
     if (vendBadge) vendBadge.textContent = n(totalVend) + ' com vendedor';
@@ -1121,10 +1124,9 @@ function renderAtivos(data) {
       const repLeads = leads
         .filter(l => (l.rep || '').toUpperCase() === repName)
         .sort((a, b) => {
-          const ORDEM = { 'Aguardando contato': 0, 'Em contato': 1, 'Em negociação': 2 };
-          const oa = ORDEM[a.status] !== undefined ? ORDEM[a.status] : 9;
-          const ob = ORDEM[b.status] !== undefined ? ORDEM[b.status] : 9;
-          if (oa !== ob) return oa - ob;
+          const pa = a.status === 'Aguardando contato' ? 0 : 1;
+          const pb = b.status === 'Aguardando contato' ? 0 : 1;
+          if (pa !== pb) return pa - pb;
           return (a.data || '').localeCompare(b.data || '');
         });
       if (badge) badge.textContent = `${n(repLeads.length)} ATIVOS`;

@@ -830,10 +830,9 @@ function renderAtivos(data) {
       const repLeads = leads
         .filter(l => (l.rep || '').toUpperCase() === repName)
         .sort((a, b) => {
-          const ORDEM = { 'Aguardando contato': 0, 'Em contato': 1, 'Em negociação': 2 };
-          const oa = ORDEM[a.status] !== undefined ? ORDEM[a.status] : 9;
-          const ob = ORDEM[b.status] !== undefined ? ORDEM[b.status] : 9;
-          if (oa !== ob) return oa - ob;
+          const pa = a.status === 'Aguardando contato' ? 0 : 1;
+          const pb = b.status === 'Aguardando contato' ? 0 : 1;
+          if (pa !== pb) return pa - pb;
           return (a.data || '').localeCompare(b.data || '');
         });
       if (badge)  badge.textContent  = `TOTAL: ${n(repLeads.length)} ATIVOS`;
