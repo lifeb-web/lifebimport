@@ -1515,13 +1515,12 @@ function renderLeads(leads, highlightRow) {
     if (cp && cp.style.display === 'block') contactOpen.add(row);
   });
 
-  // priority 0 = first; statuses not in map get 9 (sorted last by date)
-  const STATUS_PRIO = { 'Aguardando contato': 0, 'Em contato': 1, 'Em negociação': 2 };
+  // fila por último toque: sem ts_vend (nunca tratado) = topo; mais recentemente tratado = fundo
   _allLeads = leads
     .sort((a, b) => {
-      const pa = STATUS_PRIO[a.status] ?? 9;
-      const pb = STATUS_PRIO[b.status] ?? 9;
-      if (pa !== pb) return pa - pb;
+      const ta = a.ts_vend || 0;
+      const tb = b.ts_vend || 0;
+      if (ta !== tb) return ta - tb;
       return (a.data || '').localeCompare(b.data || '');
     });
 
