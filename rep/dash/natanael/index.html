@@ -149,6 +149,9 @@
     .lcp-wa-btn  { background:none; border:none; padding:0; cursor:pointer; font-family:inherit; display:flex; align-items:center; gap:5px; }
     .lcp-name-btn { background:none; border:none; padding:0; cursor:pointer; font-family:inherit; font-size:12px; font-weight:600; color:var(--text); text-align:left; line-height:1.4; word-break:break-word; }
     .lcp-name-btn:hover { text-decoration:underline; }
+    .lcp-copyable { cursor:pointer; border-radius:8px; margin:-2px -6px; padding-left:6px; padding-right:6px; transition:background .2s; -webkit-tap-highlight-color:transparent; user-select:none; }
+    .lcp-copyable:active { background:rgba(112,75,155,.08); }
+    .lcp-copy-flash { background:rgba(22,163,74,.07) !important; transition:background .1s !important; }
     .lcp-wa-overlay { display:none; flex-direction:column; align-items:center; padding:10px 4px 6px; gap:8px; text-align:center; animation:panel-in .18s ease; }
     .lcp-wac-icon  { font-size:20px; }
     .lcp-wac-msg   { font-size:12px; font-weight:700; color:var(--text); line-height:1.45; }
@@ -537,6 +540,34 @@ function getLeadTs(row, dataEntrada, tsServidor) {
   }
   if (dataEntrada) return `Entrada: ${fmtData(dataEntrada)}`;
   return '';
+}
+
+// ── COPIAR CAMPO DO PAINEL DE CONTATO ────────────────────────
+function copyLcp(el) {
+  const text = el.dataset.copy || '';
+  const val  = el.querySelector('.lcp-val');
+  if (!val) return;
+  const orig = val.innerHTML;
+  const flash = function() {
+    val.innerHTML = '<span style="color:#16a34a;font-weight:700;">✓ Copiado!</span>';
+    el.classList.add('lcp-copy-flash');
+    setTimeout(function() { val.innerHTML = orig; el.classList.remove('lcp-copy-flash'); }, 1500);
+  };
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(flash).catch(function() {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.cssText = 'position:fixed;opacity:0;';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); flash(); } catch(_) {}
+      document.body.removeChild(ta);
+    });
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.cssText = 'position:fixed;opacity:0;';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); flash(); } catch(_) {}
+    document.body.removeChild(ta);
+  }
 }
 
 // ── WA OVERLAY NO PAINEL DE CONTATO ──────────────────────────
@@ -1561,10 +1592,10 @@ function renderLeads(leads, highlightRow) {
     }
     if (endereco) {
       const endFull = [endereco, cidadeUF ? cidadeUF.replace(' · ',' — ') : ''].filter(Boolean).join(', ');
-      cpRows.push(`<div class="lcp-row"><span class="lcp-icon">🏠</span><div class="lcp-info"><div class="lcp-label">Endereço</div><div class="lcp-val">${esc(endFull)}</div></div></div>`);
+      cpRows.push(`<div class="lcp-row lcp-copyable" data-copy="${esc(endFull)}" onclick="copyLcp(this)"><span class="lcp-icon">🏠</span><div class="lcp-info"><div class="lcp-label">Endereço · toque para copiar</div><div class="lcp-val">${esc(endFull)}</div></div></div>`);
     }
     if (cnpj)
-      cpRows.push(`<div class="lcp-row"><span class="lcp-icon">📋</span><div class="lcp-info"><div class="lcp-label">CNPJ</div><div class="lcp-val">${esc(fmtCNPJ(cnpj))}</div></div></div>`);
+      cpRows.push(`<div class="lcp-row lcp-copyable" data-copy="${esc(fmtCNPJ(cnpj))}" onclick="copyLcp(this)"><span class="lcp-icon">📋</span><div class="lcp-info"><div class="lcp-label">CNPJ · toque para copiar</div><div class="lcp-val">${esc(fmtCNPJ(cnpj))}</div></div></div>`);
     const hasContact = cpRows.length > 0;
 
     const obsViewHtml = buildObsViewHtml(l.row, l.obs||'');
