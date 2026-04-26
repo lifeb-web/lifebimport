@@ -710,7 +710,12 @@ function undoLast() {
     }
   }
 
-  renderLeads(_rawLeads);
+  const undoRow = actions.length > 0 ? actions[0].row : null;
+  renderLeads(_rawLeads, undoRow);
+  if (undoRow) setTimeout(function() {
+    const c = document.querySelector('.lead-card[data-row="' + undoRow + '"]');
+    if (c) c.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 60);
   showToast('Desfeito ✓');
 
   // POST all reverts in background (skip client-side-only fields)
