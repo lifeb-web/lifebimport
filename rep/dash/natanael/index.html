@@ -430,7 +430,6 @@
 
   <div id="leads-list"></div>
   <div id="show-more-wrap"></div>
-  <div id="scroll-sentinel" style="height:1px;margin-bottom:16px;"></div>
 
   <div class="historico-section" id="historico-section">
     <button class="hist-header" onclick="toggleHistorico()" aria-expanded="false">
@@ -773,27 +772,20 @@ function handleSearch(val) {
   }
 }
 
-// ── PAGINATION + SCROLL INFINITO ─────────────────────────────
+// ── PAGINATION ────────────────────────────────────────────────
 let _visibleCount = LIMIT;
 let _rawLeads     = [];
 let _allLeads     = [];
-let _scrollObserver = null;
 
-function initScrollObserver() {
-  if (_scrollObserver) _scrollObserver.disconnect();
-  const sentinel = document.getElementById('scroll-sentinel');
-  if (!sentinel) return;
-  _scrollObserver = new IntersectionObserver(function(entries) {
-    if (!entries[0].isIntersecting) return;
-    if (_searchQuery.length === 4) return; // busca mostra tudo, sem paginar
-    const filtered = _activeFilter
-      ? _allLeads.filter(l => l.status === _activeFilter)
-      : _allLeads;
-    if (_visibleCount >= filtered.length) return;
-    _visibleCount += LIMIT;
-    renderLeads(_rawLeads);
-  }, { rootMargin: '120px' });
-  _scrollObserver.observe(sentinel);
+function showMore() {
+  _visibleCount += LIMIT;
+  renderLeads(_rawLeads);
+}
+function showLess() {
+  _visibleCount = LIMIT;
+  renderLeads(_rawLeads);
+  const list = document.getElementById('leads-list');
+  if (list) list.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // ── CONCLUDING MODE (obs step after status change) ─────────────
@@ -1702,9 +1694,18 @@ function renderLeads(leads, highlightRow) {
     </div>`;
   }).join('');
 
-  // scroll infinito — limpa botões legados, ativa observer
-  if (wrap) wrap.innerHTML = '';
-  initScrollObserver();
+  // botões ver mais / ver menos
+  if (wrap) {
+    const filtered2 = _activeFilter
+      ? _allLeads.filter(l => l.status === _activeFilter && _matchesSearch(l))
+      : _allLeads.filter(l => _matchesSearch(l));
+    const hasMore2 = !searchActive && _visibleCount < filtered2.length;
+    const hasLess2 = !searchActive && _visibleCount > LIMIT;
+    wrap.innerHTML = (hasMore2 || hasLess2) ? `<div class="show-more-row">
+      ${hasLess2 ? `<button class="show-less-btn" onclick="showLess()">▲ Ver menos</button>` : ''}
+      ${hasMore2 ? `<button class="show-more-btn" onclick="showMore()">Ver mais ▾</button>` : ''}
+    </div>` : '';
+  }
 
   // bind events
   list.querySelectorAll('.lc-select').forEach(sel => sel.addEventListener('change', onStatusChange));
