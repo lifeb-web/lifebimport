@@ -940,8 +940,9 @@ function _loadingEnd() {
 })();
 
 // ── PROXY ────────────────────────────────────────────────────
-async function proxy(action) {
-  const url  = LEADS_PROXY + '?action=' + action;
+async function proxy(action, params) {
+  let url = LEADS_PROXY + '?action=' + action;
+  if (params) Object.keys(params).forEach(k => url += '&' + k + '=' + encodeURIComponent(params[k]));
   const ctrl = new AbortController();
   const tid  = setTimeout(() => ctrl.abort(), 25000);
   let res;
@@ -1230,7 +1231,7 @@ async function loadAllData(summaryData, lm) {
     const [rFunnel, rByRep, rActive, rClosed, rAds, rLatest] = await Promise.allSettled([
       proxy('funnel'),
       proxy('by_rep'),
-      proxy('active_all'),
+      proxy('active_all', { token: '0ef82354c11e4f518d90fe5c3935b767' }),
       proxy('closed'),
       proxy('ads'),
       proxy('latest'),

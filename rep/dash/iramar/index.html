@@ -371,7 +371,7 @@
 
 <header>
   <div class="h-brand">
-    <img class="h-logo" src="https://projetojlbv.com.br/assets/img/logo-lifeb.png" alt="Life B" onerror="this.style.display='none'" onclick="location.reload()">
+    <img class="h-logo" src="__LOGO_SRC__" alt="Life B" onerror="this.style.display='none'" onclick="location.reload()">
     <div class="h-sep"></div>
     <span class="h-rep">Iramar</span>
   </div>
@@ -430,6 +430,7 @@
 
   <div id="leads-list"></div>
   <div id="show-more-wrap"></div>
+  <div id="scroll-sentinel" style="height:1px;margin-bottom:16px;"></div>
 
   <div class="historico-section" id="historico-section">
     <button class="hist-header" onclick="toggleHistorico()" aria-expanded="false">
@@ -523,8 +524,10 @@ function setLeadTs(row) {
   const el = document.getElementById('ts-' + row);
   if (el) el.textContent = getLeadTs(row);
 }
-function getLeadTs(row, dataEntrada) {
-  const ts = _tsMap[row];
+function getLeadTs(row, dataEntrada, tsServidor) {
+  const tsLocal  = _tsMap[row] || 0;
+  const tsRemoto = tsServidor  || 0;
+  const ts       = Math.max(tsLocal, tsRemoto);
   if (ts) {
     const d = new Date(ts);
     const day = String(d.getDate()).padStart(2,'0');
@@ -770,23 +773,27 @@ function handleSearch(val) {
   }
 }
 
-// ── PAGINATION ────────────────────────────────────────────────
+// ── PAGINATION + SCROLL INFINITO ─────────────────────────────
 let _visibleCount = LIMIT;
 let _rawLeads     = [];
 let _allLeads     = [];
-function showMore() {
-  const total = (_activeFilter ? _allLeads.filter(l => l.status === _activeFilter) : _allLeads).length;
-  _visibleCount = Math.min(_visibleCount + LIMIT, total);
-  renderLeads(_rawLeads);
-}
-function showLess() {
-  _visibleCount = Math.max(LIMIT, _visibleCount - LIMIT);
-  renderLeads(_rawLeads);
-  const list = document.getElementById('leads-list');
-  if (list) {
-    const y = list.getBoundingClientRect().top + window.scrollY - 72;
-    window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
-  }
+let _scrollObserver = null;
+
+function initScrollObserver() {
+  if (_scrollObserver) _scrollObserver.disconnect();
+  const sentinel = document.getElementById('scroll-sentinel');
+  if (!sentinel) return;
+  _scrollObserver = new IntersectionObserver(function(entries) {
+    if (!entries[0].isIntersecting) return;
+    if (_searchQuery.length === 4) return; // busca mostra tudo, sem paginar
+    const filtered = _activeFilter
+      ? _allLeads.filter(l => l.status === _activeFilter)
+      : _allLeads;
+    if (_visibleCount >= filtered.length) return;
+    _visibleCount += LIMIT;
+    renderLeads(_rawLeads);
+  }, { rootMargin: '120px' });
+  _scrollObserver.observe(sentinel);
 }
 
 // ── CONCLUDING MODE (obs step after status change) ─────────────
@@ -1623,7 +1630,7 @@ function renderLeads(leads, highlightRow) {
               ${options}
             </select>
           </div>
-          <div class="lc-last-updated" id="ts-${l.row}">${getLeadTs(l.row, l.data)}</div>
+          <div class="lc-last-updated" id="ts-${l.row}">${getLeadTs(l.row, l.data, l.ts_vend)}</div>
           <div class="lc-confirm" id="conf-${l.row}">
             <div class="lc-confirm-icon" id="conf-icon-${l.row}">📋</div>
             <div class="lc-confirm-msg">Mudar para <strong id="conf-status-${l.row}"></strong>?</div>
@@ -1695,19 +1702,9 @@ function renderLeads(leads, highlightRow) {
     </div>`;
   }).join('');
 
-  // show-more / show-less buttons (hidden during search)
-  if (wrap) {
-    if (searchActive || toShow.length <= LIMIT) {
-      wrap.innerHTML = '';
-    } else {
-      const canMore = _visibleCount < toShow.length;
-      const canLess = _visibleCount > LIMIT;
-      let btns = '';
-      if (canLess) btns += `<button class="show-less-btn" onclick="showLess()">▴ Ver menos</button>`;
-      if (canMore) btns += `<button class="show-more-btn" onclick="showMore()">Ver mais ▾</button>`;
-      wrap.innerHTML = btns;
-    }
-  }
+  // scroll infinito — limpa botões legados, ativa observer
+  if (wrap) wrap.innerHTML = '';
+  initScrollObserver();
 
   // bind events
   list.querySelectorAll('.lc-select').forEach(sel => sel.addEventListener('change', onStatusChange));
