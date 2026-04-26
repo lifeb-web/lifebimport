@@ -1454,6 +1454,24 @@ function renderLeads(leads, highlightRow) {
   document.getElementById('sum-neg').textContent  = _allLeads.filter(l=>l.status==='Em negociação').length;
   document.getElementById('sum-tot').textContent  = _allLeads.length;
 
+  // sync filter bar (status filter + busca por telefone)
+  (function() {
+    const bar = document.getElementById('filter-bar');
+    const lbl = document.getElementById('filter-label');
+    const clr = document.getElementById('filter-clear');
+    if (!bar || !lbl || !clr) return;
+    const parts = [];
+    if (_activeFilter) parts.push('Mostrando: ' + _activeFilter);
+    if (_searchQuery.length === 4) parts.push('🔍 ****' + _searchQuery);
+    if (parts.length) {
+      bar.classList.add('visible');
+      lbl.textContent = parts.join(' · ');
+      clr.onclick = function() { clearFilter(); closeSearch(); };
+    } else {
+      bar.classList.remove('visible');
+    }
+  })();
+
   if (!_allLeads.length) {
     list.innerHTML = `<div class="empty-state"><strong>Tudo em dia!</strong>Nenhum lead ativo no momento.</div>`;
     if (wrap) wrap.innerHTML = '';
