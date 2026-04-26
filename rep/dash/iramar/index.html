@@ -1517,9 +1517,12 @@ function renderLeads(leads, highlightRow) {
     if (cp && cp.style.display === 'block') contactOpen.add(row);
   });
 
-  // fila por último toque: sem ts_vend (nunca tratado) = topo; mais recentemente tratado = fundo
+  // Aguardando contato sempre primeiro; demais por último toque (menos recente = topo)
   _allLeads = leads
     .sort((a, b) => {
+      const pa = a.status === 'Aguardando contato' ? 0 : 1;
+      const pb = b.status === 'Aguardando contato' ? 0 : 1;
+      if (pa !== pb) return pa - pb;
       const ta = a.ts_vend || 0;
       const tb = b.ts_vend || 0;
       if (ta !== tb) return ta - tb;
