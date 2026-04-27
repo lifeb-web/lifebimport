@@ -212,7 +212,8 @@
     .lc-sp-save:hover   { background:#5c3d82; }
     .lc-sp-save:active  { transform:scale(.96); }
     .lc-sp-save.saving  { opacity:.6; pointer-events:none; }
-    .lc-sp-skip { padding:7px 14px; border-radius:8px; border:1.5px solid var(--border); background:none; font-family:var(--font); font-size:11px; font-weight:700; color:var(--muted); cursor:pointer; touch-action:manipulation; }
+    .lc-sp-skip   { padding:7px 14px; border-radius:8px; border:1.5px solid var(--border); background:none; font-family:var(--font); font-size:11px; font-weight:700; color:var(--muted); cursor:pointer; touch-action:manipulation; }
+    .lc-sp-cancel { padding:7px 14px; border-radius:8px; border:1.5px solid var(--border); background:none; font-family:var(--font); font-size:11px; font-weight:700; color:var(--muted); cursor:pointer; touch-action:manipulation; margin-right:auto; }
 
     /* EXPAND TOGGLE */
     .lc-toggle { width:100%; padding:7px 14px; border-top:1px solid var(--border); background:none; border-left:none; border-right:none; border-bottom:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; font-family:var(--font); font-size:10px; font-weight:700; color:var(--muted); letter-spacing:.4px; text-transform:uppercase; transition:background .12s, color .12s; }
@@ -1225,6 +1226,43 @@ function showStatusPrompt(row, status) {
   }
   prompt.classList.add('visible');
 }
+function cancelStatusPrompt(row) {
+  const prompt = document.getElementById('sp-' + row);
+  if (!prompt) return;
+  const tipo      = prompt.dataset.tipo      || '';
+  const oldStatus = prompt.dataset.oldStatus || '';
+  prompt.classList.remove('visible');
+
+  if (tipo === 'negociacao') {
+    // Status foi aplicado otimisticamente — reverter tudo (status, ts_vend, select, servidor)
+    const pending  = _pendingUndoByRow[row];
+    const oldTsAct = pending && pending.data ? (pending.data.actions || []).find(a => a.campo === 'TIMESTAMP') : null;
+    const oldTs    = oldTsAct ? oldTsAct.valor : '';
+    const ts       = oldTs ? parseInt(oldTs) : 0;
+    const raw      = _rawLeads.find(l => l.row === row);
+    if (raw) { raw.status = oldStatus; raw.ts_vend = ts; }
+    if (ts) _tsMap[row] = ts; else delete _tsMap[row];
+    try { localStorage.setItem(TS_KEY, JSON.stringify(_tsMap)); } catch(_) {}
+    const sel = document.querySelector(`.lc-select[data-row="${row}"]`);
+    if (sel) { sel.value = oldStatus; sel.className = 'lc-select ' + statusClass(oldStatus); sel.dataset.original = oldStatus; }
+    const card = document.querySelector(`.lead-card[data-row="${row}"]`);
+    if (card) { card.classList.remove('ag','cont','neg'); const bc = borderClass(oldStatus); if (bc) card.classList.add(bc); }
+    const tsEl = document.getElementById('ts-' + row);
+    if (tsEl) tsEl.textContent = getLeadTs(row, null, ts);
+    delete _pendingUndoByRow[row];
+    fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'STATUS_VENDEDOR', valor:oldStatus }) }).catch(() => {});
+    if (oldTs) fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'TIMESTAMP_VEND', valor:oldTs }) }).catch(() => {});
+    renderLeads(_rawLeads);
+  } else {
+    // Fechado / Perdido — status NÃO foi aplicado ainda, só fecha o form e restaura o select
+    const sel = document.querySelector(`.lc-select[data-row="${row}"]`);
+    if (sel) { sel.value = oldStatus; sel.className = 'lc-select ' + statusClass(oldStatus); sel.dataset.original = oldStatus; }
+    delete _pendingUndoByRow[row];
+  }
+}
+
 function skipPotPrompt(row) {
   const prompt = document.getElementById('sp-' + row);
   if (prompt) prompt.classList.remove('visible');
@@ -1750,7 +1788,8 @@ function renderLeads(leads, highlightRow) {
             <option>Outro</option>
           </select>
           <div class="lc-sp-footer">
-            <button class="lc-sp-skip" id="sp-skip-${l.row}" style="display:none" onclick="skipPotPrompt(${l.row})">Pular</button>
+            <button class="lc-sp-cancel" onclick="cancelStatusPrompt(${l.row})">Cancelar</button>
+            <button class="lc-sp-skip" id="sp-skip-${l.row}" style="display:none" onclick="skipPotPrompt(${l.row})">Pular →</button>
             <button class="lc-sp-save" onclick="saveStatusExtra(${l.row})">Salvar</button>
           </div>
         </div>
