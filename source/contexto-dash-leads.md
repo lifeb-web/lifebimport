@@ -1,5 +1,5 @@
 # Contexto — Dashboard de Leads (Planilha)
-Atualizado: 2026-04-27
+Atualizado: 2026-04-27 (filtro teste adicionado)
 
 ---
 
@@ -144,6 +144,7 @@ return (a.data || '').localeCompare(b.data || '');
 - Token `active_all` ✅ (já passa `0ef82354c11e4f518d90fe5c3935b767`)
 - `statusBadgeSdr` sem classe para "Não identificado" ✅
 - Relógio sem referência salva ✅
+- Leads de teste excluídos dos cálculos ✅ (commit `000177c9`)
 
 ---
 
@@ -170,3 +171,10 @@ return (a.data || '').localeCompare(b.data || '');
 - `2dc82d45` — mobile: active_all, title 'Dashboard Leads Mobile'
 - `1ab6ee34` — taxaQualif%, sort Aguardando-first, auto-carrega histórico
 - `6500b1d6` — telão: FORCE_RELOAD=1, retry 15s, watchdog 35min
+- `000177c9` — proxy: isTesteLead() — exclui leads com "teste" no nome/empresa de todos os cálculos (9 funções)
+
+## Regra do filtro de teste (proxy-side)
+Função `isTesteLead(r)` em `lifeb-leads-proxy.gs` — exclui leads onde nome OU empresa contém "teste" (case-insensitive).
+Aplicada em: `getSummary`, `getByRep`, `getFunnel`, `getActive`, `getRepHistory`, `getActiveAll`, `getClosed`, `getChart`, `getLatest`.
+`doPost` NÃO é afetado — leads de teste ainda podem ser atualizados na planilha.
+Não alterar: filtro precisa estar no proxy, pois o frontend recebe dados já agregados.
