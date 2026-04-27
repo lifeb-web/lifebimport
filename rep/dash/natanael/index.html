@@ -459,11 +459,25 @@
 <div id="toast"></div>
 
 <script>
+// ============================================================
+// Painel Rep — Life B Import
+// Arquivo gerado pelo Python a partir de dashboard-rep-template.html.
+// NÃO edite os arquivos gerados (iramar/, natanael/ etc.) diretamente —
+// edite o template e rode o gerador.
+//
+// ESTADO GLOBAL (principais variáveis)
+//   Dados:     _rawLeads, _allLeads, _tsMap, _firstLoad
+//   UI:        _activeFilter, _searchQuery, _visibleCount
+//   Undo:      _undoPending (undo simples), _pendingUndoByRow (undo deferido)
+//   Histórico: _history, _histLoaded, _histTab, _histPage
+//   Inflight:  _inFlight (contador de requests em andamento → loading bar)
+// ============================================================
+
 const PROXY_URL = 'https://script.google.com/macros/s/AKfycbyq9KJgWTRoALEEVf8Pu_I82GT0-tTK5yXNg-RsYHj4ywK6Grg9z_jG1-IcTW3LMXfNBg/exec';
-const REP_NAME  = 'NATANAEL';
-const REP_TOKEN = '634cb38cdf39c5b9971e83b51f07';
-const POLL_MS   = 60_000;
-const LIMIT     = 8;
+const REP_NAME  = 'NATANAEL';  // substituído pelo Python no momento da geração
+const REP_TOKEN = '634cb38cdf39c5b9971e83b51f07'; // token individual do rep — autenticação no proxy
+const POLL_MS   = 60_000;          // intervalo de polling em ms
+const LIMIT     = 8;               // leads visíveis por vez (paginação)
 
 const STATUS_LIST = ['Aguardando contato','Em contato','Em negociação','Fechado','Perdido'];
 
@@ -648,9 +662,20 @@ function loadEnd() {
 }
 
 // ── TOAST + UNDO ───────────────────────────────────────────────
+// Dois mecanismos de undo coexistem:
+//
+// 1. _undoPending (undo simples)
+//    Usado para obs-only e pot-only (ações que NÃO entram em concluding mode).
+//    O toast aparece imediatamente após a ação e _undoPending guarda o que reverter.
+//
+// 2. _pendingUndoByRow (undo deferido — concluding mode)
+//    Usado para mudanças de status. O toast só aparece DEPOIS que o rep termina
+//    o passo de obs (concludeCard). Enquanto isso, as ações ficam acumuladas em
+//    _pendingUndoByRow[row] e podem receber mais campos (ex: obs + status juntos).
+//    Quando concludeCard dispara, move o pendente para _undoPending via showUndoToast.
 let _toastTimer;
 let _undoPending = null;
-const _pendingUndoByRow = {}; // deferred undo toasts — shown when card concludes
+const _pendingUndoByRow = {};
 
 function showToast(msg, ms=2600) {
   const el = document.getElementById('toast');
@@ -845,6 +870,16 @@ function showLess() {
 }
 
 // ── CONCLUDING MODE (obs step after status change) ─────────────
+// ── CONCLUDING MODE ────────────────────────────────────────────
+// Fluxo de 3 etapas acionado após qualquer mudança de status:
+//   1. enterConcludingMode(row) — expande o card, abre textarea de obs,
+//      muda botão salvar para "Salvar e concluir". Rep pode escrever anotações.
+//   2. saveObs(row) com isConcluding=true, OU clique em "Pular →"
+//      → ambos chamam concludeCard(row).
+//   3. concludeCard(row) — exibe o toast de undo acumulado,
+//      adiciona animação going-down e chama renderLeads para reordenar a fila.
+// IMPORTANTE: o card só sai da posição atual no passo 3. Antes disso ele
+// permanece visível para o rep terminar as anotações sem perder o contexto.
 function enterConcludingMode(row) {
   const card = document.querySelector(`.lead-card[data-row="${row}"]`);
   if (!card) return;
