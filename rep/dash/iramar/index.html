@@ -339,6 +339,8 @@
     #search-btn { background:none; border:none; cursor:pointer; padding:6px; border-radius:8px; color:var(--muted); display:flex; align-items:center; justify-content:center; transition:color .15s,background .15s; flex-shrink:0; }
     #search-btn:hover { color:var(--purple); background:rgba(112,75,155,.08); }
     #search-btn.active { color:var(--purple); }
+    @keyframes lupa-hint { 0%,100%{transform:scale(1);color:var(--muted)} 50%{transform:scale(1.35);color:var(--purple)} }
+    #search-btn.hint { animation:lupa-hint .55s ease-in-out 3; }
     #search-bar { display:none; position:sticky; top:58px; z-index:99; background:#fff; border-bottom:1px solid var(--border); padding:8px 16px; box-shadow:0 2px 8px rgba(0,0,0,.06); }
     #search-bar.visible { display:block; }
     .sb-inner { display:flex; align-items:center; gap:8px; max-width:680px; margin:0 auto; }
@@ -2150,6 +2152,9 @@ async function loadData() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Hint visual único na lupa pra rep perceber o campo de busca
+  const lupaBt = document.getElementById('search-btn');
+  if (lupaBt) { lupaBt.classList.add('hint'); lupaBt.addEventListener('animationend', () => lupaBt.classList.remove('hint'), { once:true }); }
   loadData();
   setInterval(loadData, POLL_MS);
   document.addEventListener('visibilitychange', () => {
