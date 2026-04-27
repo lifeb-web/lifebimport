@@ -221,6 +221,9 @@
     .lc-toggle .ti { font-size:11px; transition:transform .2s; display:inline-block; }
     .lead-card.expanded .lc-toggle .ti { transform:rotate(180deg); }
     .lead-card.expanded .lc-toggle { color:var(--purple); }
+    .lc-toggle .sdr-dot { display:none; width:7px; height:7px; border-radius:50%; background:var(--purple); margin-left:2px; flex-shrink:0; }
+    .lc-toggle.has-sdr .sdr-dot { display:inline-block; }
+    .lead-card.expanded .lc-toggle.has-sdr .sdr-dot { display:none; }
 
     /* EXPANDED SECTION */
     .lc-expand { display:none; padding:12px 14px 14px; border-top:1px solid var(--border); }
@@ -1802,8 +1805,8 @@ function renderLeads(leads, highlightRow) {
           </div>
         </div>
       </div>
-      <button class="lc-toggle" onclick="toggleExpand(this)" aria-expanded="false">
-        <span class="tt">mais</span>&nbsp;<span class="ti">▾</span>
+      <button class="lc-toggle${l.obs_sdr ? ' has-sdr' : ''}" onclick="toggleExpand(this)" aria-expanded="false">
+        <span class="tt">mais</span>&nbsp;<span class="ti">▾</span><span class="sdr-dot"></span>
       </button>
       <div class="lc-expand">
         ${l.obs_sdr ? `<div class="lc-obs-sdr"><div class="lc-obs-sdr-label">Observação do SDR</div><div class="lc-obs-sdr-text">${esc(l.obs_sdr)}</div></div>` : ''}
