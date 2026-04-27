@@ -679,10 +679,14 @@ function getClosed() {
       valor:   toNum(r[COL_VALOR_FECH]),
       dias:    toNum(r[COL_DIAS_FECHAR]),
       data_f:  fmtDate(r[COL_DATA_FECH]),
+      data:    fmtDate(r[COL_DATA]),
     });
   });
 
-  result.sort(function(a, b) { return (b.data_f || '').localeCompare(a.data_f || ''); });
+  // sem data_f: usa data de entrada como fallback — lead aparece, não some
+  result.sort(function(a, b) {
+    return (b.data_f || b.data || '').localeCompare(a.data_f || a.data || '');
+  });
   return { fechamentos: result.slice(0, 100) };
 }
 
