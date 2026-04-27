@@ -1018,12 +1018,16 @@ async function loadAll() {
     // Pré-busca events e leads UMA vez (catches individuais para não bloquear se um falhar)
     // Usa snap para garantir período consistente em todas as chamadas
     const shouldCompare = !!snap.days && snap.days !== 1;
-    // Tudo pré-buscado de uma vez — render fica só com chart(×2) + sources(×1)
-    const [dSumAtual, dSumDuplo, evAtual, evDuplo, pLeads, sLeads, cLeads, dPages, dCities] = await Promise.all([
+    // Bloco 1 — dados críticos (KPIs + eventos): máx 4 paralelas
+    const [dSumAtual, dSumDuplo, evAtual, evDuplo] = await Promise.all([
       proxy('summary', undefined, undefined, snap).catch(() => null),
       shouldCompare ? proxy('summary', snapDays * 2, undefined, snap).catch(() => null) : Promise.resolve(null),
       proxy('events', undefined, undefined, snap).catch(() => null),
       shouldCompare ? proxy('events', snapDays * 2, undefined, snap).catch(() => null) : Promise.resolve(null),
+    ]);
+    if (myVersion !== loadVersion) return;
+    // Bloco 2 — dados secundários (tabelas): máx 5 paralelas, após bloco 1 terminar
+    const [pLeads, sLeads, cLeads, dPages, dCities] = await Promise.all([
       proxy('leads', undefined, 'pagePath', snap).catch(() => null),
       proxy('leads', undefined, 'sessionSourceMedium', snap).catch(() => null),
       proxy('leads', undefined, 'region,city', snap).catch(() => null),
@@ -1031,7 +1035,6 @@ async function loadAll() {
       proxy('cities', undefined, undefined, snap).catch(() => null),
     ]);
 
-    // Se uma versão mais nova já começou, descarta silenciosamente
     if (myVersion !== loadVersion) return;
 
     await Promise.allSettled([
@@ -1116,7 +1119,6 @@ async function loadSummaryWithCompare(dAtual, dDuplo, dEvAtual, dEvDuplo, snap, 
         const el = document.getElementById(id); if (!el) return;
         el.textContent = ''; el.className = 'delta-neu'; el.style.display = 'none';
       });
-      showError('Resumo indisponível — tente atualizar a página.');
       return;
     }
 
@@ -1218,7 +1220,6 @@ async function loadSummaryWithCompare(dAtual, dDuplo, dEvAtual, dEvDuplo, snap, 
       el.className     = 'delta-neu';
       el.style.display = 'none';
     });
-    showError('Erro ao carregar resumo.');
   }
 }
 
@@ -1462,7 +1463,7 @@ async function loadChart(snap, snapDays) {
       }
     }
 
-  } catch(e) { _log.error('chart', 'Erro ao renderizar gráfico', e); showError('Erro ao carregar gráfico.'); }
+  } catch(e) { _log.error('chart', 'Erro ao renderizar gráfico', e); }
   finally { document.querySelector('.chart-wrap')?.classList.remove('chart-loading'); }
 }
 
@@ -1556,7 +1557,8 @@ async function loadSources(leadsData, snap) {
   const tb = document.getElementById('tb-sources');
   try {
     const leadsMap = buildLeadsMap(leadsData, r => r.dimensionValues[0].value);
-    const d = await proxy('sources', undefined, undefined, snap);
+    const d = await proxy('sources', undefined, undefined, snap).catch(() => null);
+    if (!d) { tb.innerHTML = emptyRow(3); return; }
 
     // Traduz e agrega por nome traduzido (evita duplicatas como "Facebook" + "Facebook Ads" virado "Facebook" duas vezes)
     const merged = new Map();
@@ -1580,7 +1582,7 @@ async function loadSources(leadsData, snap) {
         <td class="num-p">${n(u)}</td>
         <td class="num-p">${leads > 0 ? n(leads) : '<span style="font-size:11px;color:var(--muted)">—</span>'}</td>
       </tr>`).join('') || emptyRow(3);
-  } catch(e) { _log.error('sources', 'Erro ao carregar origens', e); tb.innerHTML = errRow(3); showError('Erro ao carregar origens.'); }
+  } catch(e) { _log.error('sources', 'Erro ao carregar origens', e); tb.innerHTML = emptyRow(3); }
 }
 
 // TABELA — EVENTOS / LEADS com barra de progresso
@@ -1674,9 +1676,8 @@ async function loadEvents(d, snap) {
 
   } catch(e) {
     _log.error('events', 'Erro ao carregar eventos', e);
-    tb.innerHTML = errRow(2);
+    tb.innerHTML = emptyRow(2);
     document.getElementById('stat-leads').textContent = '—';
-    showError('Erro ao carregar eventos.');
   }
 }
 
