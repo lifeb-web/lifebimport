@@ -1061,12 +1061,16 @@ async function proxy(action, days, dim, snap) {
     url = `${PROXY_URL}?action=${action}&days=${p.days}`;
   }
   if (dim) url += `&dim=${encodeURIComponent(dim)}`;
+  const ctrl = new AbortController();
+  const tid  = setTimeout(() => ctrl.abort(), 25000);
   let res;
   try {
-    res = await fetch(url);
+    res = await fetch(url, { signal: ctrl.signal });
   } catch(e) {
     _log.error('proxy', 'Erro na chamada ao proxy', e);
     throw e;
+  } finally {
+    clearTimeout(tid);
   }
   if (!res.ok) {
     const e = new Error('HTTP ' + res.status);
