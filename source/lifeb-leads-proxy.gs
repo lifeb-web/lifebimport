@@ -390,9 +390,8 @@ function norm(v) {
 
 /** Retorna true se o lead é de teste — exclui dos cálculos do dashboard. */
 function isTesteLead(r) {
-  var nome    = String(r[COL_NOME]    || '').toLowerCase();
-  var empresa = String(r[COL_EMPRESA] || '').toLowerCase();
-  return nome.indexOf('teste') >= 0 || empresa.indexOf('teste') >= 0;
+  var re = /\btestes?\b/i;
+  return re.test(String(r[COL_NOME] || '')) || re.test(String(r[COL_EMPRESA] || ''));
 }
 
 // ── ACTIONS ──────────────────────────────────────────────────
