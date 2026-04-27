@@ -542,7 +542,6 @@ function getActive(rep) {
   const result = [];
 
   rows.forEach(function(r, i) {
-    if (isTesteLead(r)) return;
     const statusVend = norm(r[COL_STATUS_VEND]);
     if (EXCLUIDOS.indexOf(statusVend) >= 0) return;
     if (norm(r[COL_VENDEDOR]).toUpperCase() !== rep) return;
@@ -589,7 +588,6 @@ function getRepHistory(rep) {
   const result = [];
 
   rows.forEach(function(r, i) {
-    if (isTesteLead(r)) return;
     const statusVend = norm(r[COL_STATUS_VEND]);
     if (statusVend !== 'Fechado' && statusVend !== 'Perdido') return;
     if (norm(r[COL_VENDEDOR]).toUpperCase() !== rep) return;
