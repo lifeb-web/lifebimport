@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Meta Ads — Projeto JLBV · Life B</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --roxo:#564B99;--roxo-l:#7B6FC4;--roxo-bg:#F0EEF9;--roxo-mid:#EAE7F5;
+  --mag:#DA2F8A;--mag-l:#F055A8;--mag-bg:#FDF0F7;
+  --verde:#16A34A;--verde-bg:#F0FDF4;
+  --amber:#D97706;--amber-bg:#FFFBEB;
+  --red:#DC2626;--red-bg:#FEF2F2;
+  --bg:#F2F0FB;--card:#FFFFFF;
+  --border:#E4E0F0;--border2:#D1CBE8;
+  --text:#1C1735;--muted:#6B6490;--faint:#F8F7FD;
+  --shadow-sm:0 1px 4px rgba(86,75,153,.07),0 2px 12px rgba(86,75,153,.05);
+  --shadow-md:0 4px 20px rgba(86,75,153,.1),0 1px 4px rgba(86,75,153,.06);
+  --shadow-lg:0 8px 32px rgba(86,75,153,.14),0 2px 8px rgba(86,75,153,.08);
+}
+html{scroll-behavior:smooth}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:15px;line-height:1.5;background-image:radial-gradient(circle at 20% 0%,rgba(86,75,153,.06) 0%,transparent 50%),radial-gradient(circle at 80% 100%,rgba(218,47,138,.05) 0%,transparent 50%)}
+
+/* HEADER */
+header{background:linear-gradient(135deg,#3D3485 0%,var(--roxo) 50%,#6B4FA3 100%);position:sticky;top:0;z-index:100;box-shadow:0 2px 24px rgba(30,20,80,.25);transition:box-shadow .3s}
+.hinner{max-width:1180px;margin:0 auto;padding:.65rem 1.75rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.logo svg{height:26px;width:auto;display:block;filter:drop-shadow(0 0 10px rgba(255,255,255,.15))}
+.htitle{font-size:.8rem;font-weight:600;color:rgba(255,255,255,.88);letter-spacing:.02em;white-space:nowrap}
+.hright{display:flex;align-items:center;gap:1rem;flex-wrap:wrap}
+.badge-header{font-size:.58rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;background:rgba(255,255,255,.12);color:rgba(255,255,255,.85);border:1px solid rgba(255,255,255,.22);padding:3px 10px;border-radius:20px;backdrop-filter:blur(4px)}
+.hdate{font-size:.7rem;color:rgba(255,255,255,.65);text-align:right;line-height:1.7}
+.hdate strong{color:#fff;font-weight:600}
+
+/* MAIN */
+main{max-width:1180px;margin:0 auto;padding:2rem 1.75rem 4rem}
+
+/* SECTION LABEL */
+.slabel{font-size:.6rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:1.1rem;display:flex;align-items:center;gap:.75rem}
+.slabel::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+.sec{margin-bottom:2.25rem}
+
+/* CONTEXT BOX */
+.context-box{background:linear-gradient(135deg,rgba(86,75,153,.04),rgba(86,75,153,.08));border:1px solid var(--border2);border-left:4px solid var(--roxo);border-radius:12px;padding:1.25rem 1.5rem;font-size:.85rem;color:var(--muted);line-height:1.75;margin-bottom:1.75rem}
+.context-box strong{color:var(--text);font-weight:600}
+
+/* HERO GRID */
+.hero-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+
+/* ROAS HERO CARD */
+.hero-cell{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.6rem;position:relative;overflow:hidden;box-shadow:var(--shadow-sm);transition:transform .2s,box-shadow .2s}
+.hero-cell:hover{transform:translateY(-3px);box-shadow:var(--shadow-md)}
+.hero-cell::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.hero-cell.accent{background:linear-gradient(145deg,#3D3485,#564B99 40%,#8A4FA0 70%,var(--mag));border:none;color:#fff}
+.hero-cell.accent::before{display:none}
+.hero-cell.green-acc::before{background:linear-gradient(90deg,var(--verde),#22c55e)}
+.hero-cell.purple-acc::before{background:linear-gradient(90deg,var(--roxo),var(--roxo-l))}
+.hero-cell.amber-acc::before{background:linear-gradient(90deg,var(--amber),#f59e0b)}
+.hero-cell.accent .hero-label{color:rgba(255,255,255,.75)}
+.hero-cell.accent .hero-explain{color:rgba(255,255,255,.75)}
+.hero-cell.accent .hero-explain strong{color:#fff}
+.roas-glow{position:absolute;top:-30px;right:-30px;width:140px;height:140px;background:radial-gradient(circle,rgba(255,255,255,.12),transparent 70%);border-radius:50%;pointer-events:none}
+.hero-label{font-size:.68rem;color:var(--muted);font-weight:500;letter-spacing:.05em;margin-bottom:.5rem;text-transform:uppercase}
+.hero-explain{font-size:.72rem;color:var(--muted);margin-top:.6rem;line-height:1.6}
+.hero-explain strong{color:var(--text)}
+.num-xl{font-size:3rem;font-weight:900;line-height:1;color:#fff;letter-spacing:-.03em;text-shadow:0 0 40px rgba(255,255,255,.3)}
+.num-lg{font-size:2rem;font-weight:700;line-height:1;letter-spacing:-.02em}
+.num-lg.green{color:var(--verde)}.num-lg.purple{color:var(--roxo)}.num-lg.amber{color:var(--amber)}
+.num-lg.normal{color:var(--text);font-size:1.35rem;line-height:1.3}
+
+/* CAMPAIGN CARDS */
+.camp-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.camp-card{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:var(--shadow-sm);transition:transform .25s,box-shadow .25s}
+.camp-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+.camp-card.best{border-color:rgba(22,163,74,.4);box-shadow:0 0 0 1px rgba(22,163,74,.15),var(--shadow-sm)}
+.camp-card.best:hover{box-shadow:0 0 0 1px rgba(22,163,74,.2),var(--shadow-lg)}
+.camp-head{padding:1.1rem 1.4rem;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem;background:var(--faint)}
+.camp-name{font-size:.9rem;font-weight:600;color:var(--text)}
+.camp-sub{font-size:.68rem;color:var(--muted);margin-top:3px;line-height:1.5}
+.pill{font-size:.58rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:3px 10px;border-radius:20px;white-space:nowrap;flex-shrink:0}
+.pill-green{background:var(--verde-bg);color:var(--verde);border:1px solid rgba(22,163,74,.3)}
+.pill-purple{background:var(--roxo-bg);color:var(--roxo);border:1px solid rgba(86,75,153,.3)}
+.pill-amber{background:var(--amber-bg);color:var(--amber);border:1px solid rgba(217,119,6,.3)}
+.pill-gray{background:#F3F4F6;color:#6B7280;border:1px solid #E5E7EB}
+.camp-body{padding:1.3rem 1.4rem}
+.result-row{display:flex;align-items:baseline;gap:.5rem;margin-bottom:1.3rem}
+.result-num{font-size:2.2rem;font-weight:800;letter-spacing:-.03em}
+.result-num.green{color:var(--verde)}.result-num.normal{color:var(--text)}
+.mlist{display:flex;flex-direction:column;gap:.35rem;margin-bottom:1rem}
+.mrow{display:flex;justify-content:space-between;align-items:center;font-size:.8rem;padding:.25rem 0;border-bottom:1px solid var(--faint)}
+.mrow:last-child{border-bottom:none}
+.mk{color:var(--muted)}.mv{font-weight:600;color:var(--text)}
+.mv.green{color:var(--verde)}.mv.amber{color:var(--amber)}.mv.red{color:var(--red)}.mv.muted{color:var(--muted);font-weight:400}
+.bar-wrap{position:relative;margin-bottom:.3rem}
+.bar-track{height:6px;background:rgba(86,75,153,.08);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;width:0;transition:width 1.2s cubic-bezier(.22,.61,.36,1)}
+.bar-label{font-size:.62rem;color:var(--muted);margin-top:.25rem}
+.camp-note{margin-top:1rem;padding:.8rem 1rem;background:var(--roxo-bg);border-radius:10px;border-left:3px solid var(--roxo-l);font-size:.72rem;color:var(--muted);line-height:1.6}
+.camp-note strong{color:var(--text)}
+
+/* TABLES */
+.tcard{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:1.5rem;box-shadow:var(--shadow-sm)}
+.tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.thead-row{padding:1rem 1.4rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;background:var(--faint)}
+.thead-title{font-size:.88rem;font-weight:600}
+.thead-sub{font-size:.7rem;color:var(--muted)}
+table{width:100%;border-collapse:collapse;min-width:500px}
+thead th{font-size:.62rem;color:var(--muted);font-weight:600;letter-spacing:.09em;text-transform:uppercase;text-align:left;padding:.75rem 1.4rem;border-bottom:1px solid var(--border);background:var(--faint)}
+tbody tr{border-bottom:1px solid var(--border);transition:background .15s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--roxo-bg)}
+tbody tr.best-row{background:rgba(22,163,74,.04)}
+tbody tr.best-row td:first-child{border-left:3px solid var(--verde)}
+tbody td{padding:.9rem 1.4rem;font-size:.82rem;color:var(--text);vertical-align:middle}
+td.muted{color:var(--muted)}td.green{color:var(--verde);font-weight:600}td.amber{color:var(--amber);font-weight:600}td.red{color:var(--red)}td.bold{font-weight:600}
+.type-tag{display:inline-block;font-size:.58rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:5px}
+.tag-int{background:var(--roxo-bg);color:var(--roxo);border:1px solid rgba(86,75,153,.25)}
+.tag-lal{background:var(--mag-bg);color:var(--mag);border:1px solid rgba(218,47,138,.2)}
+.best-badge{display:inline-flex;align-items:center;gap:3px;font-size:.58rem;font-weight:700;color:var(--verde);background:var(--verde-bg);border:1px solid rgba(22,163,74,.3);padding:2px 7px;border-radius:20px;margin-left:6px;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+
+/* INSIGHTS */
+.insights-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.insight-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;box-shadow:var(--shadow-sm);transition:transform .2s,box-shadow .2s}
+.insight-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-md)}
+.insight-card.full{grid-column:span 2}
+.insight-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin-bottom:.9rem}
+.insight-title{font-size:.95rem;font-weight:700;margin-bottom:.5rem;color:var(--text)}
+.insight-body{font-size:.81rem;color:var(--muted);line-height:1.75}
+.insight-body strong{color:var(--text)}
+
+/* GLOSSARY */
+.gloss-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.gloss-item{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;box-shadow:var(--shadow-sm);transition:transform .2s}
+.gloss-item:hover{transform:translateY(-2px)}
+.gloss-term{font-size:.74rem;font-weight:700;color:var(--roxo);margin-bottom:.35rem;letter-spacing:.03em}
+.gloss-def{font-size:.76rem;color:var(--muted);line-height:1.6}
+
+/* FOOTER */
+footer{background:linear-gradient(135deg,#3D3485,var(--roxo));padding:1.5rem 2rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;font-size:.72rem;color:rgba(255,255,255,.65)}
+footer strong{color:#fff}
+
+/* FADE-IN ANIMATION */
+.fade-up{opacity:0;transform:translateY(24px);transition:opacity .55s ease,transform .55s ease}
+.fade-up.visible{opacity:1;transform:translateY(0)}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  .hero-grid{grid-template-columns:1fr 1fr}
+  .camp-grid{grid-template-columns:1fr}
+  .insights-grid{grid-template-columns:1fr}
+  .insight-card.full{grid-column:span 1}
+  .gloss-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:600px){
+  main{padding:1.5rem 1rem 3.5rem}
+  .hinner{padding:.55rem 1rem}
+  .htitle{display:none}
+  .hero-grid{grid-template-columns:1fr}
+  .num-xl{font-size:2.5rem}
+  .gloss-grid{grid-template-columns:1fr}
+  thead th,tbody td{padding:.7rem .9rem;font-size:.78rem}
+  .thead-row{padding:.9rem 1rem}
+  .camp-head{flex-direction:column;gap:.6rem}
+}
+
+/* PRINT */
+@media print{
+  header{position:static;box-shadow:none}
+  .hinner{padding:.5rem 1rem}
+  .fade-up{opacity:1;transform:none}
+  .camp-card,.hero-cell,.insight-card,.gloss-item{box-shadow:none;break-inside:avoid}
+  .tcard{break-inside:avoid}
+  body{background:#fff;background-image:none}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hinner">
+  <div class="logo">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 514 232">
+      <path d="M 432.75 206.5 L 430 206.4 L 425.25 205.72 L 421.38 204.69 L 420 204.06 L 418.5 203.65 L 416.49 202.75 L 412.5 200.72 L 409.11 198.62 L 404.12 194.84 L 400.5 191.51 L 395.12 185.83 L 391.12 180.8 L 389.24 177.88 L 385.75 171.75 L 381.11 162.12 L 377.22 151.12 L 375.75 145.3 L 375 144.72 L 373.12 145.67 L 367.75 146.89 L 360.12 144.88 L 355.98 140 L 354.72 135.25 L 354.77 131.88 L 357.17 125.5 L 360.62 122.34 L 365.75 120.73 L 370.5 120.98 L 371.16 120.5 L 370.4 107.38 L 372.11 87.25 L 375.13 73.12 L 380.06 58.75 L 383.13 52.5 L 387.06 46 L 392.28 39.12 L 398.1 33.12 L 404.25 28.19 L 410.17 24.75 L 415 22.24 L 420.07 20.25 L 427.75 18.16 L 434.5 17.06 L 446.5 16.59 L 455.16 17.12 L 466.38 19.22 L 472.25 21.09 L 477 23.03 L 485.75 28.02 L 492.88 34.09 L 498.66 41.38 L 502.66 49.75 L 504.57 58.62 L 504.47 67.12 L 503.03 73.88 L 500.61 80.88 L 494.81 90.75 L 486.86 99.75 L 479.75 105.81 L 472 111.07 L 464.17 115.75 L 456 119.66 L 448.75 122.65 L 440.12 125.65 L 433.36 127.62 L 422.29 130.38 L 422 131 L 424.46 132.12 L 429.88 134.76 L 436.74 139.12 L 445.62 148.19 L 450.58 155.88 L 454.72 166.38 L 456.67 175.38 L 456.94 181.38 L 455.04 191.88 L 451.85 197.75 L 447.87 201.75 L 443.88 204.1 L 435.38 206.41 L 432.75 206.5 Z M 89 201.88 L 78.62 201.4 L 64.25 198.66 L 48.38 191.65 L 40.4 185.62 L 33.08 177.75 L 25.19 163 L 22.23 151.38 L 21.12 18 L 24.5 17.11 L 34.38 20.16 L 42.88 27.1 L 47.88 35.93 L 49.41 149.38 L 51.09 161.5 L 55.12 171 L 62.23 179.62 L 70 184.86 L 78.38 187.63 L 96.5 189.11 L 104.06 189.75 L 102.6 196 L 98.75 199.87 L 92.37 201.75 L 89 201.88 Z M 174.62 201.01 L 171.45 200.25 L 171.77 78.88 L 175.15 58.75 L 180.09 47.75 L 184.06 42 L 192.54 33.25 L 200 28.11 L 208.12 24.15 L 222 20.16 L 238.5 18.43 L 255 18.32 L 256.12 19 L 252.88 27.67 L 243.62 32.61 L 224.88 35.17 L 213.87 41.12 L 205.75 50.92 L 201 62.92 L 199.91 108.5 L 200.75 108.97 L 228.25 108.91 L 227.75 114.16 L 221.12 119.7 L 200.75 120.11 L 199.88 121.75 L 199.84 175 L 196.65 186.12 L 192.78 191.62 L 186.83 196.62 L 176.75 200.64 L 174.62 201.01 Z M 433.12 200.73 L 440.75 196.58 L 443.94 181.5 L 441.95 168.25 L 435.65 153.62 L 427.62 144.16 L 414.88 135.79 L 397.75 131.75 L 397 129.15 L 410 127.54 L 426.62 122.19 L 444.75 114.12 L 464.5 101.61 L 475.8 88 L 478.94 72.38 L 473.65 56.62 L 460.62 45.13 L 441.62 40.45 L 425.78 42.25 L 415 46.05 L 401.84 55.5 L 389.25 74.84 L 383.85 111.38 L 388.25 142.35 L 399.1 171.25 L 417.25 193.63 L 433.12 200.73 Z M 134.62 73.76 L 124.38 70.64 L 119.37 61.12 L 122.24 51.5 L 131.75 46.16 L 141.75 49.08 L 146.88 58.12 L 141.88 70.73 L 134.62 73.76 Z M 305.12 200.7 L 282.01 199.75 L 262.88 191.76 L 248.21 178.38 L 240.15 164 L 235.64 138.5 L 241.11 115.62 L 257.25 95.06 L 276.5 86.16 L 292.62 84.59 L 308.5 87.22 L 325.85 97.12 L 339.73 118 L 343.17 135.12 L 342.38 148.23 L 263.75 148.2 L 262.42 149.12 L 264.04 158.12 L 272.25 175.5 L 285.88 185.62 L 305 188.2 L 318.75 186.04 L 325.62 188.02 L 327.62 192.71 L 311.12 199.54 L 305.12 200.7 Z M 146.25 201.14 L 133.59 197.75 L 121.85 185 L 119.14 176.25 L 118.97 87.75 L 146.12 86.78 L 147.21 200.12 L 146.25 201.14 Z M 315.43 133 L 316.29 132.25 L 312.12 114.29 L 304.81 103 L 285.38 97.94 L 269.23 110.25 L 263.72 126 L 262.63 132.12 L 263.75 133.02 L 315.43 133 Z" fill="#FFFFFF" fill-rule="evenodd"/>
+    </svg>
+  </div>
+  <div class="htitle">Dashboard Meta Ads · Projeto JLBV</div>
+  <div class="hright">
+    <span class="badge-header">Uso Interno · Confidencial</span>
+    <div class="hdate">Período: <strong>29 mar – 03 abr 2026</strong> · Atualizado <strong>03/04/2026</strong></div>
+  </div>
+  </div>
+</header>
+
+<main>
+
+<div class="sec fade-up">
+  <div class="slabel">Sobre este relatório</div>
+  <div class="context-box">
+    Este dashboard acompanha os resultados das campanhas pagas do <strong>Projeto JLBV</strong> no Meta (Facebook e Instagram). Estamos testando <strong>3 versões diferentes da nossa página de captação</strong> para descobrir qual gera mais clientes com menor custo. Os anúncios são exibidos para lojistas de farmácias, drogarias e supermercados em Goiás e Distrito Federal. O objetivo é transformar um clique no anúncio em uma reunião comercial e, depois, em uma venda fechada.
+  </div>
+</div>
+
+<div class="sec fade-up">
+  <div class="slabel">Resumo executivo — primeiros 5 dias</div>
+  <div class="hero-grid">
+
+    <div class="hero-cell accent">
+      <div class="roas-glow"></div>
+      <div class="hero-label">ROAS — Retorno sobre o investimento</div>
+      <div class="num-xl" data-countup data-target="10.8" data-suffix="×" data-decimals="1">10,8×</div>
+      <div class="hero-explain">Para cada <strong>R$1,00</strong> investido, a empresa gerou <strong>R$10,80</strong> em receita. Qualquer valor acima de 3× já é positivo. <strong>10,8× é um resultado excelente.</strong></div>
+    </div>
+
+    <div class="hero-cell purple-acc">
+      <div class="hero-label">Total investido em anúncios</div>
+      <div class="num-lg purple" data-countup data-target="443" data-prefix="R$ " data-decimals="0">R$ 443</div>
+      <div class="hero-explain">R$30/dia por campanha · 3 campanhas · aproximadamente 5 dias de veiculação</div>
+    </div>
+
+    <div class="hero-cell green-acc">
+      <div class="hero-label">Receita gerada no período</div>
+      <div class="num-lg green" data-countup data-target="4800" data-prefix="R$ " data-decimals="0" data-sep="true">R$ 4.800</div>
+      <div class="hero-explain">1 cliente fechado. Clientes B2B geram receita recorrente com reposições — o valor ao longo do tempo é ainda maior.</div>
+    </div>
+
+    <div class="hero-cell amber-acc">
+      <div class="hero-label">Reuniões agendadas — funil ativo</div>
+      <div class="num-lg normal">Em andamento</div>
+      <div class="hero-explain">Além do cliente fechado, há múltiplos leads com reuniões agendadas. O potencial de faturamento adicional ainda está sendo realizado.</div>
+    </div>
+
+  </div>
+</div>
+
+<div class="sec fade-up">
+  <div class="slabel">Comparativo das 3 páginas testadas</div>
+  <div class="camp-grid">
+
+    <div class="camp-card best">
+      <div class="camp-head">
+        <div>
+          <div class="camp-name">Página Direta — sem formulário</div>
+          <div class="camp-sub">Anúncio → página com imagens → botão WhatsApp. O visitante vai direto para o chat.</div>
+        </div>
+        <span class="pill pill-green">Maior volume</span>
+      </div>
+      <div class="camp-body">
+        <div class="result-row">
+          <div class="result-num green" data-countup data-target="19" data-decimals="0">19</div>
+          <div class="result-label">contatos gerados<br><span style="color:var(--amber);font-size:.7rem;">~9–10 mensagens reais (est. 50%)*</span></div>
+        </div>
+        <div class="mlist">
+          <div class="mrow"><span class="mk">Gasto total</span><span class="mv">R$ 142,99</span></div>
+          <div class="mrow"><span class="mk">Custo por clique no WhatsApp</span><span class="mv green">R$ 7,53</span></div>
+          <div class="mrow"><span class="mk">Custo por mensagem real (est.)</span><span class="mv amber">R$ 14–16</span></div>
+          <div class="mrow"><span class="mk">CPM — custo p/ 1.000 exibições</span><span class="mv green">R$ 18,69</span></div>
+          <div class="mrow"><span class="mk">CTR — % de quem viu e clicou</span><span class="mv green">2,20%</span></div>
+          <div class="mrow"><span class="mk">Visitantes que clicaram no WA</span><span class="mv green">12,75%</span></div>
+        </div>
+        <div class="bar-wrap">
+          <div class="bar-track"><div class="bar-fill" data-width="100" style="background:linear-gradient(90deg,var(--verde),#22c55e)"></div></div>
+          <div class="bar-label">Volume relativo de contatos</div>
+        </div>
+        <div class="camp-note">* O sistema registra o clique no botão do WhatsApp, mas nem todos completam o envio da mensagem. Estimamos ~50% de fato enviam. <strong>Contatos que não enviam não ficam registrados — impossível fazer follow-up.</strong></div>
+      </div>
+    </div>
+
+    <div class="camp-card">
+      <div class="camp-head">
+        <div>
+          <div class="camp-name">Página com Imagens — com formulário</div>
+          <div class="camp-sub">Anúncio → página com fotos → formulário (nome + WhatsApp) → catálogo enviado.</div>
+        </div>
+        <span class="pill pill-purple">Lead qualificado</span>
+      </div>
+      <div class="camp-body">
+        <div class="result-row">
+          <div class="result-num normal" data-countup data-target="6" data-decimals="0">6</div>
+          <div class="result-label">leads capturados<br><span style="color:var(--verde);font-size:.7rem;">nome + WhatsApp salvos automaticamente</span></div>
+        </div>
+        <div class="mlist">
+          <div class="mrow"><span class="mk">Gasto total</span><span class="mv">R$ 163,30</span></div>
+          <div class="mrow"><span class="mk">Custo por lead capturado</span><span class="mv amber">R$ 27,21</span></div>
+          <div class="mrow"><span class="mk">CPM — custo p/ 1.000 exibições</span><span class="mv">R$ 23,41</span></div>
+          <div class="mrow"><span class="mk">CTR — % de quem viu e clicou</span><span class="mv">2,08%</span></div>
+          <div class="mrow"><span class="mk">Visitantes que preencheram o form.</span><span class="mv amber">7,06%</span></div>
+        </div>
+        <div class="bar-wrap">
+          <div class="bar-track"><div class="bar-fill" data-width="54" style="background:linear-gradient(90deg,var(--roxo),var(--roxo-l))"></div></div>
+          <div class="bar-label">Volume relativo de contatos</div>
+        </div>
+        <div class="camp-note">O formulário salva contatos em planilha automaticamente. O SDR pode abordar o lead mesmo que ele não responda primeiro. <strong>Leads desta campanha mostram melhor engajamento e qualificação nas abordagens.</strong></div>
+      </div>
+    </div>
+
+    <div class="camp-card">
+      <div class="camp-head">
+        <div>
+          <div class="camp-name">Página com Vídeo — com formulário</div>
+          <div class="camp-sub">Anúncio → página com vídeo explicativo → formulário (nome + WhatsApp).</div>
+        </div>
+        <span class="pill pill-gray">Em observação</span>
+      </div>
+      <div class="camp-body">
+        <div class="result-row">
+          <div class="result-num normal" data-countup data-target="6" data-decimals="0">6</div>
+          <div class="result-label">leads capturados<br><span style="color:var(--verde);font-size:.7rem;">nome + WhatsApp salvos automaticamente</span></div>
+        </div>
+        <div class="mlist">
+          <div class="mrow"><span class="mk">Gasto total</span><span class="mv">R$ 137,62</span></div>
+          <div class="mrow"><span class="mk">Custo por lead capturado</span><span class="mv amber">R$ 22,94</span></div>
+          <div class="mrow"><span class="mk">CPM — custo p/ 1.000 exibições</span><span class="mv red">R$ 26,86</span></div>
+          <div class="mrow"><span class="mk">CTR — % de quem viu e clicou</span><span class="mv red">1,15%</span></div>
+          <div class="mrow"><span class="mk">Visitantes que preencheram o form.</span><span class="mv green">11,76%</span></div>
+        </div>
+        <div class="bar-wrap">
+          <div class="bar-track"><div class="bar-fill" data-width="85" style="background:linear-gradient(90deg,var(--mag),var(--mag-l))"></div></div>
+          <div class="bar-label">Conversão na página (mais alta das 3)</div>
+        </div>
+        <div class="camp-note">CTR baixo indica que o anúncio atrai menos cliques — algoritmo ainda aprendendo. <strong>A página em si converte muito bem (11,76%) — quem chega, preenche.</strong> Gargalo está em atrair visitantes, não na qualidade da página.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="sec fade-up">
+  <div class="slabel">Desempenho por audiência testada</div>
+  <div class="context-box" style="margin-bottom:1.25rem">
+    Cada campanha divide o orçamento entre <strong>5 grupos de público diferentes</strong>. Testamos dois tipos: <strong>Interesse</strong> — pessoas que o Facebook identifica como donos/gestores de farmácias ou supermercados — e <strong>LAL 1% (Lookalike)</strong> — pessoas com perfil parecido com nossos clientes atuais, encontradas automaticamente pelo algoritmo.
+  </div>
+
+  <div class="tcard">
+    <div class="thead-row">
+      <div><div class="thead-title">Página Direta — sem formulário</div><div class="thead-sub">Evento medido: clique no botão do WhatsApp</div></div>
+      <span class="pill pill-green">Interesses dominam</span>
+    </div>
+    <div class="tscroll"><table>
+      <thead><tr><th>Público</th><th>Tipo</th><th>Gasto</th><th>Contatos</th><th>Custo/contato</th><th>CTR</th></tr></thead>
+      <tbody>
+        <tr class="best-row"><td class="bold">Farmácias <span class="best-badge">★ Melhor</span></td><td><span class="type-tag tag-int">Interesse</span></td><td>R$ 35,41</td><td class="green">8</td><td class="green">R$ 4,43</td><td class="green">3,78%</td></tr>
+        <tr><td class="bold">Supermercados</td><td><span class="type-tag tag-int">Interesse</span></td><td>R$ 34,10</td><td class="green">6</td><td class="green">R$ 5,68</td><td class="green">4,93%</td></tr>
+        <tr><td class="bold">Similar a clientes Luiz Farma</td><td><span class="type-tag tag-lal">LAL 1%</span></td><td>R$ 40,01</td><td class="amber">5</td><td class="amber">R$ 8,00</td><td class="red">1,18%</td></tr>
+        <tr><td class="bold">Similar a clientes (base geral)</td><td><span class="type-tag tag-lal">LAL 1%</span></td><td>R$ 10,91</td><td class="red">0</td><td class="muted">—</td><td class="amber">1,36%</td></tr>
+        <tr><td class="bold">Similar a clientes Luiz Super</td><td><span class="type-tag tag-lal">LAL 1%</span></td><td>R$ 22,56</td><td class="red">0</td><td class="muted">—</td><td class="red">0,83%</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="tcard">
+    <div class="thead-row">
+      <div><div class="thead-title">Página com Imagens — com formulário</div><div class="thead-sub">Evento medido: preenchimento do formulário (nome + WhatsApp)</div></div>
+      <span class="pill pill-purple">Resultados mistos</span>
+    </div>
+    <div class="tscroll"><table>
+      <thead><tr><th>Público</th><th>Tipo</th><th>Gasto</th><th>Leads</th><th>Custo/lead</th><th>CTR</th></tr></thead>
+      <tbody>
+        <tr class="best-row"><td class="bold">Similar a clientes (base geral) <span class="best-badge">★ Melhor</span></td><td><span class="type-tag tag-lal">LAL 1%</span></td><td>R$ 12,21</td><td class="green">1</td><td class="green">R$ 12,21</td><td class="muted">0,97%</td></tr>
+        <tr><td class="bold">Similar a clientes Luiz Farma</td><td><span class="type-tag tag-lal">LAL 1%</span></td><td>R$ 42,39</td><td class="amber">2</td><td class="amber">R$ 21,20</td><td class="muted">1,04%</td></tr>
+        <tr><td class="bold">Supermercados</td><td><span class="type-tag tag-int">Interesse</span></td><td>R$ 25,73</td><td class="amber">1</td><td class="red">R$ 25,73</td><td class="green">4,04%</td></tr>
+        <tr><td class="bold">Similar a clientes Luiz Super</td><td><span class="type-tag tag-lal">LAL 1%</span></td><td>R$ 53,86</td><td class="amber">2</td><td class="red">R$ 26,93</td><td class="muted">1,27%</td></tr>
+        <tr><td class="bold">Farmácias</td><td><span class="type-tag tag-int">Interesse</span></td><td>R$ 29,11</td><td class="red">0</td><td class="muted">—</td><td class="green">3,80%</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="tcard">
+    <div class="thead-row">
+      <div><div class="thead-title">Página com Vídeo — com formulário</div><div class="thead-sub">Evento medido: preenchimento do formulário (nome + WhatsApp)</div></div>
+      <span class="pill pill-amber">LP converte bem, CTR baixo</span>
+    </div>
+    <div class="tscroll"><table>
+      <thead><tr><th>Público</th><th>Tipo</th><th>Gasto</th><th>Leads</th><th>Custo/lead</th><th>CTR</th></tr></thead>
+      <tbody>
+        <tr class="best-row"><td class="bold">Farmácias <span class="best-badge">★ Melhor</span></td><td><span class="type-tag tag-int">Interesse</span></td><td>R$ 28,43</td><td class="green">2</td><td class="green">R$ 14,22</td><td class="green">1,87%</td></tr>
+        <tr><td class="bold">Similar a clientes Luiz Farma</td><td><span class="type-tag tag-lal">LAL 1%</span></td><td>R$ 30,51</td><td class="green">2</td><td class="green">R$ 15,26</td><td class="muted">1,35%</td></tr>
+        <tr><td class="bold">Similar a clientes (base geral)</td><td><span class="type-tag tag-lal">LAL 1%</span></td><td>R$ 15,99</td><td class="amber">1</td><td class="amber">R$ 15,99</td><td class="muted">0,75%</td></tr>
+        <tr><td class="bold">Similar a clientes Luiz Super</td><td><span class="type-tag tag-lal">LAL 1%</span></td><td>R$ 38,63</td><td class="amber">1</td><td class="red">R$ 38,63</td><td class="red">0,50%</td></tr>
+        <tr><td class="bold">Supermercados</td><td><span class="type-tag tag-int">Interesse</span></td><td>R$ 24,06</td><td class="red">0</td><td class="muted">—</td><td class="muted">1,52%</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</div>
+
+<div class="sec fade-up">
+  <div class="slabel">Análise e conclusões</div>
+  <div class="insights-grid">
+    <div class="insight-card" style="border-left:4px solid var(--verde)">
+      <div class="insight-icon" style="background:var(--verde-bg)">📈</div>
+      <div class="insight-title">Retorno financeiro muito positivo</div>
+      <div class="insight-body">Com R$443,91 investidos e R$4.800 em receita, o ROAS de 10,8× está muito acima da média de mercado. Mais importante: esse valor representa apenas <strong>um cliente fechado</strong>, enquanto outros leads têm reuniões agendadas. O resultado final deste período deve ser bem maior.</div>
+    </div>
+    <div class="insight-card" style="border-left:4px solid var(--roxo)">
+      <div class="insight-icon" style="background:var(--roxo-bg)">🎯</div>
+      <div class="insight-title">Público por interesse supera os similares</div>
+      <div class="insight-body">Na página direta, Farmácias e Supermercados entregaram CTR de <strong>3,78% a 4,93%</strong> e custo de R$4–5 por contato. Os públicos similares (LAL) ficaram em 0,83–1,36% de CTR, com dois grupos sem nenhuma conversão. Interesses funcionam melhor nesta fase.</div>
+    </div>
+    <div class="insight-card" style="border-left:4px solid var(--mag)">
+      <div class="insight-icon" style="background:var(--mag-bg)">📋</div>
+      <div class="insight-title">Lead do formulário é mais qualificado</div>
+      <div class="insight-body">Quem preenche nome e WhatsApp demonstra intenção maior. Esses leads <strong>respondem quase sempre</strong> ao primeiro contato do SDR e avançam mais no funil. O formulário garante que o contato fica salvo — o SDR pode abordar ativamente mesmo que o lead não inicie o contato.</div>
+    </div>
+    <div class="insight-card" style="border-left:4px solid var(--amber)">
+      <div class="insight-icon" style="background:var(--amber-bg)">🎬</div>
+      <div class="insight-title">Vídeo: gargalo no anúncio, não na página</div>
+      <div class="insight-body">CTR de apenas 1,15% vs 2,0–2,2% das outras campanhas. Porém, <strong>quem chega na página com vídeo converte bem (11,76%)</strong>. O problema está em atrair mais visitantes — o algoritmo ainda está aprendendo. A página em si é eficaz.</div>
+    </div>
+    <div class="insight-card full" style="border-left:4px solid var(--roxo-l)">
+      <div class="insight-icon" style="background:var(--roxo-bg)">🗓</div>
+      <div class="insight-title">Próximos passos recomendados</div>
+      <div class="insight-body">São apenas 5 dias de dados — ainda cedo para conclusões definitivas. <strong>Recomendamos aguardar 2–3 semanas adicionais</strong> antes de encerrar o teste ou redirecionar orçamento. O algoritmo do Meta precisa de tempo para aprender quem converte melhor. O foco agora: <strong>(1)</strong> acompanhar quantas reuniões se convertem em venda, <strong>(2)</strong> perguntar ao cliente de onde ele veio para identificar qual campanha gera melhor qualidade, e <strong>(3)</strong> manter o investimento estável para não interromper o aprendizado do algoritmo.</div>
+    </div>
+  </div>
+</div>
+
+<div class="sec fade-up">
+  <div class="slabel">Glossário — entenda os termos deste relatório</div>
+  <div class="gloss-grid">
+    <div class="gloss-item">
+      <div class="gloss-term">ROAS — Retorno sobre anúncios</div>
+      <div class="gloss-def">Para cada R$1 investido, quanto voltou em receita. ROAS 10,8× = R$10,80 de receita para cada R$1 gasto.</div>
+    </div>
+    <div class="gloss-item">
+      <div class="gloss-term">CPM — Custo por mil exibições</div>
+      <div class="gloss-def">Quanto custa mostrar o anúncio para 1.000 pessoas. CPM mais baixo = entrega mais eficiente.</div>
+    </div>
+    <div class="gloss-item">
+      <div class="gloss-term">CTR — Taxa de clique</div>
+      <div class="gloss-def">% de pessoas que viram o anúncio e clicaram. CTR 2% = 2 em cada 100 que viram, clicaram.</div>
+    </div>
+    <div class="gloss-item">
+      <div class="gloss-term">CPL — Custo por Lead</div>
+      <div class="gloss-def">Quanto custou capturar um contato qualificado — alguém que preencheu o formulário com nome e WhatsApp.</div>
+    </div>
+    <div class="gloss-item">
+      <div class="gloss-term">Taxa de conversão na página</div>
+      <div class="gloss-def">De 100 visitantes, quantos realizaram a ação desejada (formulário ou clique no WhatsApp).</div>
+    </div>
+    <div class="gloss-item">
+      <div class="gloss-term">LAL 1% — Lookalike</div>
+      <div class="gloss-def">Público "semelhante". Facebook encontra pessoas com perfil parecido com nossos clientes atuais.</div>
+    </div>
+    <div class="gloss-item">
+      <div class="gloss-term">Pixel</div>
+      <div class="gloss-def">Código no site que registra ações dos visitantes e envia ao Meta para otimizar os anúncios.</div>
+    </div>
+    <div class="gloss-item">
+      <div class="gloss-term">CBO — Otimização por campanha</div>
+      <div class="gloss-def">O algoritmo distribui o orçamento automaticamente entre os públicos conforme os resultados.</div>
+    </div>
+    <div class="gloss-item">
+      <div class="gloss-term">SDR</div>
+      <div class="gloss-def">Profissional que faz o primeiro contato com o lead, qualifica e agenda a reunião com o vendedor.</div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<footer>
+  <div>Dashboard <strong>Projeto JLBV · Life B Import</strong> — Uso interno</div>
+  <div>Dados: Meta Ads Manager · Atualizado em <strong>03/04/2026</strong></div>
+</footer>
+
+<script>
+(function(){
+  // ── Fade-in on scroll ──────────────────────────────────────
+  const fadeEls = document.querySelectorAll('.fade-up');
+  const fadeObs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if(e.isIntersecting){ e.target.classList.add('visible'); fadeObs.unobserve(e.target); }
+    });
+  }, { threshold: 0.08 });
+  fadeEls.forEach(el => fadeObs.observe(el));
+
+  // ── Count-up animation ────────────────────────────────────
+  function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }
+
+  function animateCount(el){
+    const target  = parseFloat(el.dataset.target);
+    const decimals= parseInt(el.dataset.decimals || '0');
+    const prefix  = el.dataset.prefix  || '';
+    const suffix  = el.dataset.suffix  || '';
+    const useSep  = el.dataset.sep === 'true';
+    const dur     = 1400;
+    const start   = performance.now();
+
+    function fmt(val){
+      if(decimals > 0) return val.toFixed(decimals).replace('.',',');
+      if(useSep) return Math.floor(val).toLocaleString('pt-BR');
+      return Math.floor(val).toString();
+    }
+
+    function tick(now){
+      const p = Math.min((now - start) / dur, 1);
+      el.textContent = prefix + fmt(easeOutCubic(p) * target) + suffix;
+      if(p < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  const countEls = document.querySelectorAll('[data-countup]');
+  const countObs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if(e.isIntersecting){ animateCount(e.target); countObs.unobserve(e.target); }
+    });
+  }, { threshold: 0.3 });
+  countEls.forEach(el => countObs.observe(el));
+
+  // ── Bar animation ─────────────────────────────────────────
+  const barEls = document.querySelectorAll('.bar-fill[data-width]');
+  const barObs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if(e.isIntersecting){
+        e.target.style.width = e.target.dataset.width + '%';
+        barObs.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.5 });
+  barEls.forEach(el => barObs.observe(el));
+
+  // ── Sticky header shadow on scroll ───────────────────────
+  const hdr = document.querySelector('header');
+  window.addEventListener('scroll', () => {
+    hdr.style.boxShadow = window.scrollY > 10
+      ? '0 4px 32px rgba(30,20,80,.35)'
+      : '0 2px 24px rgba(30,20,80,.25)';
+  }, { passive: true });
+})();
+</script>
+</body>
+</html>
