@@ -622,7 +622,10 @@ async function loadAll() {
     // Pré-busca events e leads UMA vez (catches individuais para não bloquear se um falhar)
     // Usa snap para garantir período consistente em todas as chamadas
     const shouldCompare = !!snap.days && snap.days !== 1;
-    const [evAtual, evDuplo, pLeads, sLeads, cLeads] = await Promise.all([
+    // summary entra no pré-fetch para não competir com chart/pages/cities/sources no render
+    const [dSumAtual, dSumDuplo, evAtual, evDuplo, pLeads, sLeads, cLeads] = await Promise.all([
+      proxy('summary', undefined, undefined, snap).catch(() => null),
+      shouldCompare ? proxy('summary', snapDays * 2, undefined, snap).catch(() => null) : Promise.resolve(null),
       proxy('events', undefined, undefined, snap).catch(() => null),
       shouldCompare ? proxy('events', snapDays * 2, undefined, snap).catch(() => null) : Promise.resolve(null),
       proxy('leads', undefined, 'pagePath', snap).catch(() => null),
@@ -638,7 +641,7 @@ async function loadAll() {
     };
 
     await Promise.allSettled([
-      loadSummaryWithCompare(evAtual, evDuplo, snap, snapDays),
+      loadSummaryWithCompare(dSumAtual, dSumDuplo, evAtual, evDuplo, snap, snapDays),
       loadChart(snap, snapDays),
       loadPages(pLeads, snap),
       loadCities(cLeads, snap),
@@ -706,15 +709,22 @@ async function fetchRealtime() {
 // Estratégia: 2 fetches paralelos — período atual (days) e período duplo (days*2).
 // Período anterior = dados do dobro MENOS dados do período atual.
 // Ex: 14 dias = 50 visitantes, 7 dias = 30 → anterior = 20, delta = +50%
-async function loadSummaryWithCompare(dEvAtual, dEvDuplo, snap, snapDays) {
+async function loadSummaryWithCompare(dAtual, dDuplo, dEvAtual, dEvDuplo, snap, snapDays) {
   const deltaIds = ['delta-users', 'delta-sessions', 'delta-conv', 'delta-leads'];
 
   try {
-    const shouldCompare = !!snap.days && snap.days !== 1;
-    const [dAtual, dDuplo] = await Promise.all([
-      proxy('summary', undefined, undefined, snap),
-      shouldCompare ? proxy('summary', snapDays * 2, undefined, snap) : Promise.resolve(null),
-    ]);
+    // dAtual e dDuplo já vêm pré-buscados pelo loadAll — nunca fazem chamada nova aqui
+    if (!dAtual) {
+      ['stat-users','stat-sessions','stat-conv','stat-bounce','stat-duration'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.textContent = '—';
+      });
+      deltaIds.forEach(id => {
+        const el = document.getElementById(id); if (!el) return;
+        el.textContent = ''; el.className = 'delta-neu'; el.style.display = 'none';
+      });
+      showError('Resumo indisponível — tente atualizar a página.');
+      return;
+    }
 
     // Leads = evento Lead_Formulario (usa dados pré-buscados pelo loadAll)
     // Se evAtual veio null (falha no pre-fetch), re-busca para garantir conversão correta
@@ -804,14 +814,8 @@ async function loadSummaryWithCompare(dEvAtual, dEvDuplo, snap, snapDays) {
 
 } catch(err) {
     _log.error('summary', 'Erro ao carregar resumo', err);
-    const msg = err.message || 'Erro';
-    ['stat-users','stat-sessions','stat-conv'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = msg;
-    });
-    ['stat-bounce','stat-duration'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = '—';
+    ['stat-users','stat-sessions','stat-conv','stat-bounce','stat-duration'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.textContent = '—';
     });
     deltaIds.forEach(id => {
       const el = document.getElementById(id);
