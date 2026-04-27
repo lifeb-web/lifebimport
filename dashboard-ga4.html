@@ -1018,8 +1018,8 @@ async function loadAll() {
     // Pré-busca events e leads UMA vez (catches individuais para não bloquear se um falhar)
     // Usa snap para garantir período consistente em todas as chamadas
     const shouldCompare = !!snap.days && snap.days !== 1;
-    // summary entra no pré-fetch para não competir com chart/pages/cities/sources no render
-    const [dSumAtual, dSumDuplo, evAtual, evDuplo, pLeads, sLeads, cLeads] = await Promise.all([
+    // Tudo pré-buscado de uma vez — render fica só com chart(×2) + sources(×1)
+    const [dSumAtual, dSumDuplo, evAtual, evDuplo, pLeads, sLeads, cLeads, dPages, dCities] = await Promise.all([
       proxy('summary', undefined, undefined, snap).catch(() => null),
       shouldCompare ? proxy('summary', snapDays * 2, undefined, snap).catch(() => null) : Promise.resolve(null),
       proxy('events', undefined, undefined, snap).catch(() => null),
@@ -1027,6 +1027,8 @@ async function loadAll() {
       proxy('leads', undefined, 'pagePath', snap).catch(() => null),
       proxy('leads', undefined, 'sessionSourceMedium', snap).catch(() => null),
       proxy('leads', undefined, 'region,city', snap).catch(() => null),
+      proxy('pages', undefined, undefined, snap).catch(() => null),
+      proxy('cities', undefined, undefined, snap).catch(() => null),
     ]);
 
     // Se uma versão mais nova já começou, descarta silenciosamente
@@ -1035,8 +1037,8 @@ async function loadAll() {
     await Promise.allSettled([
       loadSummaryWithCompare(dSumAtual, dSumDuplo, evAtual, evDuplo, snap, snapDays),
       loadChart(snap, snapDays),
-      loadPages(pLeads, snap),
-      loadCities(cLeads, snap),
+      loadPages(pLeads, dPages),
+      loadCities(cLeads, dCities),
       loadSources(sLeads, snap),
       loadEvents(evAtual, snap),
     ]);
@@ -1477,10 +1479,11 @@ function isInternalPath(path) {
   return /dashboard/i.test(p) || /^\/rep(\/|$)/i.test(p) || /^\/interno(\/|$)/i.test(p);
 }
 
-// TABELA — POR PÁGINA
-async function loadPages(leadsData, snap) {
+// TABELA — POR PÁGINA (d já vem pré-buscado pelo loadAll)
+function loadPages(leadsData, d) {
   const tb = document.getElementById('tb-pages');
   try {
+    if (!d) { _log.warn('pages', 'Dados indisponíveis'); tb.innerHTML = emptyRow(4); return; }
     // Normaliza path: garante barra final (/video2 → /video2/)
     const normPath = p => (p && !p.endsWith('/') ? p + '/' : (p || '/'));
 
@@ -1492,8 +1495,6 @@ async function loadPages(leadsData, snap) {
         leadsMap.set(k, (leadsMap.get(k) || 0) + (+r.metricValues[0].value));
       }
     }
-
-    const d = await proxy('pages', undefined, undefined, snap);
 
     // Agrega rows com o mesmo path normalizado (ex: /video2 e /video2/ viram uma linha)
     const pageMap = new Map();
@@ -1521,15 +1522,15 @@ async function loadPages(leadsData, snap) {
         <td class="mh">${n(s)}</td>
         <td class="num-p">${leads > 0 ? n(leads) : '<span style="font-size:11px;color:var(--muted)">—</span>'}</td>
       </tr>`).join('') || emptyRow(4);
-  } catch(e) { _log.error('pages', 'Erro ao carregar páginas', e); tb.innerHTML = errRow(4); showError('Erro ao carregar páginas.'); }
+  } catch(e) { _log.error('pages', 'Erro ao renderizar páginas', e); tb.innerHTML = emptyRow(4); }
 }
 
-// TABELA — CIDADE / ESTADO
-async function loadCities(leadsData, snap) {
+// TABELA — CIDADE / ESTADO (d já vem pré-buscado pelo loadAll)
+function loadCities(leadsData, d) {
   const tb = document.getElementById('tb-cities');
   try {
+    if (!d) { _log.warn('cities', 'Dados indisponíveis'); tb.innerHTML = emptyRow(4); return; }
     const leadsMap = buildLeadsMap(leadsData, r => `${r.dimensionValues[0].value}||${r.dimensionValues[1].value}`);
-    const d = await proxy('cities', undefined, undefined, snap);
     const rows = (d.rows ?? [])
       .map(r => {
         const regionRaw = r.dimensionValues[0].value;
@@ -1547,7 +1548,7 @@ async function loadCities(leadsData, snap) {
         <td class="num-p">${n(users)}</td>
         <td class="num-p">${leads > 0 ? n(leads) : '<span style="font-size:11px;color:var(--muted)">—</span>'}</td>
       </tr>`).join('') || emptyRow(4);
-  } catch(e) { _log.error('cities', 'Erro ao carregar cidades', e); tb.innerHTML = errRow(4); showError('Erro ao carregar cidades.'); }
+  } catch(e) { _log.error('cities', 'Erro ao renderizar cidades', e); tb.innerHTML = emptyRow(4); }
 }
 
 // TABELA — ORIGEM DO TRÁFEGO
