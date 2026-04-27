@@ -388,6 +388,13 @@ function norm(v) {
   return String(v || '').trim();
 }
 
+/** Retorna true se o lead é de teste — exclui dos cálculos do dashboard. */
+function isTesteLead(r) {
+  var nome    = String(r[COL_NOME]    || '').toLowerCase();
+  var empresa = String(r[COL_EMPRESA] || '').toLowerCase();
+  return nome.indexOf('teste') >= 0 || empresa.indexOf('teste') >= 0;
+}
+
 // ── ACTIONS ──────────────────────────────────────────────────
 
 /**
@@ -395,7 +402,7 @@ function norm(v) {
  * Retorna totais gerais: contagens por status SDR, status vendedor, receita, pipeline, media_dias.
  */
 function getSummary() {
-  const rows = getRows();
+  const rows = getRows().filter(function(r) { return !isTesteLead(r); });
 
   const sdr   = { qualif: 0, sem_ret: 0, em_abord: 0, ag_abord: 0, fora: 0, nao_id: 0 };
   const vend  = { ag_cont: 0, em_cont: 0, reun: 0, em_neg: 0, fechado: 0, perdido: 0, sem: 0 };
@@ -461,7 +468,7 @@ function getSummary() {
  * Retorna métricas por vendedor: total atribuído, ag_cont, em_cont, em_neg, fechados, receita.
  */
 function getByRep() {
-  const rows = getRows();
+  const rows = getRows().filter(function(r) { return !isTesteLead(r); });
   const reps = {};
 
   rows.forEach(function(r) {
@@ -496,7 +503,7 @@ function getByRep() {
  * Retorna contagens para montar os funis SDR e Vendedor.
  */
 function getFunnel() {
-  const rows = getRows();
+  const rows = getRows().filter(function(r) { return !isTesteLead(r); });
 
   const sdr  = { ag_abord: 0, em_abord: 0, qualif: 0, sem_ret: 0, fora: 0, nao_id: 0 };
   const vend = { ag_cont: 0, em_cont: 0, reun: 0, em_neg: 0, fechado: 0, perdido: 0 };
@@ -535,6 +542,7 @@ function getActive(rep) {
   const result = [];
 
   rows.forEach(function(r, i) {
+    if (isTesteLead(r)) return;
     const statusVend = norm(r[COL_STATUS_VEND]);
     if (EXCLUIDOS.indexOf(statusVend) >= 0) return;
     if (norm(r[COL_VENDEDOR]).toUpperCase() !== rep) return;
@@ -581,6 +589,7 @@ function getRepHistory(rep) {
   const result = [];
 
   rows.forEach(function(r, i) {
+    if (isTesteLead(r)) return;
     const statusVend = norm(r[COL_STATUS_VEND]);
     if (statusVend !== 'Fechado' && statusVend !== 'Perdido') return;
     if (norm(r[COL_VENDEDOR]).toUpperCase() !== rep) return;
@@ -621,6 +630,7 @@ function getActiveAll() {
   const result = [];
 
   rows.forEach(function(r, i) {
+    if (isTesteLead(r)) return;
     const statusVend = norm(r[COL_STATUS_VEND]);
     if (EXCLUIDOS.indexOf(statusVend) >= 0) return;
     const vendedor = norm(r[COL_VENDEDOR]);
@@ -656,7 +666,7 @@ function getActiveAll() {
  * Leads com STATUS VENDEDOR = Fechado.
  */
 function getClosed() {
-  const rows = getRows();
+  const rows = getRows().filter(function(r) { return !isTesteLead(r); });
   const result = [];
 
   rows.forEach(function(r) {
@@ -684,7 +694,7 @@ function getClosed() {
  * Leads por dia (chave YYYY-MM-DD): total, qualificados, fechados.
  */
 function getChart() {
-  const rows = getRows();
+  const rows = getRows().filter(function(r) { return !isTesteLead(r); });
   const byDay = {};
 
   rows.forEach(function(r) {
@@ -712,7 +722,7 @@ function getChart() {
  * Retorna os 10 leads mais recentes (por data de entrada).
  */
 function getLatest() {
-  const rows = getRows();
+  const rows = getRows().filter(function(r) { return !isTesteLead(r); });
 
   const withDate = rows.filter(function(r) { return r[COL_DATA]; });
   withDate.sort(function(a, b) {
