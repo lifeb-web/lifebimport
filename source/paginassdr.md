@@ -188,7 +188,14 @@ onClick={() => { submittedRef.current = true; onSkip(); }}
 - Leads que preenchem tudo mas fecham o modal são capturados na planilha com origem `(Abandonou_Formulario)`
 - Beacon `beforeunload` captura quem fecha a aba com o form aberto e preenchido
 
+**Copy do modal — estado final (2026-04-28):**
+- H1: `"Fale agora com um consultor"` (WhatsApp) / `"Fale com um consultor"` (noWhatsapp)
+- H2: **removido** — modal pós-clique não precisa reexplicar, a landing page já convenceu
+- Palavra unificada: "consultor" em todo o modal (H1 + microcopy) — "especialista" foi descartado por soar como barreira para lojistas pequenos e arrogante para lojistas grandes
+
 ### Decisões de UX (2026-04-28)
+- **H2 removido**: padrão de mercado para modal pós-clique é headline único. H2 adicionava texto desnecessário antes dos campos e era redundante com o microcopy abaixo do botão.
+- **"Consultor" unificado**: testado "especialista" — descartado. Público B2B misto (pequeno e grande lojista) responde melhor a "consultor" que é neutro, acessível e não hierárquico.
 - **Botão "Pular" removido**: era usado em < 3% dos casos, lead chegava sem entrar na planilha. Removido em 2026-04-27.
 - **Nome obrigatório**: adicionado `required` em 2026-04-28. Era opcional antes.
 - **Botão sempre ativo**: pesquisa de mercado confirmou que botão desabilitado é um dos maiores causadores de abandono — usuário não entende por que não funciona.
