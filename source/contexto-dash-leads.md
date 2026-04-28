@@ -1,5 +1,5 @@
 # Contexto — Dashboard de Leads (Planilha)
-Atualizado: 2026-04-27
+Atualizado: 2026-04-28
 
 ---
 
@@ -206,18 +206,27 @@ Ambos os funis (SDR e Vendedor), em mobile e telão, ocultam etapas com valor 0.
 
 ## Regras de deploy
 
+**Atenção:** o `deploy.sh` das landing pages (React/Vite) NÃO afeta os dashboards — eles vivem no worktree e são deployados diretamente via git.
+
 1. Editar os arquivos no worktree: `/Users/robertmarques/Desktop/lifebimport-jlbv-pages/`
-2. `git add dashboard-leads.html dashboard-leads-telao.html && git commit && git push origin gh-pages`
-3. Copiar para pasta local:
+2. Commitar e publicar:
+   ```bash
+   cd /Users/robertmarques/Desktop/lifebimport-jlbv-pages
+   git add dashboard-leads.html dashboard-leads-telao.html
+   git commit -m "dash: descrição da mudança"
+   git push origin gh-pages
    ```
-   cp /Users/robertmarques/Desktop/lifebimport-jlbv-pages/dashboard-leads.html "/Users/robertmarques/Dropbox/DOCUMENTOS/LVL IMPORTADORA/Projeto SDR Comercial/Contexto Paginas SDR/dashboard-leads.html"
-   cp /Users/robertmarques/Desktop/lifebimport-jlbv-pages/dashboard-leads-telao.html "/Users/robertmarques/Dropbox/DOCUMENTOS/LVL IMPORTADORA/Projeto SDR Comercial/Contexto Paginas SDR/dashboard-leads-telao.html"
+3. Copiar para Dropbox (backup local):
+   ```bash
+   cp dashboard-leads.html "/Users/robertmarques/Dropbox/DOCUMENTOS/LVL IMPORTADORA/Projeto SDR Comercial/Contexto Paginas SDR/dashboard-leads.html"
+   cp dashboard-leads-telao.html "/Users/robertmarques/Dropbox/DOCUMENTOS/LVL IMPORTADORA/Projeto SDR Comercial/Contexto Paginas SDR/dashboard-leads-telao.html"
    ```
-4. Commitar este arquivo de contexto atualizado:
+4. Commitar o arquivo de contexto atualizado:
+   ```bash
+   git add source/contexto-dash-leads.md && git commit -m "docs: atualiza contexto dash leads" && git push origin gh-pages
    ```
-   git add source/contexto-dash-leads.md && git commit && git push
-   ```
-5. Verificar MD5: worktree = pasta local
+
+**Por que Dropbox é necessário:** o `deploy.sh` das landing pages usa `rsync` e preserva os dashboards, mas o Dropbox é o único backup local caso o worktree seja corrompido ou recriado.
 
 ---
 

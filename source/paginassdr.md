@@ -77,7 +77,7 @@ Todas as páginas são variantes do componente `Home` em `client/src/pages/Home.
 | `Abrir_Formulario` | Qualquer botão CTA (com source indicando qual botão) |
 | `Preencheu_Formulario` | Ao digitar qualquer coisa no formulário (dispara 1x por abertura) |
 | `Lead_Formulario` | Ao enviar o formulário com nome + telefone (clicou em "Continuar para o WhatsApp") |
-| `Pular_Formulario` | ~~Removido em 2026-04-27~~ — botão "Pular" foi retirado de todas as páginas (< 3% de uso, sem rastreamento do lead) |
+| `Pular_Formulario` | **Removido em 2026-04-27** — botão "Pular e ir direto para o WhatsApp" retirado de todas as páginas (< 3% de uso, lead chegava sem entrar na planilha) |
 | `Abandonou_Formulario` | Ao fechar o modal clicando no X — dispara sempre, independente de ter preenchido ou não. Se tiver telefone válido preenchido, também salva na planilha |
 | `Contato_WhatsApp` | CTAs nas páginas directMode |
 | `ScrollDepth_25/50/75/100` | Ao rolar a página |
@@ -139,10 +139,60 @@ onClick={() => { submittedRef.current = true; onSkip(); }}
 - `pagina` usa `window.location.href` — funciona automaticamente para qualquer página nova
 
 ## Comportamento do formulário
-- `autoComplete="name"` e `autoComplete="tel"` nos campos — browser/celular sugere dados salvos
-- **localStorage (`jlbv_lead`)**: salva nome + telefone após envio ou abandono com telefone válido. Na segunda visita o formulário já aparece pré-preenchido. Se o dado estiver salvo, o botão CTA vai direto ao WhatsApp sem abrir o form (lead retornante).
-- Leads que preenchem tudo mas não clicam em enviar são capturados automaticamente na planilha com origem `(Abandonou_Formulario)`
-- **Fix 12/04/2026**: `Abandonou_Formulario` passou a disparar em qualquer fechamento do X, não apenas quando havia telefone válido preenchido. A planilha e localStorage ainda só salvam com telefone válido.
+
+### Estado atual (2026-04-28)
+
+**Campos:**
+- Nome (`required`) e Telefone (`required`) — nenhum campo opcional
+- `autoComplete="name"` e `autoComplete="tel"` — browser/celular sugere dados salvos
+
+**Botão CTA:**
+- Sempre verde/ativo, sem estado `disabled` — padrão de mercado comprovado para reduzir abandono
+- Validação ocorre no submit via `handleSubmit`:
+  - Se `phoneValid = false` (ex: "55" + menos de 12 dígitos), retorna silenciosamente
+  - Campos `required` ativam validação nativa do browser para campos vazios
+
+**Validação do telefone (função `formatPhone`):**
+- Remove tudo que não é dígito
+- Auto-strip do código de país: se começar com "55" E tiver ≥ 4 dígitos, remove os dois primeiros (ex: "5562..." → "62...")
+- Máscara: `(XX) XXXX-XXXX` (fixo, 10 dígitos) ou `(XX) XXXXX-XXXX` (celular, 11 dígitos)
+- `phoneValid`: exige 12 dígitos se começar com "55", senão 10 dígitos
+
+**Validação visual no blur:**
+- Ao sair do campo de telefone (`onBlur`) com algo digitado mas inválido → aparece "Número incompleto." em vermelho abaixo do campo
+- Não aparece durante digitação — só após o usuário sair do campo
+- Não aparece se o campo foi deixado vazio
+
+**Campo +55 visual:**
+- Flag 🇧🇷 + "+55" exibidos como prefixo fixo à esquerda do campo — prevenção visual contra digitação do código de país
+- Sem aviso reativo quando a pessoa digita "55" — o auto-strip já resolve, o prefixo visual previne
+
+**Fechar o modal:**
+- X visível em todas as telas (cinza claro, sutil — `text-gray-400`)
+- Swipe down (mobile)
+- Clicar fora do modal
+- Múltiplas saídas = padrão de maior conversão (usuário não se sente preso)
+
+**Microcopy abaixo do botão:**
+- Versão WhatsApp: "Nosso consultor responde em instantes."
+- Versão noWhatsapp (`/contato/`): "Nosso consultor entra em contato rapidamente."
+- Fonte pequena, cinza, centralizado — não compete com o CTA
+
+**localStorage (`jlbv_lead`):**
+- Salva nome + telefone após envio ou abandono com telefone válido
+- Na segunda visita o formulário aparece pré-preenchido
+- Se o dado estiver salvo, o botão CTA vai direto ao WhatsApp sem abrir o form (lead retornante)
+- Para testar como novo visitante: `localStorage.removeItem('jlbv_lead')`
+
+**Captura de abandono:**
+- Leads que preenchem tudo mas fecham o modal são capturados na planilha com origem `(Abandonou_Formulario)`
+- Beacon `beforeunload` captura quem fecha a aba com o form aberto e preenchido
+
+### Decisões de UX (2026-04-28)
+- **Botão "Pular" removido**: era usado em < 3% dos casos, lead chegava sem entrar na planilha. Removido em 2026-04-27.
+- **Nome obrigatório**: adicionado `required` em 2026-04-28. Era opcional antes.
+- **Botão sempre ativo**: pesquisa de mercado confirmou que botão desabilitado é um dos maiores causadores de abandono — usuário não entende por que não funciona.
+- **Blur validation**: padrão de mercado (Luke Wroblewski, 22% de melhora em conclusão de form). Não interrompe digitação, só valida ao sair do campo.
 
 ## Apps Script (Google Sheets webhook)
 ```javascript
@@ -191,32 +241,55 @@ function doPost(e) {
 5. Similar a clientes Luiz Super *(LAL 1%)*
 
 ## Deploy
-Build: `pnpm exec vite build` a partir da raiz do projeto.
-O vite.config.ts gera automaticamente após cada build:
+
+### Script de deploy (deploy.sh) — fluxo atual desde 2026-04-27
+
+```bash
+cd /Users/robertmarques/Desktop/lifebimport-jlbv
+bash deploy.sh
+```
+
+O `deploy.sh` faz tudo automaticamente:
+1. `npx vite build` — gera `dist/public/`
+2. `rm -rf $PAGES/assets` — limpa assets antigos (hashes mudam a cada build)
+3. `rsync -a --exclude='.git' dist/public/ $PAGES/` — copia build para o worktree sem apagar arquivos manuais
+4. Restaura redirects das páginas desativadas (`/direto/` e `/video1-direto/`)
+5. `git add -A && git commit && git push origin gh-pages` no worktree
+
+**Por que rsync e não `npx gh-pages`:** o `npx gh-pages -d dist/public` faz force-push e substitui o branch inteiro pelo conteúdo de `dist/public/`, destruindo todos os arquivos manuais (dashboards, `rep/dash/`, `source/`). O rsync copia apenas os arquivos do build por cima, preservando o restante.
+
+**Worktree do gh-pages:** `/Users/robertmarques/Desktop/lifebimport-jlbv-pages/`
+
+O vite.config.ts gera automaticamente em cada build:
 - `dist/public/CNAME` → projetojlbv.com.br
 - `dist/public/404.html` → cópia do index.html para SPA routing
 - `dist/public/.nojekyll` → desativa Jekyll no GitHub Pages
-- `dist/public/direto/index.html`
-- `dist/public/video1/index.html`
-- `dist/public/video1-direto/index.html`
-- `dist/public/rmk/index.html`
+- Subpastas de rota: `direto/`, `video1/`, `video1-direto/`, `rmk/`, `contato/`
 
-Deploy da landing page (após build):
+**Atenção**: o `pnpm build` falha no esbuild do servidor — usar sempre `npx vite build` (só compila o frontend).
+
+### Arquivos manuais no gh-pages — nunca sobrescritos pelo deploy.sh
+- `dashboard-leads.html` — dashboard de leads mobile/desktop
+- `dashboard-leads-telao.html` — dashboard telão TV
+- `dashboard-ga4.html` — painel GA4
+- `dashboard-telao.html` — telão antigo (legado)
+- `rep/dash/` — painéis individuais de representante
+- `source/` — arquivos de contexto e scripts
+- `direto/index.html` e `video1-direto/index.html` — redirects (restaurados pelo deploy.sh após cada build)
+
+### Deploy de dashboards (dashboard-leads.html / telão)
+Esses arquivos vivem no worktree e são deployados diretamente via git — sem passar pelo build React:
 ```bash
-cd /Users/robertmarques/Desktop/lifebimport-jlbv
-npx vite build  # gera dist/public/
-# copiar dashboard-ga4.html atualizado para dist/public/ antes do deploy
-cp /caminho/dashboard-ga4.html dist/public/dashboard-ga4.html
-GIT_AUTHOR_NAME="lifeb-web" GIT_AUTHOR_EMAIL="lifeb@lifebimport.com.br" \
-GIT_COMMITTER_NAME="lifeb-web" GIT_COMMITTER_EMAIL="lifeb@lifebimport.com.br" \
-npx gh-pages -d dist/public -m "mensagem do deploy"
+cd /Users/robertmarques/Desktop/lifebimport-jlbv-pages
+git add dashboard-leads.html dashboard-leads-telao.html
+git commit -m "dash: descrição da mudança"
+git push origin gh-pages
 ```
-**Atenção**: o `pnpm build` falha no esbuild do servidor — usar `npx vite build` que compila só o frontend. O `gh-pages` sempre inclui o `dashboard-ga4.html` junto para não perder o painel.
-
-**Arquivo de edição do dashboard GA4**: `/Users/robertmarques/Desktop/lifebimport-jlbv/dist/public/dashboard-ga4.html`
-**Arquivo de edição do dashboard Telão**: `/Users/robertmarques/Desktop/lifebimport-jlbv/dist/public/dashboard-telao.html`
-
-**Backup**: `/Users/robertmarques/Dropbox/DOCUMENTOS/LVL IMPORTADORA/Projeto SDR Comercial/Contexto Paginas SDR/` — `dashboard-ga4.html` e `dashboard-telao.html` (atualizados em 14/04/2026)
+Depois copiar para Dropbox:
+```bash
+cp dashboard-leads.html "/Users/robertmarques/Dropbox/DOCUMENTOS/LVL IMPORTADORA/Projeto SDR Comercial/Contexto Paginas SDR/dashboard-leads.html"
+cp dashboard-leads-telao.html "/Users/robertmarques/Dropbox/DOCUMENTOS/LVL IMPORTADORA/Projeto SDR Comercial/Contexto Paginas SDR/dashboard-leads-telao.html"
+```
 
 As páginas precisam ser acessadas **com barra no final** no GitHub Pages.
 
