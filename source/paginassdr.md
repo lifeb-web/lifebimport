@@ -19,15 +19,18 @@ Landing page B2B para o Projeto JLBV da Life B Import, focada em lojistas de far
 - Imagens: CloudFront (d2xsxph8kpxj0f.cloudfront.net)
 
 ## Páginas ativas
-| URL | Descrição |
-|-----|-----------|
-| `projetojlbv.com.br/` | Principal — imagens + formulário |
-| `projetojlbv.com.br/direto/` | Imagens + CTA direto ao WhatsApp |
-| `projetojlbv.com.br/video1/` | Vídeo supermercado (Vimeo) no hero + formulário |
-| `projetojlbv.com.br/video1-direto/` | Vídeo no hero + CTA direto ao WhatsApp |
-| `projetojlbv.com.br/video2/` | Vídeo farmácia (YouTube) no hero + formulário — vídeos invertidos em relação ao /video1/ |
-| `projetojlbv.com.br/rmk/` | Remarketing — curta, sem vídeo, formulário, foco em objeção |
-| `projetojlbv.com.br/contato/` | Igual à principal mas sem redirecionamento para WhatsApp — formulário coleta dados e envia para planilha, follow-up feito pelo consultor por ligação |
+| URL | Status | Descrição |
+|-----|--------|-----------|
+| `projetojlbv.com.br/` | ✅ ativa | Principal — imagens + formulário |
+| `projetojlbv.com.br/video1/` | ✅ ativa | Vídeo supermercado (Vimeo) no hero + formulário |
+| `projetojlbv.com.br/video2/` | ✅ ativa | Vídeo farmácia (YouTube) no hero + formulário |
+| `projetojlbv.com.br/rmk/` | ✅ ativa | Remarketing — curta, sem vídeo, formulário, foco em objeção |
+| `projetojlbv.com.br/contato/` | ✅ ativa | Formulário sem WA automático — follow-up por ligação |
+| `projetojlbv.com.br/direto/` | 🚫 desativada | Redirecionada para `/` — era CTA direto ao WhatsApp sem formulário |
+| `projetojlbv.com.br/video1-direto/` | 🚫 desativada | Redirecionada para `/video1/` — era vídeo + CTA direto ao WhatsApp |
+
+**Por que /direto/ e /video1-direto/ foram desativadas (2026-04-27, commit `ba02409d`):**
+Essas páginas mandavam o lead direto para o WhatsApp sem passar pelo formulário, sem salvar na planilha, sem disparar `Lead_Formulario`. Um contato chegou no WA sem aparecer na planilha — investigação mostrou que nenhuma execução do GAS ocorreu no horário, confirmando que a pessoa não passou pelo formulário. A hipótese mais provável é que veio pela `/direto/` com Meta Pixel bloqueado (ad blocker, Firefox), o que impede o evento `Contato_WhatsApp` de disparar no Meta mas não impede o clique no WA. Com as páginas desativadas, todo tráfego passa pelo formulário e entra na planilha.
 
 Todas as páginas são variantes do componente `Home` em `client/src/pages/Home.tsx`:
 - `<Home />` → página principal
@@ -1978,3 +1981,33 @@ Testado: vazio → erro, lead válido → ok, linha inserida corretamente.
 - Autenticação real (OAuth/JWT) se uso deixar de ser apenas interno
 - `dashboard_data` consolidado (reduz leituras paralelas do dashboard/telão — baixa prioridade agora)
 - Deduplicação no webhook (SDR marca manualmente como "Duplicado" por enquanto)
+
+---
+
+## Diagnóstico — Lead que chegou no WA sem entrar na planilha
+
+### Como investigar um lead sumido
+1. Verificar horário exato que a mensagem chegou no WA
+2. Abrir Apps Script do webhook da planilha → menu **Execuções** → filtrar pelo horário
+3. Se houver execução com erro → webhook foi chamado mas falhou → ver mensagem de erro
+4. Se não houver execução → webhook nunca foi chamado → a pessoa não passou pelo formulário
+
+### Causas confirmadas / descartadas
+
+| Causa | Status | Motivo |
+|---|---|---|
+| Bug no `doPost` | ❌ descartada | Código correto, testado — se o webhook é chamado, salva |
+| Falha silenciosa no webhook (fetch falhou no frontend) | ⚠️ possível | Sem execução no GAS = não chegou; mas person ainda vai pro WA |
+| Pessoa veio pela `/direto/` ou `/video1-direto/` | ✅ provável (caso 2026-04-27) | Páginas sem formulário, sem webhook — meta pixel bloqueado = nenhum evento disparou |
+| Contato direto no WA (número compartilhado) | ⚠️ possível | Nenhuma página envolvida — mensagem padrão do botão é a mesma |
+
+### Caso investigado em 2026-04-27
+Contato chegou às 18:28 com a mensagem padrão do botão WA. Sem nenhuma execução no GAS nesse horário. Conclusão: webhook nunca foi chamado. Hipótese mais provável — pessoa veio pela `/direto/` (ativa na época) com Meta Pixel bloqueado no dispositivo, então `Contato_WhatsApp` não disparou no Meta e a pessoa não apareceu em eventos nem na planilha.
+
+**Resolução:** `/direto/` e `/video1-direto/` foram desativadas em 2026-04-27 (commit `ba02409d`) — agora redirecionam para as versões com formulário. Esse buraco está fechado.
+
+### Mensagem padrão do WA (igual em todos os caminhos)
+```
+Olá, sou lojista e quero conhecer o projeto JLBV da Life B.
+```
+Não é possível determinar a origem do lead pela mensagem — ela é a mesma para form, direto e links compartilhados.

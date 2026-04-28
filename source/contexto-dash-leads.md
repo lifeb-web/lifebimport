@@ -1,5 +1,5 @@
 # Contexto — Dashboard de Leads (Planilha)
-Atualizado: 2026-04-27 (filtro teste adicionado)
+Atualizado: 2026-04-27
 
 ---
 
@@ -144,7 +144,63 @@ return (a.data || '').localeCompare(b.data || '');
 - Token `active_all` ✅ (já passa `0ef82354c11e4f518d90fe5c3935b767`)
 - `statusBadgeSdr` sem classe para "Não identificado" ✅
 - Relógio sem referência salva ✅
-- Leads de teste excluídos dos cálculos ✅ (commit `000177c9`)
+- Leads de teste excluídos dos cálculos e exibições compartilhadas ✅ (commits `000177c9`, `4f0ef8b1`, `9d0e7ea4`)
+- Funil vendedor ocultava zeros inconsistentemente vs funil SDR ✅ (commit `238e531f`)
+- Fechamento sem data_f sumia da tabela ✅ (commit `0076c965`)
+
+---
+
+## Regra do filtro de teste — ESTADO FINAL (não alterar sem entender)
+
+**Função:** `isTesteLead(r)` em `lifeb-leads-proxy.gs`
+
+```javascript
+function isTesteLead(r) {
+  var re = /\btestes?\b/i;
+  return re.test(String(r[COL_NOME] || '')) || re.test(String(r[COL_EMPRESA] || ''));
+}
+```
+
+**Lógica:** palavra exata "teste" ou "testes" (case-insensitive, com borda de palavra `\b`) no nome OU empresa do lead. "Protestech" não é filtrado — "Empresa Teste Ltda" é.
+
+**Onde se aplica:**
+
+| Função | Filtro? | Motivo |
+|---|---|---|
+| `getSummary` | ✅ sim | KPIs gerais — views compartilhadas |
+| `getByRep` | ✅ sim | Tabela por rep — views compartilhadas |
+| `getFunnel` | ✅ sim | Funis SDR/Vendedor — views compartilhadas |
+| `getActiveAll` | ✅ sim | Leads ativos no telão/mobile — views compartilhadas |
+| `getClosed` | ✅ sim | Tabela fechamentos — views compartilhadas |
+| `getChart` | ✅ sim | Gráfico por dia — views compartilhadas |
+| `getLatest` | ✅ sim | Últimos leads — views compartilhadas |
+| `getActive` | ❌ não | Painel individual do rep — rep vê seus próprios leads |
+| `getRepHistory` | ❌ não | Histórico individual do rep — rep vê seu histórico |
+| `doPost` | ❌ não | Escrita — leads de teste ainda são atualizados na planilha |
+
+**Por que o filtro fica no proxy e não no frontend:** o frontend recebe dados já agregados (totais, contagens). Não tem como filtrar leads individuais dos KPIs sem refazer os cálculos no servidor.
+
+**Por que `getActive` e `getRepHistory` não filtram:** o rep de teste (ex: `robert-teste`) precisa ver seus próprios leads de teste no painel dele para poder trabalhar/testar o sistema.
+
+---
+
+## Regra do sort de fechamentos — ESTADO FINAL
+
+`getClosed` ordena por `data_f` (data de fechamento) decrescente. Se `data_f` estiver vazia, usa `data` (data de entrada) como fallback. Isso garante que fechamentos sem data de fechamento preenchida **não somem** da tabela — aparecem ordenados pela data de entrada.
+
+```javascript
+result.sort(function(a, b) {
+  return (b.data_f || b.data || '').localeCompare(a.data_f || a.data || '');
+});
+```
+
+O objeto retornado por `getClosed` inclui o campo `data` para viabilizar esse fallback.
+
+---
+
+## Regra dos funis — ESTADO FINAL
+
+Ambos os funis (SDR e Vendedor), em mobile e telão, ocultam etapas com valor 0. Etapas vazias não aparecem. Implementado com `.filter(i => i.value > 0)` na lista de itens antes de chamar `renderFunilBar`.
 
 ---
 
@@ -171,10 +227,8 @@ return (a.data || '').localeCompare(b.data || '');
 - `2dc82d45` — mobile: active_all, title 'Dashboard Leads Mobile'
 - `1ab6ee34` — taxaQualif%, sort Aguardando-first, auto-carrega histórico
 - `6500b1d6` — telão: FORCE_RELOAD=1, retry 15s, watchdog 35min
-- `000177c9` — proxy: isTesteLead() — exclui leads com "teste" no nome/empresa de todos os cálculos (9 funções)
-
-## Regra do filtro de teste (proxy-side)
-Função `isTesteLead(r)` em `lifeb-leads-proxy.gs` — exclui leads onde nome OU empresa contém "teste" (case-insensitive).
-Aplicada em: `getSummary`, `getByRep`, `getFunnel`, `getActive`, `getRepHistory`, `getActiveAll`, `getClosed`, `getChart`, `getLatest`.
-`doPost` NÃO é afetado — leads de teste ainda podem ser atualizados na planilha.
-Não alterar: filtro precisa estar no proxy, pois o frontend recebe dados já agregados.
+- `000177c9` — proxy: isTesteLead() adicionado — exclui leads de teste das views compartilhadas
+- `4f0ef8b1` — proxy: isTesteLead removido de getActive e getRepHistory (painéis individuais de rep)
+- `9d0e7ea4` — proxy: isTesteLead refinado com regex `/\btestes?\b/i` (palavra exata, evita "Protestech")
+- `238e531f` — dash: funil vendedor oculta etapas com 0 (consistente com funil SDR) — mobile e telão
+- `0076c965` — proxy: getClosed ordena com fallback data_f → data de entrada (fechamento sem data não some)
