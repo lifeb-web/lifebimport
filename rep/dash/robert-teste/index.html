@@ -527,16 +527,26 @@ function fmtCNPJ(s) {
   return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8,12)}-${d.slice(12)}`;
 }
 
+// Converte string de valor monetário em número, suportando formato BR (1.200,64) e simples (1200.64).
+function parseMoney(s) {
+  const c = String(s || '').trim().replace(/[^\d,.]/g, '');
+  if (!c) return NaN;
+  if (c.includes(',')) return parseFloat(c.replace(/\./g, '').replace(',', '.'));
+  // sem vírgula: se um único ponto com ≤2 dígitos depois → decimal; senão → separador de milhar
+  const parts = c.split('.');
+  if (parts.length === 2 && parts[1].length <= 2) return parseFloat(c);
+  return parseFloat(c.replace(/\./g, ''));
+}
 function spPreview(input, row) {
   const el = document.getElementById('sp-preview-' + row);
   if (!el) return;
-  const n = parseFloat(input.value.trim().replace(/[^\d,.-]/g,'').replace(',','.'));
+  const n = parseMoney(input.value);
   el.textContent = !isNaN(n) && n > 0 ? cur(n) : '';
 }
 function potPreview(input, row) {
   const el = document.getElementById('pot-preview-' + row);
   if (!el) return;
-  const n = parseFloat(input.value.trim().replace(/[^\d,.-]/g,'').replace(',','.'));
+  const n = parseMoney(input.value);
   el.textContent = !isNaN(n) && n > 0 ? cur(n) : '';
 }
 
@@ -1080,7 +1090,7 @@ function cancelPotEdit(row) {
 async function savePot(row) {
   const input = document.getElementById('pot-input-' + row);
   if (!input) return;
-  const n = parseFloat(input.value.replace(/[^\d,.-]/g,'').replace(',','.'));
+  const n = parseMoney(input.value);
   if (isNaN(n) || n < 0) { showToast('Valor inválido'); return; }
   const lead   = _rawLeads.find(l => l.row === row);
   const oldPot = lead ? String(lead.pot || 0) : '0';
@@ -1336,7 +1346,7 @@ async function saveStatusExtra(row) {
     const raw = input ? input.value.trim() : '';
     prompt.classList.remove('visible');
     if (raw) {
-      const n = parseFloat(raw.replace(/[^\d,.-]/g,'').replace(',','.'));
+      const n = parseMoney(raw);
       if (!isNaN(n) && n > 0) {
         const lead2 = _rawLeads.find(l => l.row === row);
         const oldPot = lead2 ? String(lead2.pot || 0) : '0';
@@ -1360,7 +1370,7 @@ async function saveStatusExtra(row) {
 
     if (step === 'valor') {
       const raw = input ? input.value.trim() : '';
-      const n   = parseFloat((raw).replace(/[^\d,.-]/g,'').replace(',','.'));
+      const n   = parseMoney(raw);
       if (!raw || isNaN(n) || n <= 0) { showToast('Informe o valor do fechamento'); if (input) input.focus(); return; }
       // Guarda valor e avança para passo da data
       prompt.dataset.valorFech = String(n);
