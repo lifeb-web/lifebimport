@@ -26,7 +26,7 @@
       --font:    'Montserrat', sans-serif;
     }
     *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
-    html { overflow-x:hidden; touch-action:pan-x pan-y; }
+    html { overflow-x:hidden; touch-action:pan-x pan-y; zoom:1.08; }
     body { font-family:var(--font); background:var(--bg); color:var(--text); min-height:100vh; -webkit-tap-highlight-color:transparent; touch-action:pan-x pan-y; }
     button, a, select, input, textarea { touch-action:manipulation; }
 
@@ -52,9 +52,9 @@
 
     /* SUMMARY / FILTROS */
     .summary-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:12px; }
-    .sum-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:10px 6px; text-align:center; cursor:pointer; user-select:none; transition:transform .12s, box-shadow .12s; }
+    .sum-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:10px 6px; text-align:center; cursor:pointer; user-select:none; transition:transform .12s, box-shadow .12s; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; }
     .sum-card:active { transform:scale(.95); }
-    .sum-label { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; color:var(--muted); margin-bottom:3px; }
+    .sum-label { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0; color:var(--muted); margin-bottom:3px; white-space:nowrap; }
     .sum-val   { font-size:22px; font-weight:800; line-height:1; }
     .sum-card.s-ag   { border-top:3px solid var(--red); }
     .sum-card.s-cont { border-top:3px solid var(--amber); }
@@ -98,8 +98,8 @@
     .lc-body { padding:14px 14px 8px; }
 
     /* empresa + pot */
-    .lc-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:2px; }
-    .lc-empresa { font-size:15px; font-weight:800; color:var(--text); line-height:1.2; flex:1; min-width:0; word-break:break-word; }
+    .lc-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:0; }
+    .lc-empresa { font-size:13px; font-weight:800; color:var(--text); line-height:1.2; flex:1; min-width:0; word-break:break-word; }
     .lc-nome { font-size:11px; font-weight:600; color:var(--muted); margin-bottom:8px; line-height:1.3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
     /* valor potencial inline edit */
@@ -221,9 +221,8 @@
     .lc-toggle .ti { font-size:11px; transition:transform .2s; display:inline-block; }
     .lead-card.expanded .lc-toggle .ti { transform:rotate(180deg); }
     .lead-card.expanded .lc-toggle { color:var(--purple); }
-    .lc-toggle .sdr-dot { display:none; width:7px; height:7px; border-radius:50%; background:var(--purple); margin-left:2px; flex-shrink:0; }
-    .lc-toggle.has-sdr .sdr-dot { display:inline-block; }
-    .lead-card.expanded .lc-toggle.has-sdr .sdr-dot { display:none; }
+    .lc-toggle .sdr-hint { font-size:10px; font-weight:400; font-style:italic; color:var(--purple); letter-spacing:0; text-transform:none; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px; opacity:.88; }
+    .lead-card.expanded .lc-toggle .sdr-hint { display:none; }
 
     /* EXPANDED SECTION */
     .lc-expand { display:none; padding:12px 14px 14px; border-top:1px solid var(--border); }
@@ -344,13 +343,14 @@
     #search-bar { display:none; position:sticky; top:58px; z-index:99; background:#fff; border-bottom:1px solid var(--border); padding:8px 16px; box-shadow:0 2px 8px rgba(0,0,0,.06); }
     #search-bar.visible { display:block; }
     .sb-inner { display:flex; align-items:center; gap:8px; max-width:680px; margin:0 auto; }
-    #search-input { flex:1; padding:9px 14px; border-radius:10px; border:2px solid var(--border); font-family:var(--font); font-size:15px; font-weight:600; color:var(--text); background:var(--bg); outline:none; transition:border-color .15s; letter-spacing:.5px; }
+    #search-input { flex:1; padding:9px 14px; border-radius:10px; border:2px solid var(--border); font-family:var(--font); font-size:15px; font-weight:500; color:var(--text); background:var(--bg); outline:none; transition:border-color .15s; }
     #search-input:focus { border-color:var(--purple); background:#fff; }
     #search-close { background:none; border:none; cursor:pointer; padding:6px 8px; font-size:17px; line-height:1; color:var(--muted); border-radius:8px; transition:color .15s; flex-shrink:0; }
     #search-close:hover { color:var(--purple); }
 
     /* DESKTOP */
     @media (min-width:640px) {
+      html { zoom: 1; }
       body { zoom: 1.25; }
       main { padding:20px 24px 60px; }
       .summary-strip { gap:10px; }
@@ -360,7 +360,7 @@
       .lcp-val, .lcp-tel { font-size:13px; }
       /* busca inline no header (desktop) — centralizada absolutamente */
       .search-hd-wrap { position:absolute; left:50%; transform:translateX(-50%); display:flex; align-items:center; }
-      #search-hd-input { width:200px; padding:7px 14px; border-radius:10px; border:1.5px solid var(--border); font-family:var(--font); font-size:13px; font-weight:600; color:var(--text); background:var(--bg); outline:none; transition:border-color .15s,background .15s; text-align:center; letter-spacing:.5px; }
+      #search-hd-input { width:260px; padding:7px 14px; border-radius:10px; border:1.5px solid var(--border); font-family:var(--font); font-size:13px; font-weight:500; color:var(--text); background:var(--bg); outline:none; transition:border-color .15s,background .15s; }
       #search-hd-input::placeholder { font-weight:400; color:var(--muted); opacity:.55; font-size:12px; letter-spacing:0; }
       #search-hd-input:focus { border-color:var(--purple); background:#fff; }
       #search-hd-input.has-query { border-color:var(--purple); background:#f9f6ff; }
@@ -370,7 +370,7 @@
     @media (max-width:360px) {
       .lc-icon-btn { width:28px; height:28px; }
       .sum-val { font-size:20px; }
-      .lc-empresa { font-size:14px; }
+      .lc-empresa { font-size:12px; }
     }
   </style>
   <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
@@ -390,13 +390,13 @@
 
 <header>
   <div class="h-brand">
-    <img class="h-logo" src="https://projetojlbv.com.br/assets/img/logo-lifeb.png" alt="Life B" onerror="this.style.display='none'" onclick="location.reload()">
+    <img class="h-logo" src="../../../logos/logo-lifeb.png" alt="Life B" onclick="location.reload()">
     <div class="h-sep"></div>
     <span class="h-rep">__REP_DISPLAY__</span>
   </div>
   <div class="search-hd-wrap">
-    <input id="search-hd-input" type="tel" inputmode="numeric" maxlength="4"
-      placeholder="🔍  últ. 4 dígitos"
+    <input id="search-hd-input" type="search" inputmode="text"
+      placeholder="🔍  nome, empresa, cidade ou fone"
       oninput="handleSearch(this.value)"
       onkeydown="if(event.key==='Escape'){this.value='';handleSearch('');}"
       autocomplete="off" spellcheck="false">
@@ -411,8 +411,8 @@
 </header>
 <div id="search-bar">
   <div class="sb-inner">
-    <input id="search-input" type="tel" inputmode="numeric" maxlength="4"
-      placeholder="últ. 4 dígitos do celular"
+    <input id="search-input" type="search" inputmode="text"
+      placeholder="nome, empresa, cidade ou fone"
       oninput="handleSearch(this.value)"
       onkeydown="if(event.key==='Escape')closeSearch()"
       onblur="setTimeout(function(){if(!document.getElementById('search-input').value)closeSearch();},150)"
@@ -493,8 +493,9 @@ const esc = s => String(s == null ? '' : s)
 
 const cur = v => {
   if (!(v > 0)) return '';
-  try { return 'R$ ' + (+v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0}); }
-  catch(_) { return 'R$ ' + Math.round(+v).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
+  const dec = (+v) % 1 !== 0 ? 2 : 0;
+  try { return 'R$ ' + (+v).toLocaleString('pt-BR',{minimumFractionDigits:dec,maximumFractionDigits:dec}); }
+  catch(_) { return 'R$ ' + (dec ? (+v).toFixed(2).replace('.',',') : String(Math.round(+v))).replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
 };
 
 function toTitleCase(s) {
@@ -503,6 +504,28 @@ function toTitleCase(s) {
   return String(s).toLowerCase().split(' ').map((w,i) =>
     (i > 0 && lower.has(w)) ? w : w.charAt(0).toUpperCase() + w.slice(1)
   ).join(' ');
+}
+function abreviarCidade(s) {
+  if (!s || s.length <= 18 || window.innerWidth >= 640) return s;
+  const PREPS = new Set(['de','da','do','das','dos','e','em','no','na','nos','nas','para','por']);
+  const ws = s.split(' ');
+  const ci = ws.reduce((a,w,i) => { if (!PREPS.has(w.toLowerCase())) a.push(i); return a; }, []);
+  if (ci.length <= 1) return s;
+  const r = [...ws];
+  for (let k = ci.length - 2; k >= 0; k--) {
+    const i = ci[k], w = r[i];
+    if (w.length <= 4) continue;
+    r[i] = w.slice(0,2) + '.';
+    if (r.join(' ').length <= 18) break;
+  }
+  return r.join(' ');
+}
+function jaContem(texto, termo) {
+  if (!termo) return false;
+  const norm = s => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  const tn = norm(termo).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  // Detecta apenas se o termo está NO FINAL do endereço, opcionalmente seguido de estado (2 letras) e/ou CEP
+  return new RegExp(tn + '(?:[\\s,;\\-\\/]+[a-z]{2}(?:[\\s,;\\-\\/]+[\\d\\-]+)?|[\\s,;\\-\\/]+[\\d\\-]+)?\\s*$').test(norm(texto));
 }
 
 function fmtData(d) {
@@ -526,17 +549,31 @@ function fmtCNPJ(s) {
   if (d.length !== 14) return s || '';
   return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8,12)}-${d.slice(12)}`;
 }
+function fmtCEP(s) {
+  const d = String(s||'').replace(/\D/g,'');
+  return d.length === 8 ? d.slice(0,5)+'-'+d.slice(5) : (d || '');
+}
 
+// Converte string de valor monetário em número, suportando formato BR (1.200,64) e simples (1200.64).
+function parseMoney(s) {
+  const c = String(s || '').trim().replace(/[^\d,.]/g, '');
+  if (!c) return NaN;
+  if (c.includes(',')) return parseFloat(c.replace(/\./g, '').replace(',', '.'));
+  // sem vírgula: se um único ponto com ≤2 dígitos depois → decimal; senão → separador de milhar
+  const parts = c.split('.');
+  if (parts.length === 2 && parts[1].length <= 2) return parseFloat(c);
+  return parseFloat(c.replace(/\./g, ''));
+}
 function spPreview(input, row) {
   const el = document.getElementById('sp-preview-' + row);
   if (!el) return;
-  const n = parseFloat(input.value.trim().replace(/[^\d,.-]/g,'').replace(',','.'));
+  const n = parseMoney(input.value);
   el.textContent = !isNaN(n) && n > 0 ? cur(n) : '';
 }
 function potPreview(input, row) {
   const el = document.getElementById('pot-preview-' + row);
   if (!el) return;
-  const n = parseFloat(input.value.trim().replace(/[^\d,.-]/g,'').replace(',','.'));
+  const n = parseMoney(input.value);
   el.textContent = !isNaN(n) && n > 0 ? cur(n) : '';
 }
 
@@ -557,7 +594,7 @@ function setLeadTs(row) {
   const el = document.getElementById('ts-' + row);
   if (el) el.textContent = getLeadTs(row);
 }
-function getLeadTs(row, dataEntrada, tsServidor) {
+function getLeadTs(row, dataEntrada, tsServidor, tsEntrada) {
   const tsLocal  = _tsMap[row] || 0;
   const tsRemoto = tsServidor  || 0;
   const ts       = Math.max(tsLocal, tsRemoto);
@@ -567,7 +604,18 @@ function getLeadTs(row, dataEntrada, tsServidor) {
     const mon = String(d.getMonth()+1).padStart(2,'0');
     const h   = String(d.getHours()).padStart(2,'0');
     const m   = String(d.getMinutes()).padStart(2,'0');
-    return `Atualizado: ${day}/${mon} - ${h}:${m}`;
+    return `Atualizado ${day}/${mon} às ${h}:${m}`;
+  }
+  if (tsEntrada) {
+    const d = new Date(tsEntrada);
+    const day = String(d.getDate()).padStart(2,'0');
+    const mon = String(d.getMonth()+1).padStart(2,'0');
+    const h   = d.getHours();
+    const m   = d.getMinutes();
+    const temHora = h !== 0 || m !== 0;
+    return temHora
+      ? `Entrada ${day}/${mon} às ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`
+      : `Entrada: ${day}/${mon}`;
   }
   if (dataEntrada) return `Entrada: ${fmtData(dataEntrada)}`;
   return '';
@@ -811,13 +859,57 @@ function clearFilter() {
 // no-op: filtering is now handled in renderLeads (JS slice of filtered set)
 function applyFilter() {}
 
-// ── BUSCA POR TELEFONE ─────────────────────────────────────────
+// ── BUSCA ──────────────────────────────────────────────────────
 let _searchQuery = '';
 function _digitsOnly(s) { return String(s || '').replace(/\D/g, ''); }
+function _norm(s) {
+  return String(s || '').toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/\s+/g, '');
+}
+function _leadFields(l) {
+  return {
+    nomeN:     _norm(l.nome),
+    empresaN:  _norm(l.empresa),
+    cidadeN:   _norm(l.cidade),
+    estadoN:   _norm(l.estado),
+    segmentoN: _norm(l.segmento),
+    waD:       _digitsOnly(l.whatsapp),
+    contD:     _digitsOnly(l.contato),
+  };
+}
+// Fase 1: query inteira como frase — só nome e empresa
+function _matchesPhrase(l) {
+  const q = _norm(_searchQuery.trim());
+  if (!q) return true;
+  const f = _leadFields(l);
+  return f.nomeN.includes(q) || f.empresaN.includes(q);
+}
+// Fase 2: cada palavra tem que bater em algum campo (AND tokens)
 function _matchesSearch(l) {
-  const q = _searchQuery;
-  if (q.length !== 4) return true;
-  return _digitsOnly(l.whatsapp).endsWith(q) || _digitsOnly(l.contato).endsWith(q);
+  // normaliza acentos mas preserva espaços para o split — _norm remove espaços, não usar aqui
+  const rawNorm = _searchQuery.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const tokens = rawNorm.split(/\s+/).filter(Boolean);
+  if (!tokens.length) return true;
+  const f = _leadFields(l);
+  return tokens.every(function(q) {
+    const qd = _digitsOnly(q);
+    if (f.nomeN.includes(q))                return true;
+    if (f.empresaN.includes(q))             return true;
+    if (f.cidadeN.includes(q))              return true;
+    if (f.estadoN.includes(q))              return true;
+    if (f.segmentoN.includes(q))            return true;
+    if (qd && f.waD.includes(qd))           return true;
+    if (qd && f.contD.includes(qd))         return true;
+    return false;
+  });
+}
+// Decisão global: se a frase bate em algum lugar do sistema (ativos ou histórico),
+// usa frase em todo lugar. Senão usa token AND. Um ponto de decisão, comportamento consistente.
+function _applySearch(leads) {
+  const universe = _rawLeads.concat(Array.isArray(_history) ? _history : []);
+  const phraseWins = universe.some(_matchesPhrase);
+  return phraseWins ? leads.filter(_matchesPhrase) : leads.filter(_matchesSearch);
 }
 function toggleSearch() {
   const bar = document.getElementById('search-bar');
@@ -845,18 +937,12 @@ function closeSearch() {
   }
 }
 function handleSearch(val) {
-  _searchQuery = _digitsOnly(val).slice(0, 4);
+  _searchQuery = val;
+  const active = _searchQuery.trim().length > 0;
   const hdInp = document.getElementById('search-hd-input');
-  if (hdInp) hdInp.classList.toggle('has-query', _searchQuery.length === 4);
+  if (hdInp) hdInp.classList.toggle('has-query', active);
   if (_rawLeads.length) renderLeads(_rawLeads);
-  if (_searchQuery.length === 4) {
-    // Fecha teclado mobile com delay leve para não parecer abrupto
-    setTimeout(function() {
-      const si = document.getElementById('search-input');
-      const hi = document.getElementById('search-hd-input');
-      if (si && document.activeElement === si) si.blur();
-      if (hi && document.activeElement === hi) hi.blur();
-    }, 250);
+  if (active) {
     const sec = document.getElementById('historico-section');
     if (sec && !sec.classList.contains('open')) sec.classList.add('open');
     if (!_histLoaded) loadHistorico();
@@ -1080,7 +1166,7 @@ function cancelPotEdit(row) {
 async function savePot(row) {
   const input = document.getElementById('pot-input-' + row);
   if (!input) return;
-  const n = parseFloat(input.value.replace(/[^\d,.-]/g,'').replace(',','.'));
+  const n = parseMoney(input.value);
   if (isNaN(n) || n < 0) { showToast('Valor inválido'); return; }
   const lead   = _rawLeads.find(l => l.row === row);
   const oldPot = lead ? String(lead.pot || 0) : '0';
@@ -1107,7 +1193,7 @@ async function savePot(row) {
     if (lead) lead.pot = parseFloat(oldPot) || 0;
     const oldN = parseFloat(oldPot) || 0;
     if (potEl) potEl.innerHTML = (oldN > 0 ? esc(cur(oldN)) : '<span class="lc-pot-no-val">–</span>') + ` <span class="lc-pot-edit-icon">${SVG_EDIT}</span>`;
-    showToast('Erro ao salvar — alteração revertida');
+    showToast('Erro ao salvar. Alteração revertida.');
   }
 }
 function potKeyDown(e, row) {
@@ -1185,7 +1271,7 @@ async function saveObs(row) {
       const viewDiv = rep.querySelector('.obsr-view');
       if (viewDiv) viewDiv.innerHTML = buildObsViewHtml(row, oldObs);
     }
-    showToast('Erro ao salvar — alteração revertida');
+    showToast('Erro ao salvar. Alteração revertida.');
   }
 }
 
@@ -1268,9 +1354,11 @@ function cancelStatusPrompt(row) {
       body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'TIMESTAMP_VEND', valor:oldTs }) }).catch(() => {});
     renderLeads(_rawLeads);
   } else {
-    // Fechado / Perdido — status NÃO foi aplicado ainda, só fecha o form e restaura o select
+    // Fechado / Perdido — form cancelado: reverte select e borda do card
     const sel = document.querySelector(`.lc-select[data-row="${row}"]`);
     if (sel) { sel.value = oldStatus; sel.className = 'lc-select ' + statusClass(oldStatus); sel.dataset.original = oldStatus; }
+    const card2 = sel ? sel.closest('.lead-card') : document.querySelector(`.lead-card[data-row="${row}"]`);
+    if (card2) { card2.classList.remove('ag','cont','neg'); const bc = borderClass(oldStatus); if (bc) card2.classList.add(bc); }
     delete _pendingUndoByRow[row];
   }
 }
@@ -1334,7 +1422,7 @@ async function saveStatusExtra(row) {
     const raw = input ? input.value.trim() : '';
     prompt.classList.remove('visible');
     if (raw) {
-      const n = parseFloat(raw.replace(/[^\d,.-]/g,'').replace(',','.'));
+      const n = parseMoney(raw);
       if (!isNaN(n) && n > 0) {
         const lead2 = _rawLeads.find(l => l.row === row);
         const oldPot = lead2 ? String(lead2.pot || 0) : '0';
@@ -1358,7 +1446,7 @@ async function saveStatusExtra(row) {
 
     if (step === 'valor') {
       const raw = input ? input.value.trim() : '';
-      const n   = parseFloat((raw).replace(/[^\d,.-]/g,'').replace(',','.'));
+      const n   = parseMoney(raw);
       if (!raw || isNaN(n) || n <= 0) { showToast('Informe o valor do fechamento'); if (input) input.focus(); return; }
       // Guarda valor e avança para passo da data
       prompt.dataset.valorFech = String(n);
@@ -1422,7 +1510,7 @@ async function saveStatusExtra(row) {
       if (d.ts) { _tsMap[row] = d.ts; try{localStorage.setItem(TS_KEY,JSON.stringify(_tsMap));}catch(_){} }
     } catch(_) {
       _revertOptimisticClose(row);
-      showToast('Erro ao registrar — verifique conexão');
+      showToast('Erro ao registrar. Verifique a conexão.');
     }
     return;
   }
@@ -1467,7 +1555,7 @@ async function saveStatusExtra(row) {
     if (d.ts) { _tsMap[row] = d.ts; try{localStorage.setItem(TS_KEY,JSON.stringify(_tsMap));}catch(_){} }
   } catch(_) {
     _revertOptimisticClose(row);
-    showToast('Erro ao registrar — verifique conexão');
+    showToast('Erro ao registrar. Verifique a conexão.');
   }
 }
 function spKeyDown(e, row) {
@@ -1545,9 +1633,12 @@ async function confirmStatusChange(row) {
   const oldStatus = sel ? sel.dataset.original : '';
 
   if (valor === 'Fechado' || valor === 'Perdido') {
-    // NÃO atualiza UI nem _rawLeads aqui — o rep ainda precisa completar o formulário.
-    // Se abandonar sem preencher, o status exibido permanece o original.
-    // O update otimista acontece em saveStatusExtra após o formulário completo.
+    // Mostra o status visualmente enquanto o rep preenche o form — evita double-trigger.
+    // dataset.original permanece oldStatus para o cancelamento poder reverter.
+    // O update otimista de _rawLeads acontece em saveStatusExtra após o form completo.
+    if (sel) { sel.value = valor; sel.className = 'lc-select ' + statusClass(valor); }
+    const card2 = sel ? sel.closest('.lead-card') : document.querySelector(`.lead-card[data-row="${row}"]`);
+    if (card2) { card2.classList.remove('ag','cont','neg'); }
     const prompt = document.getElementById('sp-' + row);
     if (prompt) prompt.dataset.oldStatus = oldStatus;
     showStatusPrompt(row, valor);
@@ -1589,7 +1680,7 @@ async function confirmStatusChange(row) {
     if (raw) raw.status = oldStatus;
     if (sel) { sel.value = oldStatus; sel.className = 'lc-select ' + statusClass(oldStatus); sel.dataset.original = oldStatus; }
     renderLeads(_rawLeads);
-    showToast('Erro ao salvar — alteração revertida');
+    showToast('Erro ao salvar. Alteração revertida.');
   }
 }
 
@@ -1641,7 +1732,7 @@ function renderLeads(leads, highlightRow) {
     if (!bar || !lbl || !clr) return;
     const parts = [];
     if (_activeFilter) parts.push('Mostrando: ' + _activeFilter);
-    if (_searchQuery.length === 4) parts.push('🔍 ****' + _searchQuery);
+    if (_searchQuery.trim()) parts.push('🔍 "' + _searchQuery.trim() + '"');
     if (parts.length) {
       bar.classList.add('visible');
       lbl.textContent = parts.join(' · ');
@@ -1657,11 +1748,16 @@ function renderLeads(leads, highlightRow) {
     return;
   }
 
-  let toShow = _activeFilter ? _allLeads.filter(l => l.status === _activeFilter) : _allLeads;
-  const searchActive = _searchQuery.length === 4;
-  if (searchActive) toShow = toShow.filter(_matchesSearch);
+  const searchActive = _searchQuery.trim().length > 0;
+  // busca ativa: ignora filtro de status e pesquisa em toda a base
+  let toShow = searchActive ? _applySearch(_allLeads)
+             : (_activeFilter ? _allLeads.filter(l => l.status === _activeFilter) : _allLeads);
   if (searchActive && !toShow.length) {
-    list.innerHTML = `<div class="empty-state"><strong>Sem resultado</strong>Nenhum lead com final ****${esc(_searchQuery)}.</div>`;
+    const hasInHistory = Array.isArray(_history) && _applySearch(_history).length > 0;
+    const msg = hasInHistory
+      ? `<strong>Não está nos ativos</strong>Resultado encontrado no histórico abaixo.`
+      : `<strong>Sem resultado</strong>Nenhum lead encontrado para "${esc(_searchQuery.trim())}".`;
+    list.innerHTML = `<div class="empty-state">${msg}</div>`;
     if (wrap) wrap.innerHTML = '';
     return;
   }
@@ -1671,7 +1767,7 @@ function renderLeads(leads, highlightRow) {
     const nomeRaw  = toTitleCase(l.nome||'');
     const nomeEmp  = toTitleCase(l.empresa||'');
     const titulo   = esc(nomeEmp || nomeRaw || '—');
-    const cidadeUF = [toTitleCase(l.cidade),(l.estado||'').toUpperCase()].filter(v=>v&&v.trim()).join(' · ');
+    const cidadeUF = [abreviarCidade(toTitleCase(l.cidade)),(l.estado||'').toUpperCase()].filter(v=>v&&v.trim()).join(' · ');
     const sClass   = statusClass(l.status);
     const bClass   = borderClass(l.status);
     const pot      = l.pot > 0 ? cur(l.pot) : '';
@@ -1707,7 +1803,14 @@ function renderLeads(leads, highlightRow) {
       cpRows.push(`<div class="lcp-row"><span class="lcp-icon">📱</span><div class="lcp-info"><div class="lcp-label">Telefone / WhatsApp</div><button class="lcp-tel lcp-wa-btn" data-wa="${esc(waNum)}" data-display="${esc(phone.display)}" data-name="${esc(nomeRaw||contato||'')}" onclick="openContactWa(this,${l.row})">💬 ${esc(phone.display)}</button></div></div>`);
     }
     if (endereco) {
-      const endFull = [endereco, cidadeUF ? cidadeUF.replace(' · ',' — ') : ''].filter(Boolean).join(', ');
+      const endPartes = [endereco];
+      if (l.cidade && !jaContem(endereco, l.cidade)) endPartes.push(toTitleCase(l.cidade));
+      if (l.estado && !jaContem(endereco, l.estado)) endPartes.push((l.estado||'').toUpperCase());
+      if (l.cep) {
+        const cepD = l.cep.replace(/\D/g,'');
+        if (cepD.length === 8 && !endereco.replace(/\D/g,'').includes(cepD)) endPartes.push(fmtCEP(l.cep));
+      }
+      const endFull = endPartes.join(', ');
       cpRows.push(`<div class="lcp-row lcp-copyable" data-copy="${esc(endFull)}" onclick="copyLcp(this)"><span class="lcp-icon">🏠</span><div class="lcp-info"><div class="lcp-label">Endereço · toque para copiar</div><div class="lcp-val">${esc(endFull)}</div></div></div>`);
     }
     if (cnpj)
@@ -1769,7 +1872,7 @@ function renderLeads(leads, highlightRow) {
               ${options}
             </select>
           </div>
-          <div class="lc-last-updated" id="ts-${l.row}">${getLeadTs(l.row, l.data, l.ts_vend)}</div>
+          <div class="lc-last-updated" id="ts-${l.row}">${getLeadTs(l.row, l.data, l.ts_vend, l.ts_entrada)}</div>
           <div class="lc-confirm" id="conf-${l.row}">
             <div class="lc-confirm-icon" id="conf-icon-${l.row}">📋</div>
             <div class="lc-confirm-msg">Mudar para <strong id="conf-status-${l.row}"></strong>?</div>
@@ -1815,8 +1918,9 @@ function renderLeads(leads, highlightRow) {
           </div>
         </div>
       </div>
-      <button class="lc-toggle${l.obs_sdr ? ' has-sdr' : ''}" onclick="toggleExpand(this)" aria-expanded="false">
-        <span class="tt">mais</span>&nbsp;<span class="ti">▾</span><span class="sdr-dot"></span>
+      <button class="lc-toggle" onclick="toggleExpand(this)" aria-expanded="false">
+        <span class="tt">mais</span>&nbsp;<span class="ti">▾</span>
+        ${l.obs_sdr ? `<span class="sdr-hint">&nbsp;&nbsp;"${esc(l.obs_sdr.slice(0,40))}${l.obs_sdr.length>40?'…':''}"</span>` : ''}
       </button>
       <div class="lc-expand">
         ${l.obs_sdr ? `<div class="lc-obs-sdr"><div class="lc-obs-sdr-label">Observação do SDR</div><div class="lc-obs-sdr-text">${esc(l.obs_sdr)}</div></div>` : ''}
@@ -1827,7 +1931,7 @@ function renderLeads(leads, highlightRow) {
           <div class="obsr-edit-wrap" id="obsr-edit-${l.row}">
             <div class="obs-conclude-banner">📝 Registre uma observação antes de concluir</div>
             <textarea class="lc-obs-textarea" id="obs-${l.row}" maxlength="1000"
-              placeholder="Escreva sua observação sobre este lead…">${esc(l.obs||'')}</textarea>
+              placeholder="O que aconteceu? Ex: ligou, não atendeu, vai tentar amanhã">${esc(l.obs||'')}</textarea>
             <div class="lc-obs-footer">
               <span class="lc-obs-fb" id="obs-fb-${l.row}"></span>
               <button class="obsr-cancel-btn"  id="obs-cancel-${l.row}"   onclick="cancelObsEdit(${l.row})">Cancelar</button>
@@ -1964,7 +2068,7 @@ function _histCardHtml(l) {
   const nomeEmp    = toTitleCase(l.empresa||'');
   const titulo     = esc(nomeEmp || nomeRaw || '—');
   const subtitulo  = nomeEmp && nomeRaw && nomeRaw.toLowerCase() !== nomeEmp.toLowerCase() ? nomeRaw : '';
-  const cidadeUF   = [toTitleCase(l.cidade),(l.estado||'').toUpperCase()].filter(v=>v&&v.trim()).join(' · ');
+  const cidadeUF   = [abreviarCidade(toTitleCase(l.cidade)),(l.estado||'').toUpperCase()].filter(v=>v&&v.trim()).join(' · ');
   const bClass     = l.status==='Fechado' ? 'fech' : 'perd';
   const badge      = l.status==='Fechado' ? 'b-fech' : 'b-perd';
   const dataMeta   = l.data_f ? '📅 '+fmtData(l.data_f) : (l.data ? '📅 '+fmtData(l.data) : '');
@@ -2012,8 +2116,8 @@ function renderHistorico() {
   const nPerd = h.filter(l=>l.status==='Perdido').length;
 
   // modo busca: mostra todos os matches (fechados e perdidos juntos), abre seção
-  if (_searchQuery.length === 4) {
-    const matches = h.filter(_matchesSearch);
+  if (_searchQuery.trim()) {
+    const matches = _applySearch(h);
     if (counts) counts.textContent = matches.length
       ? matches.length + ' resultado' + (matches.length !== 1 ? 's' : '') + ' no histórico'
       : 'nenhum no histórico';
@@ -2125,7 +2229,10 @@ async function loadData() {
         if (prompt && prompt.classList.contains('visible')) newLeads.push(existing);
       }
     });
-    const hasPending = !!document.querySelector('.lc-status-prompt.visible, .lead-card.concluding');
+    const hasEditingObs = Array.from(document.querySelectorAll('.lc-obs-textarea')).some(
+      ta => ta.value !== (ta.closest('[data-saved]')?.dataset.saved || '')
+    );
+    const hasPending = !!document.querySelector('.lc-status-prompt.visible, .lead-card.concluding, .lc-confirm.visible') || hasEditingObs;
     const changed    = _firstLoad || JSON.stringify(newLeads) !== JSON.stringify(_rawLeads);
     _rawLeads = newLeads;
     if (changed && !hasPending) renderLeads(_rawLeads);

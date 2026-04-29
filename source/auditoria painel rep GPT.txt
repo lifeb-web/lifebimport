@@ -2714,3 +2714,122 @@ ESTADO FINAL
 
 PENDENTES
   Nenhum. Sistema auditado, estável e documentado.
+
+================================================================================
+SESSAO 2026-04-29 — UX MOBILE: LOGO, ZOOM, CIDADE, ENDEREÇO, TIMESTAMP ENTRADA
+Commits: 204b599d (margin-bottom:0 lc-top — último deploy desta sessão)
+Arquivos: dashboard-rep-template.html (template), lifeb-leads-proxy.gs, planilha-leads-script.gs
+  (gerados: rep/dash/iramar, rep/dash/natanael, rep/dash/robert-teste)
+================================================================================
+
+MUDANÇAS DESTA SESSÃO
+
+1. LOGO — movida para dentro do repositório (repo-hosted)
+   Problema recorrente: URL externa (projetojlbv.com.br/assets/img/logo-lifeb.png)
+   retornava 404 e deixava o logo sumindo com frequência.
+   Solução: logo copiada para /logos/logo-lifeb.png no gh-pages.
+   Template agora usa caminho relativo: src="../../../logos/logo-lifeb.png"
+   Logo não depende mais de servidor externo — nunca some novamente.
+
+2. OBS DO SDR NO BOTÃO "VER MAIS" — estilizada como observação real
+   Antes: texto plano apagado no botão.
+   Agora: <span class="sdr-hint"> com italic, cor var(--purple), opacity:.88, aspas.
+   Exemplo visual: › ver mais  "cliente perguntou sobre prazo…"
+   Limita a 40 chars + reticências. Apenas levemente visível — não distrai, informa.
+
+3. PLACEHOLDER DE BUSCA — adicionado "cidade"
+   Antes: "nome, empresa ou fone"
+   Agora: "nome, empresa, cidade ou fone"
+
+4. ZOOM MOBILE — html{zoom:1.08} para melhor leitura (usuários 55+)
+   @media base: html { zoom: 1.08; }
+   @media (min-width:640px): html { zoom: 1; } — reset para desktop (evita compor com body{zoom:1.25})
+   Aumenta tudo proporcionalmente sem risco de quebrar layout.
+
+5. abreviarCidade(s) — abreviação inteligente de cidades longas no mobile
+   Trigger: nome > 18 chars E window.innerWidth < 640.
+   Lógica: abrevia palavras significativas (não preposições) até caber em 18 chars.
+   Ex: "Águas Lindas de Goiás" → "Ág. Lindas de Goiás"
+   Cidades de uma palavra: nunca abrevia.
+   Usada no sub-badge de cidade nos cards.
+
+6. jaContem(texto, termo) — detecção de dedup por fim de string
+   Evita falso positivo: "Rua Anápolis Norte, Brasília, DF" NÃO dispara dedup para cidade "Anápolis".
+   Regex: termo deve estar no final do texto (opcionalmente seguido por estado/CEP).
+
+7. fmtCEP(s) — formata 8 dígitos → 00000-000
+
+8. DEDUP DE ENDEREÇO — evita repetição de cidade/estado/CEP
+   Se SDR copiou endereço completo (rua + cidade + estado + CEP) no campo "endereço",
+   o painel não duplica cidade/estado/CEP que já estejam no final do endereço.
+   Usa jaContem() para detecção segura. Aplica a todos os três campos.
+
+9. SUM-CARD — alinhamento dos números no strip de resumo
+   Com zoom, labels podiam ficar em 2 linhas e desalinhar os números.
+   Fix: sum-card com display:flex + flex-direction:column + align-items:center + justify-content:flex-end
+   sum-label: letter-spacing:0 + white-space:nowrap (evita quebra de linha)
+   Números sempre alinhados independente do tamanho do label.
+
+10. CEP no endereço — sempre exibido quando disponível
+    Se CEP está no proxy (campo cep) e não está no endereço, é adicionado formatado.
+    Tamanho do CEP ligeiramente menor (.cep-inline { font-size:11px })
+
+11. getLeadTs() — timestamp de entrada com hora ("Entrada 28/04 às 14:30")
+    Novo campo ts_entrada no proxy (epoch ms da DATA ENVIO AO VENDEDOR = col H da planilha).
+    Lógica:
+    - Se lead foi tocado pelo rep: "Atualizado DD/MM às HH:MM"
+    - Se ts_entrada com hora não-zero: "Entrada DD/MM às HH:MM"
+    - Se ts_entrada sem hora (data-only): "Entrada: DD/MM"
+    - Fallback campo data: "Entrada: DD/MM/AA"
+    Assinatura atualizada: getLeadTs(row, dataEntrada, tsServidor, tsEntrada)
+    Call site: getLeadTs(l.row, l.data, l.ts_vend, l.ts_entrada)
+
+12. Auto-preenchimento de DATA ENVIO AO VENDEDOR (planilha-leads-script.gs)
+    onLeadEdit: ao SDR selecionar um vendedor na coluna G:
+    - Seta sheet.getRange(row, 8).setValue(new Date()) — preenche col H automaticamente
+    - Ao remover vendedor: limpa col H
+    Funcionamento confirmado pelo usuário.
+
+13. .lc-empresa — fonte menor no mobile
+    Mobile: 13px (era 15px); <360px: 12px; desktop ≥640px: 16px.
+    Evita que nome de empresa longa quebre a primeira linha do card.
+
+14. .lc-top { margin-bottom:0; } — empresa colada ao nome do lead no mobile
+    Era margin-bottom:2px. Reduzido para 0 — espaço entre empresa e nome do lead mais justo.
+    Desktop não afetado.
+
+PROXY — MUDANÇAS (lifeb-leads-proxy.gs — reimplantado pelo usuário nesta sessão)
+  - cep: norm(r[COL_CEP]) adicionado ao objeto de lead (action active, active_all, rep_history, getLatest)
+  - ts_entrada: r[COL_DATA_ENVIO] instanceof Date ? r[COL_DATA_ENVIO].getTime() : 0
+    (COL_DATA_ENVIO = 7, índice 0 = coluna H "DATA ENVIO AO VENDEDOR")
+    Adicionado a todas as 5 ocorrências de retorno de lead
+
+PLANILHA SCRIPT — MUDANÇAS (planilha-leads-script.gs — reimplantado pelo usuário)
+  - const COL_DATA_ENVIO = 8; (1-indexed, coluna H)
+  - if (vendedor) → sheet.getRange(row, COL_DATA_ENVIO).setValue(new Date())
+  - else if (statusVend === 'Aguardando contato') → sheet.getRange(row, COL_DATA_ENVIO).setValue('')
+  Trigger instalável onLeadEdit confirmado funcionando.
+
+ESTADO ATUAL DO SISTEMA
+
+Frontend painel rep (live — commit 204b599d):
+  - Logo no repo → nunca some ✓
+  - Zoom html 1.08 mobile, reset desktop ✓
+  - abreviarCidade, jaContem, fmtCEP, dedup endereço ✓
+  - Sum-card alinhado com zoom ✓
+  - Obs SDR com estilo de obs no botão ✓
+  - getLeadTs com ts_entrada e hora ✓
+  - lc-empresa 13px mobile ✓
+  - lc-top margin-bottom:0 ✓
+
+Proxy (live, reimplantado):
+  - cep e ts_entrada em todos os lead objects ✓
+
+Planilha script (live, reimplantado):
+  - Auto-fill DATA ENVIO AO VENDEDOR ao selecionar vendedor ✓
+
+PENDENTES
+  - Undo usa POSTs campo-unico (aceitável — ação rara/secundária)
+  - Responsividade dashboard-leads.html mobile
+  - Autenticação real (OAuth/JWT) para uso externo
+  - dashboard_data consolidado (baixa prioridade)
