@@ -1268,9 +1268,11 @@ function cancelStatusPrompt(row) {
       body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'TIMESTAMP_VEND', valor:oldTs }) }).catch(() => {});
     renderLeads(_rawLeads);
   } else {
-    // Fechado / Perdido — status NÃO foi aplicado ainda, só fecha o form e restaura o select
+    // Fechado / Perdido — form cancelado: reverte select e borda do card
     const sel = document.querySelector(`.lc-select[data-row="${row}"]`);
     if (sel) { sel.value = oldStatus; sel.className = 'lc-select ' + statusClass(oldStatus); sel.dataset.original = oldStatus; }
+    const card2 = sel ? sel.closest('.lead-card') : document.querySelector(`.lead-card[data-row="${row}"]`);
+    if (card2) { card2.classList.remove('ag','cont','neg'); const bc = borderClass(oldStatus); if (bc) card2.classList.add(bc); }
     delete _pendingUndoByRow[row];
   }
 }
@@ -1545,9 +1547,12 @@ async function confirmStatusChange(row) {
   const oldStatus = sel ? sel.dataset.original : '';
 
   if (valor === 'Fechado' || valor === 'Perdido') {
-    // NÃO atualiza UI nem _rawLeads aqui — o rep ainda precisa completar o formulário.
-    // Se abandonar sem preencher, o status exibido permanece o original.
-    // O update otimista acontece em saveStatusExtra após o formulário completo.
+    // Mostra o status visualmente enquanto o rep preenche o form — evita double-trigger.
+    // dataset.original permanece oldStatus para o cancelamento poder reverter.
+    // O update otimista de _rawLeads acontece em saveStatusExtra após o form completo.
+    if (sel) { sel.value = valor; sel.className = 'lc-select ' + statusClass(valor); }
+    const card2 = sel ? sel.closest('.lead-card') : document.querySelector(`.lead-card[data-row="${row}"]`);
+    if (card2) { card2.classList.remove('ag','cont','neg'); }
     const prompt = document.getElementById('sp-' + row);
     if (prompt) prompt.dataset.oldStatus = oldStatus;
     showStatusPrompt(row, valor);
@@ -2125,7 +2130,10 @@ async function loadData() {
         if (prompt && prompt.classList.contains('visible')) newLeads.push(existing);
       }
     });
-    const hasPending = !!document.querySelector('.lc-status-prompt.visible, .lead-card.concluding');
+    const hasEditingObs = Array.from(document.querySelectorAll('.lc-obs-textarea')).some(
+      ta => ta.value !== (ta.closest('[data-saved]')?.dataset.saved || '')
+    );
+    const hasPending = !!document.querySelector('.lc-status-prompt.visible, .lead-card.concluding, .lc-confirm.visible') || hasEditingObs;
     const changed    = _firstLoad || JSON.stringify(newLeads) !== JSON.stringify(_rawLeads);
     _rawLeads = newLeads;
     if (changed && !hasPending) renderLeads(_rawLeads);
