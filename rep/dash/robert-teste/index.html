@@ -549,6 +549,10 @@ function fmtCNPJ(s) {
   if (d.length !== 14) return s || '';
   return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8,12)}-${d.slice(12)}`;
 }
+function fmtCEP(s) {
+  const d = String(s||'').replace(/\D/g,'');
+  return d.length === 8 ? d.slice(0,5)+'-'+d.slice(5) : (d || '');
+}
 
 // Converte string de valor monetário em número, suportando formato BR (1.200,64) e simples (1200.64).
 function parseMoney(s) {
@@ -600,7 +604,7 @@ function getLeadTs(row, dataEntrada, tsServidor) {
     const mon = String(d.getMonth()+1).padStart(2,'0');
     const h   = String(d.getHours()).padStart(2,'0');
     const m   = String(d.getMinutes()).padStart(2,'0');
-    return `Atualizado: ${day}/${mon} - ${h}:${m}`;
+    return `Atualizado ${day}/${mon} às ${h}:${m}`;
   }
   if (dataEntrada) return `Entrada: ${fmtData(dataEntrada)}`;
   return '';
@@ -1178,7 +1182,7 @@ async function savePot(row) {
     if (lead) lead.pot = parseFloat(oldPot) || 0;
     const oldN = parseFloat(oldPot) || 0;
     if (potEl) potEl.innerHTML = (oldN > 0 ? esc(cur(oldN)) : '<span class="lc-pot-no-val">–</span>') + ` <span class="lc-pot-edit-icon">${SVG_EDIT}</span>`;
-    showToast('Erro ao salvar — alteração revertida');
+    showToast('Erro ao salvar. Alteração revertida.');
   }
 }
 function potKeyDown(e, row) {
@@ -1256,7 +1260,7 @@ async function saveObs(row) {
       const viewDiv = rep.querySelector('.obsr-view');
       if (viewDiv) viewDiv.innerHTML = buildObsViewHtml(row, oldObs);
     }
-    showToast('Erro ao salvar — alteração revertida');
+    showToast('Erro ao salvar. Alteração revertida.');
   }
 }
 
@@ -1495,7 +1499,7 @@ async function saveStatusExtra(row) {
       if (d.ts) { _tsMap[row] = d.ts; try{localStorage.setItem(TS_KEY,JSON.stringify(_tsMap));}catch(_){} }
     } catch(_) {
       _revertOptimisticClose(row);
-      showToast('Erro ao registrar — verifique conexão');
+      showToast('Erro ao registrar. Verifique a conexão.');
     }
     return;
   }
@@ -1540,7 +1544,7 @@ async function saveStatusExtra(row) {
     if (d.ts) { _tsMap[row] = d.ts; try{localStorage.setItem(TS_KEY,JSON.stringify(_tsMap));}catch(_){} }
   } catch(_) {
     _revertOptimisticClose(row);
-    showToast('Erro ao registrar — verifique conexão');
+    showToast('Erro ao registrar. Verifique a conexão.');
   }
 }
 function spKeyDown(e, row) {
@@ -1665,7 +1669,7 @@ async function confirmStatusChange(row) {
     if (raw) raw.status = oldStatus;
     if (sel) { sel.value = oldStatus; sel.className = 'lc-select ' + statusClass(oldStatus); sel.dataset.original = oldStatus; }
     renderLeads(_rawLeads);
-    showToast('Erro ao salvar — alteração revertida');
+    showToast('Erro ao salvar. Alteração revertida.');
   }
 }
 
@@ -1791,6 +1795,10 @@ function renderLeads(leads, highlightRow) {
       const endPartes = [endereco];
       if (l.cidade && !jaContem(endereco, l.cidade)) endPartes.push(toTitleCase(l.cidade));
       if (l.estado && !jaContem(endereco, l.estado)) endPartes.push((l.estado||'').toUpperCase());
+      if (l.cep) {
+        const cepD = l.cep.replace(/\D/g,'');
+        if (cepD.length === 8 && !endereco.replace(/\D/g,'').includes(cepD)) endPartes.push(fmtCEP(l.cep));
+      }
       const endFull = endPartes.join(', ');
       cpRows.push(`<div class="lcp-row lcp-copyable" data-copy="${esc(endFull)}" onclick="copyLcp(this)"><span class="lcp-icon">🏠</span><div class="lcp-info"><div class="lcp-label">Endereço · toque para copiar</div><div class="lcp-val">${esc(endFull)}</div></div></div>`);
     }
@@ -1912,7 +1920,7 @@ function renderLeads(leads, highlightRow) {
           <div class="obsr-edit-wrap" id="obsr-edit-${l.row}">
             <div class="obs-conclude-banner">📝 Registre uma observação antes de concluir</div>
             <textarea class="lc-obs-textarea" id="obs-${l.row}" maxlength="1000"
-              placeholder="O que aconteceu? Ex: ligou, não atendeu — vai tentar amanhã">${esc(l.obs||'')}</textarea>
+              placeholder="O que aconteceu? Ex: ligou, não atendeu, vai tentar amanhã">${esc(l.obs||'')}</textarea>
             <div class="lc-obs-footer">
               <span class="lc-obs-fb" id="obs-fb-${l.row}"></span>
               <button class="obsr-cancel-btn"  id="obs-cancel-${l.row}"   onclick="cancelObsEdit(${l.row})">Cancelar</button>
