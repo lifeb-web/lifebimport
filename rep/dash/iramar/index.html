@@ -850,7 +850,9 @@ function _matchesPhrase(l) {
 }
 // Fase 2: cada palavra tem que bater em algum campo (AND tokens)
 function _matchesSearch(l) {
-  const tokens = _norm(_searchQuery.trim()).split(/\s+/).filter(Boolean);
+  // normaliza acentos mas preserva espaços para o split — _norm remove espaços, não usar aqui
+  const rawNorm = _searchQuery.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const tokens = rawNorm.split(/\s+/).filter(Boolean);
   if (!tokens.length) return true;
   const f = _leadFields(l);
   return tokens.every(function(q) {
