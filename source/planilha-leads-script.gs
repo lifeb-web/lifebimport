@@ -81,6 +81,7 @@ function onLeadEdit(e) {
   if (row === 1) return;
 
   const COL_VENDEDOR    = 7;
+  const COL_DATA_ENVIO  = 8;
   const COL_STATUS_SDR  = 6;
   const COL_STATUS_VEND = 19;
 
@@ -91,6 +92,7 @@ function onLeadEdit(e) {
   const statusSdr  = String(sheet.getRange(row, COL_STATUS_SDR).getValue() || '').trim();
 
   if (vendedor) {
+    sheet.getRange(row, COL_DATA_ENVIO).setValue(new Date());
     if (!statusVend) {
       sheet.getRange(row, COL_STATUS_VEND).setValue('Aguardando contato');
     }
@@ -101,5 +103,6 @@ function onLeadEdit(e) {
     sendLeadNotification(vendedor, nomeLead);
   } else if (statusVend === 'Aguardando contato') {
     sheet.getRange(row, COL_STATUS_VEND).setValue('');
+    sheet.getRange(row, COL_DATA_ENVIO).setValue('');
   }
 }

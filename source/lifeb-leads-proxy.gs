@@ -555,13 +555,15 @@ function getActive(rep) {
       rep:      norm(r[COL_VENDEDOR]) || '—',
       status:   statusVend,
       pot:      toNum(r[COL_VALOR_POT]),
-      data:     fmtDate(r[COL_DATA]),
+      data:       fmtDate(r[COL_DATA]),
+      ts_entrada: (r[COL_DATA_ENVIO] instanceof Date && !isNaN(r[COL_DATA_ENVIO].getTime())) ? r[COL_DATA_ENVIO].getTime() : 0,
       obs:      norm(r[COL_OBS_VEND]),
       obs_sdr:  norm(r[COL_OBS_SDR]),
       whatsapp: norm(r[COL_WHATSAPP]),
       contato:  norm(r[COL_CONTATO_EMP]),
       cnpj:     norm(r[COL_CNPJ]),
       endereco: norm(r[COL_ENDERECO]),
+      cep:      norm(r[COL_CEP]),
       ts_vend:  Number(r[COL_TIMESTAMP_VEND]) || 0, // epoch ms — sincronização cross-device
     });
   });
@@ -601,7 +603,8 @@ function getRepHistory(rep) {
       status:   statusVend,
       pot:      toNum(r[COL_VALOR_POT]),
       valor:    toNum(r[COL_VALOR_FECH]),
-      data:     fmtDate(r[COL_DATA]),
+      data:       fmtDate(r[COL_DATA]),
+      ts_entrada: (r[COL_DATA_ENVIO] instanceof Date && !isNaN(r[COL_DATA_ENVIO].getTime())) ? r[COL_DATA_ENVIO].getTime() : 0,
       data_f:   fmtDate(r[COL_DATA_FECH]),
       motivo:   norm(r[COL_MOTIVO_PERD]),
       whatsapp: norm(r[COL_WHATSAPP]),
@@ -643,7 +646,8 @@ function getActiveAll() {
       rep:      vendedor,
       status:   statusVend,
       pot:      toNum(r[COL_VALOR_POT]),
-      data:     fmtDate(r[COL_DATA]),
+      data:       fmtDate(r[COL_DATA]),
+      ts_entrada: (r[COL_DATA_ENVIO] instanceof Date && !isNaN(r[COL_DATA_ENVIO].getTime())) ? r[COL_DATA_ENVIO].getTime() : 0,
     });
   });
 
@@ -679,7 +683,8 @@ function getClosed() {
       valor:   toNum(r[COL_VALOR_FECH]),
       dias:    toNum(r[COL_DIAS_FECHAR]),
       data_f:  fmtDate(r[COL_DATA_FECH]),
-      data:    fmtDate(r[COL_DATA]),
+      data:       fmtDate(r[COL_DATA]),
+      ts_entrada: (r[COL_DATA_ENVIO] instanceof Date && !isNaN(r[COL_DATA_ENVIO].getTime())) ? r[COL_DATA_ENVIO].getTime() : 0,
     });
   });
 
@@ -734,7 +739,8 @@ function getLatest() {
     return {
       nome:        norm(r[COL_NOME]),
       empresa:     norm(r[COL_EMPRESA]),
-      data:        fmtDate(r[COL_DATA]),
+      data:       fmtDate(r[COL_DATA]),
+      ts_entrada: (r[COL_DATA_ENVIO] instanceof Date && !isNaN(r[COL_DATA_ENVIO].getTime())) ? r[COL_DATA_ENVIO].getTime() : 0,
       hora:        fmtTime(r[COL_DATA]),
       status_sdr:  norm(r[COL_STATUS_SDR]),
       status_vend: norm(r[COL_STATUS_VEND]),
