@@ -493,8 +493,9 @@ const esc = s => String(s == null ? '' : s)
 
 const cur = v => {
   if (!(v > 0)) return '';
-  try { return 'R$ ' + (+v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0}); }
-  catch(_) { return 'R$ ' + Math.round(+v).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
+  const dec = (+v) % 1 !== 0 ? 2 : 0;
+  try { return 'R$ ' + (+v).toLocaleString('pt-BR',{minimumFractionDigits:dec,maximumFractionDigits:dec}); }
+  catch(_) { return 'R$ ' + (dec ? (+v).toFixed(2).replace('.',',') : String(Math.round(+v))).replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
 };
 
 function toTitleCase(s) {
