@@ -594,7 +594,7 @@ function setLeadTs(row) {
   const el = document.getElementById('ts-' + row);
   if (el) el.textContent = getLeadTs(row);
 }
-function getLeadTs(row, dataEntrada, tsServidor) {
+function getLeadTs(row, dataEntrada, tsServidor, tsEntrada) {
   const tsLocal  = _tsMap[row] || 0;
   const tsRemoto = tsServidor  || 0;
   const ts       = Math.max(tsLocal, tsRemoto);
@@ -605,6 +605,17 @@ function getLeadTs(row, dataEntrada, tsServidor) {
     const h   = String(d.getHours()).padStart(2,'0');
     const m   = String(d.getMinutes()).padStart(2,'0');
     return `Atualizado ${day}/${mon} às ${h}:${m}`;
+  }
+  if (tsEntrada) {
+    const d = new Date(tsEntrada);
+    const day = String(d.getDate()).padStart(2,'0');
+    const mon = String(d.getMonth()+1).padStart(2,'0');
+    const h   = d.getHours();
+    const m   = d.getMinutes();
+    const temHora = h !== 0 || m !== 0;
+    return temHora
+      ? `Entrada ${day}/${mon} às ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`
+      : `Entrada: ${day}/${mon}`;
   }
   if (dataEntrada) return `Entrada: ${fmtData(dataEntrada)}`;
   return '';
@@ -1861,7 +1872,7 @@ function renderLeads(leads, highlightRow) {
               ${options}
             </select>
           </div>
-          <div class="lc-last-updated" id="ts-${l.row}">${getLeadTs(l.row, l.data, l.ts_vend)}</div>
+          <div class="lc-last-updated" id="ts-${l.row}">${getLeadTs(l.row, l.data, l.ts_vend, l.ts_entrada)}</div>
           <div class="lc-confirm" id="conf-${l.row}">
             <div class="lc-confirm-icon" id="conf-icon-${l.row}">📋</div>
             <div class="lc-confirm-msg">Mudar para <strong id="conf-status-${l.row}"></strong>?</div>
