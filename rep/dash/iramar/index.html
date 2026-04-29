@@ -1683,7 +1683,11 @@ function renderLeads(leads, highlightRow) {
   let toShow = searchActive ? _allLeads.filter(_matchesSearch)
              : (_activeFilter ? _allLeads.filter(l => l.status === _activeFilter) : _allLeads);
   if (searchActive && !toShow.length) {
-    list.innerHTML = `<div class="empty-state"><strong>Sem resultado</strong>Nenhum lead encontrado para "${esc(_searchQuery.trim())}".</div>`;
+    const hasInHistory = Array.isArray(_history) && _history.some(_matchesSearch);
+    const msg = hasInHistory
+      ? `<strong>Não está nos ativos</strong>Resultado encontrado no histórico abaixo.`
+      : `<strong>Sem resultado</strong>Nenhum lead encontrado para "${esc(_searchQuery.trim())}".`;
+    list.innerHTML = `<div class="empty-state">${msg}</div>`;
     if (wrap) wrap.innerHTML = '';
     return;
   }
