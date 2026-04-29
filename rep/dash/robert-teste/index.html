@@ -829,13 +829,19 @@ function _norm(s) { return String(s || '').toLowerCase().replace(/\s+/g, ''); }
 function _matchesSearch(l) {
   const tokens = _searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
   if (!tokens.length) return true;
-  const nomeN    = _norm(l.nome);
-  const empresaN = _norm(l.empresa);
+  const nomeN     = _norm(l.nome);
+  const empresaN  = _norm(l.empresa);
+  const cidadeN   = _norm(l.cidade);
+  const estadoN   = _norm(l.estado);
+  const segmentoN = _norm(l.segmento);
   return tokens.every(function(q) {
     const qn = _norm(q);
     const qd = _digitsOnly(q);
-    if (nomeN.includes(qn))                        return true;
-    if (empresaN.includes(qn))                     return true;
+    if (nomeN.includes(qn))                         return true;
+    if (empresaN.includes(qn))                      return true;
+    if (cidadeN.includes(qn))                       return true;
+    if (estadoN.includes(qn))                       return true;
+    if (segmentoN.includes(qn))                     return true;
     if (qd && _digitsOnly(l.whatsapp).includes(qd)) return true;
     if (qd && _digitsOnly(l.contato ).includes(qd)) return true;
     return false;
