@@ -867,10 +867,12 @@ function _matchesSearch(l) {
     return false;
   });
 }
-// Aplica dois estágios: frase completa primeiro, tokens AND se não bater ninguém
+// Decisão global: se a frase bate em algum lugar do sistema (ativos ou histórico),
+// usa frase em todo lugar. Senão usa token AND. Um ponto de decisão, comportamento consistente.
 function _applySearch(leads) {
-  const phraseMatches = leads.filter(_matchesPhrase);
-  return phraseMatches.length ? phraseMatches : leads.filter(_matchesSearch);
+  const universe = _rawLeads.concat(Array.isArray(_history) ? _history : []);
+  const phraseWins = universe.some(_matchesPhrase);
+  return phraseWins ? leads.filter(_matchesPhrase) : leads.filter(_matchesSearch);
 }
 function toggleSearch() {
   const bar = document.getElementById('search-bar');
