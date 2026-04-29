@@ -2833,3 +2833,80 @@ PENDENTES
   - Responsividade dashboard-leads.html mobile
   - Autenticação real (OAuth/JWT) para uso externo
   - dashboard_data consolidado (baixa prioridade)
+
+════════════════════════════════════════════════════════════════
+SESSÃO 2026-04-29 (continuação) — 6 FIXES DE PERFORMANCE E BUGS
+Commit: 40ed2ec4
+════════════════════════════════════════════════════════════════
+
+CONTEXTO
+  Sessão anterior entregou auditoria completa do app (2284 linhas lidas).
+  Esta sessão implementou todos os 5 fixes acionáveis identificados.
+
+FIXES IMPLEMENTADOS
+  1. P1 — Font Montserrat: 5 pesos → 3 (wght@600;700;800)
+     - ~60KB a menos de fonte por carregamento
+     - 5 declarações CSS atualizadas: 400/500 → 600
+     - CSS .lc-pot-save.saving adicionado (necessário para fix 3)
+  
+  2. P2 — Debounce em handleSearch: 200ms
+     - has-query CSS imediato (UX visual responsivo)
+     - renderLeads/renderHistorico só disparam 200ms após última tecla
+     - Elimina re-renders em cascata durante digitação rápida
+  
+  3. Bug A — Double-tap guard: .saving class
+     - savePot: guard + try/finally remove .saving
+     - saveObs: guard por id (obs-save-{row}) + try/finally
+     - saveStatusExtra: saveBtn declarado no escopo da função;
+       guard aplicado SOMENTE nas duas paths async (fechado-data e perdido);
+       negociação e fechado-step-valor são sync, dispensam guard;
+       finally em ambos os try/catch async
+  
+  4. Bug B — AbortController 25s em loadData e loadHistorico
+     - AbortError capturado pelo catch existente → retry logic mantido
+     - clearTimeout(tid) após fetch bem-sucedido (evita abort tardio)
+  
+  5. U4 — maybeConclude() antes de "Pular →" descartar obs
+     - Verifica ta.value.trim() !== saved.trim()
+     - confirm() nativo — funciona no Android
+     - Botão alterado de concludeCard() → maybeConclude()
+
+FIXES PULADOS
+  - Bug C (setLeadTs sem tsEntrada): NO-OP confirmado
+    Razão: setLeadTs sempre seta _tsMap[row] = Date.now() antes de chamar
+    getLeadTs, então tsEntrada nunca seria acessado nessa chamada.
+    O tsEntrada já é passado corretamente em renderLeads (linha 1908).
+
+REAUDITORIA PÓS-DEPLOY — RESULTADO
+  ✓ Font URL: wght@600;700;800 (2 ocorrências)
+  ✓ AbortController: 2 ocorrências (loadData + loadHistorico)
+  ✓ _searchTimer debounce: 3 ocorrências
+  ✓ .lc-pot-save.saving CSS: 1 ocorrência
+  ✓ .lc-obs-save.saving CSS: já existia
+  ✓ .lc-sp-save.saving CSS: já existia
+  ✓ savePot guard: ativo
+  ✓ saveObs guard: ativo
+  ✓ saveStatusExtra saveBtn + guards: ativos
+  ✓ maybeConclude: definida e chamada no HTML
+  ✓ Pular → usa maybeConclude()
+  ✓ Sort logic intacta (Aguardando FIFO, demais por ts ascending)
+  ✓ Optimistic updates intactos
+  ✓ Undo mechanism intacto
+  ✓ Concluding mode flow intacto
+  ✓ Cache com rep tag intacto
+  REGRESSÕES: nenhuma encontrada
+
+ESTADO ATUAL DO SISTEMA
+  - Template: 2322 linhas
+  - Gerados: iramar, natanael, robert-teste
+  - MD5 worktree ≡ Dropbox (todos os 4 arquivos)
+  - Push: gh-pages branch, commit 40ed2ec4
+  
+  Nota: undoLast já era protegido contra double-tap por _undoPending=null
+  na primeira linha — não precisou fix.
+
+PENDENTES
+  - Undo usa POSTs campo-único (aceitável — ação rara/secundária)
+  - Responsividade dashboard-leads.html mobile
+  - Autenticação real (OAuth/JWT) para uso externo
+  - confirmStatusChange: sem guard (risco baixo — dialog desaparece imediatamente)
