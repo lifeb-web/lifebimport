@@ -189,6 +189,10 @@
     .lc-confirm-ok { flex:2; padding:10px 14px; border-radius:9px; background:var(--purple); color:#fff; border:none; font-family:var(--font); font-size:12px; font-weight:700; cursor:pointer; transition:background .15s, transform .1s; touch-action:manipulation; }
     .lc-confirm-ok:hover { background:#5c3d82; }
     .lc-confirm-ok:active { transform:scale(.95); }
+    .lc-confirm.link-wa   .lc-confirm-ok { background:#16a34a; }
+    .lc-confirm.link-wa   .lc-confirm-ok:hover { background:#15803d; }
+    .lc-confirm.link-maps .lc-confirm-ok { background:#ea4335; }
+    .lc-confirm.link-maps .lc-confirm-ok:hover { background:#c5372a; }
     .lc-confirm-cancel { flex:1; padding:10px 10px; border-radius:9px; border:1.5px solid var(--border); background:none; font-family:var(--font); font-size:12px; font-weight:700; color:var(--muted); cursor:pointer; transition:background .12s; touch-action:manipulation; }
     .lc-confirm-cancel:hover { background:var(--bg); }
 
@@ -1116,12 +1120,14 @@ function openLinkConfirm(btn) {
   if (icon) icon.textContent = isWa ? '💬' : '📍';
   const lbl = conf.querySelector('.lc-confirm-msg strong');
   if (lbl) lbl.textContent = isWa ? 'WhatsApp' : 'Google Maps';
+  conf.classList.remove('link-wa', 'link-maps');
+  conf.classList.add(isWa ? 'link-wa' : 'link-maps');
   conf.dataset.pending = url;
   conf.classList.add('visible');
 }
 function closeLinkConfirm(id) {
   const conf = document.getElementById(id);
-  if (conf) conf.classList.remove('visible');
+  if (conf) conf.classList.remove('visible', 'link-wa', 'link-maps');
 }
 function doConfirmLink(id) {
   const conf = document.getElementById(id);
