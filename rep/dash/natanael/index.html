@@ -825,27 +825,50 @@ function applyFilter() {}
 // ── BUSCA ──────────────────────────────────────────────────────
 let _searchQuery = '';
 function _digitsOnly(s) { return String(s || '').replace(/\D/g, ''); }
-function _norm(s) { return String(s || '').toLowerCase().replace(/\s+/g, ''); }
+function _norm(s) {
+  return String(s || '').toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/\s+/g, '');
+}
+function _leadFields(l) {
+  return {
+    nomeN:     _norm(l.nome),
+    empresaN:  _norm(l.empresa),
+    cidadeN:   _norm(l.cidade),
+    estadoN:   _norm(l.estado),
+    segmentoN: _norm(l.segmento),
+    waD:       _digitsOnly(l.whatsapp),
+    contD:     _digitsOnly(l.contato),
+  };
+}
+// Fase 1: query inteira como frase — só nome e empresa
+function _matchesPhrase(l) {
+  const q = _norm(_searchQuery.trim());
+  if (!q) return true;
+  const f = _leadFields(l);
+  return f.nomeN.includes(q) || f.empresaN.includes(q);
+}
+// Fase 2: cada palavra tem que bater em algum campo (AND tokens)
 function _matchesSearch(l) {
-  const tokens = _searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const tokens = _norm(_searchQuery.trim()).split(/\s+/).filter(Boolean);
   if (!tokens.length) return true;
-  const nomeN     = _norm(l.nome);
-  const empresaN  = _norm(l.empresa);
-  const cidadeN   = _norm(l.cidade);
-  const estadoN   = _norm(l.estado);
-  const segmentoN = _norm(l.segmento);
+  const f = _leadFields(l);
   return tokens.every(function(q) {
-    const qn = _norm(q);
     const qd = _digitsOnly(q);
-    if (nomeN.includes(qn))                         return true;
-    if (empresaN.includes(qn))                      return true;
-    if (cidadeN.includes(qn))                       return true;
-    if (estadoN.includes(qn))                       return true;
-    if (segmentoN.includes(qn))                     return true;
-    if (qd && _digitsOnly(l.whatsapp).includes(qd)) return true;
-    if (qd && _digitsOnly(l.contato ).includes(qd)) return true;
+    if (f.nomeN.includes(q))                return true;
+    if (f.empresaN.includes(q))             return true;
+    if (f.cidadeN.includes(q))              return true;
+    if (f.estadoN.includes(q))              return true;
+    if (f.segmentoN.includes(q))            return true;
+    if (qd && f.waD.includes(qd))           return true;
+    if (qd && f.contD.includes(qd))         return true;
     return false;
   });
+}
+// Aplica dois estágios: frase completa primeiro, tokens AND se não bater ninguém
+function _applySearch(leads) {
+  const phraseMatches = leads.filter(_matchesPhrase);
+  return phraseMatches.length ? phraseMatches : leads.filter(_matchesSearch);
 }
 function toggleSearch() {
   const bar = document.getElementById('search-bar');
@@ -1686,10 +1709,10 @@ function renderLeads(leads, highlightRow) {
 
   const searchActive = _searchQuery.trim().length > 0;
   // busca ativa: ignora filtro de status e pesquisa em toda a base
-  let toShow = searchActive ? _allLeads.filter(_matchesSearch)
+  let toShow = searchActive ? _applySearch(_allLeads)
              : (_activeFilter ? _allLeads.filter(l => l.status === _activeFilter) : _allLeads);
   if (searchActive && !toShow.length) {
-    const hasInHistory = Array.isArray(_history) && _history.some(_matchesSearch);
+    const hasInHistory = Array.isArray(_history) && _applySearch(_history).length > 0;
     const msg = hasInHistory
       ? `<strong>Não está nos ativos</strong>Resultado encontrado no histórico abaixo.`
       : `<strong>Sem resultado</strong>Nenhum lead encontrado para "${esc(_searchQuery.trim())}".`;
@@ -2045,7 +2068,7 @@ function renderHistorico() {
 
   // modo busca: mostra todos os matches (fechados e perdidos juntos), abre seção
   if (_searchQuery.trim()) {
-    const matches = h.filter(_matchesSearch);
+    const matches = _applySearch(h);
     if (counts) counts.textContent = matches.length
       ? matches.length + ' resultado' + (matches.length !== 1 ? 's' : '') + ' no histórico'
       : 'nenhum no histórico';
