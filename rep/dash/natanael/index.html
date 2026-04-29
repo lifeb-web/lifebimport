@@ -826,14 +826,16 @@ function applyFilter() {}
 let _searchQuery = '';
 function _digitsOnly(s) { return String(s || '').replace(/\D/g, ''); }
 function _matchesSearch(l) {
-  const q = _searchQuery.trim().toLowerCase();
-  if (!q) return true;
-  const qd = _digitsOnly(q);
-  if ((l.nome    || '').toLowerCase().includes(q)) return true;
-  if ((l.empresa || '').toLowerCase().includes(q)) return true;
-  if (qd && _digitsOnly(l.whatsapp).includes(qd)) return true;
-  if (qd && _digitsOnly(l.contato ).includes(qd)) return true;
-  return false;
+  const tokens = _searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (!tokens.length) return true;
+  return tokens.every(function(q) {
+    const qd = _digitsOnly(q);
+    if ((l.nome    || '').toLowerCase().includes(q)) return true;
+    if ((l.empresa || '').toLowerCase().includes(q)) return true;
+    if (qd && _digitsOnly(l.whatsapp).includes(qd)) return true;
+    if (qd && _digitsOnly(l.contato ).includes(qd)) return true;
+    return false;
+  });
 }
 function toggleSearch() {
   const bar = document.getElementById('search-bar');
@@ -1672,11 +1674,12 @@ function renderLeads(leads, highlightRow) {
     return;
   }
 
-  let toShow = _activeFilter ? _allLeads.filter(l => l.status === _activeFilter) : _allLeads;
   const searchActive = _searchQuery.trim().length > 0;
-  if (searchActive) toShow = toShow.filter(_matchesSearch);
+  // busca ativa: ignora filtro de status e pesquisa em toda a base
+  let toShow = searchActive ? _allLeads.filter(_matchesSearch)
+             : (_activeFilter ? _allLeads.filter(l => l.status === _activeFilter) : _allLeads);
   if (searchActive && !toShow.length) {
-    list.innerHTML = `<div class="empty-state"><strong>Sem resultado</strong>Nenhum lead com final ****${esc(_searchQuery)}.</div>`;
+    list.innerHTML = `<div class="empty-state"><strong>Sem resultado</strong>Nenhum lead encontrado para "${esc(_searchQuery.trim())}".</div>`;
     if (wrap) wrap.innerHTML = '';
     return;
   }
