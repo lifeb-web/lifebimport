@@ -2978,3 +2978,58 @@ PENDENTES (levantados em sessões anteriores — ainda em aberto)
   - Responsividade dashboard-leads.html mobile (fora de escopo por ora)
   - Autenticação real (OAuth/JWT) para uso externo (baixa prioridade)
   - confirmStatusChange: sem guard de double-tap (risco baixo)
+
+════════════════════════════════════════════════════════════════
+SESSÃO 2026-04-30 (cont.) — CARDS ACOS e CAC NOS DASHBOARDS DE LEADS
+════════════════════════════════════════════════════════════════
+
+COMMITS:
+  288682ed — feat: adiciona card ACOS nos dashboards mobile e telão de leads
+  fec9c616 — feat: adiciona card CAC nos dashboards mobile e telão de leads
+
+ARQUIVOS ALTERADOS:
+  dashboard-leads.html (mobile)
+  dashboard-leads-telao.html
+
+CONTEXTO
+  Usuário pediu para enriquecer a análise rápida dos dashboards de leads
+  com métricas de eficiência de anúncio. O investimento já era puxado
+  da aba 2 da planilha via proxy — não foi necessário nenhuma mudança no backend.
+
+CARDS ADICIONADOS
+
+  ACOS (Advertising Cost of Sale)
+  - Fórmula: investimento / receita × 100  → exibido como "X.X%"
+  - Cor: amber (#b45309), CSS .accent-amber
+  - Calculado em renderAds(), que já tinha inv e rec disponíveis
+  - Exibe "—" quando inv=0 ou rec=0
+
+  CAC (Custo de Aquisição de Cliente)
+  - Fórmula: investimento / fechamentos → exibido em R$ (cur())
+  - Cor: violet (#7c3aed), CSS .accent-violet
+  - Calculado em loadAllData() reutilizando o bloco cacEl já existente
+    (extração de cacInv/cacNFech para variáveis compartilhadas; cacEl badge intacto)
+  - Exibe "—" quando inv=0 ou nFech=0
+
+GRID MOBILE (dashboard-leads.html)
+  Antes: 9 cards → repeat(5,1fr) em 640px+ e 1024px+
+  Depois: 11 cards:
+    < 640px  → 2 cols  (card-rt span 2 + 5 linhas de 2 — ACOS e CAC pareados)
+    640px+   → repeat(4, 1fr)   (3 linhas: 4+4+3)
+    1024px+  → repeat(6, 1fr)   (2 linhas: 6+5)
+
+TELÃO (dashboard-leads-telao.html)
+  flex row com flex:1 por card — 11 cards ajustam automaticamente na faixa
+  Card ACOS e CAC com mesmas classes CSS e m-val/m-sub pattern dos outros
+
+AUDITORIA PÓS-IMPLEMENTAÇÃO
+  ✓ Sem IDs duplicados (mobile e telão)
+  ✓ CSS .accent-amber e .accent-violet presentes nos dois arquivos
+  ✓ card-acos: renderAds() popula em ambos os arquivos
+  ✓ card-cac: loadAllData() popula em ambos os arquivos
+  ✓ cacEl badge (fechados-cac) intacto — nenhuma regressão
+  ✓ MD5 worktree ≡ Dropbox após sync
+
+ESTADO ATUAL
+  Último commit gh-pages: fec9c616
+  Reps ativos: IRAMAR, NATANAEL, ROBERT_TESTE (sem alteração)
