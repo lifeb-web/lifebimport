@@ -2910,3 +2910,71 @@ PENDENTES
   - Responsividade dashboard-leads.html mobile
   - Autenticação real (OAuth/JWT) para uso externo
   - confirmStatusChange: sem guard (risco baixo — dialog desaparece imediatamente)
+
+════════════════════════════════════════════════════════════════
+SESSÃO 2026-04-29 (continuação) — FIX CORES BOTÕES DE CONFIRMAÇÃO
+════════════════════════════════════════════════════════════════
+
+COMMIT: 4d77112e
+ARQUIVOS: rep/dash/iramar/index.html, natanael/index.html, robert-teste/index.html
+          source/dashboard-rep-template.html
+
+PROBLEMA IDENTIFICADO
+  - Botão de confirmação WA dentro do painel de contato (info) → aparecia VERDE (correto)
+  - Botão de confirmação WA no card (ícone direto) → aparecia ROXO (incorreto — mesmo roxo do Maps)
+  - Causa: lc-confirm não tinha distinção visual por destino — cor única roxa para tudo
+
+FIX IMPLEMENTADO
+  CSS — duas classes novas no template:
+    .lc-confirm.link-wa   .lc-confirm-ok { background:#16a34a; }   /* verde */
+    .lc-confirm.link-wa   .lc-confirm-ok:hover { background:#15803d; }
+    .lc-confirm.link-maps .lc-confirm-ok { background:#ea4335; }   /* vermelho Google Maps */
+    .lc-confirm.link-maps .lc-confirm-ok:hover { background:#c5372a; }
+
+  JS — openLinkConfirm detecta tipo via btn.classList.contains('wa'):
+    conf.classList.remove('link-wa', 'link-maps');
+    conf.classList.add(isWa ? 'link-wa' : 'link-maps');
+
+  JS — closeLinkConfirm também remove as classes:
+    if (conf) conf.classList.remove('visible', 'link-wa', 'link-maps');
+
+RESULTADO
+  ✓ WA (card e painel de contato) → botão de confirmação VERDE
+  ✓ Maps → botão de confirmação VERMELHO (padrão Google)
+  ✓ Cor consistente entre todas as origens (ícone direto no card vs painel de contato)
+  ✓ Sem regressões — lc-confirm-ok herdava apenas var(--accent) antes; agora sobrescreve por classe
+
+ESTADO PÓS-COMMIT 4d77112e
+  - Template: 2322 linhas
+  - MD5 worktree ≡ Dropbox (verificado)
+
+════════════════════════════════════════════════════════════════
+SESSÃO 2026-04-30 — DOCUMENTAÇÃO DO PROJETO (SEM ALTERAÇÃO DE CÓDIGO)
+════════════════════════════════════════════════════════════════
+
+COMMIT: nenhum — sessão sem alteração de código/dashboards
+
+ATIVIDADES
+  1. Git pull ao início — worktree já na última versão (commit 4d77112e)
+  2. Geração de PDF para o diretor — "Life B Import - Estrutura do Sistema.pdf"
+     - Versão 1 incluía introdução sobre o que é a Life B + cases → removida a pedido
+     - Versão 2 (final): só a estrutura do sistema em 8 seções
+       (funil, anúncios, landing pages, formulário, planilha, painel rep, dashboards, infra)
+  3. Geração de .docx editável — "Life B Import - Estrutura do Sistema.docx"
+     - Mesma estrutura do PDF em formato Word para o diretor poder editar
+     - Instrução: arrastar no Google Drive converte para Docs automaticamente
+
+ARQUIVOS GERADOS (apenas locais — não vão para o repo)
+  ~/Downloads/Life B Import - Estrutura do Sistema.pdf
+  ~/Downloads/Life B Import - Estrutura do Sistema.docx
+
+ESTADO ATUAL DO SISTEMA
+  - Último commit no gh-pages: 4d77112e (fix cores botões confirmação WA/Maps)
+  - Reps ativos: IRAMAR, NATANAEL, ROBERT_TESTE
+  - Sem pendências de código desta sessão
+
+PENDENTES (levantados em sessões anteriores — ainda em aberto)
+  - Tela de PIN/login simples (~1h) — usuário decidiu fazer depois
+  - Responsividade dashboard-leads.html mobile (fora de escopo por ora)
+  - Autenticação real (OAuth/JWT) para uso externo (baixa prioridade)
+  - confirmStatusChange: sem guard de double-tap (risco baixo)
