@@ -208,7 +208,7 @@
       box-sizing: border-box;
     }
 
-    /* CARDS ROW — 9 cards: 2 cols mobile / 9 cols desktop */
+    /* CARDS ROW — 10 cards: 2 cols mobile / 5 cols desktop (2 linhas) */
     .cards-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -219,13 +219,13 @@
 
     @media (min-width: 640px) {
       .cards-row {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(5, 1fr);
         gap: 16px;
       }
     }
     @media (min-width: 1024px) {
       .cards-row {
-        grid-template-columns: 180px repeat(8, 1fr);
+        grid-template-columns: repeat(5, 1fr);
         gap: 12px;
       }
     }
@@ -303,6 +303,7 @@
     .accent-orange  { border-top: 3px solid var(--orange);  background: linear-gradient(180deg,#fffbf0 0%,#fff 40%); }
     .accent-cyan    { border-top: 3px solid #0891b2;        background: linear-gradient(180deg,#ecfeff 0%,#fff 40%); }
     .accent-teal      { border-top: 3px solid #0d9488;        background: linear-gradient(180deg,#f0fdfa 0%,#fff 40%); }
+    .accent-amber     { border-top: 3px solid #b45309;        background: linear-gradient(180deg,#fef9ee 0%,#fff 40%); }
     .accent-highlight { border-top: 5px solid var(--purple);  background: linear-gradient(180deg,#ede9fe 0%,#fff 50%); }
 
     /* FUNIS ROW */
@@ -645,6 +646,13 @@
       <div class="s-label">ROAS</div>
       <div class="s-val" id="card-roas" style="color:#0d9488">—</div>
       <div class="s-sub">receita / investimento</div>
+    </div>
+
+    <!-- 10. ACOS -->
+    <div class="card card-stat accent-amber">
+      <div class="s-label">ACOS</div>
+      <div class="s-val" id="card-acos" style="color:#b45309">—</div>
+      <div class="s-sub">invest. / receita</div>
     </div>
 
   </div><!-- /.cards-row -->
@@ -1188,6 +1196,9 @@ function renderAds(data, receita) {
     const rec = receita != null ? +receita : 0;
     if (el('card-roas')) {
       el('card-roas').textContent = (inv > 0 && rec > 0) ? (rec / inv).toFixed(2) + 'x' : '—';
+    }
+    if (el('card-acos')) {
+      el('card-acos').textContent = (inv > 0 && rec > 0) ? (inv / rec * 100).toFixed(1) + '%' : '—';
     }
   } catch(err) {
     _log.error('ads', 'Erro ao renderizar ads', err);
