@@ -158,6 +158,7 @@
     .accent-cyan    { border-top:4px solid #0891b2;        background:linear-gradient(180deg,#ecfeff 0%,#fff 60%); }
     .accent-teal      { border-top:4px solid #0d9488;        background:linear-gradient(180deg,#f0fdfa 0%,#fff 60%); }
     .accent-amber     { border-top:4px solid #b45309;        background:linear-gradient(180deg,#fef9ee 0%,#fff 60%); }
+    .accent-violet    { border-top:4px solid #7c3aed;        background:linear-gradient(180deg,#f5f3ff 0%,#fff 60%); }
     .accent-highlight { border-top:6px solid var(--purple);  background:linear-gradient(180deg,#ede9fe 0%,#fff 50%); flex:1.3 !important; }
 
     /* CARD HEADER */
@@ -324,6 +325,12 @@
       <div class="m-label">ACOS</div>
       <div class="m-val" id="card-acos" style="color:#b45309">—</div>
       <div class="m-sub">invest. / receita</div>
+    </div>
+
+    <div class="card card-metric accent-violet">
+      <div class="m-label">CAC</div>
+      <div class="m-val" id="card-cac" style="color:#7c3aed;font-size:20px">—</div>
+      <div class="m-sub">invest. / fechamentos</div>
     </div>
 
   </div><!-- /#telao-cards -->
@@ -961,10 +968,14 @@ async function loadAllData(summaryData, lm) {
 
     const inv = rAds.status === 'fulfilled' && rAds.value ? +rAds.value.investimento || 0 : 0;
 
+    const cacNFech = rClosed.status === 'fulfilled' ? (rClosed.value.fechamentos || []).length : 0;
     const cacEl = document.getElementById('fechados-cac');
     if (cacEl) {
-      const nFech = rClosed.status === 'fulfilled' ? (rClosed.value.fechamentos || []).length : 0;
-      cacEl.textContent = (inv > 0 && nFech > 0) ? `CAC MÉDIO: ${cur(Math.round(inv / nFech))}` : '';
+      cacEl.textContent = (inv > 0 && cacNFech > 0) ? `CAC MÉDIO: ${cur(Math.round(inv / cacNFech))}` : '';
+    }
+    const cacCard = document.getElementById('card-cac');
+    if (cacCard) {
+      cacCard.textContent = (inv > 0 && cacNFech > 0) ? cur(Math.round(inv / cacNFech)) : '—';
     }
 
     const cplEl = document.getElementById('latest-cpl');

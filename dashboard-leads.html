@@ -208,7 +208,7 @@
       box-sizing: border-box;
     }
 
-    /* CARDS ROW — 10 cards: 2 cols mobile / 5 cols desktop (2 linhas) */
+    /* CARDS ROW — 11 cards: 2 cols mobile (card-rt span 2) / 4 cols medium / 6 cols desktop */
     .cards-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -219,13 +219,13 @@
 
     @media (min-width: 640px) {
       .cards-row {
-        grid-template-columns: repeat(5, 1fr);
+        grid-template-columns: repeat(4, 1fr);
         gap: 16px;
       }
     }
     @media (min-width: 1024px) {
       .cards-row {
-        grid-template-columns: repeat(5, 1fr);
+        grid-template-columns: repeat(6, 1fr);
         gap: 12px;
       }
     }
@@ -304,6 +304,7 @@
     .accent-cyan    { border-top: 3px solid #0891b2;        background: linear-gradient(180deg,#ecfeff 0%,#fff 40%); }
     .accent-teal      { border-top: 3px solid #0d9488;        background: linear-gradient(180deg,#f0fdfa 0%,#fff 40%); }
     .accent-amber     { border-top: 3px solid #b45309;        background: linear-gradient(180deg,#fef9ee 0%,#fff 40%); }
+    .accent-violet    { border-top: 3px solid #7c3aed;        background: linear-gradient(180deg,#f5f3ff 0%,#fff 40%); }
     .accent-highlight { border-top: 5px solid var(--purple);  background: linear-gradient(180deg,#ede9fe 0%,#fff 50%); }
 
     /* FUNIS ROW */
@@ -653,6 +654,13 @@
       <div class="s-label">ACOS</div>
       <div class="s-val" id="card-acos" style="color:#b45309">—</div>
       <div class="s-sub">invest. / receita</div>
+    </div>
+
+    <!-- 11. CAC -->
+    <div class="card card-stat accent-violet">
+      <div class="s-label">CAC</div>
+      <div class="s-val" id="card-cac" style="color:#7c3aed;font-size:20px">—</div>
+      <div class="s-sub">invest. / fechamentos</div>
     </div>
 
   </div><!-- /.cards-row -->
@@ -1266,10 +1274,14 @@ async function loadAllData(summaryData, lm) {
     renderAds(rAds.status === 'fulfilled' ? rAds.value : null, summaryData.receita);
 
     const cacEl = document.getElementById('fechados-cac');
+    const cacInv = rAds.status === 'fulfilled' && rAds.value ? +rAds.value.investimento || 0 : 0;
+    const cacNFech = rClosed.status === 'fulfilled' ? (rClosed.value.fechamentos || []).length : 0;
     if (cacEl) {
-      const inv = rAds.status === 'fulfilled' && rAds.value ? +rAds.value.investimento || 0 : 0;
-      const nFech = rClosed.status === 'fulfilled' ? (rClosed.value.fechamentos || []).length : 0;
-      cacEl.textContent = (inv > 0 && nFech > 0) ? `CAC: ${cur(Math.round(inv / nFech))}` : '';
+      cacEl.textContent = (cacInv > 0 && cacNFech > 0) ? `CAC: ${cur(Math.round(cacInv / cacNFech))}` : '';
+    }
+    const cacCard = document.getElementById('card-cac');
+    if (cacCard) {
+      cacCard.textContent = (cacInv > 0 && cacNFech > 0) ? cur(Math.round(cacInv / cacNFech)) : '—';
     }
 
     const rtCplSdr = document.getElementById('rt-cpl-sdr');
