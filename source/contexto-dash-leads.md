@@ -241,3 +241,79 @@ Ambos os funis (SDR e Vendedor), em mobile e telão, ocultam etapas com valor 0.
 - `9d0e7ea4` — proxy: isTesteLead refinado com regex `/\btestes?\b/i` (palavra exata, evita "Protestech")
 - `238e531f` — dash: funil vendedor oculta etapas com 0 (consistente com funil SDR) — mobile e telão
 - `0076c965` — proxy: getClosed ordena com fallback data_f → data de entrada (fechamento sem data não some)
+
+---
+
+## Cards de métricas de anúncio — ACOS e CAC (2026-04-30)
+
+Adicionados em `dashboard-leads.html` (mobile) e `dashboard-leads-telao.html`.
+Os dados de investimento já eram puxados da aba 2 da planilha via proxy — sem mudança de backend.
+
+### ACOS (Advertising Cost of Sale)
+- **Fórmula:** `investimento / receita × 100` → exibido como `"X.X%"`
+- **Cor:** amber (`#b45309`), classe `.accent-amber`
+- **Onde calcula:** `renderAds(inv, rec)` — já tinha `inv` e `rec` disponíveis
+- **Fallback:** exibe `"—"` quando `inv = 0` ou `rec = 0`
+
+### CAC (Custo de Aquisição de Cliente)
+- **Fórmula:** `investimento / nFechamentos` → exibido em R$ via `cur()`
+- **Cor:** violet (`#7c3aed`), classe `.accent-violet`
+- **Onde calcula:** `loadAllData()` — reutiliza o bloco `cacEl` já existente, extraindo `cacInv` e `cacNFech` como variáveis compartilhadas (o badge `fechados-cac` no header continua intacto)
+- **Fallback:** exibe `"—"` quando `inv = 0` ou `nFechamentos = 0`
+
+### Grid mobile (dashboard-leads.html)
+- 11 cards no total
+- `< 640px`: 2 colunas — `card-rt` ocupa `span 2`, restante em pares (ACOS e CAC ficam juntos na última linha)
+- `640px+`: `repeat(4, 1fr)`
+- `1024px+`: `repeat(6, 1fr)`
+
+### Telão (dashboard-leads-telao.html)
+- Faixa de cards é `display:flex` — 11 cards com `flex:1` se ajustam automaticamente
+
+---
+
+## Responsividade do telão para 13" — max-height breakpoints (2026-05-01)
+
+O telão usa `height:100vh; overflow:hidden` — sem scroll, tudo deve caber na tela.
+Adicionados breakpoints de ALTURA (não largura) pois o gargalo em 13" é vertical (~800px lógico).
+
+### `@media (max-height: 820px)` — notebooks 13" típicos
+- `header`: 58px → 46px
+- `#telao-cards`: 112px → 88px
+- `.m-val`: 28px → 21px / `.rt-num`: 32px → 26px / `.funil-num`: 20px → 16px
+- Padding e gap reduzidos; footer comprimido
+- Libera ~50px extras para o conteúdo principal
+
+### `@media (max-height: 700px)` — telas muito pequenas
+- `header`: 40px / `#telao-cards`: 76px / fontes menores ainda
+
+Telão de TV (height > 820px): layout original intacto, nenhuma mudança.
+
+---
+
+## Card Fechamentos — fill height (2026-05-01)
+
+O `table-scroll` do card FECHAMENTOS no telão tinha `max-height:178px;flex:none`.
+Isso deixava espaço em branco quando o card era maior que 178px.
+
+**Fix:** trocado para `flex:1;min-height:0;overflow-y:auto`
+O scroll continua ativo quando a lista cresce além do espaço disponível.
+
+---
+
+## Commits relevantes (atualizado 2026-05-01)
+- `b9c2aadb` — active_all com token, scroll infinito (revertido depois)
+- `ebefa57d` — revert scroll infinito → showMore/showLess
+- `2dc82d45` — mobile: active_all, title 'Dashboard Leads Mobile'
+- `1ab6ee34` — taxaQualif%, sort Aguardando-first, auto-carrega histórico
+- `6500b1d6` — telão: FORCE_RELOAD=1, retry 15s, watchdog 35min
+- `000177c9` — proxy: isTesteLead() adicionado
+- `4f0ef8b1` — proxy: isTesteLead removido de getActive e getRepHistory
+- `9d0e7ea4` — proxy: isTesteLead refinado com regex `/\btestes?\b/i`
+- `238e531f` — dash: funil vendedor oculta etapas com 0
+- `0076c965` — proxy: getClosed ordena com fallback data_f → data de entrada
+- `288682ed` — feat: card ACOS nos dois dashboards (mobile e telão)
+- `fec9c616` — feat: card CAC nos dois dashboards (mobile e telão)
+- `8117fb45` — telão: fechamentos table fill card height (flex:1 ao invés de max-height fixo)
+- `ee710e19` — telão: media queries max-height 820px/700px para notebooks 13"
+- `8146a3ce` — auditoria: sessão 2026-05-01 documentada
