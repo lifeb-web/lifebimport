@@ -185,7 +185,7 @@ function doPost(e) {
           var explicitTs = parseInt(String(updates['TIMESTAMP_VEND']));
           if (!isNaN(explicitTs) && explicitTs >= 0) tsWrite = explicitTs;
         }
-        sheet.getRange(row, COL_TIMESTAMP_VEND + 1).setValue(tsWrite);
+        sheet.getRange(row, COL_TIMESTAMP_VEND + 1).setValue(new Date(tsWrite));
         SpreadsheetApp.flush();
       } finally {
         lock.releaseLock();
@@ -225,7 +225,7 @@ function doPost(e) {
       var lkTs = LockService.getScriptLock();
       lkTs.waitLock(10000);
       try {
-        sheet.getRange(row, COL_TIMESTAMP_VEND + 1).setValue(tsVal);
+        sheet.getRange(row, COL_TIMESTAMP_VEND + 1).setValue(new Date(tsVal));
         SpreadsheetApp.flush();
       } finally {
         lkTs.releaseLock();
@@ -256,7 +256,7 @@ function doPost(e) {
     lockSingle.waitLock(10000);
     try {
       sheet.getRange(row, ALLOWED_WRITE[campo] + 1).setValue(valorEscrito); // +1: colunas são 1-based no GAS
-      sheet.getRange(row, COL_TIMESTAMP_VEND + 1).setValue(now);            // sempre atualiza AF com timestamp atual
+      sheet.getRange(row, COL_TIMESTAMP_VEND + 1).setValue(new Date(now));   // sempre atualiza AF com timestamp atual
       SpreadsheetApp.flush();
     } finally {
       lockSingle.releaseLock();
