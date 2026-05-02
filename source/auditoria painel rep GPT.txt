@@ -3076,3 +3076,63 @@ ESTADO ATUAL
   Último commit gh-pages: ee710e19
   Reps ativos: IRAMAR, NATANAEL, ROBERT_TESTE (sem alteração)
   dashboard-leads.html (mobile): sem alteração nesta sessão
+
+════════════════════════════════════════════════════════════════
+SESSÃO 2026-05-02 — CAPTURA DE PRIMEIRO CONTATO WHATSAPP
+════════════════════════════════════════════════════════════════
+
+COMMITS:
+  82b51a5c — feat: captura epoch ms do primeiro contato WhatsApp na coluna AG
+  5d230c99 — fix: token correto do robert-teste (lifeb_teste_2026_rt)
+  e8dffd97 — fix: primo_contato grava Date object em vez de epoch ms bruto
+  51922eeb — fix: TIMESTAMP_VEND e PRIMO_CONTATO gravam Date object (legível na planilha)
+  (proxy corrigido localmente — remoção do ≈ U+2248 na linha 21)
+
+ARQUIVOS ALTERADOS:
+  source/lifeb-leads-proxy.gs
+  source/dashboard-rep-template.html
+  rep/dash/iramar/index.html
+  rep/dash/natanael/index.html
+  rep/dash/robert-teste/index.html
+
+FUNCIONALIDADE: CAPTURA DE PRIMEIRO CONTATO
+
+  Objetivo: registrar o momento exato em que o rep inicia contato com o lead,
+  para futura análise de tempo médio de primeiro contato no dashboard.
+
+  Coluna AG da planilha: PRIMEIRO CONTATO VEND
+  - Tipo: Date object (data + hora + segundos, legível no Sheets)
+  - Gravada uma única vez — nunca sobrescrita
+  - Invisível pro rep — acontece em background
+
+  Pontos de captura (dois fluxos, cobrem todos os caminhos):
+  1. doContactWa(row) — botão "Abrir WhatsApp" no overlay do painel de contatos
+     Cobre: contato principal, contato empresa e telefone no painel Info
+  2. doConfirmLink(id) quando conf.classList.contains('link-wa')
+     Cobre: ícone WhatsApp do card principal (não captura Maps)
+
+  Função helper no template:
+    trackPrimeiroContato(row) — dispara POST silencioso com action:'set_primeiro_contato'
+    Proxy grava new Date(now) em COL_PRIMO_CONTATO + 1 (AG) se célula vazia
+
+  Proxy — novo bloco em doPost:
+    action === 'set_primeiro_contato'
+    Verifica se coluna AG já tem valor (skip:true se já registrado)
+    Usa LockService para evitar race condition
+
+  TIMESTAMP_VEND (coluna AF): também corrigido para gravar Date object
+  em todos os 3 pontos de escrita — antes gravava epoch ms bruto como número.
+
+  Correção de bug: token do ROBERT_TESTE estava errado nos painéis gerados
+  (c4e09a0994b803ab35d43f3c → lifeb_teste_2026_rt). Corrigido e regenerado.
+
+  Correção crítica: caractere ≈ (U+2248) na linha 21 do proxy causava
+  SyntaxError no Apps Script. Removido via Python.
+
+PENDENTES RELACIONADOS
+  - Card "Tempo médio 1º contato" nos dashboards — próxima sessão
+  - Dados históricos: leads anteriores à feature ficam com AG vazia (esperado)
+
+ESTADO ATUAL
+  Último commit gh-pages: 51922eeb (+ fix local do ≈)
+  Reps ativos: IRAMAR, NATANAEL, ROBERT_TESTE

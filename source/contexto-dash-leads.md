@@ -317,3 +317,58 @@ O scroll continua ativo quando a lista cresce além do espaço disponível.
 - `8117fb45` — telão: fechamentos table fill card height (flex:1 ao invés de max-height fixo)
 - `ee710e19` — telão: media queries max-height 820px/700px para notebooks 13"
 - `8146a3ce` — auditoria: sessão 2026-05-01 documentada
+
+---
+
+## Captura de Primeiro Contato WhatsApp (2026-05-02)
+
+### Objetivo
+Registrar o momento exato do primeiro contato do rep com o lead via WhatsApp,
+para calcular tempo médio de primeiro contato no dashboard futuramente.
+
+### Coluna AG — PRIMEIRO CONTATO VEND
+- Tipo: Date object (gravado como `new Date(now)` — legível no Sheets)
+- Gravada **uma única vez** — proxy verifica se célula está vazia antes de gravar
+- Invisível pro rep — disparo silencioso em background (fire-and-forget)
+- Leads anteriores à feature: coluna AG vazia (não há como recuperar retroativamente)
+
+### Pontos de captura no template
+Dois fluxos cobrem todos os caminhos de abertura do WhatsApp:
+
+1. **`doContactWa(row)`** — "Abrir WhatsApp" no overlay do painel de contatos
+   - Cobre: contato principal, contato empresa, telefone no painel Info
+2. **`doConfirmLink(id)`** quando `conf.classList.contains('link-wa')`
+   - Cobre: ícone WhatsApp do card principal
+   - Não captura Maps (classe `link-maps`)
+
+### Função helper no template
+```js
+function trackPrimeiroContato(row) {
+  fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
+    body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, action:'set_primeiro_contato' }) })
+    .catch(() => {});
+}
+```
+
+### Proxy — action set_primeiro_contato
+```js
+const COL_PRIMO_CONTATO = 32; // AG (0-based)
+// Em doPost:
+if (action === 'set_primeiro_contato') {
+  const jaRegistrado = sheet.getRange(row, COL_PRIMO_CONTATO + 1).getValue();
+  if (jaRegistrado) return jsonResponse({ ok: true, skip: true });
+  // grava com LockService...
+  sheet.getRange(row, COL_PRIMO_CONTATO + 1).setValue(new Date(now));
+}
+```
+
+### Cálculo futuro no dashboard
+```js
+const minutos = (ts_primo_contato - ts_entrada) / 60000;
+```
+`ts_entrada` já existe no proxy como epoch ms (coluna H — COL_DATA_ENVIO).
+Para ler `primo_contato` no proxy: `r[COL_PRIMO_CONTATO] instanceof Date ? r[COL_PRIMO_CONTATO].getTime() : 0`
+
+### Fix colateral: TIMESTAMP_VEND (coluna AF)
+Antes gravava epoch ms bruto (número). Agora grava `new Date(now)` — legível no Sheets.
+Leitura via `Number(r[COL_TIMESTAMP_VEND])` permanece compatível (`Number(Date)` = epoch ms).
