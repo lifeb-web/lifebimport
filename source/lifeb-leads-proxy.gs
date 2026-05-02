@@ -56,7 +56,8 @@ const COL_MOTIVO_PERD   = 25;
 const COL_OBS_VEND      = 26;
 // AB=27 MÊS/ANO  AC=28 CAMPANHA  AD=29 CONJUNTO  AE=30 ANÚNCIO
 const COL_TIMESTAMP_VEND  = 31; // AF — última atualização pelo vendedor
-const COL_PRIMO_CONTATO   = 32; // AG — epoch ms do primeiro clique em "Abrir WhatsApp"
+const COL_PRIMO_CONTATO   = 32; // AG — timestamp do primeiro clique em "Abrir WhatsApp"
+const COL_DELTA_CONTATO   = 33; // AH — minutos entre entrada do lead e primeiro contato
 
 // Campos que o painel do rep pode gravar via POST.
 // TIMESTAMP_VEND NÃO está aqui — é gerenciado automaticamente pelo proxy em cada write.
@@ -199,15 +200,21 @@ function doPost(e) {
     if (action === 'set_primeiro_contato') {
       const jaRegistrado = sheet.getRange(row, COL_PRIMO_CONTATO + 1).getValue();
       if (jaRegistrado) return jsonResponse({ ok: true, skip: true });
+      var tsEntrada = sheet.getRange(row, COL_DATA_ENVIO + 1).getValue();
+      var deltaMin = 0;
+      if (tsEntrada instanceof Date && !isNaN(tsEntrada.getTime())) {
+        deltaMin = Math.round((now - tsEntrada.getTime()) / 60000);
+      }
       var lkPc = LockService.getScriptLock();
       lkPc.waitLock(10000);
       try {
         sheet.getRange(row, COL_PRIMO_CONTATO + 1).setValue(new Date(now));
+        if (deltaMin > 0) sheet.getRange(row, COL_DELTA_CONTATO + 1).setValue(deltaMin);
         SpreadsheetApp.flush();
       } finally {
         lkPc.releaseLock();
       }
-      return jsonResponse({ ok: true, ts: now });
+      return jsonResponse({ ok: true, ts: now, delta_min: deltaMin });
     }
 
     // ── campo único: gravação simples ────────────────────────
@@ -429,6 +436,8 @@ function getSummary() {
   let countFechadoComDias = 0;
   let firstDate = '';
   let todayCount = 0;
+  let totalSpeed = 0;
+  let countSpeed = 0;
   const today = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'yyyy-MM-dd');
 
   rows.forEach(function(r) {
@@ -463,9 +472,13 @@ function getSummary() {
     const d = fmtDate(r[COL_DATA]);
     if (d && (!firstDate || d < firstDate)) firstDate = d;
     if (d === today) todayCount++;
+
+    const delta = toNum(r[COL_DELTA_CONTATO]);
+    if (delta > 0) { totalSpeed += delta; countSpeed++; }
   });
 
   const media_dias = countFechadoComDias > 0 ? Math.round(totalDias / countFechadoComDias) : 0;
+  const media_speed_to_lead = countSpeed > 0 ? Math.round(totalSpeed / countSpeed) : 0;
 
   return {
     total: rows.length,
@@ -474,6 +487,7 @@ function getSummary() {
     receita: receita,
     pipeline: pipeline,
     media_dias: media_dias,
+    media_speed_to_lead: media_speed_to_lead,
     firstDate: firstDate,
     todayCount: todayCount,
     lastModified: getLastModified(),
