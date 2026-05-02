@@ -55,7 +55,8 @@ const COL_VALOR_FECH    = 24;
 const COL_MOTIVO_PERD   = 25;
 const COL_OBS_VEND      = 26;
 // AB=27 MÊS/ANO  AC=28 CAMPANHA  AD=29 CONJUNTO  AE=30 ANÚNCIO
-const COL_TIMESTAMP_VEND = 31; // AF — última atualização pelo vendedor
+const COL_TIMESTAMP_VEND  = 31; // AF — última atualização pelo vendedor
+const COL_PRIMO_CONTATO   = 32; // AG — epoch ms do primeiro clique em "Abrir WhatsApp"
 
 // Campos que o painel do rep pode gravar via POST.
 // TIMESTAMP_VEND NÃO está aqui — é gerenciado automaticamente pelo proxy em cada write.
@@ -190,6 +191,23 @@ function doPost(e) {
         lock.releaseLock();
       }
       return jsonResponse({ ok: true, ts: tsWrite });
+    }
+
+    // ── set_primeiro_contato: grava epoch ms em AG uma única vez ─
+    // Disparado silenciosamente pelo painel do rep ao clicar em "Abrir WhatsApp".
+    // Nunca sobrescreve — se já tiver valor, retorna ok:true com skip:true.
+    if (action === 'set_primeiro_contato') {
+      const jaRegistrado = sheet.getRange(row, COL_PRIMO_CONTATO + 1).getValue();
+      if (jaRegistrado) return jsonResponse({ ok: true, skip: true });
+      var lkPc = LockService.getScriptLock();
+      lkPc.waitLock(10000);
+      try {
+        sheet.getRange(row, COL_PRIMO_CONTATO + 1).setValue(now);
+        SpreadsheetApp.flush();
+      } finally {
+        lkPc.releaseLock();
+      }
+      return jsonResponse({ ok: true, ts: now });
     }
 
     // ── campo único: gravação simples ────────────────────────

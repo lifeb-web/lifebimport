@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="robots" content="noindex, nofollow">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Life B | Robert (Teste)</title>
+  <title>Life B | Robert Teste</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&display=swap" media="print" onload="this.media='all'">
@@ -397,7 +397,7 @@
   <div class="h-brand">
     <img class="h-logo" src="../../../logos/logo-lifeb.png" alt="Life B" onclick="location.reload()">
     <div class="h-sep"></div>
-    <span class="h-rep">Robert (Teste)</span>
+    <span class="h-rep">Robert Teste</span>
   </div>
   <div class="search-hd-wrap">
     <input id="search-hd-input" type="search" inputmode="text"
@@ -486,7 +486,7 @@
 
 const PROXY_URL = 'https://script.google.com/macros/s/AKfycbyq9KJgWTRoALEEVf8Pu_I82GT0-tTK5yXNg-RsYHj4ywK6Grg9z_jG1-IcTW3LMXfNBg/exec';
 const REP_NAME  = 'ROBERT_TESTE';  // substituído pelo Python no momento da geração
-const REP_TOKEN = 'lifeb_teste_2026_rt'; // token individual do rep — autenticação no proxy
+const REP_TOKEN = 'c4e09a0994b803ab35d43f3c'; // token individual do rep — autenticação no proxy
 const POLL_MS   = 60_000;          // intervalo de polling em ms
 const LIMIT     = 8;               // leads visíveis por vez (paginação)
 
@@ -677,7 +677,16 @@ function closeContactWa(row) {
 function doContactWa(row) {
   const url = _contactWaUrl[row];
   closeContactWa(row);
-  if (url) window.open(url, '_blank');
+  if (url) {
+    trackPrimeiroContato(row);
+    window.open(url, '_blank');
+  }
+}
+
+function trackPrimeiroContato(row) {
+  fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
+    body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, action:'set_primeiro_contato' }) })
+    .catch(() => {});
 }
 
 function buildMapsUrl(empresa, cidade, estado) {
@@ -1134,7 +1143,13 @@ function doConfirmLink(id) {
   if (!conf) return;
   const url = conf.dataset.pending;
   conf.classList.remove('visible');
-  if (url) window.open(url, '_blank', 'noopener,noreferrer');
+  if (url) {
+    if (conf.classList.contains('link-wa')) {
+      const row = parseInt(id.replace(/^h?lc-/, ''));
+      if (!isNaN(row)) trackPrimeiroContato(row);
+    }
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
 }
 
 // ── CONTACT PANEL ─────────────────────────────────────────────
