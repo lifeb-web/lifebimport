@@ -202,7 +202,7 @@ function doPost(e) {
       var lkPc = LockService.getScriptLock();
       lkPc.waitLock(10000);
       try {
-        sheet.getRange(row, COL_PRIMO_CONTATO + 1).setValue(now);
+        sheet.getRange(row, COL_PRIMO_CONTATO + 1).setValue(new Date(now));
         SpreadsheetApp.flush();
       } finally {
         lkPc.releaseLock();
