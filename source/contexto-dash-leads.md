@@ -1,5 +1,5 @@
 # Contexto — Dashboard de Leads (Planilha)
-Atualizado: 2026-04-28
+Atualizado: 2026-05-02
 
 ---
 
@@ -33,7 +33,7 @@ URLs publicadas:
 ### Actions disponíveis no proxy
 | Action | O que retorna |
 |---|---|
-| `summary` | KPIs gerais: total, sdr{}, vend{}, receita, pipeline, media_dias, firstDate, todayCount, lastModified |
+| `summary` | KPIs gerais: total, sdr{}, vend{}, receita, pipeline, media_dias, media_speed_to_lead, firstDate, todayCount, lastModified |
 | `funnel` | Contagens por status SDR e vendedor |
 | `by_rep` | Totais por representante (total, ag_cont, em_cont, em_neg, fechado, perdido, receita) |
 | `active_all` | Leads ativos de todos os reps — requer token `0ef82354c11e4f518d90fe5c3935b767` |
@@ -46,9 +46,9 @@ URLs publicadas:
 ## Seções de cada dashboard
 
 ### Mobile (`dashboard-leads.html`)
-1. **9 cards KPI** (grid 2 colunas mobile / 9 colunas desktop):
+1. **12 cards KPI** (grid 2 colunas mobile / 4-6 colunas desktop):
    - Total de Leads, Qualificados SDR, Em Tratativa, Fechamentos, Receita Total,
-     Taxa de Conversão, Potencial em Aberto, Investimento ADS, ROAS
+     Taxa de Conversão, Potencial em Aberto, Investimento ADS, ROAS, ACOS, CAC, **Speed to Lead**
 2. **Funil SDR** + **Funil Vendedor** (barras horizontais com %)
 3. **Tabelas** (scroll horizontal em mobile):
    - Por Representante (Rep, Total, Ag., Cont., Neg., Fech., Perd., Receita)
@@ -317,6 +317,7 @@ O scroll continua ativo quando a lista cresce além do espaço disponível.
 - `8117fb45` — telão: fechamentos table fill card height (flex:1 ao invés de max-height fixo)
 - `ee710e19` — telão: media queries max-height 820px/700px para notebooks 13"
 - `8146a3ce` — auditoria: sessão 2026-05-01 documentada
+- `12127a1a` — fix: labels telão não cortam mais (m-label wrap 2 linhas, labels longos abreviados)
 
 ---
 
@@ -362,13 +363,34 @@ if (action === 'set_primeiro_contato') {
 }
 ```
 
-### Cálculo futuro no dashboard
+### Coluna AH — DELTA CONTATO MIN ✅ FUNCIONANDO
+- Tipo: inteiro (minutos)
+- `Math.ceil((now - tsEntrada.getTime()) / 60000)` — arredonda pra cima
+- `Math.max(1, deltaMin)` — mínimo 1 min (garante preenchimento mesmo com delta < 30s)
+- `tsEntrada` lido da coluna H (DATA ENVIO AO VENDEDOR) — momento que o lead foi enviado ao rep
+- `now` = mesmo timestamp gravado em AG — logo: AH = AG − H em minutos
+
+### Card Speed to Lead nos dashboards ✅ FUNCIONANDO
+- ID: `card-speed-to-lead`, classe `.accent-indigo`
+- Dado: `media_speed_to_lead` retornado por `getSummary` (média da coluna AH, ignorando zeros)
+- Display: `Xh Ymin` se ≥ 60 min, senão `Xmin`
+- Grid mobile: `.card-speed { grid-column: span 2 }` em < 640px (12 cards = 6 linhas perfeitas)
+- Telão: `flex:1` auto-ajusta como os demais cards
+
+### Proxy getSummary — Speed to Lead
 ```js
-const minutos = (ts_primo_contato - ts_entrada) / 60000;
+const delta = toNum(r[COL_DELTA_CONTATO]);
+if (delta > 0) { totalSpeed += delta; countSpeed++; }
+// ...
+const media_speed_to_lead = countSpeed > 0 ? Math.round(totalSpeed / countSpeed) : 0;
 ```
-`ts_entrada` já existe no proxy como epoch ms (coluna H — COL_DATA_ENVIO).
-Para ler `primo_contato` no proxy: `r[COL_PRIMO_CONTATO] instanceof Date ? r[COL_PRIMO_CONTATO].getTime() : 0`
 
 ### Fix colateral: TIMESTAMP_VEND (coluna AF)
 Antes gravava epoch ms bruto (número). Agora grava `new Date(now)` — legível no Sheets.
 Leitura via `Number(r[COL_TIMESTAMP_VEND])` permanece compatível (`Number(Date)` = epoch ms).
+
+### Commits Speed to Lead (2026-05-02)
+- `82b51a5c` — proxy: set_primeiro_contato, COL_PRIMO_CONTATO=32, COL_DELTA_CONTATO=33
+- `71cbe237` — fix: ≈ (U+2248) removido do proxy (causava SyntaxError linha 21)
+- `e45f8e89` — fix: AH usa Math.ceil + Math.max(1) — sempre preenche mesmo delta < 30s
+- `5d230c99` — fix: token ROBERT_TESTE corrigido nos painéis gerados
