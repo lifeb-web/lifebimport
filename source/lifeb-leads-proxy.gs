@@ -203,13 +203,13 @@ function doPost(e) {
       var tsEntrada = sheet.getRange(row, COL_DATA_ENVIO + 1).getValue(); // coluna H: data/hora que o lead foi enviado ao rep
       var deltaMin = 0;
       if (tsEntrada instanceof Date && !isNaN(tsEntrada.getTime())) {
-        deltaMin = Math.round((now - tsEntrada.getTime()) / 60000);
+        deltaMin = Math.ceil((now - tsEntrada.getTime()) / 60000);
       }
       var lkPc = LockService.getScriptLock();
       lkPc.waitLock(10000);
       try {
         sheet.getRange(row, COL_PRIMO_CONTATO + 1).setValue(new Date(now));
-        if (deltaMin > 0) sheet.getRange(row, COL_DELTA_CONTATO + 1).setValue(deltaMin);
+        if (deltaMin >= 0) sheet.getRange(row, COL_DELTA_CONTATO + 1).setValue(Math.max(1, deltaMin));
         SpreadsheetApp.flush();
       } finally {
         lkPc.releaseLock();
