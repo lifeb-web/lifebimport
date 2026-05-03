@@ -200,7 +200,7 @@ function doPost(e) {
     if (action === 'set_primeiro_contato') {
       const jaRegistrado = sheet.getRange(row, COL_PRIMO_CONTATO + 1).getValue();
       if (jaRegistrado) return jsonResponse({ ok: true, skip: true });
-      var tsEntrada = sheet.getRange(row, COL_DATA_ENVIO + 1).getValue();
+      var tsEntrada = sheet.getRange(row, COL_DATA + 1).getValue(); // coluna A tem data+hora completa
       var deltaMin = 0;
       if (tsEntrada instanceof Date && !isNaN(tsEntrada.getTime())) {
         deltaMin = Math.round((now - tsEntrada.getTime()) / 60000);
