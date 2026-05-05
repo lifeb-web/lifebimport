@@ -1047,7 +1047,12 @@ function concludeCard(row) {
     showUndoToast(msg, data);
   }
   card.classList.add('going-down');
-  setTimeout(() => renderLeads(_rawLeads, row), 700);
+  setTimeout(() => {
+    // Guard: poll may have re-added this row to _rawLeads while in concluding mode
+    const _ci = _rawLeads.findIndex(l => l.row === row);
+    if (_ci >= 0) _rawLeads.splice(_ci, 1);
+    renderLeads(_rawLeads, row);
+  }, 700);
 }
 
 // ── EXPAND TOGGLE ─────────────────────────────────────────────
@@ -1222,8 +1227,12 @@ async function savePot(row) {
 
   // background POST
   try {
+    const _ctrl = new AbortController();
+    const _tid  = setTimeout(() => _ctrl.abort(), 25000);
     const res  = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'VALOR_POTENCIAL', valor:String(n) }) });
+      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'VALOR_POTENCIAL', valor:String(n) }),
+      signal: _ctrl.signal });
+    clearTimeout(_tid);
     const data = await res.json();
     if (!data.ok) throw new Error(data.error);
   } catch(err) {
@@ -1304,8 +1313,12 @@ async function saveObs(row) {
 
   // background POST
   try {
+    const _ctrl = new AbortController();
+    const _tid  = setTimeout(() => _ctrl.abort(), 25000);
     const res  = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'OBS_VENDEDOR', valor }) });
+      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'OBS_VENDEDOR', valor }),
+      signal: _ctrl.signal });
+    clearTimeout(_tid);
     const data = await res.json();
     if (!data.ok) throw new Error(data.error);
   } catch(err) {
