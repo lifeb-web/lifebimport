@@ -574,11 +574,12 @@ function getFunnel() {
  * Limite de 200 aplicado APÓS o filtro — cada rep pode ter até 200 leads ativos.
  */
 function getActive(rep) {
-  const rows = getRows().filter(function(r) { return !isExcluido(r); });
+  const rows = getRows(); // não filtrar aqui — preserva índices originais para row: i+2 correto
   const EXCLUIDOS = ['Fechado', 'Perdido', ''];
   const result = [];
 
   rows.forEach(function(r, i) {
+    if (isExcluido(r)) return;
     const statusVend = norm(r[COL_STATUS_VEND]);
     if (EXCLUIDOS.indexOf(statusVend) >= 0) return;
     if (norm(r[COL_VENDEDOR]).toUpperCase() !== rep) return;
@@ -623,10 +624,11 @@ function getActive(rep) {
  * Limite de 200 aplicado APÓS o filtro por rep.
  */
 function getRepHistory(rep) {
-  const rows = getRows().filter(function(r) { return !isExcluido(r); });
+  const rows = getRows(); // não filtrar aqui — preserva índices originais para row: i+2 correto
   const result = [];
 
   rows.forEach(function(r, i) {
+    if (isExcluido(r)) return;
     const statusVend = norm(r[COL_STATUS_VEND]);
     if (statusVend !== 'Fechado' && statusVend !== 'Perdido') return;
     if (norm(r[COL_VENDEDOR]).toUpperCase() !== rep) return;
