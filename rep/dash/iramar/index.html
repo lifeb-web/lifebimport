@@ -804,11 +804,22 @@ function undoLast() {
   }
 
   const undoRow = actions.length > 0 ? actions[0].row : null;
+  // Sync in-memory history: lead was added optimistically by saveStatusExtra — remove it on undo
+  // so it doesn't appear in both active list and historico simultaneously.
+  if (pending.isMulti && pending.leadSnapshot && _history !== null && undoRow) {
+    const hi = _history.findIndex(l => l.row === undoRow);
+    if (hi >= 0) _history.splice(hi, 1);
+  }
   renderLeads(_rawLeads, undoRow);
   if (undoRow) setTimeout(function() {
     const c = document.querySelector('.lead-card[data-row="' + undoRow + '"]');
     if (c) c.scrollIntoView({ behavior:'smooth', block:'center' });
   }, 60);
+  // Re-render historico if open so the count and list update immediately
+  if (pending.isMulti && pending.leadSnapshot) {
+    const histSec = document.getElementById('historico-section');
+    if (histSec && histSec.classList.contains('open')) renderHistorico();
+  }
   showToast('Desfeito ✓');
 
   // POST all reverts in background
@@ -1768,9 +1779,10 @@ function renderLeads(leads, highlightRow) {
   if (!list) return;
 
   // preserve UI state
-  const expandedRows = new Set();
-  const obsDrafts    = {};
-  const contactOpen  = new Set();
+  const expandedRows   = new Set();
+  const concludingRows = new Set();
+  const obsDrafts      = {};
+  const contactOpen    = new Set();
   list.querySelectorAll('.lead-card').forEach(c => {
     const row = c.dataset.row;
     if (c.classList.contains('expanded')) {
@@ -1778,6 +1790,7 @@ function renderLeads(leads, highlightRow) {
       const ta = document.getElementById('obs-' + row);
       if (ta) obsDrafts[row] = ta.value;
     }
+    if (c.classList.contains('concluding')) concludingRows.add(row);
     const cp = document.getElementById('cp-' + row);
     if (cp && cp.style.display === 'block') contactOpen.add(row);
   });
@@ -2053,6 +2066,15 @@ function renderLeads(leads, highlightRow) {
     const btn = list.querySelector(`.lead-card[data-row="${row}"] .lc-icon-btn.contact`);
     if (cp)  cp.style.display = 'block';
     if (btn) { btn.classList.add('active'); btn.setAttribute('aria-expanded','true'); }
+  });
+  concludingRows.forEach(row => {
+    const card = list.querySelector(`.lead-card[data-row="${row}"]`);
+    if (!card) return;
+    card.classList.add('concluding');
+    const rep = document.getElementById('obsr-' + row);
+    if (rep && !rep.classList.contains('editing')) rep.classList.add('editing');
+    const saveBtn = document.getElementById('obs-save-' + row);
+    if (saveBtn) saveBtn.textContent = 'Salvar e concluir';
   });
 
   // highlight recently moved card
