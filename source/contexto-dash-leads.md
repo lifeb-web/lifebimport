@@ -180,6 +180,36 @@ function isTesteLead(r) {
 
 **Por que o filtro fica no proxy e não no frontend:** o frontend recebe dados já agregados (totais, contagens). Não tem como filtrar leads individuais dos KPIs sem refazer os cálculos no servidor.
 
+---
+
+## Regra de exclusão por STATUS_SDR inválido — ESTADO FINAL (2026-05-05)
+
+**Função:** `isExcluido(r)` em `lifeb-leads-proxy.gs`
+
+```javascript
+function isExcluido(r) {
+  var s = String(r[COL_STATUS_SDR] || '').trim();
+  return s === 'Duplicado' || s === 'Número incorreto';
+}
+```
+
+**Lógica:** leads com STATUS_SDR igual a `Duplicado` ou `Número incorreto` são excluídos de todos os cálculos e exibições.
+
+**Onde se aplica:**
+
+| Função | Filtro? |
+|---|---|
+| `getSummary` | ✅ sim — junto com isTesteLead |
+| `getByRep` | ✅ sim — junto com isTesteLead |
+| `getFunnel` | ✅ sim — junto com isTesteLead |
+| `getActiveAll` | ✅ sim — dentro do forEach |
+| `getClosed` | ✅ sim — junto com isTesteLead |
+| `getChart` | ✅ sim — junto com isTesteLead |
+| `getLatest` | ✅ sim — junto com isTesteLead |
+| `getActive` | ✅ sim — rep não vê leads inválidos |
+| `getRepHistory` | ✅ sim — rep não vê leads inválidos |
+| `doPost` | ❌ não — escrita ainda permitida |
+
 **Por que `getActive` e `getRepHistory` não filtram:** o rep de teste (ex: `robert-teste`) precisa ver seus próprios leads de teste no painel dele para poder trabalhar/testar o sistema.
 
 ---
@@ -318,6 +348,7 @@ O scroll continua ativo quando a lista cresce além do espaço disponível.
 - `ee710e19` — telão: media queries max-height 820px/700px para notebooks 13"
 - `8146a3ce` — auditoria: sessão 2026-05-01 documentada
 - `12127a1a` — fix: labels telão não cortam mais (m-label wrap 2 linhas, labels longos abreviados)
+- `f58afb14` — feat: isExcluido() — leads Duplicado e Número incorreto fora de todos os cálculos e funis
 
 ---
 
