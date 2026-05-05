@@ -1477,7 +1477,8 @@ async function saveStatusExtra(row) {
         if (lead2) lead2.pot = n;
         if (_pendingUndoByRow[row]) _pendingUndoByRow[row].data.actions.push({ row, campo:'VALOR_POTENCIAL', valor:oldPot });
         fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
-          body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'VALOR_POTENCIAL', valor:String(n) }) });
+          body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'VALOR_POTENCIAL', valor:String(n) }) })
+          .catch(err => console.error('savePot negociacao failed:', err));
       }
     }
     setLeadTs(row);
