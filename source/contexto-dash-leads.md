@@ -210,7 +210,7 @@ function isExcluido(r) {
 | `getRepHistory` | ✅ sim — rep não vê leads inválidos |
 | `doPost` | ❌ não — escrita ainda permitida |
 
-**Por que `getActive` e `getRepHistory` não filtram:** o rep de teste (ex: `robert-teste`) precisa ver seus próprios leads de teste no painel dele para poder trabalhar/testar o sistema.
+**ATENÇÃO — regra de implementação:** `getActive` e `getRepHistory` filtram `isExcluido` DENTRO do forEach (não como pré-filtro do getRows()). Se o filtro for aplicado antes do forEach, os índices `i` ficam errados e `row: i + 2` aponta para a linha errada na planilha. Isso causa falha no doPost.
 
 ---
 
@@ -425,3 +425,48 @@ Leitura via `Number(r[COL_TIMESTAMP_VEND])` permanece compatível (`Number(Date)
 - `71cbe237` — fix: ≈ (U+2248) removido do proxy (causava SyntaxError linha 21)
 - `e45f8e89` — fix: AH usa Math.ceil + Math.max(1) — sempre preenche mesmo delta < 30s
 - `5d230c99` — fix: token ROBERT_TESTE corrigido nos painéis gerados
+
+---
+
+## Auditoria completa (2026-05-05) — commits 6e313cb5 + dfbb612d
+
+### Bug crítico corrigido: row index errado em getActive e getRepHistory
+
+**Causa:** `isExcluido()` filtrava rows ANTES do `forEach(r, i)`. O `i` virava índice do array filtrado, não da planilha. `row: i + 2` apontava pra linha errada → proxy rejeitava com "lead não pertence a este representante" → rep não conseguia salvar nada.
+
+**Fix (6e313cb5):** filtro `isExcluido(r)` movido pra dentro do `forEach`, preservando índice original.
+
+```js
+// ANTES (bug):
+const rows = getRows().filter(r => !isExcluido(r));
+rows.forEach(function(r, i) { result.push({ row: i + 2 ... }) });
+
+// DEPOIS (correto):
+const rows = getRows(); // sem filtro — índices preservados
+rows.forEach(function(r, i) {
+  if (isExcluido(r)) return; // skip interno
+  result.push({ row: i + 2 ... });
+});
+```
+
+**Impacto:** qualquer planilha com leads Duplicado/Número incorreto antes de leads ativos do rep causava o erro. Natanael não conseguia alterar status de nenhum lead que tivesse leads excluídos antes na planilha.
+
+### Robustez do proxy (dfbb612d)
+- `getRows()` e `doPost` agora usam `getSheetByName('LEADS')` com fallback para `getSheets()[0]` — imune a reordenação de abas
+- `set_primeiro_contato`: verificação `jaRegistrado` movida para dentro do lock — elimina race condition entre dois cliques simultâneos
+
+### Visibilidade de erros no template (dfbb612d)
+Todos os `catch(_)` críticos foram convertidos para `catch(err)` + `console.error`. Erros agora aparecem no console do DevTools para facilitar diagnóstico futuro.
+
+| Função | Antes | Depois |
+|---|---|---|
+| `trackPrimeiroContato` | `.catch(() => {})` | `.catch(err => console.error(...))` |
+| `savePot` | `catch(_)` silencioso | `catch(err)` + `console.error('savePot failed:', err)` |
+| `saveObs` | `catch(_)` silencioso | `catch(err)` + `console.error('saveObs failed:', err)` |
+| `saveStatusExtra Fechado` | `catch(_)` silencioso | `catch(err)` + `console.error(...)` |
+| `saveStatusExtra Perdido` | `catch(_)` silencioso | `catch(err)` + `console.error(...)` |
+| `confirmStatusChange` | `catch(_)` silencioso | AbortController 25s + `catch(err)` + `console.error(...)` |
+
+### Commits desta auditoria
+- `6e313cb5` — fix: row index incorreto em getActive/getRepHistory quando há leads excluídos
+- `dfbb612d` — fix: auditoria completa — proxy robusto + erros visíveis no console
