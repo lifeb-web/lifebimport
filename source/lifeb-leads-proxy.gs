@@ -135,7 +135,7 @@ function doPost(e) {
     }
 
     // 3. Abrir planilha e validar que o lead pertence ao rep
-    const sheet   = SpreadsheetApp.openById(SPREADSHEET_ID).getSheets()[0];
+    const sheet   = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName('LEADS') || SpreadsheetApp.openById(SPREADSHEET_ID).getSheets()[0];
     const lastRow = sheet.getLastRow();
     if (row > lastRow) {
       return jsonResponse({ ok: false, error: 'row fora do intervalo' });
@@ -198,8 +198,6 @@ function doPost(e) {
     // Disparado silenciosamente pelo painel do rep ao clicar em "Abrir WhatsApp".
     // Nunca sobrescreve — se já tiver valor, retorna ok:true com skip:true.
     if (action === 'set_primeiro_contato') {
-      const jaRegistrado = sheet.getRange(row, COL_PRIMO_CONTATO + 1).getValue();
-      if (jaRegistrado) return jsonResponse({ ok: true, skip: true });
       var tsEntrada = sheet.getRange(row, COL_DATA_ENVIO + 1).getValue(); // coluna H: data/hora que o lead foi enviado ao rep
       var deltaMin = 0;
       if (tsEntrada instanceof Date && !isNaN(tsEntrada.getTime())) {
@@ -208,6 +206,9 @@ function doPost(e) {
       var lkPc = LockService.getScriptLock();
       lkPc.waitLock(10000);
       try {
+        // Verificação dentro do lock — evita race condition entre dois cliques simultâneos
+        const jaRegistrado = sheet.getRange(row, COL_PRIMO_CONTATO + 1).getValue();
+        if (jaRegistrado) return jsonResponse({ ok: true, skip: true });
         sheet.getRange(row, COL_PRIMO_CONTATO + 1).setValue(new Date(now));
         if (deltaMin >= 0) sheet.getRange(row, COL_DELTA_CONTATO + 1).setValue(Math.max(1, deltaMin));
         SpreadsheetApp.flush();
@@ -286,7 +287,7 @@ function jsonResponse(obj) {
 
 /** Abre a planilha e retorna as linhas de dados (sem cabeçalho). */
 function getRows() {
-  const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheets()[0];
+  const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName('LEADS') || SpreadsheetApp.openById(SPREADSHEET_ID).getSheets()[0];
   const data  = sheet.getDataRange().getValues();
   data.shift();
   return data;

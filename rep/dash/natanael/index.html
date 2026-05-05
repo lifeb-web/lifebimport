@@ -686,7 +686,7 @@ function doContactWa(row) {
 function trackPrimeiroContato(row) {
   fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
     body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, action:'set_primeiro_contato' }) })
-    .catch(() => {});
+    .catch(err => console.error('trackPrimeiroContato failed:', err));
 }
 
 function buildMapsUrl(empresa, cidade, estado) {
@@ -1226,7 +1226,8 @@ async function savePot(row) {
       body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'VALOR_POTENCIAL', valor:String(n) }) });
     const data = await res.json();
     if (!data.ok) throw new Error(data.error);
-  } catch(_) {
+  } catch(err) {
+    console.error('savePot failed:', err);
     // revert
     if (lead) lead.pot = parseFloat(oldPot) || 0;
     const oldN = parseFloat(oldPot) || 0;
@@ -1307,7 +1308,8 @@ async function saveObs(row) {
       body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'OBS_VENDEDOR', valor }) });
     const data = await res.json();
     if (!data.ok) throw new Error(data.error);
-  } catch(_) {
+  } catch(err) {
+    console.error('saveObs failed:', err);
     if (lead) lead.obs = oldObs;
     if (rep) {
       rep.dataset.saved = oldObs;
@@ -1556,7 +1558,8 @@ async function saveStatusExtra(row) {
       const d = await r.json();
       if (!d.ok) throw new Error(d.error);
       if (d.ts) { _tsMap[row] = d.ts; try{localStorage.setItem(TS_KEY,JSON.stringify(_tsMap));}catch(_){} }
-    } catch(_) {
+    } catch(err) {
+      console.error('saveStatusExtra Fechado failed:', err);
       _revertOptimisticClose(row);
       showToast('Erro ao registrar. Verifique a conexão.');
     } finally {
@@ -1605,7 +1608,8 @@ async function saveStatusExtra(row) {
     const d = await r.json();
     if (!d.ok) throw new Error(d.error);
     if (d.ts) { _tsMap[row] = d.ts; try{localStorage.setItem(TS_KEY,JSON.stringify(_tsMap));}catch(_){} }
-  } catch(_) {
+  } catch(err) {
+    console.error('saveStatusExtra Perdido failed:', err);
     _revertOptimisticClose(row);
     showToast('Erro ao registrar. Verifique a conexão.');
   } finally {
@@ -1726,11 +1730,16 @@ async function confirmStatusChange(row) {
   }
 
   try {
+    const _ctrl = new AbortController();
+    const _tid  = setTimeout(() => _ctrl.abort(), 25000);
     const res  = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'STATUS_VENDEDOR', valor }) });
+      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'STATUS_VENDEDOR', valor }),
+      signal: _ctrl.signal });
+    clearTimeout(_tid);
     const data = await res.json();
     if (!data.ok) throw new Error(data.error);
-  } catch(_) {
+  } catch(err) {
+    console.error('confirmStatusChange failed:', err);
     if (raw) raw.status = oldStatus;
     if (sel) { sel.value = oldStatus; sel.className = 'lc-select ' + statusClass(oldStatus); sel.dataset.original = oldStatus; }
     renderLeads(_rawLeads);
