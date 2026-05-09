@@ -408,27 +408,27 @@
 
       <div class="card card-table" style="flex:1;min-height:0">
         <div class="card-hd">
-          <div class="card-hd-title">Leads Ativos — Iramar</div>
+          <div class="card-hd-title">Leads Ativos — Goiás</div>
           <div style="display:flex;align-items:center;gap:6px">
-            <span class="badge" id="ativos-ag-iramar">—</span>
-            <span class="badge" id="ativos-cont-iramar">—</span>
-            <span class="badge" id="ativos-neg-iramar">—</span>
-            <span class="badge" id="ativos-badge-iramar">—</span>
+            <span class="badge" id="ativos-ag-go">—</span>
+            <span class="badge" id="ativos-cont-go">—</span>
+            <span class="badge" id="ativos-neg-go">—</span>
+            <span class="badge" id="ativos-badge-go">—</span>
           </div>
         </div>
         <div class="table-scroll table-body">
           <table style="table-layout:fixed;width:100%;font-size:11px">
             <colgroup>
               <col style="width:27%">
-              <col style="width:22%">
-              <col style="width:22%">
+              <col style="width:19%">
               <col style="width:16%">
-              <col style="width:13%">
+              <col style="width:23%">
+              <col style="width:15%">
             </colgroup>
             <thead><tr>
-              <th>Empresa</th><th class="td-left" style="text-align:left">Cidade / UF</th><th style="text-align:center">Status</th><th style="text-align:right">Potencial</th><th style="text-align:right">Entrada</th>
+              <th>Empresa</th><th class="td-left" style="text-align:left">Cidade</th><th class="td-left" style="text-align:left">Rep</th><th style="text-align:center">Status</th><th style="text-align:right">Potencial</th>
             </tr></thead>
-            <tbody id="tb-ativos-iramar">
+            <tbody id="tb-ativos-go">
               <tr class="empty-row"><td colspan="5">Carregando...</td></tr>
             </tbody>
           </table>
@@ -437,27 +437,57 @@
 
       <div class="card card-table" style="flex:1;min-height:0">
         <div class="card-hd">
-          <div class="card-hd-title">Leads Ativos — Natanael</div>
+          <div class="card-hd-title">Leads Ativos — DF</div>
           <div style="display:flex;align-items:center;gap:6px">
-            <span class="badge" id="ativos-ag-natanael">—</span>
-            <span class="badge" id="ativos-cont-natanael">—</span>
-            <span class="badge" id="ativos-neg-natanael">—</span>
-            <span class="badge" id="ativos-badge-natanael">—</span>
+            <span class="badge" id="ativos-ag-df">—</span>
+            <span class="badge" id="ativos-cont-df">—</span>
+            <span class="badge" id="ativos-neg-df">—</span>
+            <span class="badge" id="ativos-badge-df">—</span>
           </div>
         </div>
         <div class="table-scroll table-body">
           <table style="table-layout:fixed;width:100%;font-size:11px">
             <colgroup>
               <col style="width:27%">
-              <col style="width:22%">
-              <col style="width:22%">
+              <col style="width:19%">
               <col style="width:16%">
-              <col style="width:13%">
+              <col style="width:23%">
+              <col style="width:15%">
             </colgroup>
             <thead><tr>
-              <th>Empresa</th><th class="td-left" style="text-align:left">Cidade / UF</th><th style="text-align:center">Status</th><th style="text-align:right">Potencial</th><th style="text-align:right">Entrada</th>
+              <th>Empresa</th><th class="td-left" style="text-align:left">Cidade</th><th class="td-left" style="text-align:left">Rep</th><th style="text-align:center">Status</th><th style="text-align:right">Potencial</th>
             </tr></thead>
-            <tbody id="tb-ativos-natanael">
+            <tbody id="tb-ativos-df">
+              <tr class="empty-row"><td colspan="5">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Leads Ativos — Outros (oculto quando vazio) -->
+      <div class="card card-table" id="card-ativos-outros" style="flex:1;min-height:0;display:none">
+        <div class="card-hd">
+          <div class="card-hd-title">Leads Ativos — Outros</div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="badge" id="ativos-ag-outros">—</span>
+            <span class="badge" id="ativos-cont-outros">—</span>
+            <span class="badge" id="ativos-neg-outros">—</span>
+            <span class="badge" id="ativos-badge-outros">—</span>
+          </div>
+        </div>
+        <div class="table-scroll table-body">
+          <table style="table-layout:fixed;width:100%;font-size:11px">
+            <colgroup>
+              <col style="width:27%">
+              <col style="width:19%">
+              <col style="width:16%">
+              <col style="width:23%">
+              <col style="width:15%">
+            </colgroup>
+            <thead><tr>
+              <th>Empresa</th><th class="td-left" style="text-align:left">Cidade</th><th class="td-left" style="text-align:left">Rep</th><th style="text-align:center">Status</th><th style="text-align:right">Potencial</th>
+            </tr></thead>
+            <tbody id="tb-ativos-outros">
               <tr class="empty-row"><td colspan="5">Carregando...</td></tr>
             </tbody>
           </table>
@@ -882,54 +912,53 @@ function statusBadgeAtivos(s) {
 function renderAtivos(data) {
   const leads = data.leads || [];
 
-  function fmtEntrada(d) {
-    if (!d) return '—';
-    const p = d.split('-');
-    return p.length === 3 ? `${p[2]}/${p[1]}/${p[0].slice(2)}` : d;
-  }
-
-  function renderRepCard(repName, tbodyId, badgeId, negId, agId, contId) {
+  function renderEstadoCard(estadoSigla, tbodyId, badgeId, negId, agId, contId, cardId) {
     try {
       const tbody  = document.getElementById(tbodyId);
       const badge  = document.getElementById(badgeId);
       const negEl  = document.getElementById(negId);
       const agEl   = document.getElementById(agId);
       const contEl = document.getElementById(contId);
+      const card   = cardId ? document.getElementById(cardId) : null;
       if (!tbody) return;
-      const repLeads = leads
-        .filter(l => (l.rep || '').toUpperCase() === repName)
+      const estadoLeads = leads
+        .filter(l => estadoSigla === 'OUTROS'
+          ? !['GO','DF'].includes((l.estado||'').toUpperCase().trim())
+          : (l.estado||'').toUpperCase().trim() === estadoSigla)
         .sort((a, b) => {
           const pa = a.status === 'Aguardando contato' ? 0 : 1;
           const pb = b.status === 'Aguardando contato' ? 0 : 1;
           if (pa !== pb) return pa - pb;
           return (a.data || '').localeCompare(b.data || '');
         });
-      if (badge)  badge.textContent  = `TOTAL: ${n(repLeads.length)} ATIVOS`;
-      if (agEl)   agEl.textContent   = `AGUARDANDO: ${n(repLeads.filter(l => l.status === 'Aguardando contato').length)}`;
-      if (contEl) contEl.textContent = `EM CONTATO: ${n(repLeads.filter(l => l.status === 'Em contato').length)}`;
-      if (negEl)  negEl.textContent  = `NEGOCIANDO: ${n(repLeads.filter(l => l.status === 'Em negociação').length)}`;
-      if (!repLeads.length) { tbody.innerHTML = emptyRow(5); return; }
-      tbody.innerHTML = repLeads.map(l => {
+      if (card) card.style.display = estadoLeads.length ? '' : 'none';
+      if (badge)  badge.textContent  = `TOTAL: ${n(estadoLeads.length)} ATIVOS`;
+      if (agEl)   agEl.textContent   = `AGUARDANDO: ${n(estadoLeads.filter(l => l.status === 'Aguardando contato').length)}`;
+      if (contEl) contEl.textContent = `EM CONTATO: ${n(estadoLeads.filter(l => l.status === 'Em contato').length)}`;
+      if (negEl)  negEl.textContent  = `NEGOCIANDO: ${n(estadoLeads.filter(l => l.status === 'Em negociação').length)}`;
+      if (!estadoLeads.length) { tbody.innerHTML = emptyRow(5); return; }
+      tbody.innerHTML = estadoLeads.map(l => {
         const empresa   = toTitleCase(l.empresa || l.nome) || '—';
-        const cidadeFmt = toTitleCase(l.cidade);
-        const cidadeUF  = [cidadeFmt, l.estado].filter(v => v && v.trim()).join(' - ') || '—';
+        const cidadeFmt = toTitleCase(l.cidade) || '—';
+        const rep       = toTitleCase(l.rep) || '—';
         return `<tr>
           <td title="${esc(empresa)}">${esc(empresa)}</td>
-          <td class="td-left" title="${esc(cidadeUF)}">${esc(cidadeUF)}</td>
+          <td class="td-left" title="${esc(cidadeFmt)}">${esc(cidadeFmt)}</td>
+          <td class="td-left">${esc(rep)}</td>
           <td style="text-align:center">${statusBadgeAtivos(l.status)}</td>
           <td style="text-align:right">${l.pot ? cur(l.pot) : '—'}</td>
-          <td style="text-align:right;white-space:nowrap;color:var(--muted)">${fmtEntrada(l.data)}</td>
         </tr>`;
       }).join('');
     } catch(err) {
-      _log.error('ativos', `Erro ao renderizar ativos (${repName})`, err);
+      _log.error('ativos', `Erro ao renderizar ativos (${estadoSigla})`, err);
       const tbody = document.getElementById(tbodyId);
       if (tbody) tbody.innerHTML = errRow(5);
     }
   }
 
-  renderRepCard('IRAMAR',   'tb-ativos-iramar',   'ativos-badge-iramar',   'ativos-neg-iramar',   'ativos-ag-iramar',   'ativos-cont-iramar');
-  renderRepCard('NATANAEL', 'tb-ativos-natanael', 'ativos-badge-natanael', 'ativos-neg-natanael', 'ativos-ag-natanael', 'ativos-cont-natanael');
+  renderEstadoCard('GO',     'tb-ativos-go',     'ativos-badge-go',     'ativos-neg-go',     'ativos-ag-go',     'ativos-cont-go');
+  renderEstadoCard('DF',     'tb-ativos-df',     'ativos-badge-df',     'ativos-neg-df',     'ativos-ag-df',     'ativos-cont-df');
+  renderEstadoCard('OUTROS', 'tb-ativos-outros', 'ativos-badge-outros', 'ativos-neg-outros', 'ativos-ag-outros', 'ativos-cont-outros', 'card-ativos-outros');
 }
 
 function renderFechados(data) {

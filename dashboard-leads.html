@@ -785,11 +785,11 @@
       </div>
     </div>
 
-    <!-- Leads Ativos — Iramar -->
+    <!-- Leads Ativos — Goiás -->
     <div class="card">
       <div class="card-hd">
-        <div class="card-hd-title">Iramar</div>
-        <span class="badge" id="ativos-badge-iramar">—</span>
+        <div class="card-hd-title">Leads Ativos — Goiás</div>
+        <span class="badge" id="ativos-badge-go">—</span>
       </div>
       <div class="ts-wrap ts-ativos">
         <div class="table-scroll">
@@ -797,11 +797,11 @@
             <thead>
               <tr>
                 <th class="td-left" style="text-align:left">Empresa</th>
+                <th class="td-left" style="text-align:left">Rep</th>
                 <th class="td-left" style="text-align:left">Status</th>
-                <th>Entrada</th>
               </tr>
             </thead>
-            <tbody id="tb-ativos-iramar">
+            <tbody id="tb-ativos-go">
               <tr class="empty-row"><td colspan="3">Carregando...</td></tr>
             </tbody>
           </table>
@@ -809,11 +809,11 @@
       </div>
     </div>
 
-    <!-- Leads Ativos — Natanael -->
+    <!-- Leads Ativos — DF -->
     <div class="card">
       <div class="card-hd">
-        <div class="card-hd-title">Natanael</div>
-        <span class="badge" id="ativos-badge-natanael">—</span>
+        <div class="card-hd-title">Leads Ativos — DF</div>
+        <span class="badge" id="ativos-badge-df">—</span>
       </div>
       <div class="ts-wrap ts-ativos">
         <div class="table-scroll">
@@ -821,11 +821,35 @@
             <thead>
               <tr>
                 <th class="td-left" style="text-align:left">Empresa</th>
+                <th class="td-left" style="text-align:left">Rep</th>
                 <th class="td-left" style="text-align:left">Status</th>
-                <th>Entrada</th>
               </tr>
             </thead>
-            <tbody id="tb-ativos-natanael">
+            <tbody id="tb-ativos-df">
+              <tr class="empty-row"><td colspan="3">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Leads Ativos — Outros (oculto quando vazio) -->
+    <div class="card" id="card-ativos-outros" style="display:none">
+      <div class="card-hd">
+        <div class="card-hd-title">Leads Ativos — Outros</div>
+        <span class="badge" id="ativos-badge-outros">—</span>
+      </div>
+      <div class="ts-wrap ts-ativos">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th class="td-left" style="text-align:left">Empresa</th>
+                <th class="td-left" style="text-align:left">Rep</th>
+                <th class="td-left" style="text-align:left">Status</th>
+              </tr>
+            </thead>
+            <tbody id="tb-ativos-outros">
               <tr class="empty-row"><td colspan="3">Carregando...</td></tr>
             </tbody>
           </table>
@@ -1145,44 +1169,44 @@ function renderAtivos(data) {
     return '';
   }
 
-  function fmtEntrada(d) {
-    if (!d) return '—';
-    const p = d.split('-');
-    return p.length === 3 ? `${p[2]}/${p[1]}/${p[0].slice(2)}` : d;
-  }
-
-  function renderRepCard(repName, tbodyId, badgeId) {
+  function renderEstadoCard(estadoSigla, tbodyId, badgeId, cardId) {
     try {
       const tbody = document.getElementById(tbodyId);
       const badge = document.getElementById(badgeId);
+      const card  = cardId ? document.getElementById(cardId) : null;
       if (!tbody) return;
-      const repLeads = leads
-        .filter(l => (l.rep || '').toUpperCase() === repName)
+      const estadoLeads = leads
+        .filter(l => estadoSigla === 'OUTROS'
+          ? !['GO','DF'].includes((l.estado||'').toUpperCase().trim())
+          : (l.estado||'').toUpperCase().trim() === estadoSigla)
         .sort((a, b) => {
           const pa = a.status === 'Aguardando contato' ? 0 : 1;
           const pb = b.status === 'Aguardando contato' ? 0 : 1;
           if (pa !== pb) return pa - pb;
           return (a.data || '').localeCompare(b.data || '');
         });
-      if (badge) badge.textContent = `${n(repLeads.length)} ATIVOS`;
-      if (!repLeads.length) { tbody.innerHTML = emptyRow(3); return; }
-      tbody.innerHTML = repLeads.map(l => {
+      if (card) card.style.display = estadoLeads.length ? '' : 'none';
+      if (badge) badge.textContent = `${n(estadoLeads.length)} ATIVOS`;
+      if (!estadoLeads.length) { tbody.innerHTML = emptyRow(3); return; }
+      tbody.innerHTML = estadoLeads.map(l => {
         const empresa = toTitleCase(l.empresa || l.nome) || '—';
+        const rep     = toTitleCase(l.rep) || '—';
         return `<tr class="${rowClass(l.status)}">
           <td class="td-left" title="${esc(empresa)}">${esc(empresa)}</td>
+          <td class="td-left" style="white-space:nowrap;font-size:11px">${esc(rep)}</td>
           <td class="td-left">${statusBadgeAtivos(l.status)}</td>
-          <td style="white-space:nowrap;font-size:11px;color:var(--muted)">${fmtEntrada(l.data)}</td>
         </tr>`;
       }).join('');
     } catch(err) {
-      _log.error('ativos', `Erro ao renderizar ativos (${repName})`, err);
+      _log.error('ativos', `Erro ao renderizar ativos (${estadoSigla})`, err);
       const tbody = document.getElementById(tbodyId);
       if (tbody) tbody.innerHTML = errRow(3);
     }
   }
 
-  renderRepCard('IRAMAR',   'tb-ativos-iramar',   'ativos-badge-iramar');
-  renderRepCard('NATANAEL', 'tb-ativos-natanael', 'ativos-badge-natanael');
+  renderEstadoCard('GO',     'tb-ativos-go',     'ativos-badge-go');
+  renderEstadoCard('DF',     'tb-ativos-df',     'ativos-badge-df');
+  renderEstadoCard('OUTROS', 'tb-ativos-outros', 'ativos-badge-outros', 'card-ativos-outros');
 }
 
 function renderFechados(data) {

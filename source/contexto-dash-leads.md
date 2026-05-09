@@ -470,3 +470,59 @@ Todos os `catch(_)` críticos foram convertidos para `catch(err)` + `console.err
 ### Commits desta auditoria
 - `6e313cb5` — fix: row index incorreto em getActive/getRepHistory quando há leads excluídos
 - `dfbb612d` — fix: auditoria completa — proxy robusto + erros visíveis no console
+
+---
+
+## Feature planejada — Filtros de Período (2026-05-08)
+
+### Decisão de design (pesquisa + discussão)
+Pesquisa em Pipedrive, HubSpot, Salesforce, Bitrix24, RD Station e literatura de UX/sales ops confirmou:
+- **Sem toggle global de "data de entrada / data de fechamento"** — nenhum CRM de referência usa isso no dashboard principal. Gera desconfiança nos dados.
+- **Padrão da indústria**: filtro por data de entrada para métricas de pipeline; receita/fechamentos por data de fechamento — comportamento automático por seção, invisível ao usuário.
+- **Default recomendado**: "Esse mês" (calendário fixo, não rolling 30d) — mais natural para acompanhamento de metas mensais.
+
+### Botões de período
+`Hoje | 7d | 30d | Esse mês (padrão) | Mês ant. | 90d | Total`
+
+Aplicados a **ambos os arquivos**: `dashboard-leads.html` (mobile/desktop) e `dashboard-leads-telao.html` (usado ativamente no desktop, com interação).
+
+### Comportamento por seção
+
+| Seção | Critério de data |
+|---|---|
+| Total leads, Qualificados SDR, Em tratativa | Data de entrada (`COL_DATA`) |
+| Funil SDR + Funil Vendedor | Data de entrada (cohort) |
+| Speed to Lead | Data de entrada |
+| Por Representante | Data de entrada |
+| Últimos Leads | Data de entrada |
+| **Receita, Fechamentos** | **Data de fechamento (`COL_DATA_FECH`)** |
+| **ROAS, ACOS, CAC** | **Data da despesa ADS** (ver estrutura abaixo) |
+| Potencial em aberto | **Não filtra** — snapshot atual |
+| Leads Ativos Iramar / Natanael | **Não filtra** — snapshot atual |
+
+### Estrutura dos dados de ADS
+Aba `ADS` na planilha Google Sheets com colunas: `DATA | PLATAFORMA | VALOR`
+- Uma linha por dia por plataforma (Meta, etc.)
+- O proxy precisará de uma nova action ou parâmetros `startDate`/`endDate` no `getAds` atual para agregar VALOR por intervalo de data
+- ROAS/ACOS/CAC calculados com: investimento = soma de VALOR da aba ADS no período; receita = soma de fechamentos por `COL_DATA_FECH` no período
+
+### Mudanças necessárias no proxy
+Todas as actions que recebem filtro de período precisam aceitar `startDate` + `endDate` (formato `YYYY-MM-DD`):
+- `summary` — filtra por `COL_DATA` (entrada); receita e fechamentos filtram por `COL_DATA_FECH`
+- `funnel` — filtra por `COL_DATA`
+- `by_rep` — filtra por `COL_DATA`
+- `closed` — filtra por `COL_DATA_FECH`
+- `latest` — filtra por `COL_DATA`
+- `ads` — filtra aba ADS por DATA, soma VALOR no intervalo
+- `active_all`, `active`, `rep_history` — **não filtram** (estado atual)
+
+### Mudanças no frontend (ambos os dashboards)
+- Barra de filtros sticky abaixo do header com botões de período
+- `resolvePeriod(range)` → `{ startDate, endDate, label }` (mesmo padrão do telão GA4)
+- `setRange(range, btn)` → atualiza período ativo e dispara `loadAllData()`
+- Todas as chamadas ao proxy incluem `startDate` e `endDate` como query params ou no body
+- Mobile: barra com scroll horizontal
+- Labels dos cards de Receita/Fechamentos indicam visualmente que usam data de fechamento (a definir: subtexto pequeno ou não)
+
+### Status
+**PLANEJADO** — a implementar. Há mudanças a fazer no dash antes desta feature (a definir pelo usuário).
