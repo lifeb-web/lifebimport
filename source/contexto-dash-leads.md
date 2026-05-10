@@ -1,5 +1,5 @@
 # Contexto — Dashboard de Leads (Planilha)
-Atualizado: 2026-05-02
+Atualizado: 2026-05-10
 
 ---
 
@@ -39,7 +39,7 @@ URLs publicadas:
 | `active_all` | Leads ativos de todos os reps — requer token `0ef82354c11e4f518d90fe5c3935b767` |
 | `closed` | Lista de fechamentos com empresa, rep, valor, dias, data_f |
 | `latest` | Últimos leads cadastrados (nome, empresa, data, hora, status_sdr) |
-| `ads` | Investimento Meta Ads (investimento, ultimaData) — atualizado manualmente |
+| `ads` | Investimento Meta Ads — aba ADS da planilha, uma linha por dia: `DATA \| PLATAFORMA \| VALOR`, atualizado automaticamente pelo Manus IA |
 
 ---
 
@@ -51,19 +51,23 @@ URLs publicadas:
      Taxa de Conversão, Potencial em Aberto, Investimento ADS, ROAS, ACOS, CAC, **Speed to Lead**
 2. **Funil SDR** + **Funil Vendedor** (barras horizontais com %)
 3. **Tabelas** (scroll horizontal em mobile):
-   - Por Representante (Rep, Total, Ag., Cont., Neg., Fech., Perd., Receita)
+   - Por Representante (Rep, Total, Ag., Cont., Neg., Fech., Perd., Receita) — **dinâmico, sem hardcode**
    - Últimos Leads (Nome/Empresa, Entrada, Status SDR) — últimos 10
    - Fechamentos (Empresa, Rep, Valor, Dias, Data)
-   - Leads Ativos Iramar (Empresa, Status, Entrada)
-   - Leads Ativos Natanael (Empresa, Status, Entrada)
+   - **Leads Ativos — Goiás** (Empresa, **Rep** em negrito, Status) — filtra `estado === 'GO'`
+   - **Leads Ativos — DF** (Empresa, **Rep** em negrito, Status) — filtra `estado === 'DF'`
+   - **Leads Ativos — Outros** (Empresa + (UF), **Rep** em negrito, Status) — filtra outros estados, **oculto quando vazio**
 
 ### Telão (`dashboard-leads-telao.html`)
-1. **Mesmos 9 cards KPI** em faixa horizontal no topo (altura fixa 112px)
+1. **12 cards KPI** em faixa horizontal no topo
 2. **Layout 3 colunas** (`grid-template-columns: 21fr 45fr 34fr`):
    - **Esquerda:** Funil SDR + Funil Vendedor
-   - **Centro:** Leads Ativos Iramar + Leads Ativos Natanael
-     - Tabela mais rica: 5 colunas (Empresa, Cidade/UF, Status, Potencial, Entrada)
-     - Badges separados por status: Ag. / Cont. / Neg. / Total
+   - **Centro:** Cards de leads ativos por território (flex coluna, `flex:1` cada)
+     - **Leads Ativos — Goiás**: 5 colunas `Empresa | Cidade | Status | Rep (negrito) | Potencial`
+     - **Leads Ativos — DF**: mesma estrutura
+     - **Leads Ativos — Outros**: coluna Cidade mostra `Cidade / UF`; oculto quando vazio
+     - Colgroup: `27% | 21% | 22% | 16% | 14%`
+     - Badges no header: Aguardando / Em Contato / Negociando / Total
    - **Direita:** Últimos Leads + Fechamentos + Por Representante
 3. Relógio ao vivo (HH:MM:SS) no header
 
@@ -470,6 +474,45 @@ Todos os `catch(_)` críticos foram convertidos para `catch(err)` + `console.err
 ### Commits desta auditoria
 - `6e313cb5` — fix: row index incorreto em getActive/getRepHistory quando há leads excluídos
 - `dfbb612d` — fix: auditoria completa — proxy robusto + erros visíveis no console
+
+---
+
+## Leads Ativos por Território — arquitetura (2026-05-10, commits c327401b + 016a3f17)
+
+### Lógica de filtragem
+- Dados vêm de `active_all` (já retorna campo `estado` via `COL_ESTADO=17`)
+- **Nenhuma mudança no proxy** — filtragem 100% no frontend
+- Função: `renderEstadoCard(estadoSigla, tbodyId, badgeId[, negId, agId, contId][, cardId])`
+  - Filtra `leads` por `(l.estado||'').toUpperCase().trim() === estadoSigla`
+  - Para `'OUTROS'`: filtra leads cujo estado NÃO é `GO` nem `DF`
+  - Card Outros: `card.style.display = estadoLeads.length ? '' : 'none'`
+
+### IDs dos elementos — mobile
+| Card | tbodyId | badgeId | cardId |
+|---|---|---|---|
+| Goiás | `tb-ativos-go` | `ativos-badge-go` | — |
+| DF | `tb-ativos-df` | `ativos-badge-df` | — |
+| Outros | `tb-ativos-outros` | `ativos-badge-outros` | `card-ativos-outros` |
+
+### IDs dos elementos — telão (badges adicionais)
+| Card | ag | cont | neg | total | cardId |
+|---|---|---|---|---|---|
+| Goiás | `ativos-ag-go` | `ativos-cont-go` | `ativos-neg-go` | `ativos-badge-go` | — |
+| DF | `ativos-ag-df` | `ativos-cont-df` | `ativos-neg-df` | `ativos-badge-df` | — |
+| Outros | `ativos-ag-outros` | `ativos-cont-outros` | `ativos-neg-outros` | `ativos-badge-outros` | `card-ativos-outros` |
+
+### UF no card Outros
+- **Mobile**: `(UF)` em span muted após o nome da empresa (`font-size:10px;color:var(--muted);font-weight:600`)
+- **Telão**: coluna Cidade mostra `Cidade / UF` (`cidadeFmt + ' / ' + l.estado.toUpperCase()`); header do card Outros tem "Cidade / UF"; GO e DF têm só "Cidade"
+- Implementado via `estadoSigla === 'OUTROS'` dentro do `.map()` — sem duplicação de função
+
+### Rep em negrito
+- Mobile: `font-weight:700` na `<td>` do Rep
+- Telão: `font-weight:700` na `<td>` do Rep
+- Facilita scan visual rápido de quem está atendendo cada lead
+
+### Ordem das colunas — telão
+`Empresa | Cidade[/UF] | Status | Rep | Potencial` — Status entre Cidade e Rep cria separação visual, espaço para UF no card Outros
 
 ---
 
