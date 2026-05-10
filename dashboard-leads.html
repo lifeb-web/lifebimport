@@ -1191,9 +1191,11 @@ function renderAtivos(data) {
       tbody.innerHTML = estadoLeads.map(l => {
         const empresa = toTitleCase(l.empresa || l.nome) || '—';
         const rep     = toTitleCase(l.rep) || '—';
+        const ufTag   = estadoSigla === 'OUTROS' && l.estado
+          ? ` <span style="font-size:10px;color:var(--muted);font-weight:600">(${esc(l.estado.toUpperCase())})</span>` : '';
         return `<tr class="${rowClass(l.status)}">
-          <td class="td-left" title="${esc(empresa)}">${esc(empresa)}</td>
-          <td class="td-left" style="white-space:nowrap;font-size:11px">${esc(rep)}</td>
+          <td class="td-left" title="${esc(empresa)}">${esc(empresa)}${ufTag}</td>
+          <td class="td-left" style="white-space:nowrap;font-size:11px;font-weight:700">${esc(rep)}</td>
           <td class="td-left">${statusBadgeAtivos(l.status)}</td>
         </tr>`;
       }).join('');
