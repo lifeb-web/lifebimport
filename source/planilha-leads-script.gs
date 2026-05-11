@@ -74,7 +74,7 @@ function sendLeadNotification(repName, nomeLead) {
 // → onLeadEdit → Spreadsheet → On edit
 function onLeadEdit(e) {
   const sheet = e.source.getActiveSheet();
-  if (sheet.getIndex() !== 1) return;
+  if (sheet.getName() !== 'LEADS') return;
 
   const row = e.range.getRow();
   const col = e.range.getColumn();
