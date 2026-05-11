@@ -1439,20 +1439,6 @@ function skipPotPrompt(row) {
   if (prompt) prompt.classList.remove('visible');
   enterConcludingMode(row);
 }
-function skipStatusPrompt(row) {
-  const prompt = document.getElementById('sp-' + row);
-  if (prompt) prompt.classList.remove('visible');
-  // trigger re-sort animation after prompt is dismissed
-  const raw = _rawLeads.find(l => l.row === row);
-  const status = raw ? raw.status : null;
-  if (status === 'Fechado' || status === 'Perdido') {
-    const card = document.querySelector(`.lead-card[data-row="${row}"]`);
-    if (card) {
-      card.classList.add('going-down');
-      setTimeout(() => renderLeads(_rawLeads, row), 700);
-    }
-  }
-}
 function _revertOptimisticClose(row) {
   const undoData = _pendingUndoByRow[row];
   if (undoData && undoData.data) {
@@ -1474,7 +1460,7 @@ function _revertOptimisticClose(row) {
       });
       _rawLeads.push(restored);
     }
-    if (_history && _history[0] && _history[0].row === row) _history.shift();
+    if (_history) { const _hi = _history.findIndex(l => l.row === row); if (_hi >= 0) _history.splice(_hi, 1); }
   }
   delete _pendingUndoByRow[row];
   renderLeads(_rawLeads);
