@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Life B · Closer Kit</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --purple:   #564B99;
+    --purple2:  #4A3F83;
+    --magenta:  #DA2F8A;
+    --green:    #22c55e;
+    --dark:     #100f1c;
+    --dark2:    #18162a;
+    --dark3:    #201d34;
+    --card:     #1c1930;
+    --card2:    #221f38;
+    --light:    #f0eeff;
+    --muted:    #8e89b0;
+    --border:   rgba(86,75,153,0.22);
+    --grad:     linear-gradient(135deg, #564B99 0%, #DA2F8A 100%);
+    --font:     'Plus Jakarta Sans', system-ui, sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--dark);
+    color: var(--light);
+    font-family: var(--font);
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: sticky; top: 0; z-index: 200;
+    background: rgba(16,15,28,0.95);
+    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 18px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .header-logo svg { height: 27px; width: auto; display: block; }
+  .header-right { display: flex; align-items: center; gap: 8px; }
+  .kit-label {
+    font-size: 0.66rem; font-weight: 800; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--muted);
+    border: 1px solid var(--border); padding: 4px 10px; border-radius: 20px;
+  }
+  .reset-btn {
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    padding: 5px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 700;
+    cursor: pointer; font-family: var(--font); transition: all 0.18s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .reset-btn:hover { border-color: var(--magenta); color: var(--magenta); }
+
+  /* ── NAV PILLS ── */
+  .nav-wrap { background: var(--dark2); border-bottom: 1px solid var(--border); }
+  .nav-scroll {
+    display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none;
+    padding: 10px 16px; -webkit-overflow-scrolling: touch;
+  }
+  .nav-scroll::-webkit-scrollbar { display: none; }
+  .nav-pill {
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    padding: 7px 13px; border-radius: 8px; font-size: 0.74rem; font-weight: 600;
+    cursor: pointer; white-space: nowrap; font-family: var(--font);
+    transition: all 0.18s; flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .nav-pill.active { background: var(--grad); border-color: transparent; color: white; font-weight: 800; }
+  .nav-pill:hover:not(.active) { border-color: rgba(86,75,153,0.5); color: var(--light); }
+
+  /* ── PROGRESS BAR ── */
+  .progress-bar { height: 3px; background: var(--dark3); }
+  .progress-fill {
+    height: 100%; background: var(--grad); transition: width 0.4s cubic-bezier(.4,0,.2,1);
+    box-shadow: 0 0 10px rgba(218,47,138,0.5);
+  }
+
+  /* ── MAIN ── */
+  main { max-width: 720px; margin: 0 auto; padding: 26px 18px 130px; }
+
+  /* ── STEP HEADER ── */
+  .badge-row { display: flex; align-items: center; gap: 10px; margin-bottom: 13px; flex-wrap: wrap; }
+  .step-badge {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--dark3); border: 1px solid var(--border);
+    border-radius: 8px; padding: 4px 11px;
+    font-size: 0.69rem; font-weight: 700; color: var(--muted);
+    letter-spacing: 0.05em; text-transform: uppercase;
+  }
+  .step-badge .num { color: var(--magenta); font-size: 0.76rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .step-progress {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 0.68rem; font-weight: 800; color: var(--green);
+    background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.22);
+    padding: 3px 9px; border-radius: 20px; transition: all 0.25s; letter-spacing: 0.02em;
+  }
+  .step-progress.complete { background: rgba(34,197,94,0.18); border-color: rgba(34,197,94,0.35); }
+  .step-progress.hidden { display: none; }
+  .step-title {
+    font-size: 1.9rem; font-weight: 800; line-height: 1.06;
+    letter-spacing: -0.028em; margin-bottom: 8px;
+  }
+  .step-subtitle { color: var(--muted); font-size: 0.88rem; line-height: 1.65; font-weight: 400; }
+
+  /* ── OBJECTIVE CARD ── */
+  .obj-card {
+    background: linear-gradient(135deg, rgba(86,75,153,0.15) 0%, rgba(218,47,138,0.06) 100%);
+    border: 1px solid rgba(86,75,153,0.28);
+    border-left: 3px solid var(--purple);
+    border-radius: 10px; padding: 14px 16px; margin: 20px 0 26px;
+  }
+  .obj-label { font-size: 0.63rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--magenta); margin-bottom: 7px; }
+  .obj-text { font-size: 0.9rem; line-height: 1.72; color: #cac6f0; }
+
+  /* ── SECTION LABEL ── */
+  .section-label {
+    font-size: 0.65rem; font-weight: 800; letter-spacing: 0.13em;
+    text-transform: uppercase; color: var(--purple);
+    margin: 26px 0 11px; display: flex; align-items: center; gap: 10px;
+  }
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* ── CHECKLIST ── */
+  .checklist { display: flex; flex-direction: column; gap: 6px; }
+  .check-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 13px 14px; cursor: pointer;
+    transition: border-color 0.18s, background 0.18s, opacity 0.22s;
+    user-select: none; -webkit-tap-highlight-color: transparent;
+  }
+  .check-item:hover { border-color: rgba(86,75,153,0.45); background: var(--card2); }
+  .check-item:active { transform: scale(0.99); }
+  .check-item.done { border-color: rgba(34,197,94,0.28); background: rgba(34,197,94,0.03); opacity: 0.68; }
+  .check-box {
+    width: 20px; height: 20px; min-width: 20px;
+    border: 2px solid rgba(86,75,153,0.4);
+    border-radius: 6px; display: flex; align-items: center;
+    justify-content: center; transition: all 0.2s; margin-top: 1px;
+  }
+  .check-item.done .check-box { background: var(--green); border-color: var(--green); }
+  .check-item.done .check-box::after { content: '✓'; color: white; font-size: 0.72rem; font-weight: 900; line-height: 1; }
+  .check-text { font-size: 0.875rem; line-height: 1.5; }
+  .check-text strong { color: var(--light); font-weight: 700; display: block; margin-bottom: 2px; transition: color 0.18s; }
+  .check-item.done .check-text strong { text-decoration: line-through; color: var(--muted); }
+  .check-text small { color: var(--muted); font-size: 0.78rem; line-height: 1.45; display: block; }
+
+  /* ── SCRIPT CARD ── */
+  .script-card {
+    background: rgba(218,47,138,0.05); border: 1px solid rgba(218,47,138,0.16);
+    border-left: 3px solid var(--magenta);
+    border-radius: 0 10px 10px 0; padding: 14px 16px; margin-bottom: 8px;
+  }
+  .script-label { font-size: 0.62rem; font-weight: 800; letter-spacing: 0.13em; text-transform: uppercase; color: var(--magenta); margin-bottom: 8px; }
+  .script-text { font-size: 0.9rem; line-height: 1.75; color: #d4d0f2; font-style: italic; }
+
+  /* ── WARN CARD ── */
+  .warn-card {
+    background: rgba(218,47,138,0.06); border: 1px solid rgba(218,47,138,0.18);
+    border-left: 3px solid rgba(218,47,138,0.6);
+    border-radius: 0 9px 9px 0; padding: 12px 16px; margin-bottom: 8px;
+    font-size: 0.85rem; color: #f0b8d4; line-height: 1.65;
+  }
+  .warn-card strong { color: #f472b6; font-weight: 700; }
+
+  /* ── INFO CARD ── */
+  .info-card {
+    background: rgba(86,75,153,0.08); border: 1px solid rgba(86,75,153,0.18);
+    border-radius: 9px; padding: 12px 16px; margin-bottom: 7px;
+    font-size: 0.85rem; color: #c4c0ec; line-height: 1.65;
+  }
+  .info-card strong { color: #b8b3f0; font-weight: 700; }
+
+  /* ── RULE CARD ── */
+  .rule-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px; margin-bottom: 8px;
+    display: flex; gap: 14px; align-items: flex-start;
+  }
+  .rule-icon { font-size: 1.25rem; flex-shrink: 0; line-height: 1.2; margin-top: 1px; }
+  .rule-title { font-weight: 700; font-size: 0.93rem; margin-bottom: 5px; color: var(--light); }
+  .rule-text { font-size: 0.83rem; color: var(--muted); line-height: 1.65; }
+
+  /* ── CASE CARD ── */
+  .case-card {
+    background: linear-gradient(135deg, rgba(86,75,153,0.1) 0%, rgba(218,47,138,0.04) 100%);
+    border: 1px solid rgba(86,75,153,0.25);
+    border-radius: 11px; padding: 16px; margin-bottom: 9px;
+  }
+  .case-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 11px; gap: 10px; }
+  .case-name { font-weight: 700; font-size: 0.95rem; }
+  .case-badge { background: var(--grad); color: white; font-size: 0.76rem; font-weight: 800; padding: 4px 12px; border-radius: 7px; white-space: nowrap; }
+  .case-nums { display: flex; gap: 20px; margin-bottom: 9px; flex-wrap: wrap; }
+  .case-num { font-size: 0.8rem; color: var(--muted); }
+  .case-num strong { color: var(--light); font-weight: 700; }
+  .case-desc { font-size: 0.82rem; color: var(--muted); line-height: 1.58; }
+
+  /* ── COMBO TABLE ── */
+  .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 10px; }
+  .combo-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+  .combo-table th {
+    background: var(--dark3); color: var(--muted); font-size: 0.63rem;
+    letter-spacing: 0.11em; text-transform: uppercase; padding: 9px 12px;
+    text-align: left; border-bottom: 1px solid var(--border); font-weight: 700;
+  }
+  .combo-table td { padding: 10px 12px; border-bottom: 1px solid rgba(86,75,153,0.08); vertical-align: middle; }
+  .combo-table tr:last-child td { border-bottom: none; }
+  .combo-table tbody tr:hover td { background: rgba(86,75,153,0.07); }
+  .combo-table tr.rec-row td { background: rgba(86,75,153,0.1); }
+  .combo-table tr.rec-row td:first-child { border-left: 2px solid var(--purple); padding-left: 10px; }
+  .combo-name { font-weight: 600; color: var(--light); }
+  .combo-price { color: #9be8a0; font-weight: 700; }
+  .combo-parcel { color: var(--muted); font-size: 0.77rem; }
+  .combo-tag { background: rgba(86,75,153,0.2); border: 1px solid rgba(86,75,153,0.3); color: #b8b3f0; font-size: 0.63rem; font-weight: 800; padding: 2px 8px; border-radius: 6px; white-space: nowrap; }
+  .combo-tag.entry { background: rgba(218,47,138,0.1); border-color: rgba(218,47,138,0.25); color: #f0b8d4; }
+  .combo-tag.rec { background: rgba(34,197,94,0.12); border-color: rgba(34,197,94,0.25); color: #86efac; }
+  .combo-promo { font-size: 0.71rem; color: var(--muted); padding: 9px 12px 11px; border-top: 1px solid var(--border); line-height: 1.55; }
+
+  /* ── FLAG ITEM ── */
+  .flag-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    background: rgba(218,47,138,0.04); border: 1px solid rgba(218,47,138,0.15);
+    border-left: 3px solid rgba(218,47,138,0.45);
+    border-radius: 0 9px 9px 0; padding: 11px 14px; margin-bottom: 7px;
+    font-size: 0.85rem; line-height: 1.58; color: #f0b8d4;
+  }
+  .flag-icon { font-size: 0.9rem; flex-shrink: 0; margin-top: 2px; }
+
+  /* ── STEP PAGES ── */
+  .step-page { display: none; }
+  .step-page.active { display: block; animation: fadeUp 0.3s ease; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ── BOTTOM NAV ── */
+  .nav-buttons {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(16,15,28,0.97); backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px); border-top: 1px solid var(--border);
+    padding: 12px 18px; display: flex; justify-content: space-between;
+    align-items: center; gap: 10px; z-index: 100;
+  }
+  .nav-btn {
+    background: var(--dark3); border: 1px solid var(--border); color: var(--light);
+    padding: 13px 18px; border-radius: 10px; font-size: 0.88rem; font-weight: 700;
+    cursor: pointer; font-family: var(--font); transition: all 0.18s; flex: 1;
+    -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  }
+  .nav-btn:hover:not(:disabled) { border-color: var(--purple); background: var(--card2); }
+  .nav-btn:active:not(:disabled) { transform: scale(0.97); }
+  .nav-btn:disabled { opacity: 0.2; cursor: not-allowed; }
+  .nav-btn.primary { background: var(--grad); border-color: transparent; color: white; }
+  .nav-btn.primary:hover:not(:disabled) { opacity: 0.88; }
+  .step-counter { font-size: 0.72rem; color: var(--muted); text-align: center; flex-shrink: 0; font-weight: 700; white-space: nowrap; line-height: 1.4; }
+
+  /* ── DESKTOP ── */
+  @media (min-width: 640px) {
+    main { padding: 32px 28px 140px; }
+    .step-title { font-size: 2.2rem; }
+    .step-subtitle { font-size: 0.93rem; }
+    .check-text { font-size: 0.9rem; }
+    .script-text { font-size: 0.92rem; }
+    .nav-buttons { padding: 14px 24px; }
+    .nav-btn { padding: 14px 24px; font-size: 0.9rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-logo">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 514 232" height="28">
+      <path d="M 432.75 206.5 L 430 206.4 L 425.25 205.72 L 421.38 204.69 L 420 204.06 L 418.5 203.65 L 416.49 202.75 L 412.5 200.72 L 409.11 198.62 L 404.12 194.84 L 400.5 191.51 L 395.12 185.83 L 391.12 180.8 L 389.24 177.88 L 388.8 177 L 388.15 176.25 L 387.24 174.75 L 385.75 171.75 L 385.22 171 L 384.78 169.88 L 384.16 169 L 383.79 167.88 L 383.23 167 L 382.81 165.75 L 381.11 162.12 L 380.2 159.75 L 377.22 151.12 L 375.75 145.3 L 375.5 144.76 L 375 144.72 L 373.12 145.67 L 370.5 146.59 L 367.75 146.89 L 365.5 146.82 L 363.91 146.5 L 361.88 145.84 L 360.12 144.88 L 358.48 143.5 L 357.17 142 L 355.98 140 L 355.11 137.75 L 354.72 135.25 L 354.77 131.88 L 355.2 129.5 L 356.25 126.98 L 357.17 125.5 L 357.8 124.88 L 358.38 124.05 L 360.62 122.34 L 362 121.79 L 362.88 121.27 L 363.5 121.1 L 365.75 120.73 L 367 120.68 L 369.12 120.73 L 370.5 120.98 L 370.88 120.87 L 371.16 120.5 L 370.4 107.38 L 371.08 94.25 L 372.11 87.25 L 372.58 85.25 L 373.12 81.5 L 373.88 78.87 L 374.2 77 L 374.89 74.75 L 375.13 73.12 L 376.14 69 L 377.25 65.92 L 377.84 64.88 L 378.19 63.5 L 380.06 58.75 L 383.13 52.5 L 384.15 50.75 L 384.76 50 L 385.22 49 L 387.06 46 L 388.17 44.5 L 388.77 43.88 L 389.25 43.06 L 392.28 39.12 L 398.1 33.12 L 399.88 31.81 L 404.25 28.19 L 405.09 27.75 L 405.9 27.12 L 410.17 24.75 L 410.88 24.22 L 411.88 23.81 L 412.62 23.23 L 413.88 22.86 L 415 22.24 L 420.07 20.25 L 421.78 19.88 L 423.5 19.18 L 427.75 18.16 L 434.5 17.06 L 440.88 16.63 L 446.5 16.59 L 451.12 16.79 L 455.16 17.12 L 461.53 18.12 L 466.38 19.22 L 468 19.86 L 469.5 20.16 L 472.25 21.09 L 473.75 21.79 L 475 22.17 L 477 23.03 L 481.19 25.12 L 482 25.8 L 482.88 26.2 L 485.75 28.02 L 489.75 31.1 L 492.88 34.09 L 495.62 37.16 L 498.66 41.38 L 500.12 44.19 L 500.68 45 L 502.66 49.75 L 503.73 53.5 L 504.57 58.62 L 504.76 62.88 L 504.47 67.12 L 503.69 71.88 L 503.03 73.88 L 502.52 76 L 502.03 77 L 501.73 78.12 L 500.61 80.88 L 497.63 86.5 L 494.81 90.75 L 490.75 95.74 L 486.86 99.75 L 484.69 101.75 L 483.12 103 L 482.5 103.66 L 479.75 105.81 L 477.89 107.12 L 477.2 107.75 L 475.88 108.65 L 475 109.08 L 474.38 109.65 L 472.88 110.63 L 472 111.07 L 471.12 111.8 L 468.64 113.12 L 467.88 113.66 L 466.88 114.09 L 466.01 114.75 L 464.17 115.75 L 456 119.66 L 454.75 120.07 L 451.12 121.68 L 449.88 122.06 L 448.75 122.65 L 440.12 125.65 L 436.5 126.71 L 435 127.01 L 433.36 127.62 L 429.62 128.66 L 422.29 130.38 L 421.9 130.62 L 422 131 L 422.6 131.5 L 424.46 132.12 L 425.62 132.77 L 426.95 133.25 L 427.88 133.82 L 429.12 134.22 L 429.88 134.76 L 430.88 135.2 L 433.88 137.12 L 434.62 137.72 L 435.62 138.27 L 436.74 139.12 L 441.43 143.38 L 445.62 148.19 L 446.75 149.7 L 450.58 155.88 L 453.59 162.62 L 454.72 166.38 L 455.02 167.88 L 455.6 169.38 L 456.67 175.38 L 456.94 181.38 L 456.65 186.5 L 455.69 190.5 L 455.04 191.88 L 454.69 193 L 454.1 193.88 L 453.62 195 L 451.85 197.75 L 449.47 200.38 L 447.87 201.75 L 446.74 202.62 L 445.77 203.12 L 445.11 203.62 L 443.88 204.1 L 443.08 204.62 L 439.5 205.78 L 435.38 206.41 L 432.75 206.5 Z M 89 201.88 L 84.12 201.82 L 78.62 201.4 L 72.63 200.62 L 68.12 199.66 L 64.25 198.66 L 58.75 196.82 L 55 195.07 L 53.63 194.62 L 48.38 191.65 L 47 190.8 L 44.88 189.08 L 42.92 187.75 L 40.4 185.62 L 37.25 182.59 L 33.08 177.75 L 29.24 171.88 L 25.19 163 L 24.25 160.19 L 23.63 157.62 L 22.23 151.38 L 21.79 148.25 L 21.18 141.12 L 21.12 18 L 21.62 17.11 L 22.5 17.02 L 24.5 17.11 L 29.75 18.22 L 34.38 20.16 L 38.85 23.12 L 42.88 27.1 L 45.69 31.12 L 47.88 35.93 L 48.7 39.12 L 49.37 45.62 L 49.41 149.38 L 49.88 155.38 L 51.09 161.5 L 52.23 165.12 L 55.12 171 L 57.12 174 L 59.25 176.62 L 62.23 179.62 L 64.75 181.7 L 67.08 183.12 L 69 184.19 L 74.52 186.62 L 78.38 187.63 L 86.25 188.92 L 96.5 189.11 L 103.12 189.02 L 104.06 189.75 L 104.07 190.25 L 103.53 193.75 L 102.6 196 L 100.48 198.62 L 98.75 199.87 L 96.62 200.79 L 92.37 201.75 L 89 201.88 Z M 174.62 201.01 L 172.12 201.05 L 171.45 200.25 L 171.71 196.62 L 171.74 191.5 L 171.77 78.88 L 172.25 71.98 L 173.3 65.75 L 175.15 58.75 L 177.12 53.59 L 180.09 47.75 L 182.12 44.69 L 184.06 42 L 188.13 37.25 L 192.54 33.25 L 196.73 30.12 L 200 28.11 L 203.75 26.09 L 208.12 24.15 L 214.06 22.12 L 222 20.16 L 228.62 19.16 L 238.5 18.43 L 255 18.32 L 256.12 19 L 256.16 20 L 255.68 22.62 L 252.88 27.67 L 250.83 29.62 L 247.25 31.68 L 243.62 32.61 L 236.5 32.92 L 229 34.02 L 222.12 36.2 L 218.25 38.14 L 213.87 41.12 L 209.2 45.75 L 205.75 50.92 L 203.62 54.97 L 201 62.92 L 200.34 66.88 L 199.92 71.5 L 199.91 108.5 L 200.75 108.97 L 228.25 108.91 L 228.93 109.5 L 228.68 111.62 L 227.12 114.92 L 224.75 117.77 L 221.12 119.7 L 218 120.15 L 200.75 120.11 L 200.05 120.5 L 199.88 121.75 L 199.84 175 L 198.68 181.25 L 197.05 184.88 L 194.75 189.03 L 192.78 191.62 L 189.72 194.62 L 186.83 196.62 L 183 198.7 L 176.75 200.64 L 174.62 201.01 Z M 433.12 200.73 L 437.5 199.67 L 440.75 196.58 L 442.68 192.75 L 443.94 186.38 L 443.94 181.5 L 442.92 173.12 L 439.86 161.88 L 435.65 153.62 L 430.62 147.15 L 424.1 141.12 L 418.69 137.75 L 414.88 135.79 L 410.88 134.02 L 403 132.22 L 397.75 131.75 L 397.12 131.25 L 397 129.15 L 397.62 128.72 L 402.25 128.55 L 407.75 127.9 L 412.88 126.9 L 417.12 125.66 L 426.62 122.19 L 431.65 120.12 L 437.5 117.73 L 444.75 114.12 L 456.25 107.68 L 464.5 101.61 L 468.63 97.75 L 472.75 93 L 475.25 88.8 L 476.75 85.65 L 478.64 78 L 478.94 72.38 L 477.94 66.25 L 475.66 60.12 L 470.8 53 L 464.07 47.12 L 456.25 43.12 L 447.5 40.91 L 436.62 40.64 L 425.78 42.25 L 415 46.05 L 409.62 49.14 L 401.84 55.5 L 394.73 64.25 L 389.25 74.84 L 386.12 85.01 L 384.26 95.75 L 383.85 111.38 L 384.96 124.75 L 386.71 135 L 388.25 142.35 L 390.62 150.52 L 395.04 163 L 396.63 166 L 399.1 171.25 L 402.12 176.12 L 404.09 179 L 407.08 182.88 L 412.03 188.75 L 415.69 192.12 L 421.62 196.79 L 424.89 198.62 L 431 200.59 L 433.12 200.73 Z M 134.62 73.76 L 131.75 73.76 L 127.88 72.73 L 124.38 70.64 L 122.25 68.45 L 120.12 64.61 L 119.37 61.12 L 120.07 55.5 L 122.24 51.5 L 124.43 49.25 L 128.04 47.12 L 131.75 46.16 L 134.5 46.14 L 137.62 46.87 L 141.75 49.08 L 143.84 51.12 L 145.57 53.75 L 146.88 58.12 L 146.91 61.38 L 145.62 66.1 L 141.88 70.73 L 138 72.91 L 134.62 73.76 Z M 305.12 200.7 L 297.12 201.25 L 287.62 200.7 L 279.88 199.02 L 275 197.75 L 268 194.81 L 261.05 190.62 L 256.19 186.75 L 248.21 178.38 L 244.75 172.91 L 240.15 164 L 236.91 152.12 L 235.6 141.38 L 235.64 138.5 L 236.89 128.88 L 238.18 123.38 L 241.11 115.62 L 244.03 110.12 L 248.25 104.12 L 253.54 98.25 L 257.25 95.06 L 261.75 92.06 L 267.5 89.15 L 276.5 86.16 L 281.75 85.14 L 287.5 84.65 L 292.62 84.59 L 299.12 85.1 L 308.5 87.22 L 313.5 89.13 L 317.62 91.18 L 322.17 94.12 L 325.85 97.12 L 329.75 101.15 L 335.74 109.5 L 339.73 118 L 342.68 129.5 L 343.17 135.12 L 343.12 147.25 L 342.38 148.23 L 263.75 148.2 L 262.5 148.58 L 262.42 149.12 L 262.9 152.5 L 264.74 160.38 L 266.65 166 L 268.68 170 L 272.25 175.5 L 275.25 178.66 L 279.88 182.24 L 283.88 184.76 L 289.11 186.75 L 294.38 187.93 L 299.75 188.28 L 305 188.2 L 309.75 187.69 L 314.5 186.96 L 318.75 186.04 L 322.12 186.22 L 325.62 188.02 L 327.76 191 L 327.62 192.71 L 324.25 194.63 L 317.38 197.64 L 311.12 199.54 L 305.12 200.7 Z M 146.25 201.14 L 142.47 200.75 L 138 199.69 L 133.59 197.75 L 129.25 194.83 L 125.34 190.88 L 122.17 186.12 L 120.14 181.12 L 119.14 176.25 L 118.97 87.75 L 119.62 86.82 L 146.12 86.78 L 147.18 87.5 L 147.21 200.12 L 146.88 200.86 L 146.25 201.14 Z M 315.43 133 L 316.29 132.25 L 316.1 131.12 L 313.92 119.12 L 312.12 114.29 L 308.67 107.5 L 304.81 103 L 300.42 100.12 L 295.12 98.34 L 290.38 97.79 L 285.38 97.94 L 280.62 99.25 L 276.75 101.2 L 272.28 105.5 L 269.23 110.25 L 267.12 114.5 L 264.75 121.43 L 263.72 126 L 262.63 132.12 L 262.88 132.76 L 263.75 133.02 L 315.43 133 Z" fill="#FFFFFF" fill-rule="evenodd"/>
+    </svg>
+  </div>
+  <div class="header-right">
+    <span class="kit-label">Closer Kit</span>
+    <button class="reset-btn" onclick="resetAll()">↺ Resetar</button>
+  </div>
+</header>
+
+<div class="nav-wrap">
+  <div class="nav-scroll" id="navScroll" data-no-swipe></div>
+</div>
+<div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+<main id="mainContent"></main>
+<div class="nav-buttons">
+  <button class="nav-btn" id="btnPrev" onclick="navigate(-1)">← Anterior</button>
+  <div class="step-counter" id="stepCounter"></div>
+  <button class="nav-btn primary" id="btnNext" onclick="navigate(1)">Próximo →</button>
+</div>
+
+<script>
+const steps = [
+  {
+    id: 'pre-call', emoji: '🔍', label: 'Pré-Call',
+    title: 'Pré-Call',
+    subtitle: 'Faça o dever de casa antes de entrar na reunião.',
+    objective: 'Chegar na call com contexto suficiente para gerar rapport imediato, formular hipóteses de dor e mostrar que você é diferente de qualquer representante que já passou pela porta do lojista.',
+    content: `
+    <div class="section-label">Checklist obrigatório</div>
+    <div class="checklist">
+      <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>CRM: verificar histórico do lead</strong><small>Origem do lead (Meta Ads), notas do SDR e último contato registrado</small></div></div>
+      <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>Segmento confirmado</strong><small>Farmácia, drogaria ou supermercado? Porte? Região GO ou DF?</small></div></div>
+      <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>Decisor validado pelo SDR</strong><small>O contato é o dono ou gestor com autonomia de compra</small></div></div>
+      <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>Hipótese de dor definida</strong><small>Ticket médio baixo? Espaço ocioso? Categoria sem giro? Escolha uma antes de entrar</small></div></div>
+      <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>Case do mesmo segmento separado</strong><small>Farmácia fala com farmácia. Supermercado com supermercado</small></div></div>
+      <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>Combo inicial em mente</strong><small>Micro ou Mini para lojas menores. Básico ou acima para lojas com espaço e fluxo</small></div></div>
+    </div>
+    <div class="section-label">Dicas rápidas por segmento</div>
+    <div class="info-card"><strong>Farmácia independente:</strong> margem apertada, espaço próximo ao caixa sem aproveitamento, público feminino que não converte</div>
+    <div class="info-card"><strong>Supermercado:</strong> categoria inexistente ou bagunçada, ticket médio de compra feminina, gôndola que gira sem esforço do time</div>`
+  },
+  {
+    id: 'rapport', emoji: '🤝', label: 'Rapport',
+    title: 'Rapport',
+    subtitle: 'O lojista compra de quem ele gosta e confia antes de ouvir qualquer proposta.',
+    objective: 'Criar conexão genuína nos primeiros dois minutos. Rapport não é simpatia. É fazer o lojista sentir que você o entende antes mesmo de apresentar qualquer coisa.',
+    content: `
+    <div class="section-label">Scripts de abertura</div>
+    <div class="script-card"><div class="script-label">Abertura padrão</div><div class="script-text">"Olá [nome], tudo bem? Sou [seu nome] da Life B. Antes de qualquer coisa, obrigado pelo seu tempo. Sei que dono de loja tem o dia tomado e não vou usar mais do que o necessário."</div></div>
+    <div class="script-card"><div class="script-label">Conexão com o contexto do lead</div><div class="script-text">"Vi aqui que você chegou pelo nosso anúncio sobre o Projeto JLBV. Fico feliz que tenha chegado até aqui. Queria entender o que chamou a sua atenção."</div></div>
+    <div class="section-label">Regras de rapport</div>
+    <div class="checklist">
+      <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>Escute mais do que fala</strong><small>Nos primeiros dois minutos o closer fala no máximo 30% do tempo</small></div></div>
+      <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>Use o nome do lojista</strong><small>Chame pelo nome ao longo da conversa. Cria proximidade real</small></div></div>
+      <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>Energia na voz desde o início</strong><small>Tom firme e confiante. Insegurança na voz passa antes do conteúdo</small></div></div>
+    </div>
+    <div class="warn-card">⚠️ <strong>Proibido usar "tentar".</strong> Diga "vou entrar em contato" e nunca "vou tentar entrar em contato". A palavra transmite insegurança antes de qualquer argumento.</div>`
+  },
+  {
+    id: 'compromisso', emoji: '🎯', label: 'Compromisso',
+    title: 'Compromisso',
+    subtitle: 'Estabeleça as regras do jogo antes de começar.',
+    objective: 'Alinhar expectativas logo no início: tempo, o que vai acontecer e qual é o próximo passo. Isso elimina surpresas e posiciona o closer como profissional, não como mais um vendedor.',
+    content: `
+    <div class="section-label">Scripts de alinhamento</div>
+    <div class="script-card"><div class="script-label">Abertura da agenda</div><div class="script-text">"[Nome], vou usar uns 20 minutos com você hoje. Quero entender como está funcionando a sua loja, te mostrar como o Projeto JLBV funciona na prática e no final a gente decide juntos se faz sentido ou não seguir. Pode ser assim?"</div></div>
+    <div class="script-card"><div class="script-label">Validação do decisor</div><div class="script-text">"Perfeito. Me confirma: você é quem decide sobre compras e fornecedores na loja? Quero garantir que você tenha todas as informações para decidir."</div></div>
+    <div class="section-label">Checklist</div>
+    <div class="checklist">
+      <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>Tempo alinhado</strong><small>Confirmar quanto tempo o lojista tem disponível</small></div></div>
+      <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>Decisor confirmado</strong><small>Quem decide sobre compras está na linha?</small></div></div>
+      <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>Próximo passo mencionado</strong><small>Deixar claro que ao final tomarão uma decisão. Evita o "preciso pensar"</small></div></div>
+    </div>
+    <div class="info-card"><strong>Lembre:</strong> o fechamento começa aqui, não no final. Se o lojista concordou com as regras, ele está mais próximo do sim.</div>`
+  },
+  {
+    id: 'investigacao', emoji: '🔎', label: 'Investigação',
+    title: 'Investigação',
+    subtitle: 'Faça o lojista enxergar o problema antes de você apresentar a solução.',
+    objective: 'Levantar a dor real através de perguntas inteligentes. O objetivo não é convencer. É fazer o lojista verbalizar o problema por conta própria. Quem articula a dor é quem fecha.',
+    content: `
+    <div class="section-label">Perguntas de situação</div>
+    <div class="checklist">
+      <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>"Como está o faturamento da loja hoje?"</strong><small>Entender o contexto sem pressionar</small></div></div>
+      <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>"Você já trabalha com alguma categoria de acessórios femininos?"</strong><small>Mapear experiência anterior com o segmento</small></div></div>
+      <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>"Tem algum espaço na loja que não está rendendo como deveria?"</strong><small>Identificar espaço ocioso. Gatilho direto da proposta de valor</small></div></div>
+    </div>
+    <div class="section-label">Perguntas de dor</div>
+    <div class="checklist">
+      <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>"O ticket médio da sua loja cresceu nos últimos meses?"</strong><small>Se não cresceu, abre a dor de estagnação</small></div></div>
+      <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>"Sua cliente feminina costuma comprar mais de uma coisa quando vem à loja?"</strong><small>Ativa a consciência do potencial inexplorado</small></div></div>
+      <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>"Já teve experiência com fornecedor que prometeu resultado e não entregou?"</strong><small>Identifica e quebra modelo mental negativo antes da proposta</small></div></div>
+    </div>
+    <div class="section-label">Pergunta de implicação</div>
+    <div class="script-card"><div class="script-label">Ampliar a consequência da dor</div><div class="script-text">"Esse espaço parado na gôndola, você já parou para calcular quanto deixa de faturar por mês com ele sem giro? A gente costuma fazer esse cálculo com os clientes e o número surpreende bastante."</div></div>
+    <div class="warn-card">🚩 <strong>Descarte aqui se:</strong> contato é funcionário sem autonomia / loja não tem espaço físico / interesse é só em produto avulso sem projeto / fora de GO e DF.</div>`
+  },
+  {
+    id: 'objetivo', emoji: '📈', label: 'Objetivo',
+    title: 'Objetivo',
+    subtitle: 'Conecte a solução ao sonho do lojista, não só à dor.',
+    objective: 'Fazer o lojista projetar um futuro melhor. A decisão de compra acontece no sistema límbico (emoção) e é justificada depois pelo neocórtex (lógica). Ative o sonho antes dos números.',
+    content: `
+    <div class="section-label">Perguntas de objetivo</div>
+    <div class="checklist">
+      <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>"O que você esperaria ver acontecer nos primeiros 60 dias com o projeto na loja?"</strong><small>Ancora no resultado, não no custo</small></div></div>
+      <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>"Se a gôndola estivesse girando bem, quanto a mais você gostaria de faturar com ela por mês?"</strong><small>Faz o lojista quantificar o próprio sonho</small></div></div>
+      <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>"Você prefere uma categoria que trabalha pra você ou que precisa de empurrão da equipe?"</strong><small>Valida o desejo por venda silenciosa</small></div></div>
+    </div>
+    <div class="section-label">Sonhos mapeados do lojista</div>
+    <div class="info-card">✨ <strong>Financeiro:</strong> faturar mais sem abrir outra loja, ter categoria que vende sozinha, reduzir dependência de margem baixa</div>
+    <div class="info-card">⚙️ <strong>Operacional:</strong> fornecedor que aparece, repõe e não some. Parceiro, não só vendedor</div>
+    <div class="info-card">🏆 <strong>Reconhecimento:</strong> loja com visual profissional, referência na região, consumidora feminina que recomenda</div>
+    <div class="info-card">❤️ <strong>Pessoal:</strong> sair da operação, segurança financeira, orgulho do que construiu</div>`
+  },
+  {
+    id: 'contraste', emoji: '⚡', label: 'Contraste',
+    title: 'Contraste',
+    subtitle: 'Mostre o custo de não agir. O cérebro decide por medo de perder.',
+    objective: 'Criar urgência real usando o contraste entre a situação atual e o potencial inexplorado. Use dados reais. Não invente urgência que o time não consegue entregar.',
+    content: `
+    <div class="section-label">Scripts de contraste</div>
+    <div class="script-card"><div class="script-label">O espaço vazio tem custo</div><div class="script-text">"[Nome], um espaço de gôndola parado não é neutro. Ele custa dinheiro todo dia que passa sem giro. Os clientes que estavam na mesma situação que você faturam de 3 a 5 vezes mais nessa categoria depois da implantação."</div></div>
+    <div class="script-card"><div class="script-label">Urgência regional (verdadeira)</div><div class="script-text">"Como a gente atende por região, se uma farmácia próxima a você já estiver com o projeto, ela já está encantando a cliente feminina antes de ela chegar na sua loja."</div></div>
+    <div class="script-card"><div class="script-label">Sem custo adicional de implantação</div><div class="script-text">"É o melhor: a implantação não tem custo adicional. O investimento é só nos produtos que vão girar na sua loja."</div></div>
+    <div class="section-label">Dados para usar na conversa</div>
+    <div class="info-card">📊 <strong>+2.000 projetos implantados</strong> em farmácias, drogarias e supermercados</div>
+    <div class="info-card">📊 <strong>Crescimento mínimo de 300%</strong> na categoria em todos os projetos ativos</div>
+    <div class="info-card">📊 <strong>Droga Center DF:</strong> de R$&nbsp;27k para R$&nbsp;160k na categoria (+500%)</div>`
+  },
+  {
+    id: 'solucao', emoji: '💡', label: 'Solução',
+    title: 'Apresentação da Solução',
+    subtitle: 'Apresente o Projeto JLBV conectado ao que o lojista acabou de te contar.',
+    objective: 'Apresentar o projeto de forma personalizada. Não como catálogo, mas como resposta direta à dor que o lojista verbalizou. Use os 3 pilares como âncora e o combo como a oferta concreta.',
+    content: `
+    <div class="section-label">Os 3 pilares do Projeto JLBV</div>
+    <div class="rule-card"><div class="rule-icon">🛍️</div><div><div class="rule-title">Produto e Inovação</div><div class="rule-text">Mais de 1.400 SKUs pensados para desejo e compra por impulso. Produtos que o consumidor já quer comprar. Só precisam estar na frente dele.</div></div></div>
+    <div class="rule-card"><div class="rule-icon">📐</div><div><div class="rule-title">Exposição Estratégica · Mega Vision USA</div><div class="rule-text">Método de organização da gôndola que maximiza visibilidade e giro. Implantado pelo time da Life B, não pelo lojista.</div></div></div>
+    <div class="rule-card"><div class="rule-icon">🤫</div><div><div class="rule-title">Venda Silenciosa</div><div class="rule-text">Produtos que vendem sem treinamento de equipe. A exposição adequada gera vendas automaticamente.</div></div></div>
+    <div class="section-label">Combos disponíveis</div>
+    <div class="table-wrap">
+      <table class="combo-table">
+        <thead><tr><th>Combo</th><th>Valor do pedido</th><th>6 parcelas</th><th></th></tr></thead>
+        <tbody>
+          <tr><td class="combo-name">Micro</td><td class="combo-price">R$&nbsp;929</td><td class="combo-parcel">~R$&nbsp;155/mês</td><td><span class="combo-tag entry">Entrada</span></td></tr>
+          <tr><td class="combo-name">Mini</td><td class="combo-price">R$&nbsp;1.490</td><td class="combo-parcel">~R$&nbsp;248/mês</td><td><span class="combo-tag entry">Entrada</span></td></tr>
+          <tr class="rec-row"><td class="combo-name">Básico</td><td class="combo-price">R$&nbsp;1.851</td><td class="combo-parcel">~R$&nbsp;308/mês</td><td><span class="combo-tag rec">Recomendado</span></td></tr>
+          <tr><td class="combo-name">Essencial</td><td class="combo-price">R$&nbsp;2.789</td><td class="combo-parcel">~R$&nbsp;465/mês</td><td><span class="combo-tag">Popular</span></td></tr>
+          <tr><td class="combo-name">Avançado</td><td class="combo-price">R$&nbsp;3.372</td><td class="combo-parcel">~R$&nbsp;562/mês</td><td><span class="combo-tag">Alto giro</span></td></tr>
+          <tr><td class="combo-name">Performance</td><td class="combo-price">R$&nbsp;3.702</td><td class="combo-parcel">~R$&nbsp;617/mês</td><td><span class="combo-tag">Alto giro</span></td></tr>
+          <tr><td class="combo-name">Premium</td><td class="combo-price">R$&nbsp;4.629</td><td class="combo-parcel">~R$&nbsp;771/mês</td><td><span class="combo-tag">Top</span></td></tr>
+        </tbody>
+      </table>
+      <div class="combo-promo">Pagamento: 21/28/35/42/49/56 dias &nbsp;·&nbsp; Promotora inclusa nos combos Básico e acima &nbsp;·&nbsp; Micro e Mini sem promotora</div>
+    </div>
+    <div class="script-card"><div class="script-label">Conectar ao que o lojista disse</div><div class="script-text">"[Nome], com base no que você me contou sobre [repita a dor específica], o Projeto JLBV resolve exatamente isso. A gente não entrega só produto. Entrega uma categoria funcionando dentro da sua loja, com implantação, acompanhamento e reposição."</div></div>`
+  },
+  {
+    id: 'fechamento', emoji: '🏆', label: 'Fechamento',
+    title: 'Fechamento',
+    subtitle: 'O sim foi construído nas etapas anteriores. Aqui você só confirma.',
+    objective: 'Conduzir o lojista à decisão de forma natural. Se as etapas anteriores foram bem feitas, o fechamento é burocracia. Taxa abaixo de 50% nas propostas enviadas significa proposta saindo cedo demais.',
+    content: `
+    <div class="section-label">Scripts de fechamento</div>
+    <div class="script-card"><div class="script-label">Fechamento direto</div><div class="script-text">"[Nome], faz sentido começar com o Combo [X]? A implantação a gente agenda essa semana e em 30 dias você já vê o giro na prática."</div></div>
+    <div class="script-card"><div class="script-label">Fechamento por alternativa</div><div class="script-text">"Pensando no espaço que você tem, faz mais sentido começar com o Combo Básico ou o Essencial? Os dois já vêm com promotora para a implantação."</div></div>
+    <div class="script-card"><div class="script-label">Objeção de preço</div><div class="script-text">"Entendo, [nome]. Pensa assim: o Combo Micro começa em R$&nbsp;929 parcelado em 6 vezes. Se a gôndola girar 300%, que é o nosso mínimo histórico, você recupera o investimento na primeira semana de vendas."</div></div>
+    <div class="script-card"><div class="script-label">Se vier "vou pensar"</div><div class="script-text">"Claro, [nome]. O que está faltando para você se sentir seguro em avançar agora? Às vezes tem alguma dúvida que resolvo aqui mesmo."</div></div>
+    <div class="section-label">Red flags no fechamento</div>
+    <div class="flag-item"><div class="flag-icon">🚩</div><div>Lojista pede proposta mas não confirma data de decisão. Não saia sem próximo passo marcado.</div></div>
+    <div class="flag-item"><div class="flag-icon">🚩</div><div>Lojista quer falar com sócio antes de decidir. Volte ao passo de Compromisso e confirme o decisor.</div></div>
+    <div class="flag-item"><div class="flag-icon">🚩</div><div>"Quero só ver o catálogo" não é fechamento. É investigação ainda em aberto. Retorne ao Diagnóstico.</div></div>
+    <div class="warn-card">⚠️ <strong>Regra de ouro:</strong> menos de 50% das propostas fechando significa proposta saindo cedo demais para leads desqualificados.</div>`
+  },
+  {
+    id: 'cases', emoji: '📚', label: 'Cases',
+    title: 'Cases de Resultado',
+    subtitle: 'Provas reais para o lojista justificar para si mesmo a decisão que já quer tomar.',
+    objective: 'Usar cases do mesmo segmento do lojista para criar identificação e quebrar o modelo mental de "todo fornecedor promete e não entrega". Quanto mais parecido o case, mais poderoso.',
+    content: `
+    <div class="section-label">Cases reais Life B</div>
+    <div class="case-card">
+      <div class="case-head"><div class="case-name">Droga Center · DF</div><div class="case-badge">+500%</div></div>
+      <div class="case-nums"><div class="case-num">Antes: <strong>R$&nbsp;27.000/mês</strong></div><div class="case-num">Depois: <strong>R$&nbsp;160.000/mês</strong></div></div>
+      <div class="case-desc">Drogaria em Brasília. Crescimento de 500% na categoria de acessórios em menos de 6 meses após implantação com Combo Performance.</div>
+    </div>
+    <div class="case-card">
+      <div class="case-head"><div class="case-name">Drogarias Distrital · DF</div><div class="case-badge">+450%</div></div>
+      <div class="case-nums"><div class="case-num">Antes: <strong>R$&nbsp;15.000/mês</strong></div><div class="case-num">Depois: <strong>R$&nbsp;80.000/mês</strong></div></div>
+      <div class="case-desc">Rede de drogarias no Distrito Federal. Resultado com acompanhamento mensal de giro e expansão progressiva de mix.</div>
+    </div>
+    <div class="case-card">
+      <div class="case-head"><div class="case-name">Super Couto · GO</div><div class="case-badge">+300%</div></div>
+      <div class="case-nums"><div class="case-num">Antes: <strong>R$&nbsp;3.000/mês</strong></div><div class="case-num">Depois: <strong>R$&nbsp;12.000/mês</strong></div></div>
+      <div class="case-desc">Supermercado em Goiás. Case de entrada com combo menor, crescimento consistente. Use com prospects de supermercado da região GO.</div>
+    </div>
+    <div class="script-card"><div class="script-label">Como introduzir o case</div><div class="script-text">"Tenho um cliente com uma [farmácia/supermercado] parecida com a sua, aqui em [região]. Quando começamos, a situação era bem parecida com o que você me contou. Hoje eles faturam [X] na categoria. Posso te contar como foi?"</div></div>`
+  },
+  {
+    id: 'regras', emoji: '🧭', label: 'Regras',
+    title: 'Regras do Closer',
+    subtitle: 'Princípios que separam o representante do parceiro estratégico.',
+    objective: 'Internalizar os fundamentos de postura, linguagem e mentalidade que elevam a taxa de fechamento independente do produto ou do lead.',
+    content: `
+    <div class="rule-card"><div class="rule-icon">🗣️</div><div><div class="rule-title">Elimine o "tentar"</div><div class="rule-text">Diga "vou entrar em contato", não "vou tentar entrar em contato". Tentar sinaliza insegurança. O lojista percebe antes mesmo do conteúdo da mensagem.</div></div></div>
+    <div class="rule-card"><div class="rule-icon">🧠</div><div><div class="rule-title">O adversário é o nível de consciência</div><div class="rule-text">O lojista não deixa de comprar por causa de concorrente. Ele não compra porque não enxerga o problema. A primeira missão é elevar essa consciência, não vender produto.</div></div></div>
+    <div class="rule-card"><div class="rule-icon">🎯</div><div><div class="rule-title">Funil serve para descartar</div><div class="rule-text">O vendedor eficiente descarta rápido. Se menos de 50% das propostas fecham, estão saindo propostas demais. Qualifique mais, proponha menos.</div></div></div>
+    <div class="rule-card"><div class="rule-icon">🤝</div><div><div class="rule-title">Rapport é contínuo</div><div class="rule-text">O rep que entra na loja, lembra o nome do dono e sabe o que vendeu mais no mês passado não é substituível. Concorrente copia produto e preço. Não copia relacionamento.</div></div></div>
+    <div class="rule-card"><div class="rule-icon">💰</div><div><div class="rule-title">Quanto mais próximo da receita, mais indispensável</div><div class="rule-text">O rep que mostra quanto a gôndola gerou no mês não é representante. É gestor de categoria. O lojista precisa saber responder: "quanto faturei com a Life B esse mês?"</div></div></div>
+    <div class="rule-card"><div class="rule-icon">📊</div><div><div class="rule-title">Não é sobre o que vendemos. É sobre como vendemos.</div><div class="rule-text">Produto pode ser copiado. Processo de venda não. Dominar o como é o que separa quem vende uma vez de quem fideliza por anos.</div></div></div>
+    <div class="rule-card"><div class="rule-icon">🔄</div><div><div class="rule-title">O fechamento acontece antes do fechamento</div><div class="rule-text">Se chegou na proposta e ainda precisa convencer, o processo falhou antes. A negociação é burocracia de um sim que já foi construído nas etapas anteriores.</div></div></div>`
+  }
+];
+
+let current = 0;
+const STORAGE_KEY = 'lifeb-closer-kit';
+
+// ── PERSITÊNCIA ──────────────────────────────────────────────────
+function saveState() {
+  const state = {};
+  document.querySelectorAll('.check-item[data-key]').forEach(el => {
+    state[el.dataset.key] = el.classList.contains('done') ? 1 : 0;
+  });
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(_) {}
+}
+
+function restoreState() {
+  let state = {};
+  try { state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(_) {}
+  document.querySelectorAll('.check-item[data-key]').forEach(el => {
+    if (state[el.dataset.key]) el.classList.add('done');
+  });
+}
+
+function assignKeys() {
+  document.querySelectorAll('.step-page').forEach((page, si) => {
+    page.querySelectorAll('.check-item').forEach((item, ci) => {
+      item.dataset.key = `s${si}c${ci}`;
+    });
+  });
+}
+
+// ── CONSTRUÇÃO ───────────────────────────────────────────────────
+function buildNav() {
+  document.getElementById('navScroll').innerHTML = steps.map((s, i) =>
+    `<button class="nav-pill${i===0?' active':''}" onclick="goTo(${i})" id="pill-${i}">${s.emoji} ${s.label}</button>`
+  ).join('');
+}
+
+function buildContent() {
+  document.getElementById('mainContent').innerHTML = steps.map((s, i) => `
+    <div class="step-page${i===0?' active':''}" id="page-${i}">
+      <div class="badge-row">
+        <div class="step-badge"><span>${s.emoji}</span><span>${s.label}</span><span class="num">${String(i+1).padStart(2,'0')}</span></div>
+        <span class="step-progress hidden" id="prog-${i}"></span>
+      </div>
+      <h1 class="step-title">${s.title}</h1>
+      <p class="step-subtitle">${s.subtitle}</p>
+      ${s.objective ? `<div class="obj-card"><div class="obj-label">Objetivo da etapa</div><div class="obj-text">${s.objective}</div></div>` : ''}
+      ${s.content}
+    </div>`).join('');
+}
+
+// ── PROGRESSO ────────────────────────────────────────────────────
+function updateProgress() {
+  steps.forEach((_, i) => {
+    const page = document.getElementById(`page-${i}`);
+    if (!page) return;
+    const all  = page.querySelectorAll('.check-item');
+    const done = page.querySelectorAll('.check-item.done');
+    const el   = document.getElementById(`prog-${i}`);
+    if (!el) return;
+    if (all.length === 0) { el.classList.add('hidden'); return; }
+    el.classList.remove('hidden');
+    if (done.length === all.length) {
+      el.textContent = '✓ Completo';
+      el.classList.add('complete');
+    } else {
+      el.textContent = `${done.length} / ${all.length}`;
+      el.classList.remove('complete');
+    }
+  });
+}
+
+// ── UI ───────────────────────────────────────────────────────────
+function updateUI() {
+  document.querySelectorAll('.step-page').forEach((p, i) => p.classList.toggle('active', i === current));
+  document.querySelectorAll('.nav-pill').forEach((p, i) => p.classList.toggle('active', i === current));
+  const pill = document.getElementById(`pill-${current}`);
+  if (pill) pill.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  document.getElementById('progressFill').style.width = (current / (steps.length - 1) * 100) + '%';
+  document.getElementById('stepCounter').textContent = `${current + 1} / ${steps.length}`;
+  document.getElementById('btnPrev').disabled = current === 0;
+  document.getElementById('btnNext').textContent = current === steps.length - 1 ? '↩ Início' : 'Próximo →';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  updateProgress();
+}
+
+function navigate(dir) {
+  if (dir === 1 && current === steps.length - 1) { current = 0; }
+  else { current = Math.max(0, Math.min(steps.length - 1, current + dir)); }
+  updateUI();
+}
+function goTo(i) { current = i; updateUI(); }
+
+function toggleCheck(el) {
+  el.classList.toggle('done');
+  saveState();
+  updateProgress();
+}
+
+function resetAll() {
+  if (!confirm('Resetar todos os checklists?')) return;
+  document.querySelectorAll('.check-item').forEach(el => el.classList.remove('done'));
+  try { localStorage.removeItem(STORAGE_KEY); } catch(_) {}
+  current = 0;
+  updateUI();
+}
+
+// ── SWIPE ────────────────────────────────────────────────────────
+let _sx = 0, _sy = 0, _swipeOk = false;
+document.addEventListener('touchstart', e => {
+  _swipeOk = !e.target.closest('[data-no-swipe], .table-wrap');
+  _sx = e.changedTouches[0].screenX;
+  _sy = e.changedTouches[0].screenY;
+}, { passive: true });
+document.addEventListener('touchend', e => {
+  if (!_swipeOk) return;
+  const dx = e.changedTouches[0].screenX - _sx;
+  const dy = e.changedTouches[0].screenY - _sy;
+  if (Math.abs(dx) > 65 && Math.abs(dx) > Math.abs(dy) * 1.8) navigate(dx < 0 ? 1 : -1);
+}, { passive: true });
+
+// ── TECLADO ──────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight') navigate(1);
+  if (e.key === 'ArrowLeft')  navigate(-1);
+});
+
+// ── INIT ─────────────────────────────────────────────────────────
+buildNav();
+buildContent();
+assignKeys();
+restoreState();
+updateUI();
+</script>
+</body>
+</html>
