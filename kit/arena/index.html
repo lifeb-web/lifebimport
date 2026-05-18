@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Life B · Playbook Comercial</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-RLJBF1CM3H"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-RLJBF1CM3H');</script>
+<style>
+:root {
+  --purple: #564B99;
+  --purple-light: #7B6FC4;
+  --magenta: #DA2F8A;
+  --dark: #0B0A14;
+  --dark2: #131220;
+  --dark3: #1C1A2E;
+  --card: #1A1828;
+  --card2: #211E35;
+  --light: #F2EEFF;
+  --muted: #8A84B0;
+  --border: rgba(86,75,153,0.2);
+  --green: #22C55D;
+  --amber: #F59E0B;
+  --red: #EF4444;
+  --grad: linear-gradient(135deg, #564B99 0%, #DA2F8A 100%);
+  --grad2: linear-gradient(135deg, #DA2F8A 0%, #564B99 100%);
+  --font: 'DM Sans', system-ui, sans-serif;
+  --display: 'Syne', system-ui, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--dark);
+  color: var(--light);
+  font-family: var(--font);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── NOISE TEXTURE ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── HEADER ── */
+header {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  background: rgba(11,10,20,0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.header-logo svg { height: 26px; width: auto; display: block; }
+
+.header-right { display: flex; align-items: center; gap: 8px; }
+
+.kit-label {
+  font-family: var(--display);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  padding: 4px 11px;
+  border-radius: 20px;
+}
+
+.reset-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: all 0.18s;
+}
+.reset-btn:hover { border-color: var(--magenta); color: var(--magenta); }
+
+/* ── NAV ── */
+.nav-wrap { background: var(--dark2); border-bottom: 1px solid var(--border); }
+.nav-scroll {
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 10px 16px;
+  -webkit-overflow-scrolling: touch;
+}
+.nav-scroll::-webkit-scrollbar { display: none; }
+
+.nav-pill {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 6px 13px;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: var(--font);
+  transition: all 0.18s;
+  flex-shrink: 0;
+  letter-spacing: 0.01em;
+}
+.nav-pill.active { background: var(--grad); border-color: transparent; color: white; }
+.nav-pill:hover:not(.active) { border-color: var(--purple-light); color: var(--light); }
+
+/* ── PROGRESS ── */
+.progress-bar { height: 2px; background: var(--dark3); }
+.progress-fill { height: 100%; background: var(--grad); transition: width 0.4s ease; }
+
+/* ── MAIN ── */
+main { max-width: 700px; margin: 0 auto; padding: 28px 20px calc(120px + env(safe-area-inset-bottom, 0px)); position: relative; z-index: 1; }
+
+/* ── STEP PAGE ── */
+.step-page { display: none; animation: fadeUp 0.3s ease; }
+.step-page.active { display: block; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── MODULE HEADER ── */
+.mod-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--dark3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 13px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 14px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.mod-eyebrow .num {
+  background: var(--grad);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-family: var(--display);
+}
+.mod-eyebrow .emoji { font-size: 1rem; }
+
+.mod-title {
+  font-family: var(--display);
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+  font-weight: 800;
+  line-height: 1.05;
+  margin-bottom: 8px;
+  letter-spacing: -0.03em;
+}
+.mod-subtitle {
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.65;
+  margin-bottom: 26px;
+  font-weight: 400;
+}
+
+/* ── HERO QUOTE ── */
+.hero-quote {
+  background: linear-gradient(135deg, rgba(86,75,153,0.15), rgba(218,47,138,0.08));
+  border: 1px solid rgba(86,75,153,0.3);
+  border-left: 3px solid var(--magenta);
+  border-radius: 0 12px 12px 0;
+  padding: 18px 20px;
+  margin-bottom: 22px;
+}
+.hero-quote .q-label {
+  font-size: 0.67rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--magenta);
+  margin-bottom: 8px;
+}
+.hero-quote .q-text {
+  font-family: var(--display);
+  font-size: 1.05rem;
+  line-height: 1.55;
+  color: var(--light);
+  font-weight: 600;
+}
+.hero-quote .q-author {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+/* ── SECTION LABEL ── */
+.section-label {
+  font-size: 0.67rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--purple-light);
+  margin: 24px 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* ── PRINCIPLE CARDS ── */
+.principle-grid { display: flex; flex-direction: column; gap: 8px; }
+.principle-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  transition: border-color 0.18s;
+}
+.principle-card:hover { border-color: rgba(86,75,153,0.4); }
+.p-icon { font-size: 1.2rem; flex-shrink: 0; line-height: 1; margin-top: 2px; }
+.p-title { font-family: var(--display); font-weight: 700; font-size: 0.92rem; margin-bottom: 4px; }
+.p-text { font-size: 0.83rem; color: var(--muted); line-height: 1.6; }
+
+/* ── CANVAS TABLE ── */
+.canvas-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+.canvas-table tr { border-bottom: 1px solid var(--border); }
+.canvas-table tr:last-child { border-bottom: none; }
+.canvas-table td { padding: 12px 14px; vertical-align: top; line-height: 1.6; }
+.canvas-table td:first-child {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  color: var(--magenta);
+  width: 30%;
+  padding-right: 10px;
+}
+.canvas-table td:last-child { color: #d4d0f0; }
+.canvas-table-wrap {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+/* ── CHECKLIST ── */
+.checklist { display: flex; flex-direction: column; gap: 7px; }
+.check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: all 0.18s;
+  user-select: none;
+}
+.check-item:hover { border-color: rgba(86,75,153,0.45); background: var(--card2); }
+.check-item.done { opacity: 0.55; border-color: rgba(86,75,153,0.35); }
+.check-box {
+  width: 20px; height: 20px;
+  border: 2px solid rgba(86,75,153,0.35);
+  border-radius: 6px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.18s;
+  margin-top: 1px;
+}
+.check-item.done .check-box { background: var(--grad); border-color: transparent; }
+.check-item.done .check-box::after { content: '✓'; color: white; font-size: 0.7rem; font-weight: 800; }
+.check-text { font-size: 0.88rem; line-height: 1.55; }
+.check-text strong { color: var(--light); font-weight: 600; display: block; margin-bottom: 2px; }
+.check-text small { color: var(--muted); font-size: 0.8rem; }
+
+/* ── INFO/WARN CARDS ── */
+.info-card {
+  background: rgba(86,75,153,0.1);
+  border: 1px solid rgba(86,75,153,0.22);
+  border-radius: 9px;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  font-size: 0.86rem;
+  color: #c0bce8;
+  line-height: 1.65;
+}
+.info-card strong { color: #a9a4e8; font-weight: 600; }
+
+.warn-card {
+  background: rgba(218,47,138,0.07);
+  border: 1px solid rgba(218,47,138,0.22);
+  border-radius: 9px;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  font-size: 0.86rem;
+  color: #eeaad0;
+  line-height: 1.65;
+}
+.warn-card strong { color: #DA2F8A; }
+
+.green-card {
+  background: rgba(34,197,93,0.08);
+  border: 1px solid rgba(34,197,93,0.2);
+  border-radius: 9px;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  font-size: 0.86rem;
+  color: #a3e8bc;
+  line-height: 1.65;
+}
+.green-card strong { color: var(--green); font-weight: 600; }
+
+/* ── FUNNEL STEPS ── */
+.funnel-steps { display: flex; flex-direction: column; gap: 0; }
+.funnel-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.funnel-step:last-child { border-bottom: none; }
+.step-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--grad);
+  color: white;
+  font-family: var(--display);
+  font-size: 0.75rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.step-content { flex: 1; }
+.step-title { font-weight: 700; font-size: 0.92rem; margin-bottom: 4px; }
+.step-desc { font-size: 0.83rem; color: var(--muted); line-height: 1.6; }
+.step-meta {
+  font-size: 0.73rem;
+  font-weight: 600;
+  color: var(--magenta);
+  margin-top: 5px;
+  letter-spacing: 0.04em;
+}
+
+/* ── RFV TABLE ── */
+.rfv-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.rfv-table th {
+  background: var(--dark3);
+  color: var(--muted);
+  font-size: 0.67rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 9px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  font-weight: 700;
+}
+.rfv-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(86,75,153,0.1);
+  vertical-align: top;
+  line-height: 1.55;
+}
+.rfv-table tr:last-child td { border-bottom: none; }
+.rfv-table tr:hover td { background: rgba(86,75,153,0.04); }
+.table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 10px; }
+
+.seg-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.73rem;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.seg-green { background: rgba(34,197,93,0.15); color: #86efac; border: 1px solid rgba(34,197,93,0.25); }
+.seg-blue  { background: rgba(59,130,246,0.15); color: #93c5fd; border: 1px solid rgba(59,130,246,0.25); }
+.seg-amber { background: rgba(245,158,11,0.15); color: #fcd34d; border: 1px solid rgba(245,158,11,0.25); }
+.seg-red   { background: rgba(239,68,68,0.15);  color: #fca5a5; border: 1px solid rgba(239,68,68,0.25); }
+.seg-gray  { background: rgba(107,114,128,0.15); color: #d1d5db; border: 1px solid rgba(107,114,128,0.25); }
+
+/* ── COMBO TABLE ── */
+.combo-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.combo-table th {
+  background: var(--dark3);
+  color: var(--muted);
+  font-size: 0.67rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 9px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  font-weight: 700;
+}
+.combo-table td { padding: 10px 12px; border-bottom: 1px solid rgba(86,75,153,0.1); vertical-align: middle; }
+.combo-table tr:last-child td { border-bottom: none; }
+.combo-price { color: #86efac; font-weight: 700; }
+.combo-parcel { color: var(--muted); font-size: 0.78rem; }
+.combo-tag {
+  background: rgba(86,75,153,0.2);
+  border: 1px solid rgba(86,75,153,0.3);
+  color: #a9a4e8;
+  font-size: 0.67rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+.combo-tag.entry { background: rgba(218,47,138,0.12); border-color: rgba(218,47,138,0.28); color: #eeaad0; }
+
+/* ── STACK CARDS ── */
+.stack-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.stack-icon { font-size: 1.5rem; flex-shrink: 0; }
+.stack-name { font-family: var(--display); font-weight: 700; font-size: 0.92rem; margin-bottom: 2px; }
+.stack-desc { font-size: 0.82rem; color: var(--muted); line-height: 1.5; }
+.stack-priority {
+  margin-left: auto;
+  font-size: 0.67rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 20px;
+  flex-shrink: 0;
+  letter-spacing: 0.04em;
+}
+.pri-1 { background: rgba(218,47,138,0.15); color: #eeaad0; border: 1px solid rgba(218,47,138,0.25); }
+.pri-2 { background: rgba(86,75,153,0.2); color: #a9a4e8; border: 1px solid rgba(86,75,153,0.3); }
+.pri-3 { background: rgba(107,114,128,0.15); color: #d1d5db; border: 1px solid rgba(107,114,128,0.25); }
+
+/* ── CADENCE STEPS ── */
+.cadence-step {
+  display: flex;
+  gap: 14px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--border);
+  align-items: flex-start;
+}
+.cadence-step:last-child { border-bottom: none; }
+.cad-day {
+  font-family: var(--display);
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--magenta);
+  width: 38px;
+  flex-shrink: 0;
+  padding-top: 2px;
+  letter-spacing: 0.04em;
+}
+.cad-channel { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+.cad-text { font-size: 0.85rem; line-height: 1.55; }
+.cad-text strong { color: var(--light); font-weight: 600; }
+.cad-text span { color: var(--muted); font-size: 0.8rem; }
+
+/* ── NAV BUTTONS ── */
+.nav-buttons {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: rgba(11,10,20,0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid var(--border);
+  padding: 12px 20px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  z-index: 100;
+}
+.nav-btn {
+  background: var(--dark3);
+  border: 1px solid var(--border);
+  color: var(--light);
+  padding: 12px 20px;
+  border-radius: 9px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: all 0.18s;
+  flex: 1;
+}
+.nav-btn:hover:not(:disabled) { border-color: var(--purple); }
+.nav-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+.nav-btn.primary { background: var(--grad); border-color: transparent; color: white; }
+.nav-btn.primary:hover { opacity: 0.88; }
+.step-counter { font-size: 0.72rem; color: var(--muted); text-align: center; flex-shrink: 0; font-weight: 500; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-logo">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 228" height="26">
+      <path d="M 82.62 206.75 L 78.25 206.67 L 69 205.81 L 63.25 204.77 L 57.37 203.12 L 54.25 202.12 L 48 199.7 L 41.12 195.79 L 35.62 191.66 L 30.26 186.5 L 27.11 182.75 L 22.75 175.75 L 19.7 169.12 L 17.75 163.19 L 16.16 156.62 L 15.05 146.25 L 14.97 22.88 L 18.5 22.04 L 21.5 22.79 L 24.75 23.76 L 28.38 25.15 L 32.75 28.12 L 36.78 32.12 L 39.73 36.38 L 41.16 40 L 42.16 43.12 L 43 47.38 L 43.07 50.62 L 43.1 154.5 L 44.12 163.36 L 45.74 168.88 L 47.7 173.5 L 48.76 175.38 L 52.12 180.53 L 55.15 183.75 L 57.38 185.72 L 61.75 188.7 L 66 190.72 L 69 191.78 L 73.12 192.8 L 79.75 193.79 L 82.62 193.94 L 97 193.96 L 97.74 196.5 L 96.75 200.1 L 93.88 203.72 L 90 205.77 L 87.75 206.1 L 82.62 206.75 Z M 168.25 205.88 L 165.24 205.12 L 165.6 201.5 L 165.65 196.75 L 165.7 84.12 L 166.83 73.25 L 168.15 66.62 L 169.75 62.04 L 171.17 58 L 172.75 55.21 L 174.73 51.62 L 175.73 50.12 L 177.15 47.88 L 181.12 43.12 L 184.12 40.14 L 188.5 36.68 L 192.88 33.73 L 196.38 31.7 L 199.62 30.08 L 204.51 28.12 L 209.19 26.75 L 213.25 25.8 L 218.7 24.75 L 232.12 23.32 L 249 23.16 L 249.88 23.88 L 249.56 27 L 248.75 29.27 L 246.67 32.5 L 244.25 34.72 L 240.25 36.81 L 237 37.39 L 232.5 37.56 L 226.9 38.12 L 219.75 39.75 L 214.62 41.7 L 207.38 46.14 L 203.21 50.25 L 199.73 55.38 L 197.75 59.05 L 195.1 66 L 194.13 71 L 193.73 79.62 L 193.73 112.75 L 194.75 113.86 L 221.88 113.83 L 222.81 114.5 L 221.74 118.5 L 219.67 121.5 L 217.5 123.17 L 214.55 124.62 L 212.25 124.94 L 194.75 124.91 L 193.68 125.88 L 193.73 177.62 L 193.06 182.62 L 191.7 188 L 189.75 192.04 L 186.5 196.43 L 183.25 199.62 L 178.62 202.74 L 175 204.14 L 169.25 205.73 L 168.25 205.88 Z M 127.5 78.63 L 122.25 77.79 L 118.38 75.58 L 116.25 73.47 L 114.1 69.75 L 113.23 63.5 L 114.07 60 L 116.25 56.17 L 118.14 54.25 L 121.88 52.02 L 125.88 51.03 L 128.75 51.09 L 132.12 52.02 L 135.72 54.12 L 138.78 57.62 L 140.66 62.75 L 140.75 66.5 L 139.85 69.88 L 137.64 73.62 L 135.6 75.62 L 131.62 77.83 L 128.5 78.54 L 127.5 78.63 Z M 291.5 206.01 L 283 205.76 L 276.51 204.75 L 272.88 203.77 L 268.12 202.14 L 263.26 200.12 L 257.06 196.75 L 253.97 194.75 L 249.12 190.75 L 242.2 183.38 L 237.12 175.58 L 234.12 169.12 L 232.1 163.12 L 230.74 156.62 L 229.47 146.5 L 229.51 143.5 L 230.75 133.93 L 232.1 128 L 233.69 123.88 L 235.75 119.26 L 238.19 114.62 L 240.19 111.5 L 244.23 106.38 L 247.25 103.22 L 252.12 99.21 L 256.16 96.75 L 260.11 94.75 L 265.06 92.75 L 270.25 91.07 L 275.38 90.07 L 281.38 89.57 L 286.38 89.48 L 293.25 90.05 L 300.75 91.81 L 305.1 93.12 L 309.58 95.12 L 313.88 97.75 L 319.75 102.14 L 323.62 106.17 L 328.19 112.5 L 330.75 116.63 L 332.75 120.88 L 334.75 126.63 L 336.62 135.94 L 336.92 139.12 L 337.05 145.62 L 336.75 152.74 L 336.38 152.98 L 257 152.98 L 256.07 154 L 256.81 157.62 L 258.06 164.12 L 259.12 167.75 L 260.74 171.5 L 262.12 174.5 L 263.08 176.38 L 266.2 180.62 L 269.12 183.67 L 271.5 185.69 L 274.38 187.71 L 277.88 189.74 L 281.75 191.14 L 285.33 192.12 L 289.12 192.92 L 293.88 193.16 L 299 193.08 L 305.62 192.22 L 312.25 190.99 L 316.12 191.12 L 320.78 194.62 L 321.72 196.25 L 321.39 197.5 L 318.38 199.16 L 315.25 200.75 L 311.62 202.17 L 307 203.78 L 300.62 205.05 L 291.5 206.01 Z M 140.5 205.92 L 134.87 205.12 L 131.32 204.12 L 127.74 202.75 L 123.25 199.72 L 118.73 194.88 L 115.18 189 L 113.75 184.15 L 113.08 181.62 L 112.94 179.5 L 112.91 92.75 L 113.5 91.77 L 140.12 91.73 L 140.92 92.38 L 140.98 205.12 L 140.5 205.92 Z M 309.66 137.88 L 310.16 137.25 L 309.79 133.25 L 308.78 128.25 L 307.79 123.88 L 306.77 120.75 L 305.7 118 L 302.69 112.5 L 298.82 108 L 294.62 105.1 L 290.74 103.75 L 284.25 102.6 L 278.38 102.99 L 274.25 104.09 L 270.25 106.2 L 266.19 110.12 L 263.12 114.73 L 261.12 118.74 L 259.16 123.75 L 257.75 129.67 L 257.09 132.12 L 256.59 136 L 256.36 137.5 L 256.62 137.75 L 257.75 137.95 L 309 137.96 L 309.66 137.88 Z" fill="#564B99" fill-rule="evenodd"/>
+      <path d="M 429.12 211.19 L 419.75 210.78 L 415.66 209.75 L 410.5 207.75 L 404.12 204.14 L 399.12 200.65 L 394.5 196.57 L 386.15 187.25 L 380.17 178 L 375.75 168.51 L 373.12 162.27 L 370.11 152.75 L 369 149.64 L 368.5 149.68 L 364.04 151.5 L 361.25 151.83 L 358.74 151.62 L 354.12 149.83 L 350.09 145.5 L 348.47 139.62 L 349.09 134 L 350.75 130.9 L 352.12 129.07 L 356.62 126.74 L 361 125.51 L 365 125.5 L 364.92 123.12 L 364.34 116.62 L 365.03 97.75 L 367.82 83.25 L 369.83 75 L 371.75 69.38 L 373.77 64.12 L 376.75 58 L 380.71 51.25 L 384.16 46.38 L 391.51 38.38 L 398 33.12 L 404.5 29.14 L 410.88 26.83 L 416.85 24.12 L 422.88 22.88 L 427.62 21.99 L 434.62 21.42 L 440.25 21.36 L 450 22.08 L 458.5 23.79 L 464 25.16 L 470.23 27.75 L 476 30.75 L 482.62 35.18 L 489.68 42.25 L 493.12 47.6 L 496.04 53.88 L 498.01 61.75 L 498.62 67.75 L 498.22 71.88 L 496.71 79.75 L 494.73 85.12 L 492.12 89.92 L 488.12 96.06 L 484.62 100.55 L 479.59 105.62 L 473.5 110.75 L 466.38 115.74 L 458.62 120.13 L 448 125.11 L 437.62 129.09 L 424.5 133.1 L 415.84 135.12 L 415.29 135.38 L 415.5 135.75 L 419.75 137.79 L 424 139.74 L 428.62 142.69 L 435.5 148.47 L 441.12 155.63 L 444.16 160.5 L 447.08 167 L 449.08 173.5 L 450.03 178.25 L 450.87 185.5 L 450.78 188.5 L 450.05 192.5 L 448.15 198.25 L 446.16 201.75 L 442.75 205.74 L 438.5 208.75 L 434.62 210.09 L 429.12 211.19 Z M 427 205.58 L 431.75 204.14 L 434.67 201.38 L 436.79 196.88 L 437.77 191 L 437.71 185.62 L 436.16 175.62 L 433.84 167 L 430.74 160.62 L 427.23 155.62 L 423.7 151.12 L 418.25 146.25 L 413.5 143.1 L 408.86 140.75 L 403.62 138.73 L 397.75 137.15 L 391.62 136.71 L 391 133.97 L 395.75 133.35 L 406.62 131.82 L 414.38 129.16 L 422.62 126.12 L 431 122.8 L 440.25 118.13 L 449.62 112.81 L 458 106.69 L 465.76 98.88 L 470.17 91.12 L 472.17 83.88 L 472.78 77.25 L 471.87 71.38 L 469.73 65.38 L 466.69 60.38 L 461.75 55.03 L 456.5 51.11 L 450.5 48.11 L 442.88 45.99 L 435.38 45.22 L 424.5 46.04 L 414.62 48.68 L 407.54 51.75 L 403.2 54.12 L 399.12 57.14 L 394.88 61.07 L 389.7 67.5 L 385.12 74.88 L 381.74 83.88 L 379.74 91.25 L 378.25 99 L 377.74 115.12 L 378.33 126.25 L 379.73 135.12 L 381.75 145.25 L 384.06 154.5 L 386.72 162 L 390.75 171.38 L 395.12 179.72 L 400.65 187.25 L 408.06 195.75 L 415.5 201.73 L 422.12 204.89 L 427 205.58 Z" fill="#DA2F8A" fill-rule="evenodd"/>
+    </svg>
+  </div>
+  <div class="header-right">
+    <span class="kit-label">Playbook Comercial</span>
+    <button class="reset-btn" onclick="resetAll()">Resetar</button>
+  </div>
+</header>
+
+<div class="nav-wrap">
+  <div class="nav-scroll" id="navScroll" data-no-swipe></div>
+</div>
+<div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+<main id="mainContent"></main>
+
+<div class="nav-buttons">
+  <button class="nav-btn" id="btnPrev" onclick="navigate(-1)">Anterior</button>
+  <div class="step-counter" id="stepCounter"></div>
+  <button class="nav-btn primary" id="btnNext" onclick="navigate(1)">Próximo</button>
+</div>
+
+<script>
+const modules = [
+  {
+    emoji: '🧠', label: 'Fundamentos', title: 'Fundamentos da Máquina',
+    subtitle: 'Os princípios que sustentam tudo. Antes de qualquer processo ou ferramenta.',
+    content: `
+      <div class="hero-quote">
+        <div class="q-label">Citação do evento</div>
+        <div class="q-text">"Não é sobre o que vendemos. É sobre como vendemos."</div>
+        <div class="q-author">Erick Loureiro · Arena de Crescimento</div>
+      </div>
+      <div class="section-label">Princípios que não mudam</div>
+      <div class="principle-grid">
+        <div class="principle-card"><div class="p-icon">🎯</div><div><div class="p-title">Posicionamento antes de tudo</div><div class="p-text">Não existe estratégia de geração de demanda sem posicionamento. A maioria das empresas falha na máquina de vendas por gastar tempo de menos definindo o ICP.</div></div></div>
+        <div class="principle-card"><div class="p-icon">💰</div><div><div class="p-title">Margem maior que receita</div><div class="p-text">Volume não tem correlação com margem. Faturar muito com margem baixa é ilusão. Foco em poucos produtos bem executados vence portfólio inchado.</div></div></div>
+        <div class="principle-card"><div class="p-icon">🔁</div><div><div class="p-title">Pós-venda é receita</div><div class="p-text">A maioria das empresas não investe em pós-venda. É onde está a ampliação de ticket médio, fidelização e maximização do LTV. É onde o dinheiro fica.</div></div></div>
+        <div class="principle-card"><div class="p-icon">🧪</div><div><div class="p-title">Observação → Hipótese → Teste</div><div class="p-text">Em seguida, você dobra o que está funcionando. O crescimento vem da média acumulada de experimentos. Todo canal tem um ponto de saturação.</div></div></div>
+        <div class="principle-card"><div class="p-icon">🎪</div><div><div class="p-title">Público restrito, mensagem forte</div><div class="p-text">Quando mais amplo é o público, mais difícil é transmitir a mensagem e qualificar o lead. Posicione-se como especialista em um nicho e depois expanda.</div></div></div>
+        <div class="principle-card"><div class="p-icon">🔥</div><div><div class="p-title">O adversário é a consciência do lead</div><div class="p-text">O lojista não deixa de comprar porque tem um concorrente melhor. Ele não compra porque não enxerga o problema. A Life B não compete com outros fornecedores. Compete com a inconsciência do mercado.</div></div></div>
+      </div>
+      <div class="section-label">A trilha da máquina de vendas</div>
+      <div class="funnel-steps">
+        <div class="funnel-step"><div class="step-num">1</div><div class="step-content"><div class="step-title">Cliente Ideal Perfeito</div><div class="step-desc">Antes de gerar demanda, saber exatamente para quem você vende.</div></div></div>
+        <div class="funnel-step"><div class="step-num">2</div><div class="step-content"><div class="step-title">Demanda Infinita</div><div class="step-desc">Geração de leads com canais certos para o ICP definido.</div></div></div>
+        <div class="funnel-step"><div class="step-num">3</div><div class="step-content"><div class="step-title">Vendas Infinitas</div><div class="step-desc">Processo consultivo estruturado, que não depende de talento individual.</div></div></div>
+        <div class="funnel-step"><div class="step-num">4</div><div class="step-content"><div class="step-title">Tecnologia para Escala</div><div class="step-desc">CRM, cadências e automação. Só depois de ter processo.</div></div></div>
+        <div class="funnel-step"><div class="step-num">5</div><div class="step-content"><div class="step-title">Campanha Comercial</div><div class="step-desc">Escalar o que já funciona com investimento e estrutura.</div></div></div>
+        <div class="funnel-step"><div class="step-num">6</div><div class="step-content"><div class="step-title">Estrutura Comercial</div><div class="step-desc">Time especializado, metas claras e processo documentado.</div></div></div>
+      </div>
+    `
+  },
+  {
+    emoji: '🗺️', label: 'Posicionamento', title: 'Canvas de Posicionamento',
+    subtitle: 'O que somos, para quem somos e por que o cliente deve confiar na Life B.',
+    content: `
+      <div class="canvas-table-wrap">
+        <table class="canvas-table">
+          <tr><td>PARA...</td><td>Dono ou gestor de farmácia, drogaria ou supermercado de médio porte. Drogarias e farmácias: faturamento a partir de R$120K/mês, mínimo 2 anos de empresa. Supermercados: a partir de R$300K/mês, mínimo 2 anos de empresa. Decisor varia por porte: dono nas independentes, comprador de categoria nas redes. Goiás e DF.</td></tr>
+          <tr><td>QUE...</td><td>Tem dificuldade de gerar fluxo e aumentar consumo. Não consegue encantar o público feminino no PDV. Tem espaço ocioso que não gera receita. Não tem categoria que venda sozinha e garanta rentabilidade.</td></tr>
+          <tr><td>O...</td><td>Projeto JLBV: metodologia exclusiva baseada em 3 pilares, com mix estratégico, exposição via Mega Vision USA, venda por impulso e alto sell-out. Inspirado no mercado americano.</td></tr>
+          <tr><td>É UM...</td><td>Projeto completo e personalizado de mix de acessórios para farmácias e supermercados, com itens de merchandising exclusivos, time treinado para implantação e suporte contínuo.</td></tr>
+          <tr><td>QUE...</td><td>Encanta o público feminino. Rentabiliza o espaço ocioso. Gera vendas adicionais sem esforço da equipe. Traz categorização e estratégia de precificação.</td></tr>
+          <tr><td>DIFERENTE...</td><td>Solução completa, não só produto. Método Mega Vision USA. Baixo investimento de entrada, resultado garantido e suporte presencial. Cases com +300% a +500% de crescimento.</td></tr>
+          <tr><td>ELE...</td><td>+2.000 projetos implantados. Crescimento mínimo de 300% na categoria. Droga Center DF: R$27k → R$160k (+500%). Drogarias Distrital DF (+450%). Super Couto GO (+300%).</td></tr>
+          <tr><td>MODELO</td><td>Inside Sales ✓ · Field Sales ✓ · Self-service (futuro) · Channel Sales (não é relevante)</td></tr>
+        </table>
+      </div>
+      <div class="section-label">Os 3 pilares do Projeto JLBV</div>
+      <div class="principle-grid">
+        <div class="principle-card"><div class="p-icon">🛍️</div><div><div class="p-title">Produto e Inovação</div><div class="p-text">Mais de 1.400 SKUs pensados para desejo e compra por impulso. Produtos que o consumidor já quer comprar. Só precisam estar na frente dele.</div></div></div>
+        <div class="principle-card"><div class="p-icon">📐</div><div><div class="p-title">Exposição Estratégica · Mega Vision USA</div><div class="p-text">Método de organização da gôndola que maximiza visibilidade e giro. Implantado pelo time da Life B, não pelo lojista.</div></div></div>
+        <div class="principle-card"><div class="p-icon">🤫</div><div><div class="p-title">Venda Silenciosa</div><div class="p-text">Produtos que vendem sem treinamento de equipe. A exposição adequada gera vendas automaticamente, sem precisar de esforço do time.</div></div></div>
+      </div>
+      <div class="section-label">Pitch de 20 segundos</div>
+      <div class="hero-quote">
+        <div class="q-label">Como apresentar</div>
+        <div class="q-text">"Estruturamos uma categoria de acessórios de alto giro dentro de farmácias e supermercados, usando o espaço que a loja já tem, sem custo de implantação, sem treinamento de equipe. São mais de 2.000 projetos implantados, com crescimento mínimo de 300% na categoria. A gente não vende produto. Vende faturamento incremental direto no caixa do lojista."</div>
+      </div>
+    `
+  },
+  {
+    emoji: '👤', label: 'ICP & Kanban', title: 'Cliente Ideal & Kanban Prospect',
+    subtitle: 'Quem é o lojista, o que ele sofre, o que ele sonha e como se comporta.',
+    content: `
+      <div class="section-label">Perfil do ICP</div>
+      <div class="info-card"><strong>Drogarias e farmácias:</strong> Faturamento mínimo de R$120K/mês. Independentes: o dono é o decisor e comprador. Redes com múltiplas lojas: o decisor é o comprador da categoria.</div>
+      <div class="info-card"><strong>Supermercados:</strong> Faturamento mínimo de R$300K/mês. O decisor é o comprador da categoria bazar.</div>
+      <div class="info-card"><strong>Região:</strong> Goiás e Distrito Federal</div>
+
+      <div class="section-label">Como o lojista se comporta</div>
+      <div class="principle-grid">
+        <div class="principle-card"><div class="p-icon">📱</div><div><div class="p-title">WhatsApp é o canal de trabalho</div><div class="p-text">Usa para fornecedores, equipe e pedidos. É o principal canal de comunicação no dia a dia comercial.</div></div></div>
+        <div class="principle-card"><div class="p-icon">🤝</div><div><div class="p-title">Compra por relacionamento</div><div class="p-text">Confia em quem visita e se faz presente. Avalia produto pelo giro, não só pelo preço. Decide sozinho para compras menores.</div></div></div>
+        <div class="principle-card"><div class="p-icon">🚪</div><div><div class="p-title">Abre e fecha a loja pessoalmente</div><div class="p-text">Controla estoque, faz pedidos, resolve problemas de equipe. Tempo é seu bem mais escasso.</div></div></div>
+      </div>
+
+      <div class="section-label">Dores reais</div>
+      <div class="checklist">
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>Margem apertada nos produtos principais</strong><small>Medicamentos e hortifruti têm pouco espaço para crescer</small></div></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>Ticket médio baixo: cliente entra, compra e sai</strong><small>Não há categoria que puxe compras adicionais por impulso</small></div></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>Espaço ocioso que não gera receita</strong><small>A gôndola parada é custo, não é neutra</small></div></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>Fornecedores que somem após a venda</strong><small>Nenhum parceiro que acompanha, repõe e aparece</small></div></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>Medo de investir e encalhar</strong><small>Experiências ruins anteriores criam resistência a novos fornecedores</small></div></div>
+      </div>
+
+      <div class="section-label">Sonhos do lojista</div>
+      <div class="info-card">✨ <strong>Financeiro:</strong> faturar mais sem abrir outra loja, ter categoria que vende sozinha</div>
+      <div class="info-card">⚙️ <strong>Operacional:</strong> fornecedor parceiro que aparece, repõe e não some</div>
+      <div class="info-card">🏆 <strong>Reconhecimento:</strong> loja com visual profissional, referência na região</div>
+      <div class="info-card">❤️ <strong>Pessoal:</strong> sair da operação, segurança financeira, orgulho do que construiu</div>
+
+      <div class="section-label">Consequências de não resolver</div>
+      <div class="warn-card">🔴 Faturamento estagnado enquanto custos fixos sobem</div>
+      <div class="warn-card">🔴 Consumidora feminina comprando acessórios em outro canal</div>
+      <div class="warn-card">🔴 Espaço mal aproveitado com custo todo dia</div>
+      <div class="warn-card">🔴 Risco real de fechar por inviabilidade financeira</div>
+    `
+  },
+  {
+    emoji: '📞', label: 'Cadência', title: 'Cadência de Contato',
+    subtitle: 'Como e quando entrar em contato: canal certo, ritmo certo, mensagem certa.',
+    content: `
+      <div class="hero-quote">
+        <div class="q-label">Dado do evento</div>
+        <div class="q-text">Redução de 8x na taxa de contato após 5 minutos do lead chegar. SLA máximo: 5 minutos em horário comercial.</div>
+      </div>
+
+      <div class="section-label">Canal da persona</div>
+      <div class="info-card"><strong>WhatsApp</strong> é o canal principal, onde o lojista trabalha. Ligação como reforço. E-mail não funciona para esse perfil.</div>
+
+      <div class="section-label">Cadência inbound (lead veio dos anúncios)</div>
+      <div class="table-wrap">
+        <div class="cadence-step"><div class="cad-day">Dia 1</div><div class="cad-channel">💬</div><div class="cad-text"><strong>WhatsApp até 5 minutos</strong><span>Qualificação: segmento, faturamento, decisor</span></div></div>
+        <div class="cadence-step"><div class="cad-day">Dia 1</div><div class="cad-channel">💬</div><div class="cad-text"><strong>WhatsApp 2h depois</strong><span>Case + proposta de valor personalizada</span></div></div>
+        <div class="cadence-step"><div class="cad-day">Dia 2</div><div class="cad-channel">📞</div><div class="cad-text"><strong>Ligação pela manhã</strong><span>Direto: proposta de reunião com especialista</span></div></div>
+        <div class="cadence-step"><div class="cad-day">Dia 3</div><div class="cad-channel">💬</div><div class="cad-text"><strong>WhatsApp com urgência real</strong><span>Gatilho de escassez regional verdadeiro</span></div></div>
+        <div class="cadence-step"><div class="cad-day">Dia 5</div><div class="cad-channel">💬</div><div class="cad-text"><strong>WhatsApp de encerramento</strong><span>Abre porta sem pressão. Arquiva após.</span></div></div>
+      </div>
+
+      <div class="section-label">Script de abertura SDR</div>
+      <div class="principle-grid">
+        <div class="principle-card"><div class="p-icon">1️⃣</div><div><div class="p-title">Identificação do segmento</div><div class="p-text">"Bom dia, [nome]! Sou o Robert da Life B. Vi que você se cadastrou no nosso site. Você atua com farmácia ou supermercado?"</div></div></div>
+        <div class="principle-card"><div class="p-icon">2️⃣</div><div><div class="p-title">Coleta do CNPJ</div><div class="p-text">"Me manda o CNPJ da sua loja por gentileza, vou te mandar os detalhes do projeto de acordo com seu tipo de loja."</div></div></div>
+        <div class="principle-card"><div class="p-icon">3️⃣</div><div><div class="p-title">Pesquisa + faturamento</div><div class="p-text">"Parabéns pela loja, localizei aqui no Google. Se não se importar, qual o faturamento médio mensal?"</div></div></div>
+        <div class="principle-card"><div class="p-icon">4️⃣</div><div><div class="p-title">Case + valor</div><div class="p-text">"Faz muito sentido pro seu modelo de loja. O Projeto JLBV é feito exatamente pra isso."</div></div></div>
+        <div class="principle-card"><div class="p-icon">4️⃣</div><div><div class="p-title">Prova social</div><div class="p-text">"Temos cases como a Droga Center aqui no DF que antes faturava R$27.000 em acessórios e hoje está em R$160.000, um aumento de 500%."</div></div></div>
+        <div class="principle-card"><div class="p-icon">5️⃣</div><div><div class="p-title">Agendamento</div><div class="p-text">"Quando você tem uns 20 minutos essa semana? Vou te conectar com o [Natanael/Iramar], nosso especialista, pra te mostrar como ficaria na prática."</div></div></div>
+      </div>
+
+      <div class="warn-card">⚠️ <strong>Proibido usar "tentar".</strong> Diga "vou entrar em contato". Nunca "vou tentar entrar em contato". A palavra transmite insegurança antes de qualquer argumento.</div>
+    `
+  },
+  {
+    emoji: '🔀', label: 'Dois Funis', title: 'Funil SDR + Funil do Representante',
+    subtitle: 'Dois times, dois funis, um cliente. Cada etapa tem dono e critério claro.',
+    content: `
+      <div class="section-label">Funil 1: SDR inbound</div>
+      <div class="funnel-steps">
+        <div class="funnel-step"><div class="step-num">1</div><div class="step-content"><div class="step-title">Conexão</div><div class="step-desc">Primeiro contato até 5 minutos. Identificar segmento e interesse.</div><div class="step-meta">SLA: 5 min</div></div></div>
+        <div class="funnel-step"><div class="step-num">2</div><div class="step-content"><div class="step-title">Qualificação</div><div class="step-desc">Validar segmento, faturamento (drogaria +R$120K / supermercado +R$300K), mínimo 2 anos de empresa, decisor e região (GO/DF).</div><div class="step-meta">Handoff implícito: rep já sabe o que foi validado</div></div></div>
+        <div class="funnel-step"><div class="step-num">3</div><div class="step-content"><div class="step-title">Handoff</div><div class="step-desc">Lead qualificado cai no pipeline do representante com briefing completo.</div></div></div>
+      </div>
+
+      <div class="section-label">Red flags para descarte imediato</div>
+      <div class="checklist">
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>Funcionário sem autonomia</strong><small>Só o dono ou gestor com poder de decisão avança</small></div></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>Sem espaço físico para gôndola</strong><small>Sem espaço, sem projeto possível</small></div></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>Quer produto avulso sem projeto</strong><small>A Life B vende projeto, não catálogo</small></div></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>Fora de GO e DF</strong><small>Região atual de atendimento</small></div></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>Só quer saber preço sem contexto</strong><small>Lead frio que não passou pela qualificação mínima</small></div></div>
+      </div>
+
+      <div class="section-label">Funil 2: Representante</div>
+      <div class="funnel-steps">
+        <div class="funnel-step"><div class="step-num">1</div><div class="step-content"><div class="step-title">Conexão</div><div class="step-desc">Confirmar consistência do handoff + estabelecer rapport. Rep já sabe o que o SDR qualificou.</div><div class="step-meta">Estagnação máxima: 7 dias</div></div></div>
+        <div class="funnel-step"><div class="step-num">2</div><div class="step-content"><div class="step-title">Diagnóstico</div><div class="step-desc">Aprofundar a dor específica do lojista. Fit real com o projeto. Pode ser reunião, vídeo ou ligação estruturada.</div><div class="step-meta">Estagnação máxima: 7 dias</div></div></div>
+        <div class="funnel-step"><div class="step-num">3</div><div class="step-content"><div class="step-title">Solução</div><div class="step-desc">Apresentar projeto conectado à dor levantada. Confirmar aderência e escolha do combo.</div><div class="step-meta">Estagnação máxima: 14 dias</div></div></div>
+        <div class="funnel-step"><div class="step-num">4</div><div class="step-content"><div class="step-title">Negociação</div><div class="step-desc">Pedido realizado, data de implantação definida. Fechamento é burocracia. O sim foi construído antes.</div><div class="step-meta">Estagnação máxima: 30 dias</div></div></div>
+      </div>
+
+      <div class="info-card"><strong>Métrica-chave:</strong> taxa de fechamento de propostas enviadas. Se menos de 50% fecham, estão sendo enviadas propostas demais. A qualificação precisa ser mais rigorosa.</div>
+    `
+  },
+  {
+    emoji: '🧠', label: 'Venda Consultiva', title: 'Venda Consultiva',
+    subtitle: 'Como o lojista decide e como conduzir a conversa para chegar lá.',
+    content: `
+      <div class="section-label">Níveis de consciência do lead</div>
+      <div class="funnel-steps">
+        <div class="funnel-step"><div class="step-num">1</div><div class="step-content"><div class="step-title">Inconsciente: "É quase perfeito"</div><div class="step-desc">Não enxerga problema. Missão: educar e criar consciência da dor.</div></div></div>
+        <div class="funnel-step"><div class="step-num">2</div><div class="step-content"><div class="step-title">Necessidades Implícitas: "Estou insatisfeito"</div><div class="step-desc">Sente o problema mas não sabe nomear. Missão: fazer perguntas que o ajudem a verbalizar.</div></div></div>
+        <div class="funnel-step"><div class="step-num">3</div><div class="step-content"><div class="step-title">Necessidades Explícitas: "Preciso mudar"</div><div class="step-desc">Dor clara, urgência real. Missão: apresentar solução e fechar.</div></div></div>
+      </div>
+
+      <div class="section-label">Os 3 cérebros na decisão de compra</div>
+      <div class="principle-grid">
+        <div class="principle-card"><div class="p-icon">🦎</div><div><div class="p-title">Reptiliano, ativa primeiro</div><div class="p-text">Reage a perda, escassez e urgência. "Esse espaço vazio está custando dinheiro todo dia." Ative com dados de custo de oportunidade.</div></div></div>
+        <div class="principle-card"><div class="p-icon">❤️</div><div><div class="p-title">Límbico, decide</div><div class="p-text">Emoção e empatia. Cases de clientes parecidos, rapport, confiança e orgulho do resultado. A decisão acontece aqui.</div></div></div>
+        <div class="principle-card"><div class="p-icon">🧮</div><div><div class="p-title">Neocórtex, justifica depois</div><div class="p-text">Racionaliza a decisão já tomada. Números, ROI, prazo de retorno. Use para reforçar, não para convencer.</div></div></div>
+      </div>
+
+      <div class="section-label">Perguntas de diagnóstico</div>
+      <div class="checklist">
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>"Como está o faturamento da loja hoje?"</strong><small>Situação, entender contexto sem pressionar</small></div></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>"Tem algum espaço na loja que não está rendendo como deveria?"</strong><small>Dor, gatilho direto da proposta de valor</small></div></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>"Sua cliente feminina costuma comprar mais de uma coisa quando vem à loja?"</strong><small>Implicação, ativa consciência do potencial inexplorado</small></div></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>"O que você esperaria ver nos primeiros 60 dias com o projeto na loja?"</strong><small>Objetivo, ancora no resultado, não no custo</small></div></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>"Já teve experiência com fornecedor que prometeu e não entregou?"</strong><small>Modelo mental, identifica e quebra resistência antes da proposta</small></div></div>
+      </div>
+
+      <div class="hero-quote">
+        <div class="q-label">Princípio</div>
+        <div class="q-text">O funil serve para descartar. O vendedor mais eficiente não é o que mais tenta, é o que descarta mais rápido. Quem articula a dor é quem fecha.</div>
+      </div>
+    `
+  },
+  {
+    emoji: '📦', label: 'Combos', title: 'Combos & Oferta',
+    subtitle: 'A estrutura de entrada e expansão, land com baixo risco, expand com resultado comprovado.',
+    content: `
+      <div class="section-label">Combos para drogarias · versão 01/05/2026</div>
+      <div class="table-wrap">
+        <table class="combo-table">
+          <tr><th>Combo</th><th>Valor</th><th>6 parcelas</th><th>Promotora</th><th></th></tr>
+          <tr><td>Micro</td><td class="combo-price">R$ 929</td><td class="combo-parcel">~R$155/semana</td><td>Não</td><td><span class="combo-tag entry">Entrada</span></td></tr>
+          <tr><td>Mini</td><td class="combo-price">R$ 1.490</td><td class="combo-parcel">~R$248/semana</td><td>Não</td><td><span class="combo-tag entry">Entrada</span></td></tr>
+          <tr><td>Básico</td><td class="combo-price">R$ 1.851</td><td class="combo-parcel">~R$308/semana</td><td>Sim</td><td><span class="combo-tag">Recomendado</span></td></tr>
+          <tr><td>Essencial</td><td class="combo-price">R$ 2.789</td><td class="combo-parcel">~R$465/semana</td><td>Sim</td><td><span class="combo-tag">Popular</span></td></tr>
+          <tr><td>Avançado</td><td class="combo-price">R$ 3.372</td><td class="combo-parcel">~R$562/semana</td><td>Sim</td><td><span class="combo-tag">Alto giro</span></td></tr>
+          <tr><td>Performance</td><td class="combo-price">R$ 3.702</td><td class="combo-parcel">~R$617/semana</td><td>Sim</td><td><span class="combo-tag">Alto giro</span></td></tr>
+          <tr><td>Premium</td><td class="combo-price">R$ 4.629</td><td class="combo-parcel">~R$771/semana</td><td>Sim</td><td><span class="combo-tag">Top</span></td></tr>
+        </table>
+      </div>
+      <div class="info-card">Pagamento semanal: 21/28/35/42/49/56 dias · Sem custo de implantação · Promotora inclusa nos combos Básico e acima</div>
+
+      <div class="section-label">Estratégia Land & Expand</div>
+      <div class="funnel-steps">
+        <div class="funnel-step"><div class="step-num">1</div><div class="step-content"><div class="step-title">Land, Combo Essencial (~R$3.200)</div><div class="step-desc">Oferta de entrada acessível. Reduz CAC e elimina objeção de risco. Micro/Mini para casos especiais.</div></div></div>
+        <div class="funnel-step"><div class="step-num">2</div><div class="step-content"><div class="step-title">Adoção, primeiros 30-60 dias</div><div class="step-desc">Sinal de sucesso: satisfação no visual de loja e melhoria no giro de produtos.</div></div></div>
+        <div class="funnel-step"><div class="step-num">3</div><div class="step-content"><div class="step-title">Expansão, Combo Premium (~R$5.000)</div><div class="step-desc">LTV cresce sem novo CAC. O mesmo cliente compra mais porque confia no resultado.</div></div></div>
+        <div class="funnel-step"><div class="step-num">4</div><div class="step-content"><div class="step-title">Renovação, acompanhamento mensal</div><div class="step-desc">Reposição frequente, melhoria contínua de mix, expansão de categorias.</div></div></div>
+      </div>
+
+      <div class="section-label">Matemática Land & Expand</div>
+      <div class="green-card"><strong>Baixo CAC · Alto LTV · Expansão com previsibilidade</strong><br>Abaixar o ticket de entrada reduz CAC. Subir o combo na reposição aumenta LTV sem custo novo. LTV/CAC é o número que revela a saúde real do negócio.</div>
+    `
+  },
+  {
+    emoji: '📊', label: 'RFV & Segmentos', title: 'RFV e Segmentos de Clientes',
+    subtitle: 'Como classificar a base, priorizar esforço e saber onde está o dinheiro.',
+    content: `
+      <div class="section-label">Os 3 eixos do RFV</div>
+      <div class="table-wrap">
+        <table class="rfv-table">
+          <tr><th>Eixo</th><th>Pergunta</th><th>Referência Life B</th></tr>
+          <tr><td><strong>R · Recência</strong></td><td>Quando foi o último pedido?</td><td>Saudável &lt; 45 dias · Risco &gt; 60 dias · Inativo &gt; 90 dias</td></tr>
+          <tr><td><strong>F · Frequência</strong></td><td>Quantas vezes comprou em 12 meses?</td><td>Meta: 1 pedido/mês · Mínimo: 1 a cada 2 meses</td></tr>
+          <tr><td><strong>V · Valor</strong></td><td>Quanto gerou de receita?</td><td>Alto: +R$5K · Médio: R$2K–5K · Mínimo: R$1.2K</td></tr>
+        </table>
+      </div>
+
+      <div class="section-label">Segmentos e ações</div>
+      <div class="table-wrap">
+        <table class="rfv-table">
+          <tr><th>Segmento</th><th>Perfil</th><th>Ação</th></tr>
+          <tr><td><span class="seg-badge seg-green">Campeões</span></td><td>R alta · F alta · V alto</td><td>Programa de fidelidade, gerente dedicado, benefícios exclusivos</td></tr>
+          <tr><td><span class="seg-badge seg-green">Clientes Fiéis</span></td><td>R média-alta · F alta · V alto</td><td>Expandir, cross-sell, up-sell, expansão de mix</td></tr>
+          <tr><td><span class="seg-badge seg-blue">Potencialmente Fiéis</span></td><td>R alta · F média · V médio</td><td>Nutrir, cadência de conversão, oferecer mix completo</td></tr>
+          <tr><td><span class="seg-badge seg-blue">Clientes Novos</span></td><td>R alta · F baixa · V baixo</td><td>Onboarding, atenção nos primeiros 90 dias</td></tr>
+          <tr><td><span class="seg-badge seg-amber">Demandam Atenção</span></td><td>R média · F média · V médio</td><td>Ligação de relacionamento, entender a desaceleração</td></tr>
+          <tr><td><span class="seg-badge seg-red">Em Risco</span></td><td>R baixa · F média-alta · V médio-alto</td><td>Ataque em 48h, gerente liga com oferta forte</td></tr>
+          <tr><td><span class="seg-badge seg-red">Não Podemos Perder</span></td><td>R baixa · F alta · V muito alto</td><td>Emergência nível 1, diretor envolvido em 24h</td></tr>
+          <tr><td><span class="seg-badge seg-gray">Quase Inativos</span></td><td>R baixa · F baixa · V baixo</td><td>Reativação automatizada, WhatsApp com oferta de retorno</td></tr>
+        </table>
+      </div>
+
+      <div class="section-label">Régua de inativação</div>
+      <div class="funnel-steps">
+        <div class="funnel-step"><div class="step-num">30</div><div class="step-content"><div class="step-title">dias sem pedido → Alerta</div><div class="step-desc">Rep recebe notificação. Obrigação de contato ativo imediato.</div></div></div>
+        <div class="funnel-step"><div class="step-num">60</div><div class="step-content"><div class="step-title">dias sem pedido → Risco</div><div class="step-desc">Rep apresenta plano de reativação ao gestor.</div></div></div>
+        <div class="funnel-step"><div class="step-num">90</div><div class="step-content"><div class="step-title">dias sem pedido → Saiu da carteira</div><div class="step-desc">Cliente vai para missão de reativação. Rep perde a comissão recorrente. Reativar vale pontos dobrados no ranking.</div></div></div>
+      </div>
+
+      <div class="hero-quote">
+        <div class="q-label">Wallet Matrix</div>
+        <div class="q-text">Gap absoluto bate gap percentual. 10% de R$1 milhão vale mais esforço que 50% de R$100 mil. Ranqueie por gap em reais, não por percentual.</div>
+      </div>
+    `
+  },
+  {
+    emoji: '🏆', label: 'Gamificação', title: 'Gamificação dos Representantes',
+    subtitle: 'Como transformar o comportamento certo em recompensa, sem depender só de comissão.',
+    content: `
+      <div class="hero-quote">
+        <div class="q-label">Princípio</div>
+        <div class="q-text">O cliente é da empresa, não do vendedor. A carteira do rep é um privilégio mantido com resultado, não um direito adquirido.</div>
+      </div>
+
+      <div class="section-label">O que pontua no jogo</div>
+      <div class="checklist">
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>Nova implantação</strong><small>Expansão de base, abertura de novo cliente</small></div></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>Reposição no prazo</strong><small>Indica giro saudável e relacionamento ativo</small></div></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>Expansão de mix no cliente existente</strong><small>LTV crescendo, up-sell e cross-sell reais</small></div></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>Cliente ativo há 3+ meses</strong><small>Retenção comprovada, pontos por consistência</small></div></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>Indicação de novo cliente</strong><small>Prova de confiança, vale mais pontos</small></div></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>Cliente sobe de cluster (Bronze → Prata)</strong><small>Fidelização com resultado real</small></div></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><div class="check-text"><strong>Reativação de cliente inativo</strong><small>Vale pontos dobrados, custa menos que adquirir novo</small></div></div>
+      </div>
+
+      <div class="section-label">Níveis do representante</div>
+      <div class="table-wrap">
+        <table class="rfv-table">
+          <tr><th>Nível</th><th>Critério</th><th>Benefício</th></tr>
+          <tr><td><span class="seg-badge seg-gray">Iniciante</span></td><td>Base pequena, reposições irregulares</td><td>Comissão padrão</td></tr>
+          <tr><td><span class="seg-badge seg-blue">Ativo</span></td><td>X clientes ativos + reposição regular</td><td>Comissão maior + bônus mensal</td></tr>
+          <tr><td><span class="seg-badge seg-green">Especialista</span></td><td>Clientes Prata/Ouro + expansão de mix</td><td>Comissão premium + bonificação em produto</td></tr>
+          <tr><td><span class="seg-badge seg-red">Embaixador</span></td><td>Top performer + fidelizados + indicações</td><td>Viagem, experiência, reconhecimento público</td></tr>
+        </table>
+      </div>
+
+      <div class="section-label">Regras do jogo</div>
+      <div class="info-card"><strong>Rotação de clientes:</strong> o rep que não mantém o cliente ativo perde a carteira após 90 dias. Evita sequestro de relacionamento e garante que o cliente ama a Life B, não o rep.</div>
+      <div class="info-card"><strong>Bônus de consistência:</strong> quem bate meta por 3 meses seguidos ganha multiplicador nos pontos seguintes.</div>
+      <div class="warn-card"><strong>Missão de reativação:</strong> cliente inativo 90+ dias sai da carteira e vira missão, quem reativar em 15 dias ganha pontos dobrados.</div>
+    `
+  },
+  {
+    emoji: '⚡', label: 'Regras de Ouro', title: 'Regras de Ouro do Time',
+    subtitle: 'Os princípios que separam quem fecha de quem só prospecta.',
+    content: `
+      <div class="principle-grid">
+        <div class="principle-card"><div class="p-icon">🗣️</div><div><div class="p-title">Proibido usar "tentar"</div><div class="p-text">Diga "vou entrar em contato". Nunca "vou tentar entrar em contato". A palavra sinaliza insegurança. O lojista percebe antes mesmo do conteúdo.</div></div></div>
+        <div class="principle-card"><div class="p-icon">🎯</div><div><div class="p-title">Funil serve para descartar</div><div class="p-text">O vendedor eficiente descarta rápido. Se menos de 50% das propostas fecham, estão saindo propostas demais. Qualifique mais, proponha menos.</div></div></div>
+        <div class="principle-card"><div class="p-icon">🔄</div><div><div class="p-title">O fechamento acontece antes do fechamento</div><div class="p-text">Se chegou na proposta e ainda precisa convencer, o processo falhou antes. A negociação é burocracia de um sim já construído.</div></div></div>
+        <div class="principle-card"><div class="p-icon">🤝</div><div><div class="p-title">Rapport é contínuo</div><div class="p-text">O rep que lembra o nome do dono, sabe o que vendeu mais no mês passado e aparece sem precisar vender, esse rep não é substituível.</div></div></div>
+        <div class="principle-card"><div class="p-icon">💰</div><div><div class="p-title">Quanto mais próximo da receita, mais indispensável</div><div class="p-text">O rep que mostra quanto a gôndola gerou no mês não é representante, é gestor de categoria. O lojista precisa saber responder: "quanto faturei com a Life B esse mês?"</div></div></div>
+        <div class="principle-card"><div class="p-icon">📊</div><div><div class="p-title">SLA de 5 minutos para inbound</div><div class="p-text">Após 5 minutos do lead chegar, a taxa de contato cai 8x. O lead ainda está com o celular na mão, só nos primeiros minutos.</div></div></div>
+        <div class="principle-card"><div class="p-icon">🧠</div><div><div class="p-title">O adversário é a consciência do lead</div><div class="p-text">O lojista não deixa de comprar por causa de concorrente. Ele não compra porque não enxerga o problema. Elevar essa consciência é a primeira missão.</div></div></div>
+        <div class="principle-card"><div class="p-icon">🏗️</div><div><div class="p-title">Não existe estratégia sem posicionamento</div><div class="p-text">Antes de gerar demanda, fechar o posicionamento. Mensagem ampla é mensagem fraca. Nicho primeiro, expansão depois.</div></div></div>
+      </div>
+
+      <div class="hero-quote">
+        <div class="q-label">Arena de Crescimento · Growth Machine</div>
+        <div class="q-text">"Não é sobre o que vendemos. É sobre como vendemos."</div>
+        <div class="q-author">Erick Loureiro</div>
+      </div>
+
+      <div class="section-label">Leitura recomendada</div>
+      <div class="principle-card" style="margin-bottom:8px"><div class="p-icon">📚</div><div><div class="p-title">Sonho Grande · Cristiane Correa</div><div class="p-text">A história de Lemann, Telles e Sicupira. Cultura de meritocracia, mentalidade de dono e crescimento via processos, não via pessoas heroicas.</div></div></div>
+    `
+  },
+  {
+    emoji: '🛠️', label: 'Tecnologia', title: 'Stack de Tecnologia',
+    subtitle: 'As ferramentas certas, na ordem certa, sem complexidade desnecessária.',
+    content: `
+      <div class="section-label">Stack recomendada</div>
+      <div class="stack-card"><div class="stack-icon">📋</div><div><div class="stack-name">Agendor</div><div class="stack-desc">CRM do representante. Pipeline visual, histórico de clientes, base do RFV e régua de inativação.</div></div><div class="stack-priority pri-1">1ª prioridade</div></div>
+      <div class="stack-card"><div class="stack-icon">⚙️</div><div><div class="stack-name">GS Engage</div><div class="stack-desc">Cadências do SDR. Prospecção, engajamento e gestão de atividades. Integra com Agendor.</div></div><div class="stack-priority pri-2">2ª prioridade</div></div>
+      <div class="stack-card"><div class="stack-icon">🤖</div><div><div class="stack-name">PROSPCT.AI</div><div class="stack-desc">Geração e qualificação de leads para outbound. Quando a operação outbound estiver estruturada.</div></div><div class="stack-priority pri-3">3ª prioridade</div></div>
+      <div class="stack-card"><div class="stack-icon">🧠</div><div><div class="stack-name">Station AI</div><div class="stack-desc">PSF, SPIN Selling e scripts gerados por IA. Acelera o que foi construído manualmente.</div></div><div class="stack-priority pri-3">Complementar</div></div>
+
+      <div class="section-label">Fluxo integrado</div>
+      <div class="funnel-steps">
+        <div class="funnel-step"><div class="step-num">1</div><div class="step-content"><div class="step-title">Lead entra via Meta Ads</div><div class="step-desc">WhatsApp ou formulário da landing page.</div></div></div>
+        <div class="funnel-step"><div class="step-num">2</div><div class="step-content"><div class="step-title">SDR aborda em até 5 minutos</div><div class="step-desc">GS Engage organiza a cadência e registra cada contato.</div></div></div>
+        <div class="funnel-step"><div class="step-num">3</div><div class="step-content"><div class="step-title">Lead qualificado vai para o Agendor</div><div class="step-desc">Handoff automático. Rep recebe no pipeline já com briefing do SDR.</div></div></div>
+        <div class="funnel-step"><div class="step-num">4</div><div class="step-content"><div class="step-title">Rep trabalha no Agendor</div><div class="step-desc">Atualiza status, registra pedido, monitora giro e recebe alertas de inativação.</div></div></div>
+        <div class="funnel-step"><div class="step-num">5</div><div class="step-content"><div class="step-title">Gestor monitora em tempo real</div><div class="step-desc">Dashboard de performance por rep, produtividade, conversão, carteira ativa e alertas.</div></div></div>
+      </div>
+
+      <div class="info-card"><strong>Agente SDR (próxima fase):</strong> n8n + Gemini Flash qualifica o lead automaticamente, identifica GO ou DF e atribui ao Iramar ou Natanael via proxy. Speed to lead cai de 90h para menos de 5 minutos.</div>
+    `
+  }
+];
+
+let current = 0;
+const STORAGE_KEY = 'lifeb-playbook-arena';
+
+// ── PERSISTÊNCIA ─────────────────────────────────────────────────
+function saveState() {
+  const state = {};
+  document.querySelectorAll('.check-item[data-key]').forEach(el => {
+    state[el.dataset.key] = el.classList.contains('done') ? 1 : 0;
+  });
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(_) {}
+}
+
+function restoreState() {
+  let state = {};
+  try { state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(_) {}
+  document.querySelectorAll('.check-item[data-key]').forEach(el => {
+    if (state[el.dataset.key]) el.classList.add('done');
+  });
+}
+
+function assignKeys() {
+  document.querySelectorAll('.step-page').forEach((page, si) => {
+    page.querySelectorAll('.check-item').forEach((item, ci) => {
+      item.dataset.key = `s${si}c${ci}`;
+    });
+  });
+}
+
+// ── CONSTRUÇÃO ───────────────────────────────────────────────────
+function buildNav() {
+  document.getElementById('navScroll').innerHTML = modules.map((m, i) =>
+    `<button class="nav-pill ${i===0?'active':''}" onclick="goTo(${i})" id="pill-${i}">${m.emoji} ${m.label}</button>`
+  ).join('');
+}
+
+function buildContent() {
+  document.getElementById('mainContent').innerHTML = modules.map((m, i) => `
+    <div class="step-page ${i===0?'active':''}" id="page-${i}">
+      <div class="mod-eyebrow"><span class="emoji">${m.emoji}</span><span>${m.label}</span><span class="num">${String(i+1).padStart(2,'0')}</span></div>
+      <h1 class="mod-title">${m.title}</h1>
+      <p class="mod-subtitle">${m.subtitle}</p>
+      ${m.content}
+    </div>`).join('');
+}
+
+// ── UI ───────────────────────────────────────────────────────────
+function updateUI() {
+  document.querySelectorAll('.step-page').forEach((p,i) => p.classList.toggle('active', i===current));
+  document.querySelectorAll('.nav-pill').forEach((p,i) => p.classList.toggle('active', i===current));
+  const pill = document.getElementById(`pill-${current}`);
+  if (pill) pill.scrollIntoView({behavior:'smooth', block:'nearest', inline:'center'});
+  document.getElementById('progressFill').style.width = (current/(modules.length-1)*100)+'%';
+  document.getElementById('stepCounter').textContent = `${current+1} / ${modules.length}`;
+  document.getElementById('btnPrev').disabled = current===0;
+  document.getElementById('btnNext').textContent = current===modules.length-1 ? '↩ Início' : 'Próximo →';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function navigate(dir) {
+  if (dir===1 && current===modules.length-1) { current=0; }
+  else { current = Math.max(0, Math.min(modules.length-1, current+dir)); }
+  updateUI();
+}
+
+function goTo(i) { current=i; updateUI(); }
+
+function toggleCheck(el) {
+  el.classList.toggle('done');
+  saveState();
+}
+
+function resetAll() {
+  if (!confirm('Resetar todos os checklists?')) return;
+  document.querySelectorAll('.check-item').forEach(el => el.classList.remove('done'));
+  try { localStorage.removeItem(STORAGE_KEY); } catch(_) {}
+  current = 0;
+  updateUI();
+}
+
+// ── SWIPE ────────────────────────────────────────────────────────
+let _sx = 0, _sy = 0, _swipeOk = false;
+document.addEventListener('touchstart', e => {
+  _swipeOk = !e.target.closest('[data-no-swipe], .table-wrap');
+  _sx = e.changedTouches[0].screenX;
+  _sy = e.changedTouches[0].screenY;
+}, { passive: true });
+document.addEventListener('touchend', e => {
+  if (!_swipeOk) return;
+  const dx = e.changedTouches[0].screenX - _sx;
+  const dy = e.changedTouches[0].screenY - _sy;
+  if (Math.abs(dx) > 65 && Math.abs(dx) > Math.abs(dy) * 1.8) navigate(dx < 0 ? 1 : -1);
+}, { passive: true });
+
+// ── TECLADO ──────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key==='ArrowRight') navigate(1);
+  if (e.key==='ArrowLeft') navigate(-1);
+});
+
+// ── INIT ─────────────────────────────────────────────────────────
+buildNav();
+buildContent();
+assignKeys();
+restoreState();
+updateUI();
+</script>
+</body>
+</html>
