@@ -553,6 +553,45 @@
     @media (max-width: 960px) {
       #dashboard { padding: 20px 20px 28px; }
     }
+
+    /* ── SAÚDE DA CARTEIRA — semáforo de idade dos leads ativos ── */
+    .carteira { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 12px; min-width: 0; }
+    .cart-cell { background: var(--card); border: 1px solid var(--border); border-top: 4px solid var(--muted); border-radius: 14px; padding: 14px 10px; text-align: center; overflow: hidden; }
+    .cart-cell.green { border-top-color: var(--green);  background: linear-gradient(180deg,#f0fbf4 0%,#fff 55%); }
+    .cart-cell.amber { border-top-color: var(--orange); background: linear-gradient(180deg,#fffbf0 0%,#fff 55%); }
+    .cart-cell.red   { border-top-color: var(--red);    background: linear-gradient(180deg,#fff5f5 0%,#fff 55%); }
+    .cart-num { font-size: 30px; font-weight: 800; line-height: 1; }
+    .cart-cell.green .cart-num { color: var(--green); }
+    .cart-cell.amber .cart-num { color: var(--orange); }
+    .cart-cell.red   .cart-num { color: var(--red); }
+    .cart-label { font-size: 10.5px; font-weight: 700; color: var(--muted); margin-top: 7px; text-transform: uppercase; letter-spacing: .3px; }
+    .cart-cell.red.alert { animation: cart-pulse 2.2s ease-in-out infinite; }
+    @keyframes cart-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(220,38,38,0); } 50% { box-shadow: 0 0 0 4px rgba(220,38,38,.12); } }
+
+    /* ── DESEMPENHO POR REPRESENTANTE ── */
+    .rep-grid { display: grid; grid-template-columns: 1fr; gap: 12px; min-width: 0; }
+    @media (min-width: 640px)  { .rep-grid { grid-template-columns: 1fr 1fr; } }
+    @media (min-width: 1024px) { .rep-grid { grid-template-columns: 1fr 1fr 1fr; } }
+    .rep-card { background: var(--card); border: 1px solid var(--border); border-top: 4px solid var(--purple); border-radius: 16px; padding: 16px 16px 14px; box-shadow: 0 2px 10px rgba(112,75,155,.06); min-width: 0; }
+    .rep-card-hd { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+    .rep-name { font-size: 16px; font-weight: 800; color: var(--text); letter-spacing: .3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rep-conv { font-size: 11px; font-weight: 800; padding: 3px 10px; border-radius: 20px; background: rgba(112,75,155,.08); color: var(--purple); border: 1px solid rgba(112,75,155,.2); white-space: nowrap; flex-shrink: 0; }
+    .rep-aging { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+    .aging-chip { display: flex; align-items: center; gap: 5px; font-size: 14px; font-weight: 800; }
+    .aging-chip.green { color: var(--green); }
+    .aging-chip.amber { color: var(--orange); }
+    .aging-chip.red   { color: var(--red); }
+    .aging-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .aging-dot.green { background: var(--green); }
+    .aging-dot.amber { background: var(--orange); }
+    .aging-dot.red   { background: var(--red); }
+    .aging-total { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+    .rep-metrics { display: grid; gap: 12px 8px; }
+    .rep-metrics.cols-3 { grid-template-columns: repeat(3, 1fr); }
+    .rep-metrics.cols-2 { grid-template-columns: repeat(2, 1fr); margin-top: 12px; }
+    .rep-metric { text-align: center; min-width: 0; }
+    .rm-val { font-size: 17px; font-weight: 800; color: var(--text); line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rm-label { font-size: 9.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .3px; margin-top: 4px; }
   </style>
 </head>
 <body>
@@ -584,94 +623,79 @@
 <div id="dashboard">
   <div id="error-banner"></div>
 
-  <!-- 9 CARDS -->
+  <!-- KPIs PRINCIPAIS (6) -->
   <div class="cards-row">
 
-    <!-- 1. Total de Leads -->
-    <div class="card card-rt">
-      <div class="rt-icon">&#128203;</div>
-      <div class="rt-num" id="card-total">—</div>
-      <div class="rt-label">Total de Leads Registrados</div>
-      <div class="rt-sub" id="rt-cpl-sdr">CUSTO POR LEAD: —</div>
+    <!-- Receita Total (destaque) -->
+    <div class="card card-stat accent-highlight">
+      <div class="s-label">Receita Total</div>
+      <div class="s-val" id="card-receita" style="color:var(--purple);white-space:nowrap;font-size:22px">—</div>
+      <div class="s-sub" id="card-receita-sub">total fechado</div>
     </div>
 
-    <!-- 2. Qualificados SDR -->
-    <div class="card card-stat accent-purple">
-      <div class="s-label">Qualificados</div>
-      <div class="s-val" id="card-qualif" style="color:var(--purple)">—</div>
-      <div class="s-sub">pelo SDR</div>
-    </div>
-
-    <!-- 3. Em Tratativa -->
-    <div class="card card-stat accent-blue">
-      <div class="s-label">Em Tratativa</div>
-      <div class="s-val" id="card-tratativa" style="color:var(--blue)">—</div>
-      <div class="s-sub">aguardando + contato + neg.</div>
-    </div>
-
-    <!-- 4. Fechamentos -->
+    <!-- Fechamentos -->
     <div class="card card-stat accent-green">
       <div class="s-label">Fechamentos</div>
       <div class="s-val" id="card-fechados" style="color:var(--green)">—</div>
       <div class="s-sub" id="card-fechados-sub">contratos</div>
     </div>
 
-    <!-- 5. Receita Total -->
-    <div class="card card-stat accent-highlight">
-      <div class="s-label">Receita Total</div>
-      <div class="s-val" id="card-receita" style="color:var(--purple);white-space:nowrap;font-size:20px">—</div>
-      <div class="s-sub" id="card-receita-sub">média — / contrato</div>
-    </div>
-
-    <!-- 6. Taxa de Conversão -->
+    <!-- Conversão -->
     <div class="card card-stat accent-orange">
-      <div class="s-label">Taxa de Conversão</div>
+      <div class="s-label">Conversão</div>
       <div class="s-val" id="card-conv" style="color:var(--orange)">—</div>
-      <div class="s-sub">fechados / qualificados SDR</div>
+      <div class="s-sub">fechados / qualificados</div>
     </div>
 
-    <!-- 7. Potencial -->
+    <!-- Potencial em Aberto -->
     <div class="card card-stat accent-magenta">
       <div class="s-label">Potencial em Aberto</div>
       <div class="s-val" id="card-potencial" style="color:var(--magenta);white-space:nowrap;font-size:20px">—</div>
-      <div class="s-sub">pipeline ativo (pode virar receita)</div>
+      <div class="s-sub">pipeline ativo</div>
     </div>
 
-    <!-- 8. Investimento ADS -->
+    <!-- Investimento ADS -->
     <div class="card card-stat accent-cyan">
       <div class="s-label">Investimento ADS</div>
-      <div class="s-val" id="card-ads" style="color:#0891b2">—</div>
+      <div class="s-val" id="card-ads" style="color:#0891b2;font-size:22px">—</div>
       <div class="s-sub" id="card-ads-sub">total investido</div>
     </div>
 
-    <!-- 9. ROAS -->
+    <!-- ROAS -->
     <div class="card card-stat accent-teal">
       <div class="s-label">ROAS</div>
       <div class="s-val" id="card-roas" style="color:#0d9488">—</div>
       <div class="s-sub">receita / investimento</div>
     </div>
 
-    <!-- 10. ACOS -->
-    <div class="card card-stat accent-amber">
-      <div class="s-label">ACOS</div>
-      <div class="s-val" id="card-acos" style="color:#b45309">—</div>
-      <div class="s-sub">invest. / receita</div>
-    </div>
-
-    <!-- 11. CAC -->
-    <div class="card card-stat accent-violet">
-      <div class="s-label">CAC</div>
-      <div class="s-val" id="card-cac" style="color:#7c3aed;font-size:20px">—</div>
-      <div class="s-sub">invest. / fechamentos</div>
-    </div>
-
-    <div class="card card-stat accent-indigo card-speed">
-      <div class="s-label">Speed to Lead</div>
-      <div class="s-val" id="card-speed-to-lead" style="color:#4f46e5;font-size:20px">—</div>
-      <div class="s-sub">tempo médio 1º contato</div>
-    </div>
-
   </div><!-- /.cards-row -->
+
+  <!-- SAÚDE DA CARTEIRA — semáforo de idade dos leads ativos -->
+  <div class="carteira">
+    <div class="cart-cell green">
+      <div class="cart-num" id="cart-verde">—</div>
+      <div class="cart-label">No prazo · ≤ 15d</div>
+    </div>
+    <div class="cart-cell amber">
+      <div class="cart-num" id="cart-amarelo">—</div>
+      <div class="cart-label">Atenção · 16–30d</div>
+    </div>
+    <div class="cart-cell red" id="cart-cell-red">
+      <div class="cart-num" id="cart-vermelho">—</div>
+      <div class="cart-label">Esfriando · + 30d</div>
+    </div>
+  </div>
+
+  <!-- DESEMPENHO POR REPRESENTANTE -->
+  <div class="card" style="margin-bottom:12px;padding:16px">
+    <div class="card-hd" style="margin-bottom:16px">
+      <div class="card-hd-title">Desempenho por Representante</div>
+      <span class="badge" id="reps-count">—</span>
+    </div>
+    <div class="rep-grid" id="rep-grid">
+      <div style="grid-column:1/-1;text-align:center;color:#c8c2d6;font-style:italic;font-size:13px;padding:8px">Carregando...</div>
+    </div>
+  </div><!-- /.rep panel -->
 
   <!-- FUNIS -->
   <div class="funnel-row">
@@ -700,69 +724,11 @@
 
   </div><!-- /.funnel-row -->
 
-  <!-- TABLES -->
-  <div class="tables-row">
-
-    <!-- Por Representante -->
+  <!-- FECHAMENTOS RECENTES (única lista lead-a-lead mantida) -->
+  <div class="tables-row" style="grid-template-columns:1fr">
     <div class="card">
       <div class="card-hd">
-        <div class="card-hd-title">Por Representante</div>
-        <span id="reps-media-dias" class="badge" style="white-space:nowrap"></span>
-      </div>
-      <div class="ts-wrap ts-reps">
-        <div class="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>Rep</th>
-                <th>Total</th>
-                <th>Ag.</th>
-                <th>Cont.</th>
-                <th>Neg.</th>
-                <th>Fech.</th>
-                <th>Perd.</th>
-                <th>Receita</th>
-              </tr>
-            </thead>
-            <tbody id="tb-reps">
-              <tr class="empty-row"><td colspan="8">Carregando...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- Últimos Leads -->
-    <div class="card">
-      <div class="card-hd">
-        <div class="card-hd-title">Últimos Leads</div>
-        <span id="latest-media-dia" class="badge" style="white-space:nowrap"></span>
-      </div>
-      <div class="ts-wrap">
-        <div class="table-scroll">
-          <table style="table-layout:fixed;width:100%;min-width:400px;font-size:11px">
-            <colgroup>
-              <col style="width:140px">
-              <col style="width:80px">
-              <col style="width:180px">
-            </colgroup>
-            <thead><tr>
-              <th class="td-left" style="text-align:left">Nome / Empresa</th>
-              <th style="text-align:center">Entrada</th>
-              <th style="text-align:center">Status SDR</th>
-            </tr></thead>
-            <tbody id="tb-latest">
-              <tr class="empty-row"><td colspan="3">Carregando...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- Fechamentos -->
-    <div class="card">
-      <div class="card-hd">
-        <div class="card-hd-title">Fechamentos</div>
+        <div class="card-hd-title">Fechamentos Recentes</div>
         <span id="fechados-cac" class="badge" style="white-space:nowrap"></span>
       </div>
       <div class="ts-wrap ts-fechados">
@@ -784,79 +750,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Leads Ativos — Goiás -->
-    <div class="card">
-      <div class="card-hd">
-        <div class="card-hd-title">Leads Ativos — Goiás</div>
-        <span class="badge" id="ativos-badge-go">—</span>
-      </div>
-      <div class="ts-wrap ts-ativos">
-        <div class="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th class="td-left" style="text-align:left">Empresa</th>
-                <th class="td-left" style="text-align:left">Rep</th>
-                <th class="td-left" style="text-align:left">Status</th>
-              </tr>
-            </thead>
-            <tbody id="tb-ativos-go">
-              <tr class="empty-row"><td colspan="3">Carregando...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- Leads Ativos — DF -->
-    <div class="card">
-      <div class="card-hd">
-        <div class="card-hd-title">Leads Ativos — DF</div>
-        <span class="badge" id="ativos-badge-df">—</span>
-      </div>
-      <div class="ts-wrap ts-ativos">
-        <div class="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th class="td-left" style="text-align:left">Empresa</th>
-                <th class="td-left" style="text-align:left">Rep</th>
-                <th class="td-left" style="text-align:left">Status</th>
-              </tr>
-            </thead>
-            <tbody id="tb-ativos-df">
-              <tr class="empty-row"><td colspan="3">Carregando...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- Leads Ativos — Outros (oculto quando vazio) -->
-    <div class="card" id="card-ativos-outros" style="display:none">
-      <div class="card-hd">
-        <div class="card-hd-title">Leads Ativos — Outros</div>
-        <span class="badge" id="ativos-badge-outros">—</span>
-      </div>
-      <div class="ts-wrap ts-ativos">
-        <div class="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th class="td-left" style="text-align:left">Empresa</th>
-                <th class="td-left" style="text-align:left">Rep</th>
-                <th class="td-left" style="text-align:left">Status</th>
-              </tr>
-            </thead>
-            <tbody id="tb-ativos-outros">
-              <tr class="empty-row"><td colspan="3">Carregando...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
   </div><!-- /.tables-row -->
 
 </div><!-- /#dashboard -->
@@ -927,26 +820,6 @@ function onSheetChanged() {
     banner.classList.add('show');
     setTimeout(() => banner.classList.remove('show'), 4600);
   }
-}
-
-function statusBadge(status) {
-  const s = String(status || '').trim();
-  if (s === 'Aguardando contato') return `<span class="status-badge badge-ag-cont">${esc(s)}</span>`;
-  if (s === 'Em contato')         return `<span class="status-badge badge-em-cont">${esc(s)}</span>`;
-  if (s === 'Em negociação')      return `<span class="status-badge badge-em-neg">${esc(s)}</span>`;
-  if (s === 'Fechado')            return `<span class="status-badge badge-fechado">${esc(s)}</span>`;
-  if (s === 'Perdido')            return `<span class="status-badge badge-perdido">${esc(s)}</span>`;
-  return `<span class="status-badge" style="background:#f3f4f6;color:#6b7280">${esc(s) || '—'}</span>`;
-}
-
-function statusBadgeSdr(s) {
-  const st = String(s || '').trim();
-  if (st === 'Aguardando abordagem') return `<span class="status-badge badge-sdr-ag">${esc(st)}</span>`;
-  if (st === 'Em abordagem')         return `<span class="status-badge badge-sdr-em">${esc(st)}</span>`;
-  if (st === 'Qualificado')          return `<span class="status-badge badge-sdr-qual">${esc(st)}</span>`;
-  if (st === 'Sem retorno SDR')      return `<span class="status-badge badge-sdr-sem">${esc(st)}</span>`;
-  if (st === 'Fora do perfil')       return `<span class="status-badge badge-sdr-fora">${esc(st)}</span>`;
-  return `<span class="status-badge badge-sdr-sem">${esc(st) || '—'}</span>`;
 }
 
 // ── LOADING BAR ──────────────────────────────────────────────
@@ -1033,14 +906,8 @@ function renderFunilBar(containerId, items, total) {
 
 function renderSummary(data) {
   try {
-    const { sdr = {}, vend = {}, receita = 0, pipeline = 0, total = 0, media_dias = 0, media_speed_to_lead = 0 } = data;
+    const { sdr = {}, vend = {}, receita = 0, pipeline = 0 } = data;
     const el = id => document.getElementById(id);
-
-    if (el('card-total'))    el('card-total').textContent    = n(total);
-    if (el('card-qualif'))   el('card-qualif').textContent   = n(sdr.qualif || 0);
-
-    const tratativa = (vend.ag_cont || 0) + (vend.em_cont || 0) + (vend.em_neg || 0);
-    if (el('card-tratativa')) el('card-tratativa').textContent = n(tratativa);
 
     const fechados = vend.fechado || 0;
     if (el('card-fechados')) el('card-fechados').textContent = n(fechados);
@@ -1049,37 +916,18 @@ function renderSummary(data) {
       el('card-fechados-sub').textContent = perdidos > 0 ? `${n(perdidos)} perdido${perdidos > 1 ? 's' : ''}` : 'nenhum perdido';
     }
 
-    if (el('card-receita'))  el('card-receita').textContent  = cur(receita);
-    if (el('card-receita-sub') && fechados > 0) {
-      el('card-receita-sub').textContent = `média ${cur(Math.round(receita / fechados))} · ${media_dias}d para fechar`;
+    if (el('card-receita')) el('card-receita').textContent = cur(receita);
+    if (el('card-receita-sub')) {
+      el('card-receita-sub').textContent = fechados > 0
+        ? `ticket médio ${cur(Math.round(receita / fechados))}`
+        : 'total fechado';
     }
 
     // Taxa de conversão: fechados / qualificados
     const qualif = sdr.qualif || 0;
-    const conv = qualif > 0 ? ((fechados / qualif) * 100).toFixed(1) + '%' : '—';
-    if (el('card-conv')) el('card-conv').textContent = conv;
+    if (el('card-conv')) el('card-conv').textContent = qualif > 0 ? ((fechados / qualif) * 100).toFixed(1) + '%' : '—';
 
     if (el('card-potencial')) el('card-potencial').textContent = cur(pipeline);
-
-    const repsDiasEl = document.getElementById('reps-media-dias');
-    if (repsDiasEl && media_dias > 0) repsDiasEl.textContent = `FECH: ${media_dias}d`;
-    const stlEl = document.getElementById('card-speed-to-lead');
-    if (stlEl) {
-      if (media_speed_to_lead > 0) {
-        const h = Math.floor(media_speed_to_lead / 60);
-        const m = media_speed_to_lead % 60;
-        stlEl.textContent = h > 0 ? `${h}h ${m}min` : `${m}min`;
-      } else {
-        stlEl.textContent = '—';
-      }
-    }
-
-    const mediaEl = document.getElementById('latest-media-dia');
-    if (mediaEl && data.firstDate && total > 0) {
-      const inicio = new Date(data.firstDate + 'T00:00:00');
-      const dias = Math.max(1, Math.ceil((Date.now() - inicio.getTime()) / 86400000));
-      mediaEl.textContent = `${(total / dias).toFixed(1)}/DIA`;
-    }
 
     const periodEl = document.getElementById('header-period');
     if (periodEl && data.firstDate) {
@@ -1091,6 +939,28 @@ function renderSummary(data) {
 
   } catch(err) {
     _log.error('summary', 'Erro ao renderizar summary', err);
+  }
+}
+
+// ── HELPERS DE FORMATO ───────────────────────────────────────
+function fmtSpeed(min) {
+  if (!min || min <= 0) return '—';
+  const h = Math.floor(min / 60), m = min % 60;
+  return h > 0 ? (m > 0 ? `${h}h ${m}min` : `${h}h`) : `${m}min`;
+}
+
+// Soma os baldes de idade de todos os reps → strip "Saúde da Carteira"
+function renderCarteira(reps) {
+  try {
+    const v = reps.reduce((s, r) => s + (r.verde    || 0), 0);
+    const a = reps.reduce((s, r) => s + (r.amarelo  || 0), 0);
+    const x = reps.reduce((s, r) => s + (r.vermelho || 0), 0);
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = n(val); };
+    set('cart-verde', v); set('cart-amarelo', a); set('cart-vermelho', x);
+    const redCell = document.getElementById('cart-cell-red');
+    if (redCell) redCell.classList.toggle('alert', x > 0);
+  } catch(err) {
+    _log.error('carteira', 'Erro ao renderizar carteira', err);
   }
 }
 
@@ -1130,85 +1000,53 @@ function renderFunnel(data) {
 
 function renderReps(data) {
   try {
-    const tbody = document.getElementById('tb-reps');
-    if (!tbody) return;
+    const grid = document.getElementById('rep-grid');
+    if (!grid) return;
     const reps = (data.reps || []).filter(r => r.rep !== 'Sem vendedor');
-    if (!reps.length) { tbody.innerHTML = emptyRow(8); return; }
-    tbody.innerHTML = reps.map(r => `
-      <tr>
-        <td>${esc(r.rep)}</td>
-        <td>${n(r.total)}</td>
-        <td>${n(r.ag_cont)}</td>
-        <td>${n(r.em_cont)}</td>
-        <td>${n(r.em_neg)}</td>
-        <td>${n(r.fechado)}</td>
-        <td>${n(r.perdido || 0)}</td>
-        <td>${cur(r.receita)}</td>
-      </tr>`).join('');
+    const countEl = document.getElementById('reps-count');
+    if (countEl) countEl.textContent = `${reps.length} ${reps.length === 1 ? 'rep' : 'reps'}`;
+    if (!reps.length) {
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#c8c2d6;font-style:italic;font-size:13px;padding:8px">Sem dados</div>';
+      renderCarteira([]);
+      return;
+    }
+    grid.innerHTML = reps.map(r => {
+      const conv     = r.total > 0 ? ((r.fechado / r.total) * 100).toFixed(0) + '%' : '—';
+      const ativos   = r.ativos || 0;
+      const verde    = r.verde    || 0;
+      const amarelo  = r.amarelo  || 0;
+      const vermelho = r.vermelho || 0;
+      const prazo    = r.prazo_medio  > 0 ? r.prazo_medio + 'd' : '—';
+      const speed    = fmtSpeed(r.speed_medio);
+      const ticket   = r.ticket_medio > 0 ? cur(r.ticket_medio) : '—';
+      return `<div class="rep-card">
+        <div class="rep-card-hd">
+          <span class="rep-name" title="${esc(toTitleCase(r.rep))}">${esc(toTitleCase(r.rep))}</span>
+          <span class="rep-conv">Conv. ${conv}</span>
+        </div>
+        <div class="rep-aging">
+          <span class="aging-chip green"><span class="aging-dot green"></span>${n(verde)}</span>
+          <span class="aging-chip amber"><span class="aging-dot amber"></span>${n(amarelo)}</span>
+          <span class="aging-chip red"><span class="aging-dot red"></span>${n(vermelho)}</span>
+          <span class="aging-total">${n(ativos)} ativo${ativos === 1 ? '' : 's'}</span>
+        </div>
+        <div class="rep-metrics cols-3">
+          <div class="rep-metric"><div class="rm-val">${n(r.fechado)}</div><div class="rm-label">Fechados</div></div>
+          <div class="rep-metric"><div class="rm-val">${cur(r.receita)}</div><div class="rm-label">Receita</div></div>
+          <div class="rep-metric"><div class="rm-val">${ticket}</div><div class="rm-label">Ticket méd.</div></div>
+        </div>
+        <div class="rep-metrics cols-2">
+          <div class="rep-metric"><div class="rm-val">${prazo}</div><div class="rm-label">Prazo p/ fechar</div></div>
+          <div class="rep-metric"><div class="rm-val">${speed}</div><div class="rm-label">1º contato méd.</div></div>
+        </div>
+      </div>`;
+    }).join('');
+    renderCarteira(reps);
   } catch(err) {
     _log.error('reps', 'Erro ao renderizar reps', err);
-    const tbody = document.getElementById('tb-reps');
-    if (tbody) tbody.innerHTML = errRow(8);
+    const grid = document.getElementById('rep-grid');
+    if (grid) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--magenta);font-size:13px;padding:8px">Erro ao carregar</div>';
   }
-}
-
-function statusBadgeAtivos(s) {
-  if (s === 'Aguardando contato') return `<span class="status-badge badge-row-red">${esc(s)}</span>`;
-  if (s === 'Em contato')         return `<span class="status-badge badge-row-amber">${esc(s)}</span>`;
-  if (s === 'Em negociação')      return `<span class="status-badge badge-row-green">${esc(s)}</span>`;
-  return `<span class="status-badge" style="background:#f3f4f6;color:#6b7280">${esc(s) || '—'}</span>`;
-}
-
-function renderAtivos(data) {
-  const leads = data.leads || [];
-
-  function rowClass(status) {
-    if (status === 'Aguardando contato') return 'row-ag-cont';
-    if (status === 'Em contato')         return 'row-em-cont';
-    if (status === 'Em negociação')      return 'row-em-neg';
-    return '';
-  }
-
-  function renderEstadoCard(estadoSigla, tbodyId, badgeId, cardId) {
-    try {
-      const tbody = document.getElementById(tbodyId);
-      const badge = document.getElementById(badgeId);
-      const card  = cardId ? document.getElementById(cardId) : null;
-      if (!tbody) return;
-      const estadoLeads = leads
-        .filter(l => estadoSigla === 'OUTROS'
-          ? !['GO','DF'].includes((l.estado||'').toUpperCase().trim())
-          : (l.estado||'').toUpperCase().trim() === estadoSigla)
-        .sort((a, b) => {
-          const pa = a.status === 'Aguardando contato' ? 0 : 1;
-          const pb = b.status === 'Aguardando contato' ? 0 : 1;
-          if (pa !== pb) return pa - pb;
-          return (a.data || '').localeCompare(b.data || '');
-        });
-      if (card) card.style.display = estadoLeads.length ? '' : 'none';
-      if (badge) badge.textContent = `${n(estadoLeads.length)} ATIVOS`;
-      if (!estadoLeads.length) { tbody.innerHTML = emptyRow(3); return; }
-      tbody.innerHTML = estadoLeads.map(l => {
-        const empresa = toTitleCase(l.empresa || l.nome) || '—';
-        const rep     = toTitleCase(l.rep) || '—';
-        const ufTag   = estadoSigla === 'OUTROS' && l.estado
-          ? ` <span style="font-size:10px;color:var(--muted);font-weight:600">(${esc(l.estado.toUpperCase())})</span>` : '';
-        return `<tr class="${rowClass(l.status)}">
-          <td class="td-left" title="${esc(empresa)}">${esc(empresa)}${ufTag}</td>
-          <td class="td-left" style="white-space:nowrap;font-size:11px;font-weight:700">${esc(rep)}</td>
-          <td class="td-left">${statusBadgeAtivos(l.status)}</td>
-        </tr>`;
-      }).join('');
-    } catch(err) {
-      _log.error('ativos', `Erro ao renderizar ativos (${estadoSigla})`, err);
-      const tbody = document.getElementById(tbodyId);
-      if (tbody) tbody.innerHTML = errRow(3);
-    }
-  }
-
-  renderEstadoCard('GO',     'tb-ativos-go',     'ativos-badge-go');
-  renderEstadoCard('DF',     'tb-ativos-df',     'ativos-badge-df');
-  renderEstadoCard('OUTROS', 'tb-ativos-outros', 'ativos-badge-outros', 'card-ativos-outros');
 }
 
 function renderFechados(data) {
@@ -1249,39 +1087,8 @@ function renderAds(data, receita) {
     if (el('card-roas')) {
       el('card-roas').textContent = (inv > 0 && rec > 0) ? (rec / inv).toFixed(2) + 'x' : '—';
     }
-    if (el('card-acos')) {
-      el('card-acos').textContent = (inv > 0 && rec > 0) ? (inv / rec * 100).toFixed(1) + '%' : '—';
-    }
   } catch(err) {
     _log.error('ads', 'Erro ao renderizar ads', err);
-  }
-}
-
-function renderLatest(data) {
-  try {
-    const tbody = document.getElementById('tb-latest');
-    if (!tbody) return;
-    const leads = (data.leads || []).slice(0, 10);
-    if (!leads.length) { tbody.innerHTML = emptyRow(3); return; }
-    tbody.innerHTML = leads.map(l => {
-      const nome = toTitleCase(l.empresa || l.nome) || '—';
-      const entradaHtml = (() => {
-        if (!l.data) return '—';
-        const [y, m, d] = l.data.split('-');
-        const datePart = `${d}/${m}`;
-        if (!l.hora) return datePart;
-        return `<div style="display:inline-flex;justify-content:center;align-items:center;gap:4px"><span>${datePart}</span><span style="opacity:.4">-</span><span>${esc(l.hora)}</span></div>`;
-      })();
-      return `<tr>
-        <td class="td-left" title="${esc(nome)}">${esc(nome)}</td>
-        <td style="font-weight:400;text-align:center;font-size:10px">${entradaHtml}</td>
-        <td style="text-align:center">${statusBadgeSdr(l.status_sdr || l.status_vend)}</td>
-      </tr>`;
-    }).join('');
-  } catch(err) {
-    _log.error('latest', 'Erro ao renderizar últimos leads', err);
-    const tbody = document.getElementById('tb-latest');
-    if (tbody) tbody.innerHTML = errRow(3);
   }
 }
 
@@ -1291,50 +1098,30 @@ async function loadAllData(summaryData, lm) {
   try {
     renderSummary(summaryData);
 
-    const [rFunnel, rByRep, rActive, rClosed, rAds, rLatest] = await Promise.allSettled([
+    const [rFunnel, rByRep, rClosed, rAds] = await Promise.allSettled([
       proxy('funnel'),
       proxy('by_rep'),
-      proxy('active_all', { token: '0ef82354c11e4f518d90fe5c3935b767' }),
       proxy('closed'),
       proxy('ads'),
-      proxy('latest'),
     ]);
 
     if (rFunnel.status === 'fulfilled')  renderFunnel(rFunnel.value);
     else _log.error('loadAll', 'funnel falhou', rFunnel.reason);
 
     if (rByRep.status === 'fulfilled')   renderReps(rByRep.value);
-    else _log.error('loadAll', 'by_rep falhou', rByRep.reason);
-
-    if (rActive.status === 'fulfilled')  renderAtivos(rActive.value);
-    else { _log.error('loadAll', 'active_all falhou', rActive.reason); renderAtivos({ leads: [] }); }
+    else { _log.error('loadAll', 'by_rep falhou', rByRep.reason); renderReps({ reps: [] }); }
 
     if (rClosed.status === 'fulfilled')  renderFechados(rClosed.value);
     else _log.error('loadAll', 'closed falhou', rClosed.reason);
 
-    if (rLatest.status === 'fulfilled')  renderLatest(rLatest.value);
-    else _log.error('loadAll', 'latest falhou', rLatest.reason);
-
     renderAds(rAds.status === 'fulfilled' ? rAds.value : null, summaryData.receita);
 
+    // Badge CAC no card de fechamentos (invest. total / nº fechamentos)
     const cacEl = document.getElementById('fechados-cac');
     const cacInv = rAds.status === 'fulfilled' && rAds.value ? +rAds.value.investimento || 0 : 0;
     const cacNFech = rClosed.status === 'fulfilled' ? (rClosed.value.fechamentos || []).length : 0;
     if (cacEl) {
       cacEl.textContent = (cacInv > 0 && cacNFech > 0) ? `CAC: ${cur(Math.round(cacInv / cacNFech))}` : '';
-    }
-    const cacCard = document.getElementById('card-cac');
-    if (cacCard) {
-      cacCard.textContent = (cacInv > 0 && cacNFech > 0) ? cur(Math.round(cacInv / cacNFech)) : '—';
-    }
-
-    const rtCplSdr = document.getElementById('rt-cpl-sdr');
-    if (rtCplSdr) {
-      const inv = rAds.status === 'fulfilled' && rAds.value ? +rAds.value.investimento || 0 : 0;
-      const total = summaryData.total || 0;
-      rtCplSdr.textContent = (inv > 0 && total > 0)
-        ? `CUSTO POR LEAD: ${cur(Math.round(inv / total))}`
-        : 'CUSTO POR LEAD: —';
     }
 
     stamp(lm);

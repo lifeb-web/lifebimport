@@ -86,7 +86,7 @@
     #telao-main {
       flex: 1;
       display: grid;
-      grid-template-columns: 21fr 45fr 34fr;
+      grid-template-columns: 22fr 48fr 30fr;
       gap: 8px;
       overflow: hidden;
       min-height: 0;
@@ -263,6 +263,42 @@
       .funil-num { font-size: 14px; }
       footer { padding: 3px 28px; }
     }
+
+    /* ── SAÚDE DA CARTEIRA — banda de 3 células no topo da coluna central ── */
+    .cart-band { display: flex; gap: 8px; flex-shrink: 0; height: 96px; }
+    .cart-cell { flex: 1; background: var(--card); border: 1px solid var(--border); border-top: 4px solid var(--muted); border-radius: 12px; padding: 8px 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; overflow: hidden; }
+    .cart-cell.green { border-top-color: var(--green);  background: linear-gradient(180deg,#f0fbf4 0%,#fff 60%); }
+    .cart-cell.amber { border-top-color: var(--orange); background: linear-gradient(180deg,#fffbf0 0%,#fff 60%); }
+    .cart-cell.red   { border-top-color: var(--red);    background: linear-gradient(180deg,#fff5f5 0%,#fff 60%); }
+    .cart-num { font-size: 36px; font-weight: 800; line-height: 1; }
+    .cart-cell.green .cart-num { color: var(--green); }
+    .cart-cell.amber .cart-num { color: var(--orange); }
+    .cart-cell.red   .cart-num { color: var(--red); }
+    .cart-label { font-size: 10px; font-weight: 700; color: var(--muted); margin-top: 5px; text-transform: uppercase; letter-spacing: .4px; white-space: nowrap; }
+    .cart-cell.red.alert { animation: cart-pulse 2.2s ease-in-out infinite; }
+    @keyframes cart-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(220,38,38,0); } 50% { box-shadow: 0 0 0 4px rgba(220,38,38,.14); } }
+
+    /* ── TABELA POR REPRESENTANTE — células de idade coloridas ── */
+    .th-g { color: var(--green)  !important; }
+    .th-a { color: var(--orange) !important; }
+    .th-r { color: var(--red)    !important; }
+    .ag-g { color: var(--green);  font-weight: 800; }
+    .ag-a { color: var(--orange); font-weight: 800; }
+    .ag-r { color: var(--red);    font-weight: 800; }
+    #tb-reps td { font-size: 14px; padding: 7px 5px; }
+    #tb-reps td:first-child { font-weight: 800; }
+    .conv-pill { font-weight: 800; color: var(--purple); }
+
+    @media (max-height: 820px) {
+      .cart-band { height: 78px; }
+      .cart-num { font-size: 27px; }
+      #tb-reps td { font-size: 12px; padding: 5px 4px; }
+    }
+    @media (max-height: 700px) {
+      .cart-band { height: 64px; }
+      .cart-num { font-size: 22px; }
+      .cart-label { font-size: 9px; }
+    }
   </style>
 </head>
 <body>
@@ -302,34 +338,16 @@
   <div id="telao-cards">
 
     <div class="card card-rt">
-      <div class="rt-icon">&#128203;</div>
-      <div class="rt-num" id="card-total">—</div>
-      <div class="rt-label">Total de Leads</div>
-      <div class="rt-sub">planilha SDR</div>
-    </div>
-
-    <div class="card card-metric accent-purple">
-      <div class="m-label">Qualificados</div>
-      <div class="m-val" id="card-qualif" style="color:var(--purple)">—</div>
-      <div class="m-sub">pelo SDR</div>
-    </div>
-
-    <div class="card card-metric accent-blue">
-      <div class="m-label">Em Tratativa</div>
-      <div class="m-val" id="card-tratativa" style="color:var(--blue)">—</div>
-      <div class="m-sub">com vendedor</div>
+      <div class="rt-icon">&#128176;</div>
+      <div class="rt-num" id="card-receita" style="font-size:28px">—</div>
+      <div class="rt-label">Receita Total</div>
+      <div class="rt-sub" id="card-receita-sub">total fechado</div>
     </div>
 
     <div class="card card-metric accent-green">
       <div class="m-label">Fechamentos</div>
       <div class="m-val" id="card-fechados" style="color:var(--green)">—</div>
       <div class="m-sub" id="card-fechados-sub">contratos</div>
-    </div>
-
-    <div class="card card-metric accent-highlight">
-      <div class="m-label">Receita Total</div>
-      <div class="m-val" id="card-receita" style="color:var(--purple);font-size:26px">—</div>
-      <div class="m-sub" id="card-receita-sub">aguardando dados</div>
     </div>
 
     <div class="card card-metric accent-orange">
@@ -340,13 +358,13 @@
 
     <div class="card card-metric accent-magenta">
       <div class="m-label">Potencial</div>
-      <div class="m-val" id="card-potencial" style="color:var(--magenta);font-size:20px">—</div>
+      <div class="m-val" id="card-potencial" style="color:var(--magenta);font-size:22px">—</div>
       <div class="m-sub">pipeline ativo</div>
     </div>
 
     <div class="card card-metric accent-cyan">
       <div class="m-label">Invest. ADS</div>
-      <div class="m-val" id="card-ads" style="color:#0891b2;font-size:20px">—</div>
+      <div class="m-val" id="card-ads" style="color:#0891b2;font-size:22px">—</div>
       <div class="m-sub" id="card-ads-sub">total investido</div>
     </div>
 
@@ -354,24 +372,6 @@
       <div class="m-label">ROAS</div>
       <div class="m-val" id="card-roas" style="color:#0d9488">—</div>
       <div class="m-sub">receita / invest.</div>
-    </div>
-
-    <div class="card card-metric accent-amber">
-      <div class="m-label">ACOS</div>
-      <div class="m-val" id="card-acos" style="color:#b45309">—</div>
-      <div class="m-sub">invest. / receita</div>
-    </div>
-
-    <div class="card card-metric accent-violet">
-      <div class="m-label">CAC</div>
-      <div class="m-val" id="card-cac" style="color:#7c3aed;font-size:20px">—</div>
-      <div class="m-sub">invest. / fech.</div>
-    </div>
-
-    <div class="card card-metric accent-indigo">
-      <div class="m-label">Speed to Lead</div>
-      <div class="m-val" id="card-speed-to-lead" style="color:#4f46e5;font-size:20px">—</div>
-      <div class="m-sub">tempo médio 1º contato</div>
     </div>
 
   </div><!-- /#telao-cards -->
@@ -403,92 +403,45 @@
 
     </div><!-- /#col-funnels -->
 
-    <!-- COLUNA CENTRO — Leads Ativos por representante -->
+    <!-- COLUNA CENTRO — Saúde da Carteira + Desempenho por Representante -->
     <div id="col-center">
 
-      <div class="card card-table" style="flex:1;min-height:0">
-        <div class="card-hd">
-          <div class="card-hd-title">Leads Ativos — Goiás</div>
-          <div style="display:flex;align-items:center;gap:6px">
-            <span class="badge" id="ativos-ag-go">—</span>
-            <span class="badge" id="ativos-cont-go">—</span>
-            <span class="badge" id="ativos-neg-go">—</span>
-            <span class="badge" id="ativos-badge-go">—</span>
-          </div>
+      <div class="cart-band">
+        <div class="cart-cell green">
+          <div class="cart-num" id="cart-verde">—</div>
+          <div class="cart-label">No prazo · ≤ 15 dias</div>
         </div>
-        <div class="table-scroll table-body">
-          <table style="table-layout:fixed;width:100%;font-size:11px">
-            <colgroup>
-              <col style="width:27%">
-              <col style="width:21%">
-              <col style="width:22%">
-              <col style="width:16%">
-              <col style="width:14%">
-            </colgroup>
-            <thead><tr>
-              <th>Empresa</th><th class="td-left" style="text-align:left">Cidade</th><th style="text-align:center">Status</th><th class="td-left" style="text-align:left">Rep</th><th style="text-align:right">Potencial</th>
-            </tr></thead>
-            <tbody id="tb-ativos-go">
-              <tr class="empty-row"><td colspan="5">Carregando...</td></tr>
-            </tbody>
-          </table>
+        <div class="cart-cell amber">
+          <div class="cart-num" id="cart-amarelo">—</div>
+          <div class="cart-label">Atenção · 16–30 dias</div>
+        </div>
+        <div class="cart-cell red" id="cart-cell-red">
+          <div class="cart-num" id="cart-vermelho">—</div>
+          <div class="cart-label">Esfriando · + 30 dias</div>
         </div>
       </div>
 
       <div class="card card-table" style="flex:1;min-height:0">
         <div class="card-hd">
-          <div class="card-hd-title">Leads Ativos — DF</div>
-          <div style="display:flex;align-items:center;gap:6px">
-            <span class="badge" id="ativos-ag-df">—</span>
-            <span class="badge" id="ativos-cont-df">—</span>
-            <span class="badge" id="ativos-neg-df">—</span>
-            <span class="badge" id="ativos-badge-df">—</span>
-          </div>
+          <div class="card-hd-title">Desempenho por Representante</div>
+          <span class="badge" id="reps-count">—</span>
         </div>
         <div class="table-scroll table-body">
-          <table style="table-layout:fixed;width:100%;font-size:11px">
-            <colgroup>
-              <col style="width:27%">
-              <col style="width:21%">
-              <col style="width:22%">
-              <col style="width:16%">
-              <col style="width:14%">
-            </colgroup>
+          <table style="width:100%;font-size:12px">
             <thead><tr>
-              <th>Empresa</th><th class="td-left" style="text-align:left">Cidade</th><th style="text-align:center">Status</th><th class="td-left" style="text-align:left">Rep</th><th style="text-align:right">Potencial</th>
+              <th class="td-left" style="text-align:left">Rep</th>
+              <th class="th-g">🟢</th>
+              <th class="th-a">🟡</th>
+              <th class="th-r">🔴</th>
+              <th>Fech.</th>
+              <th>Receita</th>
+              <th>Ticket</th>
+              <th>Prazo</th>
+              <th>1º Cont.</th>
+              <th>Conv.</th>
             </tr></thead>
-            <tbody id="tb-ativos-df">
-              <tr class="empty-row"><td colspan="5">Carregando...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Leads Ativos — Outros (oculto quando vazio) -->
-      <div class="card card-table" id="card-ativos-outros" style="flex:1;min-height:0;display:none">
-        <div class="card-hd">
-          <div class="card-hd-title">Leads Ativos — Outros</div>
-          <div style="display:flex;align-items:center;gap:6px">
-            <span class="badge" id="ativos-ag-outros">—</span>
-            <span class="badge" id="ativos-cont-outros">—</span>
-            <span class="badge" id="ativos-neg-outros">—</span>
-            <span class="badge" id="ativos-badge-outros">—</span>
-          </div>
-        </div>
-        <div class="table-scroll table-body">
-          <table style="table-layout:fixed;width:100%;font-size:11px">
-            <colgroup>
-              <col style="width:27%">
-              <col style="width:21%">
-              <col style="width:22%">
-              <col style="width:16%">
-              <col style="width:14%">
-            </colgroup>
-            <thead><tr>
-              <th>Empresa</th><th class="td-left" style="text-align:left">Cidade / UF</th><th style="text-align:center">Status</th><th class="td-left" style="text-align:left">Rep</th><th style="text-align:right">Potencial</th>
-            </tr></thead>
-            <tbody id="tb-ativos-outros">
-              <tr class="empty-row"><td colspan="5">Carregando...</td></tr>
+            <tbody id="tb-reps">
+              <tr class="empty-row"><td colspan="10">Carregando...</td></tr>
             </tbody>
           </table>
         </div>
@@ -496,51 +449,23 @@
 
     </div><!-- /#col-center -->
 
-    <!-- COLUNA DIREITA — Últimos Leads + Fechamentos + Por Representante -->
+    <!-- COLUNA DIREITA — Fechamentos recentes (única lista lead-a-lead) -->
     <div id="col-ativos">
 
-      <div class="card card-table" style="flex:none">
+      <div class="card card-table" style="flex:1;min-height:0">
         <div class="card-hd">
-          <div class="card-hd-title">Últimos Leads</div>
-          <div style="display:flex;align-items:center;gap:6px">
-            <span id="latest-hoje" class="badge" style="white-space:nowrap"></span>
-            <span id="latest-media-dia" class="badge" style="white-space:nowrap"></span>
-            <span id="latest-cpl" class="badge" style="white-space:nowrap"></span>
-          </div>
-        </div>
-        <div class="table-scroll table-body" style="max-height:178px;overflow-y:auto;flex:none">
-          <table style="table-layout:fixed;width:100%;font-size:11px">
-            <colgroup>
-              <col style="width:36%">
-              <col style="width:32%">
-              <col style="width:32%">
-            </colgroup>
-            <thead><tr>
-              <th class="td-left" style="text-align:left">Nome / Empresa</th>
-              <th style="text-align:center">Entrada</th>
-              <th style="text-align:center">Status SDR</th>
-            </tr></thead>
-            <tbody id="tb-latest">
-              <tr class="empty-row"><td colspan="3">Carregando...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="card card-table" style="flex:1.3">
-        <div class="card-hd">
-          <div class="card-hd-title">Fechamentos</div>
+          <div class="card-hd-title">Fechamentos Recentes</div>
           <div style="display:flex;align-items:center;gap:6px">
             <span id="fechados-media-dias" class="badge" style="white-space:nowrap"></span>
             <span id="fechados-cac" class="badge" style="white-space:nowrap"></span>
           </div>
         </div>
         <div class="table-scroll table-body" style="flex:1;min-height:0;overflow-y:auto">
-          <table style="table-layout:fixed;width:100%;font-size:11px">
+          <table style="table-layout:fixed;width:100%;font-size:12px">
             <colgroup>
-              <col style="width:32%">
+              <col style="width:30%">
               <col style="width:16%">
-              <col style="width:18%">
+              <col style="width:20%">
               <col style="width:12%">
               <col style="width:22%">
             </colgroup>
@@ -549,23 +474,6 @@
             </tr></thead>
             <tbody id="tb-fechados">
               <tr class="empty-row"><td colspan="5">Carregando...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="card card-table" style="flex:0.6">
-        <div class="card-hd">
-          <div class="card-hd-title">Funil Por Representante</div>
-          <div id="reps-conv-container" style="display:flex;align-items:center;gap:6px"></div>
-        </div>
-        <div class="table-scroll table-body" style="max-height:178px;overflow-y:auto;flex:none">
-          <table>
-            <thead><tr>
-              <th>Rep</th><th>Tot.</th><th>Ag.</th><th>Cont.</th><th>Neg.</th><th>Fech.</th><th>Perd.</th><th>Receita</th>
-            </tr></thead>
-            <tbody id="tb-reps">
-              <tr class="empty-row"><td colspan="8">Carregando...</td></tr>
             </tbody>
           </table>
         </div>
@@ -647,26 +555,6 @@ function onSheetChanged() {
   }
 }
 
-function statusBadgeSdr(s) {
-  const st = String(s || '').trim();
-  if (st === 'Aguardando abordagem') return `<span class="status-badge badge-sdr-ag">${esc(st)}</span>`;
-  if (st === 'Em abordagem')         return `<span class="status-badge badge-sdr-em">${esc(st)}</span>`;
-  if (st === 'Qualificado')          return `<span class="status-badge badge-sdr-qual">${esc(st)}</span>`;
-  if (st === 'Sem retorno SDR')      return `<span class="status-badge badge-sdr-sem">${esc(st)}</span>`;
-  if (st === 'Fora do perfil')       return `<span class="status-badge badge-sdr-fora">${esc(st)}</span>`;
-  return `<span class="status-badge badge-sdr-sem">${esc(st) || '—'}</span>`;
-}
-
-function statusBadge(status) {
-  const s = String(status || '').trim();
-  if (s === 'Aguardando contato') return `<span class="status-badge badge-ag-cont">${esc(s)}</span>`;
-  if (s === 'Em contato')         return `<span class="status-badge badge-em-cont">${esc(s)}</span>`;
-  if (s === 'Em negociação')      return `<span class="status-badge badge-em-neg">${esc(s)}</span>`;
-  if (s === 'Fechado')            return `<span class="status-badge badge-fechado">${esc(s)}</span>`;
-  if (s === 'Perdido')            return `<span class="status-badge badge-perdido">${esc(s)}</span>`;
-  return `<span class="status-badge" style="background:#f3f4f6;color:#6b7280">${esc(s) || '—'}</span>`;
-}
-
 // ── LOADING BAR ──────────────────────────────────────────────
 let _inFlight = 0;
 function _loadingStart() {
@@ -743,9 +631,6 @@ function renderAds(data, receita) {
     if (el('card-roas')) {
       el('card-roas').textContent = (inv > 0 && rec > 0) ? (rec / inv).toFixed(2) + 'x' : '—';
     }
-    if (el('card-acos')) {
-      el('card-acos').textContent = (inv > 0 && rec > 0) ? (inv / rec * 100).toFixed(1) + '%' : '—';
-    }
   } catch(err) {
     _log.error('ads', 'Erro ao renderizar ads', err);
   }
@@ -774,14 +659,8 @@ function renderFunilBar(containerId, items, total) {
 
 function renderSummary(data) {
   try {
-    const { sdr = {}, vend = {}, receita = 0, pipeline = 0, total = 0, media_dias = 0, media_speed_to_lead = 0 } = data;
+    const { sdr = {}, vend = {}, receita = 0, pipeline = 0, media_dias = 0 } = data;
     const el = id => document.getElementById(id);
-
-    if (el('card-total'))    el('card-total').textContent    = n(total);
-    if (el('card-qualif'))   el('card-qualif').textContent   = n(sdr.qualif || 0);
-
-    const tratativa = (vend.ag_cont || 0) + (vend.em_cont || 0) + (vend.reun || 0) + (vend.em_neg || 0);
-    if (el('card-tratativa')) el('card-tratativa').textContent = n(tratativa);
 
     const fechados = vend.fechado || 0;
     if (el('card-fechados')) el('card-fechados').textContent = n(fechados);
@@ -791,40 +670,18 @@ function renderSummary(data) {
     }
 
     if (el('card-receita')) el('card-receita').textContent = cur(receita);
-    if (el('card-receita-sub') && fechados > 0) {
-      el('card-receita-sub').textContent = `média ${cur(Math.round(receita / fechados))} · ${media_dias}d p/ fechar`;
+    if (el('card-receita-sub')) {
+      el('card-receita-sub').textContent = fechados > 0 ? `ticket médio ${cur(Math.round(receita / fechados))}` : 'total fechado';
     }
 
     // Taxa de conversão: fechados / qualificados
     const qualif = sdr.qualif || 0;
-    const conv = qualif > 0 ? ((fechados / qualif) * 100).toFixed(1) + '%' : '—';
-    if (el('card-conv')) el('card-conv').textContent = conv;
+    if (el('card-conv')) el('card-conv').textContent = qualif > 0 ? ((fechados / qualif) * 100).toFixed(1) + '%' : '—';
 
     if (el('card-potencial')) el('card-potencial').textContent = cur(pipeline);
 
     const fechadosMediaEl = document.getElementById('fechados-media-dias');
     if (fechadosMediaEl) fechadosMediaEl.textContent = media_dias > 0 ? `TEMPO MÉDIO: ${media_dias} DIAS` : '';
-    const stlEl = document.getElementById('card-speed-to-lead');
-    if (stlEl) {
-      if (media_speed_to_lead > 0) {
-        const h = Math.floor(media_speed_to_lead / 60);
-        const m = media_speed_to_lead % 60;
-        stlEl.textContent = h > 0 ? `${h}h ${m}min` : `${m}min`;
-      } else {
-        stlEl.textContent = '—';
-      }
-    }
-
-    const hojeEl = document.getElementById('latest-hoje');
-    if (hojeEl) hojeEl.textContent = `HOJE: ${data.todayCount || 0}`;
-
-    const mediaEl = document.getElementById('latest-media-dia');
-    if (mediaEl && data.firstDate && total > 0) {
-      const inicio = new Date(data.firstDate + 'T00:00:00');
-      const dias = Math.max(1, Math.ceil((Date.now() - inicio.getTime()) / 86400000));
-      const media = (total / dias).toFixed(1);
-      mediaEl.textContent = `MÉDIA: ${media} LEADS/DIA`;
-    }
 
     const periodEl = document.getElementById('header-period');
     if (periodEl && data.firstDate) {
@@ -836,6 +693,28 @@ function renderSummary(data) {
 
   } catch(err) {
     _log.error('summary', 'Erro ao renderizar summary', err);
+  }
+}
+
+// ── HELPERS ──────────────────────────────────────────────────
+function fmtSpeed(min) {
+  if (!min || min <= 0) return '—';
+  const h = Math.floor(min / 60), m = min % 60;
+  return h > 0 ? (m > 0 ? `${h}h ${m}min` : `${h}h`) : `${m}min`;
+}
+
+// Soma os baldes de idade de todos os reps → banda "Saúde da Carteira"
+function renderCarteira(reps) {
+  try {
+    const v = reps.reduce((s, r) => s + (r.verde    || 0), 0);
+    const a = reps.reduce((s, r) => s + (r.amarelo  || 0), 0);
+    const x = reps.reduce((s, r) => s + (r.vermelho || 0), 0);
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = n(val); };
+    set('cart-verde', v); set('cart-amarelo', a); set('cart-vermelho', x);
+    const redCell = document.getElementById('cart-cell-red');
+    if (redCell) redCell.classList.toggle('alert', x > 0);
+  } catch(err) {
+    _log.error('carteira', 'Erro ao renderizar carteira', err);
   }
 }
 
@@ -876,92 +755,33 @@ function renderReps(data) {
     const tbody = document.getElementById('tb-reps');
     if (!tbody) return;
     const reps = (data.reps || []).filter(r => r.rep !== 'Sem vendedor');
-    if (!reps.length) { tbody.innerHTML = emptyRow(8); return; }
-    const convContainer = document.getElementById('reps-conv-container');
-    if (convContainer) {
-      convContainer.innerHTML = reps.map(r => {
-        const conv = r.total > 0 ? ((r.fechado / r.total) * 100).toFixed(1) + '%' : '—';
-        return `<span class="badge">${esc(r.rep)}: ${conv}</span>`;
-      }).join('');
-    }
-    tbody.innerHTML = reps.map(r => `
-      <tr>
-        <td>${esc(r.rep)}</td>
-        <td>${n(r.total)}</td>
-        <td>${n(r.ag_cont)}</td>
-        <td>${n(r.em_cont)}</td>
-        <td>${n(r.em_neg)}</td>
+    const countEl = document.getElementById('reps-count');
+    if (countEl) countEl.textContent = `${reps.length} ${reps.length === 1 ? 'rep' : 'reps'}`;
+    if (!reps.length) { tbody.innerHTML = emptyRow(10); renderCarteira([]); return; }
+    tbody.innerHTML = reps.map(r => {
+      const conv   = r.total > 0 ? ((r.fechado / r.total) * 100).toFixed(0) + '%' : '—';
+      const prazo  = r.prazo_medio  > 0 ? r.prazo_medio + 'd' : '—';
+      const speed  = fmtSpeed(r.speed_medio);
+      const ticket = r.ticket_medio > 0 ? cur(r.ticket_medio) : '—';
+      return `<tr>
+        <td class="td-left">${esc(toTitleCase(r.rep))}</td>
+        <td class="ag-g">${n(r.verde    || 0)}</td>
+        <td class="ag-a">${n(r.amarelo  || 0)}</td>
+        <td class="ag-r">${n(r.vermelho || 0)}</td>
         <td>${n(r.fechado)}</td>
-        <td>${n(r.perdido || 0)}</td>
         <td>${cur(r.receita)}</td>
-      </tr>`).join('');
+        <td>${ticket}</td>
+        <td>${prazo}</td>
+        <td>${speed}</td>
+        <td class="conv-pill">${conv}</td>
+      </tr>`;
+    }).join('');
+    renderCarteira(reps);
   } catch(err) {
     _log.error('reps', 'Erro ao renderizar reps', err);
     const tbody = document.getElementById('tb-reps');
-    if (tbody) tbody.innerHTML = errRow(8);
+    if (tbody) tbody.innerHTML = errRow(10);
   }
-}
-
-function statusBadgeAtivos(s) {
-  if (s === 'Aguardando contato') return `<span class="status-badge badge-row-red">${esc(s)}</span>`;
-  if (s === 'Em contato')         return `<span class="status-badge badge-row-amber">${esc(s)}</span>`;
-  if (s === 'Em negociação')      return `<span class="status-badge badge-row-green">${esc(s)}</span>`;
-  return `<span class="status-badge" style="background:#f3f4f6;color:#6b7280">${esc(s) || '—'}</span>`;
-}
-
-function renderAtivos(data) {
-  const leads = data.leads || [];
-
-  function renderEstadoCard(estadoSigla, tbodyId, badgeId, negId, agId, contId, cardId) {
-    try {
-      const tbody  = document.getElementById(tbodyId);
-      const badge  = document.getElementById(badgeId);
-      const negEl  = document.getElementById(negId);
-      const agEl   = document.getElementById(agId);
-      const contEl = document.getElementById(contId);
-      const card   = cardId ? document.getElementById(cardId) : null;
-      if (!tbody) return;
-      const estadoLeads = leads
-        .filter(l => estadoSigla === 'OUTROS'
-          ? !['GO','DF'].includes((l.estado||'').toUpperCase().trim())
-          : (l.estado||'').toUpperCase().trim() === estadoSigla)
-        .sort((a, b) => {
-          const pa = a.status === 'Aguardando contato' ? 0 : 1;
-          const pb = b.status === 'Aguardando contato' ? 0 : 1;
-          if (pa !== pb) return pa - pb;
-          return (a.data || '').localeCompare(b.data || '');
-        });
-      if (card) card.style.display = estadoLeads.length ? '' : 'none';
-      if (badge)  badge.textContent  = `TOTAL: ${n(estadoLeads.length)} ATIVOS`;
-      if (agEl)   agEl.textContent   = `AGUARDANDO: ${n(estadoLeads.filter(l => l.status === 'Aguardando contato').length)}`;
-      if (contEl) contEl.textContent = `EM CONTATO: ${n(estadoLeads.filter(l => l.status === 'Em contato').length)}`;
-      if (negEl)  negEl.textContent  = `NEGOCIANDO: ${n(estadoLeads.filter(l => l.status === 'Em negociação').length)}`;
-      if (!estadoLeads.length) { tbody.innerHTML = emptyRow(5); return; }
-      tbody.innerHTML = estadoLeads.map(l => {
-        const empresa   = toTitleCase(l.empresa || l.nome) || '—';
-        const cidadeFmt = toTitleCase(l.cidade) || '—';
-        const cidadeDisplay = estadoSigla === 'OUTROS' && l.estado
-          ? [cidadeFmt, l.estado.toUpperCase()].filter(v => v && v !== '—').join(' / ')
-          : cidadeFmt;
-        const rep       = toTitleCase(l.rep) || '—';
-        return `<tr>
-          <td title="${esc(empresa)}">${esc(empresa)}</td>
-          <td class="td-left" title="${esc(cidadeDisplay)}">${esc(cidadeDisplay)}</td>
-          <td style="text-align:center">${statusBadgeAtivos(l.status)}</td>
-          <td class="td-left" style="font-weight:700">${esc(rep)}</td>
-          <td style="text-align:right">${l.pot ? cur(l.pot) : '—'}</td>
-        </tr>`;
-      }).join('');
-    } catch(err) {
-      _log.error('ativos', `Erro ao renderizar ativos (${estadoSigla})`, err);
-      const tbody = document.getElementById(tbodyId);
-      if (tbody) tbody.innerHTML = errRow(5);
-    }
-  }
-
-  renderEstadoCard('GO',     'tb-ativos-go',     'ativos-badge-go',     'ativos-neg-go',     'ativos-ag-go',     'ativos-cont-go');
-  renderEstadoCard('DF',     'tb-ativos-df',     'ativos-badge-df',     'ativos-neg-df',     'ativos-ag-df',     'ativos-cont-df');
-  renderEstadoCard('OUTROS', 'tb-ativos-outros', 'ativos-badge-outros', 'ativos-neg-outros', 'ativos-ag-outros', 'ativos-cont-outros', 'card-ativos-outros');
 }
 
 function renderFechados(data) {
@@ -989,82 +809,36 @@ function renderFechados(data) {
   }
 }
 
-function renderLatest(data) {
-  try {
-    const tbody = document.getElementById('tb-latest');
-    if (!tbody) return;
-    const leads = (data.leads || []).slice(0, 10);
-    if (!leads.length) { tbody.innerHTML = emptyRow(3); return; }
-    tbody.innerHTML = leads.map(l => {
-      const nome = toTitleCase(l.empresa || l.nome) || '—';
-      const entradaHtml = (() => {
-        if (!l.data) return '—';
-        const [y, m, d] = l.data.split('-');
-        const datePart = `${d}/${m}`;
-        if (!l.hora) return datePart;
-        return `<div style="display:inline-flex;justify-content:center;align-items:center;gap:4px"><span>${datePart}</span><span style="opacity:.4">-</span><span>${esc(l.hora)}</span></div>`;
-      })();
-      return `<tr>
-        <td class="td-left" title="${esc(nome)}">${esc(nome)}</td>
-        <td style="font-weight:400;text-align:center">${entradaHtml}</td>
-        <td style="text-align:center">${statusBadgeSdr(l.status_sdr || l.status_vend)}</td>
-      </tr>`;
-    }).join('');
-  } catch(err) {
-    _log.error('latest', 'Erro ao renderizar últimos leads', err);
-    const tbody = document.getElementById('tb-latest');
-    if (tbody) tbody.innerHTML = errRow(3);
-  }
-}
-
 // ── LOAD ALL DATA (só quando planilha mudar) ─────────────────
 async function loadAllData(summaryData, lm) {
   _loadingStart();
   try {
     renderSummary(summaryData);
 
-    const [rFunnel, rByRep, rActive, rClosed, rAds, rLatest] = await Promise.allSettled([
+    const [rFunnel, rByRep, rClosed, rAds] = await Promise.allSettled([
       proxy('funnel'),
       proxy('by_rep'),
-      proxy('active_all', { token: '0ef82354c11e4f518d90fe5c3935b767' }),
       proxy('closed'),
       proxy('ads'),
-      proxy('latest'),
     ]);
 
     if (rFunnel.status === 'fulfilled')  renderFunnel(rFunnel.value);
     else _log.error('loadAll', 'funnel falhou', rFunnel.reason);
 
     if (rByRep.status === 'fulfilled')   renderReps(rByRep.value);
-    else _log.error('loadAll', 'by_rep falhou', rByRep.reason);
-
-    if (rActive.status === 'fulfilled')  renderAtivos(rActive.value);
-    else { _log.error('loadAll', 'active_all falhou', rActive.reason); renderAtivos({ leads: [] }); }
+    else { _log.error('loadAll', 'by_rep falhou', rByRep.reason); renderReps({ reps: [] }); }
 
     if (rClosed.status === 'fulfilled')  renderFechados(rClosed.value);
     else _log.error('loadAll', 'closed falhou', rClosed.reason);
 
-    if (rLatest.status === 'fulfilled')  renderLatest(rLatest.value);
-    else _log.error('loadAll', 'latest falhou', rLatest.reason);
-
     renderAds(rAds.status === 'fulfilled' ? rAds.value : null, summaryData.receita);
 
+    // Badge CAC no card de fechamentos (invest. total / nº fechamentos)
     const inv = rAds.status === 'fulfilled' && rAds.value ? +rAds.value.investimento || 0 : 0;
-
     const cacNFech = rClosed.status === 'fulfilled' ? (rClosed.value.fechamentos || []).length : 0;
     const cacEl = document.getElementById('fechados-cac');
     if (cacEl) {
       cacEl.textContent = (inv > 0 && cacNFech > 0) ? `CAC MÉDIO: ${cur(Math.round(inv / cacNFech))}` : '';
-    }
-    const cacCard = document.getElementById('card-cac');
-    if (cacCard) {
-      cacCard.textContent = (inv > 0 && cacNFech > 0) ? cur(Math.round(inv / cacNFech)) : '—';
-    }
-
-    const cplEl = document.getElementById('latest-cpl');
-    if (cplEl) {
-      const nLeads = summaryData.total || 0;
-      cplEl.textContent = (inv > 0 && nLeads > 0) ? `CPL: ${cur(Math.round(inv / nLeads))}` : '';
     }
 
     stamp(lm);

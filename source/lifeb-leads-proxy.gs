@@ -503,18 +503,31 @@ function getSummary() {
 
 /**
  * getByRep
- * Retorna métricas por vendedor: total atribuído, ag_cont, em_cont, em_neg, fechados, receita.
+ * Retorna métricas por vendedor:
+ *   - contagens por status (ag_cont, em_cont, reun, em_neg, fechado, perdido) + total + receita
+ *   - ativos: leads em aberto (qualquer status que não Fechado/Perdido/vazio)
+ *   - verde / amarelo / vermelho: baldes de idade dos leads ativos (por DATA DE ENTRADA)
+ *       verde   = até 15 dias    amarelo = 16 a 30 dias    vermelho = mais de 30 dias
+ *   - prazo_medio: média de DIAS_FECHAR dos fechados (mesma fonte do media_dias global)
+ *   - speed_medio: média de DELTA_CONTATO em minutos (tempo médio de 1º contato)
+ *   - ticket_medio: receita / fechado
  */
 function getByRep() {
   const rows = getRows().filter(function(r) { return !isTesteLead(r) && !isExcluido(r); });
   const reps = {};
+  const now  = Date.now();
+  const NAO_ATIVO = ['Fechado', 'Perdido', ''];
 
   rows.forEach(function(r) {
     const vendedor   = norm(r[COL_VENDEDOR]) || 'Sem vendedor';
     const statusVend = norm(r[COL_STATUS_VEND]);
 
     if (!reps[vendedor]) {
-      reps[vendedor] = { rep: vendedor, total: 0, ag_cont: 0, em_cont: 0, reun: 0, em_neg: 0, fechado: 0, perdido: 0, receita: 0 };
+      reps[vendedor] = {
+        rep: vendedor, total: 0, ag_cont: 0, em_cont: 0, reun: 0, em_neg: 0, fechado: 0, perdido: 0, receita: 0,
+        ativos: 0, verde: 0, amarelo: 0, vermelho: 0,
+        _prazoSum: 0, _prazoCnt: 0, _speedSum: 0, _speedCnt: 0,
+      };
     }
     const rep = reps[vendedor];
     rep.total++;
@@ -525,9 +538,39 @@ function getByRep() {
     else if (statusVend === 'Em negociação')       rep.em_neg++;
     else if (statusVend === 'Fechado')             { rep.fechado++; rep.receita += toNum(r[COL_VALOR_FECH]); }
     else if (statusVend === 'Perdido')             rep.perdido++;
+
+    // Prazo médio de fechamento — mesma fonte (DIAS_FECHAR) do media_dias global
+    if (statusVend === 'Fechado') {
+      var dias = toNum(r[COL_DIAS_FECHAR]);
+      if (dias > 0) { rep._prazoSum += dias; rep._prazoCnt++; }
+    }
+
+    // Tempo médio de 1º contato (minutos) — só conta leads que já tiveram contato registrado
+    var delta = toNum(r[COL_DELTA_CONTATO]);
+    if (delta > 0) { rep._speedSum += delta; rep._speedCnt++; }
+
+    // Baldes de idade dos leads ATIVOS, pela data de entrada (COL_DATA)
+    if (NAO_ATIVO.indexOf(statusVend) < 0) {
+      rep.ativos++;
+      var ms = _parseDateToMs(r[COL_DATA]);
+      if (ms > 0) {
+        var idade = Math.floor((now - ms) / 86400000);
+        if      (idade <= 15) rep.verde++;
+        else if (idade <= 30) rep.amarelo++;
+        else                  rep.vermelho++;
+      } else {
+        rep.verde++; // sem data válida: trata como recente (COL_DATA praticamente sempre presente)
+      }
+    }
   });
 
-  const list = Object.values(reps).sort(function(a, b) {
+  const list = Object.values(reps).map(function(rep) {
+    rep.prazo_medio  = rep._prazoCnt > 0 ? Math.round(rep._prazoSum / rep._prazoCnt) : 0;
+    rep.speed_medio  = rep._speedCnt > 0 ? Math.round(rep._speedSum / rep._speedCnt) : 0;
+    rep.ticket_medio = rep.fechado   > 0 ? Math.round(rep.receita   / rep.fechado)   : 0;
+    delete rep._prazoSum; delete rep._prazoCnt; delete rep._speedSum; delete rep._speedCnt;
+    return rep;
+  }).sort(function(a, b) {
     if (a.rep === 'Sem vendedor') return 1;
     if (b.rep === 'Sem vendedor') return -1;
     return b.total - a.total;

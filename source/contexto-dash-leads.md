@@ -1,5 +1,40 @@
 # Contexto — Dashboard de Leads (Planilha)
-Atualizado: 2026-05-10
+Atualizado: 2026-06-01
+
+---
+
+## ⚡ REDESIGN 2026-06-01 — Cockpit por Representante (LER PRIMEIRO)
+
+Mudança pesada de natureza: o dashboard saiu de "tela de dados de lead" para **cockpit de gestão por representante**. Aplicado em mobile + telão + proxy.
+
+### O que MUDOU
+- **KPIs enxugados de 12 → 6**: Receita Total, Fechamentos, Conversão, Potencial em Aberto, Investimento ADS, ROAS. (Saíram do topo: Total de Leads, Qualificados, Em Tratativa, ACOS, CAC, Speed to Lead global — speed/prazo/ticket agora vivem POR REP.)
+- **Saúde da Carteira** (semáforo de idade dos leads ativos, por DATA DE ENTRADA):
+  - 🟢 verde = até 15 dias · 🟡 amarelo = 16–30 dias · 🔴 vermelho = +30 dias ("esfriando")
+  - Mobile: strip de 3 células abaixo dos KPIs. Telão: banda de 3 células no topo da coluna central.
+  - Card vermelho **pulsa** (classe `.alert`) quando há leads esfriando (>0).
+- **Desempenho por Representante** (coração do dashboard):
+  - Mobile: **cards empilhados** por rep (`#rep-grid`) — 1/2/3 colunas responsivo. Acaba o estouro horizontal (resolve pendência antiga).
+  - Telão: **tabela de 10 colunas** (`#tb-reps`) na coluna central (maior): Rep · 🟢 · 🟡 · 🔴 · Fech · Receita · Ticket · Prazo · 1º Cont · Conv.
+  - Métricas por rep: aging (verde/amarelo/vermelho), ativos, fechados, receita, **ticket médio**, **prazo médio de fechamento**, **tempo médio de 1º contato**, conversão.
+- **REMOVIDO**: tabelas de Leads Ativos (GO/DF/Outros no mobile e telão), Últimos Leads, tabela antiga "Por Representante" simples. Funções `renderAtivos`, `renderLatest`, `statusBadge`, `statusBadgeSdr` deletadas dos dois HTMLs.
+- **MANTIDO**: Funil SDR + Funil Vendedor, e **Fechamentos Recentes** (única lista lead-a-lead que sobrou, a pedido).
+- **Carga mais leve**: `loadAllData` caiu de 6 → 4 chamadas (`funnel`, `by_rep`, `closed`, `ads`). `active_all` e `latest` não são mais chamados.
+
+### Proxy — `getByRep` GANHOU campos (RETROCOMPATÍVEL — só adiciona)
+Por rep, além dos antigos (total/ag_cont/em_cont/reun/em_neg/fechado/perdido/receita):
+- `ativos` — leads em aberto (status ≠ Fechado/Perdido/vazio)
+- `verde`/`amarelo`/`vermelho` — baldes de idade dos ativos por `COL_DATA` (entrada): ≤15 / 16–30 / >30 dias
+- `prazo_medio` — média de `COL_DIAS_FECHAR` dos fechados (mesma fonte do `media_dias` global)
+- `speed_medio` — média de `COL_DELTA_CONTATO` (min) dos leads com contato registrado
+- `ticket_medio` — `receita / fechado`
+- O front usa `|| 0` / `> 0 ? ... : '—'` em tudo → **se o proxy ainda não foi reimplantado, mostra zeros/traços, não quebra.**
+
+### ⚠️ AÇÃO MANUAL OBRIGATÓRIA pós-deploy
+O proxy é Apps Script — precisa ser **reimplantado manualmente** (colar `source/lifeb-leads-proxy.gs` no editor → Implantar → Gerenciar implantações → editar → Nova versão). Enquanto não reimplantar, a Carteira e as colunas ticket/prazo/1º-contato ficam zeradas/traço (sem erro).
+
+### Auditoria do redesign (2026-06-01)
+Sintaxe JS (mobile+telão+proxy) OK · 0 IDs órfãos · `<div>` balanceados · render runtime sem erros nos cenários novo/antigo/vazio · lógica `getByRep` validada (8/8 asserts: baldes, prazo, speed, ticket, exclusão de teste/duplicado, Sem vendedor por último).
 
 ---
 
@@ -39,7 +74,7 @@ URLs publicadas:
 | `active_all` | Leads ativos de todos os reps — requer token `0ef82354c11e4f518d90fe5c3935b767` |
 | `closed` | Lista de fechamentos com empresa, rep, valor, dias, data_f |
 | `latest` | Últimos leads cadastrados (nome, empresa, data, hora, status_sdr) |
-| `ads` | Investimento Meta Ads — aba ADS da planilha, uma linha por dia: `DATA \| PLATAFORMA \| VALOR`, atualizado automaticamente pelo Manus IA |
+| `ads` | Investimento Meta Ads (investimento, ultimaData) — atualizado manualmente |
 
 ---
 
@@ -51,23 +86,19 @@ URLs publicadas:
      Taxa de Conversão, Potencial em Aberto, Investimento ADS, ROAS, ACOS, CAC, **Speed to Lead**
 2. **Funil SDR** + **Funil Vendedor** (barras horizontais com %)
 3. **Tabelas** (scroll horizontal em mobile):
-   - Por Representante (Rep, Total, Ag., Cont., Neg., Fech., Perd., Receita) — **dinâmico, sem hardcode**
+   - Por Representante (Rep, Total, Ag., Cont., Neg., Fech., Perd., Receita)
    - Últimos Leads (Nome/Empresa, Entrada, Status SDR) — últimos 10
    - Fechamentos (Empresa, Rep, Valor, Dias, Data)
-   - **Leads Ativos — Goiás** (Empresa, **Rep** em negrito, Status) — filtra `estado === 'GO'`
-   - **Leads Ativos — DF** (Empresa, **Rep** em negrito, Status) — filtra `estado === 'DF'`
-   - **Leads Ativos — Outros** (Empresa + (UF), **Rep** em negrito, Status) — filtra outros estados, **oculto quando vazio**
+   - Leads Ativos Iramar (Empresa, Status, Entrada)
+   - Leads Ativos Natanael (Empresa, Status, Entrada)
 
 ### Telão (`dashboard-leads-telao.html`)
-1. **12 cards KPI** em faixa horizontal no topo
+1. **Mesmos 9 cards KPI** em faixa horizontal no topo (altura fixa 112px)
 2. **Layout 3 colunas** (`grid-template-columns: 21fr 45fr 34fr`):
    - **Esquerda:** Funil SDR + Funil Vendedor
-   - **Centro:** Cards de leads ativos por território (flex coluna, `flex:1` cada)
-     - **Leads Ativos — Goiás**: 5 colunas `Empresa | Cidade | Status | Rep (negrito) | Potencial`
-     - **Leads Ativos — DF**: mesma estrutura
-     - **Leads Ativos — Outros**: coluna Cidade mostra `Cidade / UF`; oculto quando vazio
-     - Colgroup: `27% | 21% | 22% | 16% | 14%`
-     - Badges no header: Aguardando / Em Contato / Negociando / Total
+   - **Centro:** Leads Ativos Iramar + Leads Ativos Natanael
+     - Tabela mais rica: 5 colunas (Empresa, Cidade/UF, Status, Potencial, Entrada)
+     - Badges separados por status: Ag. / Cont. / Neg. / Total
    - **Direita:** Últimos Leads + Fechamentos + Por Representante
 3. Relógio ao vivo (HH:MM:SS) no header
 
@@ -474,98 +505,3 @@ Todos os `catch(_)` críticos foram convertidos para `catch(err)` + `console.err
 ### Commits desta auditoria
 - `6e313cb5` — fix: row index incorreto em getActive/getRepHistory quando há leads excluídos
 - `dfbb612d` — fix: auditoria completa — proxy robusto + erros visíveis no console
-
----
-
-## Leads Ativos por Território — arquitetura (2026-05-10, commits c327401b + 016a3f17)
-
-### Lógica de filtragem
-- Dados vêm de `active_all` (já retorna campo `estado` via `COL_ESTADO=17`)
-- **Nenhuma mudança no proxy** — filtragem 100% no frontend
-- Função: `renderEstadoCard(estadoSigla, tbodyId, badgeId[, negId, agId, contId][, cardId])`
-  - Filtra `leads` por `(l.estado||'').toUpperCase().trim() === estadoSigla`
-  - Para `'OUTROS'`: filtra leads cujo estado NÃO é `GO` nem `DF`
-  - Card Outros: `card.style.display = estadoLeads.length ? '' : 'none'`
-
-### IDs dos elementos — mobile
-| Card | tbodyId | badgeId | cardId |
-|---|---|---|---|
-| Goiás | `tb-ativos-go` | `ativos-badge-go` | — |
-| DF | `tb-ativos-df` | `ativos-badge-df` | — |
-| Outros | `tb-ativos-outros` | `ativos-badge-outros` | `card-ativos-outros` |
-
-### IDs dos elementos — telão (badges adicionais)
-| Card | ag | cont | neg | total | cardId |
-|---|---|---|---|---|---|
-| Goiás | `ativos-ag-go` | `ativos-cont-go` | `ativos-neg-go` | `ativos-badge-go` | — |
-| DF | `ativos-ag-df` | `ativos-cont-df` | `ativos-neg-df` | `ativos-badge-df` | — |
-| Outros | `ativos-ag-outros` | `ativos-cont-outros` | `ativos-neg-outros` | `ativos-badge-outros` | `card-ativos-outros` |
-
-### UF no card Outros
-- **Mobile**: `(UF)` em span muted após o nome da empresa (`font-size:10px;color:var(--muted);font-weight:600`)
-- **Telão**: coluna Cidade mostra `Cidade / UF` (`cidadeFmt + ' / ' + l.estado.toUpperCase()`); header do card Outros tem "Cidade / UF"; GO e DF têm só "Cidade"
-- Implementado via `estadoSigla === 'OUTROS'` dentro do `.map()` — sem duplicação de função
-
-### Rep em negrito
-- Mobile: `font-weight:700` na `<td>` do Rep
-- Telão: `font-weight:700` na `<td>` do Rep
-- Facilita scan visual rápido de quem está atendendo cada lead
-
-### Ordem das colunas — telão
-`Empresa | Cidade[/UF] | Status | Rep | Potencial` — Status entre Cidade e Rep cria separação visual, espaço para UF no card Outros
-
----
-
-## Feature planejada — Filtros de Período (2026-05-08)
-
-### Decisão de design (pesquisa + discussão)
-Pesquisa em Pipedrive, HubSpot, Salesforce, Bitrix24, RD Station e literatura de UX/sales ops confirmou:
-- **Sem toggle global de "data de entrada / data de fechamento"** — nenhum CRM de referência usa isso no dashboard principal. Gera desconfiança nos dados.
-- **Padrão da indústria**: filtro por data de entrada para métricas de pipeline; receita/fechamentos por data de fechamento — comportamento automático por seção, invisível ao usuário.
-- **Default recomendado**: "Esse mês" (calendário fixo, não rolling 30d) — mais natural para acompanhamento de metas mensais.
-
-### Botões de período
-`Hoje | 7d | 30d | Esse mês (padrão) | Mês ant. | 90d | Total`
-
-Aplicados a **ambos os arquivos**: `dashboard-leads.html` (mobile/desktop) e `dashboard-leads-telao.html` (usado ativamente no desktop, com interação).
-
-### Comportamento por seção
-
-| Seção | Critério de data |
-|---|---|
-| Total leads, Qualificados SDR, Em tratativa | Data de entrada (`COL_DATA`) |
-| Funil SDR + Funil Vendedor | Data de entrada (cohort) |
-| Speed to Lead | Data de entrada |
-| Por Representante | Data de entrada |
-| Últimos Leads | Data de entrada |
-| **Receita, Fechamentos** | **Data de fechamento (`COL_DATA_FECH`)** |
-| **ROAS, ACOS, CAC** | **Data da despesa ADS** (ver estrutura abaixo) |
-| Potencial em aberto | **Não filtra** — snapshot atual |
-| Leads Ativos Iramar / Natanael | **Não filtra** — snapshot atual |
-
-### Estrutura dos dados de ADS
-Aba `ADS` na planilha Google Sheets com colunas: `DATA | PLATAFORMA | VALOR`
-- Uma linha por dia por plataforma (Meta, etc.)
-- O proxy precisará de uma nova action ou parâmetros `startDate`/`endDate` no `getAds` atual para agregar VALOR por intervalo de data
-- ROAS/ACOS/CAC calculados com: investimento = soma de VALOR da aba ADS no período; receita = soma de fechamentos por `COL_DATA_FECH` no período
-
-### Mudanças necessárias no proxy
-Todas as actions que recebem filtro de período precisam aceitar `startDate` + `endDate` (formato `YYYY-MM-DD`):
-- `summary` — filtra por `COL_DATA` (entrada); receita e fechamentos filtram por `COL_DATA_FECH`
-- `funnel` — filtra por `COL_DATA`
-- `by_rep` — filtra por `COL_DATA`
-- `closed` — filtra por `COL_DATA_FECH`
-- `latest` — filtra por `COL_DATA`
-- `ads` — filtra aba ADS por DATA, soma VALOR no intervalo
-- `active_all`, `active`, `rep_history` — **não filtram** (estado atual)
-
-### Mudanças no frontend (ambos os dashboards)
-- Barra de filtros sticky abaixo do header com botões de período
-- `resolvePeriod(range)` → `{ startDate, endDate, label }` (mesmo padrão do telão GA4)
-- `setRange(range, btn)` → atualiza período ativo e dispara `loadAllData()`
-- Todas as chamadas ao proxy incluem `startDate` e `endDate` como query params ou no body
-- Mobile: barra com scroll horizontal
-- Labels dos cards de Receita/Fechamentos indicam visualmente que usam data de fechamento (a definir: subtexto pequeno ou não)
-
-### Status
-**PLANEJADO** — a implementar. Há mudanças a fazer no dash antes desta feature (a definir pelo usuário).
