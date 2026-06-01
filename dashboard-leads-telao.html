@@ -305,22 +305,42 @@
     .aging-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
     .aging-dot.green { background: var(--green); } .aging-dot.amber { background: var(--orange); } .aging-dot.red { background: var(--red); }
     .aging-total { margin-left: auto; font-size: 13px; font-weight: 700; color: var(--muted); white-space: nowrap; }
-    .rep-funnel { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
-    .rf-seg { border-radius: 9px; padding: 6px 2px; text-align: center; border-top: 3px solid var(--muted); background: #faf9fc; }
-    .rf-seg.seg-ag { border-top-color: var(--orange); } .rf-seg.seg-ct { border-top-color: var(--blue); } .rf-seg.seg-ng { border-top-color: var(--magenta); } .rf-seg.seg-fe { border-top-color: var(--green); } .rf-seg.seg-pe { border-top-color: var(--red); }
-    .rf-num { font-size: 18px; font-weight: 800; color: var(--text); line-height: 1; }
-    .rf-lb { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-top: 2px; }
+    .rep-funnel { display: flex; flex-direction: column; gap: 8px; }
+    .rf-bar { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: #f0ebf8; }
+    .rf-bar .rf-seg { min-width: 0; }
+    .rf-seg.seg-ag { background: var(--orange); } .rf-seg.seg-ct { background: var(--blue); } .rf-seg.seg-ng { background: var(--magenta); } .rf-seg.seg-fe { background: var(--green); } .rf-seg.seg-pe { background: var(--red); }
+    .rf-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 11px; font-weight: 700; color: var(--muted); }
+    .rf-lg { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+    .rf-lg i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+    .rf-lg i.seg-ag { background: var(--orange); } .rf-lg i.seg-ct { background: var(--blue); } .rf-lg i.seg-ng { background: var(--magenta); } .rf-lg i.seg-fe { background: var(--green); } .rf-lg i.seg-pe { background: var(--red); }
+    .rep-conv.rep-conv-low { background: rgba(220,38,38,.14); color: var(--red); border-color: rgba(220,38,38,.35); }
     .rep-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
     .rep-metric { text-align: center; min-width: 0; }
     .rm-val { font-size: 18px; font-weight: 800; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.1; }
     .rm-label { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-top: 3px; }
     @media (max-height: 820px) {
       .rep-medal { font-size: 18px; } .rep-name { font-size: 16px; } .aging-chip { font-size: 15px; }
-      .rf-num { font-size: 16px; } .rm-val { font-size: 16px; } .rep-card { padding: 8px 12px; }
+      .rm-val { font-size: 16px; } .rep-card { padding: 8px 12px; }
     }
     @media (max-height: 700px) {
-      .rep-name { font-size: 14px; } .aging-chip { font-size: 13px; } .rf-num { font-size: 14px; } .rm-val { font-size: 14px; }
+      .rep-name { font-size: 14px; } .aging-chip { font-size: 13px; } .rm-val { font-size: 14px; }
     }
+
+    /* card Leads Hoje */
+    .accent-sky { border-top: 4px solid #0284c7; background: linear-gradient(180deg,#f0f9ff 0%,#fff 60%); }
+    /* Fechamentos — resumo agregado (telão) */
+    #fechados-resumo { flex: 1; min-height: 0; padding: 10px 14px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+    .fch-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .fch-kpi { text-align: center; min-width: 0; }
+    .fch-val { font-size: 22px; font-weight: 800; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .fch-lb { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-top: 3px; }
+    .fch-top { font-size: 13px; color: var(--text); background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 9px 12px; text-align: center; }
+    .fch-trend { display: flex; flex-direction: column; gap: 8px; }
+    .fch-month { display: flex; align-items: center; gap: 10px; }
+    .fcm-lb { font-size: 12px; font-weight: 700; color: var(--muted); min-width: 54px; }
+    .fcm-bar { flex: 1; height: 10px; background: #f0ebf8; border-radius: 5px; overflow: hidden; }
+    .fcm-bar > div { height: 100%; background: linear-gradient(90deg, var(--green), #5dde8b); border-radius: 5px; }
+    .fcm-val { font-size: 12px; font-weight: 700; color: var(--text); min-width: 110px; text-align: right; white-space: nowrap; }
   </style>
 </head>
 <body>
@@ -366,10 +386,10 @@
       <div class="rt-sub" id="rt-cpl-sdr">custo por lead: —</div>
     </div>
 
-    <div class="card card-metric accent-red">
-      <div class="m-label">Aguardando SDR</div>
-      <div class="m-val" id="card-aguardando-sdr" style="color:var(--red)">—</div>
-      <div class="m-sub">leads p/ abordar</div>
+    <div class="card card-metric accent-sky">
+      <div class="m-label">Leads Hoje</div>
+      <div class="m-val" id="card-leads-hoje" style="color:#0284c7">—</div>
+      <div class="m-sub" id="card-leads-hoje-sub">novos hoje</div>
     </div>
 
     <div class="card card-metric accent-purple">
@@ -502,28 +522,14 @@
 
       <div class="card card-table" style="flex:1;min-height:0">
         <div class="card-hd">
-          <div class="card-hd-title">Fechamentos Recentes</div>
+          <div class="card-hd-title">Fechamentos</div>
           <div style="display:flex;align-items:center;gap:6px">
             <span id="fechados-media-dias" class="badge" style="white-space:nowrap"></span>
             <span id="fechados-cac" class="badge" style="white-space:nowrap"></span>
           </div>
         </div>
-        <div class="table-scroll table-body" style="flex:1;min-height:0;overflow-y:auto">
-          <table style="table-layout:fixed;width:100%;font-size:12px">
-            <colgroup>
-              <col style="width:30%">
-              <col style="width:16%">
-              <col style="width:20%">
-              <col style="width:12%">
-              <col style="width:22%">
-            </colgroup>
-            <thead><tr>
-              <th class="td-left" style="text-align:left">Empresa</th><th class="td-left" style="text-align:left">Rep</th><th style="text-align:right">Valor</th><th style="text-align:right">Dias</th><th style="text-align:right">Data</th>
-            </tr></thead>
-            <tbody id="tb-fechados">
-              <tr class="empty-row"><td colspan="5">Carregando...</td></tr>
-            </tbody>
-          </table>
+        <div id="fechados-resumo">
+          <div style="margin:auto;color:#c8c2d6;font-style:italic;font-size:13px">Carregando...</div>
         </div>
       </div>
 
@@ -713,9 +719,14 @@ function renderSummary(data) {
     const { sdr = {}, vend = {}, receita = 0, pipeline = 0, total = 0, media_dias = 0, media_speed_to_lead = 0 } = data;
     const el = id => document.getElementById(id);
 
-    if (el('card-total'))          el('card-total').textContent          = n(total);
-    if (el('card-aguardando-sdr')) el('card-aguardando-sdr').textContent = n(sdr.ag_abord || 0);
-    if (el('card-qualif'))         el('card-qualif').textContent         = n(sdr.qualif || 0);
+    if (el('card-total'))      el('card-total').textContent      = n(total);
+    if (el('card-leads-hoje')) el('card-leads-hoje').textContent = n(data.todayCount || 0);
+    if (el('card-leads-hoje-sub') && data.firstDate && total > 0) {
+      const inicio = new Date(data.firstDate + 'T00:00:00');
+      const dias = Math.max(1, Math.ceil((Date.now() - inicio.getTime()) / 86400000));
+      el('card-leads-hoje-sub').textContent = `média ${(total / dias).toFixed(1)}/dia`;
+    }
+    if (el('card-qualif'))     el('card-qualif').textContent     = n(sdr.qualif || 0);
 
     const tratativa = (vend.ag_cont || 0) + (vend.em_cont || 0) + (vend.reun || 0) + (vend.em_neg || 0);
     if (el('card-tratativa')) el('card-tratativa').textContent = n(tratativa);
@@ -864,22 +875,27 @@ function buildRepData(rByRep, rActive, rClosed) {
 const REP_MEDALS = ['🥇', '🥈', '🥉'];
 
 function repCardHTML(r, i) {
-  const conv   = r.total > 0 ? ((r.fechado / r.total) * 100).toFixed(0) + '%' : '—';
-  const ativos = r.ativos || 0;
-  const prazo  = r.prazo_medio  > 0 ? r.prazo_medio + 'd' : '—';
-  const speed  = fmtSpeed(r.speed_medio);
-  const ticket = r.ticket_medio > 0 ? cur(r.ticket_medio) : '—';
-  const medal  = REP_MEDALS[i] || `<span class="rep-pos">${i + 1}º</span>`;
-  const seg = [
-    ['Ag', r.ag_cont || 0, 'seg-ag'], ['Cont', r.em_cont || 0, 'seg-ct'],
-    ['Neg', r.em_neg || 0, 'seg-ng'], ['Fech', r.fechado || 0, 'seg-fe'],
-    ['Perd', r.perdido || 0, 'seg-pe'],
-  ].map(s => `<div class="rf-seg ${s[2]}"><div class="rf-num">${n(s[1])}</div><div class="rf-lb">${s[0]}</div></div>`).join('');
+  const convPct = r.total > 0 ? (r.fechado / r.total) * 100 : null;
+  const conv    = convPct == null ? '—' : convPct.toFixed(0) + '%';
+  const convLow = (convPct != null && convPct < 10) ? ' rep-conv-low' : '';
+  const ativos  = r.ativos || 0;
+  const prazo   = r.prazo_medio  > 0 ? r.prazo_medio + 'd' : '—';
+  const speed   = fmtSpeed(r.speed_medio);
+  const ticket  = r.ticket_medio > 0 ? cur(r.ticket_medio) : '—';
+  const medal   = REP_MEDALS[i] || `<span class="rep-pos">${i + 1}º</span>`;
+  const stages = [
+    ['Aguard.', r.ag_cont || 0, 'seg-ag'], ['Contato', r.em_cont || 0, 'seg-ct'],
+    ['Negoc.',  r.em_neg  || 0, 'seg-ng'], ['Fechado', r.fechado || 0, 'seg-fe'],
+    ['Perdido', r.perdido || 0, 'seg-pe'],
+  ];
+  const bar = stages.filter(s => s[1] > 0).map(s => `<div class="rf-seg ${s[2]}" style="flex:${s[1]}" title="${s[0]}: ${s[1]}"></div>`).join('')
+    || '<div class="rf-seg" style="flex:1;background:#e8e4f0"></div>';
+  const legend = stages.map(s => `<span class="rf-lg"><i class="${s[2]}"></i>${s[0]} ${n(s[1])}</span>`).join('');
   return `<div class="rep-card${i === 0 ? ' top' : ''}">
     <div class="rep-card-hd">
       <span class="rep-medal">${medal}</span>
       <span class="rep-name" title="${esc(toTitleCase(r.rep))}">${esc(toTitleCase(r.rep))}</span>
-      <span class="rep-conv">Conv. ${conv}</span>
+      <span class="rep-conv${convLow}">Conv. ${conv}</span>
     </div>
     <div class="rep-aging">
       <span class="aging-chip green"><span class="aging-dot green"></span>${n(r.verde || 0)}</span>
@@ -887,7 +903,10 @@ function repCardHTML(r, i) {
       <span class="aging-chip red"><span class="aging-dot red"></span>${n(r.vermelho || 0)}</span>
       <span class="aging-total">${n(ativos)} ativo${ativos === 1 ? '' : 's'}</span>
     </div>
-    <div class="rep-funnel">${seg}</div>
+    <div class="rep-funnel">
+      <div class="rf-bar">${bar}</div>
+      <div class="rf-legend">${legend}</div>
+    </div>
     <div class="rep-metrics">
       <div class="rep-metric"><div class="rm-val">${cur(r.receita)}</div><div class="rm-label">Receita</div></div>
       <div class="rep-metric"><div class="rm-val">${ticket}</div><div class="rm-label">Ticket médio</div></div>
@@ -915,28 +934,49 @@ function renderReps(reps) {
   }
 }
 
+const FCH_MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 function renderFechados(data) {
   try {
-    const tbody = document.getElementById('tb-fechados');
-    if (!tbody) return;
+    const box = document.getElementById('fechados-resumo');
+    if (!box) return;
     const f = data.fechamentos || [];
-    if (!f.length) { tbody.innerHTML = emptyRow(5); return; }
-    tbody.innerHTML = f.map(c => {
-      const empresa = esc(toTitleCase(c.empresa || c.nome) || '—');
-      const rep     = esc(toTitleCase(c.rep) || c.rep);
-      const dataBR  = c.data_f ? (() => { const [y,m,d] = c.data_f.split('-'); return `${d}/${m}/${y.slice(2)}`; })() : '—';
-      return `<tr>
-        <td title="${empresa}">${empresa}</td>
-        <td class="td-left">${rep}</td>
-        <td style="text-align:right">${cur(c.valor)}</td>
-        <td style="text-align:right">${c.dias ? n(c.dias) + 'd' : '—'}</td>
-        <td style="text-align:right">${dataBR}</td>
-      </tr>`;
+    if (!f.length) {
+      box.innerHTML = '<div style="margin:auto;color:#c8c2d6;font-style:italic;font-size:13px">Sem fechamentos</div>';
+      return;
+    }
+    const total  = f.reduce((s, c) => s + (+c.valor || 0), 0);
+    const qtd    = f.length;
+    const ticket = qtd > 0 ? Math.round(total / qtd) : 0;
+    const maior  = f.reduce((a, c) => ((+c.valor || 0) > (+a.valor || 0) ? c : a), f[0]);
+    const maiorEmp = toTitleCase(maior.empresa || maior.nome) || '—';
+
+    const byMonth = {};
+    f.forEach(c => {
+      const ym = String(c.data_f || c.data || '').slice(0, 7);
+      if (!/^\d{4}-\d{2}$/.test(ym)) return;
+      if (!byMonth[ym]) byMonth[ym] = { v: 0, n: 0 };
+      byMonth[ym].v += (+c.valor || 0); byMonth[ym].n++;
+    });
+    const months = Object.keys(byMonth).sort().slice(-5);
+    const maxV = Math.max(1, ...months.map(m => byMonth[m].v));
+    const trend = months.map(m => {
+      const [y, mo] = m.split('-');
+      const pct = Math.round(byMonth[m].v / maxV * 100);
+      return `<div class="fch-month"><span class="fcm-lb">${FCH_MESES[+mo - 1]}/${y.slice(2)}</span><div class="fcm-bar"><div style="width:${Math.max(pct, 3)}%"></div></div><span class="fcm-val">${cur(byMonth[m].v)} · ${byMonth[m].n}</span></div>`;
     }).join('');
+
+    box.innerHTML = `
+      <div class="fch-kpis">
+        <div class="fch-kpi"><div class="fch-val">${cur(total)}</div><div class="fch-lb">Total fechado</div></div>
+        <div class="fch-kpi"><div class="fch-val">${n(qtd)}</div><div class="fch-lb">Negócios</div></div>
+        <div class="fch-kpi"><div class="fch-val">${cur(ticket)}</div><div class="fch-lb">Ticket médio</div></div>
+      </div>
+      <div class="fch-top">🏆 Maior negócio: <strong>${cur(maior.valor)}</strong> · ${esc(maiorEmp)}</div>
+      <div class="fch-trend">${trend}</div>`;
   } catch(err) {
     _log.error('fechados', 'Erro ao renderizar fechados', err);
-    const tbody = document.getElementById('tb-fechados');
-    if (tbody) tbody.innerHTML = errRow(5);
+    const box = document.getElementById('fechados-resumo');
+    if (box) box.innerHTML = '<div style="margin:auto;color:var(--magenta);font-size:13px">Erro ao carregar</div>';
   }
 }
 
