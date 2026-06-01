@@ -627,6 +627,9 @@
     .fcm-bar { flex: 1; height: 8px; background: #f0ebf8; border-radius: 4px; overflow: hidden; }
     .fcm-bar > div { height: 100%; background: linear-gradient(90deg, var(--green), #5dde8b); border-radius: 4px; }
     .fcm-val { font-size: 11px; font-weight: 700; color: var(--text); min-width: 92px; text-align: right; white-space: nowrap; }
+    /* KPIs — paleta calma: cards uniformes, cor reservada p/ onde tem significado */
+    .cards-row .card-stat { border-top-color: var(--border); background: #fff; }
+    .cards-row .card-stat.accent-highlight { border-top-color: var(--purple); background: linear-gradient(180deg,#ede9fe 0%,#fff 50%); }
   </style>
 </head>
 <body>
@@ -814,7 +817,6 @@
     <div class="card">
       <div class="card-hd">
         <div class="card-hd-title">Fechamentos</div>
-        <span id="fechados-cac" class="badge" style="white-space:nowrap"></span>
       </div>
       <div id="fechados-resumo">
         <div style="text-align:center;color:#c8c2d6;font-style:italic;font-size:13px;padding:16px">Carregando...</div>
@@ -1226,13 +1228,17 @@ function renderFechados(data) {
       return `<div class="fch-month"><span class="fcm-lb">${FCH_MESES[+mo - 1]}/${y.slice(2)}</span><div class="fcm-bar"><div style="width:${Math.max(pct, 3)}%"></div></div><span class="fcm-val">${cur(byMonth[m].v)} · ${byMonth[m].n}</span></div>`;
     }).join('');
 
+    const hoje = new Date();
+    const curYM = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+    const mesAtual = byMonth[curYM] || { v: 0, n: 0 };
+
     box.innerHTML = `
       <div class="fch-kpis">
-        <div class="fch-kpi"><div class="fch-val">${cur(total)}</div><div class="fch-lb">Total fechado</div></div>
-        <div class="fch-kpi"><div class="fch-val">${n(qtd)}</div><div class="fch-lb">Negócios</div></div>
         <div class="fch-kpi"><div class="fch-val">${cur(ticket)}</div><div class="fch-lb">Ticket médio</div></div>
+        <div class="fch-kpi"><div class="fch-val">${cur(mesAtual.v)}</div><div class="fch-lb">Este mês · ${n(mesAtual.n)}</div></div>
+        <div class="fch-kpi"><div class="fch-val">${cur(maior.valor)}</div><div class="fch-lb">Maior negócio</div></div>
       </div>
-      <div class="fch-top">🏆 Maior negócio: <strong>${cur(maior.valor)}</strong> · ${esc(maiorEmp)}</div>
+      <div class="fch-top">🏆 ${esc(maiorEmp)}</div>
       <div class="fch-trend">${trend}</div>`;
   } catch(err) {
     _log.error('fechados', 'Erro ao renderizar fechados', err);
