@@ -535,3 +535,12 @@ Régua nova: **diretor sem conhecimento técnico tem que bater o olho e entender
 - **Destaque verde**: receita do rep ≥ média do time fica verde (`.lb-num.good` / `.rm-val.good`); top continua com linha dourada.
 - **Labels claros**: header do leaderboard "Idade dos leads" / "Funil de vendas" / "Conversão".
 - Pipeline mantido (Robert confirmou que reps atualizam o valor potencial — dado real).
+
+### Clicável / expansível — overview → detalhe (2026-06-01, commit `22a1bb14`)
+Padrão "visão limpa por cima, detalhe ao clicar". Modal reutilizável `#detail-modal` (✕/ESC/clicar-fora fecha). `loadAllData` guarda `_activeLeads` (active_all) e `_closedList` (closed) pros modais. Delegação de clique única (`document` listener) roteia por `data-drill` + KPI cards.
+- **Clicar num rep** (`.lb-row`/`.rep-card` com `data-drill="rep:NOME"`) → `showRep`: leads ativos (mais antigo no topo) + fechamentos do rep.
+- **Clicar na carteira** (`.cart-cell` com `data-drill="carteira:verde|amarelo|vermelho"`) → `showCarteira`: leads daquela faixa de idade (com coluna Rep).
+- **Clicar em Fechamentos** (`data-drill="fechados"`) → `showFechados`: lista completa (maiores primeiro) — detalhe lead-a-lead volta SOB DEMANDA.
+- **Clicar em qualquer KPI** (delegação acha `[id^=card-]` dentro do card) → `showKpiHelp` com `KPI_HELP`: explicação em português claro p/ diretor não-técnico (ex: "ROAS 7x = pra cada R$1 de anúncio, voltaram R$7").
+- Helpers: `dmOpen/dmClose`, `statusPill`, `fmtDataBR`, `leadsTable`, `closedTable`. CSS `.dm-*`, `.clickable`, cursor:pointer nos elementos clicáveis.
+- Telão também é clicável (funciona em desktop/touch; na TV é passivo, sem prejuízo).
