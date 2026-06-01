@@ -592,6 +592,22 @@
     .rep-metric { text-align: center; min-width: 0; }
     .rm-val { font-size: 17px; font-weight: 800; color: var(--text); line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .rm-label { font-size: 9.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .3px; margin-top: 4px; }
+
+    /* ranking / medalha */
+    .rep-card.top { border-top-color: #d4af37; box-shadow: 0 3px 16px rgba(212,175,55,.20); }
+    .rep-medal { font-size: 16px; flex-shrink: 0; line-height: 1; }
+    .rep-pos { font-size: 12px; font-weight: 800; color: var(--muted); flex-shrink: 0; min-width: 22px; text-align: center; }
+    .rep-card-hd .rep-name { flex: 1; min-width: 0; }
+    /* mini-funil por rep (Ag / Cont / Neg / Fech / Perd) */
+    .rep-funnel { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 12px; }
+    .rf-seg { border-radius: 9px; padding: 7px 2px 6px; text-align: center; border-top: 3px solid var(--muted); background: #faf9fc; }
+    .rf-seg.seg-ag { border-top-color: var(--orange); }
+    .rf-seg.seg-ct { border-top-color: var(--blue); }
+    .rf-seg.seg-ng { border-top-color: var(--magenta); }
+    .rf-seg.seg-fe { border-top-color: var(--green); }
+    .rf-seg.seg-pe { border-top-color: var(--red); }
+    .rf-num { font-size: 15px; font-weight: 800; color: var(--text); line-height: 1; }
+    .rf-lb { font-size: 9px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-top: 3px; }
   </style>
 </head>
 <body>
@@ -623,14 +639,36 @@
 <div id="dashboard">
   <div id="error-banner"></div>
 
-  <!-- KPIs PRINCIPAIS (6) -->
+  <!-- KPIs (13) -->
   <div class="cards-row">
 
-    <!-- Receita Total (destaque) -->
-    <div class="card card-stat accent-highlight">
-      <div class="s-label">Receita Total</div>
-      <div class="s-val" id="card-receita" style="color:var(--purple);white-space:nowrap;font-size:22px">—</div>
-      <div class="s-sub" id="card-receita-sub">total fechado</div>
+    <!-- Total de Leads (destaque) -->
+    <div class="card card-rt">
+      <div class="rt-icon">&#128203;</div>
+      <div class="rt-num" id="card-total">—</div>
+      <div class="rt-label">Total de Leads Registrados</div>
+      <div class="rt-sub" id="rt-cpl-sdr">CUSTO POR LEAD: —</div>
+    </div>
+
+    <!-- Aguardando SDR (substitui o valor perdido do "Últimos Leads") -->
+    <div class="card card-stat accent-red">
+      <div class="s-label">Aguardando SDR</div>
+      <div class="s-val" id="card-aguardando-sdr" style="color:var(--red)">—</div>
+      <div class="s-sub">leads p/ abordar</div>
+    </div>
+
+    <!-- Qualificados SDR -->
+    <div class="card card-stat accent-purple">
+      <div class="s-label">Qualificados</div>
+      <div class="s-val" id="card-qualif" style="color:var(--purple)">—</div>
+      <div class="s-sub">pelo SDR</div>
+    </div>
+
+    <!-- Em Tratativa -->
+    <div class="card card-stat accent-blue">
+      <div class="s-label">Em Tratativa</div>
+      <div class="s-val" id="card-tratativa" style="color:var(--blue)">—</div>
+      <div class="s-sub">aguardando + contato + neg.</div>
     </div>
 
     <!-- Fechamentos -->
@@ -640,24 +678,31 @@
       <div class="s-sub" id="card-fechados-sub">contratos</div>
     </div>
 
-    <!-- Conversão -->
-    <div class="card card-stat accent-orange">
-      <div class="s-label">Conversão</div>
-      <div class="s-val" id="card-conv" style="color:var(--orange)">—</div>
-      <div class="s-sub">fechados / qualificados</div>
+    <!-- Receita Total -->
+    <div class="card card-stat accent-highlight">
+      <div class="s-label">Receita Total</div>
+      <div class="s-val" id="card-receita" style="color:var(--purple);white-space:nowrap;font-size:20px">—</div>
+      <div class="s-sub" id="card-receita-sub">média — / contrato</div>
     </div>
 
-    <!-- Potencial em Aberto -->
+    <!-- Taxa de Conversão -->
+    <div class="card card-stat accent-orange">
+      <div class="s-label">Taxa de Conversão</div>
+      <div class="s-val" id="card-conv" style="color:var(--orange)">—</div>
+      <div class="s-sub">fechados / qualificados SDR</div>
+    </div>
+
+    <!-- Potencial -->
     <div class="card card-stat accent-magenta">
       <div class="s-label">Potencial em Aberto</div>
       <div class="s-val" id="card-potencial" style="color:var(--magenta);white-space:nowrap;font-size:20px">—</div>
-      <div class="s-sub">pipeline ativo</div>
+      <div class="s-sub">pipeline ativo (pode virar receita)</div>
     </div>
 
     <!-- Investimento ADS -->
     <div class="card card-stat accent-cyan">
       <div class="s-label">Investimento ADS</div>
-      <div class="s-val" id="card-ads" style="color:#0891b2;font-size:22px">—</div>
+      <div class="s-val" id="card-ads" style="color:#0891b2">—</div>
       <div class="s-sub" id="card-ads-sub">total investido</div>
     </div>
 
@@ -666,6 +711,27 @@
       <div class="s-label">ROAS</div>
       <div class="s-val" id="card-roas" style="color:#0d9488">—</div>
       <div class="s-sub">receita / investimento</div>
+    </div>
+
+    <!-- ACOS -->
+    <div class="card card-stat accent-amber">
+      <div class="s-label">ACOS</div>
+      <div class="s-val" id="card-acos" style="color:#b45309">—</div>
+      <div class="s-sub">invest. / receita</div>
+    </div>
+
+    <!-- CAC -->
+    <div class="card card-stat accent-violet">
+      <div class="s-label">CAC</div>
+      <div class="s-val" id="card-cac" style="color:#7c3aed;font-size:20px">—</div>
+      <div class="s-sub">invest. / fechamentos</div>
+    </div>
+
+    <!-- Speed to Lead -->
+    <div class="card card-stat accent-indigo card-speed">
+      <div class="s-label">Speed to Lead</div>
+      <div class="s-val" id="card-speed-to-lead" style="color:#4f46e5;font-size:20px">—</div>
+      <div class="s-sub">tempo médio 1º contato</div>
     </div>
 
   </div><!-- /.cards-row -->
@@ -906,8 +972,15 @@ function renderFunilBar(containerId, items, total) {
 
 function renderSummary(data) {
   try {
-    const { sdr = {}, vend = {}, receita = 0, pipeline = 0 } = data;
+    const { sdr = {}, vend = {}, receita = 0, pipeline = 0, total = 0, media_dias = 0, media_speed_to_lead = 0 } = data;
     const el = id => document.getElementById(id);
+
+    if (el('card-total'))          el('card-total').textContent          = n(total);
+    if (el('card-aguardando-sdr')) el('card-aguardando-sdr').textContent = n(sdr.ag_abord || 0);
+    if (el('card-qualif'))         el('card-qualif').textContent         = n(sdr.qualif || 0);
+
+    const tratativa = (vend.ag_cont || 0) + (vend.em_cont || 0) + (vend.em_neg || 0);
+    if (el('card-tratativa')) el('card-tratativa').textContent = n(tratativa);
 
     const fechados = vend.fechado || 0;
     if (el('card-fechados')) el('card-fechados').textContent = n(fechados);
@@ -919,7 +992,7 @@ function renderSummary(data) {
     if (el('card-receita')) el('card-receita').textContent = cur(receita);
     if (el('card-receita-sub')) {
       el('card-receita-sub').textContent = fechados > 0
-        ? `ticket médio ${cur(Math.round(receita / fechados))}`
+        ? `média ${cur(Math.round(receita / fechados))} · ${media_dias}d p/ fechar`
         : 'total fechado';
     }
 
@@ -928,6 +1001,9 @@ function renderSummary(data) {
     if (el('card-conv')) el('card-conv').textContent = qualif > 0 ? ((fechados / qualif) * 100).toFixed(1) + '%' : '—';
 
     if (el('card-potencial')) el('card-potencial').textContent = cur(pipeline);
+
+    const stlEl = el('card-speed-to-lead');
+    if (stlEl) stlEl.textContent = media_speed_to_lead > 0 ? fmtSpeed(media_speed_to_lead) : '—';
 
     const periodEl = document.getElementById('header-period');
     if (periodEl && data.firstDate) {
@@ -998,50 +1074,103 @@ function renderFunnel(data) {
   }
 }
 
-function renderReps(data) {
+function ageDaysFromIso(iso) {
+  if (!iso) return null;
+  const p = String(iso).split('-');
+  if (p.length !== 3) return null;
+  const t = new Date(+p[0], +p[1] - 1, +p[2]).getTime();
+  return isNaN(t) ? null : Math.floor((Date.now() - t) / 86400000);
+}
+
+// Enriquece by_rep com aging (de active_all), ticket e prazo (de closed) — tudo no cliente.
+// Ordena por receita desc (placar). speed_medio vem do proxy (0/"—" até reimplantar).
+function buildRepData(rByRep, rActive, rClosed) {
+  const base = (rByRep.status === 'fulfilled' ? (rByRep.value.reps || []) : [])
+    .filter(r => r.rep && r.rep !== 'Sem vendedor');
+  const active = rActive.status === 'fulfilled' ? (rActive.value.leads || []) : [];
+  const closed = rClosed.status === 'fulfilled' ? (rClosed.value.fechamentos || []) : [];
+
+  const aging = {};
+  active.forEach(l => {
+    const k = String(l.rep || '').toUpperCase();
+    if (!k) return;
+    if (!aging[k]) aging[k] = { verde: 0, amarelo: 0, vermelho: 0, ativos: 0 };
+    aging[k].ativos++;
+    const d = ageDaysFromIso(l.data);
+    if      (d == null || d <= 15) aging[k].verde++;
+    else if (d <= 30)              aging[k].amarelo++;
+    else                           aging[k].vermelho++;
+  });
+
+  const prazo = {};
+  closed.forEach(c => {
+    const k = String(c.rep || '').toUpperCase();
+    const dias = +c.dias || 0;
+    if (!k || dias <= 0) return;
+    if (!prazo[k]) prazo[k] = { sum: 0, cnt: 0 };
+    prazo[k].sum += dias; prazo[k].cnt++;
+  });
+
+  return base.map(r => {
+    const k  = String(r.rep).toUpperCase();
+    const ag = aging[k] || { verde: 0, amarelo: 0, vermelho: 0, ativos: 0 };
+    const pz = prazo[k];
+    return Object.assign({}, r, {
+      verde: ag.verde, amarelo: ag.amarelo, vermelho: ag.vermelho, ativos: ag.ativos,
+      ticket_medio: r.fechado > 0 ? Math.round(r.receita / r.fechado) : 0,
+      prazo_medio:  pz && pz.cnt > 0 ? Math.round(pz.sum / pz.cnt) : 0,
+      speed_medio:  r.speed_medio || 0,
+    });
+  }).sort((a, b) => (b.receita - a.receita) || (b.fechado - a.fechado));
+}
+
+const REP_MEDALS = ['🥇', '🥈', '🥉'];
+
+function repCardHTML(r, i) {
+  const conv   = r.total > 0 ? ((r.fechado / r.total) * 100).toFixed(0) + '%' : '—';
+  const ativos = r.ativos || 0;
+  const prazo  = r.prazo_medio  > 0 ? r.prazo_medio + 'd' : '—';
+  const speed  = fmtSpeed(r.speed_medio);
+  const ticket = r.ticket_medio > 0 ? cur(r.ticket_medio) : '—';
+  const medal  = REP_MEDALS[i] || `<span class="rep-pos">${i + 1}º</span>`;
+  const seg = [
+    ['Ag', r.ag_cont || 0, 'seg-ag'], ['Cont', r.em_cont || 0, 'seg-ct'],
+    ['Neg', r.em_neg || 0, 'seg-ng'], ['Fech', r.fechado || 0, 'seg-fe'],
+    ['Perd', r.perdido || 0, 'seg-pe'],
+  ].map(s => `<div class="rf-seg ${s[2]}"><div class="rf-num">${n(s[1])}</div><div class="rf-lb">${s[0]}</div></div>`).join('');
+  return `<div class="rep-card${i === 0 ? ' top' : ''}">
+    <div class="rep-card-hd">
+      <span class="rep-medal">${medal}</span>
+      <span class="rep-name" title="${esc(toTitleCase(r.rep))}">${esc(toTitleCase(r.rep))}</span>
+      <span class="rep-conv">Conv. ${conv}</span>
+    </div>
+    <div class="rep-aging">
+      <span class="aging-chip green"><span class="aging-dot green"></span>${n(r.verde || 0)}</span>
+      <span class="aging-chip amber"><span class="aging-dot amber"></span>${n(r.amarelo || 0)}</span>
+      <span class="aging-chip red"><span class="aging-dot red"></span>${n(r.vermelho || 0)}</span>
+      <span class="aging-total">${n(ativos)} ativo${ativos === 1 ? '' : 's'}</span>
+    </div>
+    <div class="rep-funnel">${seg}</div>
+    <div class="rep-metrics cols-2">
+      <div class="rep-metric"><div class="rm-val">${cur(r.receita)}</div><div class="rm-label">Receita</div></div>
+      <div class="rep-metric"><div class="rm-val">${ticket}</div><div class="rm-label">Ticket médio</div></div>
+      <div class="rep-metric"><div class="rm-val">${prazo}</div><div class="rm-label">Prazo p/ fechar</div></div>
+      <div class="rep-metric"><div class="rm-val">${speed}</div><div class="rm-label">1º contato méd.</div></div>
+    </div>
+  </div>`;
+}
+
+function renderReps(reps) {
   try {
     const grid = document.getElementById('rep-grid');
     if (!grid) return;
-    const reps = (data.reps || []).filter(r => r.rep !== 'Sem vendedor');
     const countEl = document.getElementById('reps-count');
     if (countEl) countEl.textContent = `${reps.length} ${reps.length === 1 ? 'rep' : 'reps'}`;
     if (!reps.length) {
       grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#c8c2d6;font-style:italic;font-size:13px;padding:8px">Sem dados</div>';
-      renderCarteira([]);
       return;
     }
-    grid.innerHTML = reps.map(r => {
-      const conv     = r.total > 0 ? ((r.fechado / r.total) * 100).toFixed(0) + '%' : '—';
-      const ativos   = r.ativos || 0;
-      const verde    = r.verde    || 0;
-      const amarelo  = r.amarelo  || 0;
-      const vermelho = r.vermelho || 0;
-      const prazo    = r.prazo_medio  > 0 ? r.prazo_medio + 'd' : '—';
-      const speed    = fmtSpeed(r.speed_medio);
-      const ticket   = r.ticket_medio > 0 ? cur(r.ticket_medio) : '—';
-      return `<div class="rep-card">
-        <div class="rep-card-hd">
-          <span class="rep-name" title="${esc(toTitleCase(r.rep))}">${esc(toTitleCase(r.rep))}</span>
-          <span class="rep-conv">Conv. ${conv}</span>
-        </div>
-        <div class="rep-aging">
-          <span class="aging-chip green"><span class="aging-dot green"></span>${n(verde)}</span>
-          <span class="aging-chip amber"><span class="aging-dot amber"></span>${n(amarelo)}</span>
-          <span class="aging-chip red"><span class="aging-dot red"></span>${n(vermelho)}</span>
-          <span class="aging-total">${n(ativos)} ativo${ativos === 1 ? '' : 's'}</span>
-        </div>
-        <div class="rep-metrics cols-3">
-          <div class="rep-metric"><div class="rm-val">${n(r.fechado)}</div><div class="rm-label">Fechados</div></div>
-          <div class="rep-metric"><div class="rm-val">${cur(r.receita)}</div><div class="rm-label">Receita</div></div>
-          <div class="rep-metric"><div class="rm-val">${ticket}</div><div class="rm-label">Ticket méd.</div></div>
-        </div>
-        <div class="rep-metrics cols-2">
-          <div class="rep-metric"><div class="rm-val">${prazo}</div><div class="rm-label">Prazo p/ fechar</div></div>
-          <div class="rep-metric"><div class="rm-val">${speed}</div><div class="rm-label">1º contato méd.</div></div>
-        </div>
-      </div>`;
-    }).join('');
-    renderCarteira(reps);
+    grid.innerHTML = reps.map((r, i) => repCardHTML(r, i)).join('');
   } catch(err) {
     _log.error('reps', 'Erro ao renderizar reps', err);
     const grid = document.getElementById('rep-grid');
@@ -1087,6 +1216,9 @@ function renderAds(data, receita) {
     if (el('card-roas')) {
       el('card-roas').textContent = (inv > 0 && rec > 0) ? (rec / inv).toFixed(2) + 'x' : '—';
     }
+    if (el('card-acos')) {
+      el('card-acos').textContent = (inv > 0 && rec > 0) ? (inv / rec * 100).toFixed(1) + '%' : '—';
+    }
   } catch(err) {
     _log.error('ads', 'Erro ao renderizar ads', err);
   }
@@ -1098,9 +1230,10 @@ async function loadAllData(summaryData, lm) {
   try {
     renderSummary(summaryData);
 
-    const [rFunnel, rByRep, rClosed, rAds] = await Promise.allSettled([
+    const [rFunnel, rByRep, rActive, rClosed, rAds] = await Promise.allSettled([
       proxy('funnel'),
       proxy('by_rep'),
+      proxy('active_all', { token: '0ef82354c11e4f518d90fe5c3935b767' }),
       proxy('closed'),
       proxy('ads'),
     ]);
@@ -1108,20 +1241,30 @@ async function loadAllData(summaryData, lm) {
     if (rFunnel.status === 'fulfilled')  renderFunnel(rFunnel.value);
     else _log.error('loadAll', 'funnel falhou', rFunnel.reason);
 
-    if (rByRep.status === 'fulfilled')   renderReps(rByRep.value);
-    else { _log.error('loadAll', 'by_rep falhou', rByRep.reason); renderReps({ reps: [] }); }
+    // Dados por rep montados no cliente (by_rep + active_all + closed)
+    const reps = buildRepData(rByRep, rActive, rClosed);
+    renderReps(reps);
+    renderCarteira(reps);
+    if (rByRep.status !== 'fulfilled')  _log.error('loadAll', 'by_rep falhou', rByRep.reason);
+    if (rActive.status !== 'fulfilled') _log.error('loadAll', 'active_all falhou', rActive.reason);
 
     if (rClosed.status === 'fulfilled')  renderFechados(rClosed.value);
     else _log.error('loadAll', 'closed falhou', rClosed.reason);
 
     renderAds(rAds.status === 'fulfilled' ? rAds.value : null, summaryData.receita);
 
-    // Badge CAC no card de fechamentos (invest. total / nº fechamentos)
-    const cacEl = document.getElementById('fechados-cac');
-    const cacInv = rAds.status === 'fulfilled' && rAds.value ? +rAds.value.investimento || 0 : 0;
+    const cacInv   = rAds.status === 'fulfilled' && rAds.value ? +rAds.value.investimento || 0 : 0;
     const cacNFech = rClosed.status === 'fulfilled' ? (rClosed.value.fechamentos || []).length : 0;
-    if (cacEl) {
-      cacEl.textContent = (cacInv > 0 && cacNFech > 0) ? `CAC: ${cur(Math.round(cacInv / cacNFech))}` : '';
+    const cacCard  = document.getElementById('card-cac');
+    if (cacCard) cacCard.textContent = (cacInv > 0 && cacNFech > 0) ? cur(Math.round(cacInv / cacNFech)) : '—';
+    const cacEl = document.getElementById('fechados-cac');
+    if (cacEl) cacEl.textContent = (cacInv > 0 && cacNFech > 0) ? `CAC: ${cur(Math.round(cacInv / cacNFech))}` : '';
+
+    // Custo por lead no card Total
+    const rtCpl = document.getElementById('rt-cpl-sdr');
+    if (rtCpl) {
+      const total = summaryData.total || 0;
+      rtCpl.textContent = (cacInv > 0 && total > 0) ? `CUSTO POR LEAD: ${cur(Math.round(cacInv / total))}` : 'CUSTO POR LEAD: —';
     }
 
     stamp(lm);
