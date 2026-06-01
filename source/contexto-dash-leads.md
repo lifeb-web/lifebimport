@@ -548,3 +548,11 @@ Padrão "visão limpa por cima, detalhe ao clicar". Modal reutilizável `#detail
 ### KPI clicável → info rica (2026-06-01, commit `ecc4f5e4`)
 Clicar num card do topo deixou de mostrar só a frase de ajuda — agora abre **explicação curta + DADOS por trás** (`showKpi(id)`, helper `repBreak`). Guarda `_summary`/`_reps`/`_ads` no loadAllData.
 - Total/Qualificados → leads por etapa do SDR (com %). Em Tratativa → lista completa de ativos. Receita/Fechamentos → receita por rep + negócios fechados. Conversão → conversão por rep. Potencial → pipeline por rep + maiores em aberto. Speed to Lead → 1º contato por rep. ROAS/ACOS/CAC/ADS → o cálculo com os números reais (ex: "Receita ÷ Investimento = 7,04x"). `KPI_HELP` mantém a explicação em PT claro.
+
+### Auditoria + refino (2026-06-01, commit `1cabd46f`)
+- **TOTAL DA EQUIPE** redesenhado: era grade que cortava o nome + tinha "Σ" estranho → agora linha full-width (`.lb-total` flex, `totalRowHTML` sem grid) com Receita/Fechados/Conversão/Pipeline/Ativos.
+- **Leads Hoje (modal)**: `active_all` só tem leads atribuídos, então não listava os de hoje. Trazido `proxy('latest')` de volta (`_latest`), `latestTable` lista os de hoje (Empresa/Hora/Status SDR) + números (entraram hoje / total).
+- **Travessões removidos**: todos os `—` (em-dash) e `–` (en-dash) trocados por `-`/`:` nos 2 HTMLs (pedido do Robert — "cara de IA"). Manter assim.
+- **Linhas do leaderboard**: `justify-content: space-between` (conteúdo topo+base) — menos vazio.
+- **Fechamentos**: `.fch-trend` com `flex:1` preenche a altura (acaba vazio da direita no telão).
+- **NOVO — faturamento mês a mês POR REP**: clicar num rep mostra `monthlyTrendHTML(fechs)` (barras dos últimos 6 meses do rep) + total no topo, antes dos leads ativos e fechamentos.
