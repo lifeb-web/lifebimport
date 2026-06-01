@@ -526,3 +526,12 @@ Todos os `catch(_)` críticos foram convertidos para `catch(err)` + `console.err
 ### Commits desta auditoria
 - `6e313cb5` — fix: row index incorreto em getActive/getRepHistory quando há leads excluídos
 - `dfbb612d` — fix: auditoria completa — proxy robusto + erros visíveis no console
+
+### Clareza p/ diretoria não-técnica 2026-06-01 (commit `797515f9`)
+Régua nova: **diretor sem conhecimento técnico tem que bater o olho e entender.**
+- **Linha "TOTAL DA EQUIPE"** no rodapé do leaderboard (`totalRowHTML`, `.lb-total` flex:none) — receita/fechados/pipeline/conv média do time. Bottom line executiva.
+- **Funis com % por etapa** (`renderFunilBar` → `.funil-pct`) + badges de taxa: **"X% QUALIFICAM"** (SDR) e **"X% FECHAM"** (Vendedor = fechado/total com vendedor). Adicionado `vend-total-badge` no header do Funil Vendedor do telão.
+- **Carteira em %** (`renderCarteira` preenche `cart-*-pct`): "X% da carteira esfriando" — alerta com leitura direta.
+- **Destaque verde**: receita do rep ≥ média do time fica verde (`.lb-num.good` / `.rm-val.good`); top continua com linha dourada.
+- **Labels claros**: header do leaderboard "Idade dos leads" / "Funil de vendas" / "Conversão".
+- Pipeline mantido (Robert confirmou que reps atualizam o valor potencial — dado real).
