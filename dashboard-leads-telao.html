@@ -376,6 +376,13 @@
     @keyframes dm-in { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
     .dm-table tbody tr { transition: background .12s; }
     .dm-table tbody tr:hover { background: #faf8fc; }
+    /* barra de receita comparativa por rep (ranking visual) */
+    .lb-recbar { height: 5px; border-radius: 3px; background: #efeaf7; overflow: hidden; }
+    .lb-recfill { height: 100%; border-radius: 3px; background: var(--purple-l); transition: width .5s ease; }
+    .lb-recfill.good { background: linear-gradient(90deg, var(--green), #5dde8b); }
+    .lb-recfill.gold { background: linear-gradient(90deg, #d4af37, #f0d068); }
+    /* alerta de lento (1º contato acima do limite) */
+    .lb-num.bad { color: var(--red); }
   </style>
 </head>
 <body>
@@ -938,14 +945,18 @@ function buildRepData(rByRep, rActive, rClosed) {
 
 const REP_MEDALS = ['🥇', '🥈', '🥉'];
 
-function repRowHTML(r, i, avgRec) {
+function repRowHTML(r, i, avgRec, maxRec) {
   const convPct = r.total > 0 ? (r.fechado / r.total) * 100 : null;
   const conv    = convPct == null ? '-' : convPct.toFixed(0) + '%';
   const convLow = (convPct != null && convPct < 10) ? ' low' : '';
   const prazo   = r.prazo_medio  > 0 ? r.prazo_medio + 'd' : '-';
   const speed   = fmtSpeed(r.speed_medio);
+  const speedSlow = (r.speed_medio > 60) ? ' bad' : '';
   const ticket  = r.ticket_medio > 0 ? cur(r.ticket_medio) : '-';
   const medal   = REP_MEDALS[i] || `${i + 1}º`;
+  const recGood = (avgRec && r.receita >= avgRec && r.receita > 0) ? ' good' : '';
+  const recPct  = maxRec > 0 ? Math.round((r.receita || 0) / maxRec * 100) : 0;
+  const recCls  = i === 0 ? 'gold' : (recGood ? 'good' : '');
   const stages = [['seg-ag', r.ag_cont || 0], ['seg-ct', r.em_cont || 0], ['seg-ng', r.em_neg || 0], ['seg-fe', r.fechado || 0], ['seg-pe', r.perdido || 0]];
   const bar = stages.filter(s => s[1] > 0).map(s => `<div class="${s[0]}" style="flex:${s[1]}" title="${s[1]}"></div>`).join('')
     || '<div style="flex:1;background:#e8e4f0"></div>';
@@ -958,11 +969,12 @@ function repRowHTML(r, i, avgRec) {
       <span class="lb-conv${convLow}">${conv}</span>
       <span class="lb-aging"><span class="lb-ag">🟢 ${n(r.verde || 0)}</span><span class="lb-ag">🟡 ${n(r.amarelo || 0)}</span><span class="lb-ag">🔴 ${n(r.vermelho || 0)}</span></span>
       <span class="lb-funnel">${bar}</span>
-      <span class="lb-num${(avgRec && r.receita >= avgRec && r.receita > 0) ? ' good' : ''}">${cur(r.receita)}</span>
+      <span class="lb-num${recGood}">${cur(r.receita)}</span>
       <span class="lb-num">${ticket}</span>
       <span class="lb-num">${prazo}</span>
-      <span class="lb-num">${speed}</span>
+      <span class="lb-num${speedSlow}">${speed}</span>
     </div>
+    <div class="lb-recbar"><div class="lb-recfill ${recCls}" style="width:${Math.max(recPct, 2)}%"></div></div>
     <div class="lb-sub"><b>${n(ativos)}</b> ativo${ativos === 1 ? '' : 's'} · <b>${cur(r.pipeline || 0)}</b> em pipeline · ${n(perd)} perdido${perd === 1 ? '' : 's'}</div>
   </div>`;
 }
@@ -993,7 +1005,8 @@ function renderReps(reps) {
     }
     const t = reps.reduce((a, r) => ({ rec: a.rec + (r.receita||0), fech: a.fech + (r.fechado||0), total: a.total + (r.total||0), pipe: a.pipe + (r.pipeline||0), ativos: a.ativos + (r.ativos||0) }), { rec:0, fech:0, total:0, pipe:0, ativos:0 });
     const avgRec = reps.length ? t.rec / reps.length : 0;
-    box.innerHTML = reps.map((r, i) => repRowHTML(r, i, avgRec)).join('') + totalRowHTML(t);
+    const maxRec = Math.max(0, ...reps.map(r => r.receita || 0));
+    box.innerHTML = reps.map((r, i) => repRowHTML(r, i, avgRec, maxRec)).join('') + totalRowHTML(t);
   } catch(err) {
     _log.error('reps', 'Erro ao renderizar reps', err);
     const box = document.getElementById('lb-rows');
