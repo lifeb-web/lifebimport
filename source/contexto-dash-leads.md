@@ -544,3 +544,7 @@ Padrão "visão limpa por cima, detalhe ao clicar". Modal reutilizável `#detail
 - **Clicar em qualquer KPI** (delegação acha `[id^=card-]` dentro do card) → `showKpiHelp` com `KPI_HELP`: explicação em português claro p/ diretor não-técnico (ex: "ROAS 7x = pra cada R$1 de anúncio, voltaram R$7").
 - Helpers: `dmOpen/dmClose`, `statusPill`, `fmtDataBR`, `leadsTable`, `closedTable`. CSS `.dm-*`, `.clickable`, cursor:pointer nos elementos clicáveis.
 - Telão também é clicável (funciona em desktop/touch; na TV é passivo, sem prejuízo).
+
+### KPI clicável → info rica (2026-06-01, commit `ecc4f5e4`)
+Clicar num card do topo deixou de mostrar só a frase de ajuda — agora abre **explicação curta + DADOS por trás** (`showKpi(id)`, helper `repBreak`). Guarda `_summary`/`_reps`/`_ads` no loadAllData.
+- Total/Qualificados → leads por etapa do SDR (com %). Em Tratativa → lista completa de ativos. Receita/Fechamentos → receita por rep + negócios fechados. Conversão → conversão por rep. Potencial → pipeline por rep + maiores em aberto. Speed to Lead → 1º contato por rep. ROAS/ACOS/CAC/ADS → o cálculo com os números reais (ex: "Receita ÷ Investimento = 7,04x"). `KPI_HELP` mantém a explicação em PT claro.
