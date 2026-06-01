@@ -556,3 +556,9 @@ Clicar num card do topo deixou de mostrar só a frase de ajuda — agora abre **
 - **Linhas do leaderboard**: `justify-content: space-between` (conteúdo topo+base) — menos vazio.
 - **Fechamentos**: `.fch-trend` com `flex:1` preenche a altura (acaba vazio da direita no telão).
 - **NOVO — faturamento mês a mês POR REP**: clicar num rep mostra `monthlyTrendHTML(fechs)` (barras dos últimos 6 meses do rep) + total no topo, antes dos leads ativos e fechamentos.
+
+### Polish de sofisticação (2026-06-01, commit `d2de10e4`)
+- **Hover premium** nos clicáveis: KPIs/rep-cards/fechados elevam (`translateY(-2/-3px)` + sombra roxa); linhas do leaderboard e células da carteira com feedback. Transições .15s.
+- **Modal**: entrada suave (`@keyframes dm-in` fade+scale) + `backdrop-filter: blur(3px)` no fundo + hover nas linhas das tabelas (`.dm-table tbody tr:hover`).
+- **Números alinhados**: `font-variant-numeric: tabular-nums` nos valores (m-val/rt-num/lb-num/cart-num/fch-val/etc).
+- Auditoria completa: 0 erros em TODOS os renders e modais (rep/carteira/fechados/13 KPIs), 0 órfãos, divs balanceados, 0 travessões.
