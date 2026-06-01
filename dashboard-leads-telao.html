@@ -329,6 +329,19 @@
     /* KPIs — paleta calma: cards uniformes, cor reservada p/ onde tem significado */
     #telao-cards .card-metric { border-top-color: var(--border); background: #fff; }
     #telao-cards .card-metric.accent-highlight { border-top-color: var(--purple); background: linear-gradient(180deg,#ede9fe 0%,#fff 55%); }
+    /* leaderboard: destaque de receita acima da média + linha TOTAL EQUIPE */
+    .lb-num.good { color: var(--green); }
+    .lb-total { flex: none; border-top: 2px solid var(--purple); background: #f7f4fc; padding: 9px 14px; }
+    .lb-total .lb-rank { font-size: 16px; }
+    .lb-total .lb-name, .lb-total .lb-conv, .lb-total .lb-num { color: var(--purple); }
+    .lb-total .lb-sub { color: var(--purple); opacity: .85; }
+    /* % nos funis (clareza p/ diretor) */
+    .funil-pct { font-size: 11px; font-weight: 700; color: var(--muted); min-width: 36px; text-align: right; }
+    /* % na carteira */
+    .cart-pct { font-size: 13px; font-weight: 800; }
+    .cart-cell.green .cart-pct { color: var(--green); }
+    .cart-cell.amber .cart-pct { color: var(--orange); }
+    .cart-cell.red   .cart-pct { color: var(--red); }
   </style>
 </head>
 <body>
@@ -467,6 +480,7 @@
       <div class="card card-funil">
         <div class="card-hd">
           <div class="card-hd-title">Funil Vendedor</div>
+          <span class="badge" id="vend-total-badge">—</span>
         </div>
         <div class="funil-body" id="funil-vend">
           <div style="text-align:center;color:#c8c2d6;font-size:12px;font-style:italic">Carregando...</div>
@@ -487,9 +501,9 @@
           <div class="lb-head lb-grid">
             <span></span>
             <span>Representante</span>
-            <span style="text-align:center">Conv.</span>
-            <span>Carteira (idade)</span>
-            <span>Funil</span>
+            <span style="text-align:center">Conversão</span>
+            <span>Idade dos leads</span>
+            <span>Funil de vendas</span>
             <span style="text-align:right">Receita</span>
             <span style="text-align:right">Ticket</span>
             <span style="text-align:right">Prazo</span>
@@ -509,15 +523,15 @@
       <div class="cart-band">
         <div class="cart-cell green">
           <div class="cart-num" id="cart-verde">—</div>
-          <div class="cart-label">No prazo<br>≤ 15 dias</div>
+          <div class="cart-label"><b class="cart-pct" id="cart-verde-pct">—</b> da carteira<br>No prazo · ≤ 15 dias</div>
         </div>
         <div class="cart-cell amber">
           <div class="cart-num" id="cart-amarelo">—</div>
-          <div class="cart-label">Atenção<br>16–30 dias</div>
+          <div class="cart-label"><b class="cart-pct" id="cart-amarelo-pct">—</b> da carteira<br>Atenção · 16–30 dias</div>
         </div>
         <div class="cart-cell red" id="cart-cell-red">
           <div class="cart-num" id="cart-vermelho">—</div>
-          <div class="cart-label">Esfriando<br>+ 30 dias</div>
+          <div class="cart-label"><b class="cart-pct" id="cart-vermelho-pct">—</b> da carteira<br>Esfriando · + 30 dias</div>
         </div>
       </div>
 
@@ -708,6 +722,7 @@ function renderFunilBar(containerId, items, total) {
       <div class="funil-nome" title="${esc(item.label)}">${esc(item.label)}</div>
       <div class="funil-bar-wrap"><div class="funil-bar${barClass}" style="width:${Math.max(pct,2)}%"></div></div>
       <div class="funil-num">${n(item.value)}</div>
+      <div class="funil-pct">${pct}%</div>
     </div>`;
   }).join('');
 }
@@ -783,6 +798,9 @@ function renderCarteira(reps) {
     const x = reps.reduce((s, r) => s + (r.vermelho || 0), 0);
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = n(val); };
     set('cart-verde', v); set('cart-amarelo', a); set('cart-vermelho', x);
+    const tt = v + a + x;
+    const setp = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = tt > 0 ? Math.round(val / tt * 100) + '%' : '—'; };
+    setp('cart-verde-pct', v); setp('cart-amarelo-pct', a); setp('cart-vermelho-pct', x);
     const redCell = document.getElementById('cart-cell-red');
     if (redCell) redCell.classList.toggle('alert', x > 0);
   } catch(err) {
@@ -796,10 +814,13 @@ function renderFunnel(data) {
 
     const sdrBadge = document.getElementById('sdr-total-badge');
     if (sdrBadge) {
-      const taxaQualif = total > 0 ? ((sdr.qualif || 0) / total * 100).toFixed(1) + '% QUALIFICAÇÃO' : '—';
-      sdrBadge.textContent = taxaQualif;
+      sdrBadge.textContent = total > 0 ? `${((sdr.qualif || 0) / total * 100).toFixed(0)}% QUALIFICAM` : '—';
     }
     const totalVend = (vend.ag_cont||0)+(vend.em_cont||0)+(vend.reun||0)+(vend.em_neg||0)+(vend.fechado||0)+(vend.perdido||0);
+    const vendBadge = document.getElementById('vend-total-badge');
+    if (vendBadge) {
+      vendBadge.textContent = totalVend > 0 ? `${((vend.fechado || 0) / totalVend * 100).toFixed(0)}% FECHAM` : '—';
+    }
 
     renderFunilBar('funil-sdr', [
       { label: 'Aguardando abordagem', value: sdr.ag_abord || 0, barClass: 'bar-orange' },
@@ -875,7 +896,7 @@ function buildRepData(rByRep, rActive, rClosed) {
 
 const REP_MEDALS = ['🥇', '🥈', '🥉'];
 
-function repRowHTML(r, i) {
+function repRowHTML(r, i, avgRec) {
   const convPct = r.total > 0 ? (r.fechado / r.total) * 100 : null;
   const conv    = convPct == null ? '—' : convPct.toFixed(0) + '%';
   const convLow = (convPct != null && convPct < 10) ? ' low' : '';
@@ -895,12 +916,31 @@ function repRowHTML(r, i) {
       <span class="lb-conv${convLow}">${conv}</span>
       <span class="lb-aging"><span class="lb-ag">🟢 ${n(r.verde || 0)}</span><span class="lb-ag">🟡 ${n(r.amarelo || 0)}</span><span class="lb-ag">🔴 ${n(r.vermelho || 0)}</span></span>
       <span class="lb-funnel">${bar}</span>
-      <span class="lb-num">${cur(r.receita)}</span>
+      <span class="lb-num${(avgRec && r.receita >= avgRec && r.receita > 0) ? ' good' : ''}">${cur(r.receita)}</span>
       <span class="lb-num">${ticket}</span>
       <span class="lb-num">${prazo}</span>
       <span class="lb-num">${speed}</span>
     </div>
     <div class="lb-sub"><b>${n(ativos)}</b> ativo${ativos === 1 ? '' : 's'} · <b>${cur(r.pipeline || 0)}</b> em pipeline · ${n(perd)} perdido${perd === 1 ? '' : 's'}</div>
+  </div>`;
+}
+
+function totalRowHTML(t) {
+  const conv = t.total > 0 ? (t.fech / t.total * 100).toFixed(0) + '%' : '—';
+  const ticket = t.fech > 0 ? cur(Math.round(t.rec / t.fech)) : '—';
+  return `<div class="lb-row lb-total">
+    <div class="lb-grid">
+      <span class="lb-rank">Σ</span>
+      <span class="lb-name">TOTAL DA EQUIPE</span>
+      <span class="lb-conv">${conv}</span>
+      <span class="lb-aging"></span>
+      <span class="lb-funnel"></span>
+      <span class="lb-num">${cur(t.rec)}</span>
+      <span class="lb-num">${ticket}</span>
+      <span class="lb-num">—</span>
+      <span class="lb-num">—</span>
+    </div>
+    <div class="lb-sub"><b>${n(t.fech)}</b> fechados · <b>${cur(t.pipe)}</b> em pipeline · <b>${n(t.ativos)}</b> ativos</div>
   </div>`;
 }
 
@@ -914,7 +954,9 @@ function renderReps(reps) {
       box.innerHTML = '<div style="margin:auto;color:#c8c2d6;font-style:italic;font-size:13px;padding:12px">Sem dados</div>';
       return;
     }
-    box.innerHTML = reps.map((r, i) => repRowHTML(r, i)).join('');
+    const t = reps.reduce((a, r) => ({ rec: a.rec + (r.receita||0), fech: a.fech + (r.fechado||0), total: a.total + (r.total||0), pipe: a.pipe + (r.pipeline||0), ativos: a.ativos + (r.ativos||0) }), { rec:0, fech:0, total:0, pipe:0, ativos:0 });
+    const avgRec = reps.length ? t.rec / reps.length : 0;
+    box.innerHTML = reps.map((r, i) => repRowHTML(r, i, avgRec)).join('') + totalRowHTML(t);
   } catch(err) {
     _log.error('reps', 'Erro ao renderizar reps', err);
     const box = document.getElementById('lb-rows');

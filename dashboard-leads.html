@@ -630,6 +630,15 @@
     /* KPIs — paleta calma: cards uniformes, cor reservada p/ onde tem significado */
     .cards-row .card-stat { border-top-color: var(--border); background: #fff; }
     .cards-row .card-stat.accent-highlight { border-top-color: var(--purple); background: linear-gradient(180deg,#ede9fe 0%,#fff 50%); }
+    /* % na carteira (mobile) */
+    .cart-pct { font-size: 12px; font-weight: 800; margin-top: 4px; }
+    .cart-cell.green .cart-pct { color: var(--green); }
+    .cart-cell.amber .cart-pct { color: var(--orange); }
+    .cart-cell.red   .cart-pct { color: var(--red); }
+    /* % nos funis (mobile) */
+    .funil-pct { font-size: 11px; font-weight: 700; color: var(--muted); min-width: 32px; text-align: right; }
+    /* receita do rep acima da média */
+    .rm-val.good { color: var(--green); }
   </style>
 </head>
 <body>
@@ -762,14 +771,17 @@
   <div class="carteira">
     <div class="cart-cell green">
       <div class="cart-num" id="cart-verde">—</div>
+      <div class="cart-pct" id="cart-verde-pct">—</div>
       <div class="cart-label">No prazo · ≤ 15d</div>
     </div>
     <div class="cart-cell amber">
       <div class="cart-num" id="cart-amarelo">—</div>
+      <div class="cart-pct" id="cart-amarelo-pct">—</div>
       <div class="cart-label">Atenção · 16–30d</div>
     </div>
     <div class="cart-cell red" id="cart-cell-red">
       <div class="cart-num" id="cart-vermelho">—</div>
+      <div class="cart-pct" id="cart-vermelho-pct">—</div>
       <div class="cart-label">Esfriando · + 30d</div>
     </div>
   </div>
@@ -970,6 +982,7 @@ function renderFunilBar(containerId, items, total) {
       <div class="funil-nome" title="${esc(item.label)}">${esc(item.label)}</div>
       <div class="funil-bar-wrap"><div class="funil-bar${barClass}" style="width:${Math.max(pct,2)}%"></div></div>
       <div class="funil-num">${n(item.value)}</div>
+      <div class="funil-pct">${pct}%</div>
     </div>`;
   }).join('');
 }
@@ -1044,6 +1057,9 @@ function renderCarteira(reps) {
     const x = reps.reduce((s, r) => s + (r.vermelho || 0), 0);
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = n(val); };
     set('cart-verde', v); set('cart-amarelo', a); set('cart-vermelho', x);
+    const tt = v + a + x;
+    const setp = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = tt > 0 ? Math.round(val / tt * 100) + '%' : '—'; };
+    setp('cart-verde-pct', v); setp('cart-amarelo-pct', a); setp('cart-vermelho-pct', x);
     const redCell = document.getElementById('cart-cell-red');
     if (redCell) redCell.classList.toggle('alert', x > 0);
   } catch(err) {
@@ -1057,12 +1073,11 @@ function renderFunnel(data) {
 
     const sdrBadge = document.getElementById('sdr-total-badge');
     if (sdrBadge) {
-      const taxaQualif = total > 0 ? ((sdr.qualif || 0) / total * 100).toFixed(1) + '% QUALIFICAÇÃO' : '—';
-      sdrBadge.textContent = taxaQualif;
+      sdrBadge.textContent = total > 0 ? `${((sdr.qualif || 0) / total * 100).toFixed(0)}% QUALIFICAM` : '—';
     }
     const vendBadge = document.getElementById('vend-total-badge');
     const totalVend = (vend.ag_cont||0)+(vend.em_cont||0)+(vend.reun||0)+(vend.em_neg||0)+(vend.fechado||0)+(vend.perdido||0);
-    if (vendBadge) vendBadge.textContent = n(totalVend) + ' com vendedor';
+    if (vendBadge) vendBadge.textContent = totalVend > 0 ? `${((vend.fechado || 0) / totalVend * 100).toFixed(0)}% FECHAM` : '—';
 
     renderFunilBar('funil-sdr', [
       { label: 'Aguardando abordagem', value: sdr.ag_abord || 0, barClass: 'bar-orange' },
@@ -1138,7 +1153,7 @@ function buildRepData(rByRep, rActive, rClosed) {
 
 const REP_MEDALS = ['🥇', '🥈', '🥉'];
 
-function repCardHTML(r, i) {
+function repCardHTML(r, i, avgRec) {
   const convPct = r.total > 0 ? (r.fechado / r.total) * 100 : null;
   const conv    = convPct == null ? '—' : convPct.toFixed(0) + '%';
   const convLow = (convPct != null && convPct < 10) ? ' rep-conv-low' : '';
@@ -1172,7 +1187,7 @@ function repCardHTML(r, i) {
       <div class="rf-legend">${legend}</div>
     </div>
     <div class="rep-metrics cols-2">
-      <div class="rep-metric"><div class="rm-val">${cur(r.receita)}</div><div class="rm-label">Receita</div></div>
+      <div class="rep-metric"><div class="rm-val${(avgRec && r.receita >= avgRec && r.receita > 0) ? ' good' : ''}">${cur(r.receita)}</div><div class="rm-label">Receita</div></div>
       <div class="rep-metric"><div class="rm-val">${ticket}</div><div class="rm-label">Ticket médio</div></div>
       <div class="rep-metric"><div class="rm-val">${prazo}</div><div class="rm-label">Prazo p/ fechar</div></div>
       <div class="rep-metric"><div class="rm-val">${speed}</div><div class="rm-label">1º contato méd.</div></div>
@@ -1190,7 +1205,8 @@ function renderReps(reps) {
       grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#c8c2d6;font-style:italic;font-size:13px;padding:8px">Sem dados</div>';
       return;
     }
-    grid.innerHTML = reps.map((r, i) => repCardHTML(r, i)).join('');
+    const avgRec = reps.length ? reps.reduce((s, r) => s + (r.receita || 0), 0) / reps.length : 0;
+    grid.innerHTML = reps.map((r, i) => repCardHTML(r, i, avgRec)).join('');
   } catch(err) {
     _log.error('reps', 'Erro ao renderizar reps', err);
     const grid = document.getElementById('rep-grid');
