@@ -639,6 +639,24 @@
     .funil-pct { font-size: 11px; font-weight: 700; color: var(--muted); min-width: 32px; text-align: right; }
     /* receita do rep acima da média */
     .rm-val.good { color: var(--green); }
+
+    /* ── CLICÁVEL + MODAL DE DETALHE ── */
+    .cards-row .card, .rep-card, #fechados-resumo, .cart-cell { cursor: pointer; }
+    .clickable { cursor: pointer; }
+    .dm-overlay { display: none; position: fixed; inset: 0; background: rgba(34,27,50,.55); z-index: 10000; align-items: center; justify-content: center; padding: 20px; }
+    .dm-box { background: #fff; border-radius: 16px; width: min(680px, 94vw); max-height: 88vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,.3); overflow: hidden; }
+    .dm-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 15px 20px; border-bottom: 2px solid var(--border); flex-shrink: 0; }
+    #dm-title { font-size: 18px; font-weight: 800; color: var(--text); }
+    #dm-close { background: none; border: none; font-size: 20px; color: var(--muted); cursor: pointer; line-height: 1; padding: 4px 9px; border-radius: 8px; }
+    #dm-close:hover { background: #f0ebf8; color: var(--text); }
+    #dm-body { padding: 16px 20px 20px; overflow-y: auto; }
+    .dm-sec { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; color: var(--purple); margin: 4px 0 8px; }
+    .dm-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .dm-table th { text-align: left; font-size: 10px; text-transform: uppercase; color: var(--muted); padding: 6px 8px; border-bottom: 2px solid var(--border); white-space: nowrap; }
+    .dm-table td { padding: 8px 8px; border-bottom: 1px solid var(--border); }
+    .dm-pill { padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+    .dm-help { font-size: 16px; line-height: 1.65; color: var(--text); }
+    .dm-empty { text-align: center; color: #b8b2c8; font-style: italic; padding: 18px; }
   </style>
 </head>
 <body>
@@ -769,17 +787,17 @@
 
   <!-- SAÚDE DA CARTEIRA — semáforo de idade dos leads ativos -->
   <div class="carteira">
-    <div class="cart-cell green">
+    <div class="cart-cell green" data-drill="carteira:verde">
       <div class="cart-num" id="cart-verde">—</div>
       <div class="cart-pct" id="cart-verde-pct">—</div>
       <div class="cart-label">No prazo · ≤ 15d</div>
     </div>
-    <div class="cart-cell amber">
+    <div class="cart-cell amber" data-drill="carteira:amarelo">
       <div class="cart-num" id="cart-amarelo">—</div>
       <div class="cart-pct" id="cart-amarelo-pct">—</div>
       <div class="cart-label">Atenção · 16–30d</div>
     </div>
-    <div class="cart-cell red" id="cart-cell-red">
+    <div class="cart-cell red" id="cart-cell-red" data-drill="carteira:vermelho">
       <div class="cart-num" id="cart-vermelho">—</div>
       <div class="cart-pct" id="cart-vermelho-pct">—</div>
       <div class="cart-label">Esfriando · + 30d</div>
@@ -826,9 +844,9 @@
 
   <!-- FECHAMENTOS — resumo agregado (total / nº / ticket + maior + tendência) -->
   <div class="tables-row" style="grid-template-columns:1fr">
-    <div class="card">
+    <div class="card" data-drill="fechados">
       <div class="card-hd">
-        <div class="card-hd-title">Fechamentos</div>
+        <div class="card-hd-title">Fechamentos <span style="font-weight:600;font-size:10px;color:var(--muted);text-transform:none;letter-spacing:0">· toque pra ver todos</span></div>
       </div>
       <div id="fechados-resumo">
         <div style="text-align:center;color:#c8c2d6;font-style:italic;font-size:13px;padding:16px">Carregando...</div>
@@ -843,6 +861,14 @@
   Atualização em tempo real &nbsp;·&nbsp; Planilha de Leads &nbsp;·&nbsp;
   projetojlbv.com.br
 </footer>
+
+<!-- MODAL DE DETALHE (clique pra expandir) -->
+<div id="detail-modal" class="dm-overlay">
+  <div class="dm-box">
+    <div class="dm-head"><span id="dm-title"></span><button id="dm-close" aria-label="Fechar">✕</button></div>
+    <div id="dm-body"></div>
+  </div>
+</div>
 
 <script>
 // ── CONFIGURAÇÃO ─────────────────────────────────────────────
@@ -1170,7 +1196,7 @@ function repCardHTML(r, i, avgRec) {
   const bar = stages.filter(s => s[1] > 0).map(s => `<div class="rf-seg ${s[2]}" style="flex:${s[1]}" title="${s[0]}: ${s[1]}"></div>`).join('')
     || '<div class="rf-seg" style="flex:1;background:#e8e4f0"></div>';
   const legend = stages.map(s => `${s[0]} ${n(s[1])}`).join('  ·  ');
-  return `<div class="rep-card${i === 0 ? ' top' : ''}">
+  return `<div class="rep-card${i === 0 ? ' top' : ''}" data-drill="rep:${esc(r.rep)}">
     <div class="rep-card-hd">
       <span class="rep-medal">${medal}</span>
       <span class="rep-name" title="${esc(toTitleCase(r.rep))}">${esc(toTitleCase(r.rep))}</span>
@@ -1286,6 +1312,115 @@ function renderAds(data, receita) {
   }
 }
 
+// ── MODAL DE DETALHE (overview → detalhe ao clicar) ──────────
+let _activeLeads = [];
+let _closedList  = [];
+
+const KPI_HELP = {
+  'card-total':         ['Total de Leads', 'Quantos contatos entraram no total. É o topo do funil — quanto mais, mais oportunidades de venda.'],
+  'card-leads-hoje':    ['Leads Hoje', 'Quantos contatos novos chegaram hoje. Mostra o ritmo de entrada de oportunidades.'],
+  'card-qualif':        ['Qualificados', 'Leads que o SDR analisou e considerou bons — têm perfil pra comprar.'],
+  'card-tratativa':     ['Em Tratativa', 'Leads que já estão com um vendedor trabalhando: aguardando contato, em contato ou negociando.'],
+  'card-fechados':      ['Fechamentos', 'Quantas vendas foram fechadas no período.'],
+  'card-receita':       ['Receita Total', 'Soma do valor de todas as vendas fechadas.'],
+  'card-conv':          ['Conversão', 'De cada 100 leads qualificados, quantos viraram venda. Mede a eficiência do time de vendas.'],
+  'card-potencial':     ['Potencial em Aberto', 'Soma do valor estimado dos negócios ainda em aberto — dinheiro que pode virar receita.'],
+  'card-ads':           ['Investimento em Anúncios', 'Quanto foi gasto em anúncios (Meta Ads) no total.'],
+  'card-roas':          ['ROAS', 'Retorno do anúncio. Ex: 7x = pra cada R$ 1 gasto em anúncio, voltaram R$ 7 em vendas. Quanto maior, melhor.'],
+  'card-acos':          ['ACOS', 'Quanto do faturamento foi gasto em anúncio. Ex: 14% = de cada R$ 100 vendidos, R$ 14 foram pra anúncio. Quanto menor, melhor.'],
+  'card-cac':           ['CAC', 'Custo de Aquisição de Cliente: quanto custou em anúncio pra conquistar cada cliente que fechou.'],
+  'card-speed-to-lead': ['Tempo de 1º Contato', 'Quanto tempo, em média, o vendedor leva pra falar com o lead pela 1ª vez. Quanto mais rápido, maior a chance de fechar.'],
+};
+
+function fmtDataBR(iso) {
+  if (!iso) return '—';
+  const p = String(iso).split('-');
+  return (p.length === 3) ? `${p[2]}/${p[1]}/${p[0].slice(2)}` : '—';
+}
+function statusPill(s) {
+  const map = { 'Aguardando contato':'#fef3c7|#92400e', 'Em contato':'#dbeafe|#1e40af', 'Em negociação':'#ede9fe|#5b21b6', 'Fechado':'#dcfce7|#15803d', 'Perdido':'#fee2e2|#991b1b' };
+  const c = (map[s] || '#f3f4f6|#6b7280').split('|');
+  return `<span class="dm-pill" style="background:${c[0]};color:${c[1]}">${esc(s) || '—'}</span>`;
+}
+function dmOpen(title, html) {
+  const o = document.getElementById('detail-modal');
+  const t = document.getElementById('dm-title');
+  const b = document.getElementById('dm-body');
+  if (!o || !t || !b) return;
+  t.textContent = title; b.innerHTML = html;
+  o.style.display = 'flex';
+}
+function dmClose() { const o = document.getElementById('detail-modal'); if (o) o.style.display = 'none'; }
+
+function leadsTable(leads, withRep) {
+  if (!leads.length) return '<div class="dm-empty">Nenhum lead aqui</div>';
+  const rows = leads.map(l => {
+    const age = ageDaysFromIso(l.data);
+    const local = [toTitleCase(l.cidade), (l.estado || '').toUpperCase()].filter(v => v && v !== '—').join(' / ') || '—';
+    return `<tr>
+      <td>${esc(toTitleCase(l.empresa || l.nome) || '—')}</td>
+      ${withRep ? `<td>${esc(toTitleCase(l.rep) || '—')}</td>` : ''}
+      <td>${esc(local)}</td>
+      <td>${statusPill(l.status)}</td>
+      <td style="text-align:right;font-weight:700">${age == null ? '—' : age + 'd'}</td>
+      <td style="text-align:right;font-weight:700">${l.pot ? cur(l.pot) : '—'}</td>
+    </tr>`;
+  }).join('');
+  return `<table class="dm-table"><thead><tr><th>Empresa</th>${withRep ? '<th>Rep</th>' : ''}<th>Cidade</th><th>Status</th><th style="text-align:right">Idade</th><th style="text-align:right">Potencial</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+function closedTable(list) {
+  if (!list.length) return '<div class="dm-empty">Nenhum fechamento</div>';
+  const rows = list.map(c => `<tr>
+    <td>${esc(toTitleCase(c.empresa || c.nome) || '—')}</td>
+    <td>${esc(toTitleCase(c.rep) || '—')}</td>
+    <td style="text-align:right;font-weight:800;color:var(--green)">${cur(c.valor)}</td>
+    <td style="text-align:right">${c.dias ? c.dias + 'd' : '—'}</td>
+    <td style="text-align:right">${fmtDataBR(c.data_f || c.data)}</td>
+  </tr>`).join('');
+  return `<table class="dm-table"><thead><tr><th>Empresa</th><th>Rep</th><th style="text-align:right">Valor</th><th style="text-align:right">Dias</th><th style="text-align:right">Data</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+function showRep(repKey) {
+  const R = String(repKey).toUpperCase();
+  const ativos = _activeLeads.filter(l => String(l.rep || '').toUpperCase() === R)
+    .sort((a, b) => (ageDaysFromIso(b.data) || 0) - (ageDaysFromIso(a.data) || 0));
+  const fechs = _closedList.filter(c => String(c.rep || '').toUpperCase() === R);
+  dmOpen(toTitleCase(repKey), `
+    <div class="dm-sec">Leads ativos (${ativos.length}) — mais antigos no topo</div>
+    ${leadsTable(ativos)}
+    <div class="dm-sec" style="margin-top:18px">Fechamentos (${fechs.length})</div>
+    ${closedTable(fechs)}`);
+}
+function showCarteira(bucket) {
+  const inB = _activeLeads.filter(l => {
+    const a = ageDaysFromIso(l.data);
+    if (bucket === 'verde')   return a == null || a <= 15;
+    if (bucket === 'amarelo') return a != null && a > 15 && a <= 30;
+    return a != null && a > 30;
+  }).sort((a, b) => (ageDaysFromIso(b.data) || 0) - (ageDaysFromIso(a.data) || 0));
+  const t = bucket === 'verde' ? 'No prazo (≤ 15 dias)' : bucket === 'amarelo' ? 'Atenção (16–30 dias)' : 'Esfriando (+ 30 dias)';
+  dmOpen(`${t} — ${inB.length} leads`, leadsTable(inB, true));
+}
+function showFechados() {
+  const sorted = _closedList.slice().sort((a, b) => (b.valor || 0) - (a.valor || 0));
+  dmOpen(`Fechamentos (${sorted.length}) — maiores no topo`, closedTable(sorted));
+}
+function showKpiHelp(id) { const h = KPI_HELP[id]; if (h) dmOpen(h[0], `<div class="dm-help">${esc(h[1])}</div>`); }
+
+document.addEventListener('click', e => {
+  if (e.target.id === 'dm-close' || e.target.id === 'detail-modal') { dmClose(); return; }
+  const drill = e.target.closest('[data-drill]');
+  if (drill) {
+    const d = drill.dataset.drill;
+    if (d.startsWith('rep:')) showRep(d.slice(4));
+    else if (d.startsWith('carteira:')) showCarteira(d.slice(9));
+    else if (d === 'fechados') showFechados();
+    return;
+  }
+  const kpi = e.target.closest('.cards-row .card, #telao-cards .card');
+  if (kpi) { const v = kpi.querySelector('[id^="card-"]'); if (v && KPI_HELP[v.id]) showKpiHelp(v.id); }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') dmClose(); });
+
 // ── LOAD ALL DATA (only called when sheet changed) ───────────
 async function loadAllData(summaryData, lm) {
   _loadingStart();
@@ -1302,6 +1437,10 @@ async function loadAllData(summaryData, lm) {
 
     if (rFunnel.status === 'fulfilled')  renderFunnel(rFunnel.value);
     else _log.error('loadAll', 'funnel falhou', rFunnel.reason);
+
+    // Guarda dados crus pros modais de detalhe (clique pra expandir)
+    _activeLeads = rActive.status === 'fulfilled' ? (rActive.value.leads || []) : [];
+    _closedList  = rClosed.status === 'fulfilled' ? (rClosed.value.fechamentos || []) : [];
 
     // Dados por rep montados no cliente (by_rep + active_all + closed)
     const reps = buildRepData(rByRep, rActive, rClosed);
