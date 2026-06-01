@@ -41,6 +41,14 @@ Voltou a só: total/ag_cont/em_cont/reun/em_neg/fechado/perdido/receita + `speed
 - **PROXY**: ⚠️ o `source/lifeb-leads-proxy.gs` estava DEFASADO (faltava bloco Meta Ads que Robert adicionou direto no GAS). Corrigido — agora repo = versão real (1000 linhas, Meta Ads + `speed_medio`). REGRA: nunca entregar `.gs` sem confirmar versão deployada. Ver [[feedback_proxy_drift]].
 - **1º contato por rep**: proxy reimplantado por Robert — `by_rep` retorna `speed_medio` por rep (testado ao vivo: IRAMAR 45min, NATANAEL 36min). Meta Ads automação confirmada intacta (`ads` retornou dados de 31/05).
 
+### Leaderboard escalável (TELÃO) 2026-06-01 (commit `745c0ae9`)
+Problema: cards verticais de rep com `flex:1` não escalavam — com 6-8 reps viravam fatias ilegíveis num telão sem scroll. E o centro estava colorido demais + coluna direita vazia.
+- **Centro = LEADERBOARD de linhas** (`#rep-scoreboard` → `.lb-head` header de colunas fixo + `.lb-rows` com `.lb-row` `flex:1 1 0`). Com 3 reps linhas altas, com 8 reps linhas baixas — **escala de 2 a 10+ sem scroll** (renderizado por `repRowHTML`, validado com 3 e 8 reps). Grid `.lb-grid`: rank·nome·conv·carteira(idade 🟢🟡🔴)·funil(barra)·receita·ticket·prazo·1ºcontato. Linha do 1º lugar com borda dourada (`.lb-row.top`). Conv <10% em vermelho (`.lb-conv.low`).
+- **Saúde da Carteira movida p/ coluna DIREITA** (vertical, `.cart-band` flex-column, 3 células com borda-esquerda colorida) acima dos Fechamentos → enche o vazio da direita + limpa o centro.
+- **Grid telão**: `20fr 50fr 30fr` (funis | leaderboard | carteira+fechamentos).
+- **Menos cor**: legenda do funil sem quadradinhos coloridos (só a barra colorida + header como legenda); aging com emoji 🟢🟡🔴 + número escuro.
+- **MOBILE** continua em cards empilhados (`#rep-grid`/`repCardHTML`) — escala via scroll natural; legenda do funil também virou texto cinza.
+
 ### Auditoria (2026-06-01)
 Sintaxe JS (mobile+telão+proxy) OK · 0 IDs do JS sem `id=` no HTML · `<div>` balanceados · runtime sem erros (proxy novo/antigo/vazio) · `buildRepData` validado (ranking, aging, ticket, prazo) · `renderFechados` agregado validado (total/maior/tendência) · alerta de conversão baixa OK.
 
