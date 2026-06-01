@@ -5,36 +5,32 @@ Atualizado: 2026-06-01
 
 ## ⚡ REDESIGN 2026-06-01 — Cockpit por Representante (LER PRIMEIRO)
 
-Mudança pesada de natureza: o dashboard saiu de "tela de dados de lead" para **cockpit de gestão por representante**. Aplicado em mobile + telão + proxy.
+O dashboard virou **cockpit de gestão pra diretoria**: telão no escritório pra analisar, decidir e COBRAR os reps. Objetivo: menos dado de lead, tudo sobre todos os reps + funis, fechamentos mantidos. Aplicado em mobile + telão + proxy.
 
-### O que MUDOU
-- **KPIs enxugados de 12 → 6**: Receita Total, Fechamentos, Conversão, Potencial em Aberto, Investimento ADS, ROAS. (Saíram do topo: Total de Leads, Qualificados, Em Tratativa, ACOS, CAC, Speed to Lead global — speed/prazo/ticket agora vivem POR REP.)
-- **Saúde da Carteira** (semáforo de idade dos leads ativos, por DATA DE ENTRADA):
-  - 🟢 verde = até 15 dias · 🟡 amarelo = 16–30 dias · 🔴 vermelho = +30 dias ("esfriando")
-  - Mobile: strip de 3 células abaixo dos KPIs. Telão: banda de 3 células no topo da coluna central.
-  - Card vermelho **pulsa** (classe `.alert`) quando há leads esfriando (>0).
-- **Desempenho por Representante** (coração do dashboard):
-  - Mobile: **cards empilhados** por rep (`#rep-grid`) — 1/2/3 colunas responsivo. Acaba o estouro horizontal (resolve pendência antiga).
-  - Telão: **tabela de 10 colunas** (`#tb-reps`) na coluna central (maior): Rep · 🟢 · 🟡 · 🔴 · Fech · Receita · Ticket · Prazo · 1º Cont · Conv.
-  - Métricas por rep: aging (verde/amarelo/vermelho), ativos, fechados, receita, **ticket médio**, **prazo médio de fechamento**, **tempo médio de 1º contato**, conversão.
-- **REMOVIDO**: tabelas de Leads Ativos (GO/DF/Outros no mobile e telão), Últimos Leads, tabela antiga "Por Representante" simples. Funções `renderAtivos`, `renderLatest`, `statusBadge`, `statusBadgeSdr` deletadas dos dois HTMLs.
-- **MANTIDO**: Funil SDR + Funil Vendedor, e **Fechamentos Recentes** (única lista lead-a-lead que sobrou, a pedido).
-- **Carga mais leve**: `loadAllData` caiu de 6 → 4 chamadas (`funnel`, `by_rep`, `closed`, `ads`). `active_all` e `latest` não são mais chamados.
+### Estrutura final
+- **KPIs (13, todos mantidos + 1 novo)**: Total de Leads (+ custo por lead), **Aguardando SDR** (novo — leads `Aguardando abordagem`, repõe o valor do "Últimos Leads" removido), Qualificados, Em Tratativa, Fechamentos, Receita, Conversão, Potencial, Invest. ADS, ROAS, ACOS, CAC, Speed to Lead (global). Nada foi cortado do topo.
+- **Saúde da Carteira** — semáforo de idade dos leads ativos por DATA DE ENTRADA: 🟢 ≤15d · 🟡 16–30d · 🔴 >30d ("esfriando"). Mobile: strip de 3 células. Telão: banda no topo da coluna central. Card vermelho **pulsa** (`.alert`) quando >0.
+- **Desempenho por Representante (CORAÇÃO)** — formato **placar/ranking** (ordenado por receita desc, 🥇🥈🥉 + `.top` destacado no 1º):
+  - Mobile: cards empilhados em `#rep-grid` (1/2/3 col). Telão: cards em `#rep-scoreboard` que preenchem a coluna central (`flex:1 1 0` cada — acaba o vazio da tabela fina antiga).
+  - Cada card: conversão, **mini-funil próprio** (Ag/Cont/Neg/Fech/Perd em `.rep-funnel`/`.rf-seg`), aging 🟢🟡🔴 + ativos, receita, ticket médio, prazo médio de fechamento, 1º contato médio.
+- **Funil SDR + Funil Vendedor** globais (mantidos).
+- **Fechamentos Recentes** (mantido — única lista lead-a-lead).
+- **REMOVIDO**: Leads Ativos GO/DF/Outros, Últimos Leads. Funções `renderAtivos`, `renderLatest`, `statusBadge`, `statusBadgeSdr` deletadas.
 
-### Proxy — `getByRep` GANHOU campos (RETROCOMPATÍVEL — só adiciona)
-Por rep, além dos antigos (total/ag_cont/em_cont/reun/em_neg/fechado/perdido/receita):
-- `ativos` — leads em aberto (status ≠ Fechado/Perdido/vazio)
-- `verde`/`amarelo`/`vermelho` — baldes de idade dos ativos por `COL_DATA` (entrada): ≤15 / 16–30 / >30 dias
-- `prazo_medio` — média de `COL_DIAS_FECHAR` dos fechados (mesma fonte do `media_dias` global)
-- `speed_medio` — média de `COL_DELTA_CONTATO` (min) dos leads com contato registrado
-- `ticket_medio` — `receita / fechado`
-- O front usa `|| 0` / `> 0 ? ... : '—'` em tudo → **se o proxy ainda não foi reimplantado, mostra zeros/traços, não quebra.**
+### ⭐ TUDO É CALCULADO CLIENT-SIDE (não depende de reimplantar o proxy)
+`loadAllData` chama `funnel`, `by_rep`, `active_all`, `closed`, `ads` (5). Helper `buildRepData(rByRep, rActive, rClosed)` enriquece no cliente:
+- **aging** (verde/amarelo/vermelho/ativos) ← contado de `active_all` pela `data` (entrada) via `ageDaysFromIso()`.
+- **ticket_medio** ← `receita / fechado` (de `by_rep`).
+- **prazo_medio** ← média de `dias` dos fechamentos do rep (de `closed`).
+- Carteira global = soma dos baldes dos reps (`renderCarteira(reps)`).
+- `active_all` volta ao fluxo mas SÓ pra agregação — nenhuma lista de lead é exibida.
+- **Único campo que precisa do proxy:** `speed_medio` (1º contato por rep) — `COL_DELTA_CONTATO` não é exposto por lead. Mostra "—" até reimplantar o proxy; resto enche na hora.
 
-### ⚠️ AÇÃO MANUAL OBRIGATÓRIA pós-deploy
-O proxy é Apps Script — precisa ser **reimplantado manualmente** (colar `source/lifeb-leads-proxy.gs` no editor → Implantar → Gerenciar implantações → editar → Nova versão). Enquanto não reimplantar, a Carteira e as colunas ticket/prazo/1º-contato ficam zeradas/traço (sem erro).
+### Proxy — `getByRep` enxugado
+Voltou a só: total/ag_cont/em_cont/reun/em_neg/fechado/perdido/receita + `speed_medio` (média `COL_DELTA_CONTATO`). Aging/ticket/prazo saíram do proxy (agora client-side). **Reimplantar o proxy só acende a coluna "1º contato por rep"** — todo o resto já funciona com o proxy atual.
 
-### Auditoria do redesign (2026-06-01)
-Sintaxe JS (mobile+telão+proxy) OK · 0 IDs órfãos · `<div>` balanceados · render runtime sem erros nos cenários novo/antigo/vazio · lógica `getByRep` validada (8/8 asserts: baldes, prazo, speed, ticket, exclusão de teste/duplicado, Sem vendedor por último).
+### Auditoria (2026-06-01)
+Sintaxe JS (mobile+telão+proxy) OK · 0 IDs do JS sem `id=` no HTML · `<div>` balanceados (124/124 e 125/125) · runtime sem erros (cenários proxy novo/antigo/vazio) · `buildRepData` validado: ranking por receita, aging por idade, ticket/prazo corretos, "Sem vendedor" excluído. Deploy commit `08d64009`.
 
 ---
 
