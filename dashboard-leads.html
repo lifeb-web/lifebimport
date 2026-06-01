@@ -1315,6 +1315,9 @@ function renderAds(data, receita) {
 // ── MODAL DE DETALHE (overview → detalhe ao clicar) ──────────
 let _activeLeads = [];
 let _closedList  = [];
+let _summary = {};
+let _reps = [];
+let _ads = {};
 
 const KPI_HELP = {
   'card-total':         ['Total de Leads', 'Quantos contatos entraram no total. É o topo do funil — quanto mais, mais oportunidades de venda.'],
@@ -1404,7 +1407,49 @@ function showFechados() {
   const sorted = _closedList.slice().sort((a, b) => (b.valor || 0) - (a.valor || 0));
   dmOpen(`Fechamentos (${sorted.length}) — maiores no topo`, closedTable(sorted));
 }
-function showKpiHelp(id) { const h = KPI_HELP[id]; if (h) dmOpen(h[0], `<div class="dm-help">${esc(h[1])}</div>`); }
+function repBreak(title, valFn, fmtFn) {
+  const list = (_reps || []).filter(r => r.rep && r.rep !== 'Sem vendedor')
+    .map(r => ({ rep: r.rep, v: valFn(r) })).sort((a, b) => (b.v || 0) - (a.v || 0));
+  if (!list.length) return '<div class="dm-empty">Sem dados</div>';
+  const rows = list.map(r => `<tr><td>${esc(toTitleCase(r.rep))}</td><td style="text-align:right;font-weight:800">${fmtFn(r.v)}</td></tr>`).join('');
+  return `<table class="dm-table"><thead><tr><th>Representante</th><th style="text-align:right">${title}</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+function showKpi(id) {
+  const h = KPI_HELP[id];
+  if (!h) return;
+  const s = _summary || {}, sdr = s.sdr || {};
+  let extra = '';
+  if (id === 'card-total' || id === 'card-qualif') {
+    const items = [['Aguardando abordagem', sdr.ag_abord || 0], ['Em abordagem', sdr.em_abord || 0], ['Qualificado', sdr.qualif || 0], ['Sem retorno', sdr.sem_ret || 0], ['Fora do perfil', sdr.fora || 0]];
+    const tot = s.total || items.reduce((a, i) => a + i[1], 0);
+    extra = `<div class="dm-sec">Leads por etapa do SDR</div><table class="dm-table"><tbody>${items.map(i => `<tr><td>${i[0]}</td><td style="text-align:right;font-weight:700">${n(i[1])}</td><td style="text-align:right;color:var(--muted);width:48px">${tot ? Math.round(i[1] / tot * 100) : 0}%</td></tr>`).join('')}</tbody></table>`;
+  } else if (id === 'card-tratativa') {
+    const leads = _activeLeads.slice().sort((a, b) => (ageDaysFromIso(b.data) || 0) - (ageDaysFromIso(a.data) || 0));
+    extra = `<div class="dm-sec">Leads em tratativa (${leads.length}) — mais antigos no topo</div>${leadsTable(leads, true)}`;
+  } else if (id === 'card-receita' || id === 'card-fechados') {
+    extra = `<div class="dm-sec">Receita por representante</div>${repBreak('Receita', r => r.receita || 0, cur)}<div class="dm-sec" style="margin-top:18px">Negócios fechados (${_closedList.length})</div>${closedTable(_closedList.slice().sort((a, b) => (b.valor || 0) - (a.valor || 0)))}`;
+  } else if (id === 'card-conv') {
+    extra = `<div class="dm-sec">Conversão por representante</div>${repBreak('Conversão', r => r.total > 0 ? Math.round(r.fechado / r.total * 100) : 0, v => v + '%')}`;
+  } else if (id === 'card-potencial') {
+    const withPot = _activeLeads.filter(l => (+l.pot || 0) > 0).sort((a, b) => (b.pot || 0) - (a.pot || 0));
+    extra = `<div class="dm-sec">Pipeline por representante</div>${repBreak('Em aberto', r => r.pipeline || 0, cur)}<div class="dm-sec" style="margin-top:18px">Maiores negócios em aberto</div>${leadsTable(withPot, true)}`;
+  } else if (id === 'card-speed-to-lead') {
+    extra = `<div class="dm-sec">Tempo de 1º contato por representante</div>${repBreak('1º contato', r => r.speed_medio || 0, v => v > 0 ? fmtSpeed(v) : '—')}`;
+  } else if (id === 'card-leads-hoje') {
+    const d = new Date(), tISO = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const hoje = _activeLeads.filter(l => l.data === tISO);
+    if (hoje.length) extra = `<div class="dm-sec">Leads que entraram hoje (${hoje.length})</div>${leadsTable(hoje, true)}`;
+  } else if (id === 'card-roas' || id === 'card-acos' || id === 'card-cac' || id === 'card-ads') {
+    const inv = (_ads && +_ads.investimento) || 0, rec = +s.receita || 0, nf = _closedList.length;
+    let calc;
+    if (id === 'card-roas') calc = `Receita <b>${cur(rec)}</b> ÷ Investimento <b>${cur(inv)}</b> = <b>${inv > 0 && rec > 0 ? (rec / inv).toFixed(2) + 'x' : '—'}</b>`;
+    else if (id === 'card-acos') calc = `Investimento <b>${cur(inv)}</b> ÷ Receita <b>${cur(rec)}</b> = <b>${inv > 0 && rec > 0 ? (inv / rec * 100).toFixed(1) + '%' : '—'}</b>`;
+    else if (id === 'card-cac') calc = `Investimento <b>${cur(inv)}</b> ÷ <b>${n(nf)}</b> fechamentos = <b>${inv > 0 && nf > 0 ? cur(Math.round(inv / nf)) : '—'}</b> por cliente`;
+    else calc = `Total investido em anúncios: <b>${cur(inv)}</b>${(_ads && _ads.ultimaData) ? ' · última atualização ' + _ads.ultimaData : ''}`;
+    extra = `<div class="dm-sec">Como é calculado</div><div class="dm-help" style="font-size:15px">${calc}</div>`;
+  }
+  dmOpen(h[0], `<div class="dm-help" style="margin-bottom:16px">${esc(h[1])}</div>${extra}`);
+}
 
 document.addEventListener('click', e => {
   if (e.target.id === 'dm-close' || e.target.id === 'detail-modal') { dmClose(); return; }
@@ -1417,7 +1462,7 @@ document.addEventListener('click', e => {
     return;
   }
   const kpi = e.target.closest('.cards-row .card, #telao-cards .card');
-  if (kpi) { const v = kpi.querySelector('[id^="card-"]'); if (v && KPI_HELP[v.id]) showKpiHelp(v.id); }
+  if (kpi) { const v = kpi.querySelector('[id^="card-"]'); if (v && KPI_HELP[v.id]) showKpi(v.id); }
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') dmClose(); });
 
@@ -1444,6 +1489,9 @@ async function loadAllData(summaryData, lm) {
 
     // Dados por rep montados no cliente (by_rep + active_all + closed)
     const reps = buildRepData(rByRep, rActive, rClosed);
+    _summary = summaryData || {};
+    _reps = reps;
+    _ads = (rAds.status === 'fulfilled' && rAds.value) ? rAds.value : {};
     renderReps(reps);
     renderCarteira(reps);
     if (rByRep.status !== 'fulfilled')  _log.error('loadAll', 'by_rep falhou', rByRep.reason);
