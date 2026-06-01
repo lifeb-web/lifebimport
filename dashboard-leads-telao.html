@@ -289,9 +289,12 @@
     .lb-rows { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow-y: auto; }
     .lb-rows::-webkit-scrollbar { width: 3px; }
     .lb-rows::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-    .lb-row { flex: 1 1 0; min-height: 0; padding: 0 14px; border-bottom: 1px solid var(--border); }
+    .lb-row { flex: 1 1 0; min-height: 0; padding: 6px 14px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; justify-content: center; gap: 6px; }
     .lb-row:last-child { border-bottom: none; }
     .lb-row.top { background: linear-gradient(90deg, rgba(212,175,55,.12), transparent 55%); box-shadow: inset 4px 0 0 #d4af37; }
+    .lb-sub { padding-left: 42px; font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lb-sub b { color: var(--text); font-weight: 800; }
+    @media (max-height: 700px) { .lb-sub { display: none; } }
     .lb-rank { font-size: 18px; text-align: center; }
     .lb-name { font-size: 18px; font-weight: 800; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .lb-conv { font-size: 15px; font-weight: 800; text-align: center; color: var(--purple); }
@@ -839,8 +842,9 @@ function buildRepData(rByRep, rActive, rClosed) {
   active.forEach(l => {
     const k = String(l.rep || '').toUpperCase();
     if (!k) return;
-    if (!aging[k]) aging[k] = { verde: 0, amarelo: 0, vermelho: 0, ativos: 0 };
+    if (!aging[k]) aging[k] = { verde: 0, amarelo: 0, vermelho: 0, ativos: 0, pipe: 0 };
     aging[k].ativos++;
+    aging[k].pipe += (+l.pot || 0);
     const d = ageDaysFromIso(l.data);
     if      (d == null || d <= 15) aging[k].verde++;
     else if (d <= 30)              aging[k].amarelo++;
@@ -858,10 +862,10 @@ function buildRepData(rByRep, rActive, rClosed) {
 
   return base.map(r => {
     const k  = String(r.rep).toUpperCase();
-    const ag = aging[k] || { verde: 0, amarelo: 0, vermelho: 0, ativos: 0 };
+    const ag = aging[k] || { verde: 0, amarelo: 0, vermelho: 0, ativos: 0, pipe: 0 };
     const pz = prazo[k];
     return Object.assign({}, r, {
-      verde: ag.verde, amarelo: ag.amarelo, vermelho: ag.vermelho, ativos: ag.ativos,
+      verde: ag.verde, amarelo: ag.amarelo, vermelho: ag.vermelho, ativos: ag.ativos, pipeline: ag.pipe,
       ticket_medio: r.fechado > 0 ? Math.round(r.receita / r.fechado) : 0,
       prazo_medio:  pz && pz.cnt > 0 ? Math.round(pz.sum / pz.cnt) : 0,
       speed_medio:  r.speed_medio || 0,
@@ -882,16 +886,21 @@ function repRowHTML(r, i) {
   const stages = [['seg-ag', r.ag_cont || 0], ['seg-ct', r.em_cont || 0], ['seg-ng', r.em_neg || 0], ['seg-fe', r.fechado || 0], ['seg-pe', r.perdido || 0]];
   const bar = stages.filter(s => s[1] > 0).map(s => `<div class="${s[0]}" style="flex:${s[1]}" title="${s[1]}"></div>`).join('')
     || '<div style="flex:1;background:#e8e4f0"></div>';
-  return `<div class="lb-row lb-grid${i === 0 ? ' top' : ''}">
-    <span class="lb-rank">${medal}</span>
-    <span class="lb-name" title="${esc(toTitleCase(r.rep))}">${esc(toTitleCase(r.rep))}</span>
-    <span class="lb-conv${convLow}">${conv}</span>
-    <span class="lb-aging"><span class="lb-ag">🟢 ${n(r.verde || 0)}</span><span class="lb-ag">🟡 ${n(r.amarelo || 0)}</span><span class="lb-ag">🔴 ${n(r.vermelho || 0)}</span></span>
-    <span class="lb-funnel">${bar}</span>
-    <span class="lb-num">${cur(r.receita)}</span>
-    <span class="lb-num">${ticket}</span>
-    <span class="lb-num">${prazo}</span>
-    <span class="lb-num">${speed}</span>
+  const ativos = r.ativos || 0;
+  const perd = r.perdido || 0;
+  return `<div class="lb-row${i === 0 ? ' top' : ''}">
+    <div class="lb-grid">
+      <span class="lb-rank">${medal}</span>
+      <span class="lb-name" title="${esc(toTitleCase(r.rep))}">${esc(toTitleCase(r.rep))}</span>
+      <span class="lb-conv${convLow}">${conv}</span>
+      <span class="lb-aging"><span class="lb-ag">🟢 ${n(r.verde || 0)}</span><span class="lb-ag">🟡 ${n(r.amarelo || 0)}</span><span class="lb-ag">🔴 ${n(r.vermelho || 0)}</span></span>
+      <span class="lb-funnel">${bar}</span>
+      <span class="lb-num">${cur(r.receita)}</span>
+      <span class="lb-num">${ticket}</span>
+      <span class="lb-num">${prazo}</span>
+      <span class="lb-num">${speed}</span>
+    </div>
+    <div class="lb-sub"><b>${n(ativos)}</b> ativo${ativos === 1 ? '' : 's'} · <b>${cur(r.pipeline || 0)}</b> em pipeline · ${n(perd)} perdido${perd === 1 ? '' : 's'}</div>
   </div>`;
 }
 
@@ -944,14 +953,15 @@ function renderFechados(data) {
       return `<div class="fch-month"><span class="fcm-lb">${FCH_MESES[+mo - 1]}/${y.slice(2)}</span><div class="fcm-bar"><div style="width:${Math.max(pct, 3)}%"></div></div><span class="fcm-val">${cur(byMonth[m].v)} · ${byMonth[m].n}</span></div>`;
     }).join('');
 
-    const hoje = new Date();
-    const curYM = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
-    const mesAtual = byMonth[curYM] || { v: 0, n: 0 };
+    const cutoff = new Date(Date.now() - 30 * 86400000);
+    const cutISO = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, '0')}-${String(cutoff.getDate()).padStart(2, '0')}`;
+    let u30v = 0, u30n = 0;
+    f.forEach(c => { const d = String(c.data_f || c.data || ''); if (d >= cutISO) { u30v += (+c.valor || 0); u30n++; } });
 
     box.innerHTML = `
       <div class="fch-kpis">
         <div class="fch-kpi"><div class="fch-val">${cur(ticket)}</div><div class="fch-lb">Ticket médio</div></div>
-        <div class="fch-kpi"><div class="fch-val">${cur(mesAtual.v)}</div><div class="fch-lb">Este mês · ${n(mesAtual.n)}</div></div>
+        <div class="fch-kpi"><div class="fch-val">${cur(u30v)}</div><div class="fch-lb">Últimos 30d · ${n(u30n)}</div></div>
         <div class="fch-kpi"><div class="fch-val">${cur(maior.valor)}</div><div class="fch-lb">Maior negócio</div></div>
       </div>
       <div class="fch-top">🏆 ${esc(maiorEmp)}</div>
