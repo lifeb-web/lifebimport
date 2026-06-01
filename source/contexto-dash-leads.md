@@ -35,6 +35,12 @@ Voltou a só: total/ag_cont/em_cont/reun/em_neg/fechado/perdido/receita + `speed
 - **Disciplina de cor**: vermelho só p/ alerta. Conversão por rep `< 10%` → pílula vermelha `.rep-conv-low` (cobrança).
 - **Mini-funil por rep**: caixinhas → **barra empilhada proporcional** (`.rf-bar`/`.rf-seg` flex=count) + legenda (`.rf-legend`/`.rf-lg`).
 
+### Refino visual 2026-06-01 (anti-poluição)
+- **KPIs paleta calma**: removidas as bordas/fundos coloridos (eram 13 cores = arco-íris). Regra CSS `#telao-cards .card-metric` / `.cards-row .card-stat` neutraliza borda+fundo; só Total (card-rt herói) e Receita (`.accent-highlight`) ficam coloridos. Cor reservada p/ onde significa: carteira, funis, alerta de conversão.
+- **Fechamentos sem repetição**: tirados "Total fechado" (=KPI Receita), "Negócios" (=KPI Fechamentos) e badge CAC (=KPI CAC). Card agora = **Ticket médio · Este mês (mês corrente) · Maior negócio + 🏆 empresa + tendência por mês**.
+- **PROXY**: ⚠️ o `source/lifeb-leads-proxy.gs` estava DEFASADO (faltava bloco Meta Ads que Robert adicionou direto no GAS). Corrigido — agora repo = versão real (1000 linhas, Meta Ads + `speed_medio`). REGRA: nunca entregar `.gs` sem confirmar versão deployada. Ver [[feedback_proxy_drift]].
+- **1º contato por rep**: proxy reimplantado por Robert — `by_rep` retorna `speed_medio` por rep (testado ao vivo: IRAMAR 45min, NATANAEL 36min). Meta Ads automação confirmada intacta (`ads` retornou dados de 31/05).
+
 ### Auditoria (2026-06-01)
 Sintaxe JS (mobile+telão+proxy) OK · 0 IDs do JS sem `id=` no HTML · `<div>` balanceados · runtime sem erros (proxy novo/antigo/vazio) · `buildRepData` validado (ranking, aging, ticket, prazo) · `renderFechados` agregado validado (total/maior/tendência) · alerta de conversão baixa OK.
 
