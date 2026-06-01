@@ -49,6 +49,11 @@ Problema: cards verticais de rep com `flex:1` não escalavam — com 6-8 reps vi
 - **Menos cor**: legenda do funil sem quadradinhos coloridos (só a barra colorida + header como legenda); aging com emoji 🟢🟡🔴 + número escuro.
 - **MOBILE** continua em cards empilhados (`#rep-grid`/`repCardHTML`) — escala via scroll natural; legenda do funil também virou texto cinza.
 
+### Preenchimento + pipeline 2026-06-01 (commit `5b882aad`)
+- **Linha do leaderboard vira 2 níveis** (`.lb-row` flex-column: `.lb-grid` + `.lb-sub`) → enche o espaço vazio das linhas altas quando há poucos reps. 2ª linha (`.lb-sub`): **R$ X em pipeline · N ativos · N perdidos**.
+- **Pipeline por rep** (novo): `buildRepData` soma `pot` dos leads ativos (de `active_all`) → `r.pipeline`. Mostrado no telão (sub) e no mobile (linha de ativos do card).
+- **Fechamentos "Este mês" → "Últimos 30 dias"** (rolling, filtro por `data_f >= hoje-30d`) — evita zerar no dia 1º do mês.
+
 ### Auditoria (2026-06-01)
 Sintaxe JS (mobile+telão+proxy) OK · 0 IDs do JS sem `id=` no HTML · `<div>` balanceados · runtime sem erros (proxy novo/antigo/vazio) · `buildRepData` validado (ranking, aging, ticket, prazo) · `renderFechados` agregado validado (total/maior/tendência) · alerta de conversão baixa OK.
 
