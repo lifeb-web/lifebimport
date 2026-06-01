@@ -29,8 +29,14 @@ O dashboard virou **cockpit de gestão pra diretoria**: telão no escritório pr
 ### Proxy — `getByRep` enxugado
 Voltou a só: total/ag_cont/em_cont/reun/em_neg/fechado/perdido/receita + `speed_medio` (média `COL_DELTA_CONTATO`). Aging/ticket/prazo saíram do proxy (agora client-side). **Reimplantar o proxy só acende a coluna "1º contato por rep"** — todo o resto já funciona com o proxy atual.
 
+### Polimento 2026-06-01 (commit `8b02ca67`)
+- **Fechamentos**: deixou de ser lista de nomes → **resumo agregado** (`renderFechados` popula `#fechados-resumo`): Total fechado / Nº negócios / Ticket médio + 🏆 maior negócio (único nome exibido) + **tendência por mês** (barras `.fch-month`/`.fcm-bar`, agrupado por `data_f`). Tabela `tb-fechados` removida.
+- **Card "Aguardando SDR" (estava 0) → "Leads Hoje"** (`card-leads-hoje` = `todayCount`, sub = média/dia). Cor `.accent-sky` (#0284c7).
+- **Disciplina de cor**: vermelho só p/ alerta. Conversão por rep `< 10%` → pílula vermelha `.rep-conv-low` (cobrança).
+- **Mini-funil por rep**: caixinhas → **barra empilhada proporcional** (`.rf-bar`/`.rf-seg` flex=count) + legenda (`.rf-legend`/`.rf-lg`).
+
 ### Auditoria (2026-06-01)
-Sintaxe JS (mobile+telão+proxy) OK · 0 IDs do JS sem `id=` no HTML · `<div>` balanceados (124/124 e 125/125) · runtime sem erros (cenários proxy novo/antigo/vazio) · `buildRepData` validado: ranking por receita, aging por idade, ticket/prazo corretos, "Sem vendedor" excluído. Deploy commit `08d64009`.
+Sintaxe JS (mobile+telão+proxy) OK · 0 IDs do JS sem `id=` no HTML · `<div>` balanceados · runtime sem erros (proxy novo/antigo/vazio) · `buildRepData` validado (ranking, aging, ticket, prazo) · `renderFechados` agregado validado (total/maior/tendência) · alerta de conversão baixa OK.
 
 ---
 
