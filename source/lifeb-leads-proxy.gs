@@ -504,11 +504,11 @@ function getSummary() {
 /**
  * getByRep
  * Retorna métricas por vendedor: total, contagens por status, receita,
- * e speed_medio (tempo médio de 1º contato em minutos — média de DELTA_CONTATO).
+ * e speed_medio (tempo médio de 1º contato em minutos — média de DELTA_CONTATO por rep).
  *
  * NOTA: aging (verde/amarelo/vermelho), ticket_medio e prazo_medio são calculados
- * no DASHBOARD (client-side) a partir de active_all/by_rep/closed — não dependem
- * deste proxy. Só speed_medio precisa daqui, pois DELTA_CONTATO não é exposto por lead.
+ * no DASHBOARD (client-side) a partir de active_all/by_rep/closed. Só speed_medio
+ * precisa daqui, pois DELTA_CONTATO não é exposto por lead em nenhuma outra action.
  */
 function getByRep() {
   const rows = getRows().filter(function(r) { return !isTesteLead(r) && !isExcluido(r); });
@@ -838,4 +838,163 @@ function getAds() {
   } catch(_) {
     return { investimento: 0 };
   }
+}
+
+// ============================================================
+// META ADS — AUTO-ATUALIZAÇÃO DIÁRIA DO GASTO (ABA ADS)
+// ============================================================
+// SETUP INICIAL (fazer uma única vez):
+// 1. Vá em Configurações do projeto > Propriedades do script
+// 2. Adicione as 3 propriedades:
+//    META_TOKEN     → token de longa duração do Meta Ads
+//    META_APP_ID    → 1073073594152141
+//    META_APP_SECRET → chave secreta do app
+// 3. Rode instalarTriggers() uma única vez
+// ============================================================
+
+const META_CONTA_ID      = '1540689453684643';
+const META_INSTAGRAM_ID  = '120242303144740451';
+
+/**
+ * atualizarGastoMeta
+ * Busca o gasto de ontem na API do Meta Ads (conta total − campanha Instagram)
+ * e insere uma nova linha na aba ADS da planilha.
+ * Chamado automaticamente todo dia às 6h pelo trigger diário.
+ */
+function atualizarGastoMeta() {
+  const props = PropertiesService.getScriptProperties();
+  const token = props.getProperty('META_TOKEN');
+
+  if (!token) {
+    Logger.log('ERRO: META_TOKEN não configurado em Script Properties.');
+    return;
+  }
+
+  const ontem   = new Date();
+  ontem.setDate(ontem.getDate() - 1);
+  const dataISO = Utilities.formatDate(ontem, 'America/Sao_Paulo', 'yyyy-MM-dd');
+  const dataBR  = Utilities.formatDate(ontem, 'America/Sao_Paulo', 'dd/MM/yyyy');
+
+  // Gasto total da conta
+  const timeRange = encodeURIComponent('{"since":"' + dataISO + '","until":"' + dataISO + '"}');
+  const urlConta = 'https://graph.facebook.com/v20.0/act_' + META_CONTA_ID + '/insights'
+    + '?fields=spend'
+    + '&time_range=' + timeRange
+    + '&level=account'
+    + '&access_token=' + token;
+
+  const respConta  = UrlFetchApp.fetch(urlConta, { muteHttpExceptions: true });
+  const dadosConta = JSON.parse(respConta.getContentText());
+
+  if (!dadosConta.data || dadosConta.data.length === 0) {
+    Logger.log('Sem gasto em ' + dataBR + ' — nada inserido.');
+    return;
+  }
+
+  const gastoTotal = parseFloat(dadosConta.data[0].spend);
+
+  // Gasto da campanha de tráfego Instagram (excluir do total)
+  const urlInsta  = 'https://graph.facebook.com/v20.0/' + META_INSTAGRAM_ID + '/insights'
+    + '?fields=spend'
+    + '&time_range=' + timeRange
+    + '&access_token=' + token;
+
+  const respInsta  = UrlFetchApp.fetch(urlInsta, { muteHttpExceptions: true });
+  const dadosInsta = JSON.parse(respInsta.getContentText());
+
+  let gastoInsta = 0;
+  if (dadosInsta.data && dadosInsta.data.length > 0) {
+    gastoInsta = parseFloat(dadosInsta.data[0].spend || 0);
+  }
+
+  const valorFinal = Math.round((gastoTotal - gastoInsta) * 100) / 100;
+
+  // Abre planilha e aba ADS
+  const ss  = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const aba = ss.getSheetByName('ADS');
+
+  if (!aba) {
+    Logger.log('ERRO: aba "ADS" não encontrada.');
+    return;
+  }
+
+  // Proteção contra duplicata — pula se já existe entrada para ontem
+  const linhas = aba.getDataRange().getValues();
+  for (let i = 0; i < linhas.length; i++) {
+    const cel    = linhas[i][0];
+    const celStr = (cel instanceof Date)
+      ? Utilities.formatDate(cel, 'America/Sao_Paulo', 'dd/MM/yyyy')
+      : String(cel);
+    if (celStr === dataBR) {
+      Logger.log('Entrada para ' + dataBR + ' já existe. Pulando.');
+      return;
+    }
+  }
+
+  aba.appendRow([dataBR, 'Meta Ads', valorFinal]);
+  Logger.log('Inserido: ' + dataBR + ' | Meta Ads | R$ ' + valorFinal);
+}
+
+/**
+ * renovarToken
+ * Troca o token atual por um novo de longa duração (60 dias).
+ * Chamado automaticamente no dia 1 de cada mês pelo trigger mensal.
+ */
+function renovarToken() {
+  const props     = PropertiesService.getScriptProperties();
+  const token     = props.getProperty('META_TOKEN');
+  const appId     = props.getProperty('META_APP_ID');
+  const appSecret = props.getProperty('META_APP_SECRET');
+
+  if (!token || !appId || !appSecret) {
+    Logger.log('ERRO: META_TOKEN, META_APP_ID ou META_APP_SECRET ausentes.');
+    return;
+  }
+
+  const url  = 'https://graph.facebook.com/oauth/access_token'
+    + '?grant_type=fb_exchange_token'
+    + '&client_id='         + appId
+    + '&client_secret='     + appSecret
+    + '&fb_exchange_token=' + token;
+
+  const resp  = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+  const dados = JSON.parse(resp.getContentText());
+
+  if (dados.access_token) {
+    props.setProperty('META_TOKEN', dados.access_token);
+    Logger.log('Token renovado com sucesso.');
+  } else {
+    Logger.log('ERRO ao renovar token: ' + JSON.stringify(dados));
+  }
+}
+
+/**
+ * instalarTriggers
+ * Configura os dois triggers automáticos. Rodar UMA ÚNICA VEZ.
+ *   - atualizarGastoMeta → todo dia às 6h (Brasília)
+ *   - renovarToken       → dia 1 de cada mês
+ */
+function instalarTriggers() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    const fn = t.getHandlerFunction();
+    if (fn === 'atualizarGastoMeta' || fn === 'renovarToken') {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+
+  ScriptApp.newTrigger('atualizarGastoMeta')
+    .timeBased()
+    .everyDays(1)
+    .atHour(9) // 9h UTC = 6h Brasília
+    .create();
+
+  ScriptApp.newTrigger('renovarToken')
+    .timeBased()
+    .onMonthDay(1)
+    .atHour(8)
+    .create();
+
+  Logger.log('Triggers instalados:');
+  Logger.log('  atualizarGastoMeta → todo dia às 6h');
+  Logger.log('  renovarToken       → dia 1 de cada mês');
 }
