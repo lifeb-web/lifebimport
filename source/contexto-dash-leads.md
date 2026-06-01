@@ -562,3 +562,9 @@ Clicar num card do topo deixou de mostrar só a frase de ajuda — agora abre **
 - **Modal**: entrada suave (`@keyframes dm-in` fade+scale) + `backdrop-filter: blur(3px)` no fundo + hover nas linhas das tabelas (`.dm-table tbody tr:hover`).
 - **Números alinhados**: `font-variant-numeric: tabular-nums` nos valores (m-val/rt-num/lb-num/cart-num/fch-val/etc).
 - Auditoria completa: 0 erros em TODOS os renders e modais (rep/carteira/fechados/13 KPIs), 0 órfãos, divs balanceados, 0 travessões.
+
+### UX/UI refino + melhorias (2026-06-01, commit `dad3a77d`)
+- **Leaderboard sem vão**: `.lb-row` virou `flex:0 0 auto` + min-height 60px (altura natural, conteúdo centrado); `.lb-rows` com `justify-content: space-evenly` (linhas + TOTAL espalhados uniformemente). Acabou o "buraco no meio" do space-between.
+- **Barra de receita comparativa por rep** (telão): `.lb-recbar`/`.lb-recfill` mostra a receita do rep relativa ao líder (`maxRec`) - ouro no 1º (`.gold`), verde acima da média (`.good`). Preenche a linha + ranking visual.
+- **Alerta de 1º contato lento**: `speed_medio > 60min` fica vermelho (`.lb-num.bad` / `.rm-val.bad`), igual ao alerta de conversão < 10%.
+- Polish anterior (mesma data): hover premium (elevação+sombra nos clicáveis), modal com fade+scale+blur, `tabular-nums`.
