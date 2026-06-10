@@ -247,10 +247,10 @@ footer strong{color:#fff}
 
   <div class="h-center">
     <button class="pchip" data-p="week"       onclick="setPeriod(this)">Esta semana</button>
-    <button class="pchip active" data-p="month" onclick="setPeriod(this)">Este mês</button>
+    <button class="pchip" data-p="month" onclick="setPeriod(this)">Este mês</button>
     <button class="pchip" data-p="prev_month" onclick="setPeriod(this)">Mês ant.</button>
     <button class="pchip" data-p="30d"        onclick="setPeriod(this)">30 dias</button>
-    <button class="pchip" data-p="90d"        onclick="setPeriod(this)">90 dias</button>
+    <button class="pchip active" data-p="90d"        onclick="setPeriod(this)">90 dias</button>
     <button class="pchip" data-p="custom"     onclick="setPeriod(this)">Personalizado</button>
     <div id="custom-panel">
       <input class="datein" type="date" id="dt-from">
@@ -260,7 +260,7 @@ footer strong{color:#fff}
   </div>
 
   <div class="h-right">
-    <span id="period-badge">Este mês</span>
+    <span id="period-badge">90 dias</span>
     <span id="htime">--:--</span>
     <div id="rdot"></div>
   </div>
@@ -398,7 +398,7 @@ const STAGE_DOT = {
 };
 
 let _data = null;
-let _period = 'month';
+let _period = '90d';
 let _customFrom = null, _customTo = null;
 let _refreshTimer = null;
 
@@ -484,7 +484,7 @@ function renderKpis(k, period) {
   el('k-ganho').textContent = fmtMoney(k.ganhoValor);
   el('k-ganho-cnt').textContent = k.ganhoCont + ' negócios';
   el('k-perdido').textContent = k.perdidoCont;
-  el('k-ticket').textContent = fmtMoney(k.ticketMedio);
+  el('k-ticket').textContent = k.ticketMedio > 0 ? fmtMoney(k.ticketMedio) : '—';
   el('k-conv').textContent = k.conversao !== null ? k.conversao + '%' : '—';
   el('k-conv-base').textContent = 'de ' + (k.leadsNoPeriodo || 0) + ' leads';
   el('k-prazo').textContent = k.prazoMedio ? k.prazoMedio + 'd' : '—';
@@ -543,7 +543,7 @@ function renderLeaderboard(reps, deals) {
       ${r.dealsByStage['3771724'] > 0 ? `<div class="seg-s" style="flex:${r.dealsByStage['3771724']}"></div>` : ''}
       ${r.dealsByStage['3771725'] > 0 ? `<div class="seg-n" style="flex:${r.dealsByStage['3771725']}"></div>` : ''}` : '';
 
-    const convClass = r.conversao === null ? 'nil' : (r.conversao < 40 ? 'low' : '');
+    const convClass = r.conversao === null ? 'nil' : (r.conversao < 20 ? 'low' : '');
     const convText  = r.conversao !== null ? r.conversao + '%' : '—';
     const staleText = r.stale > 0 ? `<span class="lb-stale">⚠${r.stale}</span>` : '';
 
@@ -564,7 +564,7 @@ function renderLeaderboard(reps, deals) {
           <span>Pipeline <b>${fmtMoney(r.pipeline)}</b></span>
           <span>Ganhos <b>${r.ganhoCont}</b></span>
           <span>Perdidos <b>${r.perdidoCont}</b></span>
-          <span>Ticket <b>${fmtMoney(r.ticketMedio)}</b></span>
+          <span>Leads <b>${r.leadsNoPeriodo || 0}</b></span>
         </div>
       </div>`;
   }).join('');

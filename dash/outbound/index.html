@@ -74,6 +74,7 @@ header{background:#fff;border-bottom:1px solid #e8e0f0;padding:0 18px;height:58p
 .kcard.accent-magenta{border-top:3px solid var(--magenta);background:linear-gradient(180deg,#fff0f8 0%,#fff 60%)}
 .kcard.accent-orange{border-top:3px solid var(--orange);background:linear-gradient(180deg,#fffbf0 0%,#fff 60%)}
 .kcard.accent-red{border-top:3px solid var(--red);background:linear-gradient(180deg,#fff5f5 0%,#fff 60%)}
+.kcard.accent-amber{border-top:3px solid #b45309;background:linear-gradient(180deg,#fef9ee 0%,#fff 60%)}
 .k-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
 .k-val{font-size:22px;font-weight:800;line-height:1.1;color:var(--text)}
 .kcard.feat .k-val{font-size:28px}
@@ -236,10 +237,10 @@ footer strong{color:#fff}
 
 <div id="period-bar">
   <button class="pchip" data-p="week"       onclick="setPeriod(this)">Esta semana</button>
-  <button class="pchip active" data-p="month" onclick="setPeriod(this)">Este mês</button>
+  <button class="pchip" data-p="month" onclick="setPeriod(this)">Este mês</button>
   <button class="pchip" data-p="prev_month" onclick="setPeriod(this)">Mês ant.</button>
   <button class="pchip" data-p="30d"        onclick="setPeriod(this)">30 dias</button>
-  <button class="pchip" data-p="90d"        onclick="setPeriod(this)">90 dias</button>
+  <button class="pchip active" data-p="90d"        onclick="setPeriod(this)">90 dias</button>
   <button class="pchip" data-p="custom"     onclick="setPeriod(this)">Personalizado</button>
 </div>
 
@@ -256,7 +257,7 @@ footer strong{color:#fff}
 
   <!-- KPI -->
   <div>
-    <div class="sec-hd">Visão Geral · <span id="period-label" style="color:var(--purple);font-weight:800">Este mês</span></div>
+    <div class="sec-hd">Visão Geral · <span id="period-label" style="color:var(--purple);font-weight:800">90 dias</span></div>
     <div id="kpi-scroll">
       <div class="kcard feat"><div class="k-label">Pipeline Ativo</div><div class="k-val" id="k-pipeline"><span class="skel" style="width:80px"></span></div><div class="k-sub" id="k-ativos"><span class="skel" style="width:50px"></span></div></div>
       <div class="kcard accent-green"><div class="k-label">Ganhos</div><div class="k-val" id="k-ganho"><span class="skel"></span></div><div class="k-sub" id="k-ganho-cnt"><span class="skel" style="width:50px"></span></div></div>
@@ -264,6 +265,7 @@ footer strong{color:#fff}
       <div class="kcard accent-teal"><div class="k-label">Ticket Médio</div><div class="k-val" id="k-ticket"><span class="skel"></span></div><div class="k-sub">por negócio ganho</div></div>
       <div class="kcard accent-magenta"><div class="k-label">Conversão</div><div class="k-val" id="k-conv"><span class="skel"></span></div><div class="k-sub" id="k-conv-base"><span class="skel" style="width:55px"></span></div></div>
       <div class="kcard accent-orange"><div class="k-label">Prazo Médio</div><div class="k-val" id="k-prazo"><span class="skel"></span></div><div class="k-sub">dias até fechar</div></div>
+      <div class="kcard accent-amber"><div class="k-label">Parados</div><div class="k-val" id="k-stale-m"><span class="skel"></span></div><div class="k-sub">+7 dias sem toque</div></div>
       <div class="kcard accent-blue"><div class="k-label">Leads no Período</div><div class="k-val" id="k-leads"><span class="skel"></span></div><div class="k-sub">distribuídos</div></div>
     </div>
   </div>
@@ -334,7 +336,7 @@ const STAGE_DOT_COLORS = {
 };
 
 let _data       = null;
-let _period     = 'month';
+let _period     = '90d';
 let _customFrom = null;
 let _customTo   = null;
 let _activeStageFilter = null;
@@ -455,10 +457,12 @@ function renderKpis(k, period) {
   el('k-ganho-cnt').textContent = k.ganhoCont + ' negócios';
   el('k-perdido').textContent = k.perdidoCont;
   el('k-perdido-cnt').textContent = 'perdidos no período';
-  el('k-ticket').textContent = fmtMoney(k.ticketMedio);
+  el('k-ticket').textContent = k.ticketMedio > 0 ? fmtMoney(k.ticketMedio) : '—';
   el('k-conv').textContent = k.conversao !== null ? k.conversao + '%' : '—';
   el('k-conv-base').textContent = 'de ' + (k.leadsNoPeriodo || 0) + ' leads';
   el('k-prazo').textContent = k.prazoMedio ? k.prazoMedio + 'd' : '—';
+  el('k-stale-m').textContent = k.staleTotal || 0;
+  if (k.staleTotal > 0) el('k-stale-m').style.color = '#b45309';
   el('k-leads').textContent = k.leadsNoPeriodo !== undefined ? k.leadsNoPeriodo : '—';
 }
 
@@ -535,7 +539,7 @@ function renderReps(reps, deals) {
       </div>` : '<div class="rep-minifunil"><div class="mf-empty"></div></div>';
 
     const convBadge = r.conversao !== null
-      ? `<span class="rep-badge ${r.conversao >= 50 ? 'rb-green' : 'rb-red'}">${r.conversao}% conv</span>`
+      ? `<span class="rep-badge ${r.conversao >= 20 ? 'rb-green' : 'rb-red'}">${r.conversao}% conv</span>`
       : `<span class="rep-badge rb-muted">sem dado</span>`;
     const staleBadge = r.stale > 0
       ? `<span class="rep-badge rb-amber">⚠ ${r.stale} parado${r.stale>1?'s':''}</span>` : '';
@@ -560,7 +564,7 @@ function renderReps(reps, deals) {
           <div class="rep-avatar ${isTop?'r0':''}">${initials}</div>
           <div class="rep-info">
             <div class="rep-name">${escHtml(r.name)}</div>
-            <div class="rep-sub">${r.ativos} ativo${r.ativos!==1?'s':''} · Pipeline ${fmtMoney(r.pipeline)}</div>
+            <div class="rep-sub">${r.ativos} ativo${r.ativos!==1?'s':''} · ${r.leadsNoPeriodo||0} leads recebidos</div>
           </div>
           <div class="rep-kpis">${convBadge}${staleBadge}</div>
           <span class="rep-chevron">▾</span>
@@ -568,9 +572,9 @@ function renderReps(reps, deals) {
         ${mfSegs}
         <div class="rep-stats">
           <div class="rstat"><span class="rstat-label">Ganhos</span><span class="rstat-val green">${fmtMoney(r.ganhoValor)}</span></div>
-          <div class="rstat"><span class="rstat-label">Negócios</span><span class="rstat-val green">${r.ganhoCont}</span></div>
+          <div class="rstat"><span class="rstat-label">Conversão</span><span class="rstat-val ${r.conversao !== null ? (r.conversao >= 20 ? 'green' : 'red') : ''}">${r.conversao !== null ? r.conversao + '%' : '—'}</span></div>
           <div class="rstat"><span class="rstat-label">Perdidos</span><span class="rstat-val red">${r.perdidoCont}</span></div>
-          <div class="rstat"><span class="rstat-label">Ticket</span><span class="rstat-val">${fmtMoney(r.ticketMedio)}</span></div>
+          <div class="rstat"><span class="rstat-label">Leads</span><span class="rstat-val">${r.leadsNoPeriodo || 0}</span></div>
         </div>
         <div class="rep-deals">
           <div class="rep-deals-hd">Deals Ativos (${repDeals.length})</div>
