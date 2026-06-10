@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Life B | Outbound — Telão</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --purple:#704B9B; --purple-d:#5a3a80; --purple-l:#8f6ab5;
+  --magenta:#E92085; --green:#22C35D; --red:#dc2626;
+  --blue:#2563eb; --orange:#f59e0b; --teal:#0d9488;
+  --text:#221B32; --muted:#6b6484; --bg:#f4f2f8;
+  --card:#ffffff; --border:#e8e4f0; --font:'Montserrat',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{width:100%;height:100vh;overflow:hidden;background:var(--bg)}
+body{width:100%;height:100vh;overflow:hidden;font-family:var(--font);background:var(--bg);color:var(--text);display:flex;flex-direction:column}
+
+/* LOADING BAR */
+#lb{position:fixed;top:0;left:0;height:3px;width:0;background:linear-gradient(90deg,var(--purple),var(--magenta));z-index:9999;pointer-events:none;transition:width .2s,opacity .4s}
+#lb.on{animation:lb 1.8s ease-in-out infinite}
+@keyframes lb{0%{width:0;opacity:1}60%{width:80%;opacity:1}100%{width:100%;opacity:0}}
+
+/* HEADER */
+header{background:#fff;border-bottom:1px solid #e8e0f0;padding:0 24px;height:56px;display:flex;align-items:center;gap:0;box-shadow:0 2px 12px rgba(112,75,155,.22);flex-shrink:0}
+.h-brand{display:flex;align-items:center;gap:14px;flex-shrink:0}
+.h-logo{height:30px;width:auto;cursor:pointer}
+.h-sep{width:1px;height:26px;background:rgba(112,75,155,.18);flex-shrink:0}
+.h-title{font-size:11px;font-weight:800;color:var(--purple);letter-spacing:.8px;text-transform:uppercase;white-space:nowrap}
+.h-center{flex:1;display:flex;justify-content:center;align-items:center;gap:6px;overflow:hidden}
+.pchip{flex-shrink:0;padding:5px 13px;border-radius:20px;border:1.5px solid var(--border);font-family:var(--font);font-size:10px;font-weight:700;color:var(--muted);background:#fff;cursor:pointer;transition:all .15s;white-space:nowrap}
+.pchip.active{background:var(--purple);color:#fff;border-color:var(--purple);box-shadow:0 2px 8px rgba(112,75,155,.3)}
+.pchip:active{transform:scale(.96)}
+#custom-panel{display:none;align-items:center;gap:6px;margin-left:4px}
+#custom-panel.show{display:flex}
+.datein{border:1.5px solid var(--border);border-radius:6px;padding:4px 8px;font-family:var(--font);font-size:11px;font-weight:600;color:var(--text);background:#fff;outline:none}
+.datein:focus{border-color:var(--purple)}
+.btn-apply{padding:4px 12px;background:var(--purple);color:#fff;border:none;border-radius:6px;font-family:var(--font);font-size:10px;font-weight:700;cursor:pointer}
+.h-right{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-left:auto}
+#period-badge{font-size:10px;font-weight:700;color:var(--purple);background:rgba(112,75,155,.08);padding:3px 10px;border-radius:12px;white-space:nowrap}
+#htime{font-size:20px;font-weight:800;color:var(--purple)}
+#rdot{width:9px;height:9px;border-radius:50%;background:var(--green);opacity:.35;flex-shrink:0}
+#rdot.flash{animation:rdot 1.4s ease forwards}
+@keyframes rdot{0%{opacity:.35;transform:scale(1)}18%{opacity:1;transform:scale(1.7);box-shadow:0 0 8px rgba(34,195,93,.6)}100%{opacity:.35;transform:scale(1)}}
+
+/* BODY */
+#body{flex:1;display:flex;flex-direction:column;padding:8px 14px 10px;gap:8px;overflow:hidden;min-height:0}
+
+/* KPI ROW */
+#kpi-row{display:flex;gap:8px;height:104px;flex-shrink:0}
+.kcard{flex:1;background:var(--card);border-radius:12px;border:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,.04);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 10px;text-align:center;overflow:hidden}
+.kcard.feat{background:linear-gradient(135deg,var(--purple) 0%,#9260c8 100%);border:none;box-shadow:0 4px 16px rgba(112,75,155,.35);flex:1.5}
+.kcard.feat .k-label,.kcard.feat .k-sub{color:rgba(255,255,255,.8)}
+.kcard.feat .k-val{color:#fff}
+.kcard.accent-green{border-top:4px solid var(--green);background:linear-gradient(180deg,#f0fbf4 0%,#fff 60%)}
+.kcard.accent-blue{border-top:4px solid var(--blue);background:linear-gradient(180deg,#f0f5ff 0%,#fff 60%)}
+.kcard.accent-teal{border-top:4px solid var(--teal);background:linear-gradient(180deg,#f0fdfa 0%,#fff 60%)}
+.kcard.accent-magenta{border-top:4px solid var(--magenta);background:linear-gradient(180deg,#fff0f8 0%,#fff 60%)}
+.kcard.accent-orange{border-top:4px solid var(--orange);background:linear-gradient(180deg,#fffbf0 0%,#fff 60%)}
+.kcard.accent-red{border-top:4px solid var(--red);background:linear-gradient(180deg,#fff5f5 0%,#fff 60%)}
+.kcard.accent-amber{border-top:4px solid #b45309;background:linear-gradient(180deg,#fef9ee 0%,#fff 60%)}
+.k-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);white-space:nowrap}
+.k-val{font-size:26px;font-weight:800;line-height:1.1;white-space:nowrap}
+.k-sub{font-size:9px;font-weight:600;color:var(--muted)}
+
+/* MAIN 3-COL */
+#main{flex:1;display:grid;grid-template-columns:22fr 46fr 32fr;gap:8px;overflow:hidden;min-height:0}
+
+/* CARD BASE */
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.card-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 8px;border-bottom:2px solid var(--border);flex-shrink:0}
+.card-hd-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--text);display:flex;align-items:center;gap:6px}
+.card-hd-title::before{content:'';display:inline-block;width:3px;height:13px;background:var(--purple);border-radius:2px;flex-shrink:0}
+.badge{font-size:9px;font-weight:700;padding:2px 8px;border-radius:12px;border:1px solid rgba(112,75,155,.22);color:var(--purple);background:rgba(112,75,155,.07);white-space:nowrap}
+
+/* COLUNA ESQUERDA */
+#col-left{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
+
+/* FUNIL */
+#funil-card{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.funil-body{flex:1;display:flex;flex-direction:column;justify-content:space-evenly;padding:4px 14px 8px;overflow:hidden;min-height:0}
+.funil-row{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);flex-shrink:1;min-height:0;cursor:pointer;border-radius:6px;transition:background .12s;margin:0 -6px;padding-left:6px;padding-right:6px}
+.funil-row:last-child{border-bottom:none}
+.funil-row:hover,.funil-row.active{background:rgba(112,75,155,.06)}
+.funil-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.funil-name{font-size:11px;font-weight:700;color:var(--text);min-width:82px;white-space:nowrap}
+.funil-bar-wrap{flex:1;height:6px;background:#f0ebf8;border-radius:3px;overflow:hidden;min-width:0}
+.funil-bar{height:100%;border-radius:3px;transition:width .6s cubic-bezier(.4,0,.2,1);min-width:4px}
+.bar-blue   {background:linear-gradient(90deg,var(--blue),#60a5fa)}
+.bar-purple {background:linear-gradient(90deg,var(--purple),var(--purple-l))}
+.bar-orange {background:linear-gradient(90deg,var(--orange),#fcd34d)}
+.bar-green  {background:linear-gradient(90deg,var(--green),#5dde8b)}
+.funil-n{font-size:18px;font-weight:800;color:var(--text);min-width:28px;text-align:right}
+.funil-v{font-size:10px;font-weight:700;color:var(--muted);text-align:right;min-width:52px}
+.drop-pill{font-size:8px;font-weight:700;padding:2px 5px;background:#fff8e1;color:#b45309;border-radius:8px;white-space:nowrap;flex-shrink:0}
+
+/* SAÚDE */
+#saude-band{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
+.sc{background:var(--card);border:1px solid var(--border);border-left:5px solid var(--muted);border-radius:10px;padding:8px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;overflow:hidden}
+.sc.green{border-left-color:var(--green);background:linear-gradient(90deg,#f0fbf4 0%,#fff 55%)}
+.sc.amber{border-left-color:var(--orange);background:linear-gradient(90deg,#fffbf0 0%,#fff 55%)}
+.sc.red  {border-left-color:var(--red);background:linear-gradient(90deg,#fff5f5 0%,#fff 55%)}
+.sc-num{font-size:26px;font-weight:800;line-height:1}
+.sc.green .sc-num{color:var(--green)}
+.sc.amber .sc-num{color:var(--orange)}
+.sc.red   .sc-num{color:var(--red)}
+.sc-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;text-align:right;line-height:1.3}
+.sc.red.pulse{animation:sc-pulse 2.2s ease-in-out infinite}
+@keyframes sc-pulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,0)}50%{box-shadow:0 0 0 4px rgba(220,38,38,.14)}}
+
+/* COLUNA CENTRO */
+#col-center{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
+#rep-card{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.lb-header{padding:8px 14px 7px;border-bottom:2px solid var(--border);flex-shrink:0}
+.lb-grid{display:grid;grid-template-columns:28px minmax(0,1.4fr) 48px 1.4fr 1.2fr 0.9fr 0.7fr;align-items:center;gap:8px}
+.lb-head span{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lb-rows{flex:1;display:flex;flex-direction:column;justify-content:space-evenly;min-height:0;overflow-y:auto}
+.lb-rows::-webkit-scrollbar{width:3px}
+.lb-rows::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.lb-row{flex:0 0 auto;padding:10px 14px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:7px;cursor:pointer;transition:background .12s}
+.lb-row:last-child{border-bottom:none}
+.lb-row:hover{background:#faf8fc}
+.lb-row.gold{background:linear-gradient(90deg,rgba(212,175,55,.1),transparent 50%);box-shadow:inset 4px 0 0 #d4af37}
+.lb-top-row{display:flex;align-items:center;gap:8px}
+.lb-rank{font-size:17px;text-align:center;flex-shrink:0;width:28px}
+.lb-name{font-size:16px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lb-conv{font-size:13px;font-weight:800;text-align:center;color:var(--purple);flex-shrink:0;width:48px}
+.lb-conv.low{color:var(--red)}
+.lb-conv.nil{color:var(--muted)}
+.lb-aging{display:flex;align-items:center;gap:8px;flex:1}
+.lb-funnel{display:flex;height:9px;border-radius:5px;overflow:hidden;background:#f0ebf8;flex:1}
+.lb-funnel .seg-c{background:var(--blue)}
+.lb-funnel .seg-d{background:var(--purple)}
+.lb-funnel .seg-s{background:var(--orange)}
+.lb-funnel .seg-n{background:var(--green)}
+.lb-num{font-size:14px;font-weight:800;color:var(--text);text-align:right;white-space:nowrap;min-width:70px}
+.lb-sub{padding-left:44px;font-size:11px;font-weight:600;color:var(--muted);display:flex;gap:16px;flex-wrap:nowrap;overflow:hidden}
+.lb-sub b{color:var(--text);font-weight:800}
+.lb-stale{font-size:10px;color:var(--orange);font-weight:700;flex-shrink:0}
+.lb-pipeline{flex:1;min-width:0}
+
+/* PIPELINE BAR (dentro do lb-aging) */
+.pipeline-bar-wrap{flex:1;height:5px;background:#f0ebf8;border-radius:3px;overflow:hidden}
+.pipeline-bar{height:100%;background:linear-gradient(90deg,var(--purple),var(--purple-l));border-radius:3px;transition:width .6s ease;min-width:3px}
+
+/* COLUNA DIREITA */
+#col-right{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
+#won-card{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+#lost-card{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.feed-scroll{flex:1;overflow-y:auto;min-height:0}
+.feed-scroll::-webkit-scrollbar{width:3px}
+.feed-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.feed-row{padding:8px 12px;display:flex;align-items:center;gap:9px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;text-decoration:none;display:flex}
+.feed-row:last-child{border-bottom:none}
+.feed-row:hover{background:#faf8fc}
+.feed-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.fd-green{background:var(--green)}
+.fd-red{background:var(--red)}
+.feed-info{flex:1;min-width:0}
+.feed-co{font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.feed-rep{font-size:10px;font-weight:600;color:var(--muted)}
+.feed-right{text-align:right;flex-shrink:0}
+.feed-val{font-size:12px;font-weight:800;white-space:nowrap}
+.feed-val.won{color:#15803d}
+.feed-val.lost{color:var(--red)}
+.feed-date{font-size:9px;color:var(--muted);font-weight:600}
+.feed-empty{padding:14px;text-align:center;color:var(--muted);font-size:11px;font-style:italic}
+.hd-total{font-size:11px;font-weight:800}
+.hd-total.won{color:#15803d}
+.hd-total.lost{color:var(--red)}
+
+/* MODAL */
+#modal-overlay{display:none;position:fixed;inset:0;background:rgba(34,27,50,.45);z-index:500;align-items:center;justify-content:center;padding:24px}
+#modal-overlay.show{display:flex}
+#modal{background:var(--card);border-radius:16px;width:100%;max-width:560px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 64px rgba(112,75,155,.3)}
+.modal-hd{padding:16px 20px;border-bottom:2px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.modal-title{font-size:13px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:8px}
+.modal-title::before{content:'';display:inline-block;width:4px;height:16px;background:var(--purple);border-radius:2px}
+.modal-close{background:none;border:1.5px solid var(--border);border-radius:8px;width:30px;height:30px;font-size:14px;cursor:pointer;color:var(--muted);transition:all .15s}
+.modal-close:hover{background:var(--red);color:#fff;border-color:var(--red)}
+.modal-body{flex:1;overflow-y:auto;padding:8px 0}
+.modal-body::-webkit-scrollbar{width:4px}
+.modal-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.mdeal-row{padding:10px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #f4f2f8;text-decoration:none;transition:background .12s}
+.mdeal-row:last-child{border-bottom:none}
+.mdeal-row:hover{background:#f5f3ff}
+.mdeal-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.mdeal-title{flex:1;font-size:13px;font-weight:700;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mdeal-stage{font-size:9px;font-weight:700;padding:2px 7px;border-radius:9px;white-space:nowrap;flex-shrink:0}
+.ms-blue  {background:#dbeafe;color:#1e40af}
+.ms-purple{background:#ede9fe;color:#5b21b6}
+.ms-orange{background:#fef3c7;color:#92400e}
+.ms-green {background:#dcfce7;color:#15803d}
+.mdeal-rep{font-size:10px;color:var(--muted);font-weight:600;white-space:nowrap;flex-shrink:0}
+.mdeal-val{font-size:13px;font-weight:800;color:var(--purple);white-space:nowrap;flex-shrink:0}
+.mdeal-stale{font-size:11px;flex-shrink:0}
+.mdeal-open{font-size:11px;color:var(--muted);flex-shrink:0}
+.modal-empty{padding:24px;text-align:center;color:var(--muted);font-style:italic}
+
+/* SKELETON */
+@keyframes skel{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skel{display:inline-block;height:.85em;background:linear-gradient(90deg,#e8e4f0 25%,#d0cae6 50%,#e8e4f0 75%);background-size:200% 100%;animation:skel 1.4s linear infinite;border-radius:4px;min-width:60px}
+
+/* FOOTER */
+footer{background:var(--purple);color:rgba(255,255,255,.65);text-align:center;padding:7px;font-size:10px;flex-shrink:0}
+footer strong{color:#fff}
+
+/* Responsivo altura */
+@media(max-height:820px){
+  header{height:46px}
+  #htime{font-size:16px}
+  #body{padding:6px 12px 6px;gap:6px}
+  #kpi-row{height:86px;gap:6px}
+  #main{gap:6px}
+  .k-val{font-size:21px}
+  .k-label{font-size:8px}
+  .sc-num{font-size:22px}
+  .sc{padding:6px 12px}
+  .lb-name{font-size:14px}
+  .lb-num{font-size:12px}
+  .lb-conv{font-size:11px;width:40px}
+  footer{padding:4px}
+}
+@media(max-height:700px){
+  header{height:40px}
+  #htime{font-size:14px}
+  #body{padding:4px 10px 4px;gap:5px}
+  #kpi-row{height:74px;gap:5px}
+  .k-val{font-size:18px}
+  .sc-num{font-size:18px}
+  .lb-sub{display:none}
+  footer{padding:2px}
+}
+</style>
+</head>
+<body>
+<div id="lb"></div>
+
+<header>
+  <div class="h-brand">
+    <img class="h-logo" src="../../../logos/logo-lifeb.png" alt="Life B" onclick="location.reload()">
+    <div class="h-sep"></div>
+    <span class="h-title">Outbound</span>
+  </div>
+
+  <div class="h-center">
+    <button class="pchip" data-p="week"       onclick="setPeriod(this)">Esta semana</button>
+    <button class="pchip active" data-p="month" onclick="setPeriod(this)">Este mês</button>
+    <button class="pchip" data-p="prev_month" onclick="setPeriod(this)">Mês ant.</button>
+    <button class="pchip" data-p="30d"        onclick="setPeriod(this)">30 dias</button>
+    <button class="pchip" data-p="90d"        onclick="setPeriod(this)">90 dias</button>
+    <button class="pchip" data-p="custom"     onclick="setPeriod(this)">Personalizado</button>
+    <div id="custom-panel">
+      <input class="datein" type="date" id="dt-from">
+      <input class="datein" type="date" id="dt-to">
+      <button class="btn-apply" onclick="applyCustom()">Aplicar</button>
+    </div>
+  </div>
+
+  <div class="h-right">
+    <span id="period-badge">Este mês</span>
+    <span id="htime">--:--</span>
+    <div id="rdot"></div>
+  </div>
+</header>
+
+<div id="body">
+
+  <!-- KPI ROW -->
+  <div id="kpi-row">
+    <div class="kcard feat">
+      <div class="k-label">Pipeline Ativo</div>
+      <div class="k-val" id="k-pipeline"><span class="skel" style="width:90px"></span></div>
+      <div class="k-sub" id="k-ativos"><span class="skel" style="width:55px"></span></div>
+    </div>
+    <div class="kcard accent-green">
+      <div class="k-label">Ganhos</div>
+      <div class="k-val" id="k-ganho"><span class="skel"></span></div>
+      <div class="k-sub" id="k-ganho-cnt"><span class="skel" style="width:50px"></span></div>
+    </div>
+    <div class="kcard accent-red">
+      <div class="k-label">Perdidos</div>
+      <div class="k-val" id="k-perdido"><span class="skel"></span></div>
+      <div class="k-sub" id="k-perdido-sub">no período</div>
+    </div>
+    <div class="kcard accent-teal">
+      <div class="k-label">Ticket Médio</div>
+      <div class="k-val" id="k-ticket"><span class="skel"></span></div>
+      <div class="k-sub">por negócio ganho</div>
+    </div>
+    <div class="kcard accent-magenta">
+      <div class="k-label">Conversão</div>
+      <div class="k-val" id="k-conv"><span class="skel"></span></div>
+      <div class="k-sub" id="k-conv-base"><span class="skel" style="width:55px"></span></div>
+    </div>
+    <div class="kcard accent-orange">
+      <div class="k-label">Prazo Médio</div>
+      <div class="k-val" id="k-prazo"><span class="skel"></span></div>
+      <div class="k-sub">dias até fechar</div>
+    </div>
+    <div class="kcard accent-amber">
+      <div class="k-label">Deals Parados</div>
+      <div class="k-val" id="k-stale"><span class="skel"></span></div>
+      <div class="k-sub">+7 dias sem toque</div>
+    </div>
+  </div>
+
+  <!-- MAIN 3 COLUNAS -->
+  <div id="main">
+
+    <!-- COLUNA ESQUERDA: FUNIL + SAÚDE -->
+    <div id="col-left">
+      <div class="card" id="funil-card">
+        <div class="card-hd">
+          <span class="card-hd-title">Funil de Vendas</span>
+          <span class="badge" id="funil-badge">carregando…</span>
+        </div>
+        <div class="funil-body" id="funil-rows"></div>
+      </div>
+      <div id="saude-band">
+        <div class="sc green"><span class="sc-num" id="sc-negociacao">—</span><span class="sc-label">Em<br>Negociação</span></div>
+        <div class="sc amber"><span class="sc-num" id="sc-parados">—</span><span class="sc-label">Deals<br>Parados</span></div>
+        <div class="sc red"  id="sc-perdidos-cell"><span class="sc-num" id="sc-perdidos">—</span><span class="sc-label">Perdidos<br>no Período</span></div>
+      </div>
+    </div>
+
+    <!-- COLUNA CENTRO: LEADERBOARD REPS -->
+    <div id="col-center">
+      <div class="card" id="rep-card">
+        <div class="card-hd">
+          <span class="card-hd-title">Ranking Representantes</span>
+          <span class="badge" id="rep-badge"></span>
+        </div>
+        <div class="lb-header">
+          <div class="lb-grid">
+            <span></span>
+            <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)">Nome</span>
+            <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);text-align:center">Conv.</span>
+            <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)">Funil</span>
+            <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);text-align:right">Pipeline</span>
+            <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);text-align:right">Ganhos</span>
+            <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);text-align:right">Ativos</span>
+          </div>
+        </div>
+        <div class="lb-rows" id="lb-rows"></div>
+      </div>
+    </div>
+
+    <!-- COLUNA DIREITA: FEED -->
+    <div id="col-right">
+      <div class="card" id="won-card">
+        <div class="card-hd">
+          <span class="card-hd-title">Negócios Ganhos</span>
+          <span class="hd-total won" id="won-total"></span>
+        </div>
+        <div class="feed-scroll" id="won-rows"></div>
+      </div>
+      <div class="card" id="lost-card">
+        <div class="card-hd">
+          <span class="card-hd-title">Negócios Perdidos</span>
+          <span class="hd-total lost" id="lost-total"></span>
+        </div>
+        <div class="feed-scroll" id="lost-rows"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>Life B Import &nbsp;·&nbsp; <strong>Dashboard Outbound</strong> &nbsp;·&nbsp; Dados: Agendor &nbsp;·&nbsp; Auto-refresh 60s</footer>
+
+<!-- MODAL DEALS -->
+<div id="modal-overlay" onclick="closeModal(event)">
+  <div id="modal">
+    <div class="modal-hd">
+      <span class="modal-title" id="modal-title">Negócios</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+const PROXY_URL  = 'COLE_A_URL_DO_GAS_AQUI';
+const DASH_TOKEN = 'COLE_O_DASH_TOKEN_AQUI';
+const AGENDOR_DEAL = 'https://app.agendor.com.br/negocio/';
+
+const STAGE_COLORS = {
+  '3771722':'blue','3771723':'purple','3771724':'orange','3771725':'green'
+};
+const STAGE_DOT = {
+  blue:'#2563eb', purple:'#704B9B', orange:'#f59e0b', green:'#22C35D'
+};
+
+let _data = null;
+let _period = 'month';
+let _customFrom = null, _customTo = null;
+let _refreshTimer = null;
+
+// ── CLOCK ────────────────────────────────────────────────────
+function tickClock() {
+  const n = new Date();
+  const h = String(n.getHours()).padStart(2,'0');
+  const m = String(n.getMinutes()).padStart(2,'0');
+  el('htime').textContent = h + ':' + m;
+}
+setInterval(tickClock, 10000); tickClock();
+
+// ── PERIOD ───────────────────────────────────────────────────
+function setPeriod(btn) {
+  document.querySelectorAll('.pchip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  _period = btn.dataset.p;
+  const cp = el('custom-panel');
+  if (_period === 'custom') { cp.classList.add('show'); return; }
+  cp.classList.remove('show');
+  loadData(true);
+}
+
+function applyCustom() {
+  const f = el('dt-from').value;
+  const t = el('dt-to').value;
+  if (!f || !t) return;
+  _customFrom = f; _customTo = t;
+  loadData(true);
+}
+
+// ── LOAD ─────────────────────────────────────────────────────
+async function loadData(force) {
+  if (!PROXY_URL || PROXY_URL.includes('COLE')) return;
+  el('lb').classList.add('on');
+
+  let url = PROXY_URL + '?period=' + _period;
+  if (DASH_TOKEN && !DASH_TOKEN.includes('COLE')) url += '&t=' + DASH_TOKEN;
+  if (_period === 'custom' && _customFrom && _customTo) url += '&from=' + _customFrom + '&to=' + _customTo;
+  if (!force) url += '&_ts=' + Date.now();
+
+  try {
+    const res = await fetch(url);
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || 'Erro no proxy');
+    _data = json;
+    render(_data);
+    flashDot();
+    scheduleRefresh();
+  } catch(e) {
+    console.error('Erro:', e.message);
+  } finally {
+    el('lb').classList.remove('on');
+  }
+}
+
+function scheduleRefresh() {
+  clearTimeout(_refreshTimer);
+  _refreshTimer = setTimeout(() => loadData(false), 60000);
+}
+
+function flashDot() {
+  const d = el('rdot');
+  d.classList.remove('flash'); void d.offsetWidth; d.classList.add('flash');
+}
+
+// ── RENDER ───────────────────────────────────────────────────
+function render(d) {
+  renderKpis(d.kpis, d.period);
+  renderFunil(d.funnel, d.kpis);
+  renderSaude(d.kpis, d.funnel);
+  renderLeaderboard(d.reps, d.deals);
+  renderFeed(d.recentWon, d.recentLost, d.kpis);
+}
+
+// KPIs
+function renderKpis(k, period) {
+  if (period) {
+    el('period-badge').textContent = period.label;
+  }
+  el('k-pipeline').textContent = fmtMoney(k.pipelineTotal);
+  el('k-ativos').textContent = k.ativos + ' deals ativos';
+  el('k-ganho').textContent = fmtMoney(k.ganhoValor);
+  el('k-ganho-cnt').textContent = k.ganhoCont + ' negócios';
+  el('k-perdido').textContent = k.perdidoCont;
+  el('k-ticket').textContent = fmtMoney(k.ticketMedio);
+  el('k-conv').textContent = k.conversao !== null ? k.conversao + '%' : '—';
+  el('k-conv-base').textContent = (k.ganhoCont + k.perdidoCont) + ' finalizados';
+  el('k-prazo').textContent = k.prazoMedio ? k.prazoMedio + 'd' : '—';
+  el('k-stale').textContent = k.staleTotal;
+  if (k.staleTotal > 0) el('k-stale').style.color = '#b45309';
+}
+
+// Funil
+function renderFunil(funnel, kpis) {
+  el('funil-badge').textContent = kpis.ativos + ' ativos';
+  const max = Math.max(...funnel.map(s => s.count), 1);
+  el('funil-rows').innerHTML = funnel.map(s => {
+    const pct = Math.max((s.count / max) * 100, 3);
+    const colorKey = STAGE_COLORS[String(s.stageId)] || 'purple';
+    const dotColor = STAGE_DOT[colorKey] || '#704B9B';
+    const drop = s.dropFrom !== null && s.dropFrom !== undefined
+      ? `<span class="drop-pill">↓${s.dropFrom}%</span>` : '';
+    return `
+      <div class="funil-row" onclick="openStageModal('${s.stageId}','${s.name}','${colorKey}')">
+        <div class="funil-dot" style="background:${dotColor}"></div>
+        <span class="funil-name">${s.name}</span>
+        <div class="funil-bar-wrap"><div class="funil-bar bar-${colorKey}" style="width:${pct}%"></div></div>
+        <span class="funil-n">${s.count}</span>
+        <span class="funil-v">${fmtMoney(s.value)}</span>
+        ${drop}
+      </div>`;
+  }).join('');
+}
+
+// Saúde
+function renderSaude(kpis, funnel) {
+  const neg = funnel.find(s => s.stageId === 3771725);
+  el('sc-negociacao').textContent = neg ? neg.count : 0;
+  el('sc-parados').textContent = kpis.staleTotal;
+  el('sc-perdidos').textContent = kpis.perdidoCont;
+  const perdCell = el('sc-perdidos-cell');
+  if (kpis.perdidoCont > 3) perdCell.classList.add('pulse');
+  else perdCell.classList.remove('pulse');
+}
+
+// Leaderboard
+function renderLeaderboard(reps, deals) {
+  const maxPipeline = Math.max(...reps.map(r => r.pipeline), 1);
+  el('rep-badge').textContent = reps.length + ' reps';
+
+  el('lb-rows').innerHTML = reps.map((r, i) => {
+    const isGold = i === 0;
+    const rank = ['🥇','🥈','🥉','4️⃣','5️⃣'][i] || (i+1)+'°';
+    const total = r.dealsByStage['3771722'] + r.dealsByStage['3771723'] + r.dealsByStage['3771724'] + r.dealsByStage['3771725'];
+    const pipelinePct = Math.max((r.pipeline / maxPipeline) * 100, 3);
+
+    const funnelSegs = total > 0 ? `
+      ${r.dealsByStage['3771722'] > 0 ? `<div class="seg-c" style="flex:${r.dealsByStage['3771722']}"></div>` : ''}
+      ${r.dealsByStage['3771723'] > 0 ? `<div class="seg-d" style="flex:${r.dealsByStage['3771723']}"></div>` : ''}
+      ${r.dealsByStage['3771724'] > 0 ? `<div class="seg-s" style="flex:${r.dealsByStage['3771724']}"></div>` : ''}
+      ${r.dealsByStage['3771725'] > 0 ? `<div class="seg-n" style="flex:${r.dealsByStage['3771725']}"></div>` : ''}` : '';
+
+    const convClass = r.conversao === null ? 'nil' : (r.conversao < 40 ? 'low' : '');
+    const convText  = r.conversao !== null ? r.conversao + '%' : '—';
+    const staleText = r.stale > 0 ? `<span class="lb-stale">⚠${r.stale}</span>` : '';
+
+    return `
+      <div class="lb-row ${isGold?'gold':''}" onclick="openRepModal(${r.id},'${escHtml(r.name)}')">
+        <div class="lb-top-row">
+          <span class="lb-rank">${rank}</span>
+          <span class="lb-name">${escHtml(r.name)}</span>
+          <span class="lb-conv ${convClass}">${convText}</span>
+          <div class="lb-aging">
+            <div class="lb-funnel">${funnelSegs}</div>
+          </div>
+          <div class="pipeline-bar-wrap lb-pipeline"><div class="pipeline-bar" style="width:${pipelinePct}%"></div></div>
+          <span class="lb-num">${fmtMoney(r.ganhoValor)}</span>
+          <span class="lb-num" style="min-width:36px">${r.ativos}${staleText}</span>
+        </div>
+        <div class="lb-sub">
+          <span>Pipeline <b>${fmtMoney(r.pipeline)}</b></span>
+          <span>Ganhos <b>${r.ganhoCont}</b></span>
+          <span>Perdidos <b>${r.perdidoCont}</b></span>
+          <span>Ticket <b>${fmtMoney(r.ticketMedio)}</b></span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// Feed
+function renderFeed(won, lost, kpis) {
+  el('won-total').textContent = fmtMoney(kpis.ganhoValor);
+  el('won-rows').innerHTML = won.length === 0
+    ? '<div class="feed-empty">Nenhum ganho no período</div>'
+    : won.slice(0, 18).map(d => `
+      <a class="feed-row" href="${AGENDOR_DEAL}${d.id}" target="_blank">
+        <div class="feed-dot fd-green"></div>
+        <div class="feed-info">
+          <div class="feed-co">${escHtml(d.title)}</div>
+          <div class="feed-rep">${escHtml(d.rep||'—')}</div>
+        </div>
+        <div class="feed-right">
+          <div class="feed-val won">${fmtMoney(d.value)}</div>
+          <div class="feed-date">${fmtDateDisplay(d.closedAt)}</div>
+        </div>
+      </a>`).join('');
+
+  el('lost-total').textContent = kpis.perdidoCont + ' deals';
+  el('lost-rows').innerHTML = lost.length === 0
+    ? '<div class="feed-empty">Nenhum perdido no período</div>'
+    : lost.slice(0, 12).map(d => `
+      <a class="feed-row" href="${AGENDOR_DEAL}${d.id}" target="_blank">
+        <div class="feed-dot fd-red"></div>
+        <div class="feed-info">
+          <div class="feed-co">${escHtml(d.title)}</div>
+          <div class="feed-rep">${escHtml(d.rep||'—')}</div>
+        </div>
+        <div class="feed-right">
+          <div class="feed-val lost">${d.value > 0 ? fmtMoney(d.value) : '—'}</div>
+          <div class="feed-date">${fmtDateDisplay(d.closedAt)}</div>
+        </div>
+      </a>`).join('');
+}
+
+// ── MODAL ─────────────────────────────────────────────────────
+function openStageModal(stageId, stageName, colorKey) {
+  if (!_data) return;
+  const deals = _data.deals.filter(d => String(d.stageId) === String(stageId));
+  const dotColor = STAGE_DOT[colorKey] || '#704B9B';
+  el('modal-title').textContent = stageName + ' — ' + deals.length + ' deals';
+  el('modal-body').innerHTML = deals.length === 0
+    ? '<div class="modal-empty">Nenhum deal nesta etapa</div>'
+    : deals.map(d => `
+      <a class="mdeal-row" href="${AGENDOR_DEAL}${d.id}" target="_blank">
+        <div class="mdeal-dot" style="background:${dotColor}"></div>
+        <span class="mdeal-title">${escHtml(d.title)}</span>
+        <span class="mdeal-rep">${escHtml(d.rep||'—')}</span>
+        <span class="mdeal-val">${fmtMoney(d.value)}</span>
+        ${d.stale ? '<span class="mdeal-stale" title="Sem toque +7 dias">⚠️</span>' : ''}
+        <span class="mdeal-open">↗</span>
+      </a>`).join('');
+  el('modal-overlay').classList.add('show');
+}
+
+function openRepModal(repId, repName) {
+  if (!_data) return;
+  const deals = _data.deals.filter(d => String(d.repId) === String(repId));
+  el('modal-title').textContent = repName + ' — ' + deals.length + ' deals ativos';
+  el('modal-body').innerHTML = deals.length === 0
+    ? '<div class="modal-empty">Sem deals ativos</div>'
+    : deals.map(d => {
+        const colorKey = STAGE_COLORS[String(d.stageId)] || 'purple';
+        const dotColor = STAGE_DOT[colorKey];
+        return `
+          <a class="mdeal-row" href="${AGENDOR_DEAL}${d.id}" target="_blank">
+            <div class="mdeal-dot" style="background:${dotColor}"></div>
+            <span class="mdeal-title">${escHtml(d.title)}</span>
+            <span class="mdeal-stage ms-${colorKey}">${escHtml(d.stage||'—')}</span>
+            <span class="mdeal-val">${fmtMoney(d.value)}</span>
+            ${d.stale ? '<span class="mdeal-stale" title="Sem toque +7 dias">⚠️</span>' : ''}
+            <span class="mdeal-open">↗</span>
+          </a>`;
+      }).join('');
+  el('modal-overlay').classList.add('show');
+}
+
+function closeModal(e) {
+  if (!e || e.target === el('modal-overlay')) el('modal-overlay').classList.remove('show');
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') el('modal-overlay').classList.remove('show'); });
+
+// ── UTILS ─────────────────────────────────────────────────────
+function el(id) { return document.getElementById(id); }
+
+function fmtMoney(v) {
+  if (!v && v !== 0) return '—';
+  if (v >= 1000000) return 'R$' + (v/1000000).toFixed(1) + 'M';
+  if (v >= 1000)    return 'R$' + (v/1000).toFixed(0) + 'k';
+  return 'R$' + Math.round(v);
+}
+
+function fmtDateDisplay(iso) {
+  if (!iso) return '—';
+  const p = iso.split('-');
+  return p.length < 3 ? iso : p[2] + '/' + p[1];
+}
+
+function escHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => loadData(true));
+document.addEventListener('visibilitychange', () => { if (!document.hidden) loadData(false); });
+</script>
+</body>
+</html>
