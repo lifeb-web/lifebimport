@@ -2093,3 +2093,62 @@ Contato chegou às 18:28 com a mensagem padrão do botão WA. Sem nenhuma execu�
 Olá, sou lojista e quero conhecer o projeto JLBV da Life B.
 ```
 Não é possível determinar a origem do lead pela mensagem — ela é a mesma para form, direto e links compartilhados.
+
+---
+
+## Páginas de Apresentação (rep/SDR usa COM o cliente) — criado 2026-06-03
+
+Páginas que o representante/SDR usa **com o cliente** (morno, já em conversa) como material de convencimento. **Não são anúncio** e **não capturam lead** — quem fecha é o rep, a página é o apoio visual.
+
+| Página | URL (com barra no final) | Segmento |
+|--------|--------------------------|----------|
+| Apresentação Supermercado | `projetojlbv.com.br/apresentacao-super/` | Supermercado (vídeo Vimeo + fotos super) |
+| Apresentação Farmácia | `projetojlbv.com.br/apresentacao-farma/` | Farmácia/Drogaria (vídeo YouTube + fotos farma) |
+
+### Diferença vs páginas de anúncio
+| | Anúncio (`/`, `/video1`, `/rmk`) | Apresentação |
+|---|---|---|
+| Público | Frio (Meta Ads) | Morno (rep já está falando com ele) |
+| Objetivo | Capturar lead (form/WhatsApp) | Convencer / quebrar objeção |
+| CTA | A própria página | O rep conduz — **sem botões** |
+
+### Como funcionam no código
+- Rotas em `client/src/App.tsx`: `<Home variant="apresentacao-super" />` e `<Home variant="apresentacao-farma" />`
+- Flag `isApresentacao` em `client/src/pages/Home.tsx` controla tudo: `carouselImages` filtrado por segmento, vídeo do hero por segmento (super=Vimeo `1178399214`, farma=YouTube `aOR4aUSp-zE`), vídeo interativo (não autoplay mudo), badge extra "+2.000 lojas já implantaram o projeto" no hero.
+- Pixel Meta (`1659173615439958`) + GA4 (`G-DX8FW7ZTJ3`) disparam normalmente (mesmo `index.html`): `PageView` + `ScrollDepth_25/50/75/100`. Sem eventos de form (não há form).
+
+### O que foi feito em 2026-06-03 (commits `4ab2b446` e `a4cfab33`)
+**1. Removidos TODOS os botões/CTAs no modo apresentação:**
+- Cases, Galeria: botão WhatsApp removido
+- FAQ: texto "Ainda tem dúvidas?..." + botão removidos
+- CTA Final: virou **fechamento sem botão** — h2 "Transforme a sua loja com o Projeto JLBV." + badge "+2.000 lojas"
+- Footer: telefone `(62) 9920-4961` agora é **texto** (não link clicável)
+- Header CTA e botão flutuante já eram escondidos (`!isApresentacao`)
+- **Mantidos** (não são CTA): setas/bolinhas do carrossel, zoom de imagem (lightbox), controle de vídeo
+- `WHATSAPP_APRESENTACAO_LINK` ficou sem uso → o Vite removeu do bundle (tree-shake)
+
+**2. Páginas estáticas + OG por segmento (preview de link bonito no WhatsApp):**
+- `vite.config.ts` (closeBundle) agora gera `apresentacao-super/index.html` e `apresentacao-farma/index.html` com `<title>`, `description`, `og:title`, `og:description`, `og:image` e `og:url` **próprios por segmento**. Persiste em todo build futuro.
+- `og:image`: foto de gôndola do segmento (super=`super_1_...jpg`, farma=`farm_1_...jpg` no CloudFront).
+- Descrição usa enquadramento **factual**: "Cases reais de +300% a +500% na categoria" (NÃO usa "garantido").
+- Resultado: as rotas agora retornam **HTTP 200** (pararam de depender do fallback `404.html`).
+- ⚠️ Cache de preview do WhatsApp: a 1ª vez que um link é compartilhado, o WhatsApp guarda o OG. Se foi compartilhado antes do fix, forçar atualização em `developers.facebook.com/tools/debug` (Scrape Again).
+
+### Decisões já tomadas
+- Seção final = fechamento **sem botão** (confirmado por Robert)
+- **Cases fica na 2ª dobra** (dado real: converte bem nos anúncios, Robert está testando assim)
+- Vídeo do hero mantido por segmento
+- Copy de vídeo **neutra** — nunca afirmar "ouça do dono" (nos vídeos nem sempre é o dono; pode ser comprador ou contratado)
+
+### Refino PENDENTE (próxima sessão)
+1. **Estrutura** (proposta validada em wireframe, ainda NÃO aplicada): `Hero → Cases → Método → Vídeo → Galeria → Quem Somos → FAQ → Fechamento`. Única mudança vs hoje = **descer "Quem Somos"** (hoje está na 3ª posição, interrompe entre o número e o método).
+2. **"garantido"** → trocar por factual ("cases de +300% a +500%") em 3 lugares: bullet do hero (`Home.tsx` ~linha 1214), `meta description` e `og:description` do `client/index.html` base. ⚠️ É **compartilhado com as páginas de anúncio** — decidir: trocar em todo lugar (recomendado, e o Meta reprova promessa de ganho garantido) ou só apresentação.
+3. **Vídeos por segmento** — Robert vai mandar os links (super e farma) p/ colocar na seção "Resultados em vídeo" (hoje ela mostra o vídeo do segmento OPOSTO). Header neutro: "Veja o Projeto JLBV funcionando em lojas reais" ou "Depoimentos de lojas que já implantaram".
+4. **Pixel** — adicionar evento custom `Viu_Apresentacao` (ou por segmento) no load → criar Público Personalizado de remarketing de quem viu o pitch.
+5. (opcional) Banner OG desenhado 1200×630 (Canva) no lugar da foto da gôndola.
+
+### Mensagem enviada ao time de reps (45–60 anos) — 2026-06-03
+Enviada em 3 mensagens separadas (cada link isolado p/ não confundir):
+1. Explicação: "...duas páginas pra ajudar a apresentar o Projeto JLBV pro cliente... ela não fecha a venda no seu lugar, é o apoio..."
+2. `🛒 Cliente de SUPERMERCADO → projetojlbv.com.br/apresentacao-super/`
+3. `💊 Cliente de FARMÁCIA/DROGARIA → projetojlbv.com.br/apresentacao-farma/`
