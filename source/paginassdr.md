@@ -25,7 +25,9 @@ Landing page B2B para o Projeto JLBV da Life B Import, focada em lojistas de far
 | `projetojlbv.com.br/video1/` | ✅ ativa | Vídeo supermercado (Vimeo) no hero + formulário |
 | `projetojlbv.com.br/video2/` | ✅ ativa | Vídeo farmácia (YouTube) no hero + formulário |
 | `projetojlbv.com.br/rmk/` | ✅ ativa | Remarketing — curta, sem vídeo, formulário, foco em objeção |
-| `projetojlbv.com.br/contato/` | ✅ ativa | Formulário sem WA automático — follow-up por ligação |
+| `projetojlbv.com.br/apresentacao-super/` | ✅ ativa | Rep usa com cliente — sem botões, OG por segmento |
+| `projetojlbv.com.br/apresentacao-farma/` | ✅ ativa | Rep usa com cliente — sem botões, OG por segmento |
+| `projetojlbv.com.br/contato/` | 🚫 removida | **Removida em 2026-06-09** — rota, build e toda lógica `noWhatsapp` deletados do código |
 | `projetojlbv.com.br/direto/` | 🚫 desativada | Redirecionada para `/` — era CTA direto ao WhatsApp sem formulário |
 | `projetojlbv.com.br/video1-direto/` | 🚫 desativada | Redirecionada para `/video1/` — era vídeo + CTA direto ao WhatsApp |
 
@@ -127,7 +129,8 @@ onClick={() => { submittedRef.current = true; onSkip(); }}
 
 ## WhatsApp
 - Número: 5562996437218
-- Link: `https://api.whatsapp.com/send/?phone=5562996437218&text=Ol%C3%A1%2C+sou+lojista+e+quero+conhecer+o+projeto+JLBV+da+Life+B.&type=phone_number&app_absent=0`
+- Link: `https://api.whatsapp.com/send/?phone=5562996437218&text=Ol%C3%A1!+Vi+o+Projeto+JLBV+da+Life+B+e+quero+saber+mais.&type=phone_number&app_absent=0`
+- Texto decodificado: "Olá! Vi o Projeto JLBV da Life B e quero saber mais."
 
 ## Leads — Google Sheets
 - Webhook: Google Apps Script (URL salva como `SHEETS_WEBHOOK_URL` em Home.tsx)
@@ -2152,3 +2155,45 @@ Enviada em 3 mensagens separadas (cada link isolado p/ não confundir):
 1. Explicação: "...duas páginas pra ajudar a apresentar o Projeto JLBV pro cliente... ela não fecha a venda no seu lugar, é o apoio..."
 2. `🛒 Cliente de SUPERMERCADO → projetojlbv.com.br/apresentacao-super/`
 3. `💊 Cliente de FARMÁCIA/DROGARIA → projetojlbv.com.br/apresentacao-farma/`
+
+---
+
+## Estado atual do código — 2026-06-12
+
+### Alterações feitas em 2026-06-12 (commit `d640b645`)
+
+**Carrossel:**
+- `super-01.jpg` removida do `superImages` → landing 21→20 fotos, apresentacao-super 8→7 fotos
+- Array atual: `super-03.jpg` a `super-09.jpg` (7 fotos). `super-01.jpg` era AI-generated sem overlay real.
+
+**Vídeo apresentacao-super:**
+- Poster `/thumb-super-mega.png` removido da seção "Case de Sucesso" → vídeo abre direto sem capa
+
+**Espaços excessivos corrigidos no `isApresentacao`:**
+- Hero container: `py-10 sm:py-14 md:py-20 lg:py-28` → `py-8 sm:py-10 md:py-12 lg:py-16`
+- `pt-2` vazio no hero (onde era CTA) → removido com wrapper `!isApresentacao`
+- Grid 6 cards: `mb-10 sm:mb-12` removido quando isApresentacao
+- AnimatedSection vazia após cards JLBV → wrapped com `!isApresentacao`
+- AnimatedSection vazia após Case de Sucesso → wrapped com `!isApresentacao`
+
+**Incidente recuperado:**
+- Deploy manual com `rsync --delete` apagou dashboards, rep/dash/, kit/, source/ do gh-pages → restaurados via `git checkout d0e95d4f -- <arquivos>` no mesmo deploy (commits `b12ce813` apagou, `60d394af` restaurou). **REGRA: nunca usar rsync --delete na pasta lifebimport-jlbv-pages/. Usar SEMPRE `bash deploy.sh`.**
+
+---
+
+## Estado atual do código — 2026-06-09
+
+### Alterações feitas nesta sessão
+- `/contato/` removida completamente: rota do `App.tsx`, geração de pasta no `vite.config.ts`, e toda a lógica `noWhatsapp` do `Home.tsx` (prop, state `showSuccess`, todos os ternários). TypeScript limpo.
+- Variantes ativas no `Home.tsx`: `"video1"`, `"video2"`, `"rmk"`, `"apresentacao-super"`, `"apresentacao-farma"`.
+
+### Mudanças radicais planejadas (próxima sessão)
+Robert quer redesenhar as páginas de forma significativa. Detalhes a definir na próxima sessão. **Antes de qualquer alteração: ler este arquivo completo e fazer backup do `Home.tsx` atual.**
+
+### Integração LP → GS Engage (planejada)
+- Lead do formulário vai cair simultaneamente no Sheets (já funciona) e no GS Engage (a implementar)
+- API do GS funciona: `POST https://api.gsengage.com/api/v1/leads?apiKey=...` cria lead
+- Key não pode ficar no frontend — será chamada via novo endpoint `POST /gs-inbound` no Cloudflare Worker
+- Limitação: associar à cadência via API não funciona ainda — resolver via automação dentro do GS Engage
+- 4 cadências planejadas: Inbound Quente / Recuperação Inbound SDR / Recuperação Inbound Pós-closer / Recuperação Outbound Pós-closer
+- Pendente: Robert criar cadências no GS e confirmar se há regra de automação por fonte de lead
