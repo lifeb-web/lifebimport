@@ -648,6 +648,10 @@
 <script>
 // ── CONFIGURAÇÃO ─────────────────────────────────────────────
 const LEADS_PROXY = 'https://script.google.com/macros/s/AKfycbyq9KJgWTRoALEEVf8Pu_I82GT0-tTK5yXNg-RsYHj4ywK6Grg9z_jG1-IcTW3LMXfNBg/exec';
+const AGENDOR_PROXY = 'https://script.google.com/macros/s/AKfycbxIkdzKQX1ioaaFg3p70ekootWk7eB57dux91h9afLWV9MxVGlU0gvteMoDazWfn5A6fg/exec';
+let _sheetsFechados = 0, _sheetsReceita = 0, _sheetsQualif = 0;
+let _agKpisMerged = null;
+let _agLoading = false;
 let _lastSheetModified = null;
 let _pollCount = 0;
 let _isLoading = false;
@@ -832,6 +836,11 @@ function renderSummary(data) {
     if (el('card-tratativa')) el('card-tratativa').textContent = n(tratativa);
 
     const fechados = vend.fechado || 0;
+    const qualif = sdr.qualif || 0;
+    _sheetsFechados = fechados;
+    _sheetsReceita  = receita || 0;
+    _sheetsQualif   = qualif;
+
     if (el('card-fechados')) el('card-fechados').textContent = n(fechados);
     if (el('card-fechados-sub')) {
       const perdidos = vend.perdido || 0;
@@ -844,10 +853,11 @@ function renderSummary(data) {
     }
 
     // Taxa de conversão: fechados / qualificados
-    const qualif = sdr.qualif || 0;
     if (el('card-conv')) el('card-conv').textContent = qualif > 0 ? ((fechados / qualif) * 100).toFixed(1) + '%' : '-';
 
     if (el('card-potencial')) el('card-potencial').textContent = cur(pipeline);
+
+    if (_agKpisMerged) _mergeAgendorKpis(_agKpisMerged);
 
     const stlEl = el('card-speed-to-lead');
     if (stlEl) stlEl.textContent = media_speed_to_lead > 0 ? fmtSpeed(media_speed_to_lead) : '-';
@@ -1372,10 +1382,55 @@ async function checkForUpdates() {
   }
 }
 
+// ── AGENDOR INBOUND ──────────────────────────────────────────
+function fmtBRL(v) {
+  if (!v && v !== 0) return '-';
+  return 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+
+async function loadAgendorInbound() {
+  if (_agLoading) return;
+  _agLoading = true;
+  try {
+    const url = AGENDOR_PROXY + '?origin=inbound&period=90d&bust=' + Date.now();
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'ok=false');
+    _agKpisMerged = data.kpis;
+    _mergeAgendorKpis(data.kpis);
+  } catch(e) {
+    console.warn('Agendor inbound erro:', e.message);
+  } finally {
+    _agLoading = false;
+  }
+}
+
+function _mergeAgendorKpis(k) {
+  const el = id => document.getElementById(id);
+  const totalFech = _sheetsFechados + (k.ganhoCont || 0);
+  const totalRec  = _sheetsReceita  + (k.ganhoValor || 0);
+  const perd      = k.perdidoCont  || 0;
+  if (el('card-fechados')) el('card-fechados').textContent = n(totalFech);
+  if (el('card-receita'))  el('card-receita').textContent  = cur(totalRec);
+  if (el('card-receita-sub')) {
+    el('card-receita-sub').textContent = totalFech > 0
+      ? 'média ' + cur(Math.round(totalRec / totalFech)) + (k.prazoMedio ? ' · ' + k.prazoMedio + 'd CRM' : '')
+      : 'total fechado';
+  }
+  if (el('card-conv') && _sheetsQualif > 0)
+    el('card-conv').textContent = ((totalFech / _sheetsQualif) * 100).toFixed(1) + '%';
+  if (el('card-potencial')) el('card-potencial').textContent = cur(k.pipelineTotal || 0);
+  if (el('card-fechados-sub'))
+    el('card-fechados-sub').textContent = perd > 0 ? n(perd) + ' perdido' + (perd > 1 ? 's' : '') : 'nenhum perdido';
+}
+
 // ── INIT ─────────────────────────────────────────────────────
 window.addEventListener('load', () => {
   checkForUpdates();
   setInterval(checkForUpdates, POLL_INTERVAL_MS);
+  loadAgendorInbound();
+  setInterval(loadAgendorInbound, 5 * 60 * 1000);
   setInterval(() => {
     if (Date.now() - _lastSuccessfulLoad > AUTO_RELOAD_MS) {
       _log.warn('watchdog', 'sem dados por 35min - recarregando página');

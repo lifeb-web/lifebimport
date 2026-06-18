@@ -870,56 +870,6 @@
     </div>
   </div><!-- /.tables-row -->
 
-  <!-- ═══ PIPELINE INBOUND — AGENDOR CRM ════════════════════════════ -->
-  <div style="margin-top:4px;padding-top:14px;border-top:2px solid var(--border)">
-    <div class="sec-hd">Pipeline Inbound — CRM
-      <span style="font-weight:500;text-transform:none;letter-spacing:0;font-size:10px;color:var(--muted)">· Agendor · últimos 90 dias</span>
-      <button id="ag-refresh" style="margin-left:auto;background:none;border:1.5px solid var(--border);border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700;color:var(--purple);cursor:pointer">↻</button>
-    </div>
-    <div id="ag-err" style="display:none;background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:600;color:#991b1b;margin-bottom:8px"></div>
-
-    <!-- KPIs 2×2 -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-      <div class="card card-stat accent-purple" style="padding:12px 10px">
-        <div class="s-label">Pipeline Ativo</div>
-        <div class="s-val" id="ag-pipe">-</div>
-      </div>
-      <div class="card card-stat accent-highlight" style="padding:12px 10px">
-        <div class="s-label">Ganhos</div>
-        <div class="s-val" id="ag-won">-</div>
-        <div class="s-sub" id="ag-won-cnt"></div>
-      </div>
-      <div class="card card-stat accent-red" style="padding:12px 10px">
-        <div class="s-label">Perdidos</div>
-        <div class="s-val" id="ag-lost">-</div>
-      </div>
-      <div class="card card-stat" style="padding:12px 10px;border-top:3px solid #0d9488;background:linear-gradient(180deg,#f0fdfa 0%,#fff 40%)">
-        <div class="s-label">Conversão</div>
-        <div class="s-val" id="ag-conv">-</div>
-      </div>
-    </div>
-
-    <!-- Funil Inbound -->
-    <div class="card" style="margin-bottom:8px">
-      <div class="card-hd">
-        <div class="card-hd-title">Funil Inbound</div>
-        <span class="badge" id="ag-ativos-badge">-</span>
-      </div>
-      <div id="ag-funnel">
-        <div style="text-align:center;color:#c8c2d6;font-style:italic;font-size:13px;padding:14px">Carregando...</div>
-      </div>
-    </div>
-
-    <!-- Reps inbound -->
-    <div class="card">
-      <div class="card-hd">
-        <div class="card-hd-title">Por Representante</div>
-      </div>
-      <div id="ag-reps">
-        <div style="text-align:center;color:#c8c2d6;font-style:italic;font-size:13px;padding:14px">Carregando...</div>
-      </div>
-    </div>
-  </div><!-- /Agendor inbound -->
 
 </div><!-- /#dashboard -->
 
@@ -1100,6 +1050,11 @@ function renderSummary(data) {
     if (el('card-tratativa')) el('card-tratativa').textContent = n(tratativa);
 
     const fechados = vend.fechado || 0;
+    const qualif = sdr.qualif || 0;
+    _sheetsFechados = fechados;
+    _sheetsReceita  = receita || 0;
+    _sheetsQualif   = qualif;
+
     if (el('card-fechados')) el('card-fechados').textContent = n(fechados);
     if (el('card-fechados-sub')) {
       const perdidos = vend.perdido || 0;
@@ -1114,10 +1069,11 @@ function renderSummary(data) {
     }
 
     // Taxa de conversão: fechados / qualificados
-    const qualif = sdr.qualif || 0;
     if (el('card-conv')) el('card-conv').textContent = qualif > 0 ? ((fechados / qualif) * 100).toFixed(1) + '%' : '-';
 
     if (el('card-potencial')) el('card-potencial').textContent = cur(pipeline);
+
+    if (_agKpisMerged) _mergeAgendorKpis(_agKpisMerged);
 
     const stlEl = el('card-speed-to-lead');
     if (stlEl) stlEl.textContent = media_speed_to_lead > 0 ? fmtSpeed(media_speed_to_lead) : '-';
@@ -1671,6 +1627,8 @@ async function checkForUpdates() {
 // ── AGENDOR INBOUND ──────────────────────────────────────────
 const AGENDOR_PROXY = 'https://script.google.com/macros/s/AKfycbxIkdzKQX1ioaaFg3p70ekootWk7eB57dux91h9afLWV9MxVGlU0gvteMoDazWfn5A6fg/exec';
 let _agLoading = false;
+let _sheetsFechados = 0, _sheetsReceita = 0, _sheetsQualif = 0;
+let _agKpisMerged = null;
 
 function fmtBRL(v) {
   if (!v && v !== 0) return '-';
@@ -1680,74 +1638,39 @@ function fmtBRL(v) {
 async function loadAgendorInbound() {
   if (_agLoading) return;
   _agLoading = true;
-  const errEl = document.getElementById('ag-err');
-  errEl.style.display = 'none';
   try {
     const url = AGENDOR_PROXY + '?origin=inbound&period=90d&bust=' + Date.now();
     const res = await fetch(url);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || 'proxy retornou ok=false');
-    renderAgKpis(data.kpis);
-    renderAgFunnel(data.funnel);
-    renderAgReps(data.reps);
+    _agKpisMerged = data.kpis;
+    _mergeAgendorKpis(data.kpis);
   } catch(e) {
-    errEl.textContent = 'Erro Agendor: ' + e.message;
-    errEl.style.display = 'block';
+    console.warn('Agendor inbound erro:', e.message);
   } finally {
     _agLoading = false;
   }
 }
 
-function renderAgKpis(k) {
-  const convBase = (k.ganhoCont || 0) + (k.perdidoCont || 0);
-  const conv = convBase > 0 ? Math.round(k.ganhoCont / convBase * 1000) / 10 : 0;
-  document.getElementById('ag-pipe').textContent    = fmtBRL(k.pipelineTotal);
-  document.getElementById('ag-won').textContent     = fmtBRL(k.ganhoValor);
-  document.getElementById('ag-won-cnt').textContent = k.ganhoCont ? k.ganhoCont + ' ganhos' : '';
-  document.getElementById('ag-lost').textContent    = (k.perdidoCont || 0) + ' perdidos';
-  document.getElementById('ag-conv').textContent    = conv + '%';
-  document.getElementById('ag-ativos-badge').textContent = (k.ativos || 0) + ' ativos';
+function _mergeAgendorKpis(k) {
+  const el = id => document.getElementById(id);
+  const totalFech = _sheetsFechados + (k.ganhoCont || 0);
+  const totalRec  = _sheetsReceita  + (k.ganhoValor || 0);
+  const perd      = k.perdidoCont  || 0;
+  if (el('card-fechados')) el('card-fechados').textContent = n(totalFech);
+  if (el('card-receita'))  el('card-receita').textContent  = cur(totalRec);
+  if (el('card-receita-sub')) {
+    el('card-receita-sub').textContent = totalFech > 0
+      ? 'média ' + cur(Math.round(totalRec / totalFech)) + (k.prazoMedio ? ' · ' + k.prazoMedio + 'd CRM' : '')
+      : 'total fechado';
+  }
+  if (el('card-conv') && _sheetsQualif > 0)
+    el('card-conv').textContent = ((totalFech / _sheetsQualif) * 100).toFixed(1) + '%';
+  if (el('card-potencial')) el('card-potencial').textContent = cur(k.pipelineTotal || 0);
+  if (el('card-fechados-sub'))
+    el('card-fechados-sub').textContent = perd > 0 ? n(perd) + ' perdido' + (perd > 1 ? 's' : '') : 'nenhum perdido';
 }
-
-function renderAgFunnel(funnel) {
-  const el = document.getElementById('ag-funnel');
-  if (!funnel || !funnel.length) { el.innerHTML = '<div style="color:#c8c2d6;font-style:italic;font-size:13px;padding:12px;text-align:center">Nenhum dado</div>'; return; }
-  const maxCount = Math.max(1, ...funnel.map(s => s.count));
-  el.innerHTML = funnel.map(s => {
-    const pct = Math.round(s.count / maxCount * 100);
-    const drop = s.dropFrom != null ? '<span style="font-size:10px;color:#ef4444;margin-left:6px">-' + s.dropFrom + '%</span>' : '';
-    return '<div style="padding:7px 12px 6px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)">'
-      + '<div style="width:90px;font-size:11px;font-weight:600;color:var(--fg);flex-shrink:0">' + (s.name || 'Etapa') + drop + '</div>'
-      + '<div style="flex:1;background:var(--border);border-radius:4px;height:6px"><div style="width:' + pct + '%;height:6px;border-radius:4px;background:var(--purple);transition:width .4s"></div></div>'
-      + '<div style="width:50px;text-align:right;font-size:11px;font-weight:700;color:var(--fg);flex-shrink:0">' + s.count + '<span style="font-weight:400;color:var(--muted);font-size:10px"> deals</span></div>'
-    + '</div>';
-  }).join('');
-}
-
-function renderAgReps(reps) {
-  const el = document.getElementById('ag-reps');
-  if (!reps || !reps.length) { el.innerHTML = '<div style="color:#c8c2d6;font-style:italic;font-size:13px;padding:12px;text-align:center">Nenhum dado</div>'; return; }
-  const rows = reps.filter(r => r.ativos + r.ganhoCont + r.perdidoCont > 0).map(r => {
-    const conv = (r.ganhoCont + r.perdidoCont) > 0 ? Math.round(r.ganhoCont / (r.ganhoCont + r.perdidoCont) * 1000) / 10 : null;
-    return '<tr>'
-      + '<td style="font-size:12px;font-weight:600;padding:7px 10px;color:var(--fg)">' + (r.name || '-') + '</td>'
-      + '<td style="font-size:11px;text-align:center;padding:7px 6px;color:var(--muted)">' + (r.ativos || 0) + '</td>'
-      + '<td style="font-size:11px;text-align:center;padding:7px 6px;color:#22c55e;font-weight:700">' + (r.ganhoCont || 0) + '</td>'
-      + '<td style="font-size:11px;text-align:right;padding:7px 10px;color:var(--purple);font-weight:700">' + (conv != null ? conv + '%' : '-') + '</td>'
-    + '</tr>';
-  }).join('');
-  if (!rows) { el.innerHTML = '<div style="color:#c8c2d6;font-style:italic;font-size:13px;padding:12px;text-align:center">Sem movimentação no período</div>'; return; }
-  el.innerHTML = '<table style="width:100%;border-collapse:collapse">'
-    + '<thead><tr style="border-bottom:1px solid var(--border)">'
-    + '<th style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:5px 10px;text-align:left">Rep</th>'
-    + '<th style="font-size:10px;color:var(--muted);padding:5px 6px;text-align:center">Ativos</th>'
-    + '<th style="font-size:10px;color:var(--muted);padding:5px 6px;text-align:center">Ganhos</th>'
-    + '<th style="font-size:10px;color:var(--muted);padding:5px 10px;text-align:right">Conv.</th>'
-    + '</tr></thead><tbody>' + rows + '</tbody></table>';
-}
-
-document.getElementById('ag-refresh').addEventListener('click', () => { loadAgendorInbound(); });
 
 // ── INIT ─────────────────────────────────────────────────────
 window.addEventListener('load', () => {
