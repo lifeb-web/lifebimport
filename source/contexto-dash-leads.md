@@ -1,5 +1,5 @@
-# Contexto — Dashboard de Leads (Planilha)
-Atualizado: 2026-06-01
+# Contexto — Dashboard de Leads (Planilha + Agendor CRM)
+Atualizado: 2026-06-18
 
 ---
 
@@ -556,6 +556,89 @@ Clicar num card do topo deixou de mostrar só a frase de ajuda — agora abre **
 - **Linhas do leaderboard**: `justify-content: space-between` (conteúdo topo+base) — menos vazio.
 - **Fechamentos**: `.fch-trend` com `flex:1` preenche a altura (acaba vazio da direita no telão).
 - **NOVO — faturamento mês a mês POR REP**: clicar num rep mostra `monthlyTrendHTML(fechs)` (barras dos últimos 6 meses do rep) + total no topo, antes dos leads ativos e fechamentos.
+
+---
+
+## ⚡ MIGRAÇÃO INBOUND → AGENDOR CRM (2026-06-18)
+
+### Contexto da migração
+Todos os leads inbound foram migrados para o Agendor CRM (reps operam via Bia). A planilha virou **histórico imutável** — não é mais atualizada com novos leads inbound. O dashboard inbound agora faz **merge Sheets (histórico) + Agendor (live)**.
+
+### GAS Proxy — agendor-outbound-proxy.gs (novo arquivo)
+Proxy separado do proxy da planilha. Suporta `?origin=inbound|outbound`. Arquivo em:
+`/Users/robertmarques/Dropbox/.../agendor-outbound-proxy.gs`
+
+URL do proxy:
+`https://script.google.com/macros/s/AKfycbxIkdzKQX1ioaaFg3p70ekootWk7eB57dux91h9afLWV9MxVGlU0gvteMoDazWfn5A6fg/exec`
+
+**Parâmetros:** `?origin=inbound|outbound&period=90d&bust=TIMESTAMP`
+
+**Resposta:**
+```json
+{
+  "ok": true,
+  "kpis": { "ativos", "pipelineTotal", "ganhoValor", "ganhoCont", "perdidoCont", "conversao", "prazoMedio", "staleTotal", "leadsNoPeriodo" },
+  "funnel": [ { "stageId", "name", "color", "seq", "count", "value", "dropFrom" } ],
+  "reps": [ { "id", "name", "ativos", "pipeline", "ganhoValor", "ganhoCont", "perdidoCont", "conversao", "ticketMedio" } ],
+  "deals": [ { "id", "title", "value", "stage", "stageId", "stageSeq", "stageColor", "repId", "rep", "createdAt", "updatedAt", "stale" } ],
+  "recentWon": [...],
+  "recentLost": [...]
+}
+```
+
+**Filtro origin:** `leadOrigin` fica no PERSON (não no deal). Proxy busca `/people?per_page=100` separado, monta `{personId → origin}`. Deals sem person ou sem origin → default OUTBOUND (grandfathered).
+
+**Stages inbound:**
+- 3771722 = Conexão (seq 1)
+- 3771723 = Diagnóstico (seq 2)
+- 3771724 = Solução (seq 3)
+- 3771725 = Negociação (seq 4)
+
+### Merge Sheets + Agendor no dashboard inbound
+Planilha carrega primeiro → salva `_sheetsFechados/_sheetsReceita/_sheetsQualif` → renderiza cards. Agendor carrega em paralelo via `loadAgendorInbound()` → `_mergeAgendorKpis(k)` soma por cima.
+
+```javascript
+const AGENDOR_PROXY = 'https://script.google.com/.../exec';
+let _agDeals = [];        // todos os deals ativos (para drill por etapa)
+let _agKpisMerged = null; // kpis do Agendor (para re-merge quando Sheets chegar depois)
+let _agLoading = false;
+let _sheetsFechados = 0, _sheetsReceita = 0, _sheetsQualif = 0;
+```
+
+`_mergeAgendorKpis(k)` atualiza:
+- `card-fechados` = `_sheetsFechados + k.ganhoCont`
+- `card-receita` = `_sheetsReceita + k.ganhoValor`
+- `card-potencial` = `k.pipelineTotal`
+- `card-conv` = `(totalFech / _sheetsQualif) * 100`
+- `card-fechados-sub` = N perdidos
+
+### Funil SDR removido
+Migrado para GS Engage. `renderFunilBar('funil-sdr', ...)` removido. Card HTML "Funil SDR" removido em ambos os arquivos. Comentário preservado: `// SDR funnel removido — migrado pro GS Engage`.
+
+### Funil CRM (substituiu Funil Vendedor)
+`renderAgendorFunil(funnel)` renderiza etapas live do Agendor no container `#funil-vend`.
+
+Visual por etapa: dot colorido (azul/roxo/âmbar/verde por seq) + nome + valor da etapa + badge de drop rate + barra + count + %.
+
+**Clicável (2026-06-18):** cada etapa tem `data-stage-id` e `onclick="_showStageDrillInbound(stageId, stageName)"`. Abre `detail-modal` com lista de deals daquela etapa, ordenados por valor desc, cada deal é link para `https://app.agendor.com.br/negocio/${d.id}`.
+
+```javascript
+function _showStageDrillInbound(stageId, stageName) {
+  const deals = _agDeals.filter(d => String(d.stageId) === String(stageId));
+  // ... dmOpen com lista de deal-row clicáveis para Agendor
+}
+```
+
+### Telão 13" a 100% de zoom — breakpoint 1380px
+Breakpoints reordenados (cascata max-width correta: 1450 → 1380 → 1250 → 1050):
+- `@media (max-width: 1380px)`: grid 18fr/53fr/29fr, m-val 22px, funil-nome 90px, telao-cards 96px, header comprimido
+- A 90% de zoom o viewport é ~1518px (não ativa nenhum breakpoint) — a 100% ativa o 1380px
+
+### Commits 2026-06-18
+- `6eda1041` — funil CRM ao vivo (Agendor), removeu funil SDR, mobile + telão
+- `07122683` — funil CRM clicável + drill por etapa + layout melhorado + fix 13" 100% zoom
+
+---
 
 ### Polish de sofisticação (2026-06-01, commit `d2de10e4`)
 - **Hover premium** nos clicáveis: KPIs/rep-cards/fechados elevam (`translateY(-2/-3px)` + sombra roxa); linhas do leaderboard e células da carteira com feedback. Transições .15s.
