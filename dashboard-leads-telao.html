@@ -546,17 +546,7 @@
 
       <div class="card card-funil">
         <div class="card-hd">
-          <div class="card-hd-title">Funil SDR <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;opacity:.6">(Status SDR)</span></div>
-          <span class="badge" id="sdr-total-badge">-</span>
-        </div>
-        <div class="funil-body" id="funil-sdr">
-          <div style="text-align:center;color:#c8c2d6;font-size:12px;font-style:italic">Carregando...</div>
-        </div>
-      </div>
-
-      <div class="card card-funil">
-        <div class="card-hd">
-          <div class="card-hd-title">Funil Vendedor</div>
+          <div class="card-hd-title">Funil CRM</div>
           <span class="badge" id="vend-total-badge">-</span>
         </div>
         <div class="funil-body" id="funil-vend">
@@ -917,21 +907,7 @@ function renderFunnel(data) {
       vendBadge.textContent = totalVend > 0 ? `${((vend.fechado || 0) / totalVend * 100).toFixed(0)}% FECHAM` : '-';
     }
 
-    renderFunilBar('funil-sdr', [
-      { label: 'Aguardando abordagem', value: sdr.ag_abord || 0, barClass: 'bar-orange' },
-      { label: 'Em abordagem',         value: sdr.em_abord || 0, barClass: 'bar-blue'   },
-      { label: 'Qualificado',          value: sdr.qualif   || 0, barClass: 'bar-green'  },
-      { label: 'Sem retorno SDR',      value: sdr.sem_ret  || 0, barClass: ''           },
-      { label: 'Fora do perfil',       value: sdr.fora     || 0, barClass: 'bar-red'    },
-    ].filter(i => i.value > 0), total);
-
-    renderFunilBar('funil-vend', [
-      { label: 'Aguardando contato', value: vend.ag_cont || 0, barClass: 'bar-orange'  },
-      { label: 'Em contato',         value: vend.em_cont || 0, barClass: 'bar-blue'    },
-      { label: 'Em negociação',      value: vend.em_neg  || 0, barClass: 'bar-magenta' },
-      { label: 'Fechado',            value: vend.fechado || 0, barClass: 'bar-green'   },
-      { label: 'Perdido',            value: vend.perdido || 0, barClass: 'bar-red'     },
-    ].filter(i => i.value > 0), totalVend || 1);
+    // SDR funnel removido — migrado pro GS Engage
 
   } catch(err) {
     _log.error('funnel', 'Erro ao renderizar funil', err);
@@ -1399,11 +1375,22 @@ async function loadAgendorInbound() {
     if (!data.ok) throw new Error(data.error || 'ok=false');
     _agKpisMerged = data.kpis;
     _mergeAgendorKpis(data.kpis);
+    renderAgendorFunil(data.funnel);
   } catch(e) {
     console.warn('Agendor inbound erro:', e.message);
   } finally {
     _agLoading = false;
   }
+}
+
+function renderAgendorFunil(funnel) {
+  if (!funnel || !funnel.length) return;
+  const colorMap = { 1:'bar-blue', 2:'bar-purple', 3:'bar-orange', 4:'bar-green' };
+  const items = funnel.map(s => ({ label: s.name, value: s.count, barClass: colorMap[s.seq] || 'bar-purple' }));
+  const total = funnel.reduce((a, s) => a + s.count, 0);
+  const badge = document.getElementById('vend-total-badge');
+  if (badge) badge.textContent = total + ' ativos';
+  renderFunilBar('funil-vend', items, total);
 }
 
 function _mergeAgendorKpis(k) {
