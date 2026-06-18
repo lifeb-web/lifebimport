@@ -367,21 +367,30 @@
     .funil-item {
       display: flex;
       align-items: center;
-      gap: 10px;
-      margin-bottom: 10px;
+      gap: 8px;
+      margin: 0 -4px 6px;
+      padding: 3px 4px;
+      border-radius: 7px;
+      transition: background .15s;
     }
     .funil-item:last-child { margin-bottom: 0; }
+    .funil-item[data-stage-id] { cursor: pointer; }
+    .funil-item[data-stage-id]:hover, .funil-item[data-stage-id]:active { background: rgba(112,75,155,.08); }
     .funil-nome {
       font-size: 11px;
       font-weight: 600;
       color: var(--text);
-      min-width: 130px;
-      max-width: 150px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      min-width: 126px;
+      max-width: 146px;
       flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
     }
+    .funil-nome-line { display: flex; align-items: center; gap: 4px; overflow: hidden; }
+    .funil-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .funil-drop { font-size: 9px; background: #fef3c7; color: #92400e; border-radius: 8px; padding: 1px 5px; font-weight: 700; flex-shrink: 0; }
+    .funil-stage-val { font-size: 10px; color: var(--muted); }
     .funil-bar-wrap {
       flex: 1;
       height: 6px;
@@ -641,6 +650,10 @@
     .rm-val.good { color: var(--green); }
     .rm-val.bad { color: var(--red); }
 
+    /* deal-row no modal de etapa CRM */
+    .deal-row { display:flex; align-items:center; padding:10px 16px; border-bottom:1px solid #f4f2f8; text-decoration:none; transition:background .12s; }
+    .deal-row:last-child { border-bottom:none; }
+    .deal-row:hover { background:#f5f3ff; }
     /* ── CLICÁVEL + MODAL DE DETALHE ── */
     .cards-row .card, .rep-card, #fechados-resumo, .cart-cell { cursor: pointer; }
     .clickable { cursor: pointer; }
@@ -1604,6 +1617,7 @@ const AGENDOR_PROXY = 'https://script.google.com/macros/s/AKfycbxIkdzKQX1ioaaFg3
 let _agLoading = false;
 let _sheetsFechados = 0, _sheetsReceita = 0, _sheetsQualif = 0;
 let _agKpisMerged = null;
+let _agDeals = [];
 
 function fmtBRL(v) {
   if (!v && v !== 0) return '-';
@@ -1620,6 +1634,7 @@ async function loadAgendorInbound() {
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || 'proxy retornou ok=false');
     _agKpisMerged = data.kpis;
+    _agDeals = data.deals || [];
     _mergeAgendorKpis(data.kpis);
     renderAgendorFunil(data.funnel);
   } catch(e) {
@@ -1629,14 +1644,47 @@ async function loadAgendorInbound() {
   }
 }
 
+const AGENDOR_DEAL_URL = 'https://app.agendor.com.br/negocio/';
+
 function renderAgendorFunil(funnel) {
   if (!funnel || !funnel.length) return;
   const colorMap = { 1:'bar-blue', 2:'bar-purple', 3:'bar-orange', 4:'bar-green' };
-  const items = funnel.map(s => ({ label: s.name, value: s.count, barClass: colorMap[s.seq] || 'bar-purple' }));
+  const dotColor = { 1:'#2563eb', 2:'#704B9B', 3:'#f59e0b', 4:'#22C35D' };
   const total = funnel.reduce((a, s) => a + s.count, 0);
   const badge = document.getElementById('vend-total-badge');
   if (badge) badge.textContent = total + ' ativos';
-  renderFunilBar('funil-vend', items, total);
+  const el = document.getElementById('funil-vend');
+  if (!el) return;
+  if (!total) { el.innerHTML = '<div style="text-align:center;color:#c8c2d6;font-style:italic;font-size:13px;padding:12px">Sem dados</div>'; return; }
+  el.innerHTML = funnel.map(s => {
+    const pct = total > 0 ? Math.round(s.count / total * 100) : 0;
+    const dot = dotColor[s.seq] || '#704B9B';
+    const barClass = colorMap[s.seq] || 'bar-purple';
+    const valTxt = (s.value || 0) > 0 ? `<span class="funil-stage-val">${cur(s.value)}</span>` : '';
+    const dropBadge = (s.dropFrom != null && s.dropFrom > 0) ? `<span class="funil-drop">↓${s.dropFrom}%</span>` : '';
+    return `<div class="funil-item" data-stage-id="${s.stageId}" onclick="_showStageDrillInbound('${s.stageId}','${esc(s.name)}')">
+      <div class="funil-nome">
+        <div class="funil-nome-line"><span class="funil-dot" style="background:${dot}"></span><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.name)}</span>${dropBadge}</div>
+        ${valTxt}
+      </div>
+      <div class="funil-bar-wrap"><div class="funil-bar ${barClass}" style="width:${Math.max(pct,2)}%"></div></div>
+      <div class="funil-num">${n(s.count)}</div>
+      <div class="funil-pct">${pct}%</div>
+    </div>`;
+  }).join('');
+}
+
+function _showStageDrillInbound(stageId, stageName) {
+  const deals = _agDeals.filter(d => String(d.stageId) === String(stageId));
+  const sorted = [...deals].sort((a, b) => (b.value || 0) - (a.value || 0));
+  const rows = sorted.length
+    ? sorted.map(d => `<a class="deal-row" href="${AGENDOR_DEAL_URL}${d.id}" target="_blank" rel="noopener">
+        <div style="flex:1;font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.title || '—')}</div>
+        <div style="font-size:11px;color:var(--muted);white-space:nowrap;padding:0 8px">${esc(d.rep || '—')}</div>
+        <div style="font-size:13px;font-weight:800;color:var(--purple);white-space:nowrap">${(d.value||0) > 0 ? cur(d.value) : '—'}</div>
+      </a>`).join('')
+    : '<div style="text-align:center;color:#c8c2d6;padding:24px;font-style:italic">Nenhum deal nesta etapa</div>';
+  dmOpen(stageName + ' · ' + deals.length + ' deal' + (deals.length !== 1 ? 's' : ''), rows);
 }
 
 function _mergeAgendorKpis(k) {

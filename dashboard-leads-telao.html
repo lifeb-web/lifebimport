@@ -171,9 +171,15 @@
     /* FUNIL BARRAS */
     .card-funil { flex:1; display:flex; flex-direction:column; overflow:hidden; min-height:0; }
     .funil-body { flex:1; display:flex; flex-direction:column; justify-content:space-evenly; padding:4px 14px 6px; overflow:hidden; min-height:0; }
-    .funil-item { display:flex; align-items:center; gap:10px; padding:3px 0; border-bottom:1px solid var(--border); flex-shrink:1; min-height:0; }
+    .funil-item { display:flex; align-items:center; gap:8px; padding:3px 4px; margin:0 -4px 0; border-bottom:1px solid var(--border); flex-shrink:1; min-height:0; transition:background .15s; }
     .funil-item:last-child { border-bottom:none; }
-    .funil-nome { font-size:11px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:120px; max-width:145px; flex-shrink:0; }
+    .funil-item[data-stage-id] { cursor:pointer; }
+    .funil-item[data-stage-id]:hover { background:rgba(112,75,155,.07); }
+    .funil-nome { font-size:11px; font-weight:700; color:var(--text); min-width:118px; max-width:142px; flex-shrink:0; display:flex; flex-direction:column; gap:1px; }
+    .funil-nome-line { display:flex; align-items:center; gap:4px; overflow:hidden; }
+    .funil-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+    .funil-drop { font-size:9px; background:#fef3c7; color:#92400e; border-radius:8px; padding:1px 5px; font-weight:700; flex-shrink:0; }
+    .funil-stage-val { font-size:10px; color:var(--muted); }
     .funil-bar-wrap { flex:1; height:5px; background:#f0ebf8; border-radius:3px; min-width:0; }
     .funil-bar { height:100%; background:linear-gradient(90deg,var(--purple),var(--purple-l)); border-radius:3px; transition:width .5s ease; min-width:3px; }
     .funil-bar.bar-green   { background:linear-gradient(90deg,var(--green),#5dde8b); }
@@ -393,32 +399,43 @@
     #telao-cards .card-rt     { min-width: 120px; }
 
     @media (max-width: 1450px) {
-      /* Funil: reduz largura do nome para caber na coluna menor */
       .funil-nome { min-width: 95px; max-width: 120px; }
-      /* Leaderboard: reduz gap e ajusta grid */
       .lb-grid { gap: 6px; }
     }
 
+    /* 13" notebook a 100% de zoom — ajuste fino (entre 1250px e 1450px) */
+    @media (max-width: 1380px) {
+      #telao-main { grid-template-columns: 18fr 53fr 29fr; gap: 6px; }
+      .m-val { font-size: 22px; }
+      .m-label { font-size: 9px; }
+      .funil-nome { min-width: 90px; max-width: 110px; font-size: 10px; }
+      #telao-cards { height: 96px; gap: 6px; }
+      #telao-cards .card-metric { min-width: 78px; padding: 6px 8px; }
+      .rt-num { font-size: 26px; }
+      header { padding: 6px 14px; }
+      .h-ts { font-size: 11px; }
+    }
+
     @media (max-width: 1250px) {
-      /* Rebalanceia colunas principais */
       #telao-main { grid-template-columns: 21fr 51fr 28fr; }
-      /* Funil ainda menor */
       .funil-nome { min-width: 80px; max-width: 100px; }
-      /* Leaderboard: esconde Prazo e 1º Contato (cols 8 e 9) */
       .lb-grid { grid-template-columns: 30px minmax(0,1.5fr) 56px 1.4fr 1.3fr 1.0fr 0.8fr; gap: 6px; }
       .lb-grid > *:nth-child(8),
       .lb-grid > *:nth-child(9) { display: none; }
     }
 
     @media (max-width: 1050px) {
-      /* Esconde também Ticket e 1º Contato — só o essencial */
       .lb-grid { grid-template-columns: 28px minmax(0,1.4fr) 52px 1.3fr 1.2fr 1.0fr; gap: 6px; }
       .lb-grid > *:nth-child(7),
       .lb-grid > *:nth-child(8),
       .lb-grid > *:nth-child(9) { display: none; }
-      /* Carterinha: diminui números */
       .cart-num { font-size: 24px; }
     }
+
+    /* deal-row no modal de etapa CRM */
+    .deal-row { display:flex; align-items:center; padding:10px 16px; border-bottom:1px solid #f4f2f8; text-decoration:none; transition:background .12s; }
+    .deal-row:last-child { border-bottom:none; }
+    .deal-row:hover { background:#f5f3ff; }
   </style>
 </head>
 <body>
@@ -641,6 +658,7 @@ const LEADS_PROXY = 'https://script.google.com/macros/s/AKfycbyq9KJgWTRoALEEVf8P
 const AGENDOR_PROXY = 'https://script.google.com/macros/s/AKfycbxIkdzKQX1ioaaFg3p70ekootWk7eB57dux91h9afLWV9MxVGlU0gvteMoDazWfn5A6fg/exec';
 let _sheetsFechados = 0, _sheetsReceita = 0, _sheetsQualif = 0;
 let _agKpisMerged = null;
+let _agDeals = [];
 let _agLoading = false;
 let _lastSheetModified = null;
 let _pollCount = 0;
@@ -1374,6 +1392,7 @@ async function loadAgendorInbound() {
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || 'ok=false');
     _agKpisMerged = data.kpis;
+    _agDeals = data.deals || [];
     _mergeAgendorKpis(data.kpis);
     renderAgendorFunil(data.funnel);
   } catch(e) {
@@ -1383,14 +1402,47 @@ async function loadAgendorInbound() {
   }
 }
 
+const AGENDOR_DEAL_URL = 'https://app.agendor.com.br/negocio/';
+
 function renderAgendorFunil(funnel) {
   if (!funnel || !funnel.length) return;
   const colorMap = { 1:'bar-blue', 2:'bar-purple', 3:'bar-orange', 4:'bar-green' };
-  const items = funnel.map(s => ({ label: s.name, value: s.count, barClass: colorMap[s.seq] || 'bar-purple' }));
+  const dotColor = { 1:'#2563eb', 2:'#704B9B', 3:'#f59e0b', 4:'#22C35D' };
   const total = funnel.reduce((a, s) => a + s.count, 0);
   const badge = document.getElementById('vend-total-badge');
   if (badge) badge.textContent = total + ' ativos';
-  renderFunilBar('funil-vend', items, total);
+  const el = document.getElementById('funil-vend');
+  if (!el) return;
+  if (!total) { el.innerHTML = '<div style="text-align:center;color:#c8c2d6;font-style:italic;font-size:12px;padding:12px">Sem dados</div>'; return; }
+  el.innerHTML = funnel.map(s => {
+    const pct = total > 0 ? Math.round(s.count / total * 100) : 0;
+    const dot = dotColor[s.seq] || '#704B9B';
+    const barClass = colorMap[s.seq] || 'bar-purple';
+    const valTxt = (s.value || 0) > 0 ? `<span class="funil-stage-val">${cur(s.value)}</span>` : '';
+    const dropBadge = (s.dropFrom != null && s.dropFrom > 0) ? `<span class="funil-drop">↓${s.dropFrom}%</span>` : '';
+    return `<div class="funil-item" data-stage-id="${s.stageId}" onclick="_showStageDrillInbound('${s.stageId}','${esc(s.name)}')">
+      <div class="funil-nome">
+        <div class="funil-nome-line"><span class="funil-dot" style="background:${dot}"></span><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.name)}</span>${dropBadge}</div>
+        ${valTxt}
+      </div>
+      <div class="funil-bar-wrap"><div class="funil-bar ${barClass}" style="width:${Math.max(pct,2)}%"></div></div>
+      <div class="funil-num">${n(s.count)}</div>
+      <div class="funil-pct">${pct}%</div>
+    </div>`;
+  }).join('');
+}
+
+function _showStageDrillInbound(stageId, stageName) {
+  const deals = _agDeals.filter(d => String(d.stageId) === String(stageId));
+  const sorted = [...deals].sort((a, b) => (b.value || 0) - (a.value || 0));
+  const rows = sorted.length
+    ? sorted.map(d => `<a class="deal-row" href="${AGENDOR_DEAL_URL}${d.id}" target="_blank" rel="noopener">
+        <div style="flex:1;font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.title || '—')}</div>
+        <div style="font-size:11px;color:var(--muted);white-space:nowrap;padding:0 8px">${esc(d.rep || '—')}</div>
+        <div style="font-size:13px;font-weight:800;color:var(--purple);white-space:nowrap">${(d.value||0) > 0 ? cur(d.value) : '—'}</div>
+      </a>`).join('')
+    : '<div style="text-align:center;color:#c8c2d6;padding:24px;font-style:italic">Nenhum deal nesta etapa</div>';
+  dmOpen(stageName + ' · ' + deals.length + ' deal' + (deals.length !== 1 ? 's' : ''), rows);
 }
 
 function _mergeAgendorKpis(k) {
