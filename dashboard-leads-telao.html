@@ -383,6 +383,42 @@
     .lb-recfill.gold { background: linear-gradient(90deg, #d4af37, #f0d068); }
     /* alerta de lento (1º contato acima do limite) */
     .lb-num.bad { color: var(--red); }
+
+    /* ── RESPONSIVO — largura (notebooks, PCs menores que TV) ─── */
+    /* Permite rolagem horizontal nos cards se não couberem */
+    #telao-cards { overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    #telao-cards::-webkit-scrollbar { display: none; }
+    /* Cards de métricas: largura mínima garantida para não esmagar */
+    #telao-cards .card-metric { min-width: 82px; }
+    #telao-cards .card-rt     { min-width: 120px; }
+
+    @media (max-width: 1450px) {
+      /* Funil: reduz largura do nome para caber na coluna menor */
+      .funil-nome { min-width: 95px; max-width: 120px; }
+      /* Leaderboard: reduz gap e ajusta grid */
+      .lb-grid { gap: 6px; }
+    }
+
+    @media (max-width: 1250px) {
+      /* Rebalanceia colunas principais */
+      #telao-main { grid-template-columns: 21fr 51fr 28fr; }
+      /* Funil ainda menor */
+      .funil-nome { min-width: 80px; max-width: 100px; }
+      /* Leaderboard: esconde Prazo e 1º Contato (cols 8 e 9) */
+      .lb-grid { grid-template-columns: 30px minmax(0,1.5fr) 56px 1.4fr 1.3fr 1.0fr 0.8fr; gap: 6px; }
+      .lb-grid > *:nth-child(8),
+      .lb-grid > *:nth-child(9) { display: none; }
+    }
+
+    @media (max-width: 1050px) {
+      /* Esconde também Ticket e 1º Contato — só o essencial */
+      .lb-grid { grid-template-columns: 28px minmax(0,1.4fr) 52px 1.3fr 1.2fr 1.0fr; gap: 6px; }
+      .lb-grid > *:nth-child(7),
+      .lb-grid > *:nth-child(8),
+      .lb-grid > *:nth-child(9) { display: none; }
+      /* Carterinha: diminui números */
+      .cart-num { font-size: 24px; }
+    }
   </style>
 </head>
 <body>

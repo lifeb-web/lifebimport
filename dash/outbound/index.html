@@ -455,7 +455,7 @@ function flashDot() {
 
 // ── RENDER ───────────────────────────────────────────────────
 function render(d) {
-  renderKpis(d.kpis, d.period);
+  renderKpis(d.kpis, d.period, d.deals);
   renderFunil(d.funnel);
   renderReps(d.reps, d.deals);
   renderFeed(d.recentWon, d.recentLost, d.kpis);
@@ -463,10 +463,11 @@ function render(d) {
 }
 
 // KPIs
-function renderKpis(k, period) {
+function renderKpis(k, period, deals) {
   if (period) document.getElementById('period-label').textContent = period.label;
   el('k-pipeline').textContent = fmtMoney(k.pipelineTotal);
-  el('k-ativos').textContent = k.ativos + ' deals ativos';
+  const withVal = (deals || []).filter(d => (d.value || 0) > 0).length;
+  el('k-ativos').textContent = withVal + ' precificados · ' + k.ativos + ' no funil';
   el('k-ganho').textContent = fmtMoney(k.ganhoValor);
   el('k-ganho-cnt').textContent = k.ganhoCont + ' negócios';
   el('k-perdido').textContent = k.perdidoCont;
