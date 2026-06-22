@@ -1,11 +1,19 @@
 function doPost(e) {
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
+  var nome, telefone, origem, pagina, cnpj, campanha, conjunto, anuncio;
   try {
     var data = JSON.parse(e.postData.contents);
-    var nome     = String(data.nome     || '').trim();
-    var telefone = String(data.telefone || '').trim();
+    nome     = String(data.nome     || '').trim();
+    telefone = String(data.telefone || '').trim();
+    origem   = data.origem   || '';
+    pagina   = data.pagina   || '';
+    cnpj     = data.cnpj     || '';
+    campanha = data.campanha || '';
+    conjunto = data.conjunto || '';
+    anuncio  = data.anuncio  || '';
     if (!nome || !telefone) {
+      lock.releaseLock();
       return ContentService
         .createTextOutput(JSON.stringify({ status: 'erro', error: 'nome e telefone obrigatórios' }))
         .setMimeType(ContentService.MimeType.JSON);
@@ -15,8 +23,8 @@ function doPost(e) {
       data.data,
       nome,
       telefone,
-      data.origem  || '',
-      data.pagina  || '',
+      origem,
+      pagina,
       'Aguardando abordagem'
     ]);
     // UTMs nas colunas AC(29), AD(30), AE(31) — separado para não sobrescrever ARRAYFORMULA em AB
@@ -26,16 +34,88 @@ function doPost(e) {
       data.conjunto || '',
       data.anuncio  || ''
     ]]);
-    return ContentService
-      .createTextOutput(JSON.stringify({ status: 'ok' }))
-      .setMimeType(ContentService.MimeType.JSON);
+    // CNPJ na coluna N (14)
+    if (cnpj) {
+      sheet.getRange(lastRow, 14).setValue(String(cnpj).replace(/\D/g, ''));
+    }
   } catch (err) {
+    lock.releaseLock();
     return ContentService
       .createTextOutput(JSON.stringify({ status: 'erro', error: err.message || String(err) }))
       .setMimeType(ContentService.MimeType.JSON);
-  } finally {
-    lock.releaseLock();
   }
+  lock.releaseLock();
+
+  // GS Engage — FORA do lock, falha silenciosa (não trava o lead se o GS estiver lento/fora)
+  try {
+    var gsKey = PropertiesService.getScriptProperties().getProperty('GS_API_KEY');
+    if (gsKey) {
+      _sendLeadToGSEngage(gsKey, nome, telefone, origem, pagina, cnpj, campanha, conjunto, anuncio);
+    }
+  } catch (_) {}
+
+  return ContentService
+    .createTextOutput(JSON.stringify({ status: 'ok' }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ── GS ENGAGE: cria lead INBOUND e enrola na cadência inbound ────────
+function _sendLeadToGSEngage(gsKey, nome, telefone, origem, pagina, cnpj, campanha, conjunto, anuncio) {
+  var GS_BASE = 'https://api.gsengage.com/api/v1';
+  var INBOUND_ROUTINE_ID = '6a3065cb2e916c2f2e1ce4b2';
+
+  var partes    = nome.split(/\s+/);
+  var firstName = partes[0];
+  var lastName  = partes.slice(1).join(' ') || '';
+  var digits    = telefone.replace(/\D/g, '');
+  var fone      = digits.indexOf('55') === 0 ? '+' + digits : '+55' + digits;
+
+  // Campos personalizados no GS (atribuição completa) — nomes batem com os criados no GS Engage.
+  var customFields = {};
+  if (cnpj)     customFields['CNPJ']     = String(cnpj).replace(/\D/g, '');
+  if (origem)   customFields['Origem']   = origem;
+  if (pagina)   customFields['Pagina']   = pagina;
+  if (campanha) customFields['Campanha'] = campanha;
+  if (conjunto) customFields['Conjunto'] = conjunto;
+  if (anuncio)  customFields['Anuncio']  = anuncio;
+
+  var leadPayload = {
+    firstName:       firstName,
+    lastName:        lastName,
+    mobiles:         [{ value: fone }],
+    sourceType:      'API',
+    acquisitionType: 'INBOUND',
+    customFields:    customFields
+  };
+
+  // User-Agent de browser — foi o que passou no teste (WAF do GS Engage)
+  var headers = {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'application/json'
+  };
+
+  var respLead = UrlFetchApp.fetch(GS_BASE + '/leads?apiKey=' + gsKey, {
+    method:             'post',
+    contentType:        'application/json',
+    headers:            headers,
+    payload:            JSON.stringify(leadPayload),
+    muteHttpExceptions: true
+  });
+  var leadData = JSON.parse(respLead.getContentText());
+  var leadId   = (leadData.data && (leadData.data.id || leadData.data._id)) || null;
+  if (!leadId) {
+    Logger.log('GS Engage lead error (' + respLead.getResponseCode() + '): ' + respLead.getContentText().slice(0, 200));
+    return;
+  }
+
+  var respProsp = UrlFetchApp.fetch(GS_BASE + '/prospections?apiKey=' + gsKey, {
+    method:             'post',
+    contentType:        'application/json',
+    headers:            headers,
+    payload:            JSON.stringify({ leadId: leadId, routineId: INBOUND_ROUTINE_ID }),
+    muteHttpExceptions: true
+  });
+  Logger.log('GS Engage enrolled ' + leadId + ' → status ' + respProsp.getResponseCode());
 }
 
 // ── PUSH NOTIFICATION (OneSignal) ────────────────────────────
