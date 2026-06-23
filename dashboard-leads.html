@@ -1630,9 +1630,13 @@ function fmtBRL(v) {
 async function loadAgendorInbound() {
   if (_agLoading) return;
   _agLoading = true;
+  const funilEl = document.getElementById('funil-vend');
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
     const url = AGENDOR_PROXY + '?origin=inbound&period=90d&bust=' + Date.now();
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || 'proxy retornou ok=false');
@@ -1644,6 +1648,8 @@ async function loadAgendorInbound() {
     renderAgendorFunil(data.funnel);
   } catch(e) {
     console.warn('Agendor inbound erro:', e.message);
+    if (funilEl && funilEl.textContent.includes('Carregando'))
+      funilEl.innerHTML = '<div style="text-align:center;color:#c8c2d6;font-size:12px;padding:16px">CRM offline — recarregue a página</div>';
   } finally {
     _agLoading = false;
   }
