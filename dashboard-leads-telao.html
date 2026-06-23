@@ -660,6 +660,7 @@ let _sheetsFechados = 0, _sheetsReceita = 0, _sheetsQualif = 0;
 let _agKpisMerged = null;
 let _agDeals = [];
 let _agLoading = false;
+let _sheetsFechamentos = [];
 let _lastSheetModified = null;
 let _pollCount = 0;
 let _isLoading = false;
@@ -1057,6 +1058,7 @@ function renderReps(reps) {
 const FCH_MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 function renderFechados(data) {
   try {
+    _sheetsFechamentos = data.fechamentos || [];
     const box = document.getElementById('fechados-resumo');
     if (!box) return;
     const f = data.fechamentos || [];
@@ -1395,6 +1397,7 @@ async function loadAgendorInbound() {
     _agDeals = data.deals || [];
     _mergeAgendorKpis(data.kpis);
     renderAgendorFunil(data.funnel);
+    _injectAgendorFechamentos(data.recentWon);
   } catch(e) {
     console.warn('Agendor inbound erro:', e.message);
   } finally {
@@ -1443,6 +1446,14 @@ function _showStageDrillInbound(stageId, stageName) {
       </a>`).join('')
     : '<div style="text-align:center;color:#c8c2d6;padding:24px;font-style:italic">Nenhum deal nesta etapa</div>';
   dmOpen(stageName + ' · ' + deals.length + ' deal' + (deals.length !== 1 ? 's' : ''), rows);
+}
+
+function _injectAgendorFechamentos(recentWon) {
+  if (!recentWon || !recentWon.length) return;
+  const orgOnly = recentWon.filter(w => !w.personId && w.value > 0 && w.closedAt);
+  if (!orgOnly.length) return;
+  const synthetic = orgOnly.map(w => ({ empresa: w.title, valor: w.value, data_f: w.closedAt, rep: w.rep || '' }));
+  renderFechados({ fechamentos: [..._sheetsFechamentos, ...synthetic] });
 }
 
 function _mergeAgendorKpis(k) {

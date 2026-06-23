@@ -1256,6 +1256,7 @@ function renderReps(reps) {
 const FCH_MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 function renderFechados(data) {
   try {
+    _sheetsFechamentos = data.fechamentos || [];
     const box = document.getElementById('fechados-resumo');
     if (!box) return;
     const f = data.fechamentos || [];
@@ -1621,6 +1622,7 @@ let _sheetsFechados = 0, _sheetsReceita = 0, _sheetsQualif = 0;
 let _agKpisMerged = null;
 let _agDeals = [];
 let _agRepsMap = {};
+let _sheetsFechamentos = [];
 
 function fmtBRL(v) {
   if (!v && v !== 0) return '-';
@@ -1646,6 +1648,7 @@ async function loadAgendorInbound() {
     (data.reps || []).forEach(function(rep) { if (rep.name) _agRepsMap[rep.name.toUpperCase()] = rep.ganhoCont || 0; });
     _mergeAgendorKpis(data.kpis);
     renderAgendorFunil(data.funnel);
+    _injectAgendorFechamentos(data.recentWon);
   } catch(e) {
     console.warn('Agendor inbound erro:', e.message);
     if (funilEl && funilEl.textContent.includes('Carregando'))
@@ -1696,6 +1699,17 @@ function _showStageDrillInbound(stageId, stageName) {
       </a>`).join('')
     : '<div style="text-align:center;color:#c8c2d6;padding:24px;font-style:italic">Nenhum deal nesta etapa</div>';
   dmOpen(stageName + ' · ' + deals.length + ' deal' + (deals.length !== 1 ? 's' : ''), rows);
+}
+
+// Adiciona ao bar mensal apenas deals que vieram direto pelo Agendor (person=null)
+// — esses nunca passaram pelo LP→planilha, então não estão em _sheetsFechamentos.
+// Deals com person (ex: Drogaria América) já estão na planilha; não somamos de novo.
+function _injectAgendorFechamentos(recentWon) {
+  if (!recentWon || !recentWon.length) return;
+  const orgOnly = recentWon.filter(w => !w.personId && w.value > 0 && w.closedAt);
+  if (!orgOnly.length) return;
+  const synthetic = orgOnly.map(w => ({ empresa: w.title, valor: w.value, data_f: w.closedAt, rep: w.rep || '' }));
+  renderFechados({ fechamentos: [..._sheetsFechamentos, ...synthetic] });
 }
 
 function _mergeAgendorKpis(k) {
