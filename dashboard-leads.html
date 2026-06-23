@@ -1262,6 +1262,7 @@ function renderFechados(data) {
     const _agOrgOnly = _agRecentWon.filter(w => !w.personId && w.value > 0 && w.closedAt)
       .map(w => ({ empresa: w.title, valor: w.value, data_f: w.closedAt, rep: w.rep || '' }));
     const f = [..._sheetsFechamentos, ..._agOrgOnly];
+    _closedList = f;
     if (!f.length) {
       box.innerHTML = '<div style="text-align:center;color:#c8c2d6;font-style:italic;font-size:13px;padding:16px">Sem fechamentos</div>';
       return;
@@ -1284,7 +1285,7 @@ function renderFechados(data) {
     const trend = months.map(m => {
       const [y, mo] = m.split('-');
       const pct = Math.round(byMonth[m].v / maxV * 100);
-      return `<div class="fch-month"><span class="fcm-lb">${FCH_MESES[+mo - 1]}/${y.slice(2)}</span><div class="fcm-bar"><div style="width:${Math.max(pct, 3)}%"></div></div><span class="fcm-val">${cur(byMonth[m].v)} · ${byMonth[m].n}</span></div>`;
+      return `<div class="fch-month" style="cursor:pointer" onclick="event.stopPropagation();_drillMonth('${m}')"><span class="fcm-lb">${FCH_MESES[+mo - 1]}/${y.slice(2)}</span><div class="fcm-bar"><div style="width:${Math.max(pct, 3)}%"></div></div><span class="fcm-val">${cur(byMonth[m].v)} · ${byMonth[m].n}</span></div>`;
     }).join('');
 
     const cutoff = new Date(Date.now() - 30 * 86400000);
@@ -1443,6 +1444,13 @@ function showCarteira(bucket) {
 function showFechados() {
   const sorted = _closedList.slice().sort((a, b) => (b.valor || 0) - (a.valor || 0));
   dmOpen(`Fechamentos (${sorted.length}) - maiores no topo`, closedTable(sorted));
+}
+function _drillMonth(ym) {
+  const [y, mo] = ym.split('-');
+  const label = FCH_MESES[+mo - 1] + '/' + y.slice(2);
+  const items = _closedList.filter(c => String(c.data_f || c.data || '').slice(0, 7) === ym)
+    .sort((a, b) => (b.valor || 0) - (a.valor || 0));
+  dmOpen(label + ' — ' + items.length + ' fechamento' + (items.length !== 1 ? 's' : ''), closedTable(items));
 }
 function repBreak(title, valFn, fmtFn) {
   const list = (_reps || []).filter(r => r.rep && r.rep !== 'Sem vendedor')
