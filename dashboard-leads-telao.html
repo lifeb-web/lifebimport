@@ -661,6 +661,7 @@ let _agKpisMerged = null;
 let _agDeals = [];
 let _agLoading = false;
 let _sheetsFechamentos = [];
+let _agRecentWon = [];
 let _lastSheetModified = null;
 let _pollCount = 0;
 let _isLoading = false;
@@ -1061,7 +1062,9 @@ function renderFechados(data) {
     _sheetsFechamentos = data.fechamentos || [];
     const box = document.getElementById('fechados-resumo');
     if (!box) return;
-    const f = data.fechamentos || [];
+    const _agOrgOnly = _agRecentWon.filter(w => !w.personId && w.value > 0 && w.closedAt)
+      .map(w => ({ empresa: w.title, valor: w.value, data_f: w.closedAt, rep: w.rep || '' }));
+    const f = [..._sheetsFechamentos, ..._agOrgOnly];
     if (!f.length) {
       box.innerHTML = '<div style="margin:auto;color:#c8c2d6;font-style:italic;font-size:13px">Sem fechamentos</div>';
       return;
@@ -1449,11 +1452,10 @@ function _showStageDrillInbound(stageId, stageName) {
 }
 
 function _injectAgendorFechamentos(recentWon) {
-  if (!recentWon || !recentWon.length) return;
-  const orgOnly = recentWon.filter(w => !w.personId && w.value > 0 && w.closedAt);
+  _agRecentWon = recentWon || [];
+  const orgOnly = _agRecentWon.filter(w => !w.personId && w.value > 0 && w.closedAt);
   if (!orgOnly.length) return;
-  const synthetic = orgOnly.map(w => ({ empresa: w.title, valor: w.value, data_f: w.closedAt, rep: w.rep || '' }));
-  renderFechados({ fechamentos: [..._sheetsFechamentos, ...synthetic] });
+  renderFechados({ fechamentos: _sheetsFechamentos });
 }
 
 function _mergeAgendorKpis(k) {

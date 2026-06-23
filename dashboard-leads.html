@@ -1259,7 +1259,9 @@ function renderFechados(data) {
     _sheetsFechamentos = data.fechamentos || [];
     const box = document.getElementById('fechados-resumo');
     if (!box) return;
-    const f = data.fechamentos || [];
+    const _agOrgOnly = _agRecentWon.filter(w => !w.personId && w.value > 0 && w.closedAt)
+      .map(w => ({ empresa: w.title, valor: w.value, data_f: w.closedAt, rep: w.rep || '' }));
+    const f = [..._sheetsFechamentos, ..._agOrgOnly];
     if (!f.length) {
       box.innerHTML = '<div style="text-align:center;color:#c8c2d6;font-style:italic;font-size:13px;padding:16px">Sem fechamentos</div>';
       return;
@@ -1623,6 +1625,7 @@ let _agKpisMerged = null;
 let _agDeals = [];
 let _agRepsMap = {};
 let _sheetsFechamentos = [];
+let _agRecentWon = [];
 
 function fmtBRL(v) {
   if (!v && v !== 0) return '-';
@@ -1701,15 +1704,11 @@ function _showStageDrillInbound(stageId, stageName) {
   dmOpen(stageName + ' · ' + deals.length + ' deal' + (deals.length !== 1 ? 's' : ''), rows);
 }
 
-// Adiciona ao bar mensal apenas deals que vieram direto pelo Agendor (person=null)
-// — esses nunca passaram pelo LP→planilha, então não estão em _sheetsFechamentos.
-// Deals com person (ex: Drogaria América) já estão na planilha; não somamos de novo.
 function _injectAgendorFechamentos(recentWon) {
-  if (!recentWon || !recentWon.length) return;
-  const orgOnly = recentWon.filter(w => !w.personId && w.value > 0 && w.closedAt);
+  _agRecentWon = recentWon || [];
+  const orgOnly = _agRecentWon.filter(w => !w.personId && w.value > 0 && w.closedAt);
   if (!orgOnly.length) return;
-  const synthetic = orgOnly.map(w => ({ empresa: w.title, valor: w.value, data_f: w.closedAt, rep: w.rep || '' }));
-  renderFechados({ fechamentos: [..._sheetsFechamentos, ...synthetic] });
+  renderFechados({ fechamentos: _sheetsFechamentos });
 }
 
 function _mergeAgendorKpis(k) {
