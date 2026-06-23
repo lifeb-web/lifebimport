@@ -1191,7 +1191,9 @@ function buildRepData(rByRep, rActive, rClosed) {
 const REP_MEDALS = ['🥇', '🥈', '🥉'];
 
 function repCardHTML(r, i, avgRec) {
-  const convPct = r.total > 0 ? (r.fechado / r.total) * 100 : null;
+  const repKey  = String(r.rep || '').toUpperCase();
+  const agWins  = _agRepsMap[repKey] || _agRepsMap[repKey.split(' ')[0]] || 0;
+  const convPct = r.total > 0 ? ((r.fechado + agWins) / r.total) * 100 : null;
   const conv    = convPct == null ? '-' : convPct.toFixed(0) + '%';
   const convLow = (convPct != null && convPct < 10) ? ' rep-conv-low' : '';
   const ativos  = r.ativos || 0;
@@ -1618,6 +1620,7 @@ let _agLoading = false;
 let _sheetsFechados = 0, _sheetsReceita = 0, _sheetsQualif = 0;
 let _agKpisMerged = null;
 let _agDeals = [];
+let _agRepsMap = {};
 
 function fmtBRL(v) {
   if (!v && v !== 0) return '-';
@@ -1635,6 +1638,8 @@ async function loadAgendorInbound() {
     if (!data.ok) throw new Error(data.error || 'proxy retornou ok=false');
     _agKpisMerged = data.kpis;
     _agDeals = data.deals || [];
+    _agRepsMap = {};
+    (data.reps || []).forEach(function(rep) { if (rep.name) _agRepsMap[rep.name.toUpperCase()] = rep.ganhoCont || 0; });
     _mergeAgendorKpis(data.kpis);
     renderAgendorFunil(data.funnel);
   } catch(e) {
