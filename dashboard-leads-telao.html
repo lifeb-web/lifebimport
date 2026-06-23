@@ -1062,9 +1062,13 @@ function renderFechados(data) {
     _sheetsFechamentos = data.fechamentos || [];
     const box = document.getElementById('fechados-resumo');
     if (!box) return;
-    const _agOrgOnly = _agRecentWon.filter(w => !w.personId && w.value > 0 && w.closedAt)
+    const _sheetKeys = new Set(_sheetsFechamentos.map(c =>
+      String(c.empresa || c.nome || '').toLowerCase().trim() + '|' + String(c.data_f || c.data || '').slice(0, 10)
+    ));
+    const _agNew = _agRecentWon
+      .filter(w => w.value > 0 && w.closedAt && !_sheetKeys.has(String(w.title || '').toLowerCase().trim() + '|' + w.closedAt))
       .map(w => ({ empresa: w.title, valor: w.value, data_f: w.closedAt, rep: w.rep || '' }));
-    const f = [..._sheetsFechamentos, ..._agOrgOnly];
+    const f = [..._sheetsFechamentos, ..._agNew];
     _closedList = f;
     if (!f.length) {
       box.innerHTML = '<div style="margin:auto;color:#c8c2d6;font-style:italic;font-size:13px">Sem fechamentos</div>';
@@ -1461,8 +1465,7 @@ function _showStageDrillInbound(stageId, stageName) {
 
 function _injectAgendorFechamentos(recentWon) {
   _agRecentWon = recentWon || [];
-  const orgOnly = _agRecentWon.filter(w => !w.personId && w.value > 0 && w.closedAt);
-  if (!orgOnly.length) return;
+  if (!_agRecentWon.length) return;
   renderFechados({ fechamentos: _sheetsFechamentos });
 }
 
