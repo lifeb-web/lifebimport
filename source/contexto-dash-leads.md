@@ -337,6 +337,8 @@ Os dados de investimento já eram puxados da aba 2 da planilha via proxy — sem
 
 ### ACOS (Advertising Cost of Sale)
 - **Fórmula:** `investimento / receita × 100` → exibido como `"X.X%"`
+- **Base de receita no inbound migrado (fix 2026-06-24):** usar a **mesma receita final do card `Receita Total`**, isto é, `histórico da planilha + ganhoValor do Agendor`. Não usar só `summary.receita` e nem só `k.ganhoValor`, senão `ROAS/ACOS` divergem do card de receita.
+- **Exemplo real do fix:** `R$ 80.857 ÷ R$ 10.014 = 8,07x` de ROAS e `R$ 10.014 ÷ R$ 80.857 = 12,4%` de ACOS.
 - **Cor:** amber (`#b45309`), classe `.accent-amber`
 - **Onde calcula:** `renderAds(inv, rec)` — já tinha `inv` e `rec` disponíveis
 - **Fallback:** exibe `"—"` quando `inv = 0` ou `rec = 0`
@@ -611,6 +613,18 @@ let _sheetsFechados = 0, _sheetsReceita = 0, _sheetsQualif = 0;
 - `card-potencial` = `k.pipelineTotal`
 - `card-conv` = `(totalFech / _sheetsQualif) * 100`
 - `card-fechados-sub` = N perdidos
+
+### Fix de consistência ROAS/ACOS (2026-06-24)
+No inbound migrado, `ROAS` e `ACOS` precisam usar exatamente a mesma base de receita mostrada no card `Receita Total`.
+
+Regra salva para evitar regressão:
+- `getRevenueForRoasAcos(baseReceita)` = `receita histórica da planilha + ganhoValor do Agendor`
+- `renderAds(...)` usa esse helper
+- o modal de detalhe dos KPIs (`card-roas` / `card-acos`) usa esse helper
+- `_mergeAgendorKpis(k)` recalcula `card-receita` e `renderAds(...)` com a mesma base
+
+Commits:
+- `26094807` — fix: ROAS/ACOS passam a usar a mesma receita final exibida no card de receita
 
 ### Funil SDR removido
 Migrado para GS Engage. `renderFunilBar('funil-sdr', ...)` removido. Card HTML "Funil SDR" removido em ambos os arquivos. Comentário preservado: `// SDR funnel removido — migrado pro GS Engage`.
