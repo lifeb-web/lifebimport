@@ -138,7 +138,6 @@ header{background:#fff;border-bottom:1px solid #e8e0f0;padding:0 24px;height:56p
 .lb-funnel{display:flex;height:9px;border-radius:5px;overflow:hidden;background:#f0ebf8;flex:1}
 .lb-funnel .seg-c{background:var(--blue)}
 .lb-funnel .seg-d{background:var(--purple)}
-.lb-funnel .seg-s{background:var(--orange)}
 .lb-funnel .seg-n{background:var(--green)}
 .lb-num{font-size:14px;font-weight:800;color:var(--text);text-align:right;white-space:nowrap;min-width:0}
 .lb-sub{padding-left:44px;font-size:11px;font-weight:600;color:var(--muted);display:flex;gap:16px;flex-wrap:nowrap;overflow:hidden}
@@ -396,7 +395,7 @@ const PROXY_URL  = 'https://script.google.com/macros/s/AKfycbxIkdzKQX1ioaaFg3p70
 const AGENDOR_DEAL = 'https://app.agendor.com.br/negocio/';
 
 const STAGE_COLORS = {
-  '3771722':'blue','3771723':'purple','3771724':'orange','3771725':'green'
+  '3771722':'blue','3771723':'purple','3771724':'purple','3771725':'green'
 };
 const STAGE_DOT = {
   blue:'#2563eb', purple:'#704B9B', orange:'#f59e0b', green:'#22C35D'
@@ -499,11 +498,29 @@ function renderKpis(k, period, deals) {
   el('k-leads').textContent = k.leadsNoPeriodo !== undefined ? k.leadsNoPeriodo : '—';
 }
 
+// Normaliza funil: merge 3771724 → 3771723 (Solução fundida em Diagnóstico/Solução)
+function normFunnel(funnel) {
+  const byId = {}, order = [];
+  for (const s of funnel) {
+    const sid = String(s.stageId) === '3771724' ? 3771723 : s.stageId;
+    if (!byId[sid]) {
+      byId[sid] = Object.assign({}, s, { stageId: sid });
+      if (sid === 3771723) byId[sid].name = 'Diagnóstico/Solução';
+      order.push(sid);
+    } else {
+      byId[sid].count = (byId[sid].count || 0) + (s.count || 0);
+      byId[sid].value = (byId[sid].value || 0) + (s.value || 0);
+    }
+  }
+  return order.map(sid => byId[sid]);
+}
+
 // Funil
 function renderFunil(funnel, kpis) {
   el('funil-badge').textContent = kpis.ativos + ' ativos';
-  const max = Math.max(...funnel.map(s => s.count), 1);
-  el('funil-rows').innerHTML = funnel.map(s => {
+  const nf = normFunnel(funnel);
+  const max = Math.max(...nf.map(s => s.count), 1);
+  el('funil-rows').innerHTML = nf.map(s => {
     const pct = Math.max((s.count / max) * 100, 3);
     const colorKey = STAGE_COLORS[String(s.stageId)] || 'purple';
     const dotColor = STAGE_DOT[colorKey] || '#704B9B';
@@ -540,13 +557,13 @@ function renderLeaderboard(reps, deals) {
   el('lb-rows').innerHTML = reps.map((r, i) => {
     const isGold = i === 0;
     const rank = ['🥇','🥈','🥉','4️⃣','5️⃣'][i] || (i+1)+'°';
-    const total = r.dealsByStage['3771722'] + r.dealsByStage['3771723'] + r.dealsByStage['3771724'] + r.dealsByStage['3771725'];
+    const ds3 = (r.dealsByStage['3771723'] || 0) + (r.dealsByStage['3771724'] || 0);
+    const total = (r.dealsByStage['3771722'] || 0) + ds3 + (r.dealsByStage['3771725'] || 0);
     const pipelinePct = Math.max((r.pipeline / maxPipeline) * 100, 3);
 
     const funnelSegs = total > 0 ? `
       ${r.dealsByStage['3771722'] > 0 ? `<div class="seg-c" style="flex:${r.dealsByStage['3771722']}"></div>` : ''}
-      ${r.dealsByStage['3771723'] > 0 ? `<div class="seg-d" style="flex:${r.dealsByStage['3771723']}"></div>` : ''}
-      ${r.dealsByStage['3771724'] > 0 ? `<div class="seg-s" style="flex:${r.dealsByStage['3771724']}"></div>` : ''}
+      ${ds3 > 0 ? `<div class="seg-d" style="flex:${ds3}"></div>` : ''}
       ${r.dealsByStage['3771725'] > 0 ? `<div class="seg-n" style="flex:${r.dealsByStage['3771725']}"></div>` : ''}` : '';
 
     const convClass = r.conversao === null ? 'nil' : (r.conversao < 20 ? 'low' : '');
@@ -614,7 +631,8 @@ function renderFeed(won, lost, kpis) {
 // ── MODAL ─────────────────────────────────────────────────────
 function openStageModal(stageId, stageName, colorKey) {
   if (!_data) return;
-  const deals = _data.deals.filter(d => String(d.stageId) === String(stageId));
+  const normIds = String(stageId) === '3771723' ? ['3771723','3771724'] : [String(stageId)];
+  const deals = _data.deals.filter(d => normIds.includes(String(d.stageId)));
   const dotColor = STAGE_DOT[colorKey] || '#704B9B';
   el('modal-title').textContent = stageName + ' — ' + deals.length + ' deals';
   el('modal-body').innerHTML = deals.length === 0

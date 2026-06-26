@@ -343,7 +343,7 @@ const PROXY_URL  = 'https://script.google.com/macros/s/AKfycbxIkdzKQX1ioaaFg3p70
 const AGENDOR_DEAL = 'https://app.agendor.com.br/negocio/';
 
 const STAGE_COLORS = {
-  '3771722':'blue','3771723':'purple','3771724':'orange','3771725':'green'
+  '3771722':'blue','3771723':'purple','3771724':'purple','3771725':'green'
 };
 const STAGE_DOT_COLORS = {
   blue:'#2563eb', purple:'#704B9B', orange:'#f59e0b', green:'#22C35D'
@@ -481,11 +481,29 @@ function renderKpis(k, period, deals) {
   el('k-leads').textContent = k.leadsNoPeriodo !== undefined ? k.leadsNoPeriodo : '—';
 }
 
+// Normaliza funil: merge 3771724 → 3771723 (Solução fundida em Diagnóstico/Solução)
+function normFunnel(funnel) {
+  const byId = {}, order = [];
+  for (const s of funnel) {
+    const sid = String(s.stageId) === '3771724' ? 3771723 : s.stageId;
+    if (!byId[sid]) {
+      byId[sid] = Object.assign({}, s, { stageId: sid });
+      if (sid === 3771723) byId[sid].name = 'Diagnóstico/Solução';
+      order.push(sid);
+    } else {
+      byId[sid].count = (byId[sid].count || 0) + (s.count || 0);
+      byId[sid].value = (byId[sid].value || 0) + (s.value || 0);
+    }
+  }
+  return order.map(sid => byId[sid]);
+}
+
 // Funil
 function renderFunil(funnel) {
-  const max = Math.max(...funnel.map(s => s.count), 1);
+  const nf = normFunnel(funnel);
+  const max = Math.max(...nf.map(s => s.count), 1);
   const cont = el('funil-rows');
-  cont.innerHTML = funnel.map(s => {
+  cont.innerHTML = nf.map(s => {
     const pct = Math.max((s.count / max) * 100, 2);
     const colorKey = STAGE_COLORS[String(s.stageId)] || 'purple';
     const dotColor = STAGE_DOT_COLORS[colorKey] || '#704B9B';
@@ -513,7 +531,8 @@ function toggleStageFilter(sid, name, color) {
 // Deal List (filtrado por etapa)
 function renderDealList() {
   if (!_data || !_activeStageFilter) return;
-  const deals = _data.deals.filter(d => String(d.stageId) === _activeStageFilter);
+  const normIds = _activeStageFilter === '3771723' ? ['3771723','3771724'] : [_activeStageFilter];
+  const deals = _data.deals.filter(d => normIds.includes(String(d.stageId)));
   const stage = _data.funnel.find(s => String(s.stageId) === _activeStageFilter);
   const colorKey = stage ? stage.color : 'purple';
 
@@ -544,12 +563,12 @@ function renderReps(reps, deals) {
     const isTop = i === 0;
     const repDeals = deals.filter(d => String(d.repId) === String(r.id));
 
-    const totalSegs = r.dealsByStage['3771722'] + r.dealsByStage['3771723'] + r.dealsByStage['3771724'] + r.dealsByStage['3771725'];
+    const ds3 = (r.dealsByStage['3771723'] || 0) + (r.dealsByStage['3771724'] || 0);
+    const totalSegs = (r.dealsByStage['3771722'] || 0) + ds3 + (r.dealsByStage['3771725'] || 0);
     const mfSegs = totalSegs > 0 ? `
       <div class="rep-minifunil">
         ${r.dealsByStage['3771722'] > 0 ? `<div class="mf-seg mf-blue" style="flex:${r.dealsByStage['3771722']}"></div>` : ''}
-        ${r.dealsByStage['3771723'] > 0 ? `<div class="mf-seg mf-purple" style="flex:${r.dealsByStage['3771723']}"></div>` : ''}
-        ${r.dealsByStage['3771724'] > 0 ? `<div class="mf-seg mf-orange" style="flex:${r.dealsByStage['3771724']}"></div>` : ''}
+        ${ds3 > 0 ? `<div class="mf-seg mf-purple" style="flex:${ds3}"></div>` : ''}
         ${r.dealsByStage['3771725'] > 0 ? `<div class="mf-seg mf-green" style="flex:${r.dealsByStage['3771725']}"></div>` : ''}
         ${totalSegs === 0 ? '<div class="mf-empty"></div>' : ''}
       </div>` : '<div class="rep-minifunil"><div class="mf-empty"></div></div>';
