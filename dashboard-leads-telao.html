@@ -662,6 +662,7 @@ let _agDeals = [];
 let _agLoading = false;
 let _sheetsFechamentos = [];
 let _agRecentWon = [];
+let _rawRByRep = null, _rawRActive = null, _rawRClosed = null;
 let _lastSheetModified = null;
 let _pollCount = 0;
 let _isLoading = false;
@@ -901,9 +902,7 @@ function getRevenueForRoasAcos(baseReceita) {
     : Number.isFinite(+_sheetsReceita)
       ? (+_sheetsReceita || 0)
       : (+(_summary && _summary.receita) || 0);
-  const agendorReceita = (_agKpisMerged && Number.isFinite(+_agKpisMerged.ganhoValor))
-    ? (+_agKpisMerged.ganhoValor || 0)
-    : 0;
+  const agendorReceita = _agendorOnlyWins().reduce((s, w) => s + (+w.valor || 0), 0);
   return Math.max(0, sheetsReceita + agendorReceita);
 }
 
@@ -984,13 +983,19 @@ function buildRepData(rByRep, rActive, rClosed) {
     prazo[k].sum += dias; prazo[k].cnt++;
   });
 
+  const agExtra = _agendorOnlyByRep();
+
   return base.map(r => {
     const k  = String(r.rep).toUpperCase();
     const ag = aging[k] || { verde: 0, amarelo: 0, vermelho: 0, ativos: 0, pipe: 0 };
     const pz = prazo[k];
+    const ex = agExtra[k] || { cont: 0, valor: 0 };
+    const fechado = (r.fechado || 0) + ex.cont;
+    const receita = (r.receita || 0) + ex.valor;
     return Object.assign({}, r, {
       verde: ag.verde, amarelo: ag.amarelo, vermelho: ag.vermelho, ativos: ag.ativos, pipeline: ag.pipe,
-      ticket_medio: r.fechado > 0 ? Math.round(r.receita / r.fechado) : 0,
+      fechado, receita,
+      ticket_medio: fechado > 0 ? Math.round(receita / fechado) : 0,
       prazo_medio:  pz && pz.cnt > 0 ? Math.round(pz.sum / pz.cnt) : 0,
       speed_medio:  r.speed_medio || 0,
     });
@@ -1069,17 +1074,36 @@ function renderReps(reps) {
 }
 
 const FCH_MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+// Wins do Agendor que ainda não estão na planilha (dedup por nome+data) — fonte única
+// pro bar mensal, pros cards de rep e pro KPI de receita, pra nunca contar 2x o mesmo fechamento.
+function _agendorOnlyWins() {
+  const sheetKeys = new Set(_sheetsFechamentos.map(c =>
+    String(c.empresa || c.nome || '').toLowerCase().trim() + '|' + String(c.data_f || c.data || '').slice(0, 10)
+  ));
+  return _agRecentWon
+    .filter(w => w.value > 0 && w.closedAt && !sheetKeys.has(String(w.title || '').toLowerCase().trim() + '|' + w.closedAt))
+    .map(w => ({ empresa: w.title, valor: w.value, data_f: w.closedAt, rep: w.rep || '' }));
+}
+
+// Mesma lista acima, agrupada por rep (nome maiúsculo) — pra somar nos cards de rep.
+function _agendorOnlyByRep() {
+  const byRep = {};
+  _agendorOnlyWins().forEach(w => {
+    const k = String(w.rep || '').toUpperCase();
+    if (!k) return;
+    if (!byRep[k]) byRep[k] = { cont: 0, valor: 0 };
+    byRep[k].cont++;
+    byRep[k].valor += (+w.valor || 0);
+  });
+  return byRep;
+}
+
 function renderFechados(data) {
   try {
     _sheetsFechamentos = data.fechamentos || [];
     const box = document.getElementById('fechados-resumo');
     if (!box) return;
-    const _sheetKeys = new Set(_sheetsFechamentos.map(c =>
-      String(c.empresa || c.nome || '').toLowerCase().trim() + '|' + String(c.data_f || c.data || '').slice(0, 10)
-    ));
-    const _agNew = _agRecentWon
-      .filter(w => w.value > 0 && w.closedAt && !_sheetKeys.has(String(w.title || '').toLowerCase().trim() + '|' + w.closedAt))
-      .map(w => ({ empresa: w.title, valor: w.value, data_f: w.closedAt, rep: w.rep || '' }));
+    const _agNew = _agendorOnlyWins();
     const f = [..._sheetsFechamentos, ..._agNew];
     _closedList = f;
     if (!f.length) {
@@ -1334,6 +1358,7 @@ async function loadAllData(summaryData, lm) {
       proxy('ads'),
       proxy('latest'),
     ]);
+    _rawRByRep = rByRep; _rawRActive = rActive; _rawRClosed = rClosed;
     _latest = (rLatest.status === 'fulfilled' && rLatest.value) ? (rLatest.value.leads || []) : [];
 
     if (rFunnel.status === 'fulfilled')  renderFunnel(rFunnel.value);
@@ -1500,6 +1525,12 @@ function _injectAgendorFechamentos(recentWon) {
   _agRecentWon = recentWon || [];
   if (!_agRecentWon.length) return;
   renderFechados({ fechamentos: _sheetsFechamentos });
+  if (_rawRByRep) {
+    const reps = buildRepData(_rawRByRep, _rawRActive, _rawRClosed);
+    _reps = reps;
+    renderReps(reps);
+    renderCarteira(reps);
+  }
 }
 
 function _mergeAgendorKpis(k) {
