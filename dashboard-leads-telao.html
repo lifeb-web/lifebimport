@@ -1535,7 +1535,10 @@ function _injectAgendorFechamentos(recentWon) {
 
 function _mergeAgendorKpis(k) {
   const el = id => document.getElementById(id);
-  const totalFech = _sheetsFechados + (k.ganhoCont || 0);
+  // Usa a lista JÁ deduplicada (_agendorOnlyWins), não k.ganhoCont bruto — senão um
+  // negócio que exista nos dois lados (planilha E Agendor) conta 2x aqui mas só 1x
+  // na receita (que já usa a lista deduplicada), gerando fechados/receita inconsistentes.
+  const totalFech = _sheetsFechados + _agendorOnlyWins().length;
   const totalRec  = getRevenueForRoasAcos(_sheetsReceita);
   const perd      = k.perdidoCont  || 0;
   if (el('card-fechados')) el('card-fechados').textContent = n(totalFech);
