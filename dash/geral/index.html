@@ -297,6 +297,11 @@ footer strong{color:#fff}
       <div class="kc-row"><span class="kc-val" id="k-perdido"><span class="skel"></span></span></div>
       <span class="kc-sub" id="k-perdido-cnt">no período</span>
     </div>
+    <div class="kchip" style="grid-column:1/-1">
+      <span class="kc-label">Leads Distribuídos</span>
+      <div class="kc-row"><span class="kc-val" id="k-leads"><span class="skel"></span></span></div>
+      <span class="kc-sub">negócios criados no CRM no período</span>
+    </div>
   </div>
 
   <div id="ads-section" style="display:none">
@@ -520,9 +525,10 @@ async function loadAdsSection(periodFrom, periodTo) {
   if (!show) return;
   sectionEl.classList.add('ads-updating'); // dim até os números baterem com o período já exibido no rótulo
   try {
-    const [adsR, closedR, agR] = await Promise.all([
+    const [adsR, closedR, chartR, agR] = await Promise.all([
       fetch(LEADS_PROXY + '?action=ads&from=' + periodFrom + '&to=' + periodTo, { cache: 'no-store' }).then(r => r.json()),
       fetch(LEADS_PROXY + '?action=closed', { cache: 'no-store' }).then(r => r.json()),
+      fetch(LEADS_PROXY + '?action=chart', { cache: 'no-store' }).then(r => r.json()),
       fetchOrigin('inbound', '&period=custom&from=' + periodFrom + '&to=' + periodTo)
     ]);
     if (mySeq !== _adsSeq) return; // uma troca de período/origem mais nova já disparou outra chamada
@@ -545,7 +551,14 @@ async function loadAdsSection(periodFrom, periodTo) {
 
     const receitaPeriodo  = sheetsFechamentos.reduce((s,c) => s + (+c.valor||0), 0) + agendorOnly.reduce((s,w) => s + (+w.value||0), 0);
     const fechadosPeriodo = sheetsFechamentos.length + agendorOnly.length;
-    const leadsPeriodo = (agR.kpis && agR.kpis.leadsNoPeriodo) || 0;
+    // CPL usa o total BRUTO de leads da planilha (todo formulário preenchido na LP),
+    // não o leadsNoPeriodo do Agendor (que só conta negócio já criado no CRM — bem
+    // menor, porque nem todo lead vira negócio rastreado. Usar o do CRM inflava o
+    // CPL ~8x: achado real, 90d tinha 60 no CRM vs 467 brutos na planilha).
+    const chartLabels = (chartR && chartR.labels) || [];
+    const chartTotal  = (chartR && chartR.total)  || [];
+    let leadsPeriodo = 0;
+    chartLabels.forEach((d, i) => { if (d >= periodFrom && d <= periodTo) leadsPeriodo += (chartTotal[i] || 0); });
     const inv = (adsR && +adsR.investimento) || 0;
 
     const fonteTxt = adsR.fonte === 'meta_live' ? 'ao vivo' : (adsR.fonte === 'planilha' ? 'planilha (fallback)' : '');
@@ -753,6 +766,7 @@ function renderKpiStrip(k, deals) {
   el('k-stale-sub').textContent = k.staleTotal > 0 ? '+7 dias sem toque' : 'tudo em dia';
   el('k-perdido').textContent = k.perdidoCont;
   el('k-perdido-cnt').textContent = 'no período';
+  el('k-leads').textContent = k.leadsNoPeriodo !== undefined ? k.leadsNoPeriodo : '—';
 }
 
 function normFunnel(funnel) {

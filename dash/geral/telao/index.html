@@ -65,7 +65,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;heig
 #ads-row.ads-updating{opacity:.4;transition:opacity .15s}
 
 /* HERO ROW: hero + 6 chips secundários, uma faixa só */
-#hero-row{display:grid;grid-template-columns:minmax(0,1.7fr) repeat(6,minmax(0,1fr));gap:8px;height:92px;flex-shrink:0}
+#hero-row{display:grid;grid-template-columns:minmax(0,1.7fr) repeat(7,minmax(0,1fr));gap:8px;height:92px;flex-shrink:0}
 #hero{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:10px 16px;display:flex;flex-direction:column;justify-content:center;gap:2px;position:relative;overflow:hidden;cursor:pointer}
 #hero::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(112,75,155,.06),transparent 60%);pointer-events:none}
 .hero-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -295,6 +295,11 @@ footer strong{color:#fff}
       <span class="kc-label">Perdidos</span>
       <div class="kc-row"><span class="kc-val" id="k-perdido"><span class="skel"></span></span></div>
       <span class="kc-sub">no período</span>
+    </div>
+    <div class="kchip">
+      <span class="kc-label">Leads Distrib.</span>
+      <div class="kc-row"><span class="kc-val" id="k-leads"><span class="skel"></span></span></div>
+      <span class="kc-sub">no CRM</span>
     </div>
   </div>
 
@@ -534,9 +539,10 @@ async function loadAdsSection(periodFrom, periodTo) {
   if (!show) return;
   row.classList.add('ads-updating');
   try {
-    const [adsR, closedR, agR] = await Promise.all([
+    const [adsR, closedR, chartR, agR] = await Promise.all([
       fetch(LEADS_PROXY + '?action=ads&from=' + periodFrom + '&to=' + periodTo, { cache: 'no-store' }).then(r => r.json()),
       fetch(LEADS_PROXY + '?action=closed', { cache: 'no-store' }).then(r => r.json()),
+      fetch(LEADS_PROXY + '?action=chart', { cache: 'no-store' }).then(r => r.json()),
       fetchOrigin('inbound', '&period=custom&from=' + periodFrom + '&to=' + periodTo)
     ]);
     if (mySeq !== _adsSeq) return;
@@ -555,7 +561,12 @@ async function loadAdsSection(periodFrom, periodTo) {
 
     const receitaPeriodo  = sheetsFechamentos.reduce((s,c) => s + (+c.valor||0), 0) + agendorOnly.reduce((s,w) => s + (+w.value||0), 0);
     const fechadosPeriodo = sheetsFechamentos.length + agendorOnly.length;
-    const leadsPeriodo = (agR.kpis && agR.kpis.leadsNoPeriodo) || 0;
+    // CPL usa total BRUTO de leads da planilha (todo formulário na LP), não o
+    // leadsNoPeriodo do Agendor (só negócio já criado no CRM — bem menor).
+    const chartLabels = (chartR && chartR.labels) || [];
+    const chartTotal  = (chartR && chartR.total)  || [];
+    let leadsPeriodo = 0;
+    chartLabels.forEach((d, i) => { if (d >= periodFrom && d <= periodTo) leadsPeriodo += (chartTotal[i] || 0); });
     const inv = (adsR && +adsR.investimento) || 0;
 
     const fonteTxt = adsR.fonte === 'meta_live' ? 'ao vivo' : (adsR.fonte === 'planilha' ? 'planilha' : '');
@@ -738,6 +749,7 @@ function renderKpis(k, deals) {
   el('k-stale').textContent = k.staleTotal;
   el('k-stale-sub').textContent = k.staleTotal > 0 ? '+7 dias' : 'em dia';
   el('k-perdido').textContent = k.perdidoCont;
+  el('k-leads').textContent = k.leadsNoPeriodo !== undefined ? k.leadsNoPeriodo : '—';
 }
 
 function normFunnel(funnel) {
