@@ -760,6 +760,9 @@ function normFunnel(funnel) {
     } else {
       byId[sid].count = (byId[sid].count || 0) + (s.count || 0);
       byId[sid].value = (byId[sid].value || 0) + (s.value || 0);
+      byId[sid].lost  = (byId[sid].lost  || 0) + (s.lost  || 0);
+      // reached NÃO soma — a etapa anterior (Diagnóstico) já é cumulativa e inclui
+      // quem passou por Solução; somar duplicaria a contagem.
     }
   }
   return order.map(sid => byId[sid]);
@@ -774,10 +777,16 @@ function renderFunil(funnel, kpis, recentLost) {
   const max = Math.max(...nf.map(s => s.count), kpis.ganhoCont || 0, kpis.perdidoCont || 0, 1);
   const convFrom = (count, prevCount) => prevCount > 0 ? Math.round((count / prevCount) * 100) : null;
 
+  // "reached" = quantos negócios já ENTRARAM nessa etapa em algum momento (não é
+  // quem está parado nela agora) — mesma metodologia do Relatório de Conversão
+  // nativo do Agendor. Conversão de etapa usa reached, nunca o snapshot count.
+  const reachedFirst = nf.length ? (nf[0].reached ?? nf[0].count) : 0;
+
   const stageRows = nf.map((s, i) => {
     const pct = Math.max((s.count / max) * 100, 3);
     const ord = STAGE_ORD[String(s.stageId)] || 'o2';
-    const conv = i === 0 ? null : convFrom(s.count, nf[i-1].count);
+    const reached = s.reached ?? s.count;
+    const conv = i === 0 ? null : convFrom(reached, nf[i-1].reached ?? nf[i-1].count);
     const drop = conv !== null ? `<span class="drop-pill" title="Conversão de ${escHtml(nf[i-1].name)} → ${escHtml(s.name)}">${conv}%</span>` : '';
     return `
       <div class="funil-row" onclick="openStageModal('${s.stageId}','${s.name}')">
@@ -790,12 +799,15 @@ function renderFunil(funnel, kpis, recentLost) {
       </div>`;
   }).join('');
 
-  const lastActiveCount = nf.length ? nf[nf.length-1].count : 0;
   const outcomeRow = (name, count, value, color, onclick) => {
-    const pct = convFrom(count, lastActiveCount);
+    // Ganhos/Perdidos são resultado CUMULATIVO do funil inteiro — a taxa é sempre
+    // sobre quem entrou na primeira etapa (reachedFirst), igual "taxa de ganho"
+    // do Agendor (18/119=15,1%), nunca sobre o snapshot da última etapa (isso
+    // é o que causava os 367% impossíveis quando Negociação tinha poucos ativos).
+    const pct = convFrom(count, reachedFirst);
     const barPct = Math.max((count / max) * 100, 3);
     const badge = pct !== null
-      ? `<span class="drop-pill" title="Conversão de Negociação → ${escHtml(name)}" style="background:${color==='green'?'#dcfce7':'#fee2e2'};color:${color==='green'?'#15803d':'#b91c1c'}">${color==='green'?'✓':'✕'} ${pct}%</span>`
+      ? `<span class="drop-pill" title="Taxa sobre o total que entrou no funil" style="background:${color==='green'?'#dcfce7':'#fee2e2'};color:${color==='green'?'#15803d':'#b91c1c'}">${color==='green'?'✓':'✕'} ${pct}%</span>`
       : '';
     return `
       <div class="funil-row" onclick="${onclick}" style="border-top:2px solid var(--border);padding-top:8px">
