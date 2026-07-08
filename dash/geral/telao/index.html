@@ -24,6 +24,10 @@ html{width:100%;height:100vh;overflow:hidden;background:var(--bg)}
 body{width:100%;height:100vh;overflow:hidden;font-family:var(--font);font-weight:600;background:var(--bg);color:var(--text);display:flex;flex-direction:column}
 
 #lb{position:fixed;top:0;left:0;height:2px;width:0;background:linear-gradient(90deg,var(--purple),var(--magenta));z-index:9999;pointer-events:none;transition:width .2s,opacity .4s}
+/* Telão fica sozinho na sala — erro precisa ser VISÍVEL, não só no console
+   que ninguém olha. Fica preso enquanto o erro persistir; some ao recuperar. */
+#err-toast{display:none;position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:9998;background:#7f1d1d;color:#fff;padding:8px 20px;border-radius:10px;font-size:12px;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.3);max-width:80vw;text-align:center}
+#err-toast.show{display:block}
 #lb.on{animation:lb 1.6s ease-in-out infinite}
 @keyframes lb{0%{width:0;opacity:1}60%{width:80%;opacity:1}100%{width:100%;opacity:0}}
 
@@ -57,7 +61,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;heig
 #body.refreshing{opacity:.55}
 
 /* HERO ROW: hero + 6 chips secundários, uma faixa só */
-#hero-row{display:grid;grid-template-columns:1.7fr repeat(6,1fr);gap:8px;height:92px;flex-shrink:0}
+#hero-row{display:grid;grid-template-columns:minmax(0,1.7fr) repeat(6,minmax(0,1fr));gap:8px;height:92px;flex-shrink:0}
 #hero{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:10px 16px;display:flex;flex-direction:column;justify-content:center;gap:2px;position:relative;overflow:hidden;cursor:pointer}
 #hero::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(112,75,155,.06),transparent 60%);pointer-events:none}
 .hero-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -80,7 +84,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;heig
 .kc-sub.warn{color:var(--amber)}
 
 /* ADS ROW — só quando Inbound/Ambos, faixa fina abaixo do hero */
-#ads-row{display:none;grid-template-columns:repeat(5,1fr);gap:8px;height:52px;flex-shrink:0}
+#ads-row{display:none;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;height:52px;flex-shrink:0}
 #ads-row.show{display:grid}
 .achip{background:var(--card);border-radius:10px;border:1px solid var(--border);padding:6px 12px;display:flex;flex-direction:column;justify-content:center;gap:1px}
 .ac-label{font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--faint)}
@@ -208,6 +212,7 @@ footer strong{color:#fff}
 </head>
 <body>
 <div id="lb"></div>
+<div id="err-toast"></div>
 
 <header>
   <div class="h-brand">
@@ -409,10 +414,19 @@ function setPeriod(btn) {
 
 function applyCustom() {
   const f = el('dt-from').value, t = el('dt-to').value;
-  if (!f || !t) return;
+  if (!f || !t) { showErr('Preencha as duas datas.'); return; }
+  if (f > t) { showErr('A data "De" não pode ser depois da data "até".'); return; }
+  hideErr();
   _customFrom = f; _customTo = t;
   loadData(true);
 }
+
+function showErr(msg) {
+  const b = el('err-toast');
+  b.textContent = '⚠ ' + msg;
+  b.classList.add('show');
+}
+function hideErr() { el('err-toast').classList.remove('show'); }
 
 function periodQuery(force, fromOverride, toOverride) {
   if (fromOverride && toOverride) {
@@ -471,13 +485,16 @@ async function loadData(force) {
     }).catch(() => {});
 
     _data = curr;
+    hideErr();
     render(_data);
     flashDot();
-    scheduleRefresh();
   } catch(e) {
     console.error('Erro:', e.message);
+    if (mySeq === _reqSeq) showErr('Erro ao atualizar: ' + e.message);
   } finally {
-    if (mySeq === _reqSeq) { el('lb').classList.remove('on'); el('body').classList.remove('refreshing'); }
+    // Reagenda SEMPRE, erro ou sucesso — telão fica sozinho na sala, sem
+    // ninguém pra apertar F5. Uma falha não pode travar o auto-refresh.
+    if (mySeq === _reqSeq) { scheduleRefresh(); el('lb').classList.remove('on'); el('body').classList.remove('refreshing'); }
   }
 }
 
@@ -556,7 +573,7 @@ function mergeKpis(a, b) {
     ganhoValor, ganhoCont,
     perdidoCont: (a.perdidoCont||0)+(b.perdidoCont||0),
     ticketMedio: ganhoCont > 0 ? Math.round(ganhoValor/ganhoCont) : 0,
-    conversao: leadsNoPeriodo > 0 ? Math.round((ganhoCont/leadsNoPeriodo)*1000)/10 : 0,
+    conversao: leadsNoPeriodo > 0 ? Math.round((ganhoCont/leadsNoPeriodo)*1000)/10 : null,
     prazoMedio: ganhoCont > 0 ? Math.round(prazoSum/ganhoCont) : 0,
     staleTotal: (a.staleTotal||0)+(b.staleTotal||0),
     leadsNoPeriodo
@@ -565,7 +582,7 @@ function mergeKpis(a, b) {
 
 function mergeFunnel(a, b) {
   const byId = {}, order = [];
-  [...a, ...b].forEach(s => {
+  [...(a||[]), ...(b||[])].forEach(s => {
     if (!byId[s.stageId]) { byId[s.stageId] = Object.assign({}, s); order.push(s.stageId); }
     else { byId[s.stageId].count += s.count; byId[s.stageId].value += s.value; }
   });
@@ -576,7 +593,7 @@ function mergeFunnel(a, b) {
 
 function mergeReps(a, b) {
   const byId = {};
-  [...a, ...b].forEach(r => {
+  [...(a||[]), ...(b||[])].forEach(r => {
     if (!byId[r.id]) byId[r.id] = Object.assign({}, r, { dealsByStage: Object.assign({}, r.dealsByStage) });
     else {
       const t = byId[r.id];
@@ -613,7 +630,7 @@ function originBadge(o) {
 
 // ── DELTA / SPARKLINE ────────────────────────────────────────
 function pctDelta(curr, prev) {
-  if (prev === null || prev === undefined) return null;
+  if (curr === null || curr === undefined || prev === null || prev === undefined) return null;
   if (prev === 0) return curr > 0 ? Infinity : null;
   return Math.round(((curr - prev) / prev) * 1000) / 10;
 }
@@ -676,7 +693,7 @@ function sparklineSVG(vals, color) {
 // ── RENDER ───────────────────────────────────────────────────
 function render(d) {
   renderHero(d.kpis, d.period, d.recentWon);
-  renderKpis(d.kpis);
+  renderKpis(d.kpis, d.deals);
   renderFunil(d.funnel, d.kpis, d.recentLost);
   renderSaude(d.kpis, d.funnel);
   renderLeaderboard(d.reps, d.deals);
@@ -694,15 +711,16 @@ function renderHero(k, period, recentWon) {
   }
 }
 
-function renderKpis(k) {
+function renderKpis(k, deals) {
   el('k-pipeline').textContent = fmtMoney(k.pipelineTotal);
   el('k-pipeline-delta').innerHTML = '';
-  el('k-ativos').textContent = k.ativos + ' no funil';
+  const withVal = (deals || []).filter(d => (d.value || 0) > 0).length;
+  el('k-ativos').textContent = withVal + ' precificado' + (withVal !== 1 ? 's' : '') + ' de ' + (k.ativos || 0);
   el('k-conv').textContent = k.conversao !== null ? k.conversao + '%' : '—';
   el('k-conv-delta').innerHTML = '';
   el('k-conv-base').textContent = 'de ' + (k.leadsNoPeriodo || 0) + ' leads';
   el('k-ticket').textContent = k.ticketMedio > 0 ? fmtMoney(k.ticketMedio) : '—';
-  el('k-prazo').textContent = k.prazoMedio ? k.prazoMedio + 'd' : '—';
+  el('k-prazo').textContent = k.prazoMedio ? k.prazoMedio + (k.prazoMedio === 1 ? ' dia' : ' dias') : '—';
   el('k-stale').textContent = k.staleTotal;
   el('k-stale-sub').textContent = k.staleTotal > 0 ? '+7 dias' : 'em dia';
   el('k-perdido').textContent = k.perdidoCont;
@@ -730,14 +748,14 @@ function renderFunil(funnel, kpis, recentLost) {
   el('funil-badge').textContent = kpis.ativos + ' ativos';
   const nf = normFunnel(funnel);
   const perdidoValor = (recentLost || []).reduce((s, d) => s + (d.value || 0), 0);
-  const base = kpis.leadsNoPeriodo || 0;
-  const pctOf = n => base > 0 ? Math.round((n / base) * 100) : null;
   const max = Math.max(...nf.map(s => s.count), kpis.ganhoCont || 0, kpis.perdidoCont || 0, 1);
+  const convFrom = (count, prevCount) => prevCount > 0 ? Math.round((count / prevCount) * 100) : null;
 
-  const stageRows = nf.map(s => {
+  const stageRows = nf.map((s, i) => {
     const pct = Math.max((s.count / max) * 100, 3);
     const ord = STAGE_ORD[String(s.stageId)] || 'o2';
-    const drop = s.dropFrom !== null && s.dropFrom !== undefined ? `<span class="drop-pill">↓${s.dropFrom}%</span>` : '';
+    const conv = i === 0 ? null : convFrom(s.count, nf[i-1].count);
+    const drop = conv !== null ? `<span class="drop-pill" title="Conversão de ${escHtml(nf[i-1].name)} → ${escHtml(s.name)}">${conv}%</span>` : '';
     return `
       <div class="funil-row" onclick="openStageModal('${s.stageId}','${s.name}')">
         <div class="funil-dot" style="background:${ORD_DOT[ord]}"></div>
@@ -749,11 +767,12 @@ function renderFunil(funnel, kpis, recentLost) {
       </div>`;
   }).join('');
 
+  const lastActiveCount = nf.length ? nf[nf.length-1].count : 0;
   const outcomeRow = (name, count, value, color, onclick) => {
-    const pct = pctOf(count);
+    const pct = convFrom(count, lastActiveCount);
     const barPct = Math.max((count / max) * 100, 3);
     const badge = pct !== null
-      ? `<span class="drop-pill" style="background:${color==='green'?'#dcfce7':'#fee2e2'};color:${color==='green'?'#15803d':'#b91c1c'}">${color==='green'?'✓':'✕'} ${pct}%</span>`
+      ? `<span class="drop-pill" title="Conversão de Negociação → ${escHtml(name)}" style="background:${color==='green'?'#dcfce7':'#fee2e2'};color:${color==='green'?'#15803d':'#b91c1c'}">${color==='green'?'✓':'✕'} ${pct}%</span>`
       : '';
     return `
       <div class="funil-row" onclick="${onclick}" style="border-top:2px solid var(--border);padding-top:8px">

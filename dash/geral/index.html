@@ -42,9 +42,14 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .btn-refresh{background:none;border:1.5px solid var(--border);border-radius:8px;padding:5px 10px;font-family:var(--font);font-size:11px;font-weight:700;color:var(--purple);cursor:pointer}
 .btn-refresh:active{background:var(--purple);color:#fff}
 
-#origin-bar{background:#fff;border-bottom:1px solid var(--border);padding:10px 14px;display:flex;justify-content:center;flex-shrink:0}
-.oseg{display:inline-flex;background:var(--bg);border-radius:12px;padding:3px;gap:2px}
-.ochip{padding:8px 18px;border-radius:9px;border:none;font-family:var(--font);font-size:12px;font-weight:800;color:var(--muted);background:transparent;cursor:pointer;transition:all .18s;white-space:nowrap}
+/* overflow-x:auto é a rede de segurança: se o toggle algum dia não couber
+   (fonte grande do sistema, tela muito estreita), ele rola por dentro em vez
+   de forçar a página inteira a ficar mais larga que a tela (o que corta texto
+   de outras seções sem aviso — bug real achado em teste no iPhone). */
+#origin-bar{background:#fff;border-bottom:1px solid var(--border);padding:10px 14px;display:flex;justify-content:center;flex-shrink:0;overflow-x:auto;scrollbar-width:none}
+#origin-bar::-webkit-scrollbar{display:none}
+.oseg{display:inline-flex;background:var(--bg);border-radius:12px;padding:3px;gap:2px;flex-shrink:0}
+.ochip{padding:8px 14px;border-radius:9px;border:none;font-family:var(--font);font-size:12px;font-weight:800;color:var(--muted);background:transparent;cursor:pointer;transition:all .18s;white-space:nowrap;flex-shrink:0}
 .ochip.active[data-o="outbound"]{background:var(--purple);color:#fff}
 .ochip.active[data-o="inbound"]{background:var(--magenta);color:#fff}
 .ochip.active[data-o="both"]{background:linear-gradient(90deg,var(--purple),var(--magenta));color:#fff}
@@ -82,7 +87,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .delta.flat{color:var(--muted);background:var(--bg)}
 
 /* SECUNDÁRIOS — chips neutros, compactos, cor só quando é status real */
-.kpi-strip{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kpi-strip{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
 .kchip{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:11px 12px;display:flex;flex-direction:column;gap:2px}
 .kchip[onclick]{cursor:pointer}
 .kchip[onclick]:active{transform:scale(.97)}
@@ -102,7 +107,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .funil-hd{padding:12px 16px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .funil-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--text)}
 .funil-hint{font-size:10px;color:var(--faint);font-weight:600}
-.funil-row{padding:10px 14px;display:grid;grid-template-columns:10px 130px 1fr 28px 74px 42px 12px;column-gap:8px;align-items:center;border-bottom:1px solid #f4f2f8;cursor:pointer}
+.funil-row{padding:10px 14px;display:grid;grid-template-columns:10px minmax(0,96px) minmax(20px,1fr) 26px 68px 40px 12px;column-gap:6px;align-items:center;border-bottom:1px solid #f4f2f8;cursor:pointer}
 .funil-row:last-child{border-bottom:none}
 .funil-row:hover{background:#faf8fc}
 .funil-stage-dot{width:10px;height:10px;border-radius:50%}
@@ -291,7 +296,7 @@ footer strong{color:#fff}
 
   <div id="ads-section" style="display:none">
     <div class="sec-hd">Investimento &amp; Aquisição (Inbound) — <span id="ads-updated" style="color:var(--faint);font-weight:700;text-transform:none;letter-spacing:0"></span></div>
-    <div class="kpi-strip" style="grid-template-columns:1fr 1fr">
+    <div class="kpi-strip" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)">
       <div class="kchip">
         <span class="kc-label">Investimento em Ads</span>
         <div class="kc-row"><span class="kc-val" id="ads-inv"><span class="skel"></span></span></div>
@@ -411,7 +416,9 @@ function setPeriod(btn) {
 
 function applyCustom() {
   const f = el('dt-from').value, t = el('dt-to').value;
-  if (!f || !t) return;
+  if (!f || !t) { showErr('Preencha as duas datas.'); return; }
+  if (f > t) { showErr('A data "De" não pode ser depois da data "até".'); return; }
+  hideErr();
   _customFrom = f; _customTo = t;
   loadData(true);
 }
@@ -481,11 +488,13 @@ async function loadData(force) {
     hideErr();
     render(_data);
     flashDot();
-    scheduleRefresh();
   } catch(e) {
     if (mySeq === _reqSeq) showErr('Erro ao carregar: ' + e.message);
   } finally {
-    if (mySeq === _reqSeq) { el('lb').classList.remove('on'); el('main').classList.remove('refreshing'); }
+    // Reagenda SEMPRE, erro ou sucesso — senão uma falha (ex: Agendor instável)
+    // trava o auto-refresh pra sempre e o painel fica preso no erro até alguém
+    // apertar F5 manualmente. Numa TV sem ninguém por perto isso é fatal.
+    if (mySeq === _reqSeq) { scheduleRefresh(); el('lb').classList.remove('on'); el('main').classList.remove('refreshing'); }
   }
 }
 
@@ -570,7 +579,8 @@ function mergeKpis(a, b) {
     ganhoValor, ganhoCont,
     perdidoCont: (a.perdidoCont||0)+(b.perdidoCont||0),
     ticketMedio: ganhoCont > 0 ? Math.round(ganhoValor/ganhoCont) : 0,
-    conversao: leadsNoPeriodo > 0 ? Math.round((ganhoCont/leadsNoPeriodo)*1000)/10 : 0,
+    // null (não 0) sem leads pra calcular — mesma convenção do reps[].conversao
+    conversao: leadsNoPeriodo > 0 ? Math.round((ganhoCont/leadsNoPeriodo)*1000)/10 : null,
     prazoMedio: ganhoCont > 0 ? Math.round(prazoSum/ganhoCont) : 0,
     staleTotal: (a.staleTotal||0)+(b.staleTotal||0),
     leadsNoPeriodo
@@ -579,7 +589,7 @@ function mergeKpis(a, b) {
 
 function mergeFunnel(a, b) {
   const byId = {}, order = [];
-  [...a, ...b].forEach(s => {
+  [...(a||[]), ...(b||[])].forEach(s => {
     if (!byId[s.stageId]) { byId[s.stageId] = Object.assign({}, s); order.push(s.stageId); }
     else { byId[s.stageId].count += s.count; byId[s.stageId].value += s.value; }
   });
@@ -590,7 +600,7 @@ function mergeFunnel(a, b) {
 
 function mergeReps(a, b) {
   const byId = {};
-  [...a, ...b].forEach(r => {
+  [...(a||[]), ...(b||[])].forEach(r => {
     if (!byId[r.id]) byId[r.id] = Object.assign({}, r, { dealsByStage: Object.assign({}, r.dealsByStage) });
     else {
       const t = byId[r.id];
@@ -627,7 +637,7 @@ function originBadge(o) {
 
 // ── DELTA / SPARKLINE ────────────────────────────────────────
 function pctDelta(curr, prev) {
-  if (prev === null || prev === undefined) return null;
+  if (curr === null || curr === undefined || prev === null || prev === undefined) return null;
   if (prev === 0) return curr > 0 ? Infinity : null;
   return Math.round(((curr - prev) / prev) * 1000) / 10;
 }
@@ -693,7 +703,7 @@ function sparklineSVG(vals, color) {
 // ── RENDER ───────────────────────────────────────────────────
 function render(d) {
   renderHero(d.kpis, d.period, d.recentWon);
-  renderKpiStrip(d.kpis);
+  renderKpiStrip(d.kpis, d.deals);
   renderFunil(d.funnel, d.kpis, d.recentLost);
   renderReps(d.reps, d.deals);
   renderFeed(d.recentWon, d.recentLost, d.kpis);
@@ -710,15 +720,18 @@ function renderHero(k, period, recentWon) {
   }
 }
 
-function renderKpiStrip(k) {
+function renderKpiStrip(k, deals) {
   el('k-pipeline').textContent = fmtMoney(k.pipelineTotal);
   el('k-pipeline-delta').innerHTML = '';
-  el('k-ativos').textContent = k.ativos + ' no funil';
+  // Pipeline em R$ só reflete negócios com valor atribuído — o sub-label mostra
+  // esse número, não o total bruto no funil (que inclui muitos sem preço ainda).
+  const withVal = (deals || []).filter(d => (d.value || 0) > 0).length;
+  el('k-ativos').textContent = withVal + ' precificado' + (withVal !== 1 ? 's' : '') + ' de ' + (k.ativos || 0);
   el('k-conv').textContent = k.conversao !== null ? k.conversao + '%' : '—';
   el('k-conv-delta').innerHTML = '';
   el('k-conv-base').textContent = 'de ' + (k.leadsNoPeriodo || 0) + ' leads';
   el('k-ticket').textContent = k.ticketMedio > 0 ? fmtMoney(k.ticketMedio) : '—';
-  el('k-prazo').textContent = k.prazoMedio ? k.prazoMedio + 'd' : '—';
+  el('k-prazo').textContent = k.prazoMedio ? k.prazoMedio + (k.prazoMedio === 1 ? ' dia' : ' dias') : '—';
   el('k-stale-m').textContent = k.staleTotal || 0;
   el('k-stale-sub').textContent = k.staleTotal > 0 ? '+7 dias sem toque' : 'tudo em dia';
   el('k-perdido').textContent = k.perdidoCont;
@@ -741,19 +754,21 @@ function normFunnel(funnel) {
   return order.map(sid => byId[sid]);
 }
 
-// Funil COMPLETO: 3 etapas ativas + 2 desfechos (Ganhos/Perdidos), cada um com
-// % sobre o total de leads do período — mostra a jornada inteira, não só o pipeline ativo.
+// Funil COMPLETO: 3 etapas ativas + 2 desfechos (Ganhos/Perdidos). Conversão
+// é sempre ETAPA A ETAPA (count desta ÷ count da etapa anterior), não % do
+// total de leads — Ganhos/Perdidos convertem a partir de Negociação (última
+// etapa ativa antes do desfecho).
 function renderFunil(funnel, kpis, recentLost) {
   const nf = normFunnel(funnel);
   const perdidoValor = (recentLost || []).reduce((s, d) => s + (d.value || 0), 0);
-  const base = kpis.leadsNoPeriodo || 0;
-  const pctOf = n => base > 0 ? Math.round((n / base) * 100) : null;
   const max = Math.max(...nf.map(s => s.count), kpis.ganhoCont || 0, kpis.perdidoCont || 0, 1);
+  const convFrom = (count, prevCount) => prevCount > 0 ? Math.round((count / prevCount) * 100) : null;
 
-  const stageRows = nf.map(s => {
+  const stageRows = nf.map((s, i) => {
     const pct = Math.max((s.count / max) * 100, 2);
     const ord = STAGE_ORD[String(s.stageId)] || 'o2';
-    const drop = s.dropFrom !== null && s.dropFrom !== undefined ? `<span class="funil-drop">↓${s.dropFrom}%</span>` : `<span></span>`;
+    const conv = i === 0 ? null : convFrom(s.count, nf[i-1].count);
+    const drop = conv !== null ? `<span class="funil-drop" title="Conversão de ${escHtml(nf[i-1].name)} → ${escHtml(s.name)}">${conv}%</span>` : `<span></span>`;
     return `
       <div class="funil-row" onclick="openStageModal('${s.stageId}','${s.name}')">
         <div class="funil-stage-dot" style="background:${ORD_DOT[ord]}"></div>
@@ -766,11 +781,12 @@ function renderFunil(funnel, kpis, recentLost) {
       </div>`;
   }).join('');
 
+  const lastActiveCount = nf.length ? nf[nf.length-1].count : 0;
   const outcomeRow = (name, count, value, color, onclick) => {
-    const pct = pctOf(count);
+    const pct = convFrom(count, lastActiveCount);
     const barPct = Math.max((count / max) * 100, 2);
     const badge = pct !== null
-      ? `<span class="funil-drop" style="background:${color==='green'?'#dcfce7':'#fee2e2'};color:${color==='green'?'#15803d':'#b91c1c'}">${color==='green'?'✓':'✕'} ${pct}%</span>`
+      ? `<span class="funil-drop" title="Conversão de Negociação → ${escHtml(name)}" style="background:${color==='green'?'#dcfce7':'#fee2e2'};color:${color==='green'?'#15803d':'#b91c1c'}">${color==='green'?'✓':'✕'} ${pct}%</span>`
       : '<span></span>';
     return `
       <div class="funil-row" onclick="${onclick}" style="border-top:2px solid var(--border)">
