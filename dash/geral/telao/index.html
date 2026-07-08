@@ -558,7 +558,8 @@ async function loadAdsSection(periodFrom, periodTo) {
     const leadsPeriodo = (agR.kpis && agR.kpis.leadsNoPeriodo) || 0;
     const inv = (adsR && +adsR.investimento) || 0;
 
-    el('ads-updated').textContent = adsR.ultimaData ? '· ' + adsR.ultimaData : '';
+    const fonteTxt = adsR.fonte === 'meta_live' ? 'ao vivo' : (adsR.fonte === 'planilha' ? 'planilha' : '');
+    el('ads-updated').textContent = adsR.ultimaData ? '· ' + fonteTxt + ' ' + adsR.ultimaData : '';
     el('ads-inv').textContent  = inv > 0 ? fmtMoney(inv) : '—';
     el('ads-cac').textContent  = (inv > 0 && fechadosPeriodo > 0) ? fmtMoney(Math.round(inv / fechadosPeriodo)) : '—';
     el('ads-cpl').textContent  = (inv > 0 && leadsPeriodo > 0) ? fmtMoney(Math.round(inv / leadsPeriodo)) : '—';
