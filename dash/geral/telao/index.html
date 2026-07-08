@@ -80,7 +80,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;heig
 .kc-sub.warn{color:var(--amber)}
 
 /* ADS ROW — só quando Inbound/Ambos, faixa fina abaixo do hero */
-#ads-row{display:none;grid-template-columns:repeat(4,1fr);gap:8px;height:52px;flex-shrink:0}
+#ads-row{display:none;grid-template-columns:repeat(5,1fr);gap:8px;height:52px;flex-shrink:0}
 #ads-row.show{display:grid}
 .achip{background:var(--card);border-radius:10px;border:1px solid var(--border);padding:6px 12px;display:flex;flex-direction:column;justify-content:center;gap:1px}
 .ac-label{font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--faint)}
@@ -224,10 +224,10 @@ footer strong{color:#fff}
 
   <div class="h-center">
     <button class="pchip" data-p="week"       onclick="setPeriod(this)">Esta semana</button>
-    <button class="pchip" data-p="month" onclick="setPeriod(this)">Este mês</button>
+    <button class="pchip active" data-p="month" onclick="setPeriod(this)">Este mês</button>
     <button class="pchip" data-p="prev_month" onclick="setPeriod(this)">Mês ant.</button>
     <button class="pchip" data-p="30d"        onclick="setPeriod(this)">30 dias</button>
-    <button class="pchip active" data-p="90d"        onclick="setPeriod(this)">90 dias</button>
+    <button class="pchip" data-p="90d"        onclick="setPeriod(this)">90 dias</button>
     <button class="pchip" data-p="custom"     onclick="setPeriod(this)">Personalizado</button>
     <div id="custom-panel">
       <input class="datein" type="date" id="dt-from">
@@ -292,6 +292,7 @@ footer strong{color:#fff}
   <div id="ads-row">
     <div class="achip"><span class="ac-label">Investimento Ads <span id="ads-updated" style="text-transform:none;font-weight:600"></span></span><span class="ac-val" id="ads-inv">—</span></div>
     <div class="achip"><span class="ac-label">CAC</span><span class="ac-val" id="ads-cac">—</span></div>
+    <div class="achip"><span class="ac-label">CPL</span><span class="ac-val" id="ads-cpl">—</span></div>
     <div class="achip"><span class="ac-label">ROAS</span><span class="ac-val" id="ads-roas">—</span></div>
     <div class="achip"><span class="ac-label">ACOS</span><span class="ac-val" id="ads-acos">—</span></div>
   </div>
@@ -368,13 +369,13 @@ footer strong{color:#fff}
 <script>
 const PROXY_URL  = 'https://script.google.com/macros/s/AKfycbxIkdzKQX1ioaaFg3p70ekootWk7eB57dux91h9afLWV9MxVGlU0gvteMoDazWfn5A6fg/exec';
 const LEADS_PROXY = 'https://script.google.com/macros/s/AKfycbyq9KJgWTRoALEEVf8Pu_I82GT0-tTK5yXNg-RsYHj4ywK6Grg9z_jG1-IcTW3LMXfNBg/exec';
-const AGENDOR_DEAL = 'https://app.agendor.com.br/negocio/';
+const AGENDOR_DEAL = 'https://web.agendor.com.br/sistema/negocios/historico.php?id=';
 const ORIGIN_LABELS = { outbound: 'Outbound', inbound: 'Inbound', both: 'Painel Geral' };
 const STAGE_ORD = { '3771722':'o1', '3771723':'o2', '3771724':'o2', '3771725':'o3' };
 const ORD_DOT   = { o1:'#b09bd6', o2:'#9260c8', o3:'#5a3a80' };
 
 let _data = null;
-let _period = '90d';
+let _period = 'month';
 let _customFrom = null, _customTo = null;
 let _originMode = 'both';
 let _refreshTimer = null;
@@ -449,7 +450,6 @@ async function loadData(force) {
   // Refresh automático (60s) fica IMPERCEPTÍVEL no telão — sem escurecer a tela.
   if (force) el('body').classList.add('refreshing');
   const q = periodQuery(force);
-  loadAdsSection();
 
   try {
     let curr;
@@ -460,6 +460,8 @@ async function loadData(force) {
       curr = await fetchOrigin(_originMode, q);
     }
     if (mySeq !== _reqSeq) return;
+
+    if (curr.period) loadAdsSection(curr.period.from, curr.period.to);
 
     const prevRange = prevRangeOf(curr.period);
     const pq = periodQuery(force, prevRange.from, prevRange.to);
@@ -498,40 +500,42 @@ function flashDot() {
   d.classList.remove('flash'); void d.offsetWidth; d.classList.add('flash');
 }
 
-// ── INVESTIMENTO / CAC / ROAS / ACOS (acumulado — só inbound/ambos) ──
-async function loadAdsSection() {
-  const show = _originMode === 'inbound' || _originMode === 'both';
+// ── INVESTIMENTO / CAC / CPL / ROAS / ACOS — filtrado pelo período selecionado ──
+async function loadAdsSection(periodFrom, periodTo) {
+  const show = (_originMode === 'inbound' || _originMode === 'both') && periodFrom && periodTo;
   const row = el('ads-row');
   row.classList.toggle('show', show);
   if (!show) return;
   try {
-    const [adsR, summaryR, closedR] = await Promise.all([
-      fetch(LEADS_PROXY + '?action=ads').then(r => r.json()),
-      fetch(LEADS_PROXY + '?action=summary').then(r => r.json()),
-      fetch(LEADS_PROXY + '?action=closed').then(r => r.json())
+    const [adsR, closedR, agR] = await Promise.all([
+      fetch(LEADS_PROXY + '?action=ads&from=' + periodFrom + '&to=' + periodTo).then(r => r.json()),
+      fetch(LEADS_PROXY + '?action=closed').then(r => r.json()),
+      fetchOrigin('inbound', '&period=custom&from=' + periodFrom + '&to=' + periodTo)
     ]);
-    const sheetsFechamentos = closedR.fechamentos || [];
-    const firstDate = summaryR.firstDate || '2025-01-01';
-    const t = new Date();
-    const todayStr = t.getFullYear() + '-' + String(t.getMonth()+1).padStart(2,'0') + '-' + String(t.getDate()).padStart(2,'0');
-    const agR = await fetchOrigin('inbound', '&period=custom&from=' + firstDate + '&to=' + todayStr);
+    const allSheetFechamentos = closedR.fechamentos || [];
+    const sheetsFechamentos = allSheetFechamentos.filter(c => {
+      const d = (c.data_f || c.data || '').slice(0,10);
+      return d && d >= periodFrom && d <= periodTo;
+    });
 
-    const sheetKeys = new Set(sheetsFechamentos.map(c =>
+    const sheetKeys = new Set(allSheetFechamentos.map(c =>
       String(c.empresa || c.nome || '').toLowerCase().trim() + '|' + String(c.data_f || c.data || '').slice(0,10)
     ));
     const agendorOnly = (agR.recentWon || []).filter(w =>
       w.value > 0 && w.closedAt && !sheetKeys.has(String(w.title||'').toLowerCase().trim() + '|' + w.closedAt)
     );
 
-    const receitaTotal  = sheetsFechamentos.reduce((s,c) => s + (+c.valor||0), 0) + agendorOnly.reduce((s,w) => s + (+w.value||0), 0);
-    const fechadosTotal = sheetsFechamentos.length + agendorOnly.length;
+    const receitaPeriodo  = sheetsFechamentos.reduce((s,c) => s + (+c.valor||0), 0) + agendorOnly.reduce((s,w) => s + (+w.value||0), 0);
+    const fechadosPeriodo = sheetsFechamentos.length + agendorOnly.length;
+    const leadsPeriodo = (agR.kpis && agR.kpis.leadsNoPeriodo) || 0;
     const inv = (adsR && +adsR.investimento) || 0;
 
     el('ads-updated').textContent = adsR.ultimaData ? '· ' + adsR.ultimaData : '';
     el('ads-inv').textContent  = inv > 0 ? fmtMoney(inv) : '—';
-    el('ads-cac').textContent  = (inv > 0 && fechadosTotal > 0) ? fmtMoney(Math.round(inv / fechadosTotal)) : '—';
-    el('ads-roas').textContent = (inv > 0 && receitaTotal > 0) ? (receitaTotal / inv).toFixed(2) + 'x' : '—';
-    el('ads-acos').textContent = (inv > 0 && receitaTotal > 0) ? (inv / receitaTotal * 100).toFixed(1) + '%' : '—';
+    el('ads-cac').textContent  = (inv > 0 && fechadosPeriodo > 0) ? fmtMoney(Math.round(inv / fechadosPeriodo)) : '—';
+    el('ads-cpl').textContent  = (inv > 0 && leadsPeriodo > 0) ? fmtMoney(Math.round(inv / leadsPeriodo)) : '—';
+    el('ads-roas').textContent = (inv > 0 && receitaPeriodo > 0) ? (receitaPeriodo / inv).toFixed(2) + 'x' : '—';
+    el('ads-acos').textContent = (inv > 0 && receitaPeriodo > 0) ? (inv / receitaPeriodo * 100).toFixed(1) + '%' : '—';
   } catch(e) {
     console.warn('Ads section erro:', e.message);
     el('ads-row').classList.remove('show');
@@ -673,7 +677,7 @@ function sparklineSVG(vals, color) {
 function render(d) {
   renderHero(d.kpis, d.period, d.recentWon);
   renderKpis(d.kpis);
-  renderFunil(d.funnel, d.kpis);
+  renderFunil(d.funnel, d.kpis, d.recentLost);
   renderSaude(d.kpis, d.funnel);
   renderLeaderboard(d.reps, d.deals);
   renderFeed(d.recentWon, d.recentLost, d.kpis);
@@ -720,11 +724,17 @@ function normFunnel(funnel) {
   return order.map(sid => byId[sid]);
 }
 
-function renderFunil(funnel, kpis) {
+// Funil COMPLETO: 3 etapas ativas + 2 desfechos (Ganhos/Perdidos) com % sobre
+// o total de leads do período — a jornada inteira, não só o pipeline ativo.
+function renderFunil(funnel, kpis, recentLost) {
   el('funil-badge').textContent = kpis.ativos + ' ativos';
   const nf = normFunnel(funnel);
-  const max = Math.max(...nf.map(s => s.count), 1);
-  el('funil-rows').innerHTML = nf.map(s => {
+  const perdidoValor = (recentLost || []).reduce((s, d) => s + (d.value || 0), 0);
+  const base = kpis.leadsNoPeriodo || 0;
+  const pctOf = n => base > 0 ? Math.round((n / base) * 100) : null;
+  const max = Math.max(...nf.map(s => s.count), kpis.ganhoCont || 0, kpis.perdidoCont || 0, 1);
+
+  const stageRows = nf.map(s => {
     const pct = Math.max((s.count / max) * 100, 3);
     const ord = STAGE_ORD[String(s.stageId)] || 'o2';
     const drop = s.dropFrom !== null && s.dropFrom !== undefined ? `<span class="drop-pill">↓${s.dropFrom}%</span>` : '';
@@ -738,6 +748,27 @@ function renderFunil(funnel, kpis) {
         ${drop}
       </div>`;
   }).join('');
+
+  const outcomeRow = (name, count, value, color, onclick) => {
+    const pct = pctOf(count);
+    const barPct = Math.max((count / max) * 100, 3);
+    const badge = pct !== null
+      ? `<span class="drop-pill" style="background:${color==='green'?'#dcfce7':'#fee2e2'};color:${color==='green'?'#15803d':'#b91c1c'}">${color==='green'?'✓':'✕'} ${pct}%</span>`
+      : '';
+    return `
+      <div class="funil-row" onclick="${onclick}" style="border-top:2px solid var(--border);padding-top:8px">
+        <div class="funil-dot" style="background:var(--${color})"></div>
+        <span class="funil-name">${name}</span>
+        <div class="funil-bar-wrap"><div class="funil-bar" style="width:${barPct}%;background:var(--${color})"></div></div>
+        <span class="funil-n">${count}</span>
+        <span class="funil-v">${value > 0 ? fmtMoney(value) : '—'}</span>
+        ${badge}
+      </div>`;
+  };
+
+  el('funil-rows').innerHTML = stageRows
+    + outcomeRow('Ganhos', kpis.ganhoCont || 0, kpis.ganhoValor || 0, 'green', 'openWonModal()')
+    + outcomeRow('Perdidos', kpis.perdidoCont || 0, perdidoValor, 'red', 'openLostModal()');
 }
 
 function renderSaude(kpis, funnel) {

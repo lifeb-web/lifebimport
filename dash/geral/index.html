@@ -222,10 +222,10 @@ footer strong{color:#fff}
 
 <div id="period-bar">
   <button class="pchip" data-p="week"       onclick="setPeriod(this)">Esta semana</button>
-  <button class="pchip" data-p="month" onclick="setPeriod(this)">Este mês</button>
+  <button class="pchip active" data-p="month" onclick="setPeriod(this)">Este mês</button>
   <button class="pchip" data-p="prev_month" onclick="setPeriod(this)">Mês ant.</button>
   <button class="pchip" data-p="30d"        onclick="setPeriod(this)">30 dias</button>
-  <button class="pchip active" data-p="90d"        onclick="setPeriod(this)">90 dias</button>
+  <button class="pchip" data-p="90d"        onclick="setPeriod(this)">90 dias</button>
   <button class="pchip" data-p="custom"     onclick="setPeriod(this)">Personalizado</button>
 </div>
 
@@ -290,12 +290,12 @@ footer strong{color:#fff}
   </div>
 
   <div id="ads-section" style="display:none">
-    <div class="sec-hd">Investimento &amp; Aquisição · <span id="ads-updated" style="color:var(--faint);font-weight:700;text-transform:none;letter-spacing:0"></span></div>
-    <div class="kpi-strip">
+    <div class="sec-hd">Investimento &amp; Aquisição (Inbound) — <span id="ads-updated" style="color:var(--faint);font-weight:700;text-transform:none;letter-spacing:0"></span></div>
+    <div class="kpi-strip" style="grid-template-columns:1fr 1fr">
       <div class="kchip">
         <span class="kc-label">Investimento em Ads</span>
         <div class="kc-row"><span class="kc-val" id="ads-inv"><span class="skel"></span></span></div>
-        <span class="kc-sub">acumulado</span>
+        <span class="kc-sub">no período selecionado</span>
       </div>
       <div class="kchip">
         <span class="kc-label">CAC</span>
@@ -303,14 +303,19 @@ footer strong{color:#fff}
         <span class="kc-sub">custo por cliente fechado</span>
       </div>
       <div class="kchip">
+        <span class="kc-label">CPL</span>
+        <div class="kc-row"><span class="kc-val" id="ads-cpl"><span class="skel"></span></span></div>
+        <span class="kc-sub">custo por lead recebido</span>
+      </div>
+      <div class="kchip">
         <span class="kc-label">ROAS</span>
         <div class="kc-row"><span class="kc-val" id="ads-roas"><span class="skel"></span></span></div>
         <span class="kc-sub">retorno por real investido</span>
       </div>
-      <div class="kchip">
+      <div class="kchip" style="grid-column:1/-1">
         <span class="kc-label">ACOS</span>
         <div class="kc-row"><span class="kc-val" id="ads-acos"><span class="skel"></span></span></div>
-        <span class="kc-sub">% do faturamento em ads</span>
+        <span class="kc-sub">% do faturamento gasto em ads no período</span>
       </div>
     </div>
   </div>
@@ -365,18 +370,17 @@ footer strong{color:#fff}
 <script>
 const PROXY_URL  = 'https://script.google.com/macros/s/AKfycbxIkdzKQX1ioaaFg3p70ekootWk7eB57dux91h9afLWV9MxVGlU0gvteMoDazWfn5A6fg/exec';
 const LEADS_PROXY = 'https://script.google.com/macros/s/AKfycbyq9KJgWTRoALEEVf8Pu_I82GT0-tTK5yXNg-RsYHj4ywK6Grg9z_jG1-IcTW3LMXfNBg/exec';
-const AGENDOR_DEAL = 'https://app.agendor.com.br/negocio/';
+const AGENDOR_DEAL = 'https://web.agendor.com.br/sistema/negocios/historico.php?id=';
 const ORIGIN_LABELS = { outbound: 'Outbound', inbound: 'Inbound', both: 'Painel Geral' };
 const STAGE_ORD = { '3771722':'o1', '3771723':'o2', '3771724':'o2', '3771725':'o3' };
 const ORD_DOT   = { o1:'#b09bd6', o2:'#9260c8', o3:'#5a3a80' };
 
 let _data       = null;
-let _period     = '90d';
+let _period     = 'month';
 let _customFrom = null;
 let _customTo   = null;
 let _originMode = 'both';
 let _refreshTimer = null;
-let _ads = null; // investimento/ROAS/ACOS/CAC — acumulado, não filtra por período (fonte não suporta)
 let _reqSeq = 0; // descarta respostas atrasadas fora de ordem (troca rápida de filtro)
 
 function tickClock() {
@@ -450,7 +454,6 @@ async function loadData(force) {
   // como confirmação visual do clique.
   if (force) el('main').classList.add('refreshing');
   const q = periodQuery(force);
-  loadAdsSection(); // independente do fluxo principal — não bloqueia nem quebra o resto se falhar
 
   try {
     let curr, prevKpis;
@@ -461,6 +464,10 @@ async function loadData(force) {
       curr = await fetchOrigin(_originMode, q);
     }
     if (mySeq !== _reqSeq) return; // uma troca de filtro mais nova já está em voo
+
+    // Ads/CAC/ROAS usa o MESMO período já resolvido (from/to reais) — dispara em
+    // paralelo, não bloqueia o render principal (chega e atualiza sozinho).
+    if (curr.period) loadAdsSection(curr.period.from, curr.period.to);
 
     // Período anterior (mesmo tamanho de janela) só pra delta — não bloqueia o render principal
     const prevRange = prevRangeOf(curr.period);
@@ -482,44 +489,48 @@ async function loadData(force) {
   }
 }
 
-// ── INVESTIMENTO / CAC / ROAS / ACOS ────────────────────────
-// Fonte (planilha SDR) não suporta filtro de período — é sempre acumulado
-// desde o início, igual ao painel inbound original. Só faz sentido pra
-// negócios de inbound (outbound não tem custo de aquisição via ads).
-async function loadAdsSection() {
-  const show = _originMode === 'inbound' || _originMode === 'both';
+// ── INVESTIMENTO / CAC / ROAS / ACOS — filtrado pelo MESMO período selecionado ──
+// getAds() do proxy agora aceita from/to (planilha "ADS" tem 1 linha por dia,
+// só faltava o filtro). Fechamentos da planilha também filtrados por data_f
+// dentro do período — tudo (investimento, receita, fechados) escopado igual.
+async function loadAdsSection(periodFrom, periodTo) {
+  const show = (_originMode === 'inbound' || _originMode === 'both') && periodFrom && periodTo;
   el('ads-section').style.display = show ? '' : 'none';
   if (!show) return;
   try {
-    const [adsR, summaryR, closedR] = await Promise.all([
-      fetch(LEADS_PROXY + '?action=ads').then(r => r.json()),
-      fetch(LEADS_PROXY + '?action=summary').then(r => r.json()),
-      fetch(LEADS_PROXY + '?action=closed').then(r => r.json())
+    const [adsR, closedR, agR] = await Promise.all([
+      fetch(LEADS_PROXY + '?action=ads&from=' + periodFrom + '&to=' + periodTo).then(r => r.json()),
+      fetch(LEADS_PROXY + '?action=closed').then(r => r.json()),
+      fetchOrigin('inbound', '&period=custom&from=' + periodFrom + '&to=' + periodTo)
     ]);
-    const sheetsFechamentos = closedR.fechamentos || [];
-    const firstDate = summaryR.firstDate || '2025-01-01';
-    const t = new Date();
-    const todayStr = t.getFullYear() + '-' + String(t.getMonth()+1).padStart(2,'0') + '-' + String(t.getDate()).padStart(2,'0');
-    const agR = await fetchOrigin('inbound', '&period=custom&from=' + firstDate + '&to=' + todayStr);
+    const allSheetFechamentos = closedR.fechamentos || [];
+    // filtra planilha pelo mesmo período (data_f = data de fechamento)
+    const sheetsFechamentos = allSheetFechamentos.filter(c => {
+      const d = (c.data_f || c.data || '').slice(0,10);
+      return d && d >= periodFrom && d <= periodTo;
+    });
 
     // Mesma dedup (nome+data) do painel inbound original — negócio do Agendor
-    // que já está na planilha não conta 2x.
-    const sheetKeys = new Set(sheetsFechamentos.map(c =>
+    // que já está na planilha (mesmo fora do período filtrado, checa na lista TODA
+    // pra dedup nunca falhar por causa do corte de data) não conta 2x.
+    const sheetKeys = new Set(allSheetFechamentos.map(c =>
       String(c.empresa || c.nome || '').toLowerCase().trim() + '|' + String(c.data_f || c.data || '').slice(0,10)
     ));
     const agendorOnly = (agR.recentWon || []).filter(w =>
       w.value > 0 && w.closedAt && !sheetKeys.has(String(w.title||'').toLowerCase().trim() + '|' + w.closedAt)
     );
 
-    const receitaTotal  = sheetsFechamentos.reduce((s,c) => s + (+c.valor||0), 0) + agendorOnly.reduce((s,w) => s + (+w.value||0), 0);
-    const fechadosTotal = sheetsFechamentos.length + agendorOnly.length;
+    const receitaPeriodo  = sheetsFechamentos.reduce((s,c) => s + (+c.valor||0), 0) + agendorOnly.reduce((s,w) => s + (+w.value||0), 0);
+    const fechadosPeriodo = sheetsFechamentos.length + agendorOnly.length;
+    const leadsPeriodo = (agR.kpis && agR.kpis.leadsNoPeriodo) || 0;
     const inv = (adsR && +adsR.investimento) || 0;
 
-    el('ads-updated').textContent = adsR.ultimaData ? 'atualizado ' + adsR.ultimaData : '';
+    el('ads-updated').textContent = adsR.ultimaData ? 'até ' + adsR.ultimaData : '';
     el('ads-inv').textContent  = inv > 0 ? fmtMoney(inv) : '—';
-    el('ads-cac').textContent  = (inv > 0 && fechadosTotal > 0) ? fmtMoney(Math.round(inv / fechadosTotal)) : '—';
-    el('ads-roas').textContent = (inv > 0 && receitaTotal > 0) ? (receitaTotal / inv).toFixed(2) + 'x' : '—';
-    el('ads-acos').textContent = (inv > 0 && receitaTotal > 0) ? (inv / receitaTotal * 100).toFixed(1) + '%' : '—';
+    el('ads-cac').textContent  = (inv > 0 && fechadosPeriodo > 0) ? fmtMoney(Math.round(inv / fechadosPeriodo)) : '—';
+    el('ads-cpl').textContent  = (inv > 0 && leadsPeriodo > 0) ? fmtMoney(Math.round(inv / leadsPeriodo)) : '—';
+    el('ads-roas').textContent = (inv > 0 && receitaPeriodo > 0) ? (receitaPeriodo / inv).toFixed(2) + 'x' : '—';
+    el('ads-acos').textContent = (inv > 0 && receitaPeriodo > 0) ? (inv / receitaPeriodo * 100).toFixed(1) + '%' : '—';
   } catch(e) {
     console.warn('Ads section erro:', e.message);
     el('ads-section').style.display = 'none';
@@ -683,7 +694,7 @@ function sparklineSVG(vals, color) {
 function render(d) {
   renderHero(d.kpis, d.period, d.recentWon);
   renderKpiStrip(d.kpis);
-  renderFunil(d.funnel);
+  renderFunil(d.funnel, d.kpis, d.recentLost);
   renderReps(d.reps, d.deals);
   renderFeed(d.recentWon, d.recentLost, d.kpis);
 }
@@ -730,10 +741,16 @@ function normFunnel(funnel) {
   return order.map(sid => byId[sid]);
 }
 
-function renderFunil(funnel) {
+// Funil COMPLETO: 3 etapas ativas + 2 desfechos (Ganhos/Perdidos), cada um com
+// % sobre o total de leads do período — mostra a jornada inteira, não só o pipeline ativo.
+function renderFunil(funnel, kpis, recentLost) {
   const nf = normFunnel(funnel);
-  const max = Math.max(...nf.map(s => s.count), 1);
-  el('funil-rows').innerHTML = nf.map(s => {
+  const perdidoValor = (recentLost || []).reduce((s, d) => s + (d.value || 0), 0);
+  const base = kpis.leadsNoPeriodo || 0;
+  const pctOf = n => base > 0 ? Math.round((n / base) * 100) : null;
+  const max = Math.max(...nf.map(s => s.count), kpis.ganhoCont || 0, kpis.perdidoCont || 0, 1);
+
+  const stageRows = nf.map(s => {
     const pct = Math.max((s.count / max) * 100, 2);
     const ord = STAGE_ORD[String(s.stageId)] || 'o2';
     const drop = s.dropFrom !== null && s.dropFrom !== undefined ? `<span class="funil-drop">↓${s.dropFrom}%</span>` : `<span></span>`;
@@ -748,6 +765,28 @@ function renderFunil(funnel) {
         <span class="funil-chevron">›</span>
       </div>`;
   }).join('');
+
+  const outcomeRow = (name, count, value, color, onclick) => {
+    const pct = pctOf(count);
+    const barPct = Math.max((count / max) * 100, 2);
+    const badge = pct !== null
+      ? `<span class="funil-drop" style="background:${color==='green'?'#dcfce7':'#fee2e2'};color:${color==='green'?'#15803d':'#b91c1c'}">${color==='green'?'✓':'✕'} ${pct}%</span>`
+      : '<span></span>';
+    return `
+      <div class="funil-row" onclick="${onclick}" style="border-top:2px solid var(--border)">
+        <div class="funil-stage-dot" style="background:var(--${color})"></div>
+        <span class="funil-stage-name">${name}</span>
+        <div class="funil-bar-wrap"><div class="funil-bar" style="width:${barPct}%;background:var(--${color})"></div></div>
+        <span class="funil-count">${count}</span>
+        <span class="funil-val">${value > 0 ? fmtMoney(value) : '—'}</span>
+        ${badge}
+        <span class="funil-chevron">›</span>
+      </div>`;
+  };
+
+  el('funil-rows').innerHTML = stageRows
+    + outcomeRow('Ganhos', kpis.ganhoCont || 0, kpis.ganhoValor || 0, 'green', 'openWonModal()')
+    + outcomeRow('Perdidos', kpis.perdidoCont || 0, perdidoValor, 'red', 'openLostModal()');
 }
 
 function openStageModal(stageId, stageName) {
