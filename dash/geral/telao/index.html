@@ -521,17 +521,20 @@ function flashDot() {
 }
 
 // ── INVESTIMENTO / CAC / CPL / ROAS / ACOS — filtrado pelo período selecionado ──
+let _adsSeq = 0; // guarda contra resposta atrasada de um período antigo sobrescrever a mais nova
 async function loadAdsSection(periodFrom, periodTo) {
+  const mySeq = ++_adsSeq;
   const show = (_originMode === 'inbound' || _originMode === 'both') && periodFrom && periodTo;
   const row = el('ads-row');
   row.classList.toggle('show', show);
   if (!show) return;
   try {
     const [adsR, closedR, agR] = await Promise.all([
-      fetch(LEADS_PROXY + '?action=ads&from=' + periodFrom + '&to=' + periodTo).then(r => r.json()),
-      fetch(LEADS_PROXY + '?action=closed').then(r => r.json()),
+      fetch(LEADS_PROXY + '?action=ads&from=' + periodFrom + '&to=' + periodTo, { cache: 'no-store' }).then(r => r.json()),
+      fetch(LEADS_PROXY + '?action=closed', { cache: 'no-store' }).then(r => r.json()),
       fetchOrigin('inbound', '&period=custom&from=' + periodFrom + '&to=' + periodTo)
     ]);
+    if (mySeq !== _adsSeq) return;
     const allSheetFechamentos = closedR.fechamentos || [];
     const sheetsFechamentos = allSheetFechamentos.filter(c => {
       const d = (c.data_f || c.data || '').slice(0,10);

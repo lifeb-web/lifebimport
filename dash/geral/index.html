@@ -506,16 +506,19 @@ async function loadData(force) {
 // getAds() do proxy agora aceita from/to (planilha "ADS" tem 1 linha por dia,
 // só faltava o filtro). Fechamentos da planilha também filtrados por data_f
 // dentro do período — tudo (investimento, receita, fechados) escopado igual.
+let _adsSeq = 0; // guarda contra resposta atrasada de um período antigo sobrescrever a mais nova
 async function loadAdsSection(periodFrom, periodTo) {
+  const mySeq = ++_adsSeq;
   const show = (_originMode === 'inbound' || _originMode === 'both') && periodFrom && periodTo;
   el('ads-section').style.display = show ? '' : 'none';
   if (!show) return;
   try {
     const [adsR, closedR, agR] = await Promise.all([
-      fetch(LEADS_PROXY + '?action=ads&from=' + periodFrom + '&to=' + periodTo).then(r => r.json()),
-      fetch(LEADS_PROXY + '?action=closed').then(r => r.json()),
+      fetch(LEADS_PROXY + '?action=ads&from=' + periodFrom + '&to=' + periodTo, { cache: 'no-store' }).then(r => r.json()),
+      fetch(LEADS_PROXY + '?action=closed', { cache: 'no-store' }).then(r => r.json()),
       fetchOrigin('inbound', '&period=custom&from=' + periodFrom + '&to=' + periodTo)
     ]);
+    if (mySeq !== _adsSeq) return; // uma troca de período/origem mais nova já disparou outra chamada
     const allSheetFechamentos = closedR.fechamentos || [];
     // filtra planilha pelo mesmo período (data_f = data de fechamento)
     const sheetsFechamentos = allSheetFechamentos.filter(c => {
