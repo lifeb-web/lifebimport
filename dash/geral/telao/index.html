@@ -59,6 +59,10 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;heig
 
 #body{flex:1;display:flex;flex-direction:column;padding:8px 14px 10px;gap:7px;overflow:hidden;min-height:0;transition:opacity .15s}
 #body.refreshing{opacity:.55}
+/* Fetch de Ads é mais lento (3 sub-chamadas) que o principal — dim próprio
+   preso ao ciclo de vida real desse fetch, senão o rótulo de período novo
+   fica ao lado de números de Ads ainda do período anterior por um instante. */
+#ads-row.ads-updating{opacity:.4;transition:opacity .15s}
 
 /* HERO ROW: hero + 6 chips secundários, uma faixa só */
 #hero-row{display:grid;grid-template-columns:minmax(0,1.7fr) repeat(6,minmax(0,1fr));gap:8px;height:92px;flex-shrink:0}
@@ -528,6 +532,7 @@ async function loadAdsSection(periodFrom, periodTo) {
   const row = el('ads-row');
   row.classList.toggle('show', show);
   if (!show) return;
+  row.classList.add('ads-updating');
   try {
     const [adsR, closedR, agR] = await Promise.all([
       fetch(LEADS_PROXY + '?action=ads&from=' + periodFrom + '&to=' + periodTo, { cache: 'no-store' }).then(r => r.json()),
@@ -561,7 +566,9 @@ async function loadAdsSection(periodFrom, periodTo) {
     el('ads-acos').textContent = (inv > 0 && receitaPeriodo > 0) ? (inv / receitaPeriodo * 100).toFixed(1) + '%' : '—';
   } catch(e) {
     console.warn('Ads section erro:', e.message);
-    el('ads-row').classList.remove('show');
+    row.classList.remove('show');
+  } finally {
+    if (mySeq === _adsSeq) row.classList.remove('ads-updating');
   }
 }
 

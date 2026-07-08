@@ -66,6 +66,11 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 
 #main{flex:1;padding:12px 12px 20px;display:flex;flex-direction:column;gap:12px;transition:opacity .15s}
 #main.refreshing{opacity:.55;pointer-events:none}
+/* O fetch de Ads é mais lento (3 sub-chamadas) que o principal — o dim do
+   #main já some antes dele terminar, deixando um instante com o rótulo do
+   período NOVO ao lado de números de Ads ainda do período ANTERIOR. Dim
+   próprio, preso ao ciclo de vida real desse fetch específico. */
+#ads-section.ads-updating{opacity:.4;transition:opacity .15s}
 
 #err-banner{display:none;background:#fef2f2;border:1.5px solid #fecaca;border-radius:10px;padding:10px 14px;font-size:12px;font-weight:600;color:#991b1b}
 #err-banner.show{display:block}
@@ -510,8 +515,10 @@ let _adsSeq = 0; // guarda contra resposta atrasada de um período antigo sobres
 async function loadAdsSection(periodFrom, periodTo) {
   const mySeq = ++_adsSeq;
   const show = (_originMode === 'inbound' || _originMode === 'both') && periodFrom && periodTo;
-  el('ads-section').style.display = show ? '' : 'none';
+  const sectionEl = el('ads-section');
+  sectionEl.style.display = show ? '' : 'none';
   if (!show) return;
+  sectionEl.classList.add('ads-updating'); // dim até os números baterem com o período já exibido no rótulo
   try {
     const [adsR, closedR, agR] = await Promise.all([
       fetch(LEADS_PROXY + '?action=ads&from=' + periodFrom + '&to=' + periodTo, { cache: 'no-store' }).then(r => r.json()),
@@ -549,7 +556,9 @@ async function loadAdsSection(periodFrom, periodTo) {
     el('ads-acos').textContent = (inv > 0 && receitaPeriodo > 0) ? (inv / receitaPeriodo * 100).toFixed(1) + '%' : '—';
   } catch(e) {
     console.warn('Ads section erro:', e.message);
-    el('ads-section').style.display = 'none';
+    sectionEl.style.display = 'none';
+  } finally {
+    if (mySeq === _adsSeq) sectionEl.classList.remove('ads-updating');
   }
 }
 
