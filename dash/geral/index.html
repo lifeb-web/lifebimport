@@ -401,6 +401,10 @@ function setOrigin(btn) {
   const label = ORIGIN_LABELS[_originMode];
   el('h-title-text').textContent = label;
   el('footer-mode').textContent = label;
+  // Esconde na hora (síncrono) — antes o esconder só rodava depois do fetch
+  // terminar, então por um instante o modo Outbound ainda mostrava os números
+  // de Ads/CAC do Inbound anterior na tela.
+  if (_originMode === 'outbound') el('ads-section').style.display = 'none';
   loadData(true);
 }
 
