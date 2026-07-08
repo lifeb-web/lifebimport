@@ -539,10 +539,9 @@ async function loadAdsSection(periodFrom, periodTo) {
   if (!show) return;
   row.classList.add('ads-updating');
   try {
-    const [adsR, closedR, chartR, agR] = await Promise.all([
+    const [adsR, closedR, agR] = await Promise.all([
       fetch(LEADS_PROXY + '?action=ads&from=' + periodFrom + '&to=' + periodTo, { cache: 'no-store' }).then(r => r.json()),
       fetch(LEADS_PROXY + '?action=closed', { cache: 'no-store' }).then(r => r.json()),
-      fetch(LEADS_PROXY + '?action=chart', { cache: 'no-store' }).then(r => r.json()),
       fetchOrigin('inbound', '&period=custom&from=' + periodFrom + '&to=' + periodTo)
     ]);
     if (mySeq !== _adsSeq) return;
@@ -561,12 +560,10 @@ async function loadAdsSection(periodFrom, periodTo) {
 
     const receitaPeriodo  = sheetsFechamentos.reduce((s,c) => s + (+c.valor||0), 0) + agendorOnly.reduce((s,w) => s + (+w.value||0), 0);
     const fechadosPeriodo = sheetsFechamentos.length + agendorOnly.length;
-    // CPL usa total BRUTO de leads da planilha (todo formulário na LP), não o
-    // leadsNoPeriodo do Agendor (só negócio já criado no CRM — bem menor).
-    const chartLabels = (chartR && chartR.labels) || [];
-    const chartTotal  = (chartR && chartR.total)  || [];
-    let leadsPeriodo = 0;
-    chartLabels.forEach((d, i) => { if (d >= periodFrom && d <= periodTo) leadsPeriodo += (chartTotal[i] || 0); });
+    // CPL usa leads ÚNICOS da planilha (dedup por WhatsApp, calculado no proxy —
+    // vem embutido na mesma resposta de "ads", sem chamada extra). Não usa o
+    // leadsNoPeriodo do Agendor (só negócio já criado no CRM, bem menor).
+    const leadsPeriodo = (adsR && adsR.leadsUnicos) || 0;
     const inv = (adsR && +adsR.investimento) || 0;
 
     const fonteTxt = adsR.fonte === 'meta_live' ? 'ao vivo' : (adsR.fonte === 'planilha' ? 'planilha' : '');
