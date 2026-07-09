@@ -70,7 +70,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
    #main já some antes dele terminar, deixando um instante com o rótulo do
    período NOVO ao lado de números de Ads ainda do período ANTERIOR. Dim
    próprio, preso ao ciclo de vida real desse fetch específico. */
-#ads-section.ads-updating{opacity:.4;transition:opacity .15s}
+#mkt-section.mkt-updating{opacity:.4;transition:opacity .15s}
 
 #err-banner{display:none;background:#fef2f2;border:1.5px solid #fecaca;border-radius:10px;padding:10px 14px;font-size:12px;font-weight:600;color:#991b1b}
 #err-banner.show{display:block}
@@ -304,32 +304,32 @@ footer strong{color:#fff}
     </div>
   </div>
 
-  <div id="ads-section" style="display:none">
-    <div class="sec-hd">Investimento &amp; Aquisição (Inbound) — <span id="ads-updated" style="color:var(--faint);font-weight:700;text-transform:none;letter-spacing:0"></span></div>
+  <div id="mkt-section" style="display:none">
+    <div class="sec-hd">Investimento &amp; Aquisição (Inbound) — <span id="mkt-updated" style="color:var(--faint);font-weight:700;text-transform:none;letter-spacing:0"></span></div>
     <div class="kpi-strip" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)">
       <div class="kchip">
         <span class="kc-label">Investimento em Ads</span>
-        <div class="kc-row"><span class="kc-val" id="ads-inv"><span class="skel"></span></span></div>
+        <div class="kc-row"><span class="kc-val" id="mkt-inv"><span class="skel"></span></span></div>
         <span class="kc-sub">no período selecionado</span>
       </div>
       <div class="kchip">
         <span class="kc-label">CAC</span>
-        <div class="kc-row"><span class="kc-val" id="ads-cac"><span class="skel"></span></span></div>
+        <div class="kc-row"><span class="kc-val" id="mkt-cac"><span class="skel"></span></span></div>
         <span class="kc-sub">custo por cliente fechado</span>
       </div>
       <div class="kchip">
         <span class="kc-label">CPL</span>
-        <div class="kc-row"><span class="kc-val" id="ads-cpl"><span class="skel"></span></span></div>
+        <div class="kc-row"><span class="kc-val" id="mkt-cpl"><span class="skel"></span></span></div>
         <span class="kc-sub">custo por lead recebido</span>
       </div>
       <div class="kchip">
         <span class="kc-label">ROAS</span>
-        <div class="kc-row"><span class="kc-val" id="ads-roas"><span class="skel"></span></span></div>
+        <div class="kc-row"><span class="kc-val" id="mkt-roas"><span class="skel"></span></span></div>
         <span class="kc-sub">retorno por real investido</span>
       </div>
       <div class="kchip" style="grid-column:1/-1">
         <span class="kc-label">ACOS</span>
-        <div class="kc-row"><span class="kc-val" id="ads-acos"><span class="skel"></span></span></div>
+        <div class="kc-row"><span class="kc-val" id="mkt-acos"><span class="skel"></span></span></div>
         <span class="kc-sub">% do faturamento gasto em ads no período</span>
       </div>
     </div>
@@ -415,7 +415,7 @@ function setOrigin(btn) {
   // Esconde na hora (síncrono) — antes o esconder só rodava depois do fetch
   // terminar, então por um instante o modo Outbound ainda mostrava os números
   // de Ads/CAC do Inbound anterior na tela.
-  if (_originMode === 'outbound') el('ads-section').style.display = 'none';
+  if (_originMode === 'outbound') el('mkt-section').style.display = 'none';
   loadData(true);
 }
 
@@ -551,10 +551,10 @@ let _adsSeq = 0; // guarda contra resposta atrasada de um período antigo sobres
 async function loadAdsSection(periodFrom, periodTo) {
   const mySeq = ++_adsSeq;
   const show = (_originMode === 'inbound' || _originMode === 'both') && periodFrom && periodTo;
-  const sectionEl = el('ads-section');
+  const sectionEl = el('mkt-section');
   sectionEl.style.display = show ? '' : 'none';
   if (!show) return;
-  sectionEl.classList.add('ads-updating'); // dim até os números baterem com o período já exibido no rótulo
+  sectionEl.classList.add('mkt-updating'); // dim até os números baterem com o período já exibido no rótulo
   try {
     const [adsR, closedR, agR] = await Promise.all([
       fetch(LEADS_PROXY + '?action=ads&from=' + periodFrom + '&to=' + periodTo, { cache: 'no-store' }).then(r => r.json()),
@@ -588,17 +588,22 @@ async function loadAdsSection(periodFrom, periodTo) {
     const inv = (adsR && +adsR.investimento) || 0;
 
     const fonteTxt = adsR.fonte === 'meta_live' ? 'ao vivo' : (adsR.fonte === 'planilha' ? 'planilha (fallback)' : '');
-    el('ads-updated').textContent = adsR.ultimaData ? fonteTxt + ' · ' + adsR.ultimaData : '';
-    el('ads-inv').textContent  = inv > 0 ? fmtMoney(inv) : '—';
-    el('ads-cac').textContent  = (inv > 0 && fechadosPeriodo > 0) ? fmtMoney(Math.round(inv / fechadosPeriodo)) : '—';
-    el('ads-cpl').textContent  = (inv > 0 && leadsPeriodo > 0) ? fmtMoney(Math.round(inv / leadsPeriodo)) : '—';
-    el('ads-roas').textContent = (inv > 0 && receitaPeriodo > 0) ? (receitaPeriodo / inv).toFixed(2) + 'x' : '—';
-    el('ads-acos').textContent = (inv > 0 && receitaPeriodo > 0) ? (inv / receitaPeriodo * 100).toFixed(1) + '%' : '—';
+    el('mkt-updated').textContent = adsR.ultimaData ? fonteTxt + ' · ' + adsR.ultimaData : '';
+    el('mkt-inv').textContent  = inv > 0 ? fmtMoney(inv) : '—';
+    el('mkt-cac').textContent  = (inv > 0 && fechadosPeriodo > 0) ? fmtMoney(Math.round(inv / fechadosPeriodo)) : '—';
+    el('mkt-cpl').textContent  = (inv > 0 && leadsPeriodo > 0) ? fmtMoney(Math.round(inv / leadsPeriodo)) : '—';
+    el('mkt-roas').textContent = (inv > 0 && receitaPeriodo > 0) ? (receitaPeriodo / inv).toFixed(2) + 'x' : '—';
+    el('mkt-acos').textContent = (inv > 0 && receitaPeriodo > 0) ? (inv / receitaPeriodo * 100).toFixed(1) + '%' : '—';
   } catch(e) {
-    console.warn('Ads section erro:', e.message);
-    sectionEl.style.display = 'none';
+    // Não esconde mais o bloco inteiro em erro (silencioso demais — achado 09/07):
+    // mantém os últimos números bons na tela e só avisa no rodapé do card.
+    console.warn('Investimento/CAC section erro:', e.message);
+    if (mySeq === _adsSeq) {
+      const upd = el('mkt-updated');
+      if (upd) upd.textContent = upd.textContent.replace(/ · falha ao atualizar$/, '') + ' · falha ao atualizar';
+    }
   } finally {
-    if (mySeq === _adsSeq) sectionEl.classList.remove('ads-updating');
+    if (mySeq === _adsSeq) sectionEl.classList.remove('mkt-updating');
   }
 }
 
