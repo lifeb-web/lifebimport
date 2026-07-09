@@ -504,9 +504,29 @@ async function loadData(force) {
     hideErr();
     render(_data);
     flashDot();
+    try { localStorage.setItem('geral_snapshot', JSON.stringify({ data: curr, savedAt: Date.now() })); } catch(_) {}
   } catch(e) {
     _lastErrMsg = e.message || '';
-    if (mySeq === _reqSeq) showErr('Erro ao carregar: ' + e.message);
+    // Se ainda não carregou nada NESTA sessão (ex: F5 durante o erro), mostra o
+    // último dado bom salvo (achado real 08/07: cota do Google estourando por
+    // horas) — velho, mas muito melhor que tela de erro vazia.
+    if (!_data) {
+      try {
+        const snap = JSON.parse(localStorage.getItem('geral_snapshot') || 'null');
+        if (snap && snap.data) {
+          _data = snap.data;
+          render(_data);
+          const mins = Math.round((Date.now() - snap.savedAt) / 60000);
+          showErr('Dados de ' + mins + 'min atrás (atualização falhando: ' + e.message + ')');
+        } else {
+          if (mySeq === _reqSeq) showErr('Erro ao carregar: ' + e.message);
+        }
+      } catch(_) {
+        if (mySeq === _reqSeq) showErr('Erro ao carregar: ' + e.message);
+      }
+    } else {
+      if (mySeq === _reqSeq) showErr('Erro ao carregar: ' + e.message);
+    }
   } finally {
     // Reagenda SEMPRE, erro ou sucesso — senão uma falha (ex: Agendor instável)
     // trava o auto-refresh pra sempre e o painel fica preso no erro até alguém

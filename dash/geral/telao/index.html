@@ -502,10 +502,31 @@ async function loadData(force) {
     hideErr();
     render(_data);
     flashDot();
+    try { localStorage.setItem('geral_telao_snapshot', JSON.stringify({ data: curr, savedAt: Date.now() })); } catch(_) {}
   } catch(e) {
     console.error('Erro:', e.message);
     _lastErrMsg = e.message || '';
-    if (mySeq === _reqSeq) showErr('Erro ao atualizar: ' + e.message);
+    // Telão sozinho na sala não pode ficar de tela vazia/erro a madrugada toda
+    // (achado real 08/07: cota da conta Google estourando por horas). Se ainda
+    // não carregou nada NESTA sessão (ex: recarregou a página durante o erro),
+    // mostra o último dado bom salvo — velho, mas muito melhor que nada.
+    if (!_data) {
+      try {
+        const snap = JSON.parse(localStorage.getItem('geral_telao_snapshot') || 'null');
+        if (snap && snap.data) {
+          _data = snap.data;
+          render(_data);
+          const mins = Math.round((Date.now() - snap.savedAt) / 60000);
+          showErr('Dados de ' + mins + 'min atrás (atualização falhando: ' + e.message + ')');
+        } else {
+          if (mySeq === _reqSeq) showErr('Erro ao atualizar: ' + e.message);
+        }
+      } catch(_) {
+        if (mySeq === _reqSeq) showErr('Erro ao atualizar: ' + e.message);
+      }
+    } else {
+      if (mySeq === _reqSeq) showErr('Erro ao atualizar: ' + e.message);
+    }
   } finally {
     // Reagenda SEMPRE, erro ou sucesso — telão fica sozinho na sala, sem
     // ninguém pra apertar F5. Uma falha não pode travar o auto-refresh.
