@@ -397,6 +397,7 @@ let _customTo   = null;
 let _originMode = 'both';
 let _refreshTimer = null;
 let _reqSeq = 0; // descarta respostas atrasadas fora de ordem (troca rápida de filtro)
+let _lastErrMsg = ''; // usado só pra detectar erro de cota e espaçar o retry
 
 function tickClock() {
   const n = new Date();
@@ -499,16 +500,26 @@ async function loadData(force) {
     }).catch(() => {});
 
     _data = curr;
+    _lastErrMsg = '';
     hideErr();
     render(_data);
     flashDot();
   } catch(e) {
+    _lastErrMsg = e.message || '';
     if (mySeq === _reqSeq) showErr('Erro ao carregar: ' + e.message);
   } finally {
     // Reagenda SEMPRE, erro ou sucesso — senão uma falha (ex: Agendor instável)
     // trava o auto-refresh pra sempre e o painel fica preso no erro até alguém
     // apertar F5 manualmente. Numa TV sem ninguém por perto isso é fatal.
-    if (mySeq === _reqSeq) { scheduleRefresh(); el('lb').classList.remove('on'); el('main').classList.remove('refreshing'); }
+    // MAS: erro de cota (urlfetch) martelando de 60 em 60s só piora — cada
+    // tentativa nova é mais uma rajada de chamadas na cota já estourada, e o
+    // erro nunca some (achado real 08/07: aba sozinha impedindo recuperação).
+    // Nesse caso específico, espaça bem mais (15min) em vez de 60s.
+    if (mySeq === _reqSeq) {
+      const isQuotaErr = /muitas vezes|urlfetch/i.test(_lastErrMsg || '');
+      scheduleRefresh(isQuotaErr ? 900000 : 60000);
+      el('lb').classList.remove('on'); el('main').classList.remove('refreshing');
+    }
   }
 }
 
@@ -580,9 +591,9 @@ async function fetchPrevious(pq, mySeq) {
   return r.kpis;
 }
 
-function scheduleRefresh() {
+function scheduleRefresh(delayMs) {
   clearTimeout(_refreshTimer);
-  _refreshTimer = setTimeout(() => loadData(false), 60000);
+  _refreshTimer = setTimeout(() => loadData(false), delayMs || 60000);
 }
 
 function flashDot() {

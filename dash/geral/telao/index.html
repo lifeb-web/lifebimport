@@ -394,6 +394,7 @@ let _customFrom = null, _customTo = null;
 let _originMode = 'both';
 let _refreshTimer = null;
 let _reqSeq = 0;
+let _lastErrMsg = ''; // usado só pra detectar erro de cota e espaçar o retry
 
 function tickClock() {
   const n = new Date();
@@ -497,16 +498,26 @@ async function loadData(force) {
     }).catch(() => {});
 
     _data = curr;
+    _lastErrMsg = '';
     hideErr();
     render(_data);
     flashDot();
   } catch(e) {
     console.error('Erro:', e.message);
+    _lastErrMsg = e.message || '';
     if (mySeq === _reqSeq) showErr('Erro ao atualizar: ' + e.message);
   } finally {
     // Reagenda SEMPRE, erro ou sucesso — telão fica sozinho na sala, sem
     // ninguém pra apertar F5. Uma falha não pode travar o auto-refresh.
-    if (mySeq === _reqSeq) { scheduleRefresh(); el('lb').classList.remove('on'); el('body').classList.remove('refreshing'); }
+    // MAS: erro de cota (urlfetch) martelando de 60 em 60s só piora — cada
+    // tentativa nova é mais uma rajada de chamadas na cota já estourada, e o
+    // erro nunca some (achado real 08/07: tela sozinha impedindo recuperação).
+    // Nesse caso específico, espaça bem mais (15min) em vez de 60s.
+    if (mySeq === _reqSeq) {
+      const isQuotaErr = /muitas vezes|urlfetch/i.test(_lastErrMsg || '');
+      scheduleRefresh(isQuotaErr ? 900000 : 60000);
+      el('lb').classList.remove('on'); el('body').classList.remove('refreshing');
+    }
   }
 }
 
@@ -519,9 +530,9 @@ async function fetchPrevious(pq) {
   return r.kpis;
 }
 
-function scheduleRefresh() {
+function scheduleRefresh(delayMs) {
   clearTimeout(_refreshTimer);
-  _refreshTimer = setTimeout(() => loadData(false), 60000);
+  _refreshTimer = setTimeout(() => loadData(false), delayMs || 60000);
 }
 
 function flashDot() {
