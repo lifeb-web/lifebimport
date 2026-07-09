@@ -647,11 +647,17 @@ function mergeFunnel(a, b) {
   const byId = {}, order = [];
   [...(a||[]), ...(b||[])].forEach(s => {
     if (!byId[s.stageId]) { byId[s.stageId] = Object.assign({}, s); order.push(s.stageId); }
-    else { byId[s.stageId].count += s.count; byId[s.stageId].value += s.value; }
+    else {
+      byId[s.stageId].count   += s.count;
+      byId[s.stageId].value   += s.value;
+      byId[s.stageId].reached  = (byId[s.stageId].reached || 0) + (s.reached || 0);
+      byId[s.stageId].lost     = (byId[s.stageId].lost    || 0) + (s.lost    || 0);
+      // achado real 09/07 (auditoria): faltava somar reached/lost aqui — em modo
+      // "Ambos" (padrão do painel) a conversão do funil usava só o outbound
+      // (primeira origem no array), ignorando o inbound inteiro silenciosamente.
+    }
   });
-  const arr = order.map(id => byId[id]).sort((x,y) => x.seq - y.seq);
-  arr.forEach((s,i) => { s.dropFrom = (i>0 && arr[i-1].count>0) ? Math.round((1 - s.count/arr[i-1].count)*100) : null; });
-  return arr;
+  return order.map(id => byId[id]).sort((x,y) => x.seq - y.seq);
 }
 
 function mergeReps(a, b) {
