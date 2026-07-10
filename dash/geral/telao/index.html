@@ -441,6 +441,14 @@ function showErr(msg) {
 }
 function hideErr() { el('err-toast').classList.remove('show'); }
 
+// Mensagens de erro do proxy vêm com stack trace do Apps Script embutido
+// (achado 10/07) — mostra só a primeira frase pro usuário, o resto vai pro console.
+function friendlyErr(e) {
+  const raw = (e && e.message) || String(e) || 'erro desconhecido';
+  console.error('Erro técnico completo:', raw);
+  return raw.split('\n')[0].split(' at ')[0].trim() || 'Erro ao carregar dados';
+}
+
 function periodQuery(force, fromOverride, toOverride) {
   if (fromOverride && toOverride) {
     let q = '&period=custom&from=' + fromOverride + '&to=' + toOverride;
@@ -517,15 +525,15 @@ async function loadData(force) {
           _data = snap.data;
           render(_data);
           const mins = Math.round((Date.now() - snap.savedAt) / 60000);
-          showErr('Dados de ' + mins + 'min atrás (atualização falhando: ' + e.message + ')');
+          showErr('Dados de ' + mins + 'min atrás (atualização falhando: ' + friendlyErr(e) + ')');
         } else {
-          if (mySeq === _reqSeq) showErr('Erro ao atualizar: ' + e.message);
+          if (mySeq === _reqSeq) showErr('Erro ao atualizar: ' + friendlyErr(e));
         }
       } catch(_) {
-        if (mySeq === _reqSeq) showErr('Erro ao atualizar: ' + e.message);
+        if (mySeq === _reqSeq) showErr('Erro ao atualizar: ' + friendlyErr(e));
       }
     } else {
-      if (mySeq === _reqSeq) showErr('Erro ao atualizar: ' + e.message);
+      if (mySeq === _reqSeq) showErr('Erro ao atualizar: ' + friendlyErr(e));
     }
   } finally {
     // Reagenda SEMPRE, erro ou sucesso — telão fica sozinho na sala, sem
