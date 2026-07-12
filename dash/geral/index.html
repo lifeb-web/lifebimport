@@ -140,7 +140,8 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .rep-avatar.r0{background:#c9982f}
 .rep-info{flex:1;min-width:0}
 .rep-name{font-size:14px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rep-sub{font-size:11px;font-weight:600;color:var(--muted);margin-top:1px}
+.rep-sub{font-size:11px;font-weight:600;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rep-badges{display:flex;gap:6px;flex-shrink:0}
 .rep-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;white-space:nowrap}
 .rb-green{background:#dcfce7;color:#15803d}
 .rb-red{background:#fee2e2;color:#991b1b}
@@ -150,10 +151,10 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .mf-seg{border-radius:3px;transition:flex .5s}
 .mf-o1{background:var(--o1)} .mf-o2{background:var(--o2)} .mf-o3{background:var(--o3)}
 .mf-empty{background:#f0ebf8;flex:1}
-.rep-stats{padding:8px 16px 12px;display:flex;gap:10px;justify-content:space-between;border-top:1px solid var(--border)}
-.rstat{display:flex;flex-direction:column;gap:2px}
-.rstat-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--faint)}
-.rstat-val{font-size:13px;font-weight:800;color:var(--text);white-space:nowrap;font-variant-numeric:tabular-nums}
+.rep-stats{padding:8px 16px 12px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;border-top:1px solid var(--border)}
+.rstat{display:flex;flex-direction:column;gap:2px;min-width:0}
+.rstat-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rstat-val{font-size:13px;font-weight:800;color:var(--text);white-space:nowrap;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis}
 .rstat-val.green{color:#15803d}
 .rstat-val.red{color:var(--red)}
 
@@ -204,6 +205,25 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 
 footer{background:var(--text);color:rgba(255,255,255,.6);text-align:center;padding:10px;font-size:10px;flex-shrink:0}
 footer strong{color:#fff}
+
+/* Telas estreitas (iPhone SE/mini, Android compacto) — achado 12/07: nome do rep
+   sumia por completo quando tinha os 2 badges (conversão + parado) juntos, porque
+   .rep-info tinha min-width:0 e o flex row espremia ele até zero. Os badges agora
+   quebram pra uma linha própria em vez de competir espaço com o nome. O funil
+   também cortava o nome da etapa pra 2-3 letras — dá menos espaço fixo pro
+   valor/drop% e mais garantido pro nome da etapa. */
+@media(max-width:380px){
+  .rep-header{flex-wrap:wrap;row-gap:6px}
+  .rep-info{min-width:140px}
+  .rep-badges{flex-basis:100%;justify-content:flex-end}
+  .funil-row{grid-template-columns:10px minmax(64px,96px) minmax(10px,1fr) 20px 58px 30px 12px}
+  .funil-val{font-size:9px}
+  .funil-drop{font-size:8px;padding:2px 3px}
+  /* 4 colunas de stat (Ganhos/Conversão/Perdidos/Leads) não cabem lado a lado em
+     320-375px sem cortar valor em R$ ou o rótulo "Conversão" — 2x2 dá o dobro de
+     espaço por célula, sem truncar nada. */
+  .rep-stats{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:10px}
+}
 </style>
 </head>
 <body>
@@ -939,7 +959,7 @@ function renderReps(reps, deals) {
             <div class="rep-name">${escHtml(r.name)}</div>
             <div class="rep-sub">${r.ativos} ativo${r.ativos!==1?'s':''} · ${r.leadsNoPeriodo||0} leads recebidos</div>
           </div>
-          <div style="display:flex;gap:6px;flex-shrink:0">${convBadge}${staleBadge}</div>
+          <div class="rep-badges">${convBadge}${staleBadge}</div>
         </div>
         ${mfSegs}
         <div class="rep-stats">
