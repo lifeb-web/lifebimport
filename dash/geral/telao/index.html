@@ -396,6 +396,18 @@ let _refreshTimer = null;
 let _reqSeq = 0;
 let _lastErrMsg = ''; // usado só pra detectar erro de cota e espaçar o retry
 
+// Mostra o último dado bom salvo NA HORA, antes até da primeira busca de rede
+// terminar (achado 12/07: primeiro carregamento sempre ficava com esqueleto até
+// a resposta chegar, mesmo já tendo dado de uma sessão recente guardado). Some
+// sozinho assim que o loadData() de verdade (disparado logo abaixo) substituir.
+try {
+  const _snap0 = JSON.parse(localStorage.getItem('geral_telao_snapshot') || 'null');
+  if (_snap0 && _snap0.data) {
+    _data = _snap0.data;
+    render(_data);
+  }
+} catch(_) {}
+
 function tickClock() {
   const n = new Date();
   el('htime').textContent = String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0');
