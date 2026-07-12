@@ -416,7 +416,11 @@ function setOrigin(btn) {
   // terminar, então por um instante o modo Outbound ainda mostrava os números
   // de Ads/CAC do Inbound anterior na tela.
   if (_originMode === 'outbound') el('mkt-section').style.display = 'none';
-  loadData(true);
+  // force=false: aproveita o cache de 2min do proxy em vez de forçar busca 100%
+  // fresca a cada clique (achado 10/07: cada clique no modo Ambos custava até ~80
+  // chamadas urlfetch em paralelo, estourando a cota diária do Google). Só o botão
+  // ↻ manual continua forçando fresco de verdade.
+  loadData(false);
 }
 
 function setPeriod(btn) {
@@ -426,7 +430,7 @@ function setPeriod(btn) {
   const cd = el('custom-dates');
   if (_period === 'custom') { cd.classList.add('show'); return; }
   cd.classList.remove('show');
-  loadData(true);
+  loadData(false);
 }
 
 function applyCustom() {
@@ -435,7 +439,7 @@ function applyCustom() {
   if (f > t) { showErr('A data "De" não pode ser depois da data "até".'); return; }
   hideErr();
   _customFrom = f; _customTo = t;
-  loadData(true);
+  loadData(false);
 }
 
 // ── LOAD ─────────────────────────────────────────────────────
@@ -1118,7 +1122,7 @@ function friendlyErr(e) {
   return raw.split('\n')[0].split(' at ')[0].trim() || 'Erro ao carregar dados';
 }
 
-document.addEventListener('DOMContentLoaded', () => loadData(true));
+document.addEventListener('DOMContentLoaded', () => loadData(false));
 document.addEventListener('visibilitychange', () => { if (!document.hidden) loadData(false); });
 </script>
 </body>

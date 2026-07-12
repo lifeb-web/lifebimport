@@ -412,7 +412,11 @@ function setOrigin(btn) {
   // Esconde na hora (síncrono) — antes só escondia depois do fetch terminar,
   // mostrando por um instante o Ads/CAC do Inbound anterior no modo Outbound.
   if (_originMode === 'outbound') el('mkt-row').classList.remove('show');
-  loadData(true);
+  // force=false: aproveita o cache de 2min do proxy em vez de forçar busca 100%
+  // fresca a cada clique (achado 10/07: cada clique no modo Ambos custava até ~80
+  // chamadas urlfetch em paralelo, estourando a cota diária do Google). Só o botão
+  // ↻ manual continua forçando fresco de verdade.
+  loadData(false);
 }
 
 function setPeriod(btn) {
@@ -422,7 +426,7 @@ function setPeriod(btn) {
   const cp = el('custom-panel');
   if (_period === 'custom') { cp.classList.add('show'); return; }
   cp.classList.remove('show');
-  loadData(true);
+  loadData(false);
 }
 
 function applyCustom() {
@@ -431,7 +435,7 @@ function applyCustom() {
   if (f > t) { showErr('A data "De" não pode ser depois da data "até".'); return; }
   hideErr();
   _customFrom = f; _customTo = t;
-  loadData(true);
+  loadData(false);
 }
 
 function showErr(msg) {
@@ -1104,7 +1108,7 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-document.addEventListener('DOMContentLoaded', () => loadData(true));
+document.addEventListener('DOMContentLoaded', () => loadData(false));
 document.addEventListener('visibilitychange', () => { if (!document.hidden) loadData(false); });
 </script>
 </body>
