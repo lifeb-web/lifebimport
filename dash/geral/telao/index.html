@@ -149,7 +149,9 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;heig
 .lb-sub{padding-left:44px;font-size:10px;font-weight:600;color:var(--muted);display:flex;gap:14px;flex-wrap:nowrap;overflow:hidden}
 .lb-sub b{color:var(--text);font-weight:800}
 .lb-stale{font-size:9px;color:#f59e0b;font-weight:700;flex-shrink:0}
-.pipeline-bar-wrap{flex:1;height:5px;background:#f0ebf8;border-radius:3px;overflow:hidden}
+.pipeline-cell{display:flex;flex-direction:column;gap:3px;justify-content:center}
+.pipeline-val{font-size:11px;font-weight:800;color:var(--text);text-align:right;font-variant-numeric:tabular-nums}
+.pipeline-bar-wrap{height:5px;background:#f0ebf8;border-radius:3px;overflow:hidden}
 .pipeline-bar{height:100%;background:linear-gradient(90deg,var(--purple),var(--purple-l));border-radius:3px;min-width:3px}
 
 #col-right{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
@@ -933,12 +935,14 @@ function renderLeaderboard(reps, deals) {
           <span class="lb-name">${escHtml(r.name)}</span>
           <span class="lb-conv ${convClass}">${convText}</span>
           <div class="lb-funnel">${funnelSegs}</div>
-          <div class="pipeline-bar-wrap"><div class="pipeline-bar" style="width:${pipelinePct}%"></div></div>
+          <div class="pipeline-cell">
+            <span class="pipeline-val">${r.pipeline > 0 ? fmtMoney(r.pipeline) : '—'}</span>
+            <div class="pipeline-bar-wrap"><div class="pipeline-bar" style="width:${pipelinePct}%"></div></div>
+          </div>
           <span class="lb-num">${fmtMoney(r.ganhoValor)}</span>
           <span class="lb-num" style="min-width:36px">${r.ativos}${staleText}</span>
         </div>
         <div class="lb-sub">
-          <span>Pipeline <b>${r.pipeline > 0 ? fmtMoney(r.pipeline) : '—'}</b></span>
           <span>Ganhos <b>${r.ganhoCont}</b></span>
           <span>Perdidos <b>${r.perdidoCont}</b></span>
           <span>Leads <b>${r.leadsNoPeriodo || 0}</b></span>
