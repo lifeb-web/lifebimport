@@ -515,18 +515,24 @@ async function loadData(force) {
   const q = periodQuery(force);
 
   try {
-    let curr, prevKpis;
+    let curr, prevKpis, ibData = null;
     if (_originMode === 'both') {
       const [ob, ib] = await Promise.all([fetchOrigin('outbound', q), fetchOrigin('inbound', q)]);
       curr = mergeBoth(ob, ib);
+      ibData = ib;
     } else {
       curr = await fetchOrigin(_originMode, q);
+      if (_originMode === 'inbound') ibData = curr;
     }
     if (mySeq !== _reqSeq) return; // uma troca de filtro mais nova já está em voo
 
     // Ads/CAC/ROAS usa o MESMO período já resolvido (from/to reais) — dispara em
-    // paralelo, não bloqueia o render principal (chega e atualiza sozinho).
-    if (curr.period) loadAdsSection(curr.period.from, curr.period.to);
+    // paralelo, não bloqueia o render principal (chega e atualiza sozinho). Reaproveita
+    // o recentWon do Inbound que ACABOU de ser buscado aqui em cima (ibData) em vez de
+    // buscar de novo (achado 12/07: a busca própria antiga usava period=custom&from&to,
+    // uma chave de cache DIFERENTE da busca principal — nunca aproveitava o cache quente
+    // e o bloco de Investimento podia ficar até 11s atrás do resto do painel).
+    if (curr.period) loadAdsSection(curr.period.from, curr.period.to, ibData);
 
     // Período anterior (mesmo tamanho de janela) só pra delta — não bloqueia o render principal
     const prevRange = prevRangeOf(curr.period);
@@ -585,7 +591,7 @@ async function loadData(force) {
 // só faltava o filtro). Fechamentos da planilha também filtrados por data_f
 // dentro do período — tudo (investimento, receita, fechados) escopado igual.
 let _adsSeq = 0; // guarda contra resposta atrasada de um período antigo sobrescrever a mais nova
-async function loadAdsSection(periodFrom, periodTo) {
+async function loadAdsSection(periodFrom, periodTo, inboundData) {
   const mySeq = ++_adsSeq;
   const show = (_originMode === 'inbound' || _originMode === 'both') && periodFrom && periodTo;
   const sectionEl = el('mkt-section');
@@ -593,11 +599,11 @@ async function loadAdsSection(periodFrom, periodTo) {
   if (!show) return;
   sectionEl.classList.add('mkt-updating'); // dim até os números baterem com o período já exibido no rótulo
   try {
-    const [adsR, closedR, agR] = await Promise.all([
+    const [adsR, closedR] = await Promise.all([
       fetch(LEADS_PROXY + '?action=ads&from=' + periodFrom + '&to=' + periodTo, { cache: 'no-store' }).then(r => r.json()),
-      fetch(LEADS_PROXY + '?action=closed', { cache: 'no-store' }).then(r => r.json()),
-      fetchOrigin('inbound', '&period=custom&from=' + periodFrom + '&to=' + periodTo)
+      fetch(LEADS_PROXY + '?action=closed', { cache: 'no-store' }).then(r => r.json())
     ]);
+    const agR = inboundData || { recentWon: [] };
     if (mySeq !== _adsSeq) return; // uma troca de período/origem mais nova já disparou outra chamada
     const allSheetFechamentos = closedR.fechamentos || [];
     // filtra planilha pelo mesmo período (data_f = data de fechamento)
