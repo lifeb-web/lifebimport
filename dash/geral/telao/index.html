@@ -503,16 +503,21 @@ async function loadData(force) {
   const q = periodQuery(force);
 
   try {
-    let curr;
+    let curr, ibData = null;
     if (_originMode === 'both') {
       const [ob, ib] = await Promise.all([fetchOrigin('outbound', q), fetchOrigin('inbound', q)]);
       curr = mergeBoth(ob, ib);
+      ibData = ib;
     } else {
       curr = await fetchOrigin(_originMode, q);
+      if (_originMode === 'inbound') ibData = curr;
     }
     if (mySeq !== _reqSeq) return;
 
-    if (curr.period) loadAdsSection(curr.period.from, curr.period.to);
+    // Reaproveita o inbound já buscado aqui em cima em vez de refazer a busca —
+    // achado 12/07 (mesmo do mobile): a busca própria antiga usava uma chave de
+    // cache diferente da principal e podia ficar até 11s desatualizada.
+    if (curr.period) loadAdsSection(curr.period.from, curr.period.to, ibData);
 
     const prevRange = prevRangeOf(curr.period);
     const pq = periodQuery(force, prevRange.from, prevRange.to);
@@ -587,7 +592,7 @@ function flashDot() {
 
 // ── INVESTIMENTO / CAC / CPL / ROAS / ACOS — filtrado pelo período selecionado ──
 let _adsSeq = 0; // guarda contra resposta atrasada de um período antigo sobrescrever a mais nova
-async function loadAdsSection(periodFrom, periodTo) {
+async function loadAdsSection(periodFrom, periodTo, inboundData) {
   const mySeq = ++_adsSeq;
   const show = (_originMode === 'inbound' || _originMode === 'both') && periodFrom && periodTo;
   const row = el('mkt-row');
@@ -595,11 +600,11 @@ async function loadAdsSection(periodFrom, periodTo) {
   if (!show) return;
   row.classList.add('mkt-updating');
   try {
-    const [adsR, closedR, agR] = await Promise.all([
+    const [adsR, closedR] = await Promise.all([
       fetch(LEADS_PROXY + '?action=ads&from=' + periodFrom + '&to=' + periodTo, { cache: 'no-store' }).then(r => r.json()),
-      fetch(LEADS_PROXY + '?action=closed', { cache: 'no-store' }).then(r => r.json()),
-      fetchOrigin('inbound', '&period=custom&from=' + periodFrom + '&to=' + periodTo)
+      fetch(LEADS_PROXY + '?action=closed', { cache: 'no-store' }).then(r => r.json())
     ]);
+    const agR = inboundData || { recentWon: [] };
     if (mySeq !== _adsSeq) return;
     const allSheetFechamentos = closedR.fechamentos || [];
     const sheetsFechamentos = allSheetFechamentos.filter(c => {
