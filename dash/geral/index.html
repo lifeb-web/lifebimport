@@ -115,9 +115,15 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .funil-hd{padding:12px 16px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .funil-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--text)}
 .funil-hint{font-size:10px;color:var(--faint);font-weight:600}
-.funil-row{padding:10px 14px;display:grid;grid-template-columns:10px minmax(0,148px) minmax(20px,1fr) 26px 68px 40px 12px;column-gap:6px;align-items:center;border-bottom:1px solid #f4f2f8;cursor:pointer}
+.funil-row{position:relative;padding:10px 14px;display:grid;grid-template-columns:10px minmax(0,148px) minmax(20px,1fr) 26px 68px 40px 12px;column-gap:6px;align-items:center;border-bottom:1px solid #f4f2f8;cursor:pointer}
 .funil-row:last-child{border-bottom:none}
 .funil-row:hover{background:#faf8fc}
+/* achado 13/07 (Robert: conversão por etapa "confusa", pediu seta como o Agendor
+   faz): tag flutuante sobrepondo a linha divisória entre duas etapas — absolute
+   tira do fluxo do grid, não afeta as colunas fixas (já sofridas nessa sessão). */
+.funil-conn{position:absolute;top:-8px;left:24px;display:flex;align-items:center;gap:4px;background:#fff;padding:0 5px;z-index:2;line-height:1;pointer-events:none}
+.funil-conn-arrow{font-size:10px;color:var(--amber);font-weight:800}
+.funil-conn-pct{font-size:9px;font-weight:800;color:var(--amber)}
 .funil-stage-dot{width:10px;height:10px;border-radius:50%}
 .funil-stage-name{font-size:12px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .funil-bar-wrap{height:7px;background:#f0ebf8;border-radius:4px;overflow:hidden;box-shadow:inset 0 1px 2px rgba(90,58,128,.08)}
@@ -908,21 +914,24 @@ function renderFunil(funnel, kpis, recentLost) {
     const ord = STAGE_ORD[String(s.stageId)] || 'o2';
     const reached = s.reached ?? s.count;
     const conv = i === 0 ? null : convFrom(reached, nf[i-1].reached ?? nf[i-1].count);
-    // achado 12/07 (Robert comparou com o Relatório de Conversão nativo do
-    // Agendor): lá cada etapa mostra quantos foram perdidos NELA especificamente.
-    // Grid do mobile já tem 7 colunas fixas — em vez de abrir uma coluna nova
-    // (arriscava cortar em telas estreitas, já sofrido nessa sessão), combina no
-    // mesmo badge da conversão: "34% · 3 perd".
-    const lostSuffix = s.lost > 0 ? ` · ${s.lost} perd` : '';
-    const drop = conv !== null ? `<span class="funil-drop" title="Conversão de ${escHtml(nf[i-1].name)} → ${escHtml(s.name)}${s.lost > 0 ? ' (' + s.lost + ' perdido' + (s.lost===1?'':'s') + ' nesta etapa)' : ''}">${conv}%${lostSuffix}</span>` : `<span></span>`;
+    // achado 13/07 (Robert: conversão "confusa", pediu seta como o Agendor faz):
+    // tag flutuante ↓XX% sobrepondo a linha divisória acima da etapa de destino —
+    // absolute tira do fluxo do grid, não mexe nas 7 colunas fixas (já sofridas
+    // nessa sessão). Perdidos da etapa continua no badge da 6ª coluna, agora sozinho.
+    const connector = conv !== null ? `
+      <div class="funil-conn" title="Conversão de ${escHtml(nf[i-1].name)} → ${escHtml(s.name)}">
+        <span class="funil-conn-arrow">↓</span><span class="funil-conn-pct">${conv}%</span>
+      </div>` : '';
+    const lostBadge = s.lost > 0 ? `<span class="funil-drop" style="background:#fee2e2;color:#b91c1c" title="Perdidos nesta etapa">${s.lost} perd</span>` : `<span></span>`;
     return `
       <div class="funil-row" onclick="openStageModal('${s.stageId}','${s.name}')">
+        ${connector}
         <div class="funil-stage-dot" style="background:${ORD_DOT[ord]}"></div>
         <span class="funil-stage-name">${s.name}</span>
         <div class="funil-bar-wrap"><div class="funil-bar bar-${ord}" style="width:${pct}%"></div></div>
         <span class="funil-count">${s.count}</span>
         <span class="funil-val">${s.value > 0 ? fmtMoney(s.value) : '—'}</span>
-        ${drop}
+        ${lostBadge}
         <span class="funil-chevron">›</span>
       </div>`;
   }).join('');
@@ -933,14 +942,21 @@ function renderFunil(funnel, kpis, recentLost) {
     // (conversão só da etapa anterior, ex: Negociação→Ganhos). Troca pra
     // deixar a mesma leitura "por etapa" usada nas outras setas do funil.
     // Perdidos continua sobre o funil inteiro (não tem "uma" etapa anterior —
-    // pode cair de qualquer uma das 3, já detalhado acima em cada linha).
+    // pode cair de qualquer uma das 3, já detalhado acima em cada linha), então
+    // fica com o badge tradicional (resultado agregado), nunca a seta sequencial.
     const pct = stageBase !== undefined ? convFrom(count, stageBase) : convFrom(count, reachedFirst);
     const barPct = Math.max((count / max) * 100, 2);
-    const badge = pct !== null
-      ? `<span class="funil-drop" title="${stageBase !== undefined ? 'Conversão da etapa anterior' : 'Taxa sobre o total que entrou no funil'}" style="background:${color==='green'?'#dcfce7':'#fee2e2'};color:${color==='green'?'#15803d':'#b91c1c'}">${color==='green'?'✓':'✕'} ${pct}%</span>`
+    const isSequential = stageBase !== undefined;
+    const connector = (isSequential && pct !== null) ? `
+      <div class="funil-conn" title="Conversão da etapa anterior">
+        <span class="funil-conn-arrow" style="color:#15803d">↓</span><span class="funil-conn-pct" style="color:#15803d">${pct}%</span>
+      </div>` : '';
+    const badge = (!isSequential && pct !== null)
+      ? `<span class="funil-drop" title="Taxa sobre o total que entrou no funil" style="background:${color==='green'?'#dcfce7':'#fee2e2'};color:${color==='green'?'#15803d':'#b91c1c'}">${color==='green'?'✓':'✕'} ${pct}%</span>`
       : '<span></span>';
     return `
       <div class="funil-row" onclick="${onclick}" style="border-top:2px solid var(--border)">
+        ${connector}
         <div class="funil-stage-dot" style="background:var(--${color})"></div>
         <span class="funil-stage-name">${name}</span>
         <div class="funil-bar-wrap"><div class="funil-bar" style="width:${barPct}%;background:var(--${color})"></div></div>
