@@ -127,7 +127,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .funil-drop{font-size:9px;font-weight:700;padding:2px 5px;background:#fff8e1;color:var(--amber);border-radius:8px;white-space:nowrap;overflow:hidden}
 .funil-chevron{font-size:11px;color:var(--faint);text-align:center}
 
-.og-pill{font-size:8px;font-weight:800;padding:1px 6px;border-radius:6px;margin-left:5px;letter-spacing:.3px;flex-shrink:0;vertical-align:middle}
+.og-pill{font-size:9px;font-weight:800;padding:1px 6px;border-radius:6px;margin-left:5px;letter-spacing:.2px;flex-shrink:0;white-space:nowrap;vertical-align:middle}
 .og-out{background:rgba(112,75,155,.12);color:var(--purple)}
 .og-in{background:rgba(233,32,133,.12);color:var(--magenta)}
 
@@ -172,7 +172,8 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .feed-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
 .fd-green{background:var(--green)} .fd-red{background:var(--red)}
 .feed-info{flex:1;min-width:0}
-.feed-co{font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.feed-co{font-size:12px;font-weight:700;color:var(--text);display:flex;align-items:baseline;min-width:0}
+.og-title-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .feed-rep{font-size:10px;font-weight:600;color:var(--muted)}
 .feed-right{text-align:right;flex-shrink:0}
 .feed-val{font-size:12px;font-weight:800;color:var(--text);white-space:nowrap;font-variant-numeric:tabular-nums}
@@ -196,7 +197,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .mdeal-row:last-child{border-bottom:none}
 .mdeal-row:hover{background:#f5f3ff}
 .mdeal-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
-.mdeal-title{flex:1;font-size:13px;font-weight:700;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mdeal-title{flex:1;font-size:13px;font-weight:700;color:var(--text);min-width:0;display:flex;align-items:baseline}
 .mdeal-rep{font-size:10px;color:var(--muted);font-weight:600;white-space:nowrap;flex-shrink:0}
 .mdeal-val{font-size:13px;font-weight:800;color:var(--purple);white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums}
 .mdeal-stale{font-size:11px;flex-shrink:0}
@@ -742,6 +743,10 @@ function mergeBoth(ob, ib) {
 
 function originBadge(o) {
   if (_originMode !== 'both' || !o) return '';
+  // achado 12/07: testei "OUTBOUND"/"INBOUND" por extenso (como no telão) e em
+  // telas de 320px o nome da empresa quase sumia por trás do badge — mobile não
+  // tem a folga do telão. Mantém curto, mas a estrutura (badge fora do texto que
+  // corta) já garante que o badge nunca mais desaparece, mesmo assim.
   return o === 'outbound' ? '<span class="og-pill og-out">OUT</span>' : '<span class="og-pill og-in">IN</span>';
 }
 
@@ -939,7 +944,7 @@ function openStageModal(stageId, stageName) {
     : deals.map(d => `
       <a class="mdeal-row" href="${AGENDOR_DEAL}${d.id}" target="_blank">
         <div class="mdeal-dot" style="background:${ORD_DOT[ord]}"></div>
-        <span class="mdeal-title">${escHtml(d.title)}${originBadge(d._origin)}</span>
+        <span class="mdeal-title"><span class="og-title-text">${escHtml(d.title)}</span>${originBadge(d._origin)}</span>
         <span class="mdeal-rep">${escHtml(d.rep||'—')}</span>
         <span class="mdeal-val">${fmtMoney(d.value)}</span>
         ${d.stale ? '<span class="mdeal-stale" title="Sem toque há +7 dias">⚠️</span>' : ''}
@@ -1003,7 +1008,7 @@ function openRepModal(id) {
         const ord = STAGE_ORD[String(d.stageId)] || 'o2';
         return `<a class="mdeal-row" href="${AGENDOR_DEAL}${d.id}" target="_blank">
           <div class="mdeal-dot" style="background:${ORD_DOT[ord]}"></div>
-          <span class="mdeal-title">${escHtml(d.title)}${originBadge(d._origin)}</span>
+          <span class="mdeal-title"><span class="og-title-text">${escHtml(d.title)}</span>${originBadge(d._origin)}</span>
           <span class="mdeal-val">${fmtMoney(d.value)}</span>
           ${d.stale ? '<span class="mdeal-stale" title="Sem toque há +7 dias">⚠️</span>' : ''}
           <span class="mdeal-open">↗</span>
@@ -1022,7 +1027,7 @@ function openPipelineModal() {
         const ord = STAGE_ORD[String(d.stageId)] || 'o2';
         return `<a class="mdeal-row" href="${AGENDOR_DEAL}${d.id}" target="_blank">
           <div class="mdeal-dot" style="background:${ORD_DOT[ord]}"></div>
-          <span class="mdeal-title">${escHtml(d.title)}${originBadge(d._origin)}</span>
+          <span class="mdeal-title"><span class="og-title-text">${escHtml(d.title)}</span>${originBadge(d._origin)}</span>
           <span class="mdeal-rep">${escHtml(d.rep||'—')}</span>
           <span class="mdeal-val">${d.value > 0 ? fmtMoney(d.value) : '—'}</span>
           ${d.stale ? '<span class="mdeal-stale" title="Sem toque há +7 dias">⚠️</span>' : ''}
@@ -1041,7 +1046,7 @@ function openWonModal() {
     : deals.map(d => `
       <a class="mdeal-row" href="${AGENDOR_DEAL}${d.id}" target="_blank">
         <div class="mdeal-dot" style="background:var(--green)"></div>
-        <span class="mdeal-title">${escHtml(d.title)}${originBadge(d._origin)}</span>
+        <span class="mdeal-title"><span class="og-title-text">${escHtml(d.title)}</span>${originBadge(d._origin)}</span>
         <span class="mdeal-rep">${escHtml(d.rep||'—')}</span>
         <span class="mdeal-val" style="color:#15803d">${fmtMoney(d.value)}</span>
         <span class="mdeal-open">${fmtDateDisplay(d.closedAt)}</span>
@@ -1059,7 +1064,7 @@ function openLostModal() {
     : deals.map(d => `
       <a class="mdeal-row" href="${AGENDOR_DEAL}${d.id}" target="_blank">
         <div class="mdeal-dot" style="background:var(--red)"></div>
-        <span class="mdeal-title">${escHtml(d.title)}${originBadge(d._origin)}</span>
+        <span class="mdeal-title"><span class="og-title-text">${escHtml(d.title)}</span>${originBadge(d._origin)}</span>
         <span class="mdeal-rep">${escHtml(d.rep||'—')}</span>
         <span class="mdeal-val" style="color:var(--red)">${d.value > 0 ? fmtMoney(d.value) : '—'}</span>
         <span class="mdeal-open">${fmtDateDisplay(d.closedAt)}</span>
@@ -1078,7 +1083,7 @@ function openStaleModal() {
         const ord = STAGE_ORD[String(d.stageId)] || 'o2';
         return `<a class="mdeal-row" href="${AGENDOR_DEAL}${d.id}" target="_blank">
           <div class="mdeal-dot" style="background:${ORD_DOT[ord]}"></div>
-          <span class="mdeal-title">${escHtml(d.title)}${originBadge(d._origin)}</span>
+          <span class="mdeal-title"><span class="og-title-text">${escHtml(d.title)}</span>${originBadge(d._origin)}</span>
           <span class="mdeal-rep">${escHtml(d.rep||'—')}</span>
           <span class="mdeal-val">${d.value > 0 ? fmtMoney(d.value) : '—'}</span>
           <span class="mdeal-stale" title="Sem toque há +7 dias">⚠️</span>
@@ -1101,7 +1106,7 @@ function renderFeed(won, lost, kpis) {
       <a class="feed-row" href="${AGENDOR_DEAL}${d.id}" target="_blank">
         <div class="feed-dot fd-green"></div>
         <div class="feed-info">
-          <div class="feed-co">${escHtml(d.title)}${originBadge(d._origin)}</div>
+          <div class="feed-co"><span class="og-title-text">${escHtml(d.title)}</span>${originBadge(d._origin)}</div>
           <div class="feed-rep">${escHtml(d.rep||'—')}</div>
         </div>
         <div class="feed-right">
@@ -1117,7 +1122,7 @@ function renderFeed(won, lost, kpis) {
       <a class="feed-row" href="${AGENDOR_DEAL}${d.id}" target="_blank">
         <div class="feed-dot fd-red"></div>
         <div class="feed-info">
-          <div class="feed-co">${escHtml(d.title)}${originBadge(d._origin)}</div>
+          <div class="feed-co"><span class="og-title-text">${escHtml(d.title)}</span>${originBadge(d._origin)}</div>
           <div class="feed-rep">${escHtml(d.rep||'—')}</div>
         </div>
         <div class="feed-right">
