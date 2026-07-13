@@ -848,7 +848,11 @@ function renderHero(k, period, recentWon, truncated) {
   el('period-trunc-badge').style.display = truncated ? 'inline-block' : 'none';
   el('hero-val').textContent = fmtMoney(k.ganhoValor);
   el('hero-sub').textContent = k.ganhoCont + ' negócio' + (k.ganhoCont !== 1 ? 's' : '') + ' fechado' + (k.ganhoCont !== 1 ? 's' : '');
-  el('hero-delta').innerHTML = '';
+  // achado 13/07 (Robert: setas de comparação "sumindo e aparecendo"): render()
+  // roda a cada 60s (auto-refresh) e limpava o delta na hora, só repopulando
+  // quando o fetch separado do período anterior terminava (~1-2s depois) —
+  // pisca visível. Não limpa mais aqui; renderDeltas() sobrescreve quando o
+  // valor novo chega (guard mySeq lá garante que nunca aparece delta trocado).
   if (period) {
     const buckets = sparkBuckets(recentWon, period.from, period.to);
     el('hero-spark').innerHTML = sparklineSVG(buckets, '#22C35D');
@@ -857,13 +861,11 @@ function renderHero(k, period, recentWon, truncated) {
 
 function renderKpiStrip(k, deals) {
   el('k-pipeline').textContent = fmtMoney(k.pipelineTotal);
-  el('k-pipeline-delta').innerHTML = '';
   // Pipeline em R$ só reflete negócios com valor atribuído — o sub-label mostra
   // esse número, não o total bruto no funil (que inclui muitos sem preço ainda).
   const withVal = (deals || []).filter(d => (d.value || 0) > 0).length;
   el('k-ativos').textContent = withVal + ' precificado' + (withVal !== 1 ? 's' : '') + ' de ' + (k.ativos || 0);
   el('k-conv').textContent = k.conversao !== null ? k.conversao + '%' : '—';
-  el('k-conv-delta').innerHTML = '';
   el('k-conv-base').textContent = 'de ' + (k.leadsNoPeriodo || 0) + ' leads';
   el('k-ticket').textContent = k.ticketMedio > 0 ? fmtMoney(k.ticketMedio) : '—';
   el('k-prazo').textContent = k.prazoMedio ? k.prazoMedio + (k.prazoMedio === 1 ? ' dia' : ' dias') : '—';

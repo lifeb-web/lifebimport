@@ -118,9 +118,9 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;heig
    badge solto dentro da linha de destino — deixa explícito que é o "elo" entre
    as duas, sem competir com o espaço já apertado da linha nem mexer na distribuição
    flex (justify-content:space-evenly) que já é delicada nesse card sem scroll. */
-.funil-conn{position:absolute;top:-7px;left:23px;display:flex;align-items:center;gap:4px;background:var(--card);padding:0 5px;z-index:2;line-height:1;pointer-events:none}
-.funil-conn-arrow{font-size:9px;color:var(--amber);font-weight:800}
-.funil-conn-pct{font-size:8px;font-weight:800;color:var(--amber)}
+.funil-conn{position:absolute;top:-9px;left:23px;display:flex;align-items:center;gap:4px;background:var(--card);padding:0 5px;z-index:2;line-height:1;pointer-events:none}
+.funil-conn-arrow{font-size:13px;color:var(--amber);font-weight:800}
+.funil-conn-pct{font-size:12px;font-weight:800;color:var(--amber)}
 .funil-conn-lost{font-size:8px;font-weight:800;color:#b91c1c}
 .funil-conn-sep{color:var(--border)}
 .funil-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
@@ -838,7 +838,12 @@ function renderHero(k, period, recentWon, truncated) {
   el('period-badge').title = truncated ? 'Volume muito alto — parte antiga do histórico pode não estar contada' : '';
   el('hero-val').textContent = fmtMoney(k.ganhoValor);
   el('hero-sub').textContent = k.ganhoCont + ' negócio' + (k.ganhoCont !== 1 ? 's' : '');
-  el('hero-delta').innerHTML = '';
+  // achado 13/07 (Robert: setas de comparação "sumindo e aparecendo"): render()
+  // roda a cada 60s (auto-refresh) e limpava o delta na hora, só repopulando
+  // quando o fetch separado do período anterior terminava (~1-2s depois) —
+  // pisca visível pra quem tá olhando o telão continuamente. Não limpa mais
+  // aqui; renderDeltas() já sobrescreve quando o valor novo chega (e o guard
+  // mySeq lá garante que nunca aparece delta de um período/origem trocado).
   if (period) {
     const buckets = sparkBuckets(recentWon, period.from, period.to);
     el('hero-spark').innerHTML = sparklineSVG(buckets, '#22C35D');
@@ -847,11 +852,9 @@ function renderHero(k, period, recentWon, truncated) {
 
 function renderKpis(k, deals) {
   el('k-pipeline').textContent = fmtMoney(k.pipelineTotal);
-  el('k-pipeline-delta').innerHTML = '';
   const withVal = (deals || []).filter(d => (d.value || 0) > 0).length;
   el('k-ativos').textContent = withVal + ' precificado' + (withVal !== 1 ? 's' : '') + ' de ' + (k.ativos || 0);
   el('k-conv').textContent = k.conversao !== null ? k.conversao + '%' : '—';
-  el('k-conv-delta').innerHTML = '';
   el('k-conv-base').textContent = 'de ' + (k.leadsNoPeriodo || 0) + ' leads';
   el('k-ticket').textContent = k.ticketMedio > 0 ? fmtMoney(k.ticketMedio) : '—';
   el('k-prazo').textContent = k.prazoMedio ? k.prazoMedio + (k.prazoMedio === 1 ? ' dia' : ' dias') : '—';
