@@ -603,9 +603,16 @@ async function loadAdsSection(periodFrom, periodTo, inboundData) {
   sectionEl.style.display = show ? '' : 'none';
   if (!show) return;
   sectionEl.classList.add('mkt-updating'); // dim até os números baterem com o período já exibido no rótulo
+  // achado 12/07: a API do Meta rejeita time_range com mais de ~37 meses (testado
+  // ao vivo: 3 anos funciona, 4 anos já cai pro fallback da planilha — até 1 dia
+  // desatualizada). O filtro "Total" manda from=2020-01-01 só como marcador de
+  // "bem antigo" (a conta é de 2026) — trava o mínimo em 3 anos atrás pra sempre
+  // bater na API ao vivo em vez de cair sem necessidade na planilha.
+  const adsFloor = new Date(); adsFloor.setFullYear(adsFloor.getFullYear() - 3);
+  const adsFrom = periodFrom < adsFloor.toISOString().slice(0, 10) ? adsFloor.toISOString().slice(0, 10) : periodFrom;
   try {
     const [adsR, closedR] = await Promise.all([
-      fetch(LEADS_PROXY + '?action=ads&from=' + periodFrom + '&to=' + periodTo, { cache: 'no-store' }).then(r => r.json()),
+      fetch(LEADS_PROXY + '?action=ads&from=' + adsFrom + '&to=' + periodTo, { cache: 'no-store' }).then(r => r.json()),
       fetch(LEADS_PROXY + '?action=closed', { cache: 'no-store' }).then(r => r.json())
     ]);
     const agR = inboundData || { recentWon: [] };
@@ -894,13 +901,20 @@ function renderFunil(funnel, kpis, recentLost) {
   // quem está parado nela agora) — mesma metodologia do Relatório de Conversão
   // nativo do Agendor. Conversão de etapa usa reached, nunca o snapshot count.
   const reachedFirst = nf.length ? (nf[0].reached ?? nf[0].count) : 0;
+  const reachedLast   = nf.length ? (nf[nf.length-1].reached ?? nf[nf.length-1].count) : 0;
 
   const stageRows = nf.map((s, i) => {
     const pct = Math.max((s.count / max) * 100, 2);
     const ord = STAGE_ORD[String(s.stageId)] || 'o2';
     const reached = s.reached ?? s.count;
     const conv = i === 0 ? null : convFrom(reached, nf[i-1].reached ?? nf[i-1].count);
-    const drop = conv !== null ? `<span class="funil-drop" title="Conversão de ${escHtml(nf[i-1].name)} → ${escHtml(s.name)}">${conv}%</span>` : `<span></span>`;
+    // achado 12/07 (Robert comparou com o Relatório de Conversão nativo do
+    // Agendor): lá cada etapa mostra quantos foram perdidos NELA especificamente.
+    // Grid do mobile já tem 7 colunas fixas — em vez de abrir uma coluna nova
+    // (arriscava cortar em telas estreitas, já sofrido nessa sessão), combina no
+    // mesmo badge da conversão: "34% · 3 perd".
+    const lostSuffix = s.lost > 0 ? ` · ${s.lost} perd` : '';
+    const drop = conv !== null ? `<span class="funil-drop" title="Conversão de ${escHtml(nf[i-1].name)} → ${escHtml(s.name)}${s.lost > 0 ? ' (' + s.lost + ' perdido' + (s.lost===1?'':'s') + ' nesta etapa)' : ''}">${conv}%${lostSuffix}</span>` : `<span></span>`;
     return `
       <div class="funil-row" onclick="openStageModal('${s.stageId}','${s.name}')">
         <div class="funil-stage-dot" style="background:${ORD_DOT[ord]}"></div>
@@ -913,15 +927,17 @@ function renderFunil(funnel, kpis, recentLost) {
       </div>`;
   }).join('');
 
-  const outcomeRow = (name, count, value, color, onclick) => {
-    // Ganhos/Perdidos são resultado CUMULATIVO do funil inteiro — a taxa é sempre
-    // sobre quem entrou na primeira etapa (reachedFirst), igual "taxa de ganho"
-    // do Agendor (18/119=15,1%), nunca sobre o snapshot da última etapa (isso
-    // é o que causava os 367% impossíveis quando Negociação tinha poucos ativos).
-    const pct = convFrom(count, reachedFirst);
+  const outcomeRow = (name, count, value, color, onclick, stageBase) => {
+    // achado 12/07: "Ganhos" usava taxa sobre o funil INTEIRO (reachedFirst) —
+    // diferente do que a seta do Agendor mostra entre a última etapa e Ganhos
+    // (conversão só da etapa anterior, ex: Negociação→Ganhos). Troca pra
+    // deixar a mesma leitura "por etapa" usada nas outras setas do funil.
+    // Perdidos continua sobre o funil inteiro (não tem "uma" etapa anterior —
+    // pode cair de qualquer uma das 3, já detalhado acima em cada linha).
+    const pct = stageBase !== undefined ? convFrom(count, stageBase) : convFrom(count, reachedFirst);
     const barPct = Math.max((count / max) * 100, 2);
     const badge = pct !== null
-      ? `<span class="funil-drop" title="Taxa sobre o total que entrou no funil" style="background:${color==='green'?'#dcfce7':'#fee2e2'};color:${color==='green'?'#15803d':'#b91c1c'}">${color==='green'?'✓':'✕'} ${pct}%</span>`
+      ? `<span class="funil-drop" title="${stageBase !== undefined ? 'Conversão da etapa anterior' : 'Taxa sobre o total que entrou no funil'}" style="background:${color==='green'?'#dcfce7':'#fee2e2'};color:${color==='green'?'#15803d':'#b91c1c'}">${color==='green'?'✓':'✕'} ${pct}%</span>`
       : '<span></span>';
     return `
       <div class="funil-row" onclick="${onclick}" style="border-top:2px solid var(--border)">
@@ -936,7 +952,7 @@ function renderFunil(funnel, kpis, recentLost) {
   };
 
   el('funil-rows').innerHTML = stageRows
-    + outcomeRow('Ganhos', kpis.ganhoCont || 0, kpis.ganhoValor || 0, 'green', 'openWonModal()')
+    + outcomeRow('Ganhos', kpis.ganhoCont || 0, kpis.ganhoValor || 0, 'green', 'openWonModal()', reachedLast)
     + outcomeRow('Perdidos', kpis.perdidoCont || 0, perdidoValor, 'red', 'openLostModal()');
 }
 

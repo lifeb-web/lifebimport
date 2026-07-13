@@ -605,9 +605,16 @@ async function loadAdsSection(periodFrom, periodTo, inboundData) {
   row.classList.toggle('show', show);
   if (!show) return;
   row.classList.add('mkt-updating');
+  // achado 12/07: a API do Meta rejeita time_range com mais de ~37 meses (testado
+  // ao vivo: 3 anos funciona, 4 anos já cai pro fallback da planilha — até 1 dia
+  // desatualizada). O filtro "Total" manda from=2020-01-01 só como marcador de
+  // "bem antigo" (a conta é de 2026) — trava o mínimo em 3 anos atrás pra sempre
+  // bater na API ao vivo em vez de cair sem necessidade na planilha.
+  const adsFloor = new Date(); adsFloor.setFullYear(adsFloor.getFullYear() - 3);
+  const adsFrom = periodFrom < adsFloor.toISOString().slice(0, 10) ? adsFloor.toISOString().slice(0, 10) : periodFrom;
   try {
     const [adsR, closedR] = await Promise.all([
-      fetch(LEADS_PROXY + '?action=ads&from=' + periodFrom + '&to=' + periodTo, { cache: 'no-store' }).then(r => r.json()),
+      fetch(LEADS_PROXY + '?action=ads&from=' + adsFrom + '&to=' + periodTo, { cache: 'no-store' }).then(r => r.json()),
       fetch(LEADS_PROXY + '?action=closed', { cache: 'no-store' }).then(r => r.json())
     ]);
     const agR = inboundData || { recentWon: [] };
@@ -807,7 +814,7 @@ function renderHero(k, period, recentWon, truncated) {
   if (period) el('period-badge').textContent = (truncated ? '⚠ ' : '') + period.label;
   el('period-badge').classList.toggle('trunc', !!truncated);
   el('period-badge').title = truncated ? 'Volume muito alto — parte antiga do histórico pode não estar contada' : '';
-  el('hero-val').textContent = fmtMoneyRound(k.ganhoValor);
+  el('hero-val').textContent = fmtMoney(k.ganhoValor);
   el('hero-sub').textContent = k.ganhoCont + ' negócio' + (k.ganhoCont !== 1 ? 's' : '');
   el('hero-delta').innerHTML = '';
   if (period) {
@@ -864,6 +871,7 @@ function renderFunil(funnel, kpis, recentLost) {
   // quem está parado nela agora) — mesma metodologia do Relatório de Conversão
   // nativo do Agendor. Conversão de etapa usa reached, nunca o snapshot count.
   const reachedFirst = nf.length ? (nf[0].reached ?? nf[0].count) : 0;
+  const reachedLast   = nf.length ? (nf[nf.length-1].reached ?? nf[nf.length-1].count) : 0;
 
   const stageRows = nf.map((s, i) => {
     const pct = Math.max((s.count / max) * 100, 3);
@@ -871,6 +879,11 @@ function renderFunil(funnel, kpis, recentLost) {
     const reached = s.reached ?? s.count;
     const conv = i === 0 ? null : convFrom(reached, nf[i-1].reached ?? nf[i-1].count);
     const drop = conv !== null ? `<span class="drop-pill" title="Conversão de ${escHtml(nf[i-1].name)} → ${escHtml(s.name)}">${conv}%</span>` : '';
+    // achado 12/07 (Robert comparou com o Relatório de Conversão nativo do
+    // Agendor): lá cada etapa mostra quantos foram perdidos NELA especificamente
+    // — aqui só existia um total agregado no fim, sem dar pra saber ONDE o
+    // negócio caiu. mesmo dado (s.lost) já existia, só não aparecia.
+    const lostPill = s.lost > 0 ? `<span class="drop-pill" style="background:#fee2e2;color:#b91c1c" title="Perdidos nesta etapa">${s.lost} perdido${s.lost === 1 ? '' : 's'}</span>` : '';
     return `
       <div class="funil-row" onclick="openStageModal('${s.stageId}','${s.name}')">
         <div class="funil-dot" style="background:${ORD_DOT[ord]}"></div>
@@ -878,19 +891,21 @@ function renderFunil(funnel, kpis, recentLost) {
         <div class="funil-bar-wrap"><div class="funil-bar bar-${ord}" style="width:${pct}%"></div></div>
         <span class="funil-n">${s.count}</span>
         <span class="funil-v">${fmtMoney(s.value)}</span>
-        ${drop}
+        ${lostPill}${drop}
       </div>`;
   }).join('');
 
-  const outcomeRow = (name, count, value, color, onclick) => {
-    // Ganhos/Perdidos são resultado CUMULATIVO do funil inteiro — a taxa é sempre
-    // sobre quem entrou na primeira etapa (reachedFirst), igual "taxa de ganho"
-    // do Agendor (18/119=15,1%), nunca sobre o snapshot da última etapa (isso
-    // é o que causava os 367% impossíveis quando Negociação tinha poucos ativos).
-    const pct = convFrom(count, reachedFirst);
+  const outcomeRow = (name, count, value, color, onclick, stageBase) => {
+    // achado 12/07: "Ganhos" usava taxa sobre o funil INTEIRO (reachedFirst) —
+    // diferente do que a seta do Agendor mostra entre a última etapa e Ganhos
+    // (conversão só da etapa anterior, ex: Negociação→Ganhos). Troca pra
+    // deixar a mesma leitura "por etapa" usada nas outras setas do funil.
+    // Perdidos continua sobre o funil inteiro (não tem "uma" etapa anterior —
+    // pode cair de qualquer uma das 3, já detalhado acima em cada linha).
+    const pct = stageBase !== undefined ? convFrom(count, stageBase) : convFrom(count, reachedFirst);
     const barPct = Math.max((count / max) * 100, 3);
     const badge = pct !== null
-      ? `<span class="drop-pill" title="Taxa sobre o total que entrou no funil" style="background:${color==='green'?'#dcfce7':'#fee2e2'};color:${color==='green'?'#15803d':'#b91c1c'}">${color==='green'?'✓':'✕'} ${pct}%</span>`
+      ? `<span class="drop-pill" title="${stageBase !== undefined ? 'Conversão da etapa anterior' : 'Taxa sobre o total que entrou no funil'}" style="background:${color==='green'?'#dcfce7':'#fee2e2'};color:${color==='green'?'#15803d':'#b91c1c'}">${color==='green'?'✓':'✕'} ${pct}%</span>`
       : '';
     return `
       <div class="funil-row" onclick="${onclick}" style="border-top:2px solid var(--border);padding-top:8px">
@@ -904,7 +919,7 @@ function renderFunil(funnel, kpis, recentLost) {
   };
 
   el('funil-rows').innerHTML = stageRows
-    + outcomeRow('Ganhos', kpis.ganhoCont || 0, kpis.ganhoValor || 0, 'green', 'openWonModal()')
+    + outcomeRow('Ganhos', kpis.ganhoCont || 0, kpis.ganhoValor || 0, 'green', 'openWonModal()', reachedLast)
     + outcomeRow('Perdidos', kpis.perdidoCont || 0, perdidoValor, 'red', 'openLostModal()');
 }
 
@@ -1007,10 +1022,26 @@ function renderFeed(won, lost, kpis) {
 // olhava de longe achava que só existia o que via. Rola devagar até o fim, pausa,
 // volta pro topo, pausa, repete — só ativa quando o conteúdo realmente não cabe.
 const _autoScrollTimers = {};
+const _manualScrollAt   = {};
 function autoScrollIfNeeded(elId, opts) {
   const el2 = document.getElementById(elId);
   if (!el2) return;
   if (_autoScrollTimers[elId]) { clearInterval(_autoScrollTimers[elId]); delete _autoScrollTimers[elId]; }
+
+  // achado 12/07 (Robert usa o telão também no PC, com mouse/trackpad): o
+  // interval antigo escrevia scrollTop toda hora sem checar nada, então
+  // qualquer scroll manual do usuário era engolido no tick seguinte (30ms) —
+  // "fica doido e não deixa". Detecta interação manual e pausa o piloto
+  // automático enquanto o usuário estiver mexendo (+ folga depois de parar).
+  // Listener é preso ao elemento só uma vez (flag), não a cada re-render.
+  if (!el2._manualScrollBound) {
+    const markManual = () => { _manualScrollAt[elId] = Date.now(); };
+    el2.addEventListener('wheel',      markManual, { passive: true });
+    el2.addEventListener('touchstart', markManual, { passive: true });
+    el2.addEventListener('pointerdown', markManual, { passive: true });
+    el2._manualScrollBound = true;
+  }
+
   el2.scrollTop = 0;
   // setTimeout em vez de requestAnimationFrame: rAF só dispara em sincronia com
   // repaint real, que pode nunca vir numa aba sem foco/composição ativa (achado
@@ -1018,12 +1049,22 @@ function autoScrollIfNeeded(elId, opts) {
   // mesmo risco numa TV real com economia de energia). setTimeout não depende disso.
   setTimeout(() => {
     if (el2.scrollHeight <= el2.clientHeight + 2) return; // cabe tudo, sem necessidade de rolar
-    const pauseTop    = (opts && opts.pauseTop)    || 3500;
-    const pauseBottom = (opts && opts.pauseBottom) || 3500;
-    const speed       = (opts && opts.speed)       || 0.4; // px por tick de 30ms
+    const pauseTop      = (opts && opts.pauseTop)      || 3500;
+    const pauseBottom   = (opts && opts.pauseBottom)   || 3500;
+    const speed         = (opts && opts.speed)         || 0.4; // px por tick de 30ms
+    const MANUAL_RESUME = 4000; // ms parado sem mexer pra devolver o controle ao piloto automático
     let phase = 'waitTop', phaseStart = Date.now(), accScroll = 0;
     _autoScrollTimers[elId] = setInterval(() => {
       const now = Date.now();
+      const manualAt = _manualScrollAt[elId] || 0;
+      if (now - manualAt < MANUAL_RESUME) {
+        // usuário mexendo (ou acabou de mexer): não toca no scrollTop, e mantém
+        // as fases "resetadas" na posição atual — quando ele soltar, o ciclo
+        // continua dali (pausa → rola) em vez de pular pro topo ou pra onde
+        // o piloto automático estava antes da interação.
+        phase = 'waitTop'; phaseStart = now; accScroll = el2.scrollTop;
+        return;
+      }
       if (phase === 'waitTop') {
         if (now - phaseStart > pauseTop) phase = 'scrolling';
         return;
@@ -1174,13 +1215,6 @@ function fmtMoney(v) {
   if (!v && v !== 0) return '—';
   return 'R$ ' + v.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 }
-// achado 12/07 (auditoria UX): centavos no número #1 da tela (Ganho no período)
-// competem por atenção à toa numa leitura rápida de longe — usado só ali.
-function fmtMoneyRound(v) {
-  if (!v && v !== 0) return '—';
-  return 'R$ ' + Math.round(v).toLocaleString('pt-BR');
-}
-
 function fmtDateDisplay(iso) {
   if (!iso) return '—';
   const p = iso.split('-');
