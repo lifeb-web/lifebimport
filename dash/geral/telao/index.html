@@ -26,8 +26,6 @@ body{width:100%;height:100vh;overflow:hidden;font-family:var(--font);font-weight
 #lb{position:fixed;top:0;left:0;height:2px;width:0;background:linear-gradient(90deg,var(--purple),var(--magenta));z-index:9999;pointer-events:none;transition:width .2s,opacity .4s}
 /* Telão fica sozinho na sala — erro precisa ser VISÍVEL, não só no console
    que ninguém olha. Fica preso enquanto o erro persistir; some ao recuperar. */
-#err-toast{display:none;position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:9998;background:#7f1d1d;color:#fff;padding:8px 20px;border-radius:10px;font-size:12px;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.3);max-width:80vw;text-align:center}
-#err-toast.show{display:block}
 #lb.on{animation:lb 1.6s ease-in-out infinite}
 @keyframes lb{0%{width:0;opacity:1}60%{width:80%;opacity:1}100%{width:100%;opacity:0}}
 
@@ -55,9 +53,14 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;heig
 #period-badge.trunc{color:#8a6100;background:#fff3cd;border-color:#e8c468}
 .pchip.active[data-p="total"]{background:linear-gradient(90deg,#d4af37,#f0d878);color:#3a2e00;border-color:#d4af37}
 #htime{font-size:18px;font-weight:800;color:var(--purple);font-variant-numeric:tabular-nums}
-#rdot{width:8px;height:8px;border-radius:50%;background:var(--green);opacity:.3;flex-shrink:0}
+#rdot{width:8px;height:8px;border-radius:50%;background:var(--green);opacity:.3;flex-shrink:0;cursor:default}
 #rdot.flash{animation:rdot 1.4s ease forwards}
 @keyframes rdot{0%{opacity:.3;transform:scale(1)}18%{opacity:1;transform:scale(1.7);box-shadow:0 0 8px rgba(34,195,93,.6)}100%{opacity:.3;transform:scale(1)}}
+/* achado 12/07 (Robert: erro grande "feio" no telão, roubando atenção da sala) —
+   telão nunca mostra banner de erro, só o mesmo pontinho de status ficando âmbar
+   com leve pulso; título (hover) tem a mensagem completa pra quem usa com mouse. */
+#rdot.err{background:var(--amber);opacity:1;animation:rdotErr 2s ease-in-out infinite}
+@keyframes rdotErr{0%,100%{opacity:.5}50%{opacity:1;box-shadow:0 0 6px rgba(217,119,6,.6)}}
 
 #body{flex:1;display:flex;flex-direction:column;padding:8px 14px 10px;gap:7px;overflow:hidden;min-height:0;transition:opacity .15s}
 #body.refreshing{opacity:.55}
@@ -221,7 +224,6 @@ footer strong{color:#fff}
 </head>
 <body>
 <div id="lb"></div>
-<div id="err-toast"></div>
 
 <header>
   <div class="h-brand">
@@ -457,11 +459,20 @@ function applyCustom() {
 }
 
 function showErr(msg) {
-  const b = el('err-toast');
-  b.textContent = '⚠ ' + msg;
-  b.classList.add('show');
+  // telão fica com a sala toda olhando — banner grande de erro "rouba atenção"
+  // à toa pra falha que na maioria das vezes é passageira (rate limit, API
+  // instável) e some sozinha no próximo refresh de 60s. Só o pontinho de status
+  // (já existia pro "dado atualizou") vira âmbar com leve pulso — dá pra ver
+  // que algo não está 100%, sem gritar. Mensagem completa fica no title (hover).
+  const d = el('rdot');
+  d.classList.add('err');
+  d.title = msg;
 }
-function hideErr() { el('err-toast').classList.remove('show'); }
+function hideErr() {
+  const d = el('rdot');
+  d.classList.remove('err');
+  d.title = '';
+}
 
 // Mensagens de erro do proxy vêm com stack trace do Apps Script embutido
 // (achado 10/07) — mostra só a primeira frase pro usuário, o resto vai pro console.
