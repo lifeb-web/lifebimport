@@ -679,8 +679,31 @@ async function fetchPrevious(pq, mySeq) {
 
 function scheduleRefresh(delayMs) {
   clearTimeout(_refreshTimer);
-  _refreshTimer = setTimeout(() => loadData(false), delayMs || 60000);
+  _refreshTimer = setTimeout(() => { loadData(false); checkForUpdate(); }, delayMs || 60000);
 }
+
+// ── AUTO-ATUALIZAÇÃO — Robert pediu (13/07): ninguém quer dar F5 manual em
+// todo dispositivo depois de cada deploy. Junto do refresh de dado (60s),
+// rebusca o próprio HTML (cache:no-store) e compara um hash simples do texto
+// contra o que carregou na aba. Mudou = tem deploy novo = recarrega sozinho.
+// Sem versão pra manter manualmente — funciona pra sempre a partir do
+// primeiro F5 depois deste deploy.
+let _pageHash = null;
+function simpleHash(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) { h = (Math.imul(31, h) + str.charCodeAt(i)) | 0; }
+  return h;
+}
+async function checkForUpdate() {
+  try {
+    const res = await fetch(location.pathname + '?_v=' + Date.now(), { cache: 'no-store' });
+    const text = await res.text();
+    const hash = simpleHash(text);
+    if (_pageHash === null) { _pageHash = hash; return; }
+    if (hash !== _pageHash) location.reload();
+  } catch (e) { /* falha de rede: tenta de novo no próximo ciclo, nunca recarrega sem certeza */ }
+}
+checkForUpdate();
 
 function flashDot() {
   const d = el('rdot');
