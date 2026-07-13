@@ -801,7 +801,7 @@ function render(d) {
 
 function renderHero(k, period, recentWon) {
   if (period) el('period-badge').textContent = period.label;
-  el('hero-val').textContent = fmtMoney(k.ganhoValor);
+  el('hero-val').textContent = fmtMoneyRound(k.ganhoValor);
   el('hero-sub').textContent = k.ganhoCont + ' negócio' + (k.ganhoCont !== 1 ? 's' : '');
   el('hero-delta').innerHTML = '';
   if (period) {
@@ -1167,6 +1167,12 @@ function el(id) { return document.getElementById(id); }
 function fmtMoney(v) {
   if (!v && v !== 0) return '—';
   return 'R$ ' + v.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+// achado 12/07 (auditoria UX): centavos no número #1 da tela (Ganho no período)
+// competem por atenção à toa numa leitura rápida de longe — usado só ali.
+function fmtMoneyRound(v) {
+  if (!v && v !== 0) return '—';
+  return 'R$ ' + Math.round(v).toLocaleString('pt-BR');
 }
 
 function fmtDateDisplay(iso) {
