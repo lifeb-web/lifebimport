@@ -58,6 +58,9 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 #period-bar::-webkit-scrollbar{display:none}
 .pchip{flex-shrink:0;padding:6px 14px;border-radius:20px;border:1.5px solid var(--border);font-family:var(--font);font-size:11px;font-weight:700;color:var(--muted);background:#fff;cursor:pointer;white-space:nowrap}
 .pchip.active{background:var(--text);color:#fff;border-color:var(--text)}
+.pchip.active[data-p="total"]{background:linear-gradient(90deg,#d4af37,#f0d878);color:#3a2e00;border-color:#d4af37}
+.total-badge{display:none;margin-left:6px;padding:2px 8px;border-radius:10px;background:linear-gradient(90deg,#d4af37,#f0d878);color:#3a2e00;font-size:9px;font-weight:800;letter-spacing:.4px;vertical-align:middle}
+.trunc-badge{display:none;margin-left:6px;padding:2px 8px;border-radius:10px;background:#fff3cd;color:#8a6100;font-size:9px;font-weight:800;letter-spacing:.3px;vertical-align:middle;border:1px solid #e8c468}
 #custom-dates{display:none;padding:8px 18px 12px;background:#fff;border-bottom:1px solid var(--border);gap:8px;align-items:center;flex-wrap:wrap}
 #custom-dates.show{display:flex}
 .datel{font-size:11px;font-weight:700;color:var(--muted)}
@@ -257,6 +260,7 @@ footer strong{color:#fff}
   <button class="pchip" data-p="prev_month" onclick="setPeriod(this)">Mês ant.</button>
   <button class="pchip" data-p="30d"        onclick="setPeriod(this)">30 dias</button>
   <button class="pchip" data-p="90d"        onclick="setPeriod(this)">90 dias</button>
+  <button class="pchip" data-p="total"      onclick="setPeriod(this)">Total</button>
   <button class="pchip" data-p="custom"     onclick="setPeriod(this)">Personalizado</button>
 </div>
 
@@ -271,7 +275,7 @@ footer strong{color:#fff}
 <div id="main">
   <div id="err-banner"></div>
 
-  <div class="sec-hd">Visão Geral · <span id="period-label" style="color:var(--purple);font-weight:800">90 dias</span></div>
+  <div class="sec-hd">Visão Geral · <span id="period-label" style="color:var(--purple);font-weight:800">90 dias</span><span id="period-total-badge" class="total-badge">⏳ HISTÓRICO COMPLETO</span><span id="period-trunc-badge" class="trunc-badge" title="Volume muito alto — parte antiga do histórico pode não estar contada">⚠ parcial</span></div>
 
   <!-- HERO -->
   <div id="hero" onclick="openWonModal()">
@@ -737,7 +741,8 @@ function mergeBoth(ob, ib) {
     deals: tagOrigin(ob.deals,'outbound').concat(tagOrigin(ib.deals,'inbound')),
     recentWon: tagOrigin(ob.recentWon,'outbound').concat(tagOrigin(ib.recentWon,'inbound')).sort((a,b)=>b.closedAt.localeCompare(a.closedAt)),
     recentLost: tagOrigin(ob.recentLost,'outbound').concat(tagOrigin(ib.recentLost,'inbound')).sort((a,b)=>b.closedAt.localeCompare(a.closedAt)),
-    period: ob.period
+    period: ob.period,
+    truncated: !!(ob.truncated || ib.truncated)
   };
 }
 
@@ -817,15 +822,17 @@ function sparklineSVG(vals, color) {
 
 // ── RENDER ───────────────────────────────────────────────────
 function render(d) {
-  renderHero(d.kpis, d.period, d.recentWon);
+  renderHero(d.kpis, d.period, d.recentWon, d.truncated);
   renderKpiStrip(d.kpis, d.deals);
   renderFunil(d.funnel, d.kpis, d.recentLost);
   renderReps(d.reps, d.deals);
   renderFeed(d.recentWon, d.recentLost, d.kpis);
 }
 
-function renderHero(k, period, recentWon) {
+function renderHero(k, period, recentWon, truncated) {
   if (period) el('period-label').textContent = period.label;
+  el('period-total-badge').style.display = (period && period.type === 'total') ? 'inline-block' : 'none';
+  el('period-trunc-badge').style.display = truncated ? 'inline-block' : 'none';
   el('hero-val').textContent = fmtMoney(k.ganhoValor);
   el('hero-sub').textContent = k.ganhoCont + ' negócio' + (k.ganhoCont !== 1 ? 's' : '') + ' fechado' + (k.ganhoCont !== 1 ? 's' : '');
   el('hero-delta').innerHTML = '';

@@ -51,7 +51,9 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;heig
 .datein{border:1.5px solid var(--border);border-radius:6px;padding:3px 4px;font-family:var(--font);font-size:10px;font-weight:600;color:var(--text);background:#fff;outline:none;width:106px}
 .btn-apply{padding:4px 12px;background:var(--purple);color:#fff;border:none;border-radius:6px;font-family:var(--font);font-size:10px;font-weight:700;cursor:pointer}
 .h-right{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-left:auto}
-#period-badge{font-size:10px;font-weight:700;color:var(--purple);background:rgba(112,75,155,.08);padding:3px 10px;border-radius:12px;white-space:nowrap}
+#period-badge{font-size:10px;font-weight:700;color:var(--purple);background:rgba(112,75,155,.08);padding:3px 10px;border-radius:12px;white-space:nowrap;border:1px solid transparent}
+#period-badge.trunc{color:#8a6100;background:#fff3cd;border-color:#e8c468}
+.pchip.active[data-p="total"]{background:linear-gradient(90deg,#d4af37,#f0d878);color:#3a2e00;border-color:#d4af37}
 #htime{font-size:18px;font-weight:800;color:var(--purple);font-variant-numeric:tabular-nums}
 #rdot{width:8px;height:8px;border-radius:50%;background:var(--green);opacity:.3;flex-shrink:0}
 #rdot.flash{animation:rdot 1.4s ease forwards}
@@ -240,6 +242,7 @@ footer strong{color:#fff}
     <button class="pchip" data-p="prev_month" onclick="setPeriod(this)">Mês ant.</button>
     <button class="pchip" data-p="30d"        onclick="setPeriod(this)">30 dias</button>
     <button class="pchip" data-p="90d"        onclick="setPeriod(this)">90 dias</button>
+    <button class="pchip" data-p="total"      onclick="setPeriod(this)">Total</button>
     <button class="pchip" data-p="custom"     onclick="setPeriod(this)">Personalizado</button>
     <div id="custom-panel">
       <input class="datein" type="date" id="dt-from">
@@ -716,7 +719,8 @@ function mergeBoth(ob, ib) {
     deals: tagOrigin(ob.deals,'outbound').concat(tagOrigin(ib.deals,'inbound')),
     recentWon: tagOrigin(ob.recentWon,'outbound').concat(tagOrigin(ib.recentWon,'inbound')).sort((a,b)=>b.closedAt.localeCompare(a.closedAt)),
     recentLost: tagOrigin(ob.recentLost,'outbound').concat(tagOrigin(ib.recentLost,'inbound')).sort((a,b)=>b.closedAt.localeCompare(a.closedAt)),
-    period: ob.period
+    period: ob.period,
+    truncated: !!(ob.truncated || ib.truncated)
   };
 }
 
@@ -791,7 +795,7 @@ function sparklineSVG(vals, color) {
 
 // ── RENDER ───────────────────────────────────────────────────
 function render(d) {
-  renderHero(d.kpis, d.period, d.recentWon);
+  renderHero(d.kpis, d.period, d.recentWon, d.truncated);
   renderKpis(d.kpis, d.deals);
   renderFunil(d.funnel, d.kpis, d.recentLost);
   renderSaude(d.kpis, d.funnel);
@@ -799,8 +803,10 @@ function render(d) {
   renderFeed(d.recentWon, d.recentLost, d.kpis);
 }
 
-function renderHero(k, period, recentWon) {
-  if (period) el('period-badge').textContent = period.label;
+function renderHero(k, period, recentWon, truncated) {
+  if (period) el('period-badge').textContent = (truncated ? '⚠ ' : '') + period.label;
+  el('period-badge').classList.toggle('trunc', !!truncated);
+  el('period-badge').title = truncated ? 'Volume muito alto — parte antiga do histórico pode não estar contada' : '';
   el('hero-val').textContent = fmtMoneyRound(k.ganhoValor);
   el('hero-sub').textContent = k.ganhoCont + ' negócio' + (k.ganhoCont !== 1 ? 's' : '');
   el('hero-delta').innerHTML = '';
