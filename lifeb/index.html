@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-xxx"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-xxx');
+    </script>
+
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ 
+    <title>Life B</title>
+
+    <!-- SEO -->
+    <meta name="description" content="Transforme acessórios em lucro pra sua loja.">
+    <meta name="keywords" content="Life B, Projeto JLBV, acessórios de beleza, faturamento farmácia, mix de produtos supermercado, exposição estratégica, gestão de acessórios, indústria Life B">
+    <meta name="author" content="Life B">
+
+    <!-- Open Graph (Redes Sociais) -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="/">
+    <meta property="og:title" content="Life B">
+    <meta property="og:description" content="Transforme acessórios em lucro pra sua loja.">
+    <meta property="og:image" content="img/capa.png">
+    <meta property="og:image:alt" content="Life B">
+    <meta property="fb:app_id" content="xxx">
+    
+
+    <!-- Favicon -->
+    <link rel="apple-touch-icon" sizes="57x57" href="favicon/apple-icon-57x57.png">
+    <link rel="apple-touch-icon" sizes="60x60" href="favicon/apple-icon-60x60.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="favicon/apple-icon-72x72.png">
+    <link rel="apple-touch-icon" sizes="76x76" href="favicon/apple-icon-76x76.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="favicon/apple-icon-114x114.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="favicon/apple-icon-120x120.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="favicon/apple-icon-144x144.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="favicon/apple-icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-icon-180x180.png">
+    <link rel="icon" type="image/png" sizes="192x192"  href="favicon/android-icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="favicon/favicon-96x96.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon/favicon-16x16.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="msapplication-TileColor" content="#ffffff">
+    <meta name="msapplication-TileImage" content="favicon/ms-icon-144x144.png">
+    <meta name="theme-color" content="#ffffff">
+
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.css"></noscript>
+    <script defer src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.js"></script>
+    
+    <style>
+        .lb-caption{
+            font-weight: normal !important;
+        }
+    </style>
+
+    <script src="js/jquery.js"></script>
+
+    <script defer src="js/jquery.mask.js"></script>
+
+    <link href="css/site.css?v=20260708171200" rel="stylesheet" type="text/css">
+
+    <script>
+        function abre_conteudo(qual){
+
+            window.history.pushState(null,null,''+qual);
+
+            if(!qual){
+                qual='inicio';
+            }
+            rolagem('.'+qual);
+
+            $('.item').removeClass('selecionado');
+            $('.item_'+qual).addClass('selecionado');
+
+            fecha_menu();
+
+            return (false);
+        }
+        function rolagem(qual) {
+            fecha_menu();
+            if($(qual).offset()){
+                $('html,body').animate({
+                    scrollTop: $(qual).offset().top-30
+                }, 'slow');
+            }
+        }
+        function abre_menu(){
+            if($('.menu').css('display')!='none'){
+                fecha_menu();
+            }else {
+                if($(window).width()<=1024) {
+                    $('.topo').height(370);
+                }
+                $('.menu').show();
+                $('.ico_menu img').prop('src', 'img/ico_menuclose.png');
+            }
+        }
+        function fecha_menu(){
+            if($('.ico_menu').css('display')=='none') {
+                if($(window).width()<=1024) {
+                    $('.topo').height(370);
+                }
+                $('.menu').show();
+            }else{
+                $('.topo').height('auto');
+                $('.menu').hide();
+            }
+            $('.ico_menu img').prop('src', 'img/ico_menu.png');
+        }
+       
+        let resizeTimer;
+
+        $(function () {
+          $('.mask-cpf').mask('999.999.999-99');    
+          $('.mask-celular').mask('(99) 99999-9999');
+              $('.mask-cep').mask('99999-999');
+
+            $(window).scroll(function(){
+              if($(window).scrollTop()>=100){
+                $('header').addClass('background');
+              }else{
+                $('header').removeClass('background');
+              }
+            });
+
+            // $(window).resize(function(){
+            //   clearTimeout(resizeTimer);
+            //   resizeTimer = setTimeout(function() {
+            //     reorganiza();
+            //   }, 250);
+            // });
+            reorganiza();
+
+        });
+        function reorganiza(){
+          
+          reorganizaq('banners','banner',4);
+          reorganizaq('video-grid','video-item',3);
+          reorganizaq('napratica','napratica-card',3);
+          reorganizaq('results-grid','result-card',3);
+          
+        }
+        function reorganizaq(qual,qual2,maximo){
+          
+          qnt=Math.floor(($(window).width()-90)/$('.'+qual2).outerWidth(true));
+
+          if(qnt>maximo){
+            qnt=maximo;
+          }
+          w=$('.'+qual2).outerWidth(true)*qnt;
+          $('.'+qual).width(w);//w
+          $('.'+qual).find('.paginas').html('');
+          larguraPagina=$('.'+qual2).outerWidth(true)*qnt;
+          pgs = Math.ceil($('.'+qual2).length/qnt);
+          //console.log(qual+' '+qnt+' '+pgs);
+          if(pgs>1){
+            for(k=0;k<pgs;k++){ 
+              $('.'+qual).find('.paginas').append('<div class="pagina pagina'+(k+1)+' '+(k==0?'ativa':'')+'" onclick="irParaPagina(\''+qual+'\',\''+qual2+'\',\''+(k+1)+'\',\''+larguraPagina+'\')">'+(k+1)+'</div>');
+            }
+            $('.'+qual).parent().find('.setae,.setad').show();
+          }else{
+            $('.'+qual).parent().find('.setae,.setad').hide();
+          }
+        }
+
+        const quais2 = {
+            'banners': 'banner',
+            'video-grid': 'video-item',
+            'napratica': 'napratica-card',
+            'results-grid': 'result-card'
+        };
+        
+        var paginaAtual=Array();
+
+        function paginaProxima(qual){
+          atual = paginaAtual[qual]?paginaAtual[qual]:1;
+          //if(atual>1){
+            irParaPagina(qual, quais2[qual], atual+1);
+          //}
+        }
+        function paginaAnterior(qual){
+          atual = paginaAtual[qual]?paginaAtual[qual]:1;
+          //if(atual>1){
+            irParaPagina(qual, quais2[qual], atual-1);
+          //}
+        }
+
+        function irParaPagina(qual, qual2, i) {
+          if(i<1){
+            return;
+          }
+
+          // 1. Encontra os elementos
+          var container = $('.' + qual);
+          var rolagem = container.find('.' + qual + '_rolagem'); // Ex: .banners_rolagem
+          
+          // 2. Calcula a largura de UM item (incluindo a margem se houver)
+          // Usamos o primeiro item como referência
+          var larguraItem = container.find('.'+qual2).outerWidth(true); 
+          
+          // 3. Descobre quantos itens cabem por "página" visualmente
+          // Se seu script mostra 3 banners por vez, a página 2 deve pular 3 banners.
+          // Se mostra apenas 1, pula 1.
+          var itensPorPagina = Math.floor(container.width() / larguraItem) || 1;
+          
+          console.log(itensPorPagina+' '+(i*itensPorPagina)+' '+container.find('.'+qual2).length);
+
+          if(i>Math.ceil(container.find('.'+qual2).length/itensPorPagina)){
+            return;
+          }
+          
+          // 4. Calcula o deslocamento
+          // Se i=1 (pág 1), deslocamento é 0.
+          // Se i=2, deslocamento é a largura de (itensPorPagina * 1)
+          var deslocamento = (i - 1) * (larguraItem * itensPorPagina);
+
+          paginaAtual[qual]=i;
+
+          // 5. APLICA O MOVIMENTO
+          rolagem.css({
+              'transform': 'translateX(-' + deslocamento + 'px)',
+              'transition': '0.5s ease-in-out' // Para o movimento ser suave
+          });
+
+          // 6. Atualiza as bolinhas (paginas)
+          container.find('.pagina').removeClass('ativa');
+          container.find('.pagina' + i).addClass('ativa');
+      }
+
+        function irParaPaginax(sessao,numeroPagina,larguraPagina) {
+          const janela = document.querySelector('.'+sessao);
+          const trem = document.querySelector('.'+sessao+'_rolagem');
+          
+          // A largura de uma "página" é a largura total da div banners
+          //const larguraPagina = janela.offsetWidth;
+          
+          // Calcula o deslocamento (Ex: Página 1 = 0px, Página 2 = 1200px...)
+           deslocamento = ((numeroPagina - 1) * larguraPagina);
+         
+          
+          // Move o container
+          trem.style.transform = `translateX(-${deslocamento}px)`;
+
+          console.log('.'+sessao+' .paginas .pagina');
+          $('.'+sessao+' .paginas .pagina').removeClass('ativa');
+          $('.'+sessao+' .paginas .pagina'+numeroPagina).addClass('ativa');
+          
+        }
+
+        $(document).ready(function() {
+            let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
+            let estaAnimando = false; // TRAVA DE SEGURANÇA
+
+            function handleGesture(qual, qual2) {
+                if (estaAnimando) return; // Se já estiver movendo, ignora novos comandos
+
+                const threshold = 50;
+                const $container = $('.' + qual);
+                const $bolinhaAtiva = $container.find('.pagina.ativa');
+                
+                // Se não achar a bolinha, cancela para não travar o cálculo
+                if (!$bolinhaAtiva.length) return;
+
+                let paginaAtual = parseInt($bolinhaAtiva.text()) || 1;
+                let totalPaginas = $container.find('.pagina').length;
+
+                const diffX = touchStartX - touchEndX;
+                const diffY = touchStartY - touchEndY;
+
+                if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > threshold) {
+                    estaAnimando = true; // Bloqueia novas entradas
+                    
+                    if (diffX > 0 && paginaAtual < totalPaginas) {
+                        irParaPagina(qual, qual2, paginaAtual + 1);
+                    } else if (diffX < 0 && paginaAtual > 1) {
+                        irParaPagina(qual, qual2, paginaAtual - 1);
+                    }
+
+                    // Libera a trava após a animação (0.5s é o tempo do seu CSS)
+                    setTimeout(() => { estaAnimando = false; }, 500);
+                }
+            }
+
+            const carrosseis = ['banners', 'video-grid', 'napratica', 'results-grid'];
+            
+
+            carrosseis.forEach(qual => {
+                const el = document.querySelector('.' + qual);
+                if (!el) return;
+
+                // Touch Events
+                el.addEventListener('touchstart', e => {
+                    touchStartX = e.changedTouches[0].screenX;
+                    touchStartY = e.changedTouches[0].screenY;
+                }, { passive: true });
+
+                el.addEventListener('touchmove', e => {
+                    if (estaAnimando) return;
+                    let moveX = Math.abs(e.changedTouches[0].screenX - touchStartX);
+                    let moveY = Math.abs(e.changedTouches[0].screenY - touchStartY);
+                    if (moveX > moveY) e.preventDefault(); 
+                }, { passive: false });
+
+                el.addEventListener('touchend', e => {
+                    touchEndX = e.changedTouches[0].screenX;
+                    touchEndY = e.changedTouches[0].screenY;
+                    handleGesture(qual, quais2[qual]);
+                }, { passive: true });
+
+                // MOUSE SWIPE (Para Desktop não travar ao arrastar)
+                el.addEventListener('mousedown', e => {
+                    touchStartX = e.screenX;
+                    touchStartY = e.screenY;
+                });
+
+                el.addEventListener('mouseup', e => {
+                    touchEndX = e.screenX;
+                    touchEndY = e.screenY;
+                    handleGesture(qual, quais2[qual]);
+                });
+            });
+
+            // REORGANIZAÇÃO COM DEBOUNCE REAL
+            let timeoutId;
+            $(window).on('resize', function() {
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => {
+                    // Roda as funções de correção apenas UMA VEZ após o resize parar
+                    if(typeof reorganizaq === 'function') {
+                        carrosseis.forEach(c => reorganizaq(c, quais2[c]));
+                    }
+                }, 300);
+            });
+        });        
+    </script>
+
+  <!-- Sweetalert via CDN (Sem depender de arquivos locais) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/1.1.3/sweetalert.min.css">
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/1.1.3/sweetalert.min.js"></script>
+
+</head>
+
+<body>
+    
+<!-- HEADER -->
+<header>
+  <div class="conteudo">
+    <a href=""><img class="logo" src="img/logo.png" alt="Life B" style="filter:brightness(0) invert(1)"></a>
+    <a href="https://wa.me/5562996437218?text=Ol%C3%A1%2C%20estou%20no%20site%20da%20Life%20B%2C%20e%20gostaria%20de%20falar%20com%20um%20consultor" class="btn-wa-header" target="_blank">
+      <div class="btwhats">
+        <div class="label">Fale com um consultor</div>
+        <div class="ico"><img src="img/ico_whatsapp.png"></div>
+      </div>
+    </a>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <h1>Transforme ace<span style="letter-spacing:-13px;">s</span> sórios<br>em <span class="efeito">lucro pra sua loja</span></h1>
+  <p>Com o Projeto Exclusivo JLBV, você aumenta o ticket médio, atualiza o ponto de vendas e deixa seus concorrentes por impulso a diferença entre os seus concorrentes.</p>
+  
+  <a class="setae" href="" onclick="paginaAnterior('banners');return(false);"><img src="img/setae.png"></a>
+  <div class="banners">
+    <div class="banners_rolagem">
+      
+        <div class="banner">
+          <img src="uploads/banners/20260503140744464.jpeg" alt="Projeto JLBV Farmácias">
+          <p>Projeto JLBV Farmácias</p>
+        </div>
+
+        <div class="banner">
+          <img src="uploads/banners/20260503140839189.jpeg" alt="Projeto JLBV Farmácias">
+          <p>Projeto JLBV Farmácias</p>
+        </div>
+
+        <div class="banner">
+          <img src="uploads/banners/20260503140958234.jpeg" alt="Projeto JLBV Supermercados">
+          <p>Projeto JLBV Supermercados</p>
+        </div>
+
+        <div class="banner">
+          <img src="uploads/banners/20260503141023597.jpeg" alt="Projeto JLBV Supermercados">
+          <p>Projeto JLBV Supermercados</p>
+        </div>
+      
+    </div>
+    <div class="paginas"></div>
+  </div>
+  <a class="setad" href="" onclick="paginaProxima('banners');return(false);"><img src="img/setad.png"></a>
+    
+</section>
+
+<!-- ABOUT -->
+<section class="about">
+  <h2>A Life B é uma indústria, está instalada no Polo Empresarial Goiás e é líder no Centro-Oeste</h2>
+  <div class="conteudo">
+    <div class="about-img">
+      <img src="img/industria.jpg">
+      <span class="building-label"><strong>Desde 2019</strong><br>Polo Empresarial Goiás</span>
+    </div>
+    <div class="about-textos">
+      <div class="stat-list">
+        
+        <div class="stat-item">
+          <div class="stat-num">+1400 SKUs</div>
+          <div class="stat-desc">Mix completo de acessórios de saúde, higiene e beleza<br>Produtos com visual e qualidade percebida<br>Maior valor agregado e lucratividade</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num">+500 Lançamentos em 2026</div>
+          <div class="stat-desc"></div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num">+2000 projetos implantados em farmácias, supermercados e lojas de cosméticos</div>
+          <div class="stat-desc"></div>
+        </div>
+        
+      </div>
+    </div>
+    <a href="https://wa.me/5562996437218?text=Ol%C3%A1%2C%20estou%20no%20site%20da%20Life%20B%2C%20e%20gostaria%20desse%20resultado%20na%20minha%20loja" class="no_hover" target="_blank">
+        <div class="btn-cta btn-cta-industria">
+          <div class="label">Quero esse resultado na minha loja</div>
+          <div class="icone"><img src="img/ico_whatsapp.png"></div>
+        </div>
+      </a>
+  </div>
+</section>
+
+
+  <!-- TESTIMONIALS -->
+  <section class="testimonials">
+    <h2 class="section-title">Resultados Reais</h2>
+    <p class="section-sub">Quem implantou o JLBV comprova</p>
+    <a class="setae" href="" onclick="paginaAnterior('video-grid');return(false);"><img src="img/setae.png"></a>
+    <div class="video-grid carousel">
+      <div class="video-grid_rolagem carousel_rolagem">
+        
+          <a 
+            href="https://vimeo.com/1178399214" 
+            data-fancybox="gallery" 
+            class="no_hover"
+            data-thumb="https://i.vimeocdn.com/video/2139975734-15a0f78b044548caabdd9b5857472e10c5f007b9da7d2fcc1e860bea4d29b285-d_200x150?region=us"
+            data-caption="Resultados Rede Economia"
+          >
+            <div class="video-card video-item">
+              <div class="video-thumb" style="
+              background-image:linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)),url('https://i.vimeocdn.com/video/2139975734-15a0f78b044548caabdd9b5857472e10c5f007b9da7d2fcc1e860bea4d29b285-d_200x150?region=us')">
+                <div class="play-btn"><img src="img/ico_play.png"></div>
+              </div>
+              <div class="video-label">Resultados Rede Economia</div>
+            </div>
+          </a>
+
+          <a 
+            href="https://www.youtube.com/watch?v=aOR4aUSp-zE" 
+            data-fancybox="gallery" 
+            class="no_hover"
+            data-thumb="https://img.youtube.com/vi/aOR4aUSp-zE/mqdefault.jpg"
+            data-caption="Projeto JLVB Farmácias"
+          >
+            <div class="video-card video-item">
+              <div class="video-thumb" style="
+              background-image:linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)),url('https://img.youtube.com/vi/aOR4aUSp-zE/mqdefault.jpg')">
+                <div class="play-btn"><img src="img/ico_play.png"></div>
+              </div>
+              <div class="video-label">Projeto JLVB Farmácias</div>
+            </div>
+          </a>
+          
+      </div>
+      <div class="paginas"></div>
+    </div>
+    <a class="setad" href="" onclick="paginaProxima('video-grid');return(false);"><img src="img/setad.png"></a>
+  </section>
+
+
+<!-- GUARANTEE -->
+<section class="guarantee">
+  <h2 class="section-title">Maximização dos resultados, o projeto JLBV garante um crescimento mínimo na categoria de 300%.</h2>
+  <div class="features-grid">
+    <div class="feature-item">
+      <div class="feature-icon"><img src="img/icon01.png"></div>
+      <h4>Compra direto da indústria com os melhores preços e condições</p>
+    </div>
+    <div class="feature-item">
+      <div class="feature-icon"><img src="img/icon02.png"></div>
+      <h4>Projeto JLBV com inspiração internacional (EUA)</h4>
+    </div>
+    <div class="feature-item">
+      <div class="feature-icon"><img src="img/icon03.png"></div>
+      <h4>Vendedor silencioso, merchandising inteligente (+ sell-out)</p>
+    </div>
+    <div class="feature-item">
+      <div class="feature-icon"><img src="img/icon04.png"></div>
+      <h4>Nossos concorrentes fornecem acessórios, nós soluções rentáveis!</p>
+    </div>
+  </div>
+  <a href="https://wa.me/5562996437218?text=Ol%C3%A1%2C%20estou%20no%20site%20da%20Life%20B%2C%20e%20gostaria%20de%20saber%20mais%20informa%C3%A7%C3%B5es" class="no_hover" target="_blank">
+    <div class="btn-cta">
+      <div class="label">Quero saber mais informações</div>
+      <div class="icone"><img src="img/ico_whatsapp.png"></div>
+    </div>
+  </a>
+</section>
+
+
+<!-- IN PRACTICE -->
+<section class="in-practice">
+  <h2 class="section-title" style="color:#fff">Veja o projeto JLBV Life B funcionando na prática!</h2>
+  <p class="section-sub">O projeto Mega Vision JLB organiza os acessórios de forma categórica, atribui soluções, empíra asfaltam rendas de vendas, maxima a rentabilidade e estimula a compra por impulso</p>
+  <div>
+    <a class="setae" href="" onclick="paginaAnterior('napratica');return(false);"><img src="img/setae.png"></a>
+    <div class="napratica carousel">
+      <div class="napratica_rolagem carousel_rolagem">
+        
+        <a 
+            href="uploads/napratica/20260508173301479.jpeg" 
+            data-fancybox="gallerynapratica" 
+            class="no_hover"
+            data-thumb="uploads/napratica/20260508173301479.jpeg"
+            data-caption="Mais exposição"
+          >
+            <div class="carousel-item video-card napratica-card ">
+              <div class="video-thumb" style="background-image:url('uploads/napratica/20260508173301479.jpeg')"></div>
+              <div class="video-label">Mais exposição</div>
+            </div>
+          </a>
+
+          <a 
+            href="uploads/napratica/20260508173428242.jpeg" 
+            data-fancybox="gallerynapratica" 
+            class="no_hover"
+            data-thumb="uploads/napratica/20260508173428242.jpeg"
+            data-caption="Mais giro do produto"
+          >
+            <div class="carousel-item video-card napratica-card ">
+              <div class="video-thumb" style="background-image:url('uploads/napratica/20260508173428242.jpeg')"></div>
+              <div class="video-label">Mais giro do produto</div>
+            </div>
+          </a>
+
+          <a 
+            href="uploads/napratica/20260508173503383.jpeg" 
+            data-fancybox="gallerynapratica" 
+            class="no_hover"
+            data-thumb="uploads/napratica/20260508173503383.jpeg"
+            data-caption="Mais faturamento"
+          >
+            <div class="carousel-item video-card napratica-card ">
+              <div class="video-thumb" style="background-image:url('uploads/napratica/20260508173503383.jpeg')"></div>
+              <div class="video-label">Mais faturamento</div>
+            </div>
+          </a>
+          
+      </div>
+      <div class="paginas"></div>
+    </div>
+    <a class="setad" href="" onclick="paginaProxima('napratica');return(false);"><img src="img/setad.png"></a>
+  </div>
+  
+  <a href="https://wa.me/5562996437218?text=Ol%C3%A1%2C%20estou%20no%20site%20da%20Life%20B%2C%20e%20gostaria%20de%20implantar%20na%20minha%20loja" class="no_hover" target="_blank">
+    <div class="btn-cta">
+      <div class="label">Quero implantar na minha loja</div>
+      <div class="icone"><img src="img/ico_whatsapp.png"></div>
+    </div>
+  </a>
+
+</section>
+
+<!-- CONHECA JLBV -->
+<section class="conheca">
+  <h2 class="section-title">Conheça Projeto JLBV</h2>
+  <p class="section-sub">Um método exclusivo criado para escalar seu faturamento e lucratividade, diferenciando-se dos seus concorrentes e encantando o principal público da loja que são as mulheres.</p>
+  <div class="pillars-grid">
+    <div class="pillar-card">
+      <div class="pillar-icon"><img src="img/ico_money.png"></div>
+      <div class="pillar-textos">
+        <h4>Produto & Inovação</h4>
+        <p>Produtos pensados em "dores", "desejos" e vendas por "impulso".</p>
+      </div>
+    </div>
+    <div class="pillar-card">
+      <div class="pillar-icon"><img src="img/ico_money.png"></div>
+      <div class="pillar-textos">
+        <h4>Exposição estratégica</h4>
+        <p>Projeto Mega Vision USA. Mais visibilidade nas gôndolas "vendas por impulso e ativação de memória".</p>
+      </div>
+    </div>
+    <div class="pillar-card">
+      <div class="pillar-icon"><img src="img/ico_money.png"></div>
+      <div class="pillar-textos">
+        <h4>Alta rentabilidade</h4>
+        <p>Categoria com maior rentabilidade na loja, baixo investimento e alta lucratividade.</p>
+      </div>
+    </div>
+    <div class="pillar-card">
+      <div class="pillar-icon"><img src="img/ico_money.png"></div>
+      <div class="pillar-textos">
+        <h4>Venda silenciosa</h4>
+        <p>Técnicas de exposição que fazem nossos produtos venderem naturalmente.</p>
+      </div>
+    </div>
+    <div class="pillar-card">
+      <div class="pillar-icon"><img src="img/ico_money.png"></div>
+      <div class="pillar-textos">
+        <h4>Alta conversão</h4>
+        <p>Produtos focados em itens consagrados na internet, nas "dores" e "desejos" especialmente do público feminino.</p>
+      </div>
+    </div>
+    <div class="pillar-card">
+      <div class="pillar-icon"><img src="img/ico_money.png"></div>
+      <div class="pillar-textos">
+        <h4>Mais canais</h4>
+        <p>Migramos os produtos mais desejados do e-commerce para o ponto de venda físico, capturando a demanda latente do consumidor.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- RESULTS CARDS -->
+<section class="results">
+  <h2 class="section-title">Resultados</h2>
+  <p class="section-sub"></p>
+  <a class="setae" href="" onclick="paginaAnterior('results-grid');return(false);"><img src="img/setae.png"></a>
+  <div class="carousel results-grid">
+    <div class="carousel_rolagem results-grid_rolagem">
+      
+      <div class="result-card">
+        <img class="pin" src="img/ico_pin.png">
+        <div class="result-texto">
+          Antes da implantação do projeto JLBV a rede faturava R$ 27.000 em acessórios, atualmente está faturando R$ 160.000, crescimento de 500%.
+          <div class="result-partner"><img src="uploads/depoimentos/20260510005457896.png"></div>
+        </div>
+      </div>
+
+      <div class="result-card">
+        <img class="pin" src="img/ico_pin.png">
+        <div class="result-texto">
+          Antes do projeto a rede faturava R$ 3.000 em acessórios, atualmente está faturando R$ 12.000, crescimento de 300%.
+          <div class="result-partner"><img src="uploads/depoimentos/20260510005516995.png"></div>
+        </div>
+      </div>
+
+      <div class="result-card">
+        <img class="pin" src="img/ico_pin.png">
+        <div class="result-texto">
+          Antes do JLBV a rede faturava R$ 15.000 em acessórios, atualmente está faturando R$ 80.000, crescimento de 450%.
+          <div class="result-partner"><img src="uploads/depoimentos/20260510005522680.png"></div>
+        </div>
+      </div>
+      
+    </div>
+    <div class="paginas"></div>
+  </div>
+  <a class="setad" href="" onclick="paginaProxima('results-grid');return(false);"><img src="img/setad.png"></a>
+</section>
+
+<!-- FAQ -->
+<section class="faq">
+  <div class="faq-inner">
+    <div class="faq-list">
+      
+      <div class="faq-item open">
+        <div class="faq-q"><div class="faq-q-t">1. O que é o Projeto JLBV?</div><div class="arrow"><img src="img/ico_mais.png"></div></div>
+        <div class="faq-a">É um método exclusivo da Life B que organiza e expõe acessórios nas gôndolas com o padrão Mega Vision USA. Transforma espaços parados em pontos de alta lucratividade, com crescimento mínimo de 300% na categoria.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q"><div class="faq-q-t">2. Qual o investimento e prazo de implantação?</div><div class="arrow"><img src="img/ico_mais.png"></div></div>
+        <div class="faq-a">O investimento é acessível e proporcional ao tamanho da loja, com compra direta da indústria (sem intermediários). A implantação é rápida, em média poucos dias, sem interromper o funcionamento do estabelecimento.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q"><div class="faq-q-t">3. Quais estabelecimentos podem aderir?</div><div class="arrow"><img src="img/ico_mais.png"></div></div>
+        <div class="faq-a">Farmácias, drogarias, supermercados e lojas de cosméticos. Já são mais de 2.000 projetos implantados em todo o Brasil, com resultados comprovados em redes como Droga Center (DF) e Drogarias Distrital (DF).</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q"><div class="faq-q-t">4. Qual o crescimento esperado?</div><div class="arrow"><img src="img/ico_mais.png"></div></div>
+        <div class="faq-a">O crescimento mínimo esperado é de 300%. Nossos cases reais demonstram resultados superiores: Droga Center cresceu 500% (de R$ 27 mil para R$ 160 mil) e Drogarias Distrital cresceu 450%.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q"><div class="faq-q-t">5. Como solicitar uma proposta?</div><div class="arrow"><img src="img/ico_mais.png"></div></div>
+        <div class="faq-a">Clique em qualquer botão de WhatsApp nesta página para falar com um consultor. Você receberá o catálogo completo e uma proposta personalizada para o seu negócio.</div>
+      </div>
+      
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="final-cta">
+  <h2>Quer implantar agora o projeto JLBV da Life B e garantir todos esses <span class="efeito">diferenciais estratégicos?</span></h2>
+  
+  <a href="https://wa.me/5562996437218" class="no_hover" target="_blank">
+      <div class="btn-cta">
+        <div class="label">Falar com consultor agora</div>
+        <div class="icone"><img src="img/ico_whatsapp.png"></div>
+      </div>
+    </a>
+
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <img class="logo" src="img/logo.png" alt="Life B">
+  <div class="texto">
+    LVL IMPORTADORA LTDA | CNPJ: 33.751.598/0001-00<br>
+    © 2026 Life B. Todos os direitos reservados.
+  </div>
+</footer>
+
+
+<script>
+  // FAQ accordion (Mantido como estava)
+  document.querySelectorAll('.faq-q').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const item = btn.parentElement;
+      const isOpen = item.classList.contains('open');
+      document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+      if (!isOpen) item.classList.add('open');
+    });
+  }); 
+
+  // Intersection Observer Ajustado
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        // Se o elemento for um container de carrossel, animamos os filhos
+        if (e.target.classList.contains('banners') || e.target.classList.contains('results-grid') || e.target.classList.contains('video-grid')) {
+            // Busca todos os cards internos desse container específico
+            const cards = e.target.querySelectorAll('.banner, .result-card, .video-card');
+            cards.forEach((card, index) => {
+                // Delay em cascata (opcional) para ficar mais elegante
+                setTimeout(() => {
+                    card.style.animation = 'fadeUp .7s ease both';
+                }, index * 100); 
+            });
+        } else {
+            // Para itens simples (que não são carrossel), anima normalmente
+            e.target.style.animation = 'fadeUp .7s ease both';
+        }
+        
+        // Para de observar após animar
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.1 });
+
+  // 1. Itens que devem animar individualmente (fora de carrosséis)
+  document.querySelectorAll('.stat-item, .feature-item, .pillar-card').forEach(el => {
+    el.style.opacity = '0';
+    observer.observe(el);
+  });
+
+  // 2. Containers dos carrosséis (animam todos os filhos de uma vez)
+  // Ajuste as classes abaixo conforme os nomes das suas divs principais
+  document.querySelectorAll('.banners, .results-grid, .video-grid').forEach(container => {
+    // Garante que os cards comecem invisíveis
+    container.querySelectorAll('.banner, .result-card, .video-card').forEach(card => card.style.opacity = '0');
+    observer.observe(container);
+  });
+</script>
+</body>
+
+</html>
