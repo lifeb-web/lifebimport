@@ -46,6 +46,8 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;heig
 .pchip.active{background:var(--text);color:#fff;border-color:var(--text);box-shadow:0 2px 6px -1px rgba(26,22,38,.25)}
 #custom-panel{display:none;align-items:center;gap:6px;margin-left:4px}
 #custom-panel.show{display:flex}
+#month-pick-panel{display:none;align-items:center;gap:6px;margin-left:4px}
+#month-pick-panel.show{display:flex}
 .datein{border:1.5px solid var(--border);border-radius:6px;padding:3px 4px;font-family:var(--font);font-size:10px;font-weight:600;color:var(--text);background:#fff;outline:none;width:106px}
 .btn-apply{padding:4px 12px;background:var(--purple);color:#fff;border:none;border-radius:6px;font-family:var(--font);font-size:10px;font-weight:700;cursor:pointer}
 .h-right{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-left:auto}
@@ -62,8 +64,8 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;heig
 #rdot.err{background:var(--amber);opacity:1;animation:rdotErr 2s ease-in-out infinite}
 @keyframes rdotErr{0%,100%{opacity:.5}50%{opacity:1;box-shadow:0 0 6px rgba(217,119,6,.6)}}
 
-#body{flex:1;display:flex;flex-direction:column;padding:8px 14px 10px;gap:7px;overflow:hidden;min-height:0;transition:opacity .15s}
-#body.refreshing{opacity:.55}
+#body{flex:1;display:flex;flex-direction:column;padding:8px 14px 10px;gap:7px;overflow:hidden;min-height:0;transition:opacity .25s ease,filter .25s ease}
+#body.refreshing{opacity:.85;filter:saturate(.85)}
 /* Fetch de Ads é mais lento (3 sub-chamadas) que o principal — dim próprio
    preso ao ciclo de vida real desse fetch, senão o rótulo de período novo
    fica ao lado de números de Ads ainda do período anterior por um instante. */
@@ -216,6 +218,12 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;heig
 @keyframes skel{0%{background-position:200% 0}100%{background-position:-200% 0}}
 .skel{display:inline-block;height:.85em;background:linear-gradient(90deg,#e8e4f0 25%,#d0cae6 50%,#e8e4f0 75%);background-size:200% 100%;animation:skel 1.4s linear infinite;border-radius:4px;min-width:60px}
 
+/* Flash sutil quando um número visível muda de valor (setTextFlash) — só dispara
+   quando o texto realmente muda, nunca à toa nos refreshes automáticos de 60s
+   onde nada mudou (a TV fica ligada o dia todo, flash constante seria irritante). */
+@keyframes valFlash{0%{background:rgba(112,75,155,.16)}100%{background:transparent}}
+.val-flash{animation:valFlash 900ms ease-out;border-radius:6px}
+
 footer{background:var(--text);color:rgba(255,255,255,.6);text-align:center;padding:6px;font-size:10px;flex-shrink:0}
 footer strong{color:#fff}
 
@@ -256,11 +264,15 @@ footer strong{color:#fff}
     <button class="pchip" data-p="30d"        onclick="setPeriod(this)">30 dias</button>
     <button class="pchip" data-p="90d"        onclick="setPeriod(this)">90 dias</button>
     <button class="pchip" data-p="total"      onclick="setPeriod(this)">Total</button>
+    <button class="pchip" data-p="month_pick" onclick="setPeriod(this)">📅 Mês</button>
     <button class="pchip" data-p="custom"     onclick="setPeriod(this)">Personalizado</button>
     <div id="custom-panel">
       <input class="datein" type="date" id="dt-from">
       <input class="datein" type="date" id="dt-to">
       <button class="btn-apply" onclick="applyCustom()">Aplicar</button>
+    </div>
+    <div id="month-pick-panel">
+      <input class="datein" type="month" id="mp-month" onchange="applyMonthPick()">
     </div>
   </div>
 
@@ -415,6 +427,18 @@ let _refreshTimer = null;
 let _reqSeq = 0;
 let _lastErrMsg = ''; // usado só pra detectar erro de cota e espaçar o retry
 
+// ── CACHE DE SESSÃO (SWR) — mesma lógica do mobile (achado 14/07): trocar de
+// filtro sempre esperava ida à rede, mesmo já tendo mostrado aquele exato combo
+// poucos segundos antes. Guarda a última resposta boa por combinação mode+period+
+// from/to por 90s (um pouco menos que o cache de 120s do proxy). Ao trocar de
+// filtro: se tem cache válido, mostra na hora e SEGUE revalidando por trás —
+// nunca troca o botão ↻ manual, que sempre vai na rede de verdade.
+const _respCache = new Map();
+const SESSION_CACHE_MS = 90000;
+function sessionCacheKey() {
+  return _originMode + '|' + _period + '|' + (_customFrom||'') + '|' + (_customTo||'');
+}
+
 // Mostra o último dado bom salvo NA HORA, antes até da primeira busca de rede
 // terminar (achado 12/07: primeiro carregamento sempre ficava com esqueleto até
 // a resposta chegar, mesmo já tendo dado de uma sessão recente guardado). Some
@@ -426,6 +450,12 @@ try {
     render(_data);
   }
 } catch(_) {}
+// Cold start de verdade (sem snapshot nenhum salvo — TV recém-ligada, cache
+// limpo): sem isso #funil-rows/#lb-rows/#won-rows/#lost-rows ficam em branco
+// por vários segundos até a 1ª resposta de rede chegar. render() (chamado logo
+// abaixo por loadData()) já sobrescreve tudo sozinho via innerHTML quando o
+// dado real (ou o cache de sessão) chegar — não precisa remover manualmente.
+if (!_data) renderSkeletonSections();
 
 function tickClock() {
   const n = new Date();
@@ -455,8 +485,10 @@ function setPeriod(btn) {
   btn.classList.add('active');
   _period = btn.dataset.p;
   const cp = el('custom-panel');
-  if (_period === 'custom') { cp.classList.add('show'); return; }
-  cp.classList.remove('show');
+  const mp = el('month-pick-panel');
+  if (_period === 'custom') { cp.classList.add('show'); mp.classList.remove('show'); return; }
+  if (_period === 'month_pick') { mp.classList.add('show'); cp.classList.remove('show'); return; }
+  cp.classList.remove('show'); mp.classList.remove('show');
   loadData(false);
 }
 
@@ -466,6 +498,27 @@ function applyCustom() {
   if (f > t) { showErr('A data "De" não pode ser depois da data "até".'); return; }
   hideErr();
   _customFrom = f; _customTo = t;
+  loadData(false);
+}
+
+const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+let _monthPickLabel = '';
+
+// Filtro "Mês" — mesma lógica do mobile: <input type="month"> nativo, resolve
+// from/to aqui e manda como period=custom (o proxy já aceita, zero mudança de
+// servidor). Mês corrente vai até HOJE, mês passado vai até o último dia.
+function applyMonthPick() {
+  const ym = el('mp-month').value; // 'YYYY-MM'
+  if (!ym) return;
+  const [y, m] = ym.split('-').map(Number);
+  const today = new Date();
+  const isCurrentMonth = (y === today.getFullYear() && m === today.getMonth() + 1);
+  const toDate = isCurrentMonth ? today : new Date(y, m, 0);
+  const fmt = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  _customFrom = fmt(new Date(y, m - 1, 1));
+  _customTo   = fmt(toDate);
+  _monthPickLabel = MESES_PT[m - 1] + ' de ' + y;
+  hideErr();
   loadData(false);
 }
 
@@ -499,8 +552,11 @@ function periodQuery(force, fromOverride, toOverride) {
     if (force) q += '&bust=1';
     return q;
   }
-  let q = '&period=' + _period;
-  if (_period === 'custom' && _customFrom && _customTo) q += '&from=' + _customFrom + '&to=' + _customTo;
+  // month_pick não existe no proxy — resolve pro mesmo period=custom que
+  // "Personalizado" já usa, só que com from/to calculados a partir do mês
+  // escolhido (ver applyMonthPick). Zero mudança de servidor necessária.
+  let q = '&period=' + (_period === 'month_pick' ? 'custom' : _period);
+  if ((_period === 'custom' || _period === 'month_pick') && _customFrom && _customTo) q += '&from=' + _customFrom + '&to=' + _customTo;
   if (force) q += '&bust=1';
   return q;
 }
@@ -510,6 +566,20 @@ async function fetchOrigin(origin, q) {
   const json = await res.json();
   if (!json.ok) throw new Error(json.error || 'Erro no proxy (' + origin + ')');
   return json;
+}
+
+// Modo "Ambos": tenta o proxy computar outbound+inbound numa ÚNICA chamada
+// (?origin=both — precisa da versão do .gs colada em 14/07). Se o proxy ainda
+// for o antigo (ou a chamada falhar por qualquer motivo), cai pro par de
+// chamadas paralelas de sempre — nunca quebra o painel por causa disso.
+async function fetchBoth(q) {
+  try {
+    const res = await fetch(PROXY_URL + '?origin=both' + q);
+    const json = await res.json();
+    if (json && json.ok && json.outbound && json.inbound) return json;
+  } catch (_) {}
+  const [ob, ib] = await Promise.all([fetchOrigin('outbound', q), fetchOrigin('inbound', q)]);
+  return { outbound: ob, inbound: ib };
 }
 
 function prevRangeOf(period) {
@@ -530,12 +600,23 @@ async function loadData(force) {
   if (force) el('body').classList.add('refreshing');
   const q = periodQuery(force);
 
+  // SWR: troca de filtro (force=false) pra um combo já visto nesta sessão nos
+  // últimos 90s renderiza NA HORA e segue revalidando por trás — botão ↻ manual
+  // (force=true) sempre ignora e vai na rede.
+  if (!force) {
+    const cached = _respCache.get(sessionCacheKey());
+    if (cached && (Date.now() - cached.ts) < SESSION_CACHE_MS) {
+      _data = cached.data;
+      render(_data);
+    }
+  }
+
   try {
     let curr, ibData = null;
     if (_originMode === 'both') {
-      const [ob, ib] = await Promise.all([fetchOrigin('outbound', q), fetchOrigin('inbound', q)]);
-      curr = mergeBoth(ob, ib);
-      ibData = ib;
+      const both = await fetchBoth(q);
+      curr = mergeBoth(both.outbound, both.inbound);
+      ibData = both.inbound;
     } else {
       curr = await fetchOrigin(_originMode, q);
       if (_originMode === 'inbound') ibData = curr;
@@ -559,6 +640,7 @@ async function loadData(force) {
     hideErr();
     render(_data);
     flashDot();
+    _respCache.set(sessionCacheKey(), { ts: Date.now(), data: curr });
     try { localStorage.setItem('geral_telao_snapshot', JSON.stringify({ data: curr, savedAt: Date.now() })); } catch(_) {}
   } catch(e) {
     console.error('Erro:', e.message);
@@ -601,8 +683,8 @@ async function loadData(force) {
 
 async function fetchPrevious(pq) {
   if (_originMode === 'both') {
-    const [ob, ib] = await Promise.all([fetchOrigin('outbound', pq), fetchOrigin('inbound', pq)]);
-    return mergeKpis(ob.kpis, ib.kpis);
+    const both = await fetchBoth(pq);
+    return mergeKpis(both.outbound.kpis, both.inbound.kpis);
   }
   const r = await fetchOrigin(_originMode, pq);
   return r.kpis;
@@ -639,6 +721,19 @@ checkForUpdate();
 function flashDot() {
   const d = el('rdot');
   d.classList.remove('flash'); void d.offsetWidth; d.classList.add('flash');
+}
+
+// Flash sutil no próprio número quando o valor muda entre um render e o
+// próximo — só quando o texto realmente muda (nunca à toa nos refreshes de
+// 60s onde nada mudou). Também dispara na 1ª vez que o dado real substitui o
+// skeleton — esperado: sinaliza "chegou o dado de verdade".
+function setTextFlash(id, text) {
+  const node = el(id);
+  if (!node) return;
+  if (node.textContent !== text) {
+    node.textContent = text;
+    node.classList.remove('val-flash'); void node.offsetWidth; node.classList.add('val-flash');
+  }
 }
 
 // ── INVESTIMENTO / CAC / CPL / ROAS / ACOS — filtrado pelo período selecionado ──
@@ -845,6 +940,72 @@ function sparklineSVG(vals, color) {
   </svg>`;
 }
 
+// ── SKELETON (cold start) ──────────────────────────────────────
+// Placeholders de shimmer pras 3 listas que hoje ficam literalmente vazias até
+// a 1ª resposta de rede chegar (só o hero-row já tinha .skel). Mesmas classes
+// de container das linhas reais (pro tamanho bater certinho num layout sem
+// scroll de página), mas NUNCA clicáveis/navegáveis: sem onclick, sem <a href>.
+const _SKEL_GREY = '#e8e4f0';
+
+function skeletonFunilRow(barPct) {
+  return `
+    <div class="funil-row" style="cursor:default">
+      <div class="funil-dot" style="background:${_SKEL_GREY}"></div>
+      <span class="funil-name"><span class="skel" style="width:96px"></span></span>
+      <div class="funil-bar-wrap"><div class="funil-bar" style="width:${barPct}%;background:${_SKEL_GREY}"></div></div>
+      <span class="funil-n"><span class="skel" style="width:20px"></span></span>
+      <span class="funil-v"><span class="skel" style="width:64px"></span></span>
+    </div>`;
+}
+
+function skeletonLbRow() {
+  return `
+    <div class="lb-row" style="cursor:default">
+      <div class="lb-top-row">
+        <span class="lb-rank"></span>
+        <span class="lb-name"><span class="skel" style="width:110px"></span></span>
+        <span class="lb-conv"><span class="skel" style="width:30px"></span></span>
+        <div class="lb-funnel"></div>
+        <div class="pipeline-cell">
+          <span class="pipeline-val"><span class="skel" style="width:56px"></span></span>
+          <div class="pipeline-bar-wrap"><div class="pipeline-bar" style="width:40%;background:${_SKEL_GREY}"></div></div>
+        </div>
+        <span class="lb-num"><span class="skel" style="width:56px"></span></span>
+        <span class="lb-num"><span class="skel" style="width:22px"></span></span>
+      </div>
+      <div class="lb-sub">
+        <span><span class="skel" style="width:48px"></span></span>
+        <span><span class="skel" style="width:48px"></span></span>
+        <span><span class="skel" style="width:48px"></span></span>
+      </div>
+    </div>`;
+}
+
+function skeletonFeedRow() {
+  return `
+    <div class="feed-row" style="cursor:default">
+      <div class="feed-dot" style="background:${_SKEL_GREY}"></div>
+      <div class="feed-info">
+        <div class="feed-co"><span class="skel" style="width:120px"></span></div>
+        <div class="feed-rep"><span class="skel" style="width:70px;height:.75em"></span></div>
+      </div>
+      <div class="feed-right">
+        <div class="feed-val"><span class="skel" style="width:56px"></span></div>
+        <div class="feed-date"><span class="skel" style="width:34px;height:.7em"></span></div>
+      </div>
+    </div>`;
+}
+
+function renderSkeletonSections() {
+  // 3 etapas + Ganhos + Perdidos, mesma leitura visual do funil real (barras
+  // decrescendo e o desfecho "Ganhos" mais cheio) sem precisar de dado nenhum.
+  el('funil-rows').innerHTML = [78, 55, 35, 90, 20].map(skeletonFunilRow).join('');
+  el('lb-rows').innerHTML = Array(5).fill(0).map(skeletonLbRow).join('');
+  const feedSkel = Array(4).fill(0).map(skeletonFeedRow).join('');
+  el('won-rows').innerHTML = feedSkel;
+  el('lost-rows').innerHTML = feedSkel;
+}
+
 // ── RENDER ───────────────────────────────────────────────────
 function render(d) {
   renderHero(d.kpis, d.period, d.recentWon, d.truncated);
@@ -856,10 +1017,13 @@ function render(d) {
 }
 
 function renderHero(k, period, recentWon, truncated) {
-  if (period) el('period-badge').textContent = (truncated ? '⚠ ' : '') + period.label;
+  // month_pick: o proxy devolve o label genérico de "custom" (dd/mm → dd/mm) —
+  // sobrescreve com o nome do mês escolhido, bem mais legível ("Julho de 2026").
+  const periodLabel = (_period === 'month_pick' && _monthPickLabel) ? _monthPickLabel : (period ? period.label : '');
+  if (period) el('period-badge').textContent = (truncated ? '⚠ ' : '') + periodLabel;
   el('period-badge').classList.toggle('trunc', !!truncated);
   el('period-badge').title = truncated ? 'Volume muito alto — parte antiga do histórico pode não estar contada' : '';
-  el('hero-val').textContent = fmtMoney(k.ganhoValor);
+  setTextFlash('hero-val', fmtMoney(k.ganhoValor));
   el('hero-sub').textContent = k.ganhoCont + ' negócio' + (k.ganhoCont !== 1 ? 's' : '');
   // achado 13/07 (Robert: setas de comparação "sumindo e aparecendo"): render()
   // roda a cada 60s (auto-refresh) e limpava o delta na hora, só repopulando
@@ -874,17 +1038,17 @@ function renderHero(k, period, recentWon, truncated) {
 }
 
 function renderKpis(k, deals) {
-  el('k-pipeline').textContent = fmtMoney(k.pipelineTotal);
+  setTextFlash('k-pipeline', fmtMoney(k.pipelineTotal));
   const withVal = (deals || []).filter(d => (d.value || 0) > 0).length;
   el('k-ativos').textContent = withVal + ' precificado' + (withVal !== 1 ? 's' : '') + ' de ' + (k.ativos || 0);
-  el('k-conv').textContent = k.conversao !== null ? k.conversao + '%' : '—';
+  setTextFlash('k-conv', k.conversao !== null ? k.conversao + '%' : '—');
   el('k-conv-base').textContent = 'de ' + (k.leadsNoPeriodo || 0) + ' leads';
-  el('k-ticket').textContent = k.ticketMedio > 0 ? fmtMoney(k.ticketMedio) : '—';
-  el('k-prazo').textContent = k.prazoMedio ? k.prazoMedio + (k.prazoMedio === 1 ? ' dia' : ' dias') : '—';
-  el('k-stale').textContent = k.staleTotal;
+  setTextFlash('k-ticket', k.ticketMedio > 0 ? fmtMoney(k.ticketMedio) : '—');
+  setTextFlash('k-prazo', k.prazoMedio ? k.prazoMedio + (k.prazoMedio === 1 ? ' dia' : ' dias') : '—');
+  setTextFlash('k-stale', String(k.staleTotal));
   el('k-stale-sub').textContent = k.staleTotal > 0 ? '+7 dias' : 'em dia';
-  el('k-perdido').textContent = k.perdidoCont;
-  el('k-leads').textContent = k.leadsNoPeriodo !== undefined ? k.leadsNoPeriodo : '—';
+  setTextFlash('k-perdido', String(k.perdidoCont));
+  setTextFlash('k-leads', k.leadsNoPeriodo !== undefined ? String(k.leadsNoPeriodo) : '—');
 }
 
 function normFunnel(funnel) {
@@ -912,7 +1076,14 @@ function renderFunil(funnel, kpis, recentLost) {
   el('funil-badge').textContent = kpis.ativos + ' ativos';
   const nf = normFunnel(funnel);
   const perdidoValor = (recentLost || []).reduce((s, d) => s + (d.value || 0), 0);
-  const max = Math.max(...nf.map(s => s.count), kpis.ganhoCont || 0, kpis.perdidoCont || 0, 1);
+  // achado 14/07 (Robert comparou 1:1 com o Relatório de Conversão nativo do
+  // Agendor, print em mãos): o número GRANDE de cada etapa e a barra usavam
+  // `count` (só quem está PARADO ali agora) em vez de `reached` (quem já
+  // PASSOU por ali), o que fazia o funil parecer completamente errado
+  // comparado ao relatório do Agendor, mesmo a % de conversão (que já usava
+  // reached) batendo certinho por trás. Bar/número grande agora usam reached
+  // também — mesma leitura "cumulativa" do relatório nativo.
+  const max = Math.max(...nf.map(s => s.reached ?? s.count), kpis.ganhoCont || 0, kpis.perdidoCont || 0, 1);
   const convFrom = (count, prevCount) => prevCount > 0 ? Math.round((count / prevCount) * 100) : null;
 
   // "reached" = quantos negócios já ENTRARAM nessa etapa em algum momento (não é
@@ -922,9 +1093,9 @@ function renderFunil(funnel, kpis, recentLost) {
   const reachedLast   = nf.length ? (nf[nf.length-1].reached ?? nf[nf.length-1].count) : 0;
 
   const stageRows = nf.map((s, i) => {
-    const pct = Math.max((s.count / max) * 100, 3);
-    const ord = STAGE_ORD[String(s.stageId)] || 'o2';
     const reached = s.reached ?? s.count;
+    const pct = Math.max((reached / max) * 100, 3);
+    const ord = STAGE_ORD[String(s.stageId)] || 'o2';
     const conv = i === 0 ? null : convFrom(reached, nf[i-1].reached ?? nf[i-1].count);
     // achado 13/07 (Robert: conversão "confusa", pediu seta como o Agendor faz):
     // tag flutuante ↓XX% sobreposta na linha divisória ACIMA da etapa de destino
@@ -945,7 +1116,7 @@ function renderFunil(funnel, kpis, recentLost) {
         <div class="funil-dot" style="background:${ORD_DOT[ord]}"></div>
         <span class="funil-name">${s.name}</span>
         <div class="funil-bar-wrap"><div class="funil-bar bar-${ord}" style="width:${pct}%"></div></div>
-        <span class="funil-n">${s.count}</span>
+        <span class="funil-n">${reached}</span>
         <span class="funil-v">${fmtMoney(s.value)}</span>
         ${lostPill}
       </div>`;
@@ -1191,10 +1362,13 @@ function openRepModal(repId) {
 
 function openPipelineModal() {
   if (!_data) return;
-  const deals = _data.deals;
+  // Robert (14/07): o card mostra o Pipeline em R$ (só soma quem TEM valor
+  // atribuído) — o modal tem que abrir a MESMA lista, não todo negócio ativo
+  // (antes incluía sem-valor, que não compõe aquele R$ nenhum e só confundia).
+  const deals = _data.deals.filter(d => (d.value || 0) > 0);
   el('modal-title').textContent = 'Pipeline Ativo — ' + deals.length + ' negócios';
   el('modal-body').innerHTML = deals.length === 0
-    ? '<div class="modal-empty">Sem negócios ativos</div>'
+    ? '<div class="modal-empty">Nenhum negócio ativo com valor atribuído</div>'
     : deals.map(d => {
         const ord = STAGE_ORD[String(d.stageId)] || 'o2';
         return `
