@@ -161,8 +161,15 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;heig
 .lb-name{font-size:15px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lb-conv{font-size:12px;font-weight:800;text-align:center;color:var(--purple);flex-shrink:0;width:48px;font-variant-numeric:tabular-nums}
 .lb-conv.low{color:var(--red)} .lb-conv.nil{color:var(--faint)}
-.lb-funnel{display:flex;height:9px;border-radius:5px;overflow:hidden;background:#f0ebf8;flex:1;box-shadow:inset 0 1px 2px rgba(90,58,128,.08)}
-.lb-funnel .seg-o1{background:var(--o1)} .lb-funnel .seg-o2{background:var(--o2)} .lb-funnel .seg-o3{background:var(--o3)}
+/* 14/07: era uma barra empilhada só de cor, sem número — testada ao vivo com
+   o Robert e ninguém conseguia decifrar de longe na TV. Virou "onde o rep tá
+   mais concentrado": bolinha colorida (mesma cor das outras telas) + nome da
+   etapa + contagem, tudo em texto legível a distância. */
+.lb-funnel{display:flex;align-items:center;gap:5px;flex:1;min-width:0;overflow:hidden}
+.lb-funnel-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.lb-funnel-txt{font-size:11px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lb-funnel-txt b{font-weight:800;color:var(--muted)}
+.lb-funnel.empty .lb-funnel-txt{color:var(--faint);font-weight:700}
 .lb-num{font-size:13px;font-weight:800;color:var(--text);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .lb-sub{padding-left:44px;font-size:10px;font-weight:600;color:var(--muted);display:flex;gap:14px;flex-wrap:nowrap;overflow:hidden}
 .lb-sub b{color:var(--text);font-weight:800}
@@ -303,7 +310,7 @@ footer strong{color:#fff}
       <span class="kc-sub" id="k-ativos">—</span>
     </div>
     <div class="kchip">
-      <span class="kc-label">Conversão</span>
+      <span class="kc-label" title="% dos leads que ENTRARAM neste período e já fecharam. Em períodos curtos (semana, 30 dias) o número tende a ficar baixo mesmo com a operação indo bem — o lead ainda não teve tempo de percorrer o funil até fechar.">Conversão ⓘ</span>
       <div class="kc-row"><span class="kc-val" id="k-conv"><span class="skel"></span></span><span class="kc-delta" id="k-conv-delta"></span></div>
       <span class="kc-sub" id="k-conv-base">—</span>
     </div>
@@ -370,7 +377,7 @@ footer strong{color:#fff}
             <span></span>
             <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);text-align:center">Nome</span>
             <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);text-align:center">Conv.</span>
-            <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);text-align:center">Funil</span>
+            <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);text-align:center">Foco</span>
             <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);text-align:center">Pipeline</span>
             <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);text-align:center">Ganhos</span>
             <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);text-align:center">Ativos</span>
@@ -418,6 +425,7 @@ const AGENDOR_DEAL = 'https://web.agendor.com.br/sistema/negocios/historico.php?
 const ORIGIN_LABELS = { outbound: 'Outbound', inbound: 'Inbound', both: 'Painel Geral' };
 const STAGE_ORD = { '3771722':'o1', '3771723':'o2', '3771724':'o2', '3771725':'o3' };
 const ORD_DOT   = { o1:'#b09bd6', o2:'#9260c8', o3:'#5a3a80' };
+const STAGE_LABEL = { o1:'Conexão', o2:'Diag./Solução', o3:'Negociação' };
 
 let _data = null;
 let _period = 'month';
@@ -487,7 +495,15 @@ function setPeriod(btn) {
   const cp = el('custom-panel');
   const mp = el('month-pick-panel');
   if (_period === 'custom') { cp.classList.add('show'); mp.classList.remove('show'); return; }
-  if (_period === 'month_pick') { mp.classList.add('show'); cp.classList.remove('show'); return; }
+  if (_period === 'month_pick') {
+    mp.classList.add('show'); cp.classList.remove('show');
+    // Robert (14/07): "quando clicar em mês já aparecer o calendário" — sem isso
+    // precisava de 2 toques (1 pra revelar o campo, outro pra abrir o seletor
+    // nativo). showPicker() abre na hora, no mesmo clique. Só existe em browsers
+    // modernos (Chrome/Edge) — tenta e ignora se não suportar.
+    try { el('mp-month').showPicker(); } catch(_) {}
+    return;
+  }
   cp.classList.remove('show'); mp.classList.remove('show');
   loadData(false);
 }
@@ -582,6 +598,35 @@ async function fetchBoth(q) {
   return { outbound: ob, inbound: ib };
 }
 
+// ── PREFETCH — mesma técnica de dashboard profissional (Linear, Stripe etc):
+// trocar de filtro parece instantâneo porque o dado já estava sendo buscado
+// ANTES do clique. Depois de um carregamento bem-sucedido no modo "Ambos",
+// busca em segundo plano (devagar, espaçado) os períodos mais comuns que ainda
+// não estão no cache de sessão. 100% best-effort: nunca mostra erro, nunca mexe
+// em _reqSeq/_data — se falhar (ex: cota do Google), a troca de filtro real
+// ainda tenta buscar do jeito normal. Só roda no modo "Ambos" (padrão).
+const PREFETCH_CANDIDATES = ['month', '90d', 'total'];
+let _prefetching = false;
+async function prefetchAdjacent() {
+  if (_prefetching || _originMode !== 'both') return;
+  _prefetching = true;
+  try {
+    for (const p of PREFETCH_CANDIDATES) {
+      if (p === _period) continue;
+      const key = 'both|' + p + '||';
+      const cached = _respCache.get(key);
+      if (cached && (Date.now() - cached.ts) < SESSION_CACHE_MS) continue;
+      try {
+        const both = await fetchBoth('&period=' + p);
+        _respCache.set(key, { ts: Date.now(), data: mergeBoth(both.outbound, both.inbound) });
+      } catch (_) { /* best-effort — nunca aparece pro usuário */ }
+      await new Promise(r => setTimeout(r, 1500)); // espaça as chamadas, não faz rajada
+    }
+  } finally {
+    _prefetching = false;
+  }
+}
+
 function prevRangeOf(period) {
   const from = new Date(period.from + 'T00:00:00');
   const to   = new Date(period.to   + 'T00:00:00');
@@ -592,24 +637,29 @@ function prevRangeOf(period) {
   return { from: fmt(prevFrom), to: fmt(prevTo) };
 }
 
-async function loadData(force) {
+async function loadData(force, silent) {
   if (!PROXY_URL || PROXY_URL.includes('COLE')) return;
   const mySeq = ++_reqSeq;
   el('lb').classList.add('on');
-  // Refresh automático (60s) fica IMPERCEPTÍVEL no telão — sem escurecer a tela.
-  if (force) el('body').classList.add('refreshing');
   const q = periodQuery(force);
 
   // SWR: troca de filtro (force=false) pra um combo já visto nesta sessão nos
   // últimos 90s renderiza NA HORA e segue revalidando por trás — botão ↻ manual
   // (force=true) sempre ignora e vai na rede.
+  let servedFromCache = false;
   if (!force) {
     const cached = _respCache.get(sessionCacheKey());
     if (cached && (Date.now() - cached.ts) < SESSION_CACHE_MS) {
       _data = cached.data;
       render(_data);
+      servedFromCache = true;
     }
   }
+  // achado 14/07 (Robert: trocar de filtro "parece travado" em dia de rede lenta):
+  // antes só o botão ↻ (force=true) mostrava o dim de carregando. Agora qualquer
+  // ação do usuário que precisa mesmo ir na rede mostra o dim; só o auto-refresh
+  // silencioso (silent=true) continua imperceptível no telão, como sempre foi.
+  if (!servedFromCache && !silent) el('body').classList.add('refreshing');
 
   try {
     let curr, ibData = null;
@@ -642,6 +692,7 @@ async function loadData(force) {
     flashDot();
     _respCache.set(sessionCacheKey(), { ts: Date.now(), data: curr });
     try { localStorage.setItem('geral_telao_snapshot', JSON.stringify({ data: curr, savedAt: Date.now() })); } catch(_) {}
+    prefetchAdjacent(); // dispara em segundo plano, nunca bloqueia nem mostra erro (ver função)
   } catch(e) {
     console.error('Erro:', e.message);
     _lastErrMsg = e.message || '';
@@ -692,7 +743,7 @@ async function fetchPrevious(pq) {
 
 function scheduleRefresh(delayMs) {
   clearTimeout(_refreshTimer);
-  _refreshTimer = setTimeout(() => { loadData(false); checkForUpdate(); }, delayMs || 60000);
+  _refreshTimer = setTimeout(() => { loadData(false, true); checkForUpdate(); }, delayMs || 60000);
 }
 
 // ── AUTO-ATUALIZAÇÃO — Robert pediu (13/07): telão fica sozinho na sala, sem
@@ -807,7 +858,15 @@ function mergeKpis(a, b) {
   const ganhoCont = (a.ganhoCont||0) + (b.ganhoCont||0);
   const ganhoValor = (a.ganhoValor||0) + (b.ganhoValor||0);
   const leadsNoPeriodo = (a.leadsNoPeriodo||0) + (b.leadsNoPeriodo||0);
-  const prazoSum = (a.prazoMedio||0)*(a.ganhoCont||0) + (b.prazoMedio||0)*(b.ganhoCont||0);
+  // achado 14/07 (auditoria): pesar por ganhoCont reconstrói a média ERRADA
+  // quando algum negócio ganho ficou de fora do prazo médio original (dias
+  // negativos, import retroativo) — o peso certo é prazoCount (exposto pelo
+  // proxy desde 14/07). Fallback pra ganhoCont só se o proxy ainda for a
+  // versão antiga (sem o campo).
+  const prazoWeightA = a.prazoCount !== undefined ? a.prazoCount : (a.ganhoCont||0);
+  const prazoWeightB = b.prazoCount !== undefined ? b.prazoCount : (b.ganhoCont||0);
+  const prazoWeightSum = prazoWeightA + prazoWeightB;
+  const prazoSum = (a.prazoMedio||0)*prazoWeightA + (b.prazoMedio||0)*prazoWeightB;
   return {
     ativos: (a.ativos||0)+(b.ativos||0),
     pipelineTotal: (a.pipelineTotal||0)+(b.pipelineTotal||0),
@@ -815,7 +874,7 @@ function mergeKpis(a, b) {
     perdidoCont: (a.perdidoCont||0)+(b.perdidoCont||0),
     ticketMedio: ganhoCont > 0 ? Math.round(ganhoValor/ganhoCont) : 0,
     conversao: leadsNoPeriodo > 0 ? Math.round((ganhoCont/leadsNoPeriodo)*1000)/10 : null,
-    prazoMedio: ganhoCont > 0 ? Math.round(prazoSum/ganhoCont) : 0,
+    prazoMedio: prazoWeightSum > 0 ? Math.round(prazoSum/prazoWeightSum) : 0,
     staleTotal: (a.staleTotal||0)+(b.staleTotal||0),
     leadsNoPeriodo
   };
@@ -965,7 +1024,7 @@ function skeletonLbRow() {
         <span class="lb-rank"></span>
         <span class="lb-name"><span class="skel" style="width:110px"></span></span>
         <span class="lb-conv"><span class="skel" style="width:30px"></span></span>
-        <div class="lb-funnel"></div>
+        <div class="lb-funnel"><span class="skel" style="width:8px;height:8px;min-width:0;border-radius:50%"></span><span class="skel" style="width:78px"></span></div>
         <div class="pipeline-cell">
           <span class="pipeline-val"><span class="skel" style="width:56px"></span></span>
           <div class="pipeline-bar-wrap"><div class="pipeline-bar" style="width:40%;background:${_SKEL_GREY}"></div></div>
@@ -1057,7 +1116,9 @@ function normFunnel(funnel) {
     const sid = String(s.stageId) === '3771724' ? 3771723 : s.stageId;
     if (!byId[sid]) {
       byId[sid] = Object.assign({}, s, { stageId: sid });
-      if (sid === 3771723) byId[sid].name = 'Diagnóstico/Solução';
+      // achado 14/07: nome completo "Diagnóstico/Solução" espremia o layout flex
+      // sem quebra/ellipsis do telão — abreviado pra caber com folga.
+      if (sid === 3771723) byId[sid].name = 'Diag./Solução';
       order.push(sid);
     } else {
       byId[sid].count = (byId[sid].count || 0) + (s.count || 0);
@@ -1131,16 +1192,19 @@ function renderFunil(funnel, kpis, recentLost) {
     // pode cair de qualquer uma das 3, já detalhado acima em cada linha), então
     // fica com o badge tradicional (resultado agregado), nunca a seta sequencial
     // — evita confundir "resumo do funil todo" com "elo entre duas etapas".
-    const pct = stageBase !== undefined ? convFrom(count, stageBase) : convFrom(count, reachedFirst);
+    const pct = stageBase !== undefined ? convFrom(count, stageBase) : null;
     const barPct = Math.max((count / max) * 100, 3);
     const isSequential = stageBase !== undefined;
     const connector = (isSequential && pct !== null) ? `
       <div class="funil-conn" title="Conversão da etapa anterior">
         <span class="funil-conn-arrow" style="color:#15803d">↓</span><span class="funil-conn-pct" style="color:#15803d">${pct}% fecharam</span>
       </div>` : '';
-    const badge = (!isSequential && pct !== null)
-      ? `<span class="drop-pill" title="Taxa sobre o total que entrou no funil" style="background:${color==='green'?'#dcfce7':'#fee2e2'};color:${color==='green'?'#15803d':'#b91c1c'}">${color==='green'?'✓':'✕'} ${pct}%</span>`
-      : '';
+    // achado 14/07 (Robert): a % de "Perdidos" comparava quem PERDEU no período
+    // (kpis.perdidoCont, negócio pode ter entrado no funil em QUALQUER mês) contra
+    // quem ENTROU no funil neste período (reachedFirst) — dois recortes de tempo
+    // diferentes. Lia como "39% dos leads viraram perda", que não é o que o número
+    // representa. Removido — fica só a contagem/valor, sem % nenhuma.
+    const badge = '';
     return `
       <div class="funil-row" onclick="${onclick}" style="border-top:2px solid var(--border);padding-top:8px">
         ${connector}
@@ -1174,14 +1238,22 @@ function renderLeaderboard(reps, deals) {
   el('lb-rows').innerHTML = reps.map((r, i) => {
     const isGold = i === 0;
     const rank = ['🥇','🥈','🥉','4️⃣','5️⃣'][i] || (i+1)+'°';
+    const o1 = r.dealsByStage['3771722'] || 0;
     const ds2 = (r.dealsByStage['3771723'] || 0) + (r.dealsByStage['3771724'] || 0);
-    const total = (r.dealsByStage['3771722'] || 0) + ds2 + (r.dealsByStage['3771725'] || 0);
+    const o3 = r.dealsByStage['3771725'] || 0;
+    const total = o1 + ds2 + o3;
     const pipelinePct = Math.max((r.pipeline / maxPipeline) * 100, 3);
 
-    const funnelSegs = total > 0 ? `
-      ${r.dealsByStage['3771722'] > 0 ? `<div class="seg-o1" style="flex:${r.dealsByStage['3771722']}"></div>` : ''}
-      ${ds2 > 0 ? `<div class="seg-o2" style="flex:${ds2}"></div>` : ''}
-      ${r.dealsByStage['3771725'] > 0 ? `<div class="seg-o3" style="flex:${r.dealsByStage['3771725']}"></div>` : ''}` : '';
+    // 14/07: era barra empilhada de cor sem legenda ("ninguém consegue
+    // entender" — Robert, teste ao vivo). Trocado por "onde ele tá mais
+    // concentrado": etapa com mais negócios + contagem, em texto puro pra
+    // ler de longe na TV. Empate favorece a etapa mais cedo do funil.
+    let topOrd = 'o1', topCount = o1;
+    if (ds2 > topCount) { topOrd = 'o2'; topCount = ds2; }
+    if (o3 > topCount) { topOrd = 'o3'; topCount = o3; }
+    const funnelHtml = total > 0
+      ? `<span class="lb-funnel-dot" style="background:${ORD_DOT[topOrd]}"></span><span class="lb-funnel-txt">${STAGE_LABEL[topOrd]} <b>${topCount}</b></span>`
+      : `<span class="lb-funnel-txt">—</span>`;
 
     const convClass = r.conversao === null ? 'nil' : (r.conversao < 20 ? 'low' : '');
     const convText  = r.conversao !== null ? r.conversao + '%' : '—';
@@ -1193,7 +1265,7 @@ function renderLeaderboard(reps, deals) {
           <span class="lb-rank">${rank}</span>
           <span class="lb-name">${escHtml(r.name)}</span>
           <span class="lb-conv ${convClass}">${convText}</span>
-          <div class="lb-funnel">${funnelSegs}</div>
+          <div class="lb-funnel${total > 0 ? '' : ' empty'}">${funnelHtml}</div>
           <div class="pipeline-cell">
             <span class="pipeline-val">${r.pipeline > 0 ? fmtMoney(r.pipeline) : '—'}</span>
             <div class="pipeline-bar-wrap"><div class="pipeline-bar" style="width:${pipelinePct}%"></div></div>

@@ -210,9 +210,19 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .mdeal-row{padding:10px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #f4f2f8;text-decoration:none}
 .mdeal-row:last-child{border-bottom:none}
 .mdeal-row:hover{background:#f5f3ff}
-.mdeal-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.mdeal-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;margin-top:3px;align-self:flex-start}
+/* achado 14/07 (Robert: "mobile tem coisas cortando") — antes título, badge de
+   origem, rep, valor, data e abrir disputavam TODOS a mesma linha; com badge de
+   origem (og-pill) presente, o título sobrava quase nada de espaço e truncava
+   pra 1-2 letras ("F...", "Dro..."). Título+valor (a dupla mais importante)
+   ficam na linha 1; rep/data/parado (contexto secundário) vão pra linha 2,
+   menor — mesmo padrão já usado no rep-header pros badges em tela estreita. */
+.mdeal-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.mdeal-title-line{display:flex;align-items:baseline;gap:8px}
 .mdeal-title{flex:1;font-size:13px;font-weight:700;color:var(--text);min-width:0;display:flex;align-items:baseline}
-.mdeal-rep{font-size:10px;color:var(--muted);font-weight:600;white-space:nowrap;flex-shrink:0}
+.mdeal-sub-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.mdeal-rep{font-size:10px;color:var(--muted);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;max-width:60%}
+.mdeal-date{font-size:10px;color:var(--faint);font-weight:600;white-space:nowrap;flex-shrink:0}
 .mdeal-val{font-size:13px;font-weight:800;color:var(--purple);white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums}
 .mdeal-stale{font-size:11px;flex-shrink:0}
 .mdeal-open{font-size:11px;color:var(--faint);flex-shrink:0}
@@ -315,7 +325,7 @@ footer strong{color:#fff}
       <span class="kc-sub" id="k-ativos">—</span>
     </div>
     <div class="kchip">
-      <span class="kc-label">Conversão</span>
+      <span class="kc-label" title="% dos leads que ENTRARAM neste período e já fecharam. Em períodos curtos (semana, 30 dias) o número tende a ficar baixo mesmo com a operação indo bem — o lead ainda não teve tempo de percorrer o funil até fechar.">Conversão ⓘ</span>
       <div class="kc-row"><span class="kc-val" id="k-conv"><span class="skel"></span></span><span class="kc-delta" id="k-conv-delta"></span></div>
       <span class="kc-sub" id="k-conv-base">—</span>
     </div>
@@ -504,7 +514,15 @@ function setPeriod(btn) {
   const cd = el('custom-dates');
   const mp = el('month-pick-panel');
   if (_period === 'custom') { cd.classList.add('show'); mp.classList.remove('show'); return; }
-  if (_period === 'month_pick') { mp.classList.add('show'); cd.classList.remove('show'); return; }
+  if (_period === 'month_pick') {
+    mp.classList.add('show'); cd.classList.remove('show');
+    // Robert (14/07): "quando clicar em mês já aparecer o calendário" — sem isso
+    // o usuário precisava de 2 toques (1 pra revelar o campo, outro pra abrir o
+    // seletor nativo). showPicker() abre na hora, no mesmo clique. Só existe em
+    // browsers modernos (Chrome/Edge, Safari 16.4+) — tenta e ignora se não suportar.
+    try { el('mp-month').showPicker(); } catch(_) {}
+    return;
+  }
   cd.classList.remove('show'); mp.classList.remove('show');
   loadData(false);
 }
@@ -577,6 +595,36 @@ async function fetchBoth(q) {
   return { outbound: ob, inbound: ib };
 }
 
+// ── PREFETCH — mesma técnica de dashboard profissional (Linear, Stripe etc):
+// trocar de filtro parece instantâneo porque o dado já estava sendo buscado
+// ANTES do clique. Depois de um carregamento bem-sucedido no modo "Ambos",
+// busca em segundo plano (devagar, espaçado) os períodos mais comuns que ainda
+// não estão no cache de sessão, guardando pra quando o usuário realmente clicar
+// neles. 100% best-effort: nunca mostra erro, nunca mexe em _reqSeq/_data — se
+// falhar (ex: cota do Google), a troca de filtro real ainda tenta buscar do
+// jeito normal. Só roda no modo "Ambos" (padrão) pra não triplicar por origem.
+const PREFETCH_CANDIDATES = ['month', '90d', 'total'];
+let _prefetching = false;
+async function prefetchAdjacent() {
+  if (_prefetching || _originMode !== 'both') return;
+  _prefetching = true;
+  try {
+    for (const p of PREFETCH_CANDIDATES) {
+      if (p === _period) continue;
+      const key = 'both|' + p + '||';
+      const cached = _respCache.get(key);
+      if (cached && (Date.now() - cached.ts) < SESSION_CACHE_MS) continue;
+      try {
+        const both = await fetchBoth('&period=' + p);
+        _respCache.set(key, { ts: Date.now(), data: mergeBoth(both.outbound, both.inbound) });
+      } catch (_) { /* best-effort — nunca aparece pro usuário */ }
+      await new Promise(r => setTimeout(r, 1500)); // espaça as chamadas, não faz rajada
+    }
+  } finally {
+    _prefetching = false;
+  }
+}
+
 function prevRangeOf(period) {
   const from = new Date(period.from + 'T00:00:00');
   const to   = new Date(period.to   + 'T00:00:00');
@@ -587,25 +635,30 @@ function prevRangeOf(period) {
   return { from: fmt(prevFrom), to: fmt(prevTo) };
 }
 
-async function loadData(force) {
+async function loadData(force, silent) {
   const mySeq = ++_reqSeq;
   el('lb').classList.add('on');
-  // Refresh automático (a cada 60s) fica IMPERCEPTÍVEL — sem escurecer a tela.
-  // Só ação explícita do usuário (troca de período/origem, botão ↻) mostra o dim,
-  // como confirmação visual do clique.
-  if (force) el('main').classList.add('refreshing');
   const q = periodQuery(force);
 
   // SWR: troca de filtro (force=false) pra um combo já visto nesta sessão nos
   // últimos 90s renderiza NA HORA (sem esqueleto) e segue revalidando na rede
   // por trás — clique manual no ↻ (force=true) sempre ignora e vai na rede.
+  let servedFromCache = false;
   if (!force) {
     const cached = _respCache.get(sessionCacheKey());
     if (cached && (Date.now() - cached.ts) < SESSION_CACHE_MS) {
       _data = cached.data;
       render(_data);
+      servedFromCache = true;
     }
   }
+  // achado 14/07 (Robert: trocar de filtro "parece travado" em dia de rede lenta):
+  // antes só o botão ↻ (force=true) mostrava o dim de carregando — trocar de
+  // período/origem sem cache ficava sem NENHUM sinal visual além da barrinha fina
+  // do topo. Agora qualquer ação do usuário que precisa mesmo ir na rede mostra o
+  // dim; só o auto-refresh silencioso (silent=true, chamado por scheduleRefresh)
+  // continua imperceptível, como sempre foi.
+  if (!servedFromCache && !silent) el('main').classList.add('refreshing');
 
   try {
     let curr, prevKpis, ibData = null;
@@ -642,6 +695,7 @@ async function loadData(force) {
     flashDot();
     _respCache.set(sessionCacheKey(), { ts: Date.now(), data: curr });
     try { localStorage.setItem('geral_snapshot', JSON.stringify({ data: curr, savedAt: Date.now() })); } catch(_) {}
+    prefetchAdjacent(); // dispara em segundo plano, nunca bloqueia nem mostra erro (ver função)
   } catch(e) {
     _lastErrMsg = e.message || '';
     // Se ainda não carregou nada NESTA sessão (ex: F5 durante o erro), mostra o
@@ -762,7 +816,7 @@ async function fetchPrevious(pq, mySeq) {
 
 function scheduleRefresh(delayMs) {
   clearTimeout(_refreshTimer);
-  _refreshTimer = setTimeout(() => { loadData(false); checkForUpdate(); }, delayMs || 60000);
+  _refreshTimer = setTimeout(() => { loadData(false, true); checkForUpdate(); }, delayMs || 60000);
 }
 
 // ── AUTO-ATUALIZAÇÃO — Robert pediu (13/07): ninguém quer dar F5 manual em
@@ -800,7 +854,15 @@ function mergeKpis(a, b) {
   const ganhoCont = (a.ganhoCont||0) + (b.ganhoCont||0);
   const ganhoValor = (a.ganhoValor||0) + (b.ganhoValor||0);
   const leadsNoPeriodo = (a.leadsNoPeriodo||0) + (b.leadsNoPeriodo||0);
-  const prazoSum = (a.prazoMedio||0)*(a.ganhoCont||0) + (b.prazoMedio||0)*(b.ganhoCont||0);
+  // achado 14/07 (auditoria): pesar por ganhoCont reconstrói a média ERRADA
+  // quando algum negócio ganho ficou de fora do prazo médio original (dias
+  // negativos, import retroativo) — o peso certo é prazoCount (exposto pelo
+  // proxy desde 14/07). Fallback pra ganhoCont só se o proxy ainda for a
+  // versão antiga (sem o campo).
+  const prazoWeightA = a.prazoCount !== undefined ? a.prazoCount : (a.ganhoCont||0);
+  const prazoWeightB = b.prazoCount !== undefined ? b.prazoCount : (b.ganhoCont||0);
+  const prazoWeightSum = prazoWeightA + prazoWeightB;
+  const prazoSum = (a.prazoMedio||0)*prazoWeightA + (b.prazoMedio||0)*prazoWeightB;
   return {
     ativos: (a.ativos||0)+(b.ativos||0),
     pipelineTotal: (a.pipelineTotal||0)+(b.pipelineTotal||0),
@@ -809,7 +871,7 @@ function mergeKpis(a, b) {
     ticketMedio: ganhoCont > 0 ? Math.round(ganhoValor/ganhoCont) : 0,
     // null (não 0) sem leads pra calcular — mesma convenção do reps[].conversao
     conversao: leadsNoPeriodo > 0 ? Math.round((ganhoCont/leadsNoPeriodo)*1000)/10 : null,
-    prazoMedio: ganhoCont > 0 ? Math.round(prazoSum/ganhoCont) : 0,
+    prazoMedio: prazoWeightSum > 0 ? Math.round(prazoSum/prazoWeightSum) : 0,
     staleTotal: (a.staleTotal||0)+(b.staleTotal||0),
     leadsNoPeriodo
   };
@@ -1046,7 +1108,10 @@ function normFunnel(funnel) {
     const sid = String(s.stageId) === '3771724' ? 3771723 : s.stageId;
     if (!byId[sid]) {
       byId[sid] = Object.assign({}, s, { stageId: sid });
-      if (sid === 3771723) byId[sid].name = 'Diagnóstico/Solução';
+      // achado 14/07 (Robert: "mobile tem coisas cortando"): nome completo
+      // "Diagnóstico/Solução" (19 caracteres) estourava a coluna de 148px do
+      // funil e cortava com "..." — abreviado pra caber inteiro.
+      if (sid === 3771723) byId[sid].name = 'Diag./Solução';
       order.push(sid);
     } else {
       byId[sid].count = (byId[sid].count || 0) + (s.count || 0);
@@ -1117,16 +1182,19 @@ function renderFunil(funnel, kpis, recentLost) {
     // Perdidos continua sobre o funil inteiro (não tem "uma" etapa anterior —
     // pode cair de qualquer uma das 3, já detalhado acima em cada linha), então
     // fica com o badge tradicional (resultado agregado), nunca a seta sequencial.
-    const pct = stageBase !== undefined ? convFrom(count, stageBase) : convFrom(count, reachedFirst);
+    const pct = stageBase !== undefined ? convFrom(count, stageBase) : null;
     const barPct = Math.max((count / max) * 100, 2);
     const isSequential = stageBase !== undefined;
     const connector = (isSequential && pct !== null) ? `
       <div class="funil-conn" title="Conversão da etapa anterior">
         <span class="funil-conn-arrow" style="color:#15803d">↓</span><span class="funil-conn-pct" style="color:#15803d">${pct}%</span>
       </div>` : '';
-    const badge = (!isSequential && pct !== null)
-      ? `<span class="funil-drop" title="Taxa sobre o total que entrou no funil" style="background:${color==='green'?'#dcfce7':'#fee2e2'};color:${color==='green'?'#15803d':'#b91c1c'}">${color==='green'?'✓':'✕'} ${pct}%</span>`
-      : '<span></span>';
+    // achado 14/07 (Robert): a % de "Perdidos" comparava quem PERDEU no período
+    // (kpis.perdidoCont, negócio pode ter entrado no funil em QUALQUER mês) contra
+    // quem ENTROU no funil neste período (reachedFirst) — dois recortes de tempo
+    // diferentes. Lia como "39% dos leads viraram perda", que não é o que o número
+    // representa. Removido — fica só a contagem/valor, sem % nenhuma.
+    const badge = '<span></span>';
     return `
       <div class="funil-row" onclick="${onclick}" style="border-top:2px solid var(--border)">
         ${connector}
@@ -1145,23 +1213,43 @@ function renderFunil(funnel, kpis, recentLost) {
     + outcomeRow('Perdidos', kpis.perdidoCont || 0, perdidoValor, 'red', 'openLostModal()');
 }
 
+// Linha padrão de negócio usada em todo modal de lista — título+badge de origem
+// e valor na linha 1 (a dupla mais importante), rep/data/parado na linha 2
+// (contexto secundário, menor). Ver comentário da classe .mdeal-main no CSS.
+function mdealRow(d, opts) {
+  opts = opts || {};
+  const ord = STAGE_ORD[String(d.stageId)] || 'o2';
+  const dotColor = opts.dotColor || ORD_DOT[ord];
+  const valStyle = opts.valColor ? ` style="color:${opts.valColor}"` : '';
+  const valText = opts.dashIfZero ? (d.value > 0 ? fmtMoney(d.value) : '—') : fmtMoney(d.value);
+  const showStale = opts.alwaysStale || d.stale;
+  const sub = [
+    opts.showRep !== false ? `<span class="mdeal-rep">${escHtml(d.rep||'—')}</span>` : '',
+    opts.date ? `<span class="mdeal-date">${fmtDateDisplay(opts.date)}</span>` : '',
+    showStale ? '<span class="mdeal-stale" title="Sem toque há +7 dias">⚠️</span>' : ''
+  ].filter(Boolean).join('');
+  return `
+    <a class="mdeal-row" href="${AGENDOR_DEAL}${d.id}" target="_blank">
+      <div class="mdeal-dot" style="background:${dotColor}"></div>
+      <div class="mdeal-main">
+        <div class="mdeal-title-line">
+          <span class="mdeal-title"><span class="og-title-text">${escHtml(d.title)}</span>${originBadge(d._origin)}</span>
+          <span class="mdeal-val"${valStyle}>${valText}</span>
+        </div>
+        ${sub ? `<div class="mdeal-sub-line">${sub}</div>` : ''}
+      </div>
+      <span class="mdeal-open">↗</span>
+    </a>`;
+}
+
 function openStageModal(stageId, stageName) {
   if (!_data) return;
   const normIds = String(stageId) === '3771723' ? ['3771723','3771724'] : [String(stageId)];
   const deals = _data.deals.filter(d => normIds.includes(String(d.stageId)));
-  const ord = STAGE_ORD[String(stageId)] || 'o2';
   el('modal-title').textContent = stageName + ' — ' + deals.length + ' negócios';
   el('modal-body').innerHTML = deals.length === 0
     ? '<div class="modal-empty">Nenhum negócio nesta etapa</div>'
-    : deals.map(d => `
-      <a class="mdeal-row" href="${AGENDOR_DEAL}${d.id}" target="_blank">
-        <div class="mdeal-dot" style="background:${ORD_DOT[ord]}"></div>
-        <span class="mdeal-title"><span class="og-title-text">${escHtml(d.title)}</span>${originBadge(d._origin)}</span>
-        <span class="mdeal-rep">${escHtml(d.rep||'—')}</span>
-        <span class="mdeal-val">${fmtMoney(d.value)}</span>
-        ${d.stale ? '<span class="mdeal-stale" title="Sem toque há +7 dias">⚠️</span>' : ''}
-        <span class="mdeal-open">↗</span>
-      </a>`).join('');
+    : deals.map(d => mdealRow(d)).join('');
   el('modal-overlay').classList.add('show');
 }
 
@@ -1216,16 +1304,7 @@ function openRepModal(id) {
   el('modal-title').textContent = (r ? r.name : 'Rep') + ' — ' + deals.length + ' negócios ativos';
   el('modal-body').innerHTML = deals.length === 0
     ? '<div class="modal-empty">Sem negócios ativos</div>'
-    : deals.map(d => {
-        const ord = STAGE_ORD[String(d.stageId)] || 'o2';
-        return `<a class="mdeal-row" href="${AGENDOR_DEAL}${d.id}" target="_blank">
-          <div class="mdeal-dot" style="background:${ORD_DOT[ord]}"></div>
-          <span class="mdeal-title"><span class="og-title-text">${escHtml(d.title)}</span>${originBadge(d._origin)}</span>
-          <span class="mdeal-val">${fmtMoney(d.value)}</span>
-          ${d.stale ? '<span class="mdeal-stale" title="Sem toque há +7 dias">⚠️</span>' : ''}
-          <span class="mdeal-open">↗</span>
-        </a>`;
-      }).join('');
+    : deals.map(d => mdealRow(d, { showRep: false })).join('');
   el('modal-overlay').classList.add('show');
 }
 
@@ -1239,17 +1318,7 @@ function openPipelineModal() {
   el('modal-title').textContent = 'Pipeline Ativo — ' + deals.length + ' negócios';
   el('modal-body').innerHTML = deals.length === 0
     ? '<div class="modal-empty">Nenhum negócio ativo com valor atribuído</div>'
-    : deals.map(d => {
-        const ord = STAGE_ORD[String(d.stageId)] || 'o2';
-        return `<a class="mdeal-row" href="${AGENDOR_DEAL}${d.id}" target="_blank">
-          <div class="mdeal-dot" style="background:${ORD_DOT[ord]}"></div>
-          <span class="mdeal-title"><span class="og-title-text">${escHtml(d.title)}</span>${originBadge(d._origin)}</span>
-          <span class="mdeal-rep">${escHtml(d.rep||'—')}</span>
-          <span class="mdeal-val">${d.value > 0 ? fmtMoney(d.value) : '—'}</span>
-          ${d.stale ? '<span class="mdeal-stale" title="Sem toque há +7 dias">⚠️</span>' : ''}
-          <span class="mdeal-open">↗</span>
-        </a>`;
-      }).join('');
+    : deals.map(d => mdealRow(d, { dashIfZero: true })).join('');
   el('modal-overlay').classList.add('show');
 }
 
@@ -1259,15 +1328,7 @@ function openWonModal() {
   el('modal-title').textContent = 'Negócios Ganhos — ' + deals.length;
   el('modal-body').innerHTML = deals.length === 0
     ? '<div class="modal-empty">Nenhum negócio ganho no período</div>'
-    : deals.map(d => `
-      <a class="mdeal-row" href="${AGENDOR_DEAL}${d.id}" target="_blank">
-        <div class="mdeal-dot" style="background:var(--green)"></div>
-        <span class="mdeal-title"><span class="og-title-text">${escHtml(d.title)}</span>${originBadge(d._origin)}</span>
-        <span class="mdeal-rep">${escHtml(d.rep||'—')}</span>
-        <span class="mdeal-val" style="color:#15803d">${fmtMoney(d.value)}</span>
-        <span class="mdeal-open">${fmtDateDisplay(d.closedAt)}</span>
-        <span class="mdeal-open">↗</span>
-      </a>`).join('');
+    : deals.map(d => mdealRow(d, { dotColor: 'var(--green)', valColor: '#15803d', date: d.closedAt })).join('');
   el('modal-overlay').classList.add('show');
 }
 
@@ -1277,15 +1338,7 @@ function openLostModal() {
   el('modal-title').textContent = 'Perdidos no Período — ' + deals.length;
   el('modal-body').innerHTML = deals.length === 0
     ? '<div class="modal-empty">Nenhum negócio perdido no período</div>'
-    : deals.map(d => `
-      <a class="mdeal-row" href="${AGENDOR_DEAL}${d.id}" target="_blank">
-        <div class="mdeal-dot" style="background:var(--red)"></div>
-        <span class="mdeal-title"><span class="og-title-text">${escHtml(d.title)}</span>${originBadge(d._origin)}</span>
-        <span class="mdeal-rep">${escHtml(d.rep||'—')}</span>
-        <span class="mdeal-val" style="color:var(--red)">${d.value > 0 ? fmtMoney(d.value) : '—'}</span>
-        <span class="mdeal-open">${fmtDateDisplay(d.closedAt)}</span>
-        <span class="mdeal-open">↗</span>
-      </a>`).join('');
+    : deals.map(d => mdealRow(d, { dotColor: 'var(--red)', valColor: 'var(--red)', dashIfZero: true, date: d.closedAt })).join('');
   el('modal-overlay').classList.add('show');
 }
 
@@ -1295,17 +1348,7 @@ function openStaleModal() {
   el('modal-title').textContent = 'Negócios Parados (+7 dias) — ' + deals.length;
   el('modal-body').innerHTML = deals.length === 0
     ? '<div class="modal-empty">Nenhum negócio parado. Boa!</div>'
-    : deals.map(d => {
-        const ord = STAGE_ORD[String(d.stageId)] || 'o2';
-        return `<a class="mdeal-row" href="${AGENDOR_DEAL}${d.id}" target="_blank">
-          <div class="mdeal-dot" style="background:${ORD_DOT[ord]}"></div>
-          <span class="mdeal-title"><span class="og-title-text">${escHtml(d.title)}</span>${originBadge(d._origin)}</span>
-          <span class="mdeal-rep">${escHtml(d.rep||'—')}</span>
-          <span class="mdeal-val">${d.value > 0 ? fmtMoney(d.value) : '—'}</span>
-          <span class="mdeal-stale" title="Sem toque há +7 dias">⚠️</span>
-          <span class="mdeal-open">↗</span>
-        </a>`;
-      }).join('');
+    : deals.map(d => mdealRow(d, { dashIfZero: true, alwaysStale: true })).join('');
   el('modal-overlay').classList.add('show');
 }
 
