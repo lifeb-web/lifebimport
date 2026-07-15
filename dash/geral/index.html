@@ -358,7 +358,7 @@ footer strong{color:#fff}
     <div class="kchip">
       <span class="kc-label">Prazo Médio</span>
       <div class="kc-row"><span class="kc-val" id="k-prazo"><span class="skel"></span></span></div>
-      <span class="kc-sub">dias até fechar</span>
+      <span class="kc-sub" id="k-prazo-sub">dias até fechar</span>
     </div>
     <div class="kchip" onclick="openStaleModal()">
       <span class="kc-label">Parados</span>
@@ -456,12 +456,319 @@ footer strong{color:#fff}
 </div>
 
 <script>
-const PROXY_URL  = 'https://script.google.com/macros/s/AKfycbwYhN02lEurKoMy7i87Y5F8HNCUiAtGnFr_cqL0ft3WZNxInctbcIFKFqbVpMpmqKfZ/exec';
 const LEADS_PROXY = 'https://script.google.com/macros/s/AKfycbyq9KJgWTRoALEEVf8Pu_I82GT0-tTK5yXNg-RsYHj4ywK6Grg9z_jG1-IcTW3LMXfNBg/exec';
 const AGENDOR_DEAL = 'https://web.agendor.com.br/sistema/negocios/historico.php?id=';
 const ORIGIN_LABELS = { outbound: 'Outbound', inbound: 'Inbound', both: 'Painel Geral' };
 const STAGE_ORD = { '3771722':'o1', '3771723':'o2', '3771724':'o2', '3771725':'o3' };
 const ORD_DOT   = { o1:'#b09bd6', o2:'#9260c8', o3:'#5a3a80' };
+
+// ============================================================
+// FONTE DE DADOS — migrado 15/07 de "chamar o Agendor ao vivo via proxy
+// GAS" (limitado pela cota diária de urlfetch da conta Google) pra "ler do
+// Supabase" (tabela dash_geral_deals, sincronizada pelo Apps Script a cada
+// 10min via supabase-sync.gs). anon key abaixo é PUBLIC BY DESIGN (Row Level
+// Security ativo na tabela, policy só permite SELECT — testado ao vivo:
+// INSERT/UPDATE/DELETE com essa key são rejeitados pelo Postgres, 401).
+// ============================================================
+const SUPABASE_URL      = 'https://hyjnfvqstxtdzagzzumm.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5am5mdnFzdHh0ZHphZ3p6dW1tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQwNzA3OTksImV4cCI6MjA5OTY0Njc5OX0.MGTH5waqoE0a3L3l20aB8XzK1MQwC22KVLUktLnZjSc';
+
+// ── Motor de agregação client-side — porta fiel de aggregate() +
+// getPeriodDates() + leadsNoPeriodo/conversao de agendor-outbound-proxy.gs.
+// Validado ao vivo 15/07 contra o proxy real (8 combinações origem×período +
+// modo "Ambos" via 6 períodos + período customizado) — bateu 100% em todos
+// os KPIs, funil (incl. "reached"/lost) e estatística por rep antes deste
+// motor substituir a leitura ao vivo.
+const REPS = {
+  '976406': 'Iramar', '977487': 'Natanael', '977488': 'Janeth',
+  '977499': 'Sâmilla', '977506': 'Washington', '983372': 'Flávia', '983373': 'Nathália'
+};
+const STAGES = {
+  '3771722': { name: 'Conexão', color: 'blue', seq: 1 },
+  '3771723': { name: 'Diagnóstico', color: 'purple', seq: 2 },
+  '3771724': { name: 'Solução', color: 'orange', seq: 3 },
+  '3771725': { name: 'Negociação', color: 'green', seq: 4 }
+};
+
+function fmtDateUTC(d) {
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return y + '-' + m + '-' + day;
+}
+function fmtDisplayISO(iso) {
+  if (!iso) return '';
+  const p = iso.split('-');
+  return p[2] + '/' + p[1] + '/' + p[0];
+}
+
+// Trata o Y-M-D de "hoje" (já resolvido no fuso do dispositivo — em produção
+// sempre América/São_Paulo, o público real) como se fosse UTC só pra fazer
+// aritmética de calendário sem sofrer de fuso duas vezes.
+function getPeriodDatesClient(type, from, to, todayStr) {
+  const todayParts = todayStr.split('-').map(Number);
+  const nowUtc = new Date(Date.UTC(todayParts[0], todayParts[1] - 1, todayParts[2]));
+  let label, fromDate, toDate;
+
+  if (type === 'week') {
+    const dow = nowUtc.getUTCDay() || 7;
+    const mon = new Date(nowUtc); mon.setUTCDate(nowUtc.getUTCDate() - dow + 1);
+    fromDate = fmtDateUTC(mon); toDate = todayStr; label = 'Esta semana';
+  } else if (type === 'month') {
+    fromDate = todayStr.substring(0, 7) + '-01'; toDate = todayStr; label = 'Este mês';
+  } else if (type === 'prev_month') {
+    const pm = new Date(Date.UTC(todayParts[0], todayParts[1] - 2, 1));
+    const ld = new Date(Date.UTC(todayParts[0], todayParts[1] - 1, 0));
+    fromDate = fmtDateUTC(pm); toDate = fmtDateUTC(ld); label = 'Mês anterior';
+  } else if (type === '30d') {
+    const d30 = new Date(nowUtc); d30.setUTCDate(nowUtc.getUTCDate() - 30);
+    fromDate = fmtDateUTC(d30); toDate = todayStr; label = 'Últimos 30 dias';
+  } else if (type === '90d') {
+    const d90 = new Date(nowUtc); d90.setUTCDate(nowUtc.getUTCDate() - 90);
+    fromDate = fmtDateUTC(d90); toDate = todayStr; label = 'Últimos 90 dias';
+  } else if (type === 'total') {
+    fromDate = '2020-01-01'; toDate = todayStr; label = 'Total (desde o início)';
+  } else if (type === 'custom' && from && to) {
+    fromDate = from; toDate = to; label = fmtDisplayISO(from) + ' → ' + fmtDisplayISO(to);
+  } else {
+    fromDate = todayStr.substring(0, 7) + '-01'; toDate = todayStr; label = 'Este mês'; type = 'month';
+  }
+  return { type, from: fromDate, to: toDate, label };
+}
+
+// Opera sobre deals já filtrados por origem e sem negócio congelado
+// (ongoingAtivo), mais won/lost já filtrados pelo período (por closed_at).
+function aggregateClient(ongoingAtivo, won, lost, period) {
+  const periodFrom = new Date(period.from + 'T00:00:00');
+  const periodTo = new Date(period.to + 'T23:59:59');
+
+  const repMap = {};
+  Object.keys(REPS).forEach(id => {
+    repMap[id] = {
+      id: parseInt(id), name: REPS[id],
+      ativos: 0, pipeline: 0, stale: 0,
+      ganhoValor: 0, ganhoCont: 0, perdidoCont: 0,
+      dealsByStage: { '3771722': 0, '3771723': 0, '3771724': 0, '3771725': 0 }
+    };
+  });
+
+  const stageMap = {};
+  Object.keys(STAGES).forEach(sid => {
+    stageMap[sid] = { stageId: parseInt(sid), name: STAGES[sid].name, color: STAGES[sid].color, seq: STAGES[sid].seq, count: 0, value: 0, countPeriodo: 0 };
+  });
+
+  const allDeals = [];
+  let pipelineTotal = 0;
+
+  ongoingAtivo.forEach(d => {
+    const rid = String(d.owner_id || '');
+    const sid = String(d.stage_id || '');
+    const val = parseFloat(d.value) || 0;
+    const isStale = !!d.stale; // pré-computado no sync (já exclui frozen/tarefa futura)
+
+    pipelineTotal += val;
+
+    if (stageMap[sid]) {
+      stageMap[sid].count++; stageMap[sid].value += val;
+      const createdAt = d.created_at ? new Date(d.created_at) : null;
+      if (createdAt && createdAt >= periodFrom && createdAt <= periodTo) stageMap[sid].countPeriodo++;
+    }
+
+    if (repMap[rid]) {
+      repMap[rid].ativos++;
+      repMap[rid].pipeline += val;
+      if (isStale) repMap[rid].stale++;
+      if (repMap[rid].dealsByStage[sid] !== undefined) repMap[rid].dealsByStage[sid]++;
+    }
+
+    allDeals.push({
+      id: d.id,
+      title: d.title || '(sem título)',
+      value: val,
+      stage: d.stage_name || null,
+      stageId: sid,
+      stageSeq: stageMap[sid] ? stageMap[sid].seq : 99,
+      stageColor: stageMap[sid] ? stageMap[sid].color : 'muted',
+      repId: d.owner_id || null,
+      rep: d.owner_name || null,
+      createdAt: (d.created_at || '').substring(0, 10),
+      updatedAt: (d.updated_at || '').substring(0, 10),
+      stale: isStale,
+      frozen: !!d.frozen,
+      _origin: d.origin || null
+    });
+  });
+
+  let ganhoValor = 0, ganhoCont = 0, totalPrazo = 0, prazoCount = 0;
+  const recentWon = [];
+  won.forEach(d => {
+    const rid = String(d.owner_id || '');
+    const val = parseFloat(d.value) || 0;
+    ganhoValor += val; ganhoCont++;
+
+    if (d.created_at && d.closed_at) {
+      const days = Math.round((new Date(d.closed_at) - new Date(d.created_at)) / 86400000);
+      if (days >= 0) { totalPrazo += days; prazoCount++; }
+    }
+    if (repMap[rid]) { repMap[rid].ganhoValor += val; repMap[rid].ganhoCont++; }
+
+    recentWon.push({
+      id: d.id, title: d.title || '(sem título)', value: val,
+      repId: d.owner_id || null, rep: d.owner_name || null,
+      closedAt: (d.closed_at || '').substring(0, 10),
+      _origin: d.origin || null
+    });
+  });
+
+  let perdidoCont = 0;
+  const recentLost = [];
+  const lostByStage = {};
+  Object.keys(STAGES).forEach(sid => { lostByStage[sid] = 0; });
+  lost.forEach(d => {
+    const rid = String(d.owner_id || '');
+    const sid = String(d.stage_id || '');
+    perdidoCont++;
+    if (repMap[rid]) repMap[rid].perdidoCont++;
+    if (lostByStage.hasOwnProperty(sid)) lostByStage[sid]++;
+
+    recentLost.push({
+      id: d.id, title: d.title || '(sem título)', value: parseFloat(d.value) || 0,
+      repId: d.owner_id || null, rep: d.owner_name || null,
+      closedAt: (d.closed_at || '').substring(0, 10),
+      _origin: d.origin || null
+    });
+  });
+
+  recentWon.sort((a, b) => b.closedAt.localeCompare(a.closedAt));
+  recentLost.sort((a, b) => b.closedAt.localeCompare(a.closedAt));
+  allDeals.sort((a, b) => (a.stageSeq - b.stageSeq) || (b.value - a.value));
+
+  const ticketMedio = ganhoCont > 0 ? Math.round(ganhoValor / ganhoCont) : 0;
+  const prazoMedio = prazoCount > 0 ? Math.round(totalPrazo / prazoCount) : 0;
+  const totalStale = ongoingAtivo.filter(d => d.stale).length;
+
+  const repsArr = Object.values(repMap).map(r => {
+    r.ticketMedio = r.ganhoCont > 0 ? Math.round(r.ganhoValor / r.ganhoCont) : 0;
+    return r;
+  }).sort((a, b) => (b.ganhoValor - a.ganhoValor) || (b.ativos - a.ativos));
+
+  const funnelArr = Object.keys(stageMap).map(k => stageMap[k]).sort((a, b) => a.seq - b.seq);
+  let carryReached = ganhoCont;
+  for (let fi = funnelArr.length - 1; fi >= 0; fi--) {
+    const fsid = String(funnelArr[fi].stageId);
+    const reached = funnelArr[fi].countPeriodo + (lostByStage[fsid] || 0) + carryReached;
+    funnelArr[fi].reached = reached;
+    funnelArr[fi].lost = lostByStage[fsid] || 0;
+    carryReached = reached;
+  }
+
+  return {
+    kpis: {
+      ativos: ongoingAtivo.length, pipelineTotal,
+      ganhoValor, ganhoCont, perdidoCont,
+      ticketMedio, prazoMedio, prazoCount,
+      staleTotal: totalStale
+    },
+    funnel: funnelArr,
+    reps: repsArr,
+    deals: allDeals,
+    recentWon, recentLost
+  };
+}
+
+// Função principal — mesmo papel de doGet()+computeBoth() do proxy antigo.
+// originFilter: 'outbound' | 'inbound' | 'both' — 'both' roda UMA passagem
+// só sobre as linhas combinadas (validado matematicamente idêntico a rodar
+// outbound+inbound separado e depois somar via merge, já que cada deal tem
+// origem única e nunca se repete entre as duas).
+function computeDashboardData(allRows, originFilter, periodType, customFrom, customTo, todayStr) {
+  const period = getPeriodDatesClient(periodType, customFrom, customTo, todayStr);
+  const periodFrom = new Date(period.from + 'T00:00:00');
+  const periodTo = new Date(period.to + 'T23:59:59');
+
+  const byOrigin = originFilter === 'both' ? allRows : allRows.filter(d => d.origin === originFilter);
+
+  const ongoingAll = byOrigin.filter(d => d.status === 'ongoing'); // inclui frozen — usado no leadsNoPeriodo
+  const wonAll = byOrigin.filter(d => d.status === 'won');
+  const lostAll = byOrigin.filter(d => d.status === 'lost');
+
+  const periodWon = wonAll.filter(d => d.closed_at && new Date(d.closed_at) >= periodFrom && new Date(d.closed_at) <= periodTo);
+  const periodLost = lostAll.filter(d => d.closed_at && new Date(d.closed_at) >= periodFrom && new Date(d.closed_at) <= periodTo);
+
+  // leadsNoPeriodo/repLeadsMap — dedup por id (já único na tabela), createdAt
+  // dentro do período. Roda ANTES do filtro de frozen de propósito: lead que
+  // entrou é fato histórico, continua contando mesmo se depois for congelado
+  // (achado 15/07, Robert confirmado explicitamente).
+  let leadsNoPeriodo = 0;
+  const repLeadsMap = {};
+  ongoingAll.concat(wonAll).concat(lostAll).forEach(d => {
+    if (d.created_at) {
+      const c = new Date(d.created_at);
+      if (c >= periodFrom && c <= periodTo) {
+        leadsNoPeriodo++;
+        const rid = String(d.owner_id || '');
+        if (rid) repLeadsMap[rid] = (repLeadsMap[rid] || 0) + 1;
+      }
+    }
+  });
+
+  // achado 15/07 (Robert confirmado explicitamente): congelado some de TUDO
+  // que conta como "ativo" — Pipeline, Ativos, funil, estatística de rep.
+  const ongoingAtivo = ongoingAll.filter(d => !d.frozen);
+
+  const result = aggregateClient(ongoingAtivo, periodWon, periodLost, period);
+  result.kpis.leadsNoPeriodo = leadsNoPeriodo;
+  result.kpis.conversao = leadsNoPeriodo > 0 ? Math.round((result.kpis.ganhoCont / leadsNoPeriodo) * 1000) / 10 : null;
+  result.reps.forEach(r => {
+    const rl = repLeadsMap[String(r.id)] || 0;
+    r.leadsNoPeriodo = rl;
+    r.conversao = rl > 0 ? Math.round((r.ganhoCont / rl) * 1000) / 10 : null;
+  });
+
+  return {
+    ok: true,
+    kpis: result.kpis,
+    funnel: result.funnel,
+    reps: result.reps,
+    deals: result.deals,
+    recentWon: result.recentWon,
+    recentLost: result.recentLost,
+    period,
+    truncated: false,
+    updatedAt: new Date().toISOString()
+  };
+}
+
+// Busca TODAS as linhas de dash_geral_deals (paginado — hoje ~150 linhas,
+// mas não assume teto: mesma técnica de Range usada na validação em Node).
+async function fetchRawDeals() {
+  const PAGE = 1000;
+  let all = [];
+  let from = 0;
+  while (true) {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/dash_geral_deals?select=*', {
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
+        Range: from + '-' + (from + PAGE - 1),
+        Prefer: 'count=exact'
+      }
+    });
+    if (!res.ok) throw new Error('Supabase HTTP ' + res.status);
+    const chunk = await res.json();
+    all = all.concat(chunk);
+    const cr = res.headers.get('content-range');
+    const total = (cr && cr.indexOf('/') !== -1) ? parseInt(cr.split('/')[1], 10) : chunk.length;
+    if (all.length >= total || chunk.length < PAGE) break;
+    from += PAGE;
+  }
+  return all;
+}
+
+function todayLocalStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
 
 let _data       = null;
 let _period     = 'month';
@@ -472,19 +779,12 @@ let _refreshTimer = null;
 let _reqSeq = 0; // descarta respostas atrasadas fora de ordem (troca rápida de filtro)
 let _lastErrMsg = ''; // usado só pra detectar erro de cota e espaçar o retry
 
-// ── CACHE DE SESSÃO (SWR) — achado 14/07: trocar de filtro (ex: "Este mês" →
-// "90 dias" → volta pro "Este mês") sempre esperava uma ida à rede de novo, mesmo
-// já tendo mostrado aquele exato combo poucos segundos antes nesta mesma aba.
-// Guarda a última resposta boa de cada combinação mode+period+from/to por 90s
-// (um pouco menos que o cache de 120s do proxy, pra nunca ficar "mais fresco no
-// cliente que no servidor"). Ao trocar de filtro: se tem cache válido, mostra na
-// hora (sem esqueleto) e SEGUE revalidando na rede por trás — nunca troca por um
-// clique manual no ↻ (force=true), que deve sempre ir na rede de verdade.
-const _respCache = new Map();
-const SESSION_CACHE_MS = 90000;
-function sessionCacheKey() {
-  return _originMode + '|' + _period + '|' + (_customFrom||'') + '|' + (_customTo||'');
-}
+// ── DADO CRU (Supabase) — achado 15/07: com o motor de agregação rodando no
+// cliente, trocar de filtro nunca mais precisa ir na rede — só recalcula em
+// cima do MESMO snapshot já carregado. Só o botão ↻ manual (force=true) e o
+// auto-refresh periódico (scheduleRefresh) tocam a rede de verdade.
+let _rawDeals     = null;
+let _rawFetchedAt = 0;
 
 // Mostra o último dado bom salvo NA HORA, antes até da primeira busca de rede
 // terminar (achado 12/07: primeiro carregamento sempre ficava com esqueleto até
@@ -521,10 +821,9 @@ function setOrigin(btn) {
   // terminar, então por um instante o modo Outbound ainda mostrava os números
   // de Ads/CAC do Inbound anterior na tela.
   if (_originMode === 'outbound') el('mkt-section').style.display = 'none';
-  // force=false: aproveita o cache de 2min do proxy em vez de forçar busca 100%
-  // fresca a cada clique (achado 10/07: cada clique no modo Ambos custava até ~80
-  // chamadas urlfetch em paralelo, estourando a cota diária do Google). Só o botão
-  // ↻ manual continua forçando fresco de verdade.
+  // force=false: recálculo 100% local em cima do _rawDeals já carregado, sem
+  // nenhuma chamada de rede (migração pro Supabase, 15/07). Só o botão ↻ manual
+  // (ou o auto-refresh periódico) força uma busca de verdade.
   loadData(false);
 }
 
@@ -550,6 +849,7 @@ function applyCustom() {
   if (f > t) { showErr('A data "De" não pode ser depois da data "até".'); return; }
   hideErr();
   _customFrom = f; _customTo = t;
+  el('custom-dates').classList.remove('show'); // mesmo achado do seletor de mês: fecha ao aplicar
   loadData(false);
 }
 
@@ -599,76 +899,13 @@ function mpSelectMonth(y, m) {
   _mpSelYear = y; _mpSelMonth = m;
   renderMonthGrid();
   hideErr();
+  // achado 15/07 (Robert: "deveria sumir quando o filtro é aplicado"): faltava
+  // fechar o painel depois de escolher o mês — ficava aberto pra sempre.
+  el('month-pick-panel').classList.remove('show');
   loadData(false);
 }
 
 // ── LOAD ─────────────────────────────────────────────────────
-function periodQuery(force, fromOverride, toOverride) {
-  if (fromOverride && toOverride) {
-    let q = '&period=custom&from=' + fromOverride + '&to=' + toOverride;
-    if (force) q += '&bust=1';
-    return q;
-  }
-  // month_pick não existe no proxy — resolve pro mesmo period=custom que
-  // "Personalizado" já usa, só que com from/to calculados a partir do mês
-  // escolhido (ver applyMonthPick). Zero mudança de servidor necessária.
-  let q = '&period=' + (_period === 'month_pick' ? 'custom' : _period);
-  if ((_period === 'custom' || _period === 'month_pick') && _customFrom && _customTo) q += '&from=' + _customFrom + '&to=' + _customTo;
-  if (force) q += '&bust=1';
-  return q;
-}
-
-async function fetchOrigin(origin, q) {
-  const res = await fetch(PROXY_URL + '?origin=' + origin + q);
-  const json = await res.json();
-  if (!json.ok) throw new Error(json.error || 'Erro no proxy (' + origin + ')');
-  return json;
-}
-
-// Modo "Ambos": tenta o proxy computar outbound+inbound numa ÚNICA chamada
-// (?origin=both — precisa da versão do .gs colada em 14/07). Se o proxy ainda
-// for o antigo (ou a chamada falhar por qualquer motivo), cai pro par de
-// chamadas paralelas de sempre — nunca quebra o painel por causa disso.
-async function fetchBoth(q) {
-  try {
-    const res = await fetch(PROXY_URL + '?origin=both' + q);
-    const json = await res.json();
-    if (json && json.ok && json.outbound && json.inbound) return json;
-  } catch (_) {}
-  const [ob, ib] = await Promise.all([fetchOrigin('outbound', q), fetchOrigin('inbound', q)]);
-  return { outbound: ob, inbound: ib };
-}
-
-// ── PREFETCH — mesma técnica de dashboard profissional (Linear, Stripe etc):
-// trocar de filtro parece instantâneo porque o dado já estava sendo buscado
-// ANTES do clique. Depois de um carregamento bem-sucedido no modo "Ambos",
-// busca em segundo plano (devagar, espaçado) os períodos mais comuns que ainda
-// não estão no cache de sessão, guardando pra quando o usuário realmente clicar
-// neles. 100% best-effort: nunca mostra erro, nunca mexe em _reqSeq/_data — se
-// falhar (ex: cota do Google), a troca de filtro real ainda tenta buscar do
-// jeito normal. Só roda no modo "Ambos" (padrão) pra não triplicar por origem.
-const PREFETCH_CANDIDATES = ['month', '90d', 'total'];
-let _prefetching = false;
-async function prefetchAdjacent() {
-  if (_prefetching || _originMode !== 'both') return;
-  _prefetching = true;
-  try {
-    for (const p of PREFETCH_CANDIDATES) {
-      if (p === _period) continue;
-      const key = 'both|' + p + '||';
-      const cached = _respCache.get(key);
-      if (cached && (Date.now() - cached.ts) < SESSION_CACHE_MS) continue;
-      try {
-        const both = await fetchBoth('&period=' + p);
-        _respCache.set(key, { ts: Date.now(), data: mergeBoth(both.outbound, both.inbound) });
-      } catch (_) { /* best-effort — nunca aparece pro usuário */ }
-      await new Promise(r => setTimeout(r, 1500)); // espaça as chamadas, não faz rajada
-    }
-  } finally {
-    _prefetching = false;
-  }
-}
-
 function prevRangeOf(period) {
   const from = new Date(period.from + 'T00:00:00');
   const to   = new Date(period.to   + 'T00:00:00');
@@ -681,70 +918,59 @@ function prevRangeOf(period) {
 
 async function loadData(force, silent) {
   const mySeq = ++_reqSeq;
-  el('lb').classList.add('on');
-  const q = periodQuery(force);
-
-  // SWR: troca de filtro (force=false) pra um combo já visto nesta sessão nos
-  // últimos 90s renderiza NA HORA (sem esqueleto) e segue revalidando na rede
-  // por trás — clique manual no ↻ (force=true) sempre ignora e vai na rede.
-  let servedFromCache = false;
-  if (!force) {
-    const cached = _respCache.get(sessionCacheKey());
-    if (cached && (Date.now() - cached.ts) < SESSION_CACHE_MS) {
-      _data = cached.data;
-      render(_data);
-      servedFromCache = true;
-    }
-  }
-  // achado 14/07 (Robert: trocar de filtro "parece travado" em dia de rede lenta):
-  // antes só o botão ↻ (force=true) mostrava o dim de carregando — trocar de
-  // período/origem sem cache ficava sem NENHUM sinal visual além da barrinha fina
-  // do topo. Agora qualquer ação do usuário que precisa mesmo ir na rede mostra o
-  // dim; só o auto-refresh silencioso (silent=true, chamado por scheduleRefresh)
-  // continua imperceptível, como sempre foi.
-  if (!servedFromCache && !silent) el('main').classList.add('refreshing');
+  // Só precisa tocar a rede em duas situações: cold start (ainda não tem
+  // snapshot cru nenhum) ou pedido explícito de refresh (force=true, botão
+  // ↻ ou ciclo do auto-refresh). Qualquer troca de filtro/origem no meio do
+  // caminho recalcula na hora em cima do MESMO _rawDeals — zero rede.
+  const needsFetch = force || !_rawDeals;
+  // achado 15/07 (Robert: "não dá pra perceber que foi aplicado"): o cálculo
+  // local é tão instantâneo que o navegador nem chega a pintar o dim antes de
+  // já tirar de novo — parecia que o clique não tinha feito nada. Toda troca
+  // visível (!silent) sempre pisca o dim por um mínimo de tempo, mesmo sem
+  // rede nenhuma envolvida — só o auto-refresh silencioso continua invisível.
+  if (!silent) el('main').classList.add('refreshing');
+  if (needsFetch && !silent) el('lb').classList.add('on');
 
   try {
-    let curr, prevKpis, ibData = null;
-    if (_originMode === 'both') {
-      const both = await fetchBoth(q);
-      curr = mergeBoth(both.outbound, both.inbound);
-      ibData = both.inbound;
-    } else {
-      curr = await fetchOrigin(_originMode, q);
-      if (_originMode === 'inbound') ibData = curr;
+    if (needsFetch) {
+      _rawDeals = await fetchRawDeals();
+      _rawFetchedAt = Date.now();
+    } else if (!silent) {
+      await new Promise(r => setTimeout(r, 150)); // respiro mínimo pro pulso ser visível
     }
     if (mySeq !== _reqSeq) return; // uma troca de filtro mais nova já está em voo
 
-    // Ads/CAC/ROAS usa o MESMO período já resolvido (from/to reais) — dispara em
-    // paralelo, não bloqueia o render principal (chega e atualiza sozinho). Reaproveita
-    // o recentWon do Inbound que ACABOU de ser buscado aqui em cima (ibData) em vez de
-    // buscar de novo (achado 12/07: a busca própria antiga usava period=custom&from&to,
-    // uma chave de cache DIFERENTE da busca principal — nunca aproveitava o cache quente
-    // e o bloco de Investimento podia ficar até 11s atrás do resto do painel).
-    if (curr.period) loadAdsSection(curr.period.from, curr.period.to, ibData);
+    const today = todayLocalStr();
+    // month_pick não existe como tipo de período no motor — usa o mesmo
+    // 'custom' que "Personalizado" já resolve, com from/to calculados por
+    // mpSelectMonth() (mesma tradução que periodQuery() fazia antes da
+    // migração pro Supabase).
+    const effPeriodType = _period === 'month_pick' ? 'custom' : _period;
+    const curr = computeDashboardData(_rawDeals, _originMode, effPeriodType, _customFrom, _customTo, today);
+    let ibData = null;
+    if (_originMode === 'both') ibData = computeDashboardData(_rawDeals, 'inbound', effPeriodType, _customFrom, _customTo, today);
+    else if (_originMode === 'inbound') ibData = curr;
 
-    // Período anterior (mesmo tamanho de janela) só pra delta — não bloqueia o render principal
+    // Ads/CAC/ROAS usa o MESMO período já resolvido (from/to reais) — dispara em
+    // paralelo, não bloqueia o render principal (chega e atualiza sozinho).
+    if (curr.period) loadAdsSection(curr.period.from, curr.period.to, ibData, silent);
+
+    // Período anterior (mesmo tamanho de janela) só pra delta — cálculo local,
+    // sem rede, então já sai pronto antes mesmo do render principal.
     const prevRange = prevRangeOf(curr.period);
-    const pq = periodQuery(force, prevRange.from, prevRange.to);
-    fetchPrevious(pq, mySeq).then(prev => {
-      if (mySeq !== _reqSeq || !_data) return;
-      renderDeltas(_data.kpis, prev);
-    }).catch(() => {});
+    const prev = computeDashboardData(_rawDeals, _originMode, 'custom', prevRange.from, prevRange.to, today);
 
     _data = curr;
     _lastErrMsg = '';
     hideErr();
     render(_data);
+    renderDeltas(_data.kpis, prev.kpis);
     flashDot();
-    _respCache.set(sessionCacheKey(), { ts: Date.now(), data: curr });
     try { localStorage.setItem('geral_snapshot', JSON.stringify({ data: curr, savedAt: Date.now() })); } catch(_) {}
-    prefetchAdjacent(); // dispara em segundo plano, nunca bloqueia nem mostra erro (ver função)
   } catch(e) {
     _lastErrMsg = e.message || '';
     // Se ainda não carregou nada NESTA sessão (ex: F5 durante o erro), mostra o
-    // último dado bom salvo (achado real 08/07: cota do Google estourando por
-    // horas) — velho, mas muito melhor que tela de erro vazia.
+    // último dado bom salvo — velho, mas muito melhor que tela de erro vazia.
     if (!_data) {
       try {
         const snap = JSON.parse(localStorage.getItem('geral_snapshot') || 'null');
@@ -763,16 +989,13 @@ async function loadData(force, silent) {
       if (mySeq === _reqSeq) showErr('Erro ao carregar: ' + friendlyErr(e));
     }
   } finally {
-    // Reagenda SEMPRE, erro ou sucesso — senão uma falha (ex: Agendor instável)
-    // trava o auto-refresh pra sempre e o painel fica preso no erro até alguém
-    // apertar F5 manualmente. Numa TV sem ninguém por perto isso é fatal.
-    // MAS: erro de cota (urlfetch) martelando de 60 em 60s só piora — cada
-    // tentativa nova é mais uma rajada de chamadas na cota já estourada, e o
-    // erro nunca some (achado real 08/07: aba sozinha impedindo recuperação).
-    // Nesse caso específico, espaça bem mais (15min) em vez de 60s.
+    // Reagenda SEMPRE, erro ou sucesso — senão uma falha (ex: Supabase fora do
+    // ar por instante) trava o auto-refresh pra sempre e o painel fica preso
+    // até alguém apertar F5 manualmente. Numa TV sem ninguém por perto isso é
+    // fatal. Sem mais backoff de cota (não existe mais — Supabase não tem o
+    // limite de urlfetch do Google que o proxy antigo tinha).
     if (mySeq === _reqSeq) {
-      const isQuotaErr = /muitas vezes|urlfetch/i.test(_lastErrMsg || '');
-      scheduleRefresh(isQuotaErr ? 900000 : 60000);
+      scheduleRefresh(60000);
       el('lb').classList.remove('on'); el('main').classList.remove('refreshing');
     }
   }
@@ -783,13 +1006,19 @@ async function loadData(force, silent) {
 // só faltava o filtro). Fechamentos da planilha também filtrados por data_f
 // dentro do período — tudo (investimento, receita, fechados) escopado igual.
 let _adsSeq = 0; // guarda contra resposta atrasada de um período antigo sobrescrever a mais nova
-async function loadAdsSection(periodFrom, periodTo, inboundData) {
+async function loadAdsSection(periodFrom, periodTo, inboundData, silent) {
   const mySeq = ++_adsSeq;
   const show = (_originMode === 'inbound' || _originMode === 'both') && periodFrom && periodTo;
   const sectionEl = el('mkt-section');
   sectionEl.style.display = show ? '' : 'none';
   if (!show) return;
-  sectionEl.classList.add('mkt-updating'); // dim até os números baterem com o período já exibido no rótulo
+  // achado 15/07 (Robert: "às vezes fica apagado do nada"): essa seção SEMPRE
+  // busca ao vivo (Meta via LEADS_PROXY, 2 chamadas de rede reais — não dá pra
+  // cachear local como o resto, que agora vem do Supabase). Mas ela dimava em
+  // TODO ciclo, inclusive no auto-refresh silencioso de 60s que roda sozinho
+  // sem ninguém tocar em nada — parecia "piscar sozinho" na tela. Mesmo
+  // silent=true que o resto do painel já respeita.
+  if (!silent) sectionEl.classList.add('mkt-updating');
   // achado 12/07: a API do Meta rejeita time_range com mais de ~37 meses (testado
   // ao vivo: 3 anos funciona, 4 anos já cai pro fallback da planilha — até 1 dia
   // desatualizada). O filtro "Total" manda from=2020-01-01 só como marcador de
@@ -849,18 +1078,13 @@ async function loadAdsSection(periodFrom, periodTo, inboundData) {
   }
 }
 
-async function fetchPrevious(pq, mySeq) {
-  if (_originMode === 'both') {
-    const both = await fetchBoth(pq);
-    return mergeKpis(both.outbound.kpis, both.inbound.kpis);
-  }
-  const r = await fetchOrigin(_originMode, pq);
-  return r.kpis;
-}
-
+// Auto-refresh SEMPRE force=true: é o único ponto do painel que ainda toca a
+// rede periodicamente (busca o snapshot mais novo do Supabase, atualizado a
+// cada 10min pelo sync). Qualquer clique de filtro no meio do caminho continua
+// 100% local, em cima do snapshot já carregado.
 function scheduleRefresh(delayMs) {
   clearTimeout(_refreshTimer);
-  _refreshTimer = setTimeout(() => { loadData(false, true); checkForUpdate(); }, delayMs || 60000);
+  _refreshTimer = setTimeout(() => { loadData(true, true); checkForUpdate(); }, delayMs || 60000);
 }
 
 // ── AUTO-ATUALIZAÇÃO — Robert pediu (13/07): ninguém quer dar F5 manual em
@@ -889,86 +1113,6 @@ checkForUpdate();
 function flashDot() {
   const d = el('rdot');
   d.classList.remove('flash'); void d.offsetWidth; d.classList.add('flash');
-}
-
-// ── MERGE (modo Ambos) ──────────────────────────────────────
-function tagOrigin(arr, origin) { return (arr||[]).map(x => Object.assign({}, x, { _origin: origin })); }
-
-function mergeKpis(a, b) {
-  const ganhoCont = (a.ganhoCont||0) + (b.ganhoCont||0);
-  const ganhoValor = (a.ganhoValor||0) + (b.ganhoValor||0);
-  const leadsNoPeriodo = (a.leadsNoPeriodo||0) + (b.leadsNoPeriodo||0);
-  // achado 14/07 (auditoria): pesar por ganhoCont reconstrói a média ERRADA
-  // quando algum negócio ganho ficou de fora do prazo médio original (dias
-  // negativos, import retroativo) — o peso certo é prazoCount (exposto pelo
-  // proxy desde 14/07). Fallback pra ganhoCont só se o proxy ainda for a
-  // versão antiga (sem o campo).
-  const prazoWeightA = a.prazoCount !== undefined ? a.prazoCount : (a.ganhoCont||0);
-  const prazoWeightB = b.prazoCount !== undefined ? b.prazoCount : (b.ganhoCont||0);
-  const prazoWeightSum = prazoWeightA + prazoWeightB;
-  const prazoSum = (a.prazoMedio||0)*prazoWeightA + (b.prazoMedio||0)*prazoWeightB;
-  return {
-    ativos: (a.ativos||0)+(b.ativos||0),
-    pipelineTotal: (a.pipelineTotal||0)+(b.pipelineTotal||0),
-    ganhoValor, ganhoCont,
-    perdidoCont: (a.perdidoCont||0)+(b.perdidoCont||0),
-    ticketMedio: ganhoCont > 0 ? Math.round(ganhoValor/ganhoCont) : 0,
-    // null (não 0) sem leads pra calcular — mesma convenção do reps[].conversao
-    conversao: leadsNoPeriodo > 0 ? Math.round((ganhoCont/leadsNoPeriodo)*1000)/10 : null,
-    prazoMedio: prazoWeightSum > 0 ? Math.round(prazoSum/prazoWeightSum) : 0,
-    staleTotal: (a.staleTotal||0)+(b.staleTotal||0),
-    leadsNoPeriodo
-  };
-}
-
-function mergeFunnel(a, b) {
-  const byId = {}, order = [];
-  [...(a||[]), ...(b||[])].forEach(s => {
-    if (!byId[s.stageId]) { byId[s.stageId] = Object.assign({}, s); order.push(s.stageId); }
-    else {
-      byId[s.stageId].count   += s.count;
-      byId[s.stageId].value   += s.value;
-      byId[s.stageId].reached  = (byId[s.stageId].reached || 0) + (s.reached || 0);
-      byId[s.stageId].lost     = (byId[s.stageId].lost    || 0) + (s.lost    || 0);
-      // achado real 09/07 (auditoria): faltava somar reached/lost aqui — em modo
-      // "Ambos" (padrão do painel) a conversão do funil usava só o outbound
-      // (primeira origem no array), ignorando o inbound inteiro silenciosamente.
-    }
-  });
-  return order.map(id => byId[id]).sort((x,y) => x.seq - y.seq);
-}
-
-function mergeReps(a, b) {
-  const byId = {};
-  [...(a||[]), ...(b||[])].forEach(r => {
-    if (!byId[r.id]) byId[r.id] = Object.assign({}, r, { dealsByStage: Object.assign({}, r.dealsByStage) });
-    else {
-      const t = byId[r.id];
-      t.ativos += r.ativos; t.pipeline += r.pipeline; t.stale += r.stale;
-      t.ganhoValor += r.ganhoValor; t.ganhoCont += r.ganhoCont; t.perdidoCont += r.perdidoCont;
-      t.leadsNoPeriodo = (t.leadsNoPeriodo||0) + (r.leadsNoPeriodo||0);
-      Object.keys(r.dealsByStage||{}).forEach(k => { t.dealsByStage[k] = (t.dealsByStage[k]||0) + (r.dealsByStage[k]||0); });
-    }
-  });
-  return Object.values(byId).map(r => {
-    r.conversao = r.leadsNoPeriodo > 0 ? Math.round((r.ganhoCont / r.leadsNoPeriodo) * 1000)/10 : null;
-    r.ticketMedio = r.ganhoCont > 0 ? Math.round(r.ganhoValor / r.ganhoCont) : 0;
-    return r;
-  }).sort((x,y) => (y.ganhoValor - x.ganhoValor) || (y.ativos - x.ativos));
-}
-
-function mergeBoth(ob, ib) {
-  return {
-    ok: true,
-    kpis: mergeKpis(ob.kpis, ib.kpis),
-    funnel: mergeFunnel(ob.funnel, ib.funnel),
-    reps: mergeReps(ob.reps, ib.reps),
-    deals: tagOrigin(ob.deals,'outbound').concat(tagOrigin(ib.deals,'inbound')),
-    recentWon: tagOrigin(ob.recentWon,'outbound').concat(tagOrigin(ib.recentWon,'inbound')).sort((a,b)=>b.closedAt.localeCompare(a.closedAt)),
-    recentLost: tagOrigin(ob.recentLost,'outbound').concat(tagOrigin(ib.recentLost,'inbound')).sort((a,b)=>b.closedAt.localeCompare(a.closedAt)),
-    period: ob.period,
-    truncated: !!(ob.truncated || ib.truncated)
-  };
 }
 
 function originBadge(o) {
@@ -1139,6 +1283,15 @@ function renderKpiStrip(k, deals) {
   el('k-conv-base').textContent = 'de ' + (k.leadsNoPeriodo || 0) + ' leads';
   setTextFlash('k-ticket', k.ticketMedio > 0 ? fmtMoney(k.ticketMedio) : '—');
   setTextFlash('k-prazo', k.prazoMedio ? k.prazoMedio + (k.prazoMedio === 1 ? ' dia' : ' dias') : '—');
+  // achado 15/07 (Robert: "achando esse prazo muito rápido"): negócio importado
+  // em lote no Agendor entra no CRM com created_at do dia do IMPORTE, mas
+  // end_time (fechamento real) é de meses antes — dá prazo negativo, que o
+  // cálculo (correto) descarta da média. Em períodos longos isso descarta MAIS
+  // DA METADE dos ganhos da conta — sem avisar, "5 dias" parece precisão quando
+  // na verdade é média de uma fatia pequena. Mostra a base quando encolhe.
+  el('k-prazo-sub').textContent = (k.prazoCount < k.ganhoCont && k.ganhoCont > 0)
+    ? ('de ' + k.prazoCount + ' de ' + k.ganhoCont + ' negócios')
+    : 'dias até fechar';
   setTextFlash('k-stale-m', k.staleTotal || 0);
   el('k-stale-sub').textContent = k.staleTotal > 0 ? '+7 dias sem toque' : 'tudo em dia';
   setTextFlash('k-perdido', k.perdidoCont);
@@ -1502,7 +1655,16 @@ function friendlyErr(e) {
 // nem retomar aba são "ação explícita do usuário" — mesmo espírito do
 // auto-refresh silencioso.
 document.addEventListener('DOMContentLoaded', () => loadData(false, true));
-document.addEventListener('visibilitychange', () => { if (!document.hidden) loadData(false, true); });
+// achado 15/07 (auditoria adversarial): antes da migração, voltar pra aba quase
+// sempre disparava uma busca de rede de verdade (cache de sessão de 90s quase
+// sempre vencido). Agora que _rawDeals fica em memória indefinidamente, force=
+// false nunca mais rebusca nada — quem sai do app no celular e volta minutos
+// depois via rep vendo dado cada vez mais velho, sem nenhum refresh corretivo,
+// só o timer de 60s (que navegador costuma atrasar/suspender em aba oculta).
+// Força busca de verdade se o snapshot já passou de 60s.
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) loadData((Date.now() - _rawFetchedAt) > 60000, true);
+});
 </script>
 </body>
 </html>
