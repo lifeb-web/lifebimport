@@ -63,8 +63,25 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .trunc-badge{display:none;margin-left:6px;padding:2px 8px;border-radius:10px;background:#fff3cd;color:#8a6100;font-size:9px;font-weight:800;letter-spacing:.3px;vertical-align:middle;border:1px solid #e8c468}
 #custom-dates{display:none;padding:8px 18px 12px;background:#fff;border-bottom:1px solid var(--border);gap:8px;align-items:center;flex-wrap:wrap}
 #custom-dates.show{display:flex}
-#month-pick-panel{display:none;padding:8px 18px 12px;background:#fff;border-bottom:1px solid var(--border);gap:8px;align-items:center;flex-wrap:wrap}
+/* achado 15/07 (Robert: "esses filtros meio merdinhas") — o <input type="month">
+   nativo sempre parecia campo de texto e o navegador decidia sozinho onde abrir
+   o calendário (às vezes no canto da tela, sem relação nenhuma com o chip que
+   foi tocado). Trocado por um seletor construído do zero, no mesmo vocabulário
+   visual dos outros chips/cards do painel — sempre abre no mesmo lugar (dentro
+   do fluxo normal da página, como o painel de "Personalizado"), nunca depende
+   de decisão do navegador. */
+#month-pick-panel{display:none;flex-direction:column;gap:10px;padding:12px 18px 14px;background:#fff;border-bottom:1px solid var(--border)}
 #month-pick-panel.show{display:flex}
+.mp-header{display:flex;align-items:center;justify-content:center;gap:18px}
+.mp-nav{width:30px;height:30px;border-radius:8px;border:1.5px solid var(--border);background:#fff;color:var(--purple);font-size:16px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.mp-nav:active{background:var(--bg)}
+.mp-year{font-size:13px;font-weight:800;color:var(--text);min-width:48px;text-align:center;font-variant-numeric:tabular-nums}
+.mp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.mp-month-btn{padding:9px 4px;border-radius:9px;border:1.5px solid var(--border);background:#fff;font-family:var(--font);font-size:11px;font-weight:700;color:var(--muted);cursor:pointer}
+.mp-month-btn:active{background:var(--bg)}
+.mp-month-btn.mp-current{border-color:var(--purple-l);color:var(--purple)}
+.mp-month-btn.mp-selected{background:var(--purple);color:#fff;border-color:var(--purple)}
+.mp-month-btn.mp-future{opacity:.35;pointer-events:none}
 .datel{font-size:11px;font-weight:700;color:var(--muted)}
 .datein{border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;font-family:var(--font);font-size:12px;font-weight:600;color:var(--text);background:#fff;outline:none}
 .btn-apply{padding:6px 16px;background:var(--purple);color:#fff;border:none;border-radius:8px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer}
@@ -295,8 +312,12 @@ footer strong{color:#fff}
 </div>
 
 <div id="month-pick-panel">
-  <span class="datel">Mês</span>
-  <input class="datein" type="month" id="mp-month" onchange="applyMonthPick()">
+  <div class="mp-header">
+    <button class="mp-nav" onclick="mpChangeYear(-1)" aria-label="Ano anterior">‹</button>
+    <span class="mp-year" id="mp-year-label">2026</span>
+    <button class="mp-nav" onclick="mpChangeYear(1)" aria-label="Próximo ano">›</button>
+  </div>
+  <div class="mp-grid" id="mp-grid"></div>
 </div>
 
 <div id="main">
@@ -516,11 +537,7 @@ function setPeriod(btn) {
   if (_period === 'custom') { cd.classList.add('show'); mp.classList.remove('show'); return; }
   if (_period === 'month_pick') {
     mp.classList.add('show'); cd.classList.remove('show');
-    // Robert (14/07): "quando clicar em mês já aparecer o calendário" — sem isso
-    // o usuário precisava de 2 toques (1 pra revelar o campo, outro pra abrir o
-    // seletor nativo). showPicker() abre na hora, no mesmo clique. Só existe em
-    // browsers modernos (Chrome/Edge, Safari 16.4+) — tenta e ignora se não suportar.
-    try { el('mp-month').showPicker(); } catch(_) {}
+    renderMonthGrid();
     return;
   }
   cd.classList.remove('show'); mp.classList.remove('show');
@@ -537,16 +554,41 @@ function applyCustom() {
 }
 
 const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 let _monthPickLabel = '';
+let _mpYear = new Date().getFullYear();     // ano exibido no seletor (navegação)
+let _mpSelYear = null, _mpSelMonth = null;  // mês/ano atualmente aplicado (pra destacar)
 
-// Filtro "Mês" — seletor nativo <input type="month">, sem precisar de nenhuma
-// mudança no proxy: resolve from/to aqui e manda como period=custom (o proxy já
-// aceita). Mês corrente vai até HOJE (mesma regra do período "Este mês"), mês
-// passado vai até o último dia — nunca inclui dias futuros de um mês em curso.
-function applyMonthPick() {
-  const ym = el('mp-month').value; // 'YYYY-MM'
-  if (!ym) return;
-  const [y, m] = ym.split('-').map(Number);
+// Filtro "Mês" — achado 15/07 (Robert: "esses filtros meio merdinhas"): o
+// <input type="month"> nativo parecia campo de texto e o navegador decidia
+// sozinho onde abrir o calendário. Substituído por um seletor construído do
+// zero (grade de 12 meses + navegação de ano), sempre no mesmo lugar, mesmo
+// vocabulário visual dos outros chips. Resolve from/to aqui e manda como
+// period=custom (o proxy já aceita, nenhuma mudança de servidor necessária).
+function renderMonthGrid() {
+  const today = new Date();
+  const isCurrentYear = _mpYear === today.getFullYear();
+  el('mp-year-label').textContent = _mpYear;
+  el('mp-grid').innerHTML = MESES_ABREV.map((label, i) => {
+    const m = i + 1;
+    const isFuture = isCurrentYear && m > (today.getMonth() + 1);
+    const isCurrent = isCurrentYear && m === (today.getMonth() + 1);
+    const isSelected = _mpSelYear === _mpYear && _mpSelMonth === m;
+    const cls = ['mp-month-btn', isCurrent ? 'mp-current' : '', isSelected ? 'mp-selected' : '', isFuture ? 'mp-future' : ''].filter(Boolean).join(' ');
+    return `<button class="${cls}" ${isFuture ? 'disabled' : ''} onclick="mpSelectMonth(${_mpYear},${m})">${label}</button>`;
+  }).join('');
+}
+
+function mpChangeYear(delta) {
+  const nextYear = _mpYear + delta;
+  if (nextYear > new Date().getFullYear()) return; // nunca navega pro futuro
+  _mpYear = nextYear;
+  renderMonthGrid();
+}
+
+// Mês corrente vai até HOJE (mesma regra do período "Este mês"), mês passado
+// vai até o último dia — nunca inclui dias futuros de um mês em curso.
+function mpSelectMonth(y, m) {
   const today = new Date();
   const isCurrentMonth = (y === today.getFullYear() && m === today.getMonth() + 1);
   const toDate = isCurrentMonth ? today : new Date(y, m, 0);
@@ -554,6 +596,8 @@ function applyMonthPick() {
   _customFrom = fmt(new Date(y, m - 1, 1));
   _customTo   = fmt(toDate);
   _monthPickLabel = MESES_PT[m - 1] + ' de ' + y;
+  _mpSelYear = y; _mpSelMonth = m;
+  renderMonthGrid();
   hideErr();
   loadData(false);
 }

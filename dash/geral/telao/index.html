@@ -46,8 +46,23 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;heig
 .pchip.active{background:var(--text);color:#fff;border-color:var(--text);box-shadow:0 2px 6px -1px rgba(26,22,38,.25)}
 #custom-panel{display:none;align-items:center;gap:6px;margin-left:4px}
 #custom-panel.show{display:flex}
-#month-pick-panel{display:none;align-items:center;gap:6px;margin-left:4px}
+/* achado 15/07 (Robert: "esses filtros meio merdinhas") — <input type="month">
+   nativo parecia campo de texto e o navegador escolhia sozinho onde abrir o
+   calendário. Trocado por seletor construído do zero (grade de meses). Header
+   do telão só tem 54px de altura (não cabe grade de 3 linhas inline como o
+   painel de "Personalizado") — vira um dropdown flutuante abaixo do header. */
+#month-pick-panel{display:none;position:absolute;top:100%;left:50%;transform:translateX(-50%);background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 28px -8px rgba(26,22,38,.28);padding:12px 14px;z-index:250;flex-direction:column;gap:10px;margin-top:4px}
 #month-pick-panel.show{display:flex}
+.mp-header{display:flex;align-items:center;justify-content:center;gap:16px}
+.mp-nav{width:26px;height:26px;border-radius:7px;border:1.5px solid var(--border);background:#fff;color:var(--purple);font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.mp-nav:hover{background:var(--bg)}
+.mp-year{font-size:12px;font-weight:800;color:var(--text);min-width:42px;text-align:center;font-variant-numeric:tabular-nums}
+.mp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.mp-month-btn{padding:7px 12px;border-radius:8px;border:1.5px solid var(--border);background:#fff;font-family:var(--font);font-size:11px;font-weight:700;color:var(--muted);cursor:pointer}
+.mp-month-btn:hover{background:var(--bg)}
+.mp-month-btn.mp-current{border-color:var(--purple-l);color:var(--purple)}
+.mp-month-btn.mp-selected{background:var(--purple);color:#fff;border-color:var(--purple)}
+.mp-month-btn.mp-future{opacity:.35;pointer-events:none}
 .datein{border:1.5px solid var(--border);border-radius:6px;padding:3px 4px;font-family:var(--font);font-size:10px;font-weight:600;color:var(--text);background:#fff;outline:none;width:106px}
 .btn-apply{padding:4px 12px;background:var(--purple);color:#fff;border:none;border-radius:6px;font-family:var(--font);font-size:10px;font-weight:700;cursor:pointer}
 .h-right{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-left:auto}
@@ -284,7 +299,12 @@ footer strong{color:#fff}
       <button class="btn-apply" onclick="applyCustom()">Aplicar</button>
     </div>
     <div id="month-pick-panel">
-      <input class="datein" type="month" id="mp-month" onchange="applyMonthPick()">
+      <div class="mp-header">
+        <button class="mp-nav" onclick="mpChangeYear(-1)" aria-label="Ano anterior">‹</button>
+        <span class="mp-year" id="mp-year-label">2026</span>
+        <button class="mp-nav" onclick="mpChangeYear(1)" aria-label="Próximo ano">›</button>
+      </div>
+      <div class="mp-grid" id="mp-grid"></div>
     </div>
   </div>
 
@@ -510,11 +530,7 @@ function setPeriod(btn) {
   if (_period === 'custom') { cp.classList.add('show'); mp.classList.remove('show'); return; }
   if (_period === 'month_pick') {
     mp.classList.add('show'); cp.classList.remove('show');
-    // Robert (14/07): "quando clicar em mês já aparecer o calendário" — sem isso
-    // precisava de 2 toques (1 pra revelar o campo, outro pra abrir o seletor
-    // nativo). showPicker() abre na hora, no mesmo clique. Só existe em browsers
-    // modernos (Chrome/Edge) — tenta e ignora se não suportar.
-    try { el('mp-month').showPicker(); } catch(_) {}
+    renderMonthGrid();
     return;
   }
   cp.classList.remove('show'); mp.classList.remove('show');
@@ -531,15 +547,38 @@ function applyCustom() {
 }
 
 const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 let _monthPickLabel = '';
+let _mpYear = new Date().getFullYear();     // ano exibido no seletor (navegação)
+let _mpSelYear = null, _mpSelMonth = null;  // mês/ano atualmente aplicado (pra destacar)
 
-// Filtro "Mês" — mesma lógica do mobile: <input type="month"> nativo, resolve
-// from/to aqui e manda como period=custom (o proxy já aceita, zero mudança de
-// servidor). Mês corrente vai até HOJE, mês passado vai até o último dia.
-function applyMonthPick() {
-  const ym = el('mp-month').value; // 'YYYY-MM'
-  if (!ym) return;
-  const [y, m] = ym.split('-').map(Number);
+// Filtro "Mês" — mesma lógica do mobile (achado 15/07, Robert: "esses filtros
+// meio merdinhas"): <input type="month"> nativo trocado por seletor construído
+// do zero (grade de 12 meses + navegação de ano). Resolve from/to aqui e manda
+// como period=custom (o proxy já aceita, zero mudança de servidor).
+function renderMonthGrid() {
+  const today = new Date();
+  const isCurrentYear = _mpYear === today.getFullYear();
+  el('mp-year-label').textContent = _mpYear;
+  el('mp-grid').innerHTML = MESES_ABREV.map((label, i) => {
+    const m = i + 1;
+    const isFuture = isCurrentYear && m > (today.getMonth() + 1);
+    const isCurrent = isCurrentYear && m === (today.getMonth() + 1);
+    const isSelected = _mpSelYear === _mpYear && _mpSelMonth === m;
+    const cls = ['mp-month-btn', isCurrent ? 'mp-current' : '', isSelected ? 'mp-selected' : '', isFuture ? 'mp-future' : ''].filter(Boolean).join(' ');
+    return `<button class="${cls}" ${isFuture ? 'disabled' : ''} onclick="mpSelectMonth(${_mpYear},${m})">${label}</button>`;
+  }).join('');
+}
+
+function mpChangeYear(delta) {
+  const nextYear = _mpYear + delta;
+  if (nextYear > new Date().getFullYear()) return; // nunca navega pro futuro
+  _mpYear = nextYear;
+  renderMonthGrid();
+}
+
+// Mês corrente vai até HOJE, mês passado vai até o último dia.
+function mpSelectMonth(y, m) {
   const today = new Date();
   const isCurrentMonth = (y === today.getFullYear() && m === today.getMonth() + 1);
   const toDate = isCurrentMonth ? today : new Date(y, m, 0);
@@ -547,6 +586,8 @@ function applyMonthPick() {
   _customFrom = fmt(new Date(y, m - 1, 1));
   _customTo   = fmt(toDate);
   _monthPickLabel = MESES_PT[m - 1] + ' de ' + y;
+  _mpSelYear = y; _mpSelMonth = m;
+  renderMonthGrid();
   hideErr();
   loadData(false);
 }
