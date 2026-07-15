@@ -61,15 +61,23 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .pchip.active[data-p="total"]{background:linear-gradient(90deg,#d4af37,#f0d878);color:#3a2e00;border-color:#d4af37}
 .total-badge{display:none;margin-left:6px;padding:2px 8px;border-radius:10px;background:linear-gradient(90deg,#d4af37,#f0d878);color:#3a2e00;font-size:9px;font-weight:800;letter-spacing:.4px;vertical-align:middle}
 .trunc-badge{display:none;margin-left:6px;padding:2px 8px;border-radius:10px;background:#fff3cd;color:#8a6100;font-size:9px;font-weight:800;letter-spacing:.3px;vertical-align:middle;border:1px solid #e8c468}
-#custom-dates{display:none;padding:8px 18px 12px;background:#fff;border-bottom:1px solid var(--border);gap:8px;align-items:center;flex-wrap:wrap}
+/* achado 15/07 (Robert: "esses filtros meio merdinhas" / "no personalizado
+   pode melhorar com uma construção própria") — <input type="date"> nativo
+   trocado por um calendário de verdade (dia a dia, com faixa de início→fim),
+   mesmo vocabulário visual do seletor de mês ao lado. Sempre abre no mesmo
+   lugar, nunca depende de decisão do navegador. */
+#custom-dates{display:none;flex-direction:column;gap:8px;padding:12px 18px 14px;background:#fff;border-bottom:1px solid var(--border)}
 #custom-dates.show{display:flex}
-/* achado 15/07 (Robert: "esses filtros meio merdinhas") — o <input type="month">
-   nativo sempre parecia campo de texto e o navegador decidia sozinho onde abrir
-   o calendário (às vezes no canto da tela, sem relação nenhuma com o chip que
-   foi tocado). Trocado por um seletor construído do zero, no mesmo vocabulário
-   visual dos outros chips/cards do painel — sempre abre no mesmo lugar (dentro
-   do fluxo normal da página, como o painel de "Personalizado"), nunca depende
-   de decisão do navegador. */
+.cp-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+.cp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cp-day{aspect-ratio:1;border-radius:8px;border:1.5px solid transparent;background:#fff;font-family:var(--font);font-size:12px;font-weight:700;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.cp-day:active{background:var(--bg)}
+.cp-day.cp-empty{visibility:hidden;cursor:default}
+.cp-day.cp-future{opacity:.3;pointer-events:none}
+.cp-day.cp-today{border-color:var(--purple-l)}
+.cp-day.cp-inrange{background:rgba(112,75,155,.12);border-radius:0}
+.cp-day.cp-selected{background:var(--purple);color:#fff;border-color:var(--purple)}
+.cp-range-label{font-size:11.5px;font-weight:700;color:var(--muted);text-align:center;padding-top:2px}
 #month-pick-panel{display:none;flex-direction:column;gap:10px;padding:12px 18px 14px;background:#fff;border-bottom:1px solid var(--border)}
 #month-pick-panel.show{display:flex}
 .mp-header{display:flex;align-items:center;justify-content:center;gap:18px}
@@ -82,9 +90,6 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .mp-month-btn.mp-current{border-color:var(--purple-l);color:var(--purple)}
 .mp-month-btn.mp-selected{background:var(--purple);color:#fff;border-color:var(--purple)}
 .mp-month-btn.mp-future{opacity:.35;pointer-events:none}
-.datel{font-size:11px;font-weight:700;color:var(--muted)}
-.datein{border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;font-family:var(--font);font-size:12px;font-weight:600;color:var(--text);background:#fff;outline:none}
-.btn-apply{padding:6px 16px;background:var(--purple);color:#fff;border:none;border-radius:8px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer}
 
 #main{flex:1;padding:12px 12px 20px;display:flex;flex-direction:column;gap:12px;transition:opacity .25s ease,filter .25s ease}
 #main.refreshing{opacity:.85;filter:saturate(.85);pointer-events:none}
@@ -304,11 +309,14 @@ footer strong{color:#fff}
 </div>
 
 <div id="custom-dates">
-  <span class="datel">De</span>
-  <input class="datein" type="date" id="dt-from">
-  <span class="datel">até</span>
-  <input class="datein" type="date" id="dt-to">
-  <button class="btn-apply" onclick="applyCustom()">Aplicar</button>
+  <div class="mp-header">
+    <button class="mp-nav" onclick="cpChangeMonth(-1)" aria-label="Mês anterior">‹</button>
+    <span class="mp-year" id="cp-month-label">—</span>
+    <button class="mp-nav" onclick="cpChangeMonth(1)" aria-label="Próximo mês">›</button>
+  </div>
+  <div class="cp-weekdays"><span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span></div>
+  <div class="cp-grid" id="cp-grid"></div>
+  <div class="cp-range-label" id="cp-range-label">Selecione a data inicial</div>
 </div>
 
 <div id="month-pick-panel">
@@ -862,23 +870,17 @@ function setPeriod(btn) {
   _period = btn.dataset.p;
   const cd = el('custom-dates');
   const mp = el('month-pick-panel');
-  if (_period === 'custom') { cd.classList.add('show'); mp.classList.remove('show'); return; }
+  if (_period === 'custom') {
+    cd.classList.add('show'); mp.classList.remove('show');
+    renderCustomCalendar();
+    return;
+  }
   if (_period === 'month_pick') {
     mp.classList.add('show'); cd.classList.remove('show');
     renderMonthGrid();
     return;
   }
   cd.classList.remove('show'); mp.classList.remove('show');
-  loadData(false);
-}
-
-function applyCustom() {
-  const f = el('dt-from').value, t = el('dt-to').value;
-  if (!f || !t) { showErr('Preencha as duas datas.'); return; }
-  if (f > t) { showErr('A data "De" não pode ser depois da data "até".'); return; }
-  hideErr();
-  _customFrom = f; _customTo = t;
-  el('custom-dates').classList.remove('show'); // mesmo achado do seletor de mês: fecha ao aplicar
   loadData(false);
 }
 
@@ -932,6 +934,67 @@ function mpSelectMonth(y, m) {
   // fechar o painel depois de escolher o mês — ficava aberto pra sempre.
   el('month-pick-panel').classList.remove('show');
   loadData(false);
+}
+
+// Filtro "Personalizado" — mesmo achado do seletor de mês (Robert: "pode
+// melhorar também com uma construção própria"): <input type="date"> nativo
+// trocado por calendário dia-a-dia construído do zero, com seleção de faixa
+// (toca a data inicial, depois a final — aplica sozinho ao completar).
+let _cpYear  = new Date().getFullYear();
+let _cpMonth = new Date().getMonth() + 1; // mês exibido no calendário (navegação)
+let _cpRangeStart = null, _cpRangeEnd = null; // 'YYYY-MM-DD' ou null
+
+function renderCustomCalendar() {
+  el('cp-month-label').textContent = MESES_PT[_cpMonth - 1] + ' de ' + _cpYear;
+  const todayIso = todayLocalStr();
+  const firstDow = new Date(_cpYear, _cpMonth - 1, 1).getDay(); // 0=domingo
+  const daysInMonth = new Date(_cpYear, _cpMonth, 0).getDate();
+
+  let cells = [];
+  for (let i = 0; i < firstDow; i++) cells.push('<span class="cp-day cp-empty"></span>');
+  for (let d = 1; d <= daysInMonth; d++) {
+    const iso = _cpYear + '-' + String(_cpMonth).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    const isFuture = iso > todayIso;
+    const isEdge = iso === _cpRangeStart || iso === _cpRangeEnd;
+    const inRange = _cpRangeStart && _cpRangeEnd && iso > _cpRangeStart && iso < _cpRangeEnd;
+    const cls = ['cp-day',
+      isFuture ? 'cp-future' : '',
+      isEdge ? 'cp-selected' : '',
+      inRange ? 'cp-inrange' : '',
+      iso === todayIso ? 'cp-today' : ''
+    ].filter(Boolean).join(' ');
+    cells.push(`<button class="${cls}" ${isFuture ? 'disabled' : ''} onclick="cpSelectDay('${iso}')">${d}</button>`);
+  }
+  el('cp-grid').innerHTML = cells.join('');
+  el('cp-range-label').textContent = !_cpRangeStart
+    ? 'Selecione a data inicial'
+    : (fmtDisplayISO(_cpRangeStart) + (_cpRangeEnd ? ' → ' + fmtDisplayISO(_cpRangeEnd) : ' → selecione o fim'));
+}
+
+function cpChangeMonth(delta) {
+  _cpMonth += delta;
+  if (_cpMonth > 12) { _cpMonth = 1; _cpYear++; }
+  if (_cpMonth < 1)  { _cpMonth = 12; _cpYear--; }
+  renderCustomCalendar();
+}
+
+function cpSelectDay(iso) {
+  if (!_cpRangeStart || _cpRangeEnd) {
+    // primeira escolha, ou faixa anterior já completa — começa de novo
+    _cpRangeStart = iso; _cpRangeEnd = null;
+  } else if (iso < _cpRangeStart) {
+    // tocou antes do início já escolhido — reinicia a faixa a partir daqui
+    _cpRangeStart = iso; _cpRangeEnd = null;
+  } else {
+    _cpRangeEnd = iso;
+  }
+  renderCustomCalendar();
+  if (_cpRangeStart && _cpRangeEnd) {
+    _customFrom = _cpRangeStart; _customTo = _cpRangeEnd;
+    hideErr();
+    el('custom-dates').classList.remove('show'); // fecha sozinho ao completar a faixa
+    loadData(false);
+  }
 }
 
 // ── LOAD ─────────────────────────────────────────────────────

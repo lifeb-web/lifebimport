@@ -44,13 +44,13 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;heig
 .h-center{flex:1;display:flex;justify-content:center;align-items:center;gap:6px;overflow:hidden}
 .pchip{flex-shrink:0;padding:5px 13px;border-radius:20px;border:1.5px solid var(--border);font-family:var(--font);font-size:10px;font-weight:700;color:var(--muted);background:#fff;cursor:pointer;white-space:nowrap}
 .pchip.active{background:var(--text);color:#fff;border-color:var(--text);box-shadow:0 2px 6px -1px rgba(26,22,38,.25)}
-#custom-panel{display:none;align-items:center;gap:6px;margin-left:4px}
+/* achado 15/07 (Robert: "esses filtros meio merdinhas" / "no personalizado
+   pode melhorar com uma construção própria") — <input type="date"/"month">
+   nativo trocado por seletores construídos do zero. Header do telão só tem
+   54px de altura (não cabe grade/calendário inline) — os dois viram dropdown
+   flutuante abaixo do header. */
+#custom-panel{display:none;position:absolute;top:100%;left:50%;transform:translateX(-50%);background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 28px -8px rgba(26,22,38,.28);padding:12px 14px;z-index:250;flex-direction:column;gap:8px;margin-top:4px;width:240px}
 #custom-panel.show{display:flex}
-/* achado 15/07 (Robert: "esses filtros meio merdinhas") — <input type="month">
-   nativo parecia campo de texto e o navegador escolhia sozinho onde abrir o
-   calendário. Trocado por seletor construído do zero (grade de meses). Header
-   do telão só tem 54px de altura (não cabe grade de 3 linhas inline como o
-   painel de "Personalizado") — vira um dropdown flutuante abaixo do header. */
 #month-pick-panel{display:none;position:absolute;top:100%;left:50%;transform:translateX(-50%);background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 28px -8px rgba(26,22,38,.28);padding:12px 14px;z-index:250;flex-direction:column;gap:10px;margin-top:4px}
 #month-pick-panel.show{display:flex}
 .mp-header{display:flex;align-items:center;justify-content:center;gap:16px}
@@ -63,8 +63,16 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;heig
 .mp-month-btn.mp-current{border-color:var(--purple-l);color:var(--purple)}
 .mp-month-btn.mp-selected{background:var(--purple);color:#fff;border-color:var(--purple)}
 .mp-month-btn.mp-future{opacity:.35;pointer-events:none}
-.datein{border:1.5px solid var(--border);border-radius:6px;padding:3px 4px;font-family:var(--font);font-size:10px;font-weight:600;color:var(--text);background:#fff;outline:none;width:106px}
-.btn-apply{padding:4px 12px;background:var(--purple);color:#fff;border:none;border-radius:6px;font-family:var(--font);font-size:10px;font-weight:700;cursor:pointer}
+.cp-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center;font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase}
+.cp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cp-day{aspect-ratio:1;border-radius:6px;border:1.5px solid transparent;background:#fff;font-family:var(--font);font-size:10.5px;font-weight:700;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.cp-day:hover{background:var(--bg)}
+.cp-day.cp-empty{visibility:hidden;cursor:default}
+.cp-day.cp-future{opacity:.3;pointer-events:none}
+.cp-day.cp-today{border-color:var(--purple-l)}
+.cp-day.cp-inrange{background:rgba(112,75,155,.12);border-radius:0}
+.cp-day.cp-selected{background:var(--purple);color:#fff;border-color:var(--purple)}
+.cp-range-label{font-size:10px;font-weight:700;color:var(--muted);text-align:center;padding-top:2px}
 .h-right{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-left:auto}
 #period-badge{font-size:10px;font-weight:700;color:var(--purple);background:rgba(112,75,155,.08);padding:3px 10px;border-radius:12px;white-space:nowrap;border:1px solid transparent}
 #period-badge.trunc{color:#8a6100;background:#fff3cd;border-color:#e8c468}
@@ -300,9 +308,14 @@ footer strong{color:#fff}
     <button class="pchip" data-p="month_pick" onclick="setPeriod(this)">📅 Mês</button>
     <button class="pchip" data-p="custom"     onclick="setPeriod(this)">Personalizado</button>
     <div id="custom-panel">
-      <input class="datein" type="date" id="dt-from">
-      <input class="datein" type="date" id="dt-to">
-      <button class="btn-apply" onclick="applyCustom()">Aplicar</button>
+      <div class="mp-header">
+        <button class="mp-nav" onclick="cpChangeMonth(-1)" aria-label="Mês anterior">‹</button>
+        <span class="mp-year" id="cp-month-label">—</span>
+        <button class="mp-nav" onclick="cpChangeMonth(1)" aria-label="Próximo mês">›</button>
+      </div>
+      <div class="cp-weekdays"><span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span></div>
+      <div class="cp-grid" id="cp-grid"></div>
+      <div class="cp-range-label" id="cp-range-label">Selecione a data inicial</div>
     </div>
     <div id="month-pick-panel">
       <div class="mp-header">
@@ -863,23 +876,17 @@ function setPeriod(btn) {
   _period = btn.dataset.p;
   const cp = el('custom-panel');
   const mp = el('month-pick-panel');
-  if (_period === 'custom') { cp.classList.add('show'); mp.classList.remove('show'); return; }
+  if (_period === 'custom') {
+    cp.classList.add('show'); mp.classList.remove('show');
+    renderCustomCalendar();
+    return;
+  }
   if (_period === 'month_pick') {
     mp.classList.add('show'); cp.classList.remove('show');
     renderMonthGrid();
     return;
   }
   cp.classList.remove('show'); mp.classList.remove('show');
-  loadData(false);
-}
-
-function applyCustom() {
-  const f = el('dt-from').value, t = el('dt-to').value;
-  if (!f || !t) { showErr('Preencha as duas datas.'); return; }
-  if (f > t) { showErr('A data "De" não pode ser depois da data "até".'); return; }
-  hideErr();
-  _customFrom = f; _customTo = t;
-  el('custom-panel').classList.remove('show'); // mesmo achado do seletor de mês: fecha ao aplicar
   loadData(false);
 }
 
@@ -930,6 +937,65 @@ function mpSelectMonth(y, m) {
   // fechar o painel depois de escolher o mês — ficava aberto pra sempre.
   el('month-pick-panel').classList.remove('show');
   loadData(false);
+}
+
+// Filtro "Personalizado" — mesmo achado do seletor de mês (Robert: "pode
+// melhorar também com uma construção própria"): <input type="date"> nativo
+// trocado por calendário dia-a-dia construído do zero, com seleção de faixa
+// (toca a data inicial, depois a final — aplica sozinho ao completar).
+let _cpYear  = new Date().getFullYear();
+let _cpMonth = new Date().getMonth() + 1; // mês exibido no calendário (navegação)
+let _cpRangeStart = null, _cpRangeEnd = null; // 'YYYY-MM-DD' ou null
+
+function renderCustomCalendar() {
+  el('cp-month-label').textContent = MESES_PT[_cpMonth - 1] + ' de ' + _cpYear;
+  const todayIso = todayLocalStr();
+  const firstDow = new Date(_cpYear, _cpMonth - 1, 1).getDay();
+  const daysInMonth = new Date(_cpYear, _cpMonth, 0).getDate();
+
+  let cells = [];
+  for (let i = 0; i < firstDow; i++) cells.push('<span class="cp-day cp-empty"></span>');
+  for (let d = 1; d <= daysInMonth; d++) {
+    const iso = _cpYear + '-' + String(_cpMonth).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    const isFuture = iso > todayIso;
+    const isEdge = iso === _cpRangeStart || iso === _cpRangeEnd;
+    const inRange = _cpRangeStart && _cpRangeEnd && iso > _cpRangeStart && iso < _cpRangeEnd;
+    const cls = ['cp-day',
+      isFuture ? 'cp-future' : '',
+      isEdge ? 'cp-selected' : '',
+      inRange ? 'cp-inrange' : '',
+      iso === todayIso ? 'cp-today' : ''
+    ].filter(Boolean).join(' ');
+    cells.push(`<button class="${cls}" ${isFuture ? 'disabled' : ''} onclick="cpSelectDay('${iso}')">${d}</button>`);
+  }
+  el('cp-grid').innerHTML = cells.join('');
+  el('cp-range-label').textContent = !_cpRangeStart
+    ? 'Selecione a data inicial'
+    : (fmtDisplayISO(_cpRangeStart) + (_cpRangeEnd ? ' → ' + fmtDisplayISO(_cpRangeEnd) : ' → selecione o fim'));
+}
+
+function cpChangeMonth(delta) {
+  _cpMonth += delta;
+  if (_cpMonth > 12) { _cpMonth = 1; _cpYear++; }
+  if (_cpMonth < 1)  { _cpMonth = 12; _cpYear--; }
+  renderCustomCalendar();
+}
+
+function cpSelectDay(iso) {
+  if (!_cpRangeStart || _cpRangeEnd) {
+    _cpRangeStart = iso; _cpRangeEnd = null;
+  } else if (iso < _cpRangeStart) {
+    _cpRangeStart = iso; _cpRangeEnd = null;
+  } else {
+    _cpRangeEnd = iso;
+  }
+  renderCustomCalendar();
+  if (_cpRangeStart && _cpRangeEnd) {
+    _customFrom = _cpRangeStart; _customTo = _cpRangeEnd;
+    hideErr();
+    el('custom-panel').classList.remove('show');
+    loadData(false);
+  }
 }
 
 function showErr(msg) {
