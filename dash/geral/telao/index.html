@@ -167,9 +167,14 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;heig
    etapa + contagem, tudo em texto legível a distância. */
 .lb-funnel{display:flex;align-items:center;gap:5px;flex:1;min-width:0;overflow:hidden}
 .lb-funnel-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.lb-funnel-txt{font-size:11px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.lb-funnel-txt b{font-weight:800;color:var(--muted)}
-.lb-funnel.empty .lb-funnel-txt{color:var(--faint);font-weight:700}
+/* achado 15/07 (auditoria adversarial): label+contagem num span só, com
+   ellipsis no conjunto, cortava o NÚMERO (a parte que importa) sempre que o
+   nome da etapa ("Diag./Solução", "Negociação") não cabia — testado ao vivo,
+   reproduzível em 2 das 3 etapas possíveis. Separado em 2 spans: label pode
+   truncar à vontade, contagem nunca encolhe nem corta. */
+.lb-funnel-label{font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+.lb-funnel-count{font-size:12px;font-weight:800;color:var(--text);white-space:nowrap;flex-shrink:0}
+.lb-funnel.empty .lb-funnel-label{color:var(--faint);font-weight:700}
 .lb-num{font-size:13px;font-weight:800;color:var(--text);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .lb-sub{padding-left:44px;font-size:10px;font-weight:600;color:var(--muted);display:flex;gap:14px;flex-wrap:nowrap;overflow:hidden}
 .lb-sub b{color:var(--text);font-weight:800}
@@ -422,6 +427,14 @@ footer strong{color:#fff}
 const PROXY_URL  = 'https://script.google.com/macros/s/AKfycbwYhN02lEurKoMy7i87Y5F8HNCUiAtGnFr_cqL0ft3WZNxInctbcIFKFqbVpMpmqKfZ/exec';
 const LEADS_PROXY = 'https://script.google.com/macros/s/AKfycbyq9KJgWTRoALEEVf8Pu_I82GT0-tTK5yXNg-RsYHj4ywK6Grg9z_jG1-IcTW3LMXfNBg/exec';
 const AGENDOR_DEAL = 'https://web.agendor.com.br/sistema/negocios/historico.php?id=';
+// achado 15/07 (auditoria adversarial): estava declarada lá embaixo perto de
+// skeletonFunilRow(), mas o cold-start chama renderSkeletonSections() bem no
+// início do script (antes de qualquer fetch) — const fica em "temporal dead
+// zone" até a linha rodar, então isso lançava ReferenceError síncrono e
+// travava o script INTEIRO (nem os listeners de DOMContentLoaded chegavam a
+// registrar). Telão que perdesse o localStorage (TV reiniciada, cache limpo)
+// ficava morto pra sempre, sem erro visível. Movida pra cima de tudo que usa.
+const _SKEL_GREY = '#e8e4f0';
 const ORIGIN_LABELS = { outbound: 'Outbound', inbound: 'Inbound', both: 'Painel Geral' };
 const STAGE_ORD = { '3771722':'o1', '3771723':'o2', '3771724':'o2', '3771725':'o3' };
 const ORD_DOT   = { o1:'#b09bd6', o2:'#9260c8', o3:'#5a3a80' };
@@ -1004,7 +1017,7 @@ function sparklineSVG(vals, color) {
 // a 1ª resposta de rede chegar (só o hero-row já tinha .skel). Mesmas classes
 // de container das linhas reais (pro tamanho bater certinho num layout sem
 // scroll de página), mas NUNCA clicáveis/navegáveis: sem onclick, sem <a href>.
-const _SKEL_GREY = '#e8e4f0';
+// _SKEL_GREY foi movida pro topo do script — ver comentário lá (achado 15/07).
 
 function skeletonFunilRow(barPct) {
   return `
@@ -1252,8 +1265,8 @@ function renderLeaderboard(reps, deals) {
     if (ds2 > topCount) { topOrd = 'o2'; topCount = ds2; }
     if (o3 > topCount) { topOrd = 'o3'; topCount = o3; }
     const funnelHtml = total > 0
-      ? `<span class="lb-funnel-dot" style="background:${ORD_DOT[topOrd]}"></span><span class="lb-funnel-txt">${STAGE_LABEL[topOrd]} <b>${topCount}</b></span>`
-      : `<span class="lb-funnel-txt">—</span>`;
+      ? `<span class="lb-funnel-dot" style="background:${ORD_DOT[topOrd]}"></span><span class="lb-funnel-label">${STAGE_LABEL[topOrd]}</span><span class="lb-funnel-count">${topCount}</span>`
+      : `<span class="lb-funnel-label">—</span>`;
 
     const convClass = r.conversao === null ? 'nil' : (r.conversao < 20 ? 'low' : '');
     const convText  = r.conversao !== null ? r.conversao + '%' : '—';
@@ -1536,8 +1549,14 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-document.addEventListener('DOMContentLoaded', () => loadData(false));
-document.addEventListener('visibilitychange', () => { if (!document.hidden) loadData(false); });
+// achado 15/07 (auditoria adversarial): sem o 2º parâmetro, TODA abertura de
+// página e TODA volta de aba mostrava o dim de "carregando" por ~1.2s mesmo
+// já tendo um snapshot local renderizado na hora — exatamente o flicker que
+// as notas de 12/07 e 13/07 diziam ter eliminado. Nem carregamento inicial
+// nem retomar aba são "ação explícita do usuário" — mesmo espírito do
+// auto-refresh silencioso.
+document.addEventListener('DOMContentLoaded', () => loadData(false, true));
+document.addEventListener('visibilitychange', () => { if (!document.hidden) loadData(false, true); });
 </script>
 </body>
 </html>

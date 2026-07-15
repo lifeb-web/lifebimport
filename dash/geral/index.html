@@ -1222,15 +1222,21 @@ function mdealRow(d, opts) {
   const dotColor = opts.dotColor || ORD_DOT[ord];
   const valStyle = opts.valColor ? ` style="color:${opts.valColor}"` : '';
   const valText = opts.dashIfZero ? (d.value > 0 ? fmtMoney(d.value) : '—') : fmtMoney(d.value);
-  const showStale = opts.alwaysStale || d.stale;
-  // achado 15/07 (Robert): "congelado" (pausa deliberada do rep, campo próprio
-  // do Agendor) é diferente de "parado" (heurística de tempo sem toque) — o
-  // proxy já exclui congelado de "stale", então os dois nunca aparecem juntos,
-  // mas o ícone é outro pra nunca dar a entender que foi esquecido.
+  // achado 15/07 (auditoria adversarial): negócio já Ganho/Perdido não tem
+  // "parado"/"congelado" com sentido nenhum (só existe pra pipeline ATIVO) —
+  // hoje o proxy nunca manda .stale/.frozen em recentWon/recentLost, mas isso
+  // era implícito (dependia do proxy nunca mudar). openWonModal/openLostModal
+  // passam noStaleFrozen:true pra nunca depender dessa suposição silenciosa.
+  const showStale = !opts.noStaleFrozen && (opts.alwaysStale || d.stale);
+  const showFrozen = !opts.noStaleFrozen && d.frozen;
+  // "congelado" (pausa deliberada do rep, campo próprio do Agendor) é diferente
+  // de "parado" (heurística de tempo sem toque) — o proxy já exclui congelado
+  // de "stale", então os dois nunca aparecem juntos, mas o ícone é outro pra
+  // nunca dar a entender que foi esquecido.
   const sub = [
     opts.showRep !== false ? `<span class="mdeal-rep">${escHtml(d.rep||'—')}</span>` : '',
     opts.date ? `<span class="mdeal-date">${fmtDateDisplay(opts.date)}</span>` : '',
-    d.frozen ? '<span class="mdeal-stale" title="Congelado (pausa deliberada)">🧊</span>' : (showStale ? '<span class="mdeal-stale" title="Sem toque há +7 dias">⚠️</span>' : '')
+    showFrozen ? '<span class="mdeal-stale" title="Congelado (pausa deliberada)">🧊</span>' : (showStale ? '<span class="mdeal-stale" title="Sem toque há +7 dias">⚠️</span>' : '')
   ].filter(Boolean).join('');
   return `
     <a class="mdeal-row" href="${AGENDOR_DEAL}${d.id}" target="_blank">
@@ -1332,7 +1338,7 @@ function openWonModal() {
   el('modal-title').textContent = 'Negócios Ganhos — ' + deals.length;
   el('modal-body').innerHTML = deals.length === 0
     ? '<div class="modal-empty">Nenhum negócio ganho no período</div>'
-    : deals.map(d => mdealRow(d, { dotColor: 'var(--green)', valColor: '#15803d', date: d.closedAt })).join('');
+    : deals.map(d => mdealRow(d, { dotColor: 'var(--green)', valColor: '#15803d', date: d.closedAt, noStaleFrozen: true })).join('');
   el('modal-overlay').classList.add('show');
 }
 
@@ -1342,7 +1348,7 @@ function openLostModal() {
   el('modal-title').textContent = 'Perdidos no Período — ' + deals.length;
   el('modal-body').innerHTML = deals.length === 0
     ? '<div class="modal-empty">Nenhum negócio perdido no período</div>'
-    : deals.map(d => mdealRow(d, { dotColor: 'var(--red)', valColor: 'var(--red)', dashIfZero: true, date: d.closedAt })).join('');
+    : deals.map(d => mdealRow(d, { dotColor: 'var(--red)', valColor: 'var(--red)', dashIfZero: true, date: d.closedAt, noStaleFrozen: true })).join('');
   el('modal-overlay').classList.add('show');
 }
 
@@ -1445,8 +1451,14 @@ function friendlyErr(e) {
   return raw.split('\n')[0].split(' at ')[0].trim() || 'Erro ao carregar dados';
 }
 
-document.addEventListener('DOMContentLoaded', () => loadData(false));
-document.addEventListener('visibilitychange', () => { if (!document.hidden) loadData(false); });
+// achado 15/07 (auditoria adversarial): sem o 2º parâmetro, TODA abertura de
+// página e TODA volta de aba mostrava o dim de "carregando" por ~1.2s mesmo
+// já tendo um snapshot local renderizado na hora — exatamente o flicker que
+// as notas de 12/07 e 13/07 diziam ter eliminado. Nem carregamento inicial
+// nem retomar aba são "ação explícita do usuário" — mesmo espírito do
+// auto-refresh silencioso.
+document.addEventListener('DOMContentLoaded', () => loadData(false, true));
+document.addEventListener('visibilitychange', () => { if (!document.hidden) loadData(false, true); });
 </script>
 </body>
 </html>
