@@ -137,9 +137,6 @@
         let resizeTimer;
 
         $(function () {
-          $('.mask-cpf').mask('999.999.999-99');    
-          $('.mask-celular').mask('(99) 99999-9999');
-              $('.mask-cep').mask('99999-999');
 
             $(window).scroll(function(){
               if($(window).scrollTop()>=100){
@@ -740,22 +737,31 @@
 <!-- LEAD MODAL -->
 <div class="lead-modal-overlay" id="leadModalOverlay">
   <div class="lead-modal" id="leadModal">
-    <button type="button" class="lead-modal-close" id="leadModalClose" aria-label="Fechar">&times;</button>
+    <div class="lead-modal-handle"><span></span></div>
+    <button type="button" class="lead-modal-close" id="leadModalClose" aria-label="Fechar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    </button>
+    <img src="https://d2xsxph8kpxj0f.cloudfront.net/310519663443567391/DudyrJtvnPXoPe9sKXDH5u/LifeB_78863297.png" alt="Life B" class="lead-modal-logo">
     <h3 class="lead-modal-title" id="leadModalTitle">Fale agora com um consultor</h3>
     <form id="leadForm" novalidate>
       <div class="lead-field">
-        <label for="leadNome">Nome</label>
-        <input type="text" id="leadNome" name="nome" autocomplete="name" required>
+        <input type="text" id="leadNome" name="nome" placeholder="Seu nome" autocomplete="name" required>
       </div>
       <div class="lead-field">
-        <label for="leadTelefone">Telefone</label>
         <div class="lead-phone-wrap">
           <span class="lead-phone-prefix">🇧🇷 +55</span>
-          <input type="tel" id="leadTelefone" name="telefone" class="mask-celular" autocomplete="tel" inputmode="numeric" required>
+          <input type="tel" id="leadTelefone" name="telefone" placeholder="DDD + número do WhatsApp" autocomplete="tel" inputmode="numeric" required>
         </div>
         <span class="lead-phone-error" id="leadPhoneError">Número incompleto.</span>
       </div>
-      <button type="submit" class="lead-submit-btn" id="leadSubmitBtn">Continuar para o WhatsApp</button>
+      <div class="lead-field">
+        <input type="text" id="leadCnpj" name="cnpj" placeholder="CNPJ da empresa (opcional)" inputmode="numeric">
+        <span class="lead-cnpj-error" id="leadCnpjError">CNPJ incompleto.</span>
+      </div>
+      <button type="submit" class="lead-submit-btn" id="leadSubmitBtn">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"></path></svg>
+        Continuar para o WhatsApp
+      </button>
       <div class="lead-microcopy">Nosso consultor responde em instantes.</div>
     </form>
   </div>
@@ -816,6 +822,7 @@
 (function () {
   var WHATSAPP_NUMBER = '5562996437218';
   var SHEETS_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbxf8BCiia3qwZUh0wUX8pg7xKD-0-p_6ssf7SJAPvCZJjmpJMniwcuAQVFkRl9Mb8wf/exec';
+  var GS_WORKER_INBOUND_URL = 'https://gs-agendor-worker.robert131196.workers.dev/gs-inbound';
   var LOCAL_KEY = 'jlbv_lead';
 
   var overlay = document.getElementById('leadModalOverlay');
@@ -825,10 +832,13 @@
   var nomeInput = document.getElementById('leadNome');
   var telInput = document.getElementById('leadTelefone');
   var phoneError = document.getElementById('leadPhoneError');
+  var cnpjInput = document.getElementById('leadCnpj');
+  var cnpjError = document.getElementById('leadCnpjError');
 
   var currentOrigem = '';
   var currentWaText = '';
   var formOpened = false;
+  var touchStartY = 0;
 
   function getUtms() {
     var p = new URLSearchParams(window.location.search);
@@ -841,6 +851,28 @@
 
   function digits(v) { return (v || '').replace(/\D/g, ''); }
 
+  function formatPhone(value) {
+    var d = digits(value);
+    if (d.indexOf('55') === 0 && d.length >= 4) d = d.slice(2);
+    d = d.slice(0, 11);
+    if (!d) return '';
+    if (d.length <= 2) return '(' + d;
+    var ddd = d.slice(0, 2);
+    var rest = d.slice(2);
+    if (rest.length <= 4) return '(' + ddd + ') ' + rest;
+    if (d.length <= 10) return '(' + ddd + ') ' + rest.slice(0, 4) + '-' + rest.slice(4);
+    return '(' + ddd + ') ' + rest.slice(0, 5) + '-' + rest.slice(5);
+  }
+
+  function formatCNPJ(value) {
+    var d = digits(value).slice(0, 14);
+    if (d.length <= 2) return d;
+    if (d.length <= 5) return d.slice(0, 2) + '.' + d.slice(2);
+    if (d.length <= 8) return d.slice(0, 2) + '.' + d.slice(2, 5) + '.' + d.slice(5);
+    if (d.length <= 12) return d.slice(0, 2) + '.' + d.slice(2, 5) + '.' + d.slice(5, 8) + '/' + d.slice(8);
+    return d.slice(0, 2) + '.' + d.slice(2, 5) + '.' + d.slice(5, 8) + '/' + d.slice(8, 12) + '-' + d.slice(12);
+  }
+
   function normalizedPhone() {
     var d = digits(telInput.value);
     if (d.length > 11 && d.indexOf('55') === 0) d = d.slice(2);
@@ -850,6 +882,9 @@
   function phoneValid() {
     return normalizedPhone().length === 11;
   }
+
+  function cnpjDigits() { return digits(cnpjInput.value); }
+  function cnpjValid() { return cnpjDigits().length === 14; }
 
   function waLink(text) {
     return 'https://wa.me/' + WHATSAPP_NUMBER + (text ? '?text=' + encodeURIComponent(text) : '');
@@ -882,6 +917,18 @@
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(body)
     }).catch(function () {});
+    // Mesma integração com GS Engage/Agendor que as outras LPs já usam (faltava aqui)
+    fetch(GS_WORKER_INBOUND_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nome: payload.nome,
+        telefone: payload.telefone,
+        origem: payload.origem,
+        pagina: window.location.href,
+        cnpj: payload.cnpj || undefined
+      })
+    }).catch(function () {});
   }
 
   function saveLocalLead(nome, telefone) {
@@ -902,28 +949,32 @@
     currentWaText = waText;
     formOpened = true;
     var saved = getLocalLead();
-    if (saved) {
-      nomeInput.value = saved.nome || '';
-      telInput.value = saved.telefone || '';
-    }
+    nomeInput.value = saved ? (saved.nome || '') : '';
+    telInput.value = saved ? (saved.telefone || '') : '';
+    cnpjInput.value = '';
     overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
     phoneError.classList.remove('show');
+    cnpjError.classList.remove('show');
     fireGtag('Abrir_Formulario', { source: origem });
     fireFbq('Abrir_Formulario', { source: origem });
-    setTimeout(function () { nomeInput.focus(); }, 100);
+    setTimeout(function () { nomeInput.focus(); }, 300);
   }
 
   function closeModal() {
     var hadPhone = phoneValid();
     overlay.classList.remove('open');
+    document.body.style.overflow = '';
     if (formOpened && hadPhone) {
       fireGtag('Abandonou_Formulario', { source: currentOrigem });
       fireFbq('Abandonou_Formulario', { source: currentOrigem });
       postLead({
         nome: nomeInput.value.trim(),
         telefone: telInput.value.trim(),
+        cnpj: cnpjDigits(),
         origem: currentOrigem + ' (Abandonou_Formulario)'
       });
+      saveLocalLead(nomeInput.value.trim(), telInput.value.trim());
     }
     formOpened = false;
   }
@@ -952,19 +1003,29 @@
     if (e.target === overlay) closeModal();
   });
 
+  // Swipe down para fechar (mobile) — igual ao gesto das outras LPs
+  modal.addEventListener('touchstart', function (e) {
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+  modal.addEventListener('touchend', function (e) {
+    if (e.changedTouches[0].clientY - touchStartY > 80) closeModal();
+  }, { passive: true });
+
   var telBlurred = false;
-  telInput.addEventListener('blur', function () {
-    telBlurred = true;
-    if (telInput.value && !phoneValid()) {
-      phoneError.classList.add('show');
-    } else {
-      phoneError.classList.remove('show');
-    }
-  });
   telInput.addEventListener('input', function () {
+    telInput.value = formatPhone(telInput.value);
     if (telBlurred) {
       phoneError.classList.toggle('show', !!telInput.value && !phoneValid());
     }
+  });
+  telInput.addEventListener('blur', function () {
+    telBlurred = true;
+    phoneError.classList.toggle('show', !!telInput.value && !phoneValid());
+  });
+
+  cnpjInput.addEventListener('input', function () {
+    cnpjInput.value = formatCNPJ(cnpjInput.value);
+    cnpjError.classList.toggle('show', cnpjDigits().length > 0 && !cnpjValid());
   });
 
   form.addEventListener('submit', function (e) {
@@ -978,14 +1039,16 @@
 
     var nome = nomeInput.value.trim();
     var telefone = telInput.value.trim();
+    var cnpj = cnpjDigits();
 
     fireGtag('Lead_Formulario', { source: currentOrigem });
     fireFbq('Lead', { source: currentOrigem });
 
-    postLead({ nome: nome, telefone: telefone, origem: currentOrigem });
+    postLead({ nome: nome, telefone: telefone, cnpj: cnpj, origem: currentOrigem });
     saveLocalLead(nome, telefone);
     formOpened = false;
     overlay.classList.remove('open');
+    document.body.style.overflow = '';
 
     window.open(waLink(currentWaText), '_blank');
   });
@@ -998,13 +1061,14 @@
         data: new Date().toLocaleString('pt-BR'),
         nome: nomeInput.value.trim(),
         telefone: telInput.value.trim(),
-        origem: currentOrigem + ' (Abandonou_Formulario)',
+        origem: currentOrigem + ' (Fechou a Pagina)',
         pagina: window.location.href,
         campanha: utms.campanha,
         conjunto: utms.conjunto,
         anuncio: utms.anuncio
       });
       navigator.sendBeacon(SHEETS_WEBHOOK_URL, new Blob([body], { type: 'text/plain;charset=utf-8' }));
+      saveLocalLead(nomeInput.value.trim(), telInput.value.trim());
     }
   });
 
