@@ -1223,10 +1223,14 @@ function mdealRow(d, opts) {
   const valStyle = opts.valColor ? ` style="color:${opts.valColor}"` : '';
   const valText = opts.dashIfZero ? (d.value > 0 ? fmtMoney(d.value) : '—') : fmtMoney(d.value);
   const showStale = opts.alwaysStale || d.stale;
+  // achado 15/07 (Robert): "congelado" (pausa deliberada do rep, campo próprio
+  // do Agendor) é diferente de "parado" (heurística de tempo sem toque) — o
+  // proxy já exclui congelado de "stale", então os dois nunca aparecem juntos,
+  // mas o ícone é outro pra nunca dar a entender que foi esquecido.
   const sub = [
     opts.showRep !== false ? `<span class="mdeal-rep">${escHtml(d.rep||'—')}</span>` : '',
     opts.date ? `<span class="mdeal-date">${fmtDateDisplay(opts.date)}</span>` : '',
-    showStale ? '<span class="mdeal-stale" title="Sem toque há +7 dias">⚠️</span>' : ''
+    d.frozen ? '<span class="mdeal-stale" title="Congelado (pausa deliberada)">🧊</span>' : (showStale ? '<span class="mdeal-stale" title="Sem toque há +7 dias">⚠️</span>' : '')
   ].filter(Boolean).join('');
   return `
     <a class="mdeal-row" href="${AGENDOR_DEAL}${d.id}" target="_blank">
