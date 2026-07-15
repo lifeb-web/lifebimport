@@ -166,7 +166,12 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;heig
 #rep-card{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
 .lb-header{padding:8px 14px 7px;border-bottom:1px solid var(--border);flex-shrink:0}
 .lb-grid{display:grid;grid-template-columns:28px minmax(0,1.4fr) 48px 1.1fr 1fr 1.2fr 0.55fr;align-items:center;gap:8px}
-.lb-rows{flex:1;display:flex;flex-direction:column;justify-content:space-evenly;min-height:0;overflow-y:auto}
+/* achado 15/07 (Robert: "a barrinha de scroll corta os números... nem tem
+   serventia mesmo"): rolagem já é 100% automática (autoScrollIfNeeded) — a
+   barra nativa só ocupava espaço e cortava a última coluna. scrollTop
+   continua funcionando normalmente com a barra escondida. */
+.lb-rows{flex:1;display:flex;flex-direction:column;justify-content:space-evenly;min-height:0;overflow-y:auto;scrollbar-width:none}
+.lb-rows::-webkit-scrollbar{display:none}
 .lb-row{flex:0 0 auto;padding:9px 14px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:6px;cursor:pointer}
 .lb-row:last-child{border-bottom:none}
 .lb-row:hover{background:#faf8fc}
@@ -202,7 +207,8 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;heig
 #col-right{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
 #won-card{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
 #lost-card{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
-.feed-scroll{flex:1;overflow-y:auto;min-height:0}
+.feed-scroll{flex:1;overflow-y:auto;min-height:0;scrollbar-width:none}
+.feed-scroll::-webkit-scrollbar{display:none}
 .feed-row{padding:7px 12px;display:flex;align-items:center;gap:9px;border-bottom:1px solid var(--border);cursor:pointer;text-decoration:none}
 .feed-row:last-child{border-bottom:none}
 .feed-row:hover{background:#faf8fc}
@@ -331,7 +337,7 @@ footer strong{color:#fff}
     </div>
     <div class="kchip" onclick="openPipelineModal()">
       <span class="kc-label">Pipeline</span>
-      <div class="kc-row"><span class="kc-val" id="k-pipeline"><span class="skel"></span></span><span class="kc-delta" id="k-pipeline-delta"></span></div>
+      <div class="kc-row"><span class="kc-val" id="k-pipeline"><span class="skel"></span></span></div>
       <span class="kc-sub" id="k-ativos">—</span>
     </div>
     <div class="kchip">
@@ -368,9 +374,9 @@ footer strong{color:#fff}
 
   <div id="mkt-row">
     <div class="achip"><span class="ac-label">Investimento Ads<span class="ac-tag">IN</span> <span id="mkt-updated" style="text-transform:none;font-weight:600"></span></span><span class="ac-val" id="mkt-inv"><span class="skel"></span></span></div>
-    <div class="achip"><span class="ac-label" title="Custo de Aquisição de Cliente">CAC: Custo por Venda<span class="ac-tag">IN</span></span><span class="ac-val" id="mkt-cac"><span class="skel"></span></span></div>
+    <div class="achip"><span class="ac-label" title="Custo de Aquisição de Cliente">CAC: Custo por Venda<span class="ac-tag">IN</span></span><span class="ac-val" id="mkt-cac"><span class="skel"></span></span><span class="kc-delta" id="mkt-cac-delta"></span></div>
     <div class="achip"><span class="ac-label" title="Custo Por Lead">CPL: Custo por Lead<span class="ac-tag">IN</span></span><span class="ac-val" id="mkt-cpl"><span class="skel"></span></span></div>
-    <div class="achip"><span class="ac-label" title="Return On Ad Spend">ROAS: Retorno s/ Investido<span class="ac-tag">IN</span></span><span class="ac-val" id="mkt-roas"><span class="skel"></span></span></div>
+    <div class="achip"><span class="ac-label" title="Return On Ad Spend">ROAS: Retorno s/ Investido<span class="ac-tag">IN</span></span><span class="ac-val" id="mkt-roas"><span class="skel"></span></span><span class="kc-delta" id="mkt-roas-delta"></span></div>
     <div class="achip"><span class="ac-label" title="Advertising Cost of Sale">ACOS: % Gasto / Receita<span class="ac-tag">IN</span></span><span class="ac-val" id="mkt-acos"><span class="skel"></span></span></div>
   </div>
 
@@ -781,6 +787,35 @@ let _lastErrMsg = ''; // usado só pra detectar erro de cota e espaçar o retry
 // auto-refresh periódico (scheduleRefresh) tocam a rede de verdade.
 let _rawDeals     = null;
 let _rawFetchedAt = 0;
+// Gasto diário do Meta Ads (dash_geral_ads_daily) — mesma ideia, achado 15/07:
+// era a ÚLTIMA parte do painel ainda dependente de rede (e da API do Meta,
+// rate-limited) numa troca de filtro. Buscado junto de _rawDeals, somado
+// localmente por período em loadAdsSection().
+let _adsRawDaily     = null;
+let _adsRawFetchedAt = 0;
+async function fetchAdsRawDaily() {
+  const PAGE = 1000;
+  let all = [];
+  let from = 0;
+  while (true) {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/dash_geral_ads_daily?select=*', {
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
+        Range: from + '-' + (from + PAGE - 1),
+        Prefer: 'count=exact'
+      }
+    });
+    if (!res.ok) throw new Error('Supabase HTTP ' + res.status);
+    const chunk = await res.json();
+    all = all.concat(chunk);
+    const cr = res.headers.get('content-range');
+    const total = (cr && cr.indexOf('/') !== -1) ? parseInt(cr.split('/')[1], 10) : chunk.length;
+    if (all.length >= total || chunk.length < PAGE) break;
+    from += PAGE;
+  }
+  return all;
+}
 
 // Mostra o último dado bom salvo NA HORA, antes até da primeira busca de rede
 // terminar (achado 12/07: primeiro carregamento sempre ficava com esqueleto até
@@ -950,6 +985,10 @@ async function loadData(force, silent) {
     if (needsFetch) {
       _rawDeals = await fetchRawDeals();
       _rawFetchedAt = Date.now();
+      // best-effort: falha aqui nunca derruba o carregamento principal do CRM
+      // (que já terminou acima) — loadAdsSection() simplesmente mostra "—"
+      // se _adsRawDaily continuar null.
+      try { _adsRawDaily = await fetchAdsRawDaily(); _adsRawFetchedAt = Date.now(); } catch (_) {}
     } else if (!silent) {
       await new Promise(r => setTimeout(r, 150)); // respiro mínimo pro pulso ser visível
     }
@@ -966,13 +1005,16 @@ async function loadData(force, silent) {
     if (_originMode === 'both') ibData = computeDashboardData(_rawDeals, 'inbound', effPeriodType, _customFrom, _customTo, today);
     else if (_originMode === 'inbound') ibData = curr;
 
-    // Reaproveita o inbound já computado aqui em cima em vez de recalcular.
-    if (curr.period) loadAdsSection(curr.period.from, curr.period.to, ibData, silent);
-
     // Período anterior (mesmo tamanho de janela) só pra delta — cálculo local,
     // sem rede, então já sai pronto antes mesmo do render principal.
     const prevRange = prevRangeOf(curr.period);
     const prev = computeDashboardData(_rawDeals, _originMode, 'custom', prevRange.from, prevRange.to, today);
+    let prevIbData = null;
+    if (_originMode === 'both') prevIbData = computeDashboardData(_rawDeals, 'inbound', 'custom', prevRange.from, prevRange.to, today);
+    else if (_originMode === 'inbound') prevIbData = prev;
+
+    // Reaproveita o inbound já computado aqui em cima em vez de recalcular.
+    if (curr.period) loadAdsSection(curr.period.from, curr.period.to, ibData, silent, prevRange.from, prevRange.to, prevIbData);
 
     _data = curr;
     _lastErrMsg = '';
@@ -1068,7 +1110,7 @@ function setTextFlash(id, text) {
 
 // ── INVESTIMENTO / CAC / CPL / ROAS / ACOS — filtrado pelo período selecionado ──
 let _adsSeq = 0; // guarda contra resposta atrasada de um período antigo sobrescrever a mais nova
-async function loadAdsSection(periodFrom, periodTo, inboundData, silent) {
+async function loadAdsSection(periodFrom, periodTo, inboundData, silent, prevPeriodFrom, prevPeriodTo, prevInboundData) {
   const mySeq = ++_adsSeq;
   const show = (_originMode === 'inbound' || _originMode === 'both') && periodFrom && periodTo;
   const row = el('mkt-row');
@@ -1081,48 +1123,52 @@ async function loadAdsSection(periodFrom, periodTo, inboundData, silent) {
   // sem ninguém tocar em nada — parecia "piscar sozinho" na tela. Mesmo
   // silent=true que o resto do painel já respeita.
   if (!silent) row.classList.add('mkt-updating');
-  // achado 12/07: a API do Meta rejeita time_range com mais de ~37 meses (testado
-  // ao vivo: 3 anos funciona, 4 anos já cai pro fallback da planilha — até 1 dia
-  // desatualizada). O filtro "Total" manda from=2020-01-01 só como marcador de
-  // "bem antigo" (a conta é de 2026) — trava o mínimo em 3 anos atrás pra sempre
-  // bater na API ao vivo em vez de cair sem necessidade na planilha.
-  const adsFloor = new Date(); adsFloor.setFullYear(adsFloor.getFullYear() - 3);
-  const adsFrom = periodFrom < adsFloor.toISOString().slice(0, 10) ? adsFloor.toISOString().slice(0, 10) : periodFrom;
   try {
-    const [adsR, closedR] = await Promise.all([
-      fetch(LEADS_PROXY + '?action=ads&from=' + adsFrom + '&to=' + periodTo, { cache: 'no-store' }).then(r => r.json()),
-      fetch(LEADS_PROXY + '?action=closed', { cache: 'no-store' }).then(r => r.json())
-    ]);
-    const agR = inboundData || { recentWon: [] };
+    // achado 15/07 (Robert: "não pode nada depender de planilha... ninguém
+    // atualiza lá"): a planilha de leads só recebe CAPTURA automática hoje —
+    // ninguém mais atualiza status/fechamento manualmente lá. Receita/fechados
+    // agora vêm 100% do CRM (mesmo _data já calculado pelo motor local) —
+    // único uso restante da planilha é contar leads únicos (dedup por
+    // WhatsApp) pro CPL, que continua automático.
+    const leadsR = await fetch(LEADS_PROXY + '?action=leads_unicos&from=' + periodFrom + '&to=' + periodTo, { cache: 'no-store' }).then(r => r.json());
     if (mySeq !== _adsSeq) return;
-    const allSheetFechamentos = closedR.fechamentos || [];
-    const sheetsFechamentos = allSheetFechamentos.filter(c => {
-      const d = (c.data_f || c.data || '').slice(0,10);
-      return d && d >= periodFrom && d <= periodTo;
-    });
 
-    const sheetKeys = new Set(allSheetFechamentos.map(c =>
-      String(c.empresa || c.nome || '').toLowerCase().trim() + '|' + String(c.data_f || c.data || '').slice(0,10)
-    ));
-    const agendorOnly = (agR.recentWon || []).filter(w =>
-      w.value > 0 && w.closedAt && !sheetKeys.has(String(w.title||'').toLowerCase().trim() + '|' + w.closedAt)
-    );
+    const agK = (inboundData && inboundData.kpis) || { ganhoValor: 0, ganhoCont: 0 };
+    const receitaPeriodo  = agK.ganhoValor;
+    const fechadosPeriodo = agK.ganhoCont;
+    const leadsPeriodo = (leadsR && leadsR.leadsUnicos) || 0;
 
-    const receitaPeriodo  = sheetsFechamentos.reduce((s,c) => s + (+c.valor||0), 0) + agendorOnly.reduce((s,w) => s + (+w.value||0), 0);
-    const fechadosPeriodo = sheetsFechamentos.length + agendorOnly.length;
-    // CPL usa leads ÚNICOS da planilha (dedup por WhatsApp, calculado no proxy —
-    // vem embutido na mesma resposta de "ads", sem chamada extra). Não usa o
-    // leadsNoPeriodo do Agendor (só negócio já criado no CRM, bem menor).
-    const leadsPeriodo = (adsR && adsR.leadsUnicos) || 0;
-    const inv = (adsR && +adsR.investimento) || 0;
+    // achado 15/07: investimento vem do Supabase (dash_geral_ads_daily,
+    // sincronizado periodicamente a partir do Meta) — soma local por
+    // período, zero chamada de rede ao Meta numa troca de filtro. Era a
+    // ÚLTIMA parte do painel ainda dependente disso.
+    const adsRows = (_adsRawDaily || []).filter(r => r.date >= periodFrom && r.date <= periodTo);
+    const inv = adsRows.reduce((s, r) => s + (parseFloat(r.spend_net) || 0), 0);
+    const ultimaData = (_adsRawDaily && _adsRawDaily.length)
+      ? _adsRawDaily.reduce((max, r) => (r.date > max ? r.date : max), _adsRawDaily[0].date)
+      : null;
 
-    const fonteTxt = adsR.fonte === 'meta_live' ? 'ao vivo' : (adsR.fonte === 'planilha' ? 'planilha' : '');
-    el('mkt-updated').textContent = adsR.ultimaData ? '· ' + fonteTxt + ' ' + adsR.ultimaData : '';
+    el('mkt-updated').textContent = ultimaData ? '· sincronizado ' + fmtDisplayISO(ultimaData) : '';
     el('mkt-inv').textContent  = inv > 0 ? fmtMoney(inv) : '—';
     el('mkt-cac').textContent  = (inv > 0 && fechadosPeriodo > 0) ? fmtMoney(Math.round(inv / fechadosPeriodo)) : '—';
     el('mkt-cpl').textContent  = (inv > 0 && leadsPeriodo > 0) ? fmtMoney(Math.round(inv / leadsPeriodo)) : '—';
     el('mkt-roas').textContent = (inv > 0 && receitaPeriodo > 0) ? (receitaPeriodo / inv).toFixed(2) + 'x' : '—';
     el('mkt-acos').textContent = (inv > 0 && receitaPeriodo > 0) ? (inv / receitaPeriodo * 100).toFixed(1) + '%' : '—';
+
+    // achado 15/07 (Robert: setinha só nas métricas que fazem sentido comparar
+    // por período — ROAS e CAC são as mais estratégicas de Ads; CPL/ACOS/
+    // Investimento ficam de fora pra não poluir). Cálculo 100% local.
+    if (prevPeriodFrom && prevPeriodTo) {
+      const prevAdsRows = (_adsRawDaily || []).filter(r => r.date >= prevPeriodFrom && r.date <= prevPeriodTo);
+      const prevInv = prevAdsRows.reduce((s, r) => s + (parseFloat(r.spend_net) || 0), 0);
+      const prevK = (prevInboundData && prevInboundData.kpis) || { ganhoValor: 0, ganhoCont: 0 };
+      const roasNow  = (inv > 0 && receitaPeriodo > 0) ? receitaPeriodo / inv : null;
+      const roasPrev = (prevInv > 0 && prevK.ganhoValor > 0) ? prevK.ganhoValor / prevInv : null;
+      const cacNow   = (inv > 0 && fechadosPeriodo > 0) ? inv / fechadosPeriodo : null;
+      const cacPrev  = (prevInv > 0 && prevK.ganhoCont > 0) ? prevInv / prevK.ganhoCont : null;
+      el('mkt-roas-delta').innerHTML = kcDeltaHTML(pctDelta(roasNow, roasPrev));       // maior é melhor
+      el('mkt-cac-delta').innerHTML  = kcDeltaHTML(pctDelta(cacNow, cacPrev), true);   // menor é melhor
+    }
   } catch(e) {
     // Não esconde mais o bloco inteiro em erro (silencioso demais — achado 09/07):
     // mantém os últimos números bons na tela e só avisa no rodapé do card.
@@ -1157,10 +1203,13 @@ function deltaHTML(pct) {
   const txt = pct === Infinity ? 'novo' : Math.abs(pct) + '%';
   return `<span class="delta ${cls}">${arrow} ${txt}</span>`;
 }
-function kcDeltaHTML(pct) {
+function kcDeltaHTML(pct, invert) {
   if (pct === null || pct === undefined) return '';
-  const cls = (pct === Infinity ? 1 : pct) >= 0 ? 'up' : 'down';
-  const arrow = (pct === Infinity ? 1 : pct) >= 0 ? '▲' : '▼';
+  const raw = pct === Infinity ? 1 : pct;
+  // invert: métrica onde MENOR é melhor (ex: CAC) — verde quando cai, vermelho quando sobe
+  const good = invert ? raw <= 0 : raw >= 0;
+  const cls = good ? 'up' : 'down';
+  const arrow = raw >= 0 ? '▲' : '▼';
   const txt = pct === Infinity ? 'novo' : Math.abs(pct) + '%';
   return `<span class="kc-delta ${cls}">${arrow}${txt}</span>`;
 }
@@ -1168,7 +1217,9 @@ function kcDeltaHTML(pct) {
 function renderDeltas(k, prev) {
   if (!prev) return;
   el('hero-delta').innerHTML = deltaHTML(pctDelta(k.ganhoValor, prev.ganhoValor));
-  el('k-pipeline-delta').innerHTML = kcDeltaHTML(pctDelta(k.pipelineTotal, prev.pipelineTotal));
+  // achado 15/07 (Robert): tirada a seta do Pipeline Ativo — é uma foto do
+  // momento atual, não filtrada por período, então "período anterior" SEMPRE
+  // recalcula pro mesmo valor (delta sempre 0%, nunca informativo de verdade).
   el('k-conv-delta').innerHTML = kcDeltaHTML(pctDelta(k.conversao, prev.conversao));
 }
 
@@ -1542,11 +1593,26 @@ function renderFeed(won, lost, kpis) {
 // escondia negócio além do que cabia na altura do card, sem NENHUM aviso — quem
 // olhava de longe achava que só existia o que via. Rola devagar até o fim, pausa,
 // volta pro topo, pausa, repete — só ativa quando o conteúdo realmente não cabe.
-const _autoScrollTimers = {};
-const _manualScrollAt   = {};
+const _autoScrollTimers    = {};
+const _manualScrollAt      = {};
+const _autoScrollSignature = {};
 function autoScrollIfNeeded(elId, opts) {
   const el2 = document.getElementById(elId);
   if (!el2) return;
+
+  // achado 15/07 (Robert: "fica bugado, piscando igual louco"): esta função
+  // reiniciava o scroll (volta pro topo + reinicia o timer do zero) TODA VEZ
+  // que render() rodava — inclusive quando o conteúdo era EXATAMENTE o
+  // mesmo de antes (auto-refresh de 60s sem mudança real, ou troca de filtro
+  // voltando pro mesmo combo já visto). Se isso acontecesse mais rápido que
+  // 1 ciclo completo de rolagem (pausa+desce+pausa), o scroll nunca
+  // terminava — ficava voltando pro topo sem parar, visualmente "piscando".
+  // Agora só reinicia se o conteúdo realmente mudou (hash do innerHTML já
+  // escrito por quem chamou esta função).
+  const sig = simpleHash(el2.innerHTML);
+  if (_autoScrollSignature[elId] === sig && _autoScrollTimers[elId]) return;
+  _autoScrollSignature[elId] = sig;
+
   if (_autoScrollTimers[elId]) { clearInterval(_autoScrollTimers[elId]); delete _autoScrollTimers[elId]; }
 
   // achado 12/07 (Robert usa o telão também no PC, com mouse/trackpad): o
