@@ -199,7 +199,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;heig
 #col-center{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
 #rep-card{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
 .lb-header{padding:8px 14px 7px;border-bottom:1px solid var(--border);flex-shrink:0}
-.lb-grid{display:grid;grid-template-columns:28px minmax(0,1.4fr) 48px 1.1fr 1fr 1.2fr 0.55fr;align-items:center;gap:8px}
+.lb-grid{display:grid;grid-template-columns:28px minmax(0,1.4fr) 48px 1fr 1.2fr 0.55fr;align-items:center;gap:8px}
 /* achado 15/07 (Robert: "a barrinha de scroll corta os números... nem tem
    serventia mesmo"): rolagem já é 100% automática (autoScrollIfNeeded) — a
    barra nativa só ocupava espaço e cortava a última coluna. scrollTop
@@ -210,25 +210,11 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;heig
 .lb-row:last-child{border-bottom:none}
 .lb-row:hover{background:#faf8fc}
 .lb-row.gold{background:linear-gradient(90deg,rgba(212,175,55,.1),transparent 50%);box-shadow:inset 4px 0 0 #d4af37,0 2px 8px -3px rgba(212,175,55,.25)}
-.lb-top-row{display:grid;grid-template-columns:28px minmax(0,1.4fr) 48px 1.1fr 1fr 1.2fr 0.55fr;align-items:center;gap:8px}
+.lb-top-row{display:grid;grid-template-columns:28px minmax(0,1.4fr) 48px 1fr 1.2fr 0.55fr;align-items:center;gap:8px}
 .lb-rank{font-size:16px;text-align:center;flex-shrink:0;width:28px}
 .lb-name{font-size:15px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lb-conv{font-size:12px;font-weight:800;text-align:center;color:var(--purple);flex-shrink:0;width:48px;font-variant-numeric:tabular-nums}
 .lb-conv.low{color:var(--red)} .lb-conv.nil{color:var(--faint)}
-/* 14/07: era uma barra empilhada só de cor, sem número — testada ao vivo com
-   o Robert e ninguém conseguia decifrar de longe na TV. Virou "onde o rep tá
-   mais concentrado": bolinha colorida (mesma cor das outras telas) + nome da
-   etapa + contagem, tudo em texto legível a distância. */
-.lb-funnel{display:flex;align-items:center;gap:5px;flex:1;min-width:0;overflow:hidden}
-.lb-funnel-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-/* achado 15/07 (auditoria adversarial): label+contagem num span só, com
-   ellipsis no conjunto, cortava o NÚMERO (a parte que importa) sempre que o
-   nome da etapa ("Diag./Solução", "Negociação") não cabia — testado ao vivo,
-   reproduzível em 2 das 3 etapas possíveis. Separado em 2 spans: label pode
-   truncar à vontade, contagem nunca encolhe nem corta. */
-.lb-funnel-label{font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
-.lb-funnel-count{font-size:12px;font-weight:800;color:var(--text);white-space:nowrap;flex-shrink:0}
-.lb-funnel.empty .lb-funnel-label{color:var(--faint);font-weight:700}
 .lb-num{font-size:13px;font-weight:800;color:var(--text);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .lb-sub{padding-left:44px;font-size:10px;font-weight:600;color:var(--muted);display:flex;gap:14px;flex-wrap:nowrap;overflow:hidden}
 .lb-sub b{color:var(--text);font-weight:800}
@@ -447,7 +433,6 @@ footer strong{color:#fff}
             <span></span>
             <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);text-align:center">Nome</span>
             <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);text-align:center">Conv.</span>
-            <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);text-align:center">Foco</span>
             <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);text-align:center">Pipeline</span>
             <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);text-align:center">Ganhos</span>
             <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);text-align:center">Ativos</span>
@@ -1449,7 +1434,6 @@ function skeletonLbRow() {
         <span class="lb-rank"></span>
         <span class="lb-name"><span class="skel" style="width:110px"></span></span>
         <span class="lb-conv"><span class="skel" style="width:30px"></span></span>
-        <div class="lb-funnel"><span class="skel" style="width:8px;height:8px;min-width:0;border-radius:50%"></span><span class="skel" style="width:78px"></span></div>
         <div class="pipeline-cell">
           <span class="pipeline-val"><span class="skel" style="width:56px"></span></span>
           <div class="pipeline-bar-wrap"><div class="pipeline-bar" style="width:40%;background:${_SKEL_GREY}"></div></div>
@@ -1674,22 +1658,7 @@ function renderLeaderboard(reps, deals) {
   el('lb-rows').innerHTML = reps.map((r, i) => {
     const isGold = i === 0;
     const rank = ['🥇','🥈','🥉','4️⃣','5️⃣'][i] || (i+1)+'°';
-    const o1 = r.dealsByStage['3771722'] || 0;
-    const ds2 = (r.dealsByStage['3771723'] || 0) + (r.dealsByStage['3771724'] || 0);
-    const o3 = r.dealsByStage['3771725'] || 0;
-    const total = o1 + ds2 + o3;
     const pipelinePct = Math.max((r.pipeline / maxPipeline) * 100, 3);
-
-    // 14/07: era barra empilhada de cor sem legenda ("ninguém consegue
-    // entender" — Robert, teste ao vivo). Trocado por "onde ele tá mais
-    // concentrado": etapa com mais negócios + contagem, em texto puro pra
-    // ler de longe na TV. Empate favorece a etapa mais cedo do funil.
-    let topOrd = 'o1', topCount = o1;
-    if (ds2 > topCount) { topOrd = 'o2'; topCount = ds2; }
-    if (o3 > topCount) { topOrd = 'o3'; topCount = o3; }
-    const funnelHtml = total > 0
-      ? `<span class="lb-funnel-dot" style="background:${ORD_DOT[topOrd]}"></span><span class="lb-funnel-label">${STAGE_LABEL[topOrd]}</span><span class="lb-funnel-count">${topCount}</span>`
-      : `<span class="lb-funnel-label">—</span>`;
 
     const convClass = r.conversao === null ? 'nil' : (r.conversao < 20 ? 'low' : '');
     const convText  = r.conversao !== null ? r.conversao + '%' : '—';
@@ -1701,7 +1670,6 @@ function renderLeaderboard(reps, deals) {
           <span class="lb-rank">${rank}</span>
           <span class="lb-name">${escHtml(r.name)}</span>
           <span class="lb-conv ${convClass}">${convText}</span>
-          <div class="lb-funnel${total > 0 ? '' : ' empty'}">${funnelHtml}</div>
           <div class="pipeline-cell">
             <span class="pipeline-val">${r.pipeline > 0 ? fmtMoney(r.pipeline) : '—'}</span>
             <div class="pipeline-bar-wrap"><div class="pipeline-bar" style="width:${pipelinePct}%"></div></div>
