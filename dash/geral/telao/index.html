@@ -1968,6 +1968,26 @@ document.addEventListener('DOMContentLoaded', () => loadData(false, true));
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) loadData((Date.now() - _rawFetchedAt) > 60000, true);
 });
+
+// achado 16/07 (Robert: TV de 75" fica "encavalada" em 100% de zoom) — overlay
+// só aparece com ?debug=1 na URL, nunca no uso normal. Mostra a largura REAL
+// que o navegador enxerga nessa TV específica (pode divergir bastante da
+// resolução física do painel, dependendo do que tá conectado nela — Smart TV,
+// TV box, PC via HDMI etc. cada um lida com escala/zoom diferente).
+if (/[?&]debug=1\b/.test(location.search)) {
+  const box = document.createElement('div');
+  box.style.cssText = 'position:fixed;bottom:8px;right:8px;z-index:99999;background:#000;color:#0f0;font:12px/1.4 monospace;padding:8px 10px;border-radius:6px;opacity:.92;pointer-events:none';
+  const upd = () => {
+    box.textContent =
+      'innerWidth: ' + window.innerWidth + 'x' + window.innerHeight +
+      ' | clientWidth: ' + document.documentElement.clientWidth +
+      ' | dpr: ' + window.devicePixelRatio +
+      ' | screen: ' + screen.width + 'x' + screen.height;
+  };
+  upd();
+  window.addEventListener('resize', upd);
+  document.body.appendChild(box);
+}
 </script>
 </body>
 </html>
