@@ -422,7 +422,7 @@ footer strong{color:#fff}
       </div>
       <div class="kchip" style="grid-column:1/-1">
         <span class="kc-label">ACOS</span>
-        <div class="kc-row"><span class="kc-val" id="mkt-acos"><span class="skel"></span></span></div>
+        <div class="kc-row"><span class="kc-val" id="mkt-acos"><span class="skel"></span></span><span class="kc-delta" id="mkt-acos-delta"></span></div>
         <span class="kc-sub">% do faturamento gasto em ads no período</span>
       </div>
     </div>
@@ -1208,9 +1208,15 @@ async function loadAdsSection(periodFrom, periodTo, inboundData, silent, prevPer
       const cacPrev  = (prevInv > 0 && prevK.ganhoCont > 0) ? prevInv / prevK.ganhoCont : null;
       const cplNow   = (inv > 0 && leadsPeriodo > 0) ? inv / leadsPeriodo : null;
       const cplPrev  = (prevInv > 0 && prevLeadsPeriodo > 0) ? prevInv / prevLeadsPeriodo : null;
+      const acosNow  = (inv > 0 && receitaPeriodo > 0) ? inv / receitaPeriodo : null;
+      const acosPrev = (prevInv > 0 && prevK.ganhoValor > 0) ? prevInv / prevK.ganhoValor : null;
       el('mkt-roas-delta').innerHTML = kcDeltaHTML(pctDelta(roasNow, roasPrev));       // maior é melhor
       el('mkt-cac-delta').innerHTML  = kcDeltaHTML(pctDelta(cacNow, cacPrev), true);   // menor é melhor
       el('mkt-cpl-delta').innerHTML  = kcDeltaHTML(pctDelta(cplNow, cplPrev), true);   // menor é melhor
+      // achado 16/07 (Robert: "faltou a setinha no acos"): ACOS é % do
+      // faturamento gasto em ads — igual CAC/CPL, menor é melhor (mais
+      // eficiente), por isso invertido.
+      el('mkt-acos-delta').innerHTML = kcDeltaHTML(pctDelta(acosNow, acosPrev), true);  // menor é melhor
       // achado 15/07 (Robert pediu seta em Investimento também): gasto em si
       // não tem direção boa/ruim isolada (gastar mais pode ser ótimo se o
       // ROAS acompanhar, ou péssimo se não) — mostra a variação sem pintar
@@ -1223,6 +1229,7 @@ async function loadAdsSection(periodFrom, periodTo, inboundData, silent, prevPer
       el('mkt-roas-delta').innerHTML = '';
       el('mkt-cac-delta').innerHTML = '';
       el('mkt-cpl-delta').innerHTML = '';
+      el('mkt-acos-delta').innerHTML = '';
       el('mkt-inv-delta').innerHTML = '';
     }
   } catch(e) {

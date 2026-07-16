@@ -416,7 +416,7 @@ footer strong{color:#fff}
     <div class="achip"><span class="ac-label" title="Custo de Aquisição de Cliente">CAC: Custo por Venda<span class="ac-tag">IN</span></span><span class="ac-val" id="mkt-cac"><span class="skel"></span></span><span class="kc-delta" id="mkt-cac-delta"></span></div>
     <div class="achip"><span class="ac-label" title="Custo Por Lead">CPL: Custo por Lead<span class="ac-tag">IN</span></span><span class="ac-val" id="mkt-cpl"><span class="skel"></span></span><span class="kc-delta" id="mkt-cpl-delta"></span></div>
     <div class="achip"><span class="ac-label" title="Return On Ad Spend">ROAS: Retorno s/ Investido<span class="ac-tag">IN</span></span><span class="ac-val" id="mkt-roas"><span class="skel"></span></span><span class="kc-delta" id="mkt-roas-delta"></span></div>
-    <div class="achip"><span class="ac-label" title="Advertising Cost of Sale">ACOS: % Gasto / Receita<span class="ac-tag">IN</span></span><span class="ac-val" id="mkt-acos"><span class="skel"></span></span></div>
+    <div class="achip"><span class="ac-label" title="Advertising Cost of Sale">ACOS: % Gasto / Receita<span class="ac-tag">IN</span></span><span class="ac-val" id="mkt-acos"><span class="skel"></span></span><span class="kc-delta" id="mkt-acos-delta"></span></div>
   </div>
 
   <div id="main">
@@ -1295,9 +1295,15 @@ async function loadAdsSection(periodFrom, periodTo, inboundData, silent, prevPer
       const cacPrev  = (prevInv > 0 && prevK.ganhoCont > 0) ? prevInv / prevK.ganhoCont : null;
       const cplNow   = (inv > 0 && leadsPeriodo > 0) ? inv / leadsPeriodo : null;
       const cplPrev  = (prevInv > 0 && prevLeadsPeriodo > 0) ? prevInv / prevLeadsPeriodo : null;
+      const acosNow  = (inv > 0 && receitaPeriodo > 0) ? inv / receitaPeriodo : null;
+      const acosPrev = (prevInv > 0 && prevK.ganhoValor > 0) ? prevInv / prevK.ganhoValor : null;
       el('mkt-roas-delta').innerHTML = kcDeltaHTML(pctDelta(roasNow, roasPrev));       // maior é melhor
       el('mkt-cac-delta').innerHTML  = kcDeltaHTML(pctDelta(cacNow, cacPrev), true);   // menor é melhor
       el('mkt-cpl-delta').innerHTML  = kcDeltaHTML(pctDelta(cplNow, cplPrev), true);   // menor é melhor
+      // achado 16/07 (Robert: "faltou a setinha no acos"): ACOS é % do
+      // faturamento gasto em ads — igual CAC/CPL, menor é melhor (mais
+      // eficiente), por isso invertido.
+      el('mkt-acos-delta').innerHTML = kcDeltaHTML(pctDelta(acosNow, acosPrev), true);  // menor é melhor
       el('mkt-inv-delta').innerHTML  = kcDeltaHTML(pctDelta(inv, prevInv), false, true);
     } else {
       // achado 15/07 (Robert): sem período anterior válido (ex: "Total") —
@@ -1305,6 +1311,7 @@ async function loadAdsSection(periodFrom, periodTo, inboundData, silent, prevPer
       el('mkt-roas-delta').innerHTML = '';
       el('mkt-cac-delta').innerHTML = '';
       el('mkt-cpl-delta').innerHTML = '';
+      el('mkt-acos-delta').innerHTML = '';
       el('mkt-inv-delta').innerHTML = '';
     }
   } catch(e) {
