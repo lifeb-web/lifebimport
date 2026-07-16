@@ -1077,20 +1077,27 @@ async function loadData(force, silent) {
 
     // Período anterior (mesmo tamanho de janela) só pra delta — cálculo local,
     // sem rede, então já sai pronto antes mesmo do render principal.
-    const prevRange = prevRangeOf(curr.period);
-    const prev = computeDashboardData(_rawDeals, _originMode, 'custom', prevRange.from, prevRange.to, today);
+    // achado 15/07 (Robert): "Total" (desde 2020, marcador arbitrário) não tem
+    // NENHUM "período anterior" que faça sentido comparar — pular o cálculo
+    // inteiro pra esse tipo de período em vez de gerar uma comparação contra
+    // uma janela antes mesmo da conta existir.
+    const isTotalPeriod = curr.period.type === 'total';
+    const prevRange = isTotalPeriod ? null : prevRangeOf(curr.period);
+    const prev = isTotalPeriod ? null : computeDashboardData(_rawDeals, _originMode, 'custom', prevRange.from, prevRange.to, today);
     let prevIbData = null;
-    if (_originMode === 'both') prevIbData = computeDashboardData(_rawDeals, 'inbound', 'custom', prevRange.from, prevRange.to, today);
-    else if (_originMode === 'inbound') prevIbData = prev;
+    if (!isTotalPeriod) {
+      if (_originMode === 'both') prevIbData = computeDashboardData(_rawDeals, 'inbound', 'custom', prevRange.from, prevRange.to, today);
+      else if (_originMode === 'inbound') prevIbData = prev;
+    }
 
     // Ads/CAC/ROAS usa o MESMO período já resolvido (from/to reais) — dispara em
     // paralelo, não bloqueia o render principal (chega e atualiza sozinho).
-    if (curr.period) loadAdsSection(curr.period.from, curr.period.to, ibData, silent, prevRange.from, prevRange.to, prevIbData);
+    if (curr.period) loadAdsSection(curr.period.from, curr.period.to, ibData, silent, prevRange && prevRange.from, prevRange && prevRange.to, prevIbData);
 
     _data = curr;
     hideErr();
     render(_data);
-    renderDeltas(_data.kpis, prev.kpis);
+    renderDeltas(_data.kpis, prev && prev.kpis);
     flashDot();
     try { localStorage.setItem('geral_snapshot', JSON.stringify({ data: curr, savedAt: Date.now() })); } catch(_) {}
   } catch(e) {
@@ -1210,6 +1217,13 @@ async function loadAdsSection(periodFrom, periodTo, inboundData, silent, prevPer
       // de verde/vermelho, pra não sugerir um julgamento que a métrica sozinha
       // não sustenta.
       el('mkt-inv-delta').innerHTML  = kcDeltaHTML(pctDelta(inv, prevInv), false, true);
+    } else {
+      // achado 15/07 (Robert): sem período anterior válido (ex: "Total") —
+      // limpa em vez de deixar seta do filtro ANTERIOR grudada na tela.
+      el('mkt-roas-delta').innerHTML = '';
+      el('mkt-cac-delta').innerHTML = '';
+      el('mkt-cpl-delta').innerHTML = '';
+      el('mkt-inv-delta').innerHTML = '';
     }
   } catch(e) {
     // Não esconde mais o bloco inteiro em erro (silencioso demais — achado 09/07):
@@ -1309,7 +1323,15 @@ function kcDeltaHTML(pct, invert, neutral) {
 }
 
 function renderDeltas(k, prev) {
-  if (!prev) return;
+  if (!prev) {
+    // achado 15/07 (Robert): sem período anterior válido (ex: filtro "Total"),
+    // limpa em vez de deixar a seta do filtro ANTERIOR grudada na tela —
+    // achado ao vivo: só o "return" aqui deixava o dado velho exibido.
+    el('hero-delta').innerHTML = '';
+    el('k-conv-delta').innerHTML = '';
+    el('k-leads-delta').innerHTML = '';
+    return;
+  }
   el('hero-delta').innerHTML = deltaHTML(pctDelta(k.ganhoValor, prev.ganhoValor));
   // achado 15/07 (Robert): tirada a seta do Pipeline Ativo — é uma foto do
   // momento atual, não filtrada por período, então "período anterior" SEMPRE
