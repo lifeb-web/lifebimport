@@ -1046,7 +1046,7 @@ function prevRangeOf(period) {
   const from = new Date(period.from + 'T00:00:00');
   const to   = new Date(period.to   + 'T00:00:00');
   if (from.getDate() === 1) {
-    // achado 16/07 (Robert): período que começa no dia 1 do mês (mês corrente
+    // achado 15/07 (Robert): período que começa no dia 1 do mês (mês corrente
     // parcial ou mês fechado escolhido no seletor) compara com o MESMO
     // intervalo de dias do mês anterior (calendário alinhado), não janela
     // corrida — janela corrida misturaria a 1ª quinzena de um mês com a 2ª
@@ -1225,7 +1225,7 @@ async function loadAdsSection(periodFrom, periodTo, inboundData, silent, prevPer
     // agora vêm 100% do CRM (mesmo _data já calculado pelo motor local) —
     // único uso restante da planilha é contar leads únicos (dedup por
     // WhatsApp) pro CPL, que continua automático.
-    // achado 16/07 (Robert pediu seta em CPL também): busca em paralelo o
+    // achado 15/07 (Robert pediu seta em CPL também): busca em paralelo o
     // mesmo endpoint pro período anterior.
     const [leadsR, prevLeadsR] = await Promise.all([
       fetch(LEADS_PROXY + '?action=leads_unicos&from=' + periodFrom + '&to=' + periodTo, { cache: 'no-store' }).then(r => r.json()),
@@ -1266,7 +1266,7 @@ async function loadAdsSection(periodFrom, periodTo, inboundData, silent, prevPer
     el('mkt-acos').textContent = (inv > 0 && receitaPeriodo > 0) ? (inv / receitaPeriodo * 100).toFixed(1) + '%' : '—';
 
     // achado 15/07 (Robert: setinha só nas métricas que fazem sentido comparar
-    // por período). Cálculo 100% local. 16/07: adicionado CPL (invertido,
+    // por período). Cálculo 100% local. 15/07: adicionado CPL (invertido,
     // menor é melhor) e Investimento (neutro, sem direção boa/ruim isolada).
     if (prevPeriodFrom && prevPeriodTo) {
       const prevAdsRows = (_adsRawDaily || []).filter(r => r.date >= prevPeriodFrom && r.date <= prevPeriodTo);
@@ -1336,7 +1336,7 @@ function kcDeltaHTML(pct, invert, neutral) {
   const raw = pct === Infinity ? 1 : pct;
   // neutral: métrica sem direção boa/ruim isolada (ex: Investimento em Ads —
   // gastar mais não é bom nem ruim sozinho) — mostra a variação real sem
-  // pintar de verde/vermelho (achado 16/07, pedido do Robert).
+  // pintar de verde/vermelho (achado 15/07, pedido do Robert).
   const cls = neutral ? 'flat' : ((invert ? raw <= 0 : raw >= 0) ? 'up' : 'down');
   const arrow = raw >= 0 ? '▲' : '▼';
   const txt = pct === Infinity ? 'novo' : Math.abs(pct) + '%';
@@ -1350,7 +1350,7 @@ function renderDeltas(k, prev) {
   // momento atual, não filtrada por período, então "período anterior" SEMPRE
   // recalcula pro mesmo valor (delta sempre 0%, nunca informativo de verdade).
   el('k-conv-delta').innerHTML = kcDeltaHTML(pctDelta(k.conversao, prev.conversao));
-  // achado 16/07 (Robert): seta em Leads Distribuídos — mais lead é sempre bom, sem invert.
+  // achado 15/07 (Robert): seta em Leads Distribuídos — mais lead é sempre bom, sem invert.
   el('k-leads-delta').innerHTML = kcDeltaHTML(pctDelta(k.leadsNoPeriodo, prev.leadsNoPeriodo));
 }
 
