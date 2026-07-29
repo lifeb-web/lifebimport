@@ -199,7 +199,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .mf-seg{border-radius:3px;transition:flex .5s}
 .mf-o1{background:var(--o1)} .mf-o2{background:var(--o2)} .mf-o3{background:var(--o3)}
 .mf-empty{background:#f0ebf8;flex:1}
-.rep-stats{padding:8px 16px 12px;display:grid;grid-template-columns:1.25fr 1.25fr 1fr 0.85fr 0.75fr;gap:8px;border-top:1px solid var(--border)}
+.rep-stats{padding:8px 16px 12px;display:grid;grid-template-columns:1.1fr 1.1fr 1fr 0.9fr 0.75fr 0.65fr;gap:8px;border-top:1px solid var(--border)}
 .rstat{display:flex;flex-direction:column;gap:2px;min-width:0}
 .rstat-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rstat-val{font-size:13px;font-weight:800;color:var(--text);white-space:nowrap;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis}
@@ -278,9 +278,11 @@ footer strong{color:#fff}
   .funil-row{grid-template-columns:10px minmax(64px,96px) minmax(10px,1fr) 20px 58px 30px 12px}
   .funil-val{font-size:9px}
   .funil-drop{font-size:8px;padding:2px 3px}
-  /* 4 colunas de stat (Ganhos/Conversão/Perdidos/Leads) não cabem lado a lado em
-     320-375px sem cortar valor em R$ ou o rótulo "Conversão" — 2x2 dá o dobro de
-     espaço por célula, sem truncar nada. */
+  /* 6 colunas de stat (Pipeline/Ganhos/Ticket Médio/Conversão/Perdidos/Leads)
+     não cabem lado a lado em 320-375px sem cortar valor em R$ ou o rótulo
+     "Conversão" — 2 colunas x 3 linhas dá o dobro de espaço por célula, sem
+     truncar nada (28/07: Ticket Médio adicionado, 6 itens dividem exato em
+     3 linhas de 2, mais arrumado que os 5 antigos). */
   .rep-stats{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:10px}
 }
 </style>
@@ -499,9 +501,16 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // modo "Ambos" via 6 períodos + período customizado) — bateu 100% em todos
 // os KPIs, funil (incl. "reached"/lost) e estatística por rep antes deste
 // motor substituir a leitura ao vivo.
+// Ranking de reps — chave é o id do owner no Agendor. Pra adicionar/remover
+// alguém, só editar este objeto (mesma lista em telao/index.html, manter em
+// sincronia) — o motor de agregação lê Object.keys(REPS) dinamicamente, não
+// precisa mexer em mais nada. Nathália (983373) removida em 28/07 (saiu da
+// empresa, confirmado 0 negócio dela na base — nada fica órfão); histórico
+// dela permanece intacto nos totais gerais (Ganho/Pipeline/Funil não filtram
+// por REPS), só o card pessoal dela some do ranking.
 const REPS = {
   '976406': 'Iramar', '977487': 'Natanael', '977488': 'Janeth',
-  '977499': 'Sâmilla', '977506': 'Washington', '983372': 'Flávia', '983373': 'Nathália'
+  '977499': 'Sâmilla', '977506': 'Washington', '983372': 'Flávia'
 };
 const STAGES = {
   '3771722': { name: 'Conexão', color: 'blue', seq: 1 },
@@ -1415,6 +1424,7 @@ function renderSkeletonSections() {
       <div class="rep-stats">
         <div class="rstat"><span class="rstat-label">Pipeline</span><span class="skel" style="width:50px;min-width:0"></span></div>
         <div class="rstat"><span class="rstat-label">Ganhos</span><span class="skel" style="width:50px;min-width:0"></span></div>
+        <div class="rstat"><span class="rstat-label">Ticket Médio</span><span class="skel" style="width:44px;min-width:0"></span></div>
         <div class="rstat"><span class="rstat-label">Conversão</span><span class="skel" style="width:34px;min-width:0"></span></div>
         <div class="rstat"><span class="rstat-label">Perdidos</span><span class="skel" style="width:20px;min-width:0"></span></div>
         <div class="rstat"><span class="rstat-label">Leads</span><span class="skel" style="width:20px;min-width:0"></span></div>
@@ -1693,6 +1703,7 @@ function renderReps(reps, deals) {
         <div class="rep-stats">
           <div class="rstat"><span class="rstat-label">Pipeline</span><span class="rstat-val">${r.pipeline > 0 ? fmtMoney(r.pipeline) : '—'}</span></div>
           <div class="rstat"><span class="rstat-label">Ganhos</span><span class="rstat-val green">${fmtMoney(r.ganhoValor)}</span></div>
+          <div class="rstat"><span class="rstat-label">Ticket Médio</span><span class="rstat-val">${r.ticketMedio > 0 ? fmtMoney(r.ticketMedio) : '—'}</span></div>
           <div class="rstat"><span class="rstat-label">Conversão</span><span class="rstat-val ${r.conversao !== null ? (r.conversao >= 20 ? 'green' : 'red') : ''}">${r.conversao !== null ? r.conversao + '%' : '—'}</span></div>
           <div class="rstat"><span class="rstat-label">Perdidos</span><span class="rstat-val red">${r.perdidoCont}</span></div>
           <div class="rstat"><span class="rstat-label">Leads</span><span class="rstat-val">${r.leadsNoPeriodo || 0}</span></div>

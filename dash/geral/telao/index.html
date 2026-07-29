@@ -506,9 +506,16 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // modo "Ambos" via 6 períodos + período customizado) — bateu 100% em todos
 // os KPIs, funil (incl. "reached"/lost) e estatística por rep antes deste
 // motor substituir a leitura ao vivo. Mesmo código do mobile (index.html).
+// Ranking de reps — chave é o id do owner no Agendor. Pra adicionar/remover
+// alguém, só editar este objeto (mesma lista em ../index.html, manter em
+// sincronia) — o motor de agregação lê Object.keys(REPS) dinamicamente, não
+// precisa mexer em mais nada. Nathália (983373) removida em 28/07 (saiu da
+// empresa, confirmado 0 negócio dela na base — nada fica órfão); histórico
+// dela permanece intacto nos totais gerais (Ganho/Pipeline/Funil não filtram
+// por REPS), só o card pessoal dela some do ranking.
 const REPS = {
   '976406': 'Iramar', '977487': 'Natanael', '977488': 'Janeth',
-  '977499': 'Sâmilla', '977506': 'Washington', '983372': 'Flávia', '983373': 'Nathália'
+  '977499': 'Sâmilla', '977506': 'Washington', '983372': 'Flávia'
 };
 const STAGES = {
   '3771722': { name: 'Conexão', color: 'blue', seq: 1 },
@@ -1443,6 +1450,7 @@ function skeletonLbRow() {
       </div>
       <div class="lb-sub">
         <span><span class="skel" style="width:48px"></span></span>
+        <span><span class="skel" style="width:60px"></span></span>
         <span><span class="skel" style="width:48px"></span></span>
         <span><span class="skel" style="width:48px"></span></span>
       </div>
@@ -1679,6 +1687,7 @@ function renderLeaderboard(reps, deals) {
         </div>
         <div class="lb-sub">
           <span>Ganhos <b>${r.ganhoCont}</b></span>
+          <span>Ticket médio <b>${r.ticketMedio > 0 ? fmtMoney(r.ticketMedio) : '—'}</b></span>
           <span>Perdidos <b>${r.perdidoCont}</b></span>
           <span>Leads <b>${r.leadsNoPeriodo || 0}</b></span>
         </div>
