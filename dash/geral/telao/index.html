@@ -216,7 +216,20 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;heig
 .lb-conv{font-size:12px;font-weight:800;text-align:center;color:var(--purple);flex-shrink:0;width:48px;font-variant-numeric:tabular-nums}
 .lb-conv.low{color:var(--red)} .lb-conv.nil{color:var(--faint)}
 .lb-num{font-size:13px;font-weight:800;color:var(--text);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
-.lb-sub{padding-left:44px;font-size:10px;font-weight:600;color:var(--muted);display:flex;gap:14px;flex-wrap:nowrap;overflow:hidden}
+/* achado 28/07 (auditoria de alinhamento, medido por pixel via CDP): com
+   display:flex, cada item empurra o próximo pela LARGURA DO CONTEÚDO — "Ganhos
+   16" (2 díg.) e "Ganhos 7" (1 díg.) deixam "Ticket médio" começando em x
+   diferente linha a linha, e o efeito se acumula: "Perdidos" chegou a variar
+   54px entre reps (508 a 562), "Leads" 57px (578 a 635) — rep com Ticket "—"
+   (sem ganho no período) é o pior caso, tudo puxado pra esquerda. Grid com
+   colunas de largura FIXA (mesmo padrão do .lb-grid/.lb-top-row acima, que já
+   alinha certinho por ser grid de verdade) — cada instância de .lb-sub usa o
+   MESMO template, então a coluna sempre cai no mesmo x, não importa o
+   conteúdo. Larguras com folga sobre o maior valor real medido hoje;
+   white-space:nowrap+ellipsis como rede de segurança se um ticket muito alto
+   (ex: R$ 99.999,99) um dia estourar a coluna, em vez de quebrar linha. */
+.lb-sub{padding-left:44px;font-size:10px;font-weight:600;color:var(--muted);display:grid;grid-template-columns:70px 150px 74px 60px;column-gap:14px}
+.lb-sub span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lb-sub b{color:var(--text);font-weight:800}
 .lb-stale{font-size:9px;color:#f59e0b;font-weight:700;flex-shrink:0}
 .pipeline-cell{display:flex;flex-direction:column;gap:3px;justify-content:center}
@@ -272,8 +285,8 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;heig
 .skel{display:inline-block;height:.85em;background:linear-gradient(90deg,#e8e4f0 25%,#d0cae6 50%,#e8e4f0 75%);background-size:200% 100%;animation:skel 1.4s linear infinite;border-radius:4px;min-width:60px}
 
 /* Flash sutil quando um número visível muda de valor (setTextFlash) — só dispara
-   quando o texto realmente muda, nunca à toa nos refreshes automáticos de 60s
-   onde nada mudou (a TV fica ligada o dia todo, flash constante seria irritante). */
+   quando o texto realmente muda, nunca à toa nos ciclos automáticos do poll de
+   fundo onde nada mudou (a TV fica ligada o dia todo, flash constante seria irritante). */
 @keyframes valFlash{0%{background:rgba(112,75,155,.16)}100%{background:transparent}}
 .val-flash{animation:valFlash 900ms ease-out;border-radius:6px}
 
@@ -461,7 +474,7 @@ footer strong{color:#fff}
   </div>
 </div>
 
-<footer>Life B Import &nbsp;·&nbsp; <strong id="footer-mode">Painel Geral</strong> &nbsp;·&nbsp; Dados: Agendor &nbsp;·&nbsp; Auto-refresh 60s</footer>
+<footer>Life B Import &nbsp;·&nbsp; <strong id="footer-mode">Painel Geral</strong> &nbsp;·&nbsp; Dados: Agendor &nbsp;·&nbsp; Auto-refresh 20s</footer>
 
 <div id="modal-overlay" onclick="closeModal(event)">
   <div id="modal">
@@ -808,7 +821,6 @@ let _data = null;
 let _period = 'month';
 let _customFrom = null, _customTo = null;
 let _originMode = 'both';
-let _refreshTimer = null;
 let _reqSeq = 0;
 // achado 15/07 (auditoria — dead code, mesmo achado do mobile): _lastErrMsg
 // era escrito mas nunca lido — sobra do proxy antigo (backoff de cota, que
@@ -817,9 +829,8 @@ let _reqSeq = 0;
 // ── DADO CRU (Supabase) — achado 15/07: com o motor de agregação rodando no
 // cliente, trocar de filtro nunca mais precisa ir na rede — só recalcula em
 // cima do MESMO snapshot já carregado. Só o botão ↻ manual (force=true) e o
-// auto-refresh periódico (scheduleRefresh) tocam a rede de verdade.
+// poll de fundo (scheduleBackgroundPoll) tocam a rede de verdade.
 let _rawDeals     = null;
-let _rawFetchedAt = 0;
 // Gasto diário do Meta Ads (dash_geral_ads_daily) — mesma ideia, achado 15/07:
 // era a ÚLTIMA parte do painel ainda dependente de rede (e da API do Meta,
 // rate-limited) numa troca de filtro. Buscado junto de _rawDeals, somado
@@ -1021,7 +1032,7 @@ function cpSelectDay(iso) {
 function showErr(msg) {
   // telão fica com a sala toda olhando — banner grande de erro "rouba atenção"
   // à toa pra falha que na maioria das vezes é passageira (rate limit, API
-  // instável) e some sozinha no próximo refresh de 60s. Só o pontinho de status
+  // instável) e some sozinha no próximo ciclo do poll de fundo. Só o pontinho de status
   // (já existia pro "dado atualizou") vira âmbar com leve pulso — dá pra ver
   // que algo não está 100%, sem gritar. Mensagem completa fica no title (hover).
   const d = el('rdot');
@@ -1082,7 +1093,6 @@ async function loadData(force, silent) {
   try {
     if (needsFetch) {
       _rawDeals = await fetchRawDeals();
-      _rawFetchedAt = Date.now();
       // best-effort: falha aqui nunca derruba o carregamento principal do CRM
       // (que já terminou acima) — loadAdsSection() simplesmente mostra "—"
       // se _adsRawDaily continuar null.
@@ -1150,28 +1160,51 @@ async function loadData(force, silent) {
       if (mySeq === _reqSeq) showErr('Erro ao atualizar: ' + friendlyErr(e));
     }
   } finally {
-    // Reagenda SEMPRE, erro ou sucesso — telão fica sozinho na sala, sem
-    // ninguém pra apertar F5. Uma falha não pode travar o auto-refresh. Sem
-    // mais backoff de cota (não existe mais — Supabase não tem o limite de
-    // urlfetch do Google que o proxy antigo tinha).
+    // achado 28/07 (Robert: "quando tem um ganho precisa dar F5 pra atualizar"):
+    // ATÉ aqui reagendava o poll de fundo (scheduleRefresh) a cada loadData(),
+    // inclusive troca de filtro 100% local sem tocar rede — cada clique dava
+    // clearTimeout no timer pendente e recomeçava a contagem de 60s do zero.
+    // Uso ativo do painel podia adiar pra sempre o próximo refresh de rede de
+    // verdade. Telão fica sozinho na sala, sem ninguém pra apertar F5 — o poll
+    // agora é uma cadeia independente (scheduleBackgroundPoll, criada 1x no
+    // bootstrap do script), nunca tocada aqui, sempre roda no próprio ritmo.
     if (mySeq === _reqSeq) {
-      scheduleRefresh(60000);
       el('lb').classList.remove('on'); el('body').classList.remove('refreshing');
     }
   }
 }
 
-// Auto-refresh SEMPRE force=true: é o único ponto do painel que ainda toca a
-// rede periodicamente (busca o snapshot mais novo do Supabase, atualizado a
-// cada 10min pelo sync). Qualquer clique de filtro no meio do caminho continua
-// 100% local, em cima do snapshot já carregado.
-function scheduleRefresh(delayMs) {
-  clearTimeout(_refreshTimer);
-  _refreshTimer = setTimeout(() => { loadData(true, true); checkForUpdate(); }, delayMs || 60000);
+// Poll de fundo — o único ponto do painel que ainda toca a rede
+// periodicamente (busca o snapshot mais novo do Supabase). Qualquer clique
+// de filtro no meio do caminho continua 100% local, em cima do snapshot já
+// carregado — este poll NUNCA é resetado/adiado por interação nenhuma (achado
+// 28/07, ver comentário no finally de loadData()), sempre roda no seu próprio
+// ritmo. force=true sempre (busca de verdade); silent=true (nunca pisca o dim
+// sozinho). Cadeia auto-reagendada (setTimeout dentro do próprio callback) em
+// vez de setInterval — garante que nunca sobrepõe 2 fetches se um ciclo
+// atrasar por rede lenta, só reagenda depois do ciclo anterior terminar.
+//
+// Intervalo reduzido de 60s pra 20s (achado 28/07, Robert: "quando tem um
+// ganho precisa dar F5 pra atualizar na hora"): o sync Agendor→Supabase
+// (supabase-sync.gs) já é quase instantâneo via webhook desde 16/07 — o
+// gargalo real de "demora a aparecer" sempre foi este polling do front (fora
+// o bug do reset por interação, corrigido junto). 20s cobre a maior parte do
+// caso "acabei de marcar Ganho, quero ver refletido" sem martelar o Supabase
+// (fetch é leve, tabela pequena, poucos clientes simultâneos) — importante
+// aqui especialmente porque é o telão que a sala toda está olhando quando um
+// Ganho é anunciado.
+const BG_POLL_MS = 20000;
+function scheduleBackgroundPoll() {
+  setTimeout(async () => {
+    await loadData(true, true);
+    checkForUpdate();
+    scheduleBackgroundPoll();
+  }, BG_POLL_MS);
 }
+scheduleBackgroundPoll();
 
 // ── AUTO-ATUALIZAÇÃO — Robert pediu (13/07): telão fica sozinho na sala, sem
-// ninguém pra dar F5 depois de cada deploy. Junto do refresh de dado (60s),
+// ninguém pra dar F5 depois de cada deploy. Junto do poll de fundo (20s),
 // rebusca o próprio HTML (cache:no-store, sem depender de header de cache do
 // GitHub Pages/CDN) e compara um hash simples do texto contra o que carregou
 // na aba. Mudou = tem deploy novo = recarrega sozinho. Sem versão pra manter
@@ -1199,8 +1232,8 @@ function flashDot() {
 }
 
 // Flash sutil no próprio número quando o valor muda entre um render e o
-// próximo — só quando o texto realmente muda (nunca à toa nos refreshes de
-// 60s onde nada mudou). Também dispara na 1ª vez que o dado real substitui o
+// próximo — só quando o texto realmente muda (nunca à toa nos ciclos do poll
+// de fundo onde nada mudou). Também dispara na 1ª vez que o dado real substitui o
 // skeleton — esperado: sinaliza "chegou o dado de verdade".
 function setTextFlash(id, text) {
   const node = el(id);
@@ -1222,7 +1255,7 @@ async function loadAdsSection(periodFrom, periodTo, inboundData, silent, prevPer
   // achado 15/07 (Robert: "às vezes fica apagado do nada"): essa seção SEMPRE
   // busca ao vivo (Meta via LEADS_PROXY, 2 chamadas de rede reais — não dá pra
   // cachear local como o resto, que agora vem do Supabase). Mas ela dimava em
-  // TODO ciclo, inclusive no auto-refresh silencioso de 60s que roda sozinho
+  // TODO ciclo, inclusive no poll de fundo silencioso (20s) que roda sozinho
   // sem ninguém tocar em nada — parecia "piscar sozinho" na tela. Mesmo
   // silent=true que o resto do painel já respeita.
   if (!silent) row.classList.add('mkt-updating');
@@ -1502,7 +1535,7 @@ function renderHero(k, period, recentWon, truncated) {
   setTextFlash('hero-val', fmtMoney(k.ganhoValor));
   el('hero-sub').textContent = k.ganhoCont + ' negócio' + (k.ganhoCont !== 1 ? 's' : '');
   // achado 13/07 (Robert: setas de comparação "sumindo e aparecendo"): render()
-  // roda a cada 60s (auto-refresh) e limpava o delta na hora, só repopulando
+  // roda a cada ciclo do poll de fundo e limpava o delta na hora, só repopulando
   // quando o fetch separado do período anterior terminava (~1-2s depois) —
   // pisca visível pra quem tá olhando o telão continuamente. Não limpa mais
   // aqui; renderDeltas() já sobrescreve quando o valor novo chega (e o guard
@@ -1751,7 +1784,7 @@ function autoScrollIfNeeded(elId, opts) {
   // achado 15/07 (Robert: "fica bugado, piscando igual louco"): esta função
   // reiniciava o scroll (volta pro topo + reinicia o timer do zero) TODA VEZ
   // que render() rodava — inclusive quando o conteúdo era EXATAMENTE o
-  // mesmo de antes (auto-refresh de 60s sem mudança real, ou troca de filtro
+  // mesmo de antes (poll de fundo sem mudança real, ou troca de filtro
   // voltando pro mesmo combo já visto). Se isso acontecesse mais rápido que
   // 1 ciclo completo de rolagem (pausa+desce+pausa), o scroll nunca
   // terminava — ficava voltando pro topo sem parar, visualmente "piscando".
@@ -1972,10 +2005,14 @@ function escHtml(s) {
 // auto-refresh silencioso.
 document.addEventListener('DOMContentLoaded', () => loadData(false, true));
 // achado 15/07 (auditoria adversarial): mesmo achado do mobile — force=false
-// nunca mais rebusca nada uma vez que _rawDeals já está em memória. Força
-// busca de verdade se o snapshot já passou de 60s.
+// nunca mais rebusca nada uma vez que _rawDeals já está em memória.
+// achado 28/07 (Robert: "quando tem um ganho precisa dar F5"): antes só forçava
+// se o snapshot já tivesse passado de 60s — o "60s" media só o carregamento
+// local, sem relação nenhuma com quando o negócio mudou de verdade no Agendor.
+// Sempre força busca fresca e silenciosa ao voltar a ficar visível — fetch é
+// leve, não tem por que economizar.
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) loadData((Date.now() - _rawFetchedAt) > 60000, true);
+  if (!document.hidden) loadData(true, true);
 });
 
 // achado 16/07 (Robert: TV de 75" fica "encavalada" em 100% de zoom) — overlay

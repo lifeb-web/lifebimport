@@ -804,20 +804,18 @@ let _period     = 'month';
 let _customFrom = null;
 let _customTo   = null;
 let _originMode = 'both';
-let _refreshTimer = null;
 let _reqSeq = 0; // descarta respostas atrasadas fora de ordem (troca rápida de filtro)
 // achado 15/07 (auditoria — dead code): _lastErrMsg era escrito em 2 lugares
 // (catch de loadData) mas nunca LIDO em lugar nenhum — sobra do proxy antigo,
 // onde servia pra decidir backoff de cota (retry mais espaçado em erro de
 // quota do Google). Cota não existe mais desde a migração pro Supabase
-// (ver comentário de scheduleRefresh), a variável ficou órfã. Removida.
+// (ver comentário de scheduleBackgroundPoll), a variável ficou órfã. Removida.
 
 // ── DADO CRU (Supabase) — achado 15/07: com o motor de agregação rodando no
 // cliente, trocar de filtro nunca mais precisa ir na rede — só recalcula em
 // cima do MESMO snapshot já carregado. Só o botão ↻ manual (force=true) e o
-// auto-refresh periódico (scheduleRefresh) tocam a rede de verdade.
+// poll de fundo (scheduleBackgroundPoll) tocam a rede de verdade.
 let _rawDeals     = null;
-let _rawFetchedAt = 0;
 // Gasto diário do Meta Ads (dash_geral_ads_daily) — mesma ideia, achado 15/07:
 // era a ÚLTIMA parte do painel ainda dependente de rede (e da API do Meta,
 // rate-limited) numa troca de filtro. Buscado junto de _rawDeals, somado
@@ -1063,7 +1061,6 @@ async function loadData(force, silent) {
   try {
     if (needsFetch) {
       _rawDeals = await fetchRawDeals();
-      _rawFetchedAt = Date.now();
       // best-effort: falha aqui nunca derruba o carregamento principal do CRM
       // (que já terminou acima) — loadAdsSection() simplesmente mostra "—"
       // se _adsRawDaily continuar null.
@@ -1130,13 +1127,15 @@ async function loadData(force, silent) {
       if (mySeq === _reqSeq) showErr('Erro ao carregar: ' + friendlyErr(e));
     }
   } finally {
-    // Reagenda SEMPRE, erro ou sucesso — senão uma falha (ex: Supabase fora do
-    // ar por instante) trava o auto-refresh pra sempre e o painel fica preso
-    // até alguém apertar F5 manualmente. Numa TV sem ninguém por perto isso é
-    // fatal. Sem mais backoff de cota (não existe mais — Supabase não tem o
-    // limite de urlfetch do Google que o proxy antigo tinha).
+    // achado 28/07 (Robert: "quando tem um ganho precisa dar F5 pra atualizar"):
+    // ATÉ aqui reagendava o poll de fundo (scheduleRefresh) a cada loadData(),
+    // inclusive troca de filtro 100% local sem tocar rede — cada clique dava
+    // clearTimeout no timer pendente e recomeçava a contagem de 60s do zero.
+    // Uso ativo do painel podia adiar pra sempre o próximo refresh de rede de
+    // verdade. O poll agora é uma cadeia independente (scheduleBackgroundPoll,
+    // criada 1x no bootstrap do script) — nunca é tocada aqui, sempre roda no
+    // próprio ritmo não importa quantos filtros alguém clicar no meio do caminho.
     if (mySeq === _reqSeq) {
-      scheduleRefresh(60000);
       el('lb').classList.remove('on'); el('main').classList.remove('refreshing');
     }
   }
@@ -1157,7 +1156,7 @@ async function loadAdsSection(periodFrom, periodTo, inboundData, silent, prevPer
   // achado 15/07 (Robert: "às vezes fica apagado do nada"): essa seção SEMPRE
   // busca ao vivo (Meta via LEADS_PROXY, 2 chamadas de rede reais — não dá pra
   // cachear local como o resto, que agora vem do Supabase). Mas ela dimava em
-  // TODO ciclo, inclusive no auto-refresh silencioso de 60s que roda sozinho
+  // TODO ciclo, inclusive no poll de fundo silencioso (20s) que roda sozinho
   // sem ninguém tocar em nada — parecia "piscar sozinho" na tela. Mesmo
   // silent=true que o resto do painel já respeita.
   if (!silent) sectionEl.classList.add('mkt-updating');
@@ -1254,17 +1253,35 @@ async function loadAdsSection(periodFrom, periodTo, inboundData, silent, prevPer
   }
 }
 
-// Auto-refresh SEMPRE force=true: é o único ponto do painel que ainda toca a
-// rede periodicamente (busca o snapshot mais novo do Supabase, atualizado a
-// cada 10min pelo sync). Qualquer clique de filtro no meio do caminho continua
-// 100% local, em cima do snapshot já carregado.
-function scheduleRefresh(delayMs) {
-  clearTimeout(_refreshTimer);
-  _refreshTimer = setTimeout(() => { loadData(true, true); checkForUpdate(); }, delayMs || 60000);
+// Poll de fundo — o único ponto do painel que ainda toca a rede
+// periodicamente (busca o snapshot mais novo do Supabase). Qualquer clique
+// de filtro no meio do caminho continua 100% local, em cima do snapshot já
+// carregado — este poll NUNCA é resetado/adiado por interação nenhuma (achado
+// 28/07, ver comentário no finally de loadData()), sempre roda no seu próprio
+// ritmo. force=true sempre (busca de verdade); silent=true (nunca pisca o dim
+// sozinho). Cadeia auto-reagendada (setTimeout dentro do próprio callback) em
+// vez de setInterval — garante que nunca sobrepõe 2 fetches se um ciclo
+// atrasar por rede lenta, só reagenda depois do ciclo anterior terminar.
+//
+// Intervalo reduzido de 60s pra 20s (achado 28/07, Robert: "quando tem um
+// ganho precisa dar F5 pra atualizar na hora"): o sync Agendor→Supabase
+// (supabase-sync.gs) já é quase instantâneo via webhook desde 16/07 — o
+// gargalo real de "demora a aparecer" sempre foi este polling do front (fora
+// o bug do reset por interação, corrigido junto). 20s cobre a maior parte do
+// caso "acabei de marcar Ganho, quero ver refletido" sem martelar o Supabase
+// (fetch é leve, tabela pequena, poucos clientes simultâneos).
+const BG_POLL_MS = 20000;
+function scheduleBackgroundPoll() {
+  setTimeout(async () => {
+    await loadData(true, true);
+    checkForUpdate();
+    scheduleBackgroundPoll();
+  }, BG_POLL_MS);
 }
+scheduleBackgroundPoll();
 
 // ── AUTO-ATUALIZAÇÃO — Robert pediu (13/07): ninguém quer dar F5 manual em
-// todo dispositivo depois de cada deploy. Junto do refresh de dado (60s),
+// todo dispositivo depois de cada deploy. Junto do poll de fundo (20s),
 // rebusca o próprio HTML (cache:no-store) e compara um hash simples do texto
 // contra o que carregou na aba. Mudou = tem deploy novo = recarrega sozinho.
 // Sem versão pra manter manualmente — funciona pra sempre a partir do
@@ -1466,7 +1483,7 @@ function renderHero(k, period, recentWon, truncated) {
   setTextFlash('hero-val', fmtMoney(k.ganhoValor));
   el('hero-sub').textContent = k.ganhoCont + ' negócio' + (k.ganhoCont !== 1 ? 's' : '') + ' fechado' + (k.ganhoCont !== 1 ? 's' : '');
   // achado 13/07 (Robert: setas de comparação "sumindo e aparecendo"): render()
-  // roda a cada 60s (auto-refresh) e limpava o delta na hora, só repopulando
+  // roda a cada ciclo do poll de fundo e limpava o delta na hora, só repopulando
   // quando o fetch separado do período anterior terminava (~1-2s depois) —
   // pisca visível. Não limpa mais aqui; renderDeltas() sobrescreve quando o
   // valor novo chega (guard mySeq lá garante que nunca aparece delta trocado).
@@ -1810,7 +1827,7 @@ function renderFeed(won, lost, kpis) {
 function el(id) { return document.getElementById(id); }
 
 // Flash sutil quando um número visível muda de valor (não à toa em todo
-// render — os refreshes automáticos de 60s rodam render() mesmo sem nada ter
+// render — o poll de fundo roda render() a cada ciclo mesmo sem nada ter
 // mudado). String(text) na comparação: alguns chamadores passam number puro
 // (ex: k.perdidoCont), e node.textContent já vem como string do DOM — sem essa
 // normalização, `!==` estrito flasharia em TODO render de valor numérico.
@@ -1868,10 +1885,16 @@ document.addEventListener('DOMContentLoaded', () => loadData(false, true));
 // sempre vencido). Agora que _rawDeals fica em memória indefinidamente, force=
 // false nunca mais rebusca nada — quem sai do app no celular e volta minutos
 // depois via rep vendo dado cada vez mais velho, sem nenhum refresh corretivo,
-// só o timer de 60s (que navegador costuma atrasar/suspender em aba oculta).
-// Força busca de verdade se o snapshot já passou de 60s.
+// só o poll de fundo (que navegador costuma atrasar/suspender em aba oculta).
+// achado 28/07 (Robert: "quando tem um ganho precisa dar F5"): antes só forçava
+// se o snapshot já tivesse passado de 60s — quem reabria o painel MENOS de
+// 60s depois de marcar um Ganho no Agendor via outro dispositivo via um dado
+// que já podia estar velho mesmo assim (o "60s" aqui só media o próprio
+// carregamento local, não tinha relação nenhuma com quando o negócio mudou de
+// verdade lá no Agendor). Sempre força busca fresca e silenciosa ao voltar
+// pra aba — fetch é leve (uma tabela pequena), não tem por que economizar.
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) loadData((Date.now() - _rawFetchedAt) > 60000, true);
+  if (!document.hidden) loadData(true, true);
 });
 </script>
 </body>
