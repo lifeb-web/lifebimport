@@ -104,11 +104,6 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 
 #main{flex:1;padding:12px 12px 20px;display:flex;flex-direction:column;gap:12px;transition:opacity .25s ease,filter .25s ease}
 #main.refreshing{opacity:.85;filter:saturate(.85);pointer-events:none}
-/* O fetch de Ads é mais lento (3 sub-chamadas) que o principal — o dim do
-   #main já some antes dele terminar, deixando um instante com o rótulo do
-   período NOVO ao lado de números de Ads ainda do período ANTERIOR. Dim
-   próprio, preso ao ciclo de vida real desse fetch específico. */
-#mkt-section.mkt-updating{opacity:.4;transition:opacity .15s}
 
 #err-banner{display:none;background:#fef2f2;border:1.5px solid #fecaca;border-radius:10px;padding:10px 14px;font-size:12px;font-weight:600;color:#991b1b}
 #err-banner.show{display:block}
@@ -1147,109 +1142,119 @@ async function loadData(force, silent) {
 // que o Meta paga pra gerar); só leadsUnicos ainda usa LEADS_PROXY (achado
 // 15/07).
 let _adsSeq = 0; // guarda contra resposta atrasada de um período antigo sobrescrever a mais nova
+// Cache de leads_unicos por período nesta sessão (achado 30/07, Robert:
+// "achei muito demorado pra carregar e renderizar" — "Total" sozinho leva
+// ~9s pra escanear a planilha inteira via GAS). TTL de 5min: a planilha só
+// recebe captura automática (ninguém edita manualmente), não faz sentido
+// repetir a mesma busca lenta toda vez que o rep volta pro mesmo período.
+const _leadsUnicosCache = new Map(); // 'from|to' → { data, ts }
+const LEADS_UNICOS_CACHE_TTL = 5 * 60 * 1000;
+async function fetchLeadsUnicosCached(from, to) {
+  const key = from + '|' + to;
+  const hit = _leadsUnicosCache.get(key);
+  if (hit && (Date.now() - hit.ts) < LEADS_UNICOS_CACHE_TTL) return hit.data;
+  const data = await fetch(LEADS_PROXY + '?action=leads_unicos&from=' + from + '&to=' + to, { cache: 'no-store' }).then(r => r.json());
+  _leadsUnicosCache.set(key, { data, ts: Date.now() });
+  return data;
+}
+
 async function loadAdsSection(periodFrom, periodTo, inboundData, silent, prevPeriodFrom, prevPeriodTo, prevInboundData) {
   const mySeq = ++_adsSeq;
   const show = (_originMode === 'inbound' || _originMode === 'both') && periodFrom && periodTo;
   const sectionEl = el('mkt-section');
   sectionEl.style.display = show ? '' : 'none';
   if (!show) return;
-  // achado 15/07 (Robert: "às vezes fica apagado do nada"): essa seção SEMPRE
-  // busca ao vivo (Meta via LEADS_PROXY, 2 chamadas de rede reais — não dá pra
-  // cachear local como o resto, que agora vem do Supabase). Mas ela dimava em
-  // TODO ciclo, inclusive no poll de fundo silencioso (20s) que roda sozinho
-  // sem ninguém tocar em nada — parecia "piscar sozinho" na tela. Mesmo
-  // silent=true que o resto do painel já respeita.
-  if (!silent) sectionEl.classList.add('mkt-updating');
+
+  // FASE 1 — síncrona, ZERO rede: Investimento/CAC/ROAS/ACOS (e as setas
+  // delas) só dependem de _adsRawDaily (Supabase, já em memória) + inboundData
+  // (já calculado local pelo motor do CRM). Renderiza na hora — achado 30/07
+  // (Robert: "achei muito demorado pra carregar e renderizar"): antes o card
+  // INTEIRO ficava esperando 2 chamadas de rede pro CPL mesmo essas 4 métricas
+  // não precisando de nada disso. Só o CPL de fato depende de rede (Fase 2).
+  const agK = (inboundData && inboundData.kpis) || { ganhoValor: 0, ganhoCont: 0 };
+  const receitaPeriodo  = agK.ganhoValor;
+  const fechadosPeriodo = agK.ganhoCont;
+
+  const adsRows = (_adsRawDaily || []).filter(r => r.date >= periodFrom && r.date <= periodTo);
+  const inv = adsRows.reduce((s, r) => s + (parseFloat(r.spend_net) || 0), 0);
+  const ultimaData = (_adsRawDaily && _adsRawDaily.length)
+    ? _adsRawDaily.reduce((max, r) => (r.date > max ? r.date : max), _adsRawDaily[0].date)
+    : null;
+
+  el('mkt-updated').textContent = ultimaData ? 'sincronizado · ' + fmtDisplayISO(ultimaData) : '';
+  el('mkt-inv').textContent  = inv > 0 ? fmtMoney(inv) : '—';
+  el('mkt-cac').textContent  = (inv > 0 && fechadosPeriodo > 0) ? fmtMoney(Math.round(inv / fechadosPeriodo)) : '—';
+  el('mkt-roas').textContent = (inv > 0 && receitaPeriodo > 0) ? (receitaPeriodo / inv).toFixed(2) + 'x' : '—';
+  el('mkt-acos').textContent = (inv > 0 && receitaPeriodo > 0) ? (inv / receitaPeriodo * 100).toFixed(1) + '%' : '—';
+
+  let prevInv = null;
+  // achado 15/07 (Robert: setinha só nas métricas que fazem sentido comparar
+  // por período — ROAS e CAC são as mais estratégicas de Ads; CPL/ACOS/
+  // Investimento ficam de fora pra não poluir). Cálculo 100% local (mesmo
+  // _adsRawDaily + kpis do CRM já calculados pro período anterior).
+  if (prevPeriodFrom && prevPeriodTo) {
+    const prevAdsRows = (_adsRawDaily || []).filter(r => r.date >= prevPeriodFrom && r.date <= prevPeriodTo);
+    prevInv = prevAdsRows.reduce((s, r) => s + (parseFloat(r.spend_net) || 0), 0);
+    const prevK = (prevInboundData && prevInboundData.kpis) || { ganhoValor: 0, ganhoCont: 0 };
+    const roasNow  = (inv > 0 && receitaPeriodo > 0) ? receitaPeriodo / inv : null;
+    const roasPrev = (prevInv > 0 && prevK.ganhoValor > 0) ? prevK.ganhoValor / prevInv : null;
+    const cacNow   = (inv > 0 && fechadosPeriodo > 0) ? inv / fechadosPeriodo : null;
+    const cacPrev  = (prevInv > 0 && prevK.ganhoCont > 0) ? prevInv / prevK.ganhoCont : null;
+    const acosNow  = (inv > 0 && receitaPeriodo > 0) ? inv / receitaPeriodo : null;
+    const acosPrev = (prevInv > 0 && prevK.ganhoValor > 0) ? prevInv / prevK.ganhoValor : null;
+    el('mkt-roas-delta').innerHTML = kcDeltaHTML(pctDelta(roasNow, roasPrev));       // maior é melhor
+    el('mkt-cac-delta').innerHTML  = kcDeltaHTML(pctDelta(cacNow, cacPrev), true);   // menor é melhor
+    // achado 16/07 (Robert: "faltou a setinha no acos"): ACOS é % do
+    // faturamento gasto em ads — igual CAC/CPL, menor é melhor (mais
+    // eficiente), por isso invertido.
+    el('mkt-acos-delta').innerHTML = kcDeltaHTML(pctDelta(acosNow, acosPrev), true);  // menor é melhor
+    // achado 15/07 (Robert pediu seta em Investimento também): gasto em si
+    // não tem direção boa/ruim isolada (gastar mais pode ser ótimo se o
+    // ROAS acompanhar, ou péssimo se não) — mostra a variação sem pintar
+    // de verde/vermelho, pra não sugerir um julgamento que a métrica sozinha
+    // não sustenta.
+    el('mkt-inv-delta').innerHTML  = kcDeltaHTML(pctDelta(inv, prevInv), false, true);
+  } else {
+    // achado 15/07 (Robert): sem período anterior válido (ex: "Total") —
+    // limpa em vez de deixar seta do filtro ANTERIOR grudada na tela.
+    el('mkt-roas-delta').innerHTML = '';
+    el('mkt-cac-delta').innerHTML = '';
+    el('mkt-acos-delta').innerHTML = '';
+    el('mkt-inv-delta').innerHTML = '';
+  }
+
+  // FASE 2 — só o CPL depende de leads_unicos (planilha via GAS, única parte
+  // do card que ainda toca rede de verdade). Cacheada (ver fetchLeadsUnicosCached
+  // acima) e isolada: nunca atrasa nem dima o resto do card, só o próprio CPL
+  // mostra skeleton enquanto espera.
+  const cplEl = el('mkt-cpl'), cplDeltaEl = el('mkt-cpl-delta');
+  cplEl.innerHTML = '<span class="skel"></span>';
+  cplDeltaEl.innerHTML = '';
   try {
-    // achado 15/07 (Robert: "não pode nada depender de planilha... ninguém
-    // atualiza lá"): a planilha de leads só recebe CAPTURA automática hoje —
-    // ninguém mais atualiza status/fechamento manualmente lá, então parar de
-    // usar "fechamentos" dela pra receita (ficaria cada vez mais desatualizado
-    // e incompleto). Receita/fechados agora vêm 100% do CRM (mesmo _data já
-    // calculado pelo motor local) — único uso restante da planilha é contar
-    // leads únicos (dedup por WhatsApp) pro CPL, que continua automático.
-    // achado 15/07 (Robert pediu seta em CPL também): busca em paralelo o
-    // mesmo endpoint pro período anterior — só dispara se prevPeriodFrom/To
-    // vieram preenchidos (sempre vêm, exceto na 1ª carga antes do 1º render).
     const [leadsR, prevLeadsR] = await Promise.all([
-      fetch(LEADS_PROXY + '?action=leads_unicos&from=' + periodFrom + '&to=' + periodTo, { cache: 'no-store' }).then(r => r.json()),
-      (prevPeriodFrom && prevPeriodTo)
-        ? fetch(LEADS_PROXY + '?action=leads_unicos&from=' + prevPeriodFrom + '&to=' + prevPeriodTo, { cache: 'no-store' }).then(r => r.json()).catch(() => null)
-        : Promise.resolve(null)
+      fetchLeadsUnicosCached(periodFrom, periodTo),
+      (prevPeriodFrom && prevPeriodTo) ? fetchLeadsUnicosCached(prevPeriodFrom, prevPeriodTo).catch(() => null) : Promise.resolve(null)
     ]);
     if (mySeq !== _adsSeq) return; // uma troca de período/origem mais nova já disparou outra chamada
 
-    const agK = (inboundData && inboundData.kpis) || { ganhoValor: 0, ganhoCont: 0 };
-    const receitaPeriodo  = agK.ganhoValor;
-    const fechadosPeriodo = agK.ganhoCont;
     const leadsPeriodo = (leadsR && leadsR.leadsUnicos) || 0;
+    cplEl.textContent = (inv > 0 && leadsPeriodo > 0) ? fmtMoney(Math.round(inv / leadsPeriodo)) : '—';
 
-    // achado 15/07: investimento vem do Supabase (dash_geral_ads_daily,
-    // sincronizado periodicamente a partir do Meta) — soma local por
-    // período, zero chamada de rede ao Meta numa troca de filtro. Era a
-    // ÚLTIMA parte do painel ainda dependente disso.
-    const adsRows = (_adsRawDaily || []).filter(r => r.date >= periodFrom && r.date <= periodTo);
-    const inv = adsRows.reduce((s, r) => s + (parseFloat(r.spend_net) || 0), 0);
-    const ultimaData = (_adsRawDaily && _adsRawDaily.length)
-      ? _adsRawDaily.reduce((max, r) => (r.date > max ? r.date : max), _adsRawDaily[0].date)
-      : null;
-
-    el('mkt-updated').textContent = ultimaData ? 'sincronizado · ' + fmtDisplayISO(ultimaData) : '';
-    el('mkt-inv').textContent  = inv > 0 ? fmtMoney(inv) : '—';
-    el('mkt-cac').textContent  = (inv > 0 && fechadosPeriodo > 0) ? fmtMoney(Math.round(inv / fechadosPeriodo)) : '—';
-    el('mkt-cpl').textContent  = (inv > 0 && leadsPeriodo > 0) ? fmtMoney(Math.round(inv / leadsPeriodo)) : '—';
-    el('mkt-roas').textContent = (inv > 0 && receitaPeriodo > 0) ? (receitaPeriodo / inv).toFixed(2) + 'x' : '—';
-    el('mkt-acos').textContent = (inv > 0 && receitaPeriodo > 0) ? (inv / receitaPeriodo * 100).toFixed(1) + '%' : '—';
-
-    // achado 15/07 (Robert: setinha só nas métricas que fazem sentido comparar
-    // por período — ROAS e CAC são as mais estratégicas de Ads; CPL/ACOS/
-    // Investimento ficam de fora pra não poluir). Cálculo 100% local (mesmo
-    // _adsRawDaily + kpis do CRM já calculados pro período anterior).
-    if (prevPeriodFrom && prevPeriodTo) {
-      const prevAdsRows = (_adsRawDaily || []).filter(r => r.date >= prevPeriodFrom && r.date <= prevPeriodTo);
-      const prevInv = prevAdsRows.reduce((s, r) => s + (parseFloat(r.spend_net) || 0), 0);
-      const prevK = (prevInboundData && prevInboundData.kpis) || { ganhoValor: 0, ganhoCont: 0 };
+    if (prevPeriodFrom && prevPeriodTo && prevInv !== null) {
       const prevLeadsPeriodo = (prevLeadsR && prevLeadsR.leadsUnicos) || 0;
-      const roasNow  = (inv > 0 && receitaPeriodo > 0) ? receitaPeriodo / inv : null;
-      const roasPrev = (prevInv > 0 && prevK.ganhoValor > 0) ? prevK.ganhoValor / prevInv : null;
-      const cacNow   = (inv > 0 && fechadosPeriodo > 0) ? inv / fechadosPeriodo : null;
-      const cacPrev  = (prevInv > 0 && prevK.ganhoCont > 0) ? prevInv / prevK.ganhoCont : null;
       const cplNow   = (inv > 0 && leadsPeriodo > 0) ? inv / leadsPeriodo : null;
       const cplPrev  = (prevInv > 0 && prevLeadsPeriodo > 0) ? prevInv / prevLeadsPeriodo : null;
-      const acosNow  = (inv > 0 && receitaPeriodo > 0) ? inv / receitaPeriodo : null;
-      const acosPrev = (prevInv > 0 && prevK.ganhoValor > 0) ? prevInv / prevK.ganhoValor : null;
-      el('mkt-roas-delta').innerHTML = kcDeltaHTML(pctDelta(roasNow, roasPrev));       // maior é melhor
-      el('mkt-cac-delta').innerHTML  = kcDeltaHTML(pctDelta(cacNow, cacPrev), true);   // menor é melhor
-      el('mkt-cpl-delta').innerHTML  = kcDeltaHTML(pctDelta(cplNow, cplPrev), true);   // menor é melhor
-      // achado 16/07 (Robert: "faltou a setinha no acos"): ACOS é % do
-      // faturamento gasto em ads — igual CAC/CPL, menor é melhor (mais
-      // eficiente), por isso invertido.
-      el('mkt-acos-delta').innerHTML = kcDeltaHTML(pctDelta(acosNow, acosPrev), true);  // menor é melhor
-      // achado 15/07 (Robert pediu seta em Investimento também): gasto em si
-      // não tem direção boa/ruim isolada (gastar mais pode ser ótimo se o
-      // ROAS acompanhar, ou péssimo se não) — mostra a variação sem pintar
-      // de verde/vermelho, pra não sugerir um julgamento que a métrica sozinha
-      // não sustenta.
-      el('mkt-inv-delta').innerHTML  = kcDeltaHTML(pctDelta(inv, prevInv), false, true);
-    } else {
-      // achado 15/07 (Robert): sem período anterior válido (ex: "Total") —
-      // limpa em vez de deixar seta do filtro ANTERIOR grudada na tela.
-      el('mkt-roas-delta').innerHTML = '';
-      el('mkt-cac-delta').innerHTML = '';
-      el('mkt-cpl-delta').innerHTML = '';
-      el('mkt-acos-delta').innerHTML = '';
-      el('mkt-inv-delta').innerHTML = '';
+      cplDeltaEl.innerHTML = kcDeltaHTML(pctDelta(cplNow, cplPrev), true); // menor é melhor
     }
   } catch(e) {
     // Não esconde mais o bloco inteiro em erro (silencioso demais — achado 09/07):
     // mantém os últimos números bons na tela e só avisa no rodapé do card.
-    console.warn('Investimento/CAC section erro:', e.message);
+    console.warn('CPL (leads_unicos) erro:', e.message);
     if (mySeq === _adsSeq) {
+      cplEl.textContent = '—';
       const upd = el('mkt-updated');
       if (upd) upd.textContent = upd.textContent.replace(/ · falha ao atualizar$/, '') + ' · falha ao atualizar';
     }
-  } finally {
-    if (mySeq === _adsSeq) sectionEl.classList.remove('mkt-updating');
   }
 }
 
