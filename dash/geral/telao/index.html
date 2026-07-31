@@ -291,6 +291,30 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;heig
 .mdeal-open{font-size:11px;color:var(--faint);flex-shrink:0}
 .modal-empty{padding:24px;text-align:center;color:var(--faint);font-style:italic}
 
+/* Sub-dashboard por rep dentro do modal (openRepModal) — mesma linguagem
+   visual do dash geral (KPI grid, funil, feed), só que escopado a 1 rep via
+   computeRepScoped() filtrando _rawDeals por owner_id antes de rodar o MESMO
+   motor de agregação (aggregateClient via computeDashboardData). Espelha
+   dash/geral/index.html — manter em sincronia. */
+.rv-hero{padding:16px 20px 14px;border-bottom:1px solid var(--border)}
+.rv-hero-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.rv-hero-label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--faint)}
+.rv-hero-val{font-size:30px;font-weight:800;color:var(--text);margin-top:2px;font-variant-numeric:tabular-nums}
+.rv-hero-sub{font-size:12px;font-weight:600;color:var(--muted);margin-top:1px}
+.rv-spark{margin-top:6px}
+.rv-kpis{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border-bottom:1px solid var(--border)}
+.rv-kpi{background:var(--card);padding:11px 20px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.rv-k-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rv-k-row{display:flex;align-items:baseline;gap:6px}
+.rv-k-val{font-size:15px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rv-k-val.amber{color:var(--amber)}
+.rv-k-val.red{color:var(--red)}
+.rv-funil{border-bottom:1px solid var(--border)}
+.rv-tabs{display:flex;gap:6px;padding:12px 20px 6px}
+.rv-tab{flex:1;padding:7px 4px;border-radius:8px;border:1.5px solid var(--border);background:var(--card);font-size:11px;font-weight:800;color:var(--muted);cursor:pointer;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rv-tab.active{background:var(--purple);border-color:var(--purple);color:#fff}
+#rv-feed{max-height:260px;overflow-y:auto}
+
 @keyframes skel{0%{background-position:200% 0}100%{background-position:-200% 0}}
 .skel{display:inline-block;height:.85em;background:linear-gradient(90deg,#e8e4f0 25%,#d0cae6 50%,#e8e4f0 75%);background-size:200% 100%;animation:skel 1.4s linear infinite;border-radius:4px;min-width:60px}
 
@@ -1910,24 +1934,127 @@ function openStageModal(stageId, stageName) {
   el('modal-overlay').classList.add('show');
 }
 
+// Filtra _rawDeals (snapshot cru) por owner_id ANTES de rodar computeDashboardData
+// — reusa 100% o mesmo motor (aggregateClient) que monta o dash geral, só que a
+// entrada já vem pré-recortada pra 1 rep só. Espelha dash/geral/index.html —
+// manter em sincronia.
+function computeRepScoped(repId) {
+  const repRows = (_rawDeals || []).filter(d => String(d.owner_id) === String(repId));
+  const today = todayLocalStr();
+  const effPeriodType = _period === 'month_pick' ? 'custom' : _period;
+  const curr = computeDashboardData(repRows, _originMode, effPeriodType, _customFrom, _customTo, today);
+  const isTotalPeriod = curr.period.type === 'total';
+  const prevRange = isTotalPeriod ? null : prevRangeOf(curr.period);
+  const prev = isTotalPeriod ? null : computeDashboardData(repRows, _originMode, 'custom', prevRange.from, prevRange.to, today);
+  return { curr, prev };
+}
+
+function renderRepFunilRows(funnel) {
+  const nf = normFunnel(funnel);
+  const max = Math.max(...nf.map(s => s.reached ?? s.count), 1);
+  return nf.map(s => {
+    const reached = s.reached ?? s.count;
+    const pct = Math.max((reached / max) * 100, 3);
+    const ord = STAGE_ORD[String(s.stageId)] || 'o2';
+    const lostPill = s.lost > 0 ? `<span class="drop-pill" style="background:#fee2e2;color:#b91c1c">${s.lost} perdido${s.lost === 1 ? '' : 's'}</span>` : '';
+    return `
+      <div class="funil-row" style="cursor:default">
+        <div class="funil-dot" style="background:${ORD_DOT[ord]}"></div>
+        <span class="funil-name">${escHtml(s.name)}</span>
+        <div class="funil-bar-wrap"><div class="funil-bar bar-${ord}" style="width:${pct}%"></div></div>
+        <span class="funil-n">${reached}</span>
+        <span class="funil-v">${s.value > 0 ? fmtMoney(s.value) : '—'}</span>
+        ${lostPill}
+      </div>`;
+  }).join('');
+}
+
+function rvDealRow(d, opts) {
+  opts = opts || {};
+  const ord = STAGE_ORD[String(d.stageId)] || 'o2';
+  const dotColor = opts.dotColor || ORD_DOT[ord];
+  const valStyle = opts.valColor ? ` style="color:${opts.valColor}"` : '';
+  const valText = opts.dashIfZero ? (d.value > 0 ? fmtMoney(d.value) : '—') : fmtMoney(d.value);
+  const showStale = !opts.noStaleFrozen && (opts.alwaysStale || d.stale);
+  const showFrozen = !opts.noStaleFrozen && d.frozen;
+  return `
+    <a class="mdeal-row" href="${AGENDOR_DEAL}${d.id}" target="_blank">
+      <div class="mdeal-dot" style="background:${dotColor}"></div>
+      <span class="mdeal-title"><span class="og-title-text">${escHtml(d.title)}</span>${originBadge(d._origin)}</span>
+      ${opts.date ? `<span class="feed-date" style="flex-shrink:0">${fmtDateDisplay(opts.date)}</span>` : ''}
+      <span class="mdeal-val"${valStyle}>${valText}</span>
+      ${showFrozen ? '<span class="mdeal-stale" title="Congelado (pausa deliberada)">🧊</span>' : (showStale ? '<span class="mdeal-stale" title="Sem toque +7 dias">⚠️</span>' : '')}
+      <span class="mdeal-open">↗</span>
+    </a>`;
+}
+
+let _repViewCache = null;
+let _repViewTab = 'won';
+
+function repViewHTML() {
+  const { curr, prev } = _repViewCache;
+  const k = curr.kpis;
+  const heroDelta = deltaHTML(pctDelta(k.ganhoValor, prev && prev.kpis.ganhoValor));
+  const convDelta = kcDeltaHTML(pctDelta(k.conversao, prev && prev.kpis.conversao));
+  const leadsDelta = kcDeltaHTML(pctDelta(k.leadsNoPeriodo, prev && prev.kpis.leadsNoPeriodo));
+  const buckets = sparkBuckets(curr.recentWon, curr.period.from, curr.period.to);
+
+  const tabs = [
+    { id: 'won', label: 'Ganhos', n: curr.recentWon.length },
+    { id: 'lost', label: 'Perdidos', n: curr.recentLost.length },
+    { id: 'pipe', label: 'Ativos', n: curr.deals.length }
+  ];
+
+  return `
+    <div class="rv">
+      <div class="rv-hero">
+        <div class="rv-hero-top">
+          <span class="rv-hero-label">Ganhos · ${escHtml(curr.period.label)}</span>
+          ${heroDelta}
+        </div>
+        <div class="rv-hero-val">${fmtMoney(k.ganhoValor)}</div>
+        <div class="rv-hero-sub">${k.ganhoCont} negócio${k.ganhoCont !== 1 ? 's' : ''} fechado${k.ganhoCont !== 1 ? 's' : ''}</div>
+        <div class="rv-spark">${sparklineSVG(buckets, '#22C35D')}</div>
+      </div>
+      <div class="rv-kpis">
+        <div class="rv-kpi"><span class="rv-k-lbl">Pipeline</span><span class="rv-k-val">${fmtMoney(k.pipelineTotal)}</span></div>
+        <div class="rv-kpi"><span class="rv-k-lbl">Conversão</span><div class="rv-k-row"><span class="rv-k-val">${k.conversao !== null ? k.conversao + '%' : '—'}</span>${convDelta}</div></div>
+        <div class="rv-kpi"><span class="rv-k-lbl">Ticket médio</span><span class="rv-k-val">${k.ticketMedio > 0 ? fmtMoney(k.ticketMedio) : '—'}</span></div>
+        <div class="rv-kpi"><span class="rv-k-lbl">Prazo médio</span><span class="rv-k-val">${k.prazoMedio ? k.prazoMedio + (k.prazoMedio === 1 ? ' dia' : ' dias') : '—'}</span></div>
+        <div class="rv-kpi"><span class="rv-k-lbl">Parados</span><span class="rv-k-val ${k.staleTotal > 0 ? 'amber' : ''}">${k.staleTotal || 0}</span></div>
+        <div class="rv-kpi"><span class="rv-k-lbl">Perdidos</span><span class="rv-k-val red">${k.perdidoCont || 0}</span></div>
+        <div class="rv-kpi" style="grid-column:1/-1"><span class="rv-k-lbl">Leads recebidos</span><div class="rv-k-row"><span class="rv-k-val">${k.leadsNoPeriodo || 0}</span>${leadsDelta}</div></div>
+      </div>
+      <div class="rv-funil">${renderRepFunilRows(curr.funnel)}</div>
+      <div class="rv-tabs">
+        ${tabs.map(t => `<button class="rv-tab ${_repViewTab === t.id ? 'active' : ''}" onclick="switchRepViewTab('${t.id}')">${t.label} (${t.n})</button>`).join('')}
+      </div>
+      <div id="rv-feed">${repViewFeedHTML()}</div>
+    </div>`;
+}
+
+function repViewFeedHTML() {
+  const { curr } = _repViewCache;
+  const list = _repViewTab === 'won' ? curr.recentWon : (_repViewTab === 'lost' ? curr.recentLost : curr.deals);
+  if (!list.length) return '<div class="modal-empty">Nada aqui neste período</div>';
+  if (_repViewTab === 'won') return list.map(d => rvDealRow(d, { dotColor: 'var(--green)', valColor: '#15803d', date: d.closedAt, noStaleFrozen: true })).join('');
+  if (_repViewTab === 'lost') return list.map(d => rvDealRow(d, { dotColor: 'var(--red)', valColor: 'var(--red)', dashIfZero: true, date: d.closedAt, noStaleFrozen: true })).join('');
+  return list.map(d => rvDealRow(d, { dashIfZero: true })).join('');
+}
+
+function switchRepViewTab(tab) {
+  _repViewTab = tab;
+  el('modal-body').innerHTML = repViewHTML();
+}
+
 function openRepModal(repId) {
-  if (!_data) return;
-  const deals = _data.deals.filter(d => String(d.repId) === String(repId));
-  const r = _data.reps.find(x => String(x.id) === String(repId));
-  el('modal-title').textContent = (r ? r.name : 'Rep') + ' — ' + deals.length + ' negócios ativos';
-  el('modal-body').innerHTML = deals.length === 0
-    ? '<div class="modal-empty">Sem negócios ativos</div>'
-    : deals.map(d => {
-        const ord = STAGE_ORD[String(d.stageId)] || 'o2';
-        return `
-          <a class="mdeal-row" href="${AGENDOR_DEAL}${d.id}" target="_blank">
-            <div class="mdeal-dot" style="background:${ORD_DOT[ord]}"></div>
-            <span class="mdeal-title"><span class="og-title-text">${escHtml(d.title)}</span>${originBadge(d._origin)}</span>
-            <span class="mdeal-val">${fmtMoney(d.value)}</span>
-            ${d.frozen ? '<span class="mdeal-stale" title="Congelado (pausa deliberada)">🧊</span>' : (d.stale ? '<span class="mdeal-stale" title="Sem toque +7 dias">⚠️</span>' : '')}
-            <span class="mdeal-open">↗</span>
-          </a>`;
-      }).join('');
+  if (!_data || !_rawDeals) return;
+  const rInfo = _data.reps.find(x => String(x.id) === String(repId));
+  const { curr, prev } = computeRepScoped(repId);
+  _repViewCache = { rName: rInfo ? rInfo.name : 'Rep', curr, prev };
+  _repViewTab = 'won';
+  el('modal-title').textContent = _repViewCache.rName;
+  el('modal-body').innerHTML = repViewHTML();
   el('modal-overlay').classList.add('show');
 }
 
