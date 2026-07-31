@@ -492,7 +492,11 @@ footer strong{color:#fff}
 </div>
 
 <script>
-const LEADS_PROXY = 'https://script.google.com/macros/s/AKfycbyq9KJgWTRoALEEVf8Pu_I82GT0-tTK5yXNg-RsYHj4ywK6Grg9z_jG1-IcTW3LMXfNBg/exec';
+// achado 31/07: LEADS_PROXY (Google Apps Script) removida — era usada só pro
+// CPL (action=leads_unicos), migrado pro Supabase (dash_geral_leads_daily,
+// ver fetchLeadsRawDaily/leadsUnicosLocal). Painel não depende mais de
+// nenhum proxy GAS pra ler dado — só o sync de fundo (backend) ainda fala
+// com Agendor/Meta/planilha.
 const AGENDOR_DEAL = 'https://web.agendor.com.br/sistema/negocios/historico.php?id=';
 // achado 15/07 (auditoria adversarial): estava declarada lá embaixo perto de
 // skeletonFunilRow(), mas o cold-start chama renderSkeletonSections() bem no
@@ -865,6 +869,53 @@ async function fetchAdsRawDaily() {
   return all;
 }
 
+// Leads únicos (dedup por contato) pro CPL — achado 31/07: era a ÚLTIMA parte
+// do painel ainda dependente de rede ao vivo (varria a planilha via GAS a
+// cada troca de filtro, até 9-12s no período "Total"). dash_geral_leads_daily
+// guarda 1 linha por lead válido (teste/excluído já filtrados no sync) com
+// um HASH do contato (nunca o telefone em texto puro — a tabela é lida pela
+// chave anon, pública; hash com sal evita expor dado de contato de verdade).
+// Buscado 1x junto do resto, dedup feito local por período exatamente como
+// getLeadsUnicos() já fazia no proxy (mesma regra: sem contato = conta
+// mesmo assim, contato repetido DENTRO do período escolhido conta 1x só).
+let _leadsRawDaily = null;
+async function fetchLeadsRawDaily() {
+  const PAGE = 1000;
+  let all = [];
+  let from = 0;
+  while (true) {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/dash_geral_leads_daily?select=*', {
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
+        Range: from + '-' + (from + PAGE - 1),
+        Prefer: 'count=exact'
+      }
+    });
+    if (!res.ok) throw new Error('Supabase HTTP ' + res.status);
+    const chunk = await res.json();
+    all = all.concat(chunk);
+    const cr = res.headers.get('content-range');
+    const total = (cr && cr.indexOf('/') !== -1) ? parseInt(cr.split('/')[1], 10) : chunk.length;
+    if (all.length >= total || chunk.length < PAGE) break;
+    from += PAGE;
+  }
+  return all;
+}
+function leadsUnicosLocal(periodFrom, periodTo) {
+  if (!_leadsRawDaily) return 0;
+  const seen = new Set();
+  let count = 0;
+  for (const r of _leadsRawDaily) {
+    if (r.date < periodFrom || r.date > periodTo) continue;
+    if (!r.contact_hash) { count++; continue; }
+    if (seen.has(r.contact_hash)) continue;
+    seen.add(r.contact_hash);
+    count++;
+  }
+  return count;
+}
+
 // Mostra o último dado bom salvo NA HORA, antes até da primeira busca de rede
 // terminar (achado 12/07: primeiro carregamento sempre ficava com esqueleto até
 // a resposta chegar, mesmo já tendo dado de uma sessão recente guardado). Some
@@ -1103,6 +1154,7 @@ async function loadData(force, silent) {
       // 100% silencioso (zero console.warn) — card de Ads sumia sem nenhuma
       // pista de por quê, nem no console. Logado igual ao catch do CPL.
       try { _adsRawDaily = await fetchAdsRawDaily(); } catch (eAds) { console.warn('fetchAdsRawDaily falhou:', eAds.message); }
+      try { _leadsRawDaily = await fetchLeadsRawDaily(); } catch (eLeads) { console.warn('fetchLeadsRawDaily falhou:', eLeads.message); }
     } else if (!silent) {
       await new Promise(r => setTimeout(r, 150)); // respiro mínimo pro pulso ser visível
     }
@@ -1250,37 +1302,16 @@ function setTextFlash(id, text) {
   }
 }
 
-// ── INVESTIMENTO / CAC / CPL / ROAS / ACOS — filtrado pelo período selecionado ──
-let _adsSeq = 0; // guarda contra resposta atrasada de um período antigo sobrescrever a mais nova
-// Cache de leads_unicos por período nesta sessão (achado 30/07, Robert:
-// "achei muito demorado pra carregar e renderizar" — "Total" sozinho leva
-// ~9s pra escanear a planilha inteira via GAS). TTL de 5min: a planilha só
-// recebe captura automática (ninguém edita manualmente), não faz sentido
-// repetir a mesma busca lenta toda vez que o rep volta pro mesmo período.
-const _leadsUnicosCache = new Map(); // 'from|to' → { data, ts }
-const LEADS_UNICOS_CACHE_TTL = 5 * 60 * 1000;
-async function fetchLeadsUnicosCached(from, to) {
-  const key = from + '|' + to;
-  const hit = _leadsUnicosCache.get(key);
-  if (hit && (Date.now() - hit.ts) < LEADS_UNICOS_CACHE_TTL) return hit.data;
-  const data = await fetch(LEADS_PROXY + '?action=leads_unicos&from=' + from + '&to=' + to, { cache: 'no-store' }).then(r => r.json());
-  _leadsUnicosCache.set(key, { data, ts: Date.now() });
-  return data;
-}
-
-async function loadAdsSection(periodFrom, periodTo, inboundData, silent, prevPeriodFrom, prevPeriodTo, prevInboundData) {
-  const mySeq = ++_adsSeq;
+// ── INVESTIMENTO / CAC / CPL / ROAS / ACOS — filtrado pelo período selecionado.
+// Achado 31/07: CPL era a ÚLTIMA parte do painel ainda dependente de rede ao
+// vivo — com a migração pro Supabase (dash_geral_leads_daily), a função
+// inteira virou síncrona, zero rede, zero espera, igual o resto do painel. ──
+function loadAdsSection(periodFrom, periodTo, inboundData, silent, prevPeriodFrom, prevPeriodTo, prevInboundData) {
   const show = (_originMode === 'inbound' || _originMode === 'both') && periodFrom && periodTo;
   const row = el('mkt-row');
   row.classList.toggle('show', show);
   if (!show) return;
 
-  // FASE 1 — síncrona, ZERO rede: Investimento/CAC/ROAS/ACOS (e as setas
-  // delas) só dependem de _adsRawDaily (Supabase, já em memória) + inboundData
-  // (já calculado local pelo motor do CRM). Renderiza na hora — achado 30/07
-  // (Robert: "achei muito demorado pra carregar e renderizar"): antes o card
-  // INTEIRO ficava esperando 2 chamadas de rede pro CPL mesmo essas 4 métricas
-  // não precisando de nada disso. Só o CPL de fato depende de rede (Fase 2).
   const agK = (inboundData && inboundData.kpis) || { ganhoValor: 0, ganhoCont: 0 };
   const receitaPeriodo  = agK.ganhoValor;
   const fechadosPeriodo = agK.ganhoCont;
@@ -1290,6 +1321,7 @@ async function loadAdsSection(periodFrom, periodTo, inboundData, silent, prevPer
   const ultimaData = (_adsRawDaily && _adsRawDaily.length)
     ? _adsRawDaily.reduce((max, r) => (r.date > max ? r.date : max), _adsRawDaily[0].date)
     : null;
+  const leadsPeriodo = leadsUnicosLocal(periodFrom, periodTo);
 
   // achado 15/07 (auditoria, confirmado ao vivo via CDP a 1280px — largura
   // mínima documentada do telão): ".ac-label" some com "Investimento Ads"+
@@ -1302,25 +1334,29 @@ async function loadAdsSection(periodFrom, periodTo, inboundData, silent, prevPer
   el('mkt-updated').textContent = ultimaData ? '· sincronizado ' + fmtDateDisplay(ultimaData) : '';
   el('mkt-inv').textContent  = inv > 0 ? fmtMoney(inv) : '—';
   el('mkt-cac').textContent  = (inv > 0 && fechadosPeriodo > 0) ? fmtMoney(Math.round(inv / fechadosPeriodo)) : '—';
+  el('mkt-cpl').textContent  = (inv > 0 && leadsPeriodo > 0) ? fmtMoney(Math.round(inv / leadsPeriodo)) : '—';
   el('mkt-roas').textContent = (inv > 0 && receitaPeriodo > 0) ? (receitaPeriodo / inv).toFixed(2) + 'x' : '—';
   el('mkt-acos').textContent = (inv > 0 && receitaPeriodo > 0) ? (inv / receitaPeriodo * 100).toFixed(1) + '%' : '—';
 
-  let prevInv = null;
   // achado 15/07 (Robert: setinha só nas métricas que fazem sentido comparar
   // por período). Cálculo 100% local. 15/07: adicionado CPL (invertido,
   // menor é melhor) e Investimento (neutro, sem direção boa/ruim isolada).
   if (prevPeriodFrom && prevPeriodTo) {
     const prevAdsRows = (_adsRawDaily || []).filter(r => r.date >= prevPeriodFrom && r.date <= prevPeriodTo);
-    prevInv = prevAdsRows.reduce((s, r) => s + (parseFloat(r.spend_net) || 0), 0);
+    const prevInv = prevAdsRows.reduce((s, r) => s + (parseFloat(r.spend_net) || 0), 0);
     const prevK = (prevInboundData && prevInboundData.kpis) || { ganhoValor: 0, ganhoCont: 0 };
+    const prevLeadsPeriodo = leadsUnicosLocal(prevPeriodFrom, prevPeriodTo);
     const roasNow  = (inv > 0 && receitaPeriodo > 0) ? receitaPeriodo / inv : null;
     const roasPrev = (prevInv > 0 && prevK.ganhoValor > 0) ? prevK.ganhoValor / prevInv : null;
     const cacNow   = (inv > 0 && fechadosPeriodo > 0) ? inv / fechadosPeriodo : null;
     const cacPrev  = (prevInv > 0 && prevK.ganhoCont > 0) ? prevInv / prevK.ganhoCont : null;
+    const cplNow   = (inv > 0 && leadsPeriodo > 0) ? inv / leadsPeriodo : null;
+    const cplPrev  = (prevInv > 0 && prevLeadsPeriodo > 0) ? prevInv / prevLeadsPeriodo : null;
     const acosNow  = (inv > 0 && receitaPeriodo > 0) ? inv / receitaPeriodo : null;
     const acosPrev = (prevInv > 0 && prevK.ganhoValor > 0) ? prevInv / prevK.ganhoValor : null;
     el('mkt-roas-delta').innerHTML = kcDeltaHTML(pctDelta(roasNow, roasPrev));       // maior é melhor
     el('mkt-cac-delta').innerHTML  = kcDeltaHTML(pctDelta(cacNow, cacPrev), true);   // menor é melhor
+    el('mkt-cpl-delta').innerHTML  = kcDeltaHTML(pctDelta(cplNow, cplPrev), true);   // menor é melhor
     // achado 16/07 (Robert: "faltou a setinha no acos"): ACOS é % do
     // faturamento gasto em ads — igual CAC/CPL, menor é melhor (mais
     // eficiente), por isso invertido.
@@ -1331,42 +1367,9 @@ async function loadAdsSection(periodFrom, periodTo, inboundData, silent, prevPer
     // limpa em vez de deixar seta do filtro ANTERIOR grudada na tela.
     el('mkt-roas-delta').innerHTML = '';
     el('mkt-cac-delta').innerHTML = '';
+    el('mkt-cpl-delta').innerHTML = '';
     el('mkt-acos-delta').innerHTML = '';
     el('mkt-inv-delta').innerHTML = '';
-  }
-
-  // FASE 2 — só o CPL depende de leads_unicos (planilha via GAS, única parte
-  // do card que ainda toca rede de verdade). Cacheada (ver fetchLeadsUnicosCached
-  // acima) e isolada: nunca atrasa nem dima o resto do card, só o próprio CPL
-  // mostra skeleton enquanto espera.
-  const cplEl = el('mkt-cpl'), cplDeltaEl = el('mkt-cpl-delta');
-  cplEl.innerHTML = '<span class="skel"></span>';
-  cplDeltaEl.innerHTML = '';
-  try {
-    const [leadsR, prevLeadsR] = await Promise.all([
-      fetchLeadsUnicosCached(periodFrom, periodTo),
-      (prevPeriodFrom && prevPeriodTo) ? fetchLeadsUnicosCached(prevPeriodFrom, prevPeriodTo).catch(() => null) : Promise.resolve(null)
-    ]);
-    if (mySeq !== _adsSeq) return;
-
-    const leadsPeriodo = (leadsR && leadsR.leadsUnicos) || 0;
-    cplEl.textContent = (inv > 0 && leadsPeriodo > 0) ? fmtMoney(Math.round(inv / leadsPeriodo)) : '—';
-
-    if (prevPeriodFrom && prevPeriodTo && prevInv !== null) {
-      const prevLeadsPeriodo = (prevLeadsR && prevLeadsR.leadsUnicos) || 0;
-      const cplNow   = (inv > 0 && leadsPeriodo > 0) ? inv / leadsPeriodo : null;
-      const cplPrev  = (prevInv > 0 && prevLeadsPeriodo > 0) ? prevInv / prevLeadsPeriodo : null;
-      cplDeltaEl.innerHTML = kcDeltaHTML(pctDelta(cplNow, cplPrev), true); // menor é melhor
-    }
-  } catch(e) {
-    // Não esconde mais o bloco inteiro em erro (silencioso demais — achado 09/07):
-    // mantém os últimos números bons na tela e só avisa no rodapé do card.
-    console.warn('CPL (leads_unicos) erro:', e.message);
-    if (mySeq === _adsSeq) {
-      cplEl.textContent = '—';
-      const upd = el('mkt-updated');
-      if (upd) upd.textContent = upd.textContent.replace(/ · falha ao atualizar$/, '') + ' · falha ao atualizar';
-    }
   }
 }
 
