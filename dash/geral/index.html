@@ -165,9 +165,9 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .bar-o1{background:linear-gradient(90deg,var(--o1),#c9b8e6)}
 .bar-o2{background:linear-gradient(90deg,var(--o2),var(--purple-l))}
 .bar-o3{background:linear-gradient(90deg,var(--o3),var(--purple))}
-.funil-count{font-size:17px;font-weight:800;color:var(--text);text-align:right;font-variant-numeric:tabular-nums}
-.funil-val{font-size:10px;font-weight:600;color:var(--muted);text-align:right;white-space:nowrap;overflow:hidden}
-.funil-drop{font-size:9px;font-weight:700;padding:2px 5px;background:#fff8e1;color:var(--amber);border-radius:8px;white-space:nowrap;overflow:hidden}
+.funil-count{font-size:17px;font-weight:800;color:var(--text);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.funil-val{font-size:10px;font-weight:600;color:var(--muted);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.funil-drop{font-size:9px;font-weight:700;padding:2px 5px;background:#fff8e1;color:var(--amber);border-radius:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .funil-chevron{font-size:11px;color:var(--faint);text-align:center}
 
 .og-pill{font-size:9px;font-weight:800;padding:1px 6px;border-radius:6px;margin-left:5px;letter-spacing:.2px;flex-shrink:0;white-space:nowrap;vertical-align:middle}
@@ -270,7 +270,14 @@ footer strong{color:#fff}
   .rep-header{flex-wrap:wrap;row-gap:6px}
   .rep-info{min-width:140px}
   .rep-badges{flex-basis:100%;justify-content:flex-end}
-  .funil-row{grid-template-columns:10px minmax(64px,96px) minmax(10px,1fr) 20px 58px 30px 12px}
+  /* achado 30/07 (auditoria): coluna de contagem ficava fixa em 20px sem reduzir
+     a fonte (só .funil-val/.funil-drop encolhiam) — número de 3 dígitos (90d/
+     Total, ex "161") vazava até 16px pra fora da coluna, visualmente sobre a
+     coluna vizinha. .funil-val também cortava dígito de R$ em silêncio (tinha
+     overflow:hidden sem ellipsis). Fix: fonte do contador reduzida + colunas de
+     contador/valor alargadas com folga sobre o pior caso medido. */
+  .funil-row{grid-template-columns:10px minmax(64px,96px) minmax(10px,1fr) 28px 64px 42px 12px}
+  .funil-count{font-size:12px}
   .funil-val{font-size:9px}
   .funil-drop{font-size:8px;padding:2px 3px}
   /* 6 colunas de stat (Pipeline/Ganhos/Ticket Médio/Conversão/Perdidos/Leads)
@@ -816,7 +823,6 @@ let _rawDeals     = null;
 // rate-limited) numa troca de filtro. Buscado junto de _rawDeals, somado
 // localmente por período em loadAdsSection().
 let _adsRawDaily     = null;
-let _adsRawFetchedAt = 0;
 async function fetchAdsRawDaily() {
   const PAGE = 1000;
   let all = [];
@@ -1058,8 +1064,10 @@ async function loadData(force, silent) {
       _rawDeals = await fetchRawDeals();
       // best-effort: falha aqui nunca derruba o carregamento principal do CRM
       // (que já terminou acima) — loadAdsSection() simplesmente mostra "—"
-      // se _adsRawDaily continuar null.
-      try { _adsRawDaily = await fetchAdsRawDaily(); _adsRawFetchedAt = Date.now(); } catch (_) {}
+      // se _adsRawDaily continuar null. achado 30/07 (auditoria): catch era
+      // 100% silencioso (zero console.warn) — card de Ads sumia sem nenhuma
+      // pista de por quê, nem no console. Logado igual ao catch do CPL.
+      try { _adsRawDaily = await fetchAdsRawDaily(); } catch (eAds) { console.warn('fetchAdsRawDaily falhou:', eAds.message); }
     } else if (!silent) {
       await new Promise(r => setTimeout(r, 150)); // respiro mínimo pro pulso ser visível
     }

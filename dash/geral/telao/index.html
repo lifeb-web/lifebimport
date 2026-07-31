@@ -92,11 +92,20 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;heig
 .cp-day.cp-inrange{background:rgba(112,75,155,.12);border-radius:0}
 .cp-day.cp-selected{background:var(--purple);color:#fff;border-color:var(--purple)}
 .cp-range-label{font-size:10px;font-weight:700;color:var(--muted);text-align:center;padding-top:2px}
-.h-right{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-left:auto}
-#period-badge{font-size:10px;font-weight:700;color:var(--purple);background:rgba(112,75,155,.08);padding:3px 10px;border-radius:12px;white-space:nowrap;border:1px solid transparent}
+/* achado 30/07 (auditoria, medido em 1280px — largura mínima documentada):
+   #period-badge sem limite de largura + .h-right sem min-width:0 empurrava
+   #htime/#rdot pra fora do viewport em qualquer período mais longo que "Este
+   mês" (ex "Total (desde o início)" chegava a 48px além do viewport,
+   "Personalizado" 70px) — sem scroll horizontal, eles só desapareciam
+   (overflow:hidden do html é a rede de segurança). #rdot é a bolinha "ao
+   vivo" — não pode nunca sumir. Fix: badge trunca o PRÓPRIO texto (min-width:
+   0 + ellipsis + teto), nunca mais empurra os vizinhos; texto completo sempre
+   disponível no title (hover, telão usado com mouse também). */
+.h-right{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-left:auto;min-width:0}
+#period-badge{font-size:10px;font-weight:700;color:var(--purple);background:rgba(112,75,155,.08);padding:3px 10px;border-radius:12px;white-space:nowrap;border:1px solid transparent;overflow:hidden;text-overflow:ellipsis;min-width:0;max-width:78px}
 #period-badge.trunc{color:#8a6100;background:#fff3cd;border-color:#e8c468}
 .pchip.active[data-p="total"]{background:linear-gradient(90deg,#d4af37,#f0d878);color:#3a2e00;border-color:#d4af37}
-#htime{font-size:18px;font-weight:800;color:var(--purple);font-variant-numeric:tabular-nums}
+#htime{font-size:18px;font-weight:800;color:var(--purple);font-variant-numeric:tabular-nums;flex-shrink:0}
 #rdot{width:8px;height:8px;border-radius:50%;background:var(--green);opacity:.3;flex-shrink:0;cursor:default}
 #rdot.flash{animation:rdot 1.4s ease forwards}
 @keyframes rdot{0%{opacity:.3;transform:scale(1)}18%{opacity:1;transform:scale(1.7);box-shadow:0 0 8px rgba(34,195,93,.6)}100%{opacity:.3;transform:scale(1)}}
@@ -832,7 +841,6 @@ let _rawDeals     = null;
 // rate-limited) numa troca de filtro. Buscado junto de _rawDeals, somado
 // localmente por período em loadAdsSection().
 let _adsRawDaily     = null;
-let _adsRawFetchedAt = 0;
 async function fetchAdsRawDaily() {
   const PAGE = 1000;
   let all = [];
@@ -1091,8 +1099,10 @@ async function loadData(force, silent) {
       _rawDeals = await fetchRawDeals();
       // best-effort: falha aqui nunca derruba o carregamento principal do CRM
       // (que já terminou acima) — loadAdsSection() simplesmente mostra "—"
-      // se _adsRawDaily continuar null.
-      try { _adsRawDaily = await fetchAdsRawDaily(); _adsRawFetchedAt = Date.now(); } catch (_) {}
+      // se _adsRawDaily continuar null. achado 30/07 (auditoria): catch era
+      // 100% silencioso (zero console.warn) — card de Ads sumia sem nenhuma
+      // pista de por quê, nem no console. Logado igual ao catch do CPL.
+      try { _adsRawDaily = await fetchAdsRawDaily(); } catch (eAds) { console.warn('fetchAdsRawDaily falhou:', eAds.message); }
     } else if (!silent) {
       await new Promise(r => setTimeout(r, 150)); // respiro mínimo pro pulso ser visível
     }
@@ -1539,7 +1549,12 @@ function renderHero(k, period, recentWon, truncated) {
   const periodLabel = (_period === 'month_pick' && _monthPickLabel) ? _monthPickLabel : (period ? period.label : '');
   if (period) el('period-badge').textContent = (truncated ? '⚠ ' : '') + periodLabel;
   el('period-badge').classList.toggle('trunc', !!truncated);
-  el('period-badge').title = truncated ? 'Volume muito alto — parte antiga do histórico pode não estar contada' : '';
+  // achado 30/07: title sempre mostra o texto completo do período — a badge agora
+  // pode truncar visualmente (ellipsis) em telas na largura mínima documentada
+  // (1280px), title garante que quem usa mouse ainda vê o período inteiro no hover.
+  el('period-badge').title = truncated
+    ? 'Volume muito alto — parte antiga do histórico pode não estar contada'
+    : periodLabel;
   setTextFlash('hero-val', fmtMoney(k.ganhoValor));
   el('hero-sub').textContent = k.ganhoCont + ' negócio' + (k.ganhoCont !== 1 ? 's' : '');
   // achado 13/07 (Robert: setas de comparação "sumindo e aparecendo"): render()
