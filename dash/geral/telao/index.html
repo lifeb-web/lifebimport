@@ -29,7 +29,22 @@ body{width:100%;height:100vh;overflow:hidden;font-family:var(--font);font-weight
 #lb.on{animation:lb 1.6s ease-in-out infinite}
 @keyframes lb{0%{width:0;opacity:1}60%{width:80%;opacity:1}100%{width:100%;opacity:0}}
 
-header{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;height:54px;display:flex;align-items:center;gap:14px;flex-shrink:0;box-shadow:0 1px 3px rgba(26,22,38,.05);position:relative;z-index:2}
+header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;min-height:54px;display:grid;grid-template-columns:auto auto 1fr auto;align-items:start;gap:14px;flex-shrink:0;box-shadow:0 1px 3px rgba(26,22,38,.05);position:relative;z-index:2}
+/* achado 31/07 (2ª rodada): header era display:flex — um flex item (header)
+   dentro do body (flex-column) não estava recalculando sua própria altura
+   auto quando o FILHO (.h-center) precisava de mais linhas por causa do
+   flex-wrap interno (quirk real de flexbox aninhado, confirmado via CDP:
+   header.scrollHeight pedia 95px mas offsetHeight ficava travado em 54px,
+   cortando/sobrepondo as linhas extras de chip). Trocado pra CSS Grid —
+   MAS o header tem 4 filhos diretos (.h-brand, .oseg — o toggle Outbound/
+   Inbound/Ambos, que eu tinha esquecido —, .h-center, .h-right), não 3:
+   com só 3 colunas declaradas, o 4º item (.h-right, badge+relógio+bolinha
+   "ao vivo") caía sozinho numa linha implícita extra do grid, atrás do
+   conteúdo (confirmado via getComputedStyle: gridTemplateRows resolvia
+   "59px 27px", 2 linhas, com .h-right na 2ª). 4 colunas resolve de vez —
+   mesmo resultado visual no caso comum (1 linha, ≥1280px), sem overflow
+   nem sobreposição em nenhuma largura. */
+.h-brand,.h-right{padding-top:6px}
 .h-brand{display:flex;align-items:center;gap:12px;flex-shrink:0}
 .h-logo{height:28px;width:auto;cursor:pointer}
 .h-sep{width:1px;height:24px;background:var(--border);flex-shrink:0}
@@ -60,12 +75,22 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;heig
    na pilha de elementos naquele ponto — clicável só "no papel", nunca de
    verdade. overflow:hidden aqui só existia pra manter a faixa de chips
    arrumada (nunca precisou dele nos testes em 1280/1920px), então removido. */
-.h-center{position:relative;flex:1;display:flex;justify-content:center;align-items:center;gap:3px}
+.h-center{position:relative;flex:1;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:3px;row-gap:5px;min-width:0}
 /* achado 31/07: 10 chips (2 novos, Hoje+60 dias) não cabem mais com o padding/
    gap antigo (pensado pra 8) — estourava 126px em 1280px, empurrando a
    bolinha "ao vivo" pra fora igual o bug do period-badge de ontem. Padding/
    gap reduzidos, fonte mantida (legibilidade a distância no telão importa
    mais que espaço) — medido via CDP até sobrar folga real, não só 0px. */
+/* achado 31/07 (2ª rodada, Robert testou numa janela de PC mais estreita que
+   1280px — não redimensionada de propósito, só o tamanho real da janela dele):
+   abaixo de ~1280px os 10 chips não cabem NEM espremidos — estouravam o
+   header inteiro pra fora do viewport (297px de overflow medido a 911px),
+   cortando pedaço de coluna nas duas bordas da tela toda (ranking/feed atrás
+   do header, não só os chips). header virou min-height (era height fixo de
+   54px) + flex-wrap aqui — chips que não cabem numa linha só descem pra uma
+   2ª linha, dentro do próprio .h-center, sem NUNCA gerar scroll horizontal
+   nem cortar conteúdo. #main (flex:1) absorve a diferença de altura sozinho,
+   sem precisar de nenhum ajuste manual. */
 .pchip{flex-shrink:0;padding:5px 5px;border-radius:20px;border:1.5px solid var(--border);font-family:var(--font);font-size:10px;font-weight:700;color:var(--muted);background:#fff;cursor:pointer;white-space:nowrap}
 .pchip.active{background:var(--text);color:#fff;border-color:var(--text);box-shadow:0 2px 6px -1px rgba(26,22,38,.25)}
 /* achado 15/07 (Robert: "esses filtros meio merdinhas" / "no personalizado
@@ -331,7 +356,7 @@ footer{background:var(--text);color:rgba(255,255,255,.6);text-align:center;paddi
 footer strong{color:#fff}
 
 @media(max-height:860px){
-  header{height:44px}
+  header{min-height:44px}
   #htime{font-size:15px}
   #body{padding:6px 12px 6px;gap:5px}
   #hero-row{height:76px;gap:6px}
