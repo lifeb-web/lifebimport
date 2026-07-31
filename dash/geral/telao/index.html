@@ -60,8 +60,13 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;heig
    na pilha de elementos naquele ponto — clicável só "no papel", nunca de
    verdade. overflow:hidden aqui só existia pra manter a faixa de chips
    arrumada (nunca precisou dele nos testes em 1280/1920px), então removido. */
-.h-center{position:relative;flex:1;display:flex;justify-content:center;align-items:center;gap:6px}
-.pchip{flex-shrink:0;padding:5px 13px;border-radius:20px;border:1.5px solid var(--border);font-family:var(--font);font-size:10px;font-weight:700;color:var(--muted);background:#fff;cursor:pointer;white-space:nowrap}
+.h-center{position:relative;flex:1;display:flex;justify-content:center;align-items:center;gap:3px}
+/* achado 31/07: 10 chips (2 novos, Hoje+60 dias) não cabem mais com o padding/
+   gap antigo (pensado pra 8) — estourava 126px em 1280px, empurrando a
+   bolinha "ao vivo" pra fora igual o bug do period-badge de ontem. Padding/
+   gap reduzidos, fonte mantida (legibilidade a distância no telão importa
+   mais que espaço) — medido via CDP até sobrar folga real, não só 0px. */
+.pchip{flex-shrink:0;padding:5px 5px;border-radius:20px;border:1.5px solid var(--border);font-family:var(--font);font-size:10px;font-weight:700;color:var(--muted);background:#fff;cursor:pointer;white-space:nowrap}
 .pchip.active{background:var(--text);color:#fff;border-color:var(--text);box-shadow:0 2px 6px -1px rgba(26,22,38,.25)}
 /* achado 15/07 (Robert: "esses filtros meio merdinhas" / "no personalizado
    pode melhorar com uma construção própria") — <input type="date"/"month">
@@ -329,10 +334,12 @@ footer strong{color:#fff}
   </div>
 
   <div class="h-center">
+    <button class="pchip" data-p="today"      onclick="setPeriod(this)">Hoje</button>
     <button class="pchip" data-p="week"       onclick="setPeriod(this)">Esta semana</button>
     <button class="pchip active" data-p="month" onclick="setPeriod(this)">Este mês</button>
     <button class="pchip" data-p="prev_month" onclick="setPeriod(this)">Mês ant.</button>
     <button class="pchip" data-p="30d"        onclick="setPeriod(this)">30 dias</button>
+    <button class="pchip" data-p="60d"        onclick="setPeriod(this)">60 dias</button>
     <button class="pchip" data-p="90d"        onclick="setPeriod(this)">90 dias</button>
     <button class="pchip" data-p="total"      onclick="setPeriod(this)">Total</button>
     <button class="pchip" data-p="month_pick" onclick="setPeriod(this)">📅 Mês</button>
@@ -566,7 +573,9 @@ function getPeriodDatesClient(type, from, to, todayStr) {
   const nowUtc = new Date(Date.UTC(todayParts[0], todayParts[1] - 1, todayParts[2]));
   let label, fromDate, toDate;
 
-  if (type === 'week') {
+  if (type === 'today') {
+    fromDate = todayStr; toDate = todayStr; label = 'Hoje';
+  } else if (type === 'week') {
     const dow = nowUtc.getUTCDay() || 7;
     const mon = new Date(nowUtc); mon.setUTCDate(nowUtc.getUTCDate() - dow + 1);
     fromDate = fmtDateUTC(mon); toDate = todayStr; label = 'Esta semana';
@@ -579,6 +588,9 @@ function getPeriodDatesClient(type, from, to, todayStr) {
   } else if (type === '30d') {
     const d30 = new Date(nowUtc); d30.setUTCDate(nowUtc.getUTCDate() - 30);
     fromDate = fmtDateUTC(d30); toDate = todayStr; label = 'Últimos 30 dias';
+  } else if (type === '60d') {
+    const d60 = new Date(nowUtc); d60.setUTCDate(nowUtc.getUTCDate() - 60);
+    fromDate = fmtDateUTC(d60); toDate = todayStr; label = 'Últimos 60 dias';
   } else if (type === '90d') {
     const d90 = new Date(nowUtc); d90.setUTCDate(nowUtc.getUTCDate() - 90);
     fromDate = fmtDateUTC(d90); toDate = todayStr; label = 'Últimos 90 dias';

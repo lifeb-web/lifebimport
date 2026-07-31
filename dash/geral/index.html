@@ -314,10 +314,12 @@ footer strong{color:#fff}
 </div>
 
 <div id="period-bar">
+  <button class="pchip" data-p="today"      onclick="setPeriod(this)">Hoje</button>
   <button class="pchip" data-p="week"       onclick="setPeriod(this)">Esta semana</button>
   <button class="pchip active" data-p="month" onclick="setPeriod(this)">Este mês</button>
   <button class="pchip" data-p="prev_month" onclick="setPeriod(this)">Mês ant.</button>
   <button class="pchip" data-p="30d"        onclick="setPeriod(this)">30 dias</button>
+  <button class="pchip" data-p="60d"        onclick="setPeriod(this)">60 dias</button>
   <button class="pchip" data-p="90d"        onclick="setPeriod(this)">90 dias</button>
   <button class="pchip" data-p="total"      onclick="setPeriod(this)">Total</button>
   <button class="pchip" data-p="month_pick" onclick="setPeriod(this)">📅 Mês</button>
@@ -545,7 +547,9 @@ function getPeriodDatesClient(type, from, to, todayStr) {
   const nowUtc = new Date(Date.UTC(todayParts[0], todayParts[1] - 1, todayParts[2]));
   let label, fromDate, toDate;
 
-  if (type === 'week') {
+  if (type === 'today') {
+    fromDate = todayStr; toDate = todayStr; label = 'Hoje';
+  } else if (type === 'week') {
     const dow = nowUtc.getUTCDay() || 7;
     const mon = new Date(nowUtc); mon.setUTCDate(nowUtc.getUTCDate() - dow + 1);
     fromDate = fmtDateUTC(mon); toDate = todayStr; label = 'Esta semana';
@@ -558,6 +562,9 @@ function getPeriodDatesClient(type, from, to, todayStr) {
   } else if (type === '30d') {
     const d30 = new Date(nowUtc); d30.setUTCDate(nowUtc.getUTCDate() - 30);
     fromDate = fmtDateUTC(d30); toDate = todayStr; label = 'Últimos 30 dias';
+  } else if (type === '60d') {
+    const d60 = new Date(nowUtc); d60.setUTCDate(nowUtc.getUTCDate() - 60);
+    fromDate = fmtDateUTC(d60); toDate = todayStr; label = 'Últimos 60 dias';
   } else if (type === '90d') {
     const d90 = new Date(nowUtc); d90.setUTCDate(nowUtc.getUTCDate() - 90);
     fromDate = fmtDateUTC(d90); toDate = todayStr; label = 'Últimos 90 dias';
