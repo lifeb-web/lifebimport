@@ -219,6 +219,8 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .rv-k-val.amber{color:var(--amber)}
 .rv-k-val.red{color:var(--red)}
 .rv-funil{border-bottom:1px solid var(--border)}
+.rv-funil-active{background:#faf8fc}
+.rv-funil-active .funil-stage-name{color:var(--purple)}
 .rv-tabs{display:flex;gap:6px;padding:10px 16px 6px}
 .rv-tab{flex:1;padding:7px 4px;border-radius:8px;border:1.5px solid var(--border);background:var(--card);font-size:10px;font-weight:800;color:var(--muted);cursor:pointer;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rv-tab.active{background:var(--purple);border-color:var(--purple);color:#fff}
@@ -1790,23 +1792,37 @@ function computeRepScoped(repId) {
   return { curr, prev };
 }
 
+// Cada etapa do funil é clicável — Robert (31/07): "colocou lista de ganhos
+// perdidos ativos mas nem teve o trabalho de colocar em negociação pra dar
+// pra gente ver a lista". Clique filtra o feed abaixo pra só os negócios
+// daquela etapa (mesmo merge 3771723/3771724 → "Diag./Solução" que o resto
+// do painel já usa via normFunnel/openStageModal).
 function renderRepFunilRows(funnel) {
   const nf = normFunnel(funnel);
   const max = Math.max(...nf.map(s => s.reached ?? s.count), 1);
-  return nf.map(s => {
+  const convFrom = (count, prevCount) => prevCount > 0 ? Math.round((count / prevCount) * 100) : null;
+  return nf.map((s, i) => {
     const reached = s.reached ?? s.count;
     const pct = Math.max((reached / max) * 100, 2);
     const ord = STAGE_ORD[String(s.stageId)] || 'o2';
     const lostBadge = s.lost > 0 ? `<span class="funil-drop" style="background:#fee2e2;color:#b91c1c">${s.lost} perd</span>` : '<span></span>';
+    const tabKey = 'stage:' + s.stageId;
+    const isActive = _repViewTab === tabKey;
+    const conv = i === 0 ? null : convFrom(reached, nf[i - 1].reached ?? nf[i - 1].count);
+    const connector = conv !== null ? `
+      <div class="funil-conn" title="Conversão de ${escHtml(nf[i - 1].name)} → ${escHtml(s.name)}">
+        <span class="funil-conn-arrow">↓</span><span class="funil-conn-pct">${conv}%</span>
+      </div>` : '';
     return `
-      <div class="funil-row" style="cursor:default">
+      <div class="funil-row${isActive ? ' rv-funil-active' : ''}" onclick="switchRepViewTab('${tabKey}')">
+        ${connector}
         <div class="funil-stage-dot" style="background:${ORD_DOT[ord]}"></div>
         <span class="funil-stage-name">${escHtml(s.name)}</span>
         <div class="funil-bar-wrap"><div class="funil-bar bar-${ord}" style="width:${pct}%"></div></div>
         <span class="funil-count">${reached}</span>
         <span class="funil-val">${s.value > 0 ? fmtMoney(s.value) : '—'}</span>
         ${lostBadge}
-        <span></span>
+        <span class="funil-chevron">›</span>
       </div>`;
   }).join('');
 }
@@ -1858,6 +1874,14 @@ function repViewHTML() {
 
 function repViewFeedHTML() {
   const { curr } = _repViewCache;
+  if (_repViewTab.indexOf('stage:') === 0) {
+    const sid = _repViewTab.slice(6);
+    const normIds = sid === '3771723' ? ['3771723', '3771724'] : [sid];
+    const list = curr.deals.filter(d => normIds.includes(String(d.stageId)));
+    return list.length
+      ? list.map(d => mdealRow(d, { showRep: false, dashIfZero: true })).join('')
+      : '<div class="modal-empty">Nada aqui neste período</div>';
+  }
   const list = _repViewTab === 'won' ? curr.recentWon : (_repViewTab === 'lost' ? curr.recentLost : curr.deals);
   if (!list.length) return '<div class="modal-empty">Nada aqui neste período</div>';
   if (_repViewTab === 'won') return list.map(d => mdealRow(d, { showRep: false, dotColor: 'var(--green)', valColor: '#15803d', date: d.closedAt, noStaleFrozen: true })).join('');
