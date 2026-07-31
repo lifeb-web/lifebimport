@@ -837,27 +837,6 @@ let _rawDeals     = null;
 // localmente por período em loadAdsSection().
 let _adsRawDaily     = null;
 let _adsRawFetchedAt = 0;
-
-// PATCH TEMPORÁRIO (achado 29/07): META_TOKEN do Apps Script expirou/parou
-// ~21/07 — syncAdsDailyToSupabase() ficou sem gravar em dash_geral_ads_daily
-// desde então. Preenche o buraco 22-29/07 com o líquido puxado direto do Meta
-// na hora (mesma fórmula do backend: conta inteira − campanha [TRÁFEGO] POSTS
-// INSTAGRAM, confirmada ativa, id 120242303144740451). Autolimitado por data:
-// só entra se o Supabase AINDA não tiver aquela data — assim que o sync
-// automático voltar (token renovado por Robert), a linha real do Supabase
-// substitui esta sozinha, sem precisar de novo deploy. 29/07 é dia corrente,
-// parcial, congelado no valor de quando este patch foi gerado — não é live.
-// Remover depois de confirmar o sync rodando sozinho de novo por uns dias.
-const _ADS_GAP_PATCH_20260729 = [
-  { date: '2026-07-22', spend_net: 165.40 },
-  { date: '2026-07-23', spend_net: 160.09 },
-  { date: '2026-07-24', spend_net: 160.36 },
-  { date: '2026-07-25', spend_net: 151.18 },
-  { date: '2026-07-26', spend_net: 175.79 },
-  { date: '2026-07-27', spend_net: 154.40 },
-  { date: '2026-07-28', spend_net: 181.45 },
-  { date: '2026-07-29', spend_net: 111.69 }
-];
 async function fetchAdsRawDaily() {
   const PAGE = 1000;
   let all = [];
@@ -879,10 +858,6 @@ async function fetchAdsRawDaily() {
     if (all.length >= total || chunk.length < PAGE) break;
     from += PAGE;
   }
-  const known = new Set(all.map(function(r) { return r.date; }));
-  _ADS_GAP_PATCH_20260729.forEach(function(r) {
-    if (!known.has(r.date)) all.push({ date: r.date, spend_net: r.spend_net, synced_at: null });
-  });
   return all;
 }
 
