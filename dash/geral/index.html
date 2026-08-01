@@ -1300,32 +1300,93 @@ function loadAdsSection(periodFrom, periodTo, inboundData, silent, prevPeriodFro
   }
 }
 
-// Poll de fundo — o único ponto do painel que ainda toca a rede
-// periodicamente (busca o snapshot mais novo do Supabase). Qualquer clique
-// de filtro no meio do caminho continua 100% local, em cima do snapshot já
-// carregado — este poll NUNCA é resetado/adiado por interação nenhuma (achado
-// 28/07, ver comentário no finally de loadData()), sempre roda no seu próprio
-// ritmo. force=true sempre (busca de verdade); silent=true (nunca pisca o dim
-// sozinho). Cadeia auto-reagendada (setTimeout dentro do próprio callback) em
-// vez de setInterval — garante que nunca sobrepõe 2 fetches se um ciclo
-// atrasar por rede lenta, só reagenda depois do ciclo anterior terminar.
-//
-// Intervalo reduzido de 60s pra 20s (achado 28/07, Robert: "quando tem um
-// ganho precisa dar F5 pra atualizar na hora"): o sync Agendor→Supabase
-// (supabase-sync.gs) já é quase instantâneo via webhook desde 16/07 — o
-// gargalo real de "demora a aparecer" sempre foi este polling do front (fora
-// o bug do reset por interação, corrigido junto). 20s cobre a maior parte do
-// caso "acabei de marcar Ganho, quero ver refletido" sem martelar o Supabase
-// (fetch é leve, tabela pequena, poucos clientes simultâneos).
+// ── Checagem barata de mudança (01/08) — achado real: o poll de fundo
+// buscava as 3 tabelas INTEIRAS a cada 20s, sem checar se algo tinha mudado
+// de verdade. Com o telão ligado 24h/dia, isso dava ~4.320 buscas completas
+// por dia — vários GB/dia — e estourou o teto de 5GB/mês do plano free do
+// Supabase em questão de dias, não meses. Fix: busca só 1 timestamp
+// (dezenas de bytes) a cada 20s; a tabela inteira só é buscada quando esse
+// timestamp realmente mudou. "Ganho aparece rápido" continua intacto — o
+// timestamp muda no MESMO instante que o dado muda, então o próximo tick
+// de 20s pega a mudança igualzinho a antes, só que sem desperdiçar rede
+// nos milhares de ciclos em que nada mudou. ──
+async function fetchLatestStamp_(table, col) {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/' + table + '?select=' + col + '&order=' + col + '.desc&limit=1', {
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY }
+  });
+  if (!res.ok) throw new Error('Supabase HTTP ' + res.status);
+  const rows = await res.json();
+  return rows.length ? rows[0][col] : null;
+}
+
+let _lastDealsStamp = null, _lastAdsStamp = null, _lastLeadsStamp = null;
+
+async function backgroundPollTick_() {
+  try {
+    const [dealsStamp, adsStamp, leadsStamp] = await Promise.all([
+      fetchLatestStamp_('dash_geral_deals', 'updated_at').catch(() => undefined),
+      fetchLatestStamp_('dash_geral_ads_daily', 'synced_at').catch(() => undefined),
+      fetchLatestStamp_('dash_geral_leads_daily', 'synced_at').catch(() => undefined)
+    ]);
+    const changed =
+      (dealsStamp !== undefined && dealsStamp !== _lastDealsStamp) ||
+      (adsStamp !== undefined && adsStamp !== _lastAdsStamp) ||
+      (leadsStamp !== undefined && leadsStamp !== _lastLeadsStamp);
+    if (dealsStamp !== undefined) _lastDealsStamp = dealsStamp;
+    if (adsStamp !== undefined) _lastAdsStamp = adsStamp;
+    if (leadsStamp !== undefined) _lastLeadsStamp = leadsStamp;
+    if (changed) await loadData(true, true);
+  } catch (e) {
+    console.warn('backgroundPollTick_ falhou:', e.message);
+  }
+}
+
+// Hora/dia em BRT de verdade via Intl (não depende do fuso do dispositivo
+// estar configurado certo — mesma cautela de [[feedback_timezone_teste_utc]]).
+function getBRTParts_() {
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', hour: 'numeric', hour12: false, weekday: 'short' }).formatToParts(new Date());
+  const hour = parseInt(parts.find(p => p.type === 'hour').value, 10) % 24;
+  const weekday = parts.find(p => p.type === 'weekday').value;
+  return { hour, isWeekend: weekday === 'Sat' || weekday === 'Sun' };
+}
+
+// Robert (01/08): mais economia de egress — de madrugada e fim de semana
+// ninguém tá olhando o telão de verdade, não precisa checar a cada 20s.
+function backgroundPollDelayMs_() {
+  const { hour, isWeekend } = getBRTParts_();
+  const isNight = hour >= 22 || hour < 5; // 22h-5h BRT
+  if (isNight) return 6 * 60 * 60 * 1000;    // ~1x cobrindo a janela inteira da madrugada
+  if (isWeekend) return 24 * 60 * 60 * 1000; // 1x por dia no fim de semana
+  return BG_POLL_MS;
+}
+
+// Poll de fundo — cadeia auto-reagendada (setTimeout dentro do próprio
+// callback) em vez de setInterval — garante que nunca sobrepõe 2 ciclos se
+// um atrasar por rede lenta, só reagenda depois do anterior terminar. Nunca
+// resetado/adiado por interação nenhuma (achado 28/07), sempre no seu ritmo.
+// Atualização manual (↻) ou reabrir a página sempre buscam dado real na
+// hora, não importa a janela de horário — o throttle é só do poll automático.
 const BG_POLL_MS = 20000;
 function scheduleBackgroundPoll() {
   setTimeout(async () => {
-    await loadData(true, true);
-    checkForUpdate();
+    await backgroundPollTick_();
     scheduleBackgroundPoll();
-  }, BG_POLL_MS);
+  }, backgroundPollDelayMs_());
 }
 scheduleBackgroundPoll();
+
+// Checagem de deploy novo — desacoplada do poll de dado (01/08): rebuscar o
+// HTML inteiro a cada 20s só pra detectar deploy (raro, poucas vezes por
+// semana) era outra fonte grande de egress desperdiçado. 5min é sobra de
+// tempo pra "recarrega sozinho depois de um deploy" continuar funcionando.
+const UPDATE_CHECK_MS = 300000;
+function scheduleUpdateCheck() {
+  setTimeout(async () => {
+    await checkForUpdate();
+    scheduleUpdateCheck();
+  }, UPDATE_CHECK_MS);
+}
+scheduleUpdateCheck();
 
 // ── AUTO-ATUALIZAÇÃO — Robert pediu (13/07): ninguém quer dar F5 manual em
 // todo dispositivo depois de cada deploy. Junto do poll de fundo (20s),
