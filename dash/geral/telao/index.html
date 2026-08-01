@@ -336,9 +336,16 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 .rv-k-val{font-size:15px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rv-k-val.amber{color:var(--amber)}
 .rv-k-val.red{color:var(--red)}
-.rv-funil{border-bottom:1px solid var(--border)}
-.rv-funil .funil-bar-wrap{flex:0 1 220px}
-.rv-funil .funil-v{margin-left:auto}
+/* achado 31/07 (3ª rodada): tentei esticar a barra pra caber nos 920px do
+   modal largo (flex:1 puro → gigante; travada em 220px → sobrava vazio;
+   valor ancorado na direita → 2 blocos com buraco no meio). Causa raiz:
+   esse padrão de linha (nome+barra+contagem+valor) foi desenhado pra caber
+   numa coluna de ~500-560px (mesma largura dos outros modais) — forçá-lo a
+   preencher 920px sempre ia parecer errado, não importa o truque de flex.
+   Fix de verdade: trava a SEÇÃO inteira em 560px (largura já aprovada em
+   todo o resto do painel), deixa .funil-bar-wrap:flex:1 original agir
+   dentro desse espaço menor, como sempre funcionou. */
+.rv-funil{border-bottom:1px solid var(--border);max-width:560px}
 .rv-funil-active{background:#f5f3ff}
 .rv-funil-active .funil-name{color:var(--purple)}
 .rv-tabs{display:flex;gap:6px;padding:12px 20px 6px}
