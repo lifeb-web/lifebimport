@@ -57,7 +57,13 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
    (fonte grande do sistema, tela muito estreita), ele rola por dentro em vez
    de forçar a página inteira a ficar mais larga que a tela (o que corta texto
    de outras seções sem aviso — bug real achado em teste no iPhone). */
-#origin-bar{background:#fff;border-bottom:1px solid var(--border);padding:10px 14px;display:flex;justify-content:center;flex-shrink:0;overflow-x:auto;scrollbar-width:none}
+/* achado 01/08 (auditoria adversarial, ANTES de deployar): 2 grupos .oseg
+   lado a lado (Outbound/Inbound/Ambos + Vendas/SDR) não cabem nos ~390px
+   do mobile — "SDR" cortava, escondido atrás de overflow-x:auto sem
+   scrollbar visível (mesma classe de bug já corrigida no telão hoje: nunca
+   depender de scroll horizontal invisível). flex-wrap deixa o 2º grupo
+   descer pra uma linha própria quando não cabe, sem cortar nada. */
+#origin-bar{background:#fff;border-bottom:1px solid var(--border);padding:10px 14px;display:flex;flex-wrap:wrap;justify-content:center;gap:8px;row-gap:6px;flex-shrink:0}
 #origin-bar::-webkit-scrollbar{display:none}
 .oseg{display:inline-flex;background:var(--bg);border-radius:12px;padding:3px;gap:2px;flex-shrink:0}
 .ochip{padding:8px 14px;border-radius:9px;border:none;font-family:var(--font);font-size:12px;font-weight:800;color:var(--muted);background:transparent;cursor:pointer;transition:all .18s;white-space:nowrap;flex-shrink:0}
@@ -149,6 +155,15 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .funil-hd{padding:12px 16px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .funil-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--text)}
 .funil-hint{font-size:10px;color:var(--faint);font-weight:600}
+
+/* ── Seção SDR (01/08) — reaproveita 100% as classes já existentes do
+   funil/feed pra manter a mesma linguagem visual, só com IDs/dados novos. ── */
+#sdr-cadencias-card,#sdr-atividades-card,#sdr-ligacoes-card{background:var(--card);border-radius:14px;border:1px solid var(--border);overflow:hidden;box-shadow:0 1px 3px rgba(26,22,38,.04),0 4px 14px -6px rgba(26,22,38,.08)}
+.sdr-reason-row{padding:11px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid #f4f2f8}
+.sdr-reason-row:last-child{border-bottom:none}
+.sdr-reason-name{font-size:12.5px;font-weight:700;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sdr-reason-count{font-size:13px;font-weight:800;color:var(--red);flex-shrink:0;font-variant-numeric:tabular-nums}
+.sdr-empty{padding:20px 16px;text-align:center;color:var(--faint);font-size:12.5px;font-style:italic}
 .funil-row{position:relative;padding:10px 14px;display:grid;grid-template-columns:10px minmax(0,148px) minmax(20px,1fr) 26px 68px 40px 12px;column-gap:6px;align-items:center;border-bottom:1px solid #f4f2f8;cursor:pointer}
 .funil-row:last-child{border-bottom:none}
 .funil-row:hover{background:#faf8fc}
@@ -337,6 +352,10 @@ footer strong{color:#fff}
     <button class="ochip" data-o="inbound" onclick="setOrigin(this)">Inbound</button>
     <button class="ochip active" data-o="both" onclick="setOrigin(this)">Ambos</button>
   </div>
+  <div class="oseg">
+    <button class="ochip active" data-v="vendas" onclick="setView(this)">Vendas</button>
+    <button class="ochip" data-v="sdr" onclick="setView(this)">SDR</button>
+  </div>
 </div>
 
 <div id="period-bar">
@@ -375,6 +394,7 @@ footer strong{color:#fff}
 <div id="main">
   <div id="err-banner"></div>
 
+  <div id="vendas-view">
   <div class="sec-hd">Visão Geral · <span id="period-label" style="color:var(--purple);font-weight:800">90 dias</span><span id="period-total-badge" class="total-badge">⏳ HISTÓRICO COMPLETO</span><span id="period-trunc-badge" class="trunc-badge" title="Volume muito alto — parte antiga do histórico pode não estar contada">⚠ parcial</span></div>
 
   <!-- HERO -->
@@ -493,6 +513,91 @@ footer strong{color:#fff}
       <div id="feed-lost-rows"></div>
     </div>
   </div>
+  </div><!-- /vendas-view -->
+
+  <div id="sdr-view" style="display:none">
+    <div class="sec-hd">SDR (Felipe) · <span id="sdr-period-label" style="color:var(--purple);font-weight:800">90 dias</span></div>
+
+    <div class="kpi-strip">
+      <div class="kchip">
+        <span class="kc-label">Prospecções Ativas</span>
+        <div class="kc-row"><span class="kc-val" id="sdr-k-ativas"><span class="skel"></span></span></div>
+        <span class="kc-sub">em cadência agora</span>
+      </div>
+      <div class="kchip">
+        <span class="kc-label">Conversão ⓘ</span>
+        <div class="kc-row"><span class="kc-val" id="sdr-k-conv"><span class="skel"></span></span></div>
+        <span class="kc-sub" id="sdr-k-conv-base">—</span>
+      </div>
+      <div class="kchip" onclick="openSdrModal('won')">
+        <span class="kc-label">Ganhos</span>
+        <div class="kc-row"><span class="kc-val" id="sdr-k-ganhos"><span class="skel"></span></span></div>
+        <span class="kc-sub">no período</span>
+      </div>
+      <div class="kchip" onclick="openSdrModal('lost')">
+        <span class="kc-label">Perdidos</span>
+        <div class="kc-row"><span class="kc-val" id="sdr-k-perdidos"><span class="skel"></span></span></div>
+        <span class="kc-sub">no período</span>
+      </div>
+      <div class="kchip">
+        <span class="kc-label">Atividades Feitas</span>
+        <div class="kc-row"><span class="kc-val" id="sdr-k-ativ-feitas"><span class="skel"></span></span></div>
+        <span class="kc-sub" id="sdr-k-ativ-sub">—</span>
+      </div>
+      <div class="kchip">
+        <span class="kc-label">Ligações</span>
+        <div class="kc-row"><span class="kc-val" id="sdr-k-ligacoes"><span class="skel"></span></span></div>
+        <span class="kc-sub" id="sdr-k-ligacoes-sub">—</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-hd">Cadências</div>
+      <div id="sdr-cadencias-card">
+        <div class="funil-hd">
+          <span class="funil-title">Ativas / Ganhos / Perdidos por cadência</span>
+        </div>
+        <div id="sdr-cadencias-rows"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-hd">Atividades por Tipo</div>
+      <div id="sdr-atividades-card">
+        <div id="sdr-atividades-rows"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-hd">Ligações — Resultado</div>
+      <div id="sdr-ligacoes-card">
+        <div id="sdr-ligacoes-rows"></div>
+      </div>
+    </div>
+
+    <div id="sdr-perdidos-section">
+      <div class="sec-hd">Motivos de Perda</div>
+      <div class="feed-card">
+        <div id="sdr-perdidos-rows"></div>
+      </div>
+    </div>
+
+    <div id="sdr-threads-section">
+      <div class="sec-hd">WhatsApp / Conversas</div>
+      <div class="kpi-strip" style="grid-template-columns:1fr 1fr">
+        <div class="kchip">
+          <span class="kc-label">Threads Ativas</span>
+          <div class="kc-row"><span class="kc-val" id="sdr-k-threads"><span class="skel"></span></span></div>
+          <span class="kc-sub">últimos contatos</span>
+        </div>
+        <div class="kchip">
+          <span class="kc-label">Não Lidas</span>
+          <div class="kc-row"><span class="kc-val" id="sdr-k-unread"><span class="skel"></span></span></div>
+          <span class="kc-sub">precisam de resposta</span>
+        </div>
+      </div>
+    </div>
+  </div><!-- /sdr-view -->
 </div>
 
 <footer>Life B Import &nbsp;·&nbsp; <strong id="footer-mode">Painel Geral</strong> &nbsp;·&nbsp; Dados: Agendor</footer>
@@ -1192,6 +1297,7 @@ async function loadData(force, silent) {
     hideErr();
     render(_data);
     renderDeltas(_data.kpis, prev && prev.kpis);
+    refreshSdrIfActive_();
     flashDot();
     try { localStorage.setItem('geral_snapshot', JSON.stringify({ data: curr, savedAt: Date.now() })); } catch(_) {}
   } catch(e) {
@@ -1298,6 +1404,234 @@ function loadAdsSection(periodFrom, periodTo, inboundData, silent, prevPeriodFro
     el('mkt-acos-delta').innerHTML = '';
     el('mkt-inv-delta').innerHTML = '';
   }
+}
+
+// ============================================================
+// SDR (Felipe) — GS Engage (01/08) — mesmo padrão de fetch/compute/render
+// do resto do painel: busca as tabelas 1x (lazy, só quando a aba SDR é
+// aberta pela 1ª vez — nunca busca sozinho em segundo plano, pra não
+// repetir o erro de egress que acabou de estourar o teto do Supabase),
+// recalcula tudo local em JS puro a cada troca de período/origem.
+// ============================================================
+let _sdrRaw = null;
+let _sdrViewActive = false;
+let _sdrLoading = false;
+let _sdrLastData = null;
+
+async function fetchSdrTable_(table) {
+  const PAGE = 1000;
+  let all = [];
+  let from = 0;
+  while (true) {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/' + table + '?select=*', {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY, Range: from + '-' + (from + PAGE - 1) }
+    });
+    if (!res.ok) throw new Error('Supabase HTTP ' + res.status + ' (' + table + ')');
+    const rows = await res.json();
+    all = all.concat(rows);
+    if (rows.length < PAGE) break;
+    from += PAGE;
+  }
+  return all;
+}
+
+async function fetchSdrRaw() {
+  const [leads, prospections, activities, calls, threads] = await Promise.all([
+    fetchSdrTable_('dash_sdr_leads'),
+    fetchSdrTable_('dash_sdr_prospections'),
+    fetchSdrTable_('dash_sdr_activities'),
+    fetchSdrTable_('dash_sdr_calls'),
+    fetchSdrTable_('dash_sdr_threads')
+  ]);
+  return { leads, prospections, activities, calls, threads };
+}
+
+// Robert (01/08): SDR não tem polling automático de propósito (evita repetir
+// o erro de egress) — mas precisa parecer atualizado. Solução: mostra na
+// hora o que já tem em memória (se já visitou antes, zero espera) E busca
+// de novo em segundo plano toda vez que a aba é aberta — nunca fica preso
+// no dado da 1ª visita, mas nunca gasta rede sozinho sem alguém realmente
+// olhar a aba.
+function setView(btn) {
+  const bar = btn.closest('.oseg');
+  bar.querySelectorAll('.ochip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  _sdrViewActive = btn.dataset.v === 'sdr';
+  el('vendas-view').style.display = _sdrViewActive ? 'none' : '';
+  el('sdr-view').style.display = _sdrViewActive ? '' : 'none';
+  if (_sdrViewActive) {
+    if (_sdrRaw && _data && _data.period) renderSdrSection(computeSdrData(_sdrRaw, _data.period.from, _data.period.to, _data.period.label));
+    loadSdrFresh_();
+  }
+}
+
+async function loadSdrFresh_() {
+  if (_sdrLoading) return;
+  _sdrLoading = true;
+  try {
+    _sdrRaw = await fetchSdrRaw();
+    if (_sdrViewActive && _data && _data.period) renderSdrSection(computeSdrData(_sdrRaw, _data.period.from, _data.period.to, _data.period.label));
+  } catch (e) {
+    console.warn('fetchSdrRaw falhou:', e.message);
+    if (!el('sdr-cadencias-rows').children.length) {
+      el('sdr-cadencias-rows').innerHTML = '<div class="sdr-empty">Erro ao carregar dado do SDR — tenta de novo em instantes.</div>';
+    }
+  } finally {
+    _sdrLoading = false;
+  }
+}
+
+// Chamado a cada loadData() (troca de período/origem) — recalcula em cima
+// do MESMO _sdrRaw já carregado, zero rede, exatamente como o resto do
+// painel já faz com _rawDeals.
+function refreshSdrIfActive_() {
+  if (_sdrViewActive && _sdrRaw && _data && _data.period) {
+    renderSdrSection(computeSdrData(_sdrRaw, _data.period.from, _data.period.to, _data.period.label));
+  }
+}
+
+function computeSdrData(raw, periodFrom, periodTo, periodLabel) {
+  const pf = new Date(periodFrom + 'T00:00:00');
+  const pt = new Date(periodTo + 'T23:59:59');
+  const inPeriod = (iso) => { if (!iso) return false; const d = new Date(iso); return d >= pf && d <= pt; };
+
+  const prospections = raw.prospections || [];
+  const activities = raw.activities || [];
+  const calls = raw.calls || [];
+  const threads = raw.threads || [];
+
+  const ativas = prospections.filter(p => p.status === 'IN_PROGRESS').length;
+  const wonInPeriod = prospections.filter(p => p.status === 'WON' && inPeriod(p.finished_at));
+  const lostInPeriod = prospections.filter(p => p.status === 'LOST' && inPeriod(p.finished_at));
+  const finishedTotal = wonInPeriod.length + lostInPeriod.length;
+  const conversao = finishedTotal > 0 ? Math.round((wonInPeriod.length / finishedTotal) * 1000) / 10 : null;
+
+  const byRoutine = {};
+  const ensureRoutine = (key) => { if (!byRoutine[key]) byRoutine[key] = { name: key, ativas: 0, ganhos: 0, perdidos: 0 }; return byRoutine[key]; };
+  prospections.forEach(p => { if (p.status === 'IN_PROGRESS') ensureRoutine(p.routine_name || 'Sem cadência').ativas++; });
+  wonInPeriod.forEach(p => { ensureRoutine(p.routine_name || 'Sem cadência').ganhos++; });
+  lostInPeriod.forEach(p => { ensureRoutine(p.routine_name || 'Sem cadência').perdidos++; });
+  const cadencias = Object.values(byRoutine).sort((a, b) => (b.ativas + b.ganhos + b.perdidos) - (a.ativas + a.ganhos + a.perdidos));
+
+  const TYPE_LABELS = { CALL: 'Ligação', WHATSAPP_MESSAGE: 'WhatsApp', SEARCH: 'Pesquisa', LINKEDIN_MESSAGE: 'LinkedIn', EMAIL: 'E-mail', SCHEDULE_MEETING: 'Reunião' };
+  const byType = {};
+  let feitasCount = 0;
+  activities.forEach(a => {
+    const ref = a.finished_at || a.scheduled_to;
+    if (!inPeriod(ref)) return;
+    const key = a.type || 'Outro';
+    if (!byType[key]) byType[key] = { type: key, label: TYPE_LABELS[key] || key, feitas: 0, agendadas: 0, ignoradas: 0 };
+    if (a.status === 'FINISHED') { byType[key].feitas++; feitasCount++; }
+    else if (a.status === 'SCHEDULED') byType[key].agendadas++;
+    else if (a.status === 'IGNORED') byType[key].ignoradas++;
+  });
+  const atividadesPorTipo = Object.values(byType).sort((a, b) => b.feitas - a.feitas);
+
+  const callsInPeriod = calls.filter(c => inPeriod(c.started_at));
+  const CALL_OUTCOME_LABELS = { MEANINGFUL: 'Com avanço', NOT_MEANINGFUL: 'Sem avanço', GATEKEEPER: 'Gatekeeper', UNAVAILABLE_PERSONA: 'Pessoa indisponível', WRONG_NUMBER: 'Número errado', NO_CONTACT: 'Sem contato' };
+  const byOutcome = {};
+  let totalDuration = 0;
+  callsInPeriod.forEach(c => {
+    const key = c.outcome || 'Outro';
+    byOutcome[key] = (byOutcome[key] || 0) + 1;
+    totalDuration += c.duration_in_seconds || 0;
+  });
+  const ligacoesPorOutcome = Object.keys(byOutcome).map(k => ({ outcome: k, label: CALL_OUTCOME_LABELS[k] || k, count: byOutcome[k] })).sort((a, b) => b.count - a.count);
+  const duracaoMediaMin = callsInPeriod.length > 0 ? Math.round(totalDuration / callsInPeriod.length / 60 * 10) / 10 : null;
+
+  const byReason = {};
+  lostInPeriod.forEach(p => { const key = p.lost_reason || 'Sem motivo registrado'; byReason[key] = (byReason[key] || 0) + 1; });
+  const perdidosPorMotivo = Object.keys(byReason).map(k => ({ reason: k, count: byReason[k] })).sort((a, b) => b.count - a.count);
+
+  const unreadCount = threads.filter(t => t.has_unread_messages).length;
+
+  return {
+    periodLabel,
+    kpis: { ativas, ganhos: wonInPeriod.length, perdidos: lostInPeriod.length, conversao, feitasCount, callsCount: callsInPeriod.length, duracaoMediaMin },
+    cadencias, atividadesPorTipo, ligacoesPorOutcome, perdidosPorMotivo,
+    threadsCount: threads.length, unreadCount,
+    wonList: wonInPeriod, lostList: lostInPeriod
+  };
+}
+
+function sdrFunilRow_(dotColor, name, count, maxCount, valText, dropText) {
+  const pct = Math.max((count / Math.max(maxCount, 1)) * 100, 4);
+  const drop = dropText ? `<span class="funil-drop" style="background:#fee2e2;color:#b91c1c">${dropText}</span>` : '<span></span>';
+  return `
+    <div class="funil-row" style="cursor:default">
+      <div class="funil-stage-dot" style="background:${dotColor}"></div>
+      <span class="funil-stage-name" title="${escHtml(name)}">${escHtml(name)}</span>
+      <div class="funil-bar-wrap"><div class="funil-bar bar-o2" style="width:${pct}%;background:${dotColor}"></div></div>
+      <span class="funil-count">${count}</span>
+      <span class="funil-val">${escHtml(valText || '')}</span>
+      ${drop}
+      <span></span>
+    </div>`;
+}
+
+function renderSdrSection(d) {
+  _sdrLastData = d;
+  el('sdr-period-label').textContent = d.periodLabel;
+  el('sdr-k-ativas').textContent = d.kpis.ativas;
+  el('sdr-k-conv').textContent = d.kpis.conversao !== null ? d.kpis.conversao + '%' : '—';
+  el('sdr-k-conv-base').textContent = 'de ' + (d.kpis.ganhos + d.kpis.perdidos) + ' finalizada' + ((d.kpis.ganhos + d.kpis.perdidos) !== 1 ? 's' : '');
+  el('sdr-k-ganhos').textContent = d.kpis.ganhos;
+  el('sdr-k-perdidos').textContent = d.kpis.perdidos;
+  el('sdr-k-ativ-feitas').textContent = d.kpis.feitasCount;
+  el('sdr-k-ativ-sub').textContent = 'no período';
+  el('sdr-k-ligacoes').textContent = d.kpis.callsCount;
+  el('sdr-k-ligacoes-sub').textContent = d.kpis.duracaoMediaMin !== null ? (d.kpis.duracaoMediaMin + ' min em média') : 'no período';
+
+  const maxCad = Math.max(...d.cadencias.map(c => c.ativas), 1);
+  el('sdr-cadencias-rows').innerHTML = d.cadencias.length === 0
+    ? '<div class="sdr-empty">Nenhuma cadência com dado ainda</div>'
+    : d.cadencias.map(c => sdrFunilRow_('var(--purple)', c.name, c.ativas, maxCad, c.ganhos + 'G / ' + c.perdidos + 'P')).join('');
+
+  const maxAtiv = Math.max(...d.atividadesPorTipo.map(t => t.feitas), 1);
+  el('sdr-atividades-rows').innerHTML = d.atividadesPorTipo.length === 0
+    ? '<div class="sdr-empty">Nenhuma atividade no período</div>'
+    : d.atividadesPorTipo.map(t => sdrFunilRow_('var(--purple)', t.label, t.feitas, maxAtiv, t.agendadas + ' agend.', t.ignoradas > 0 ? (t.ignoradas + ' ignor.') : null)).join('');
+
+  const maxOut = Math.max(...d.ligacoesPorOutcome.map(o => o.count), 1);
+  el('sdr-ligacoes-rows').innerHTML = d.ligacoesPorOutcome.length === 0
+    ? '<div class="sdr-empty">Nenhuma ligação no período</div>'
+    : d.ligacoesPorOutcome.map(o => sdrFunilRow_(o.outcome === 'MEANINGFUL' ? 'var(--green)' : (o.outcome === 'NO_CONTACT' || o.outcome === 'WRONG_NUMBER' ? 'var(--red)' : 'var(--amber)'), o.label, o.count, maxOut)).join('');
+
+  el('sdr-perdidos-rows').innerHTML = d.perdidosPorMotivo.length === 0
+    ? '<div class="sdr-empty">Nenhum perdido no período</div>'
+    : d.perdidosPorMotivo.map(r => `<div class="sdr-reason-row"><span class="sdr-reason-name">${escHtml(r.reason)}</span><span class="sdr-reason-count">${r.count}</span></div>`).join('');
+
+  el('sdr-k-threads').textContent = d.threadsCount;
+  el('sdr-k-unread').textContent = d.unreadCount;
+}
+
+function sdrLeadName_(leadId) {
+  if (!_sdrRaw) return '—';
+  const lead = _sdrRaw.leads.find(l => l.gs_id === leadId);
+  return lead ? (lead.company_name || lead.full_name || '—') : '—';
+}
+
+function openSdrModal(kind) {
+  if (!_sdrLastData) return;
+  const list = kind === 'won' ? _sdrLastData.wonList : _sdrLastData.lostList;
+  el('modal-title').textContent = (kind === 'won' ? 'Ganhos SDR — ' : 'Perdidos SDR — ') + list.length;
+  el('modal-body').innerHTML = list.length === 0
+    ? '<div class="modal-empty">Nada aqui neste período</div>'
+    : list.map(p => `
+      <div class="mdeal-row" style="cursor:default">
+        <div class="mdeal-dot" style="background:${kind === 'won' ? 'var(--green)' : 'var(--red)'}"></div>
+        <div class="mdeal-main">
+          <div class="mdeal-title-line">
+            <span class="mdeal-title">${escHtml(sdrLeadName_(p.lead_id))}</span>
+          </div>
+          <div class="mdeal-sub-line">
+            <span class="mdeal-rep">${escHtml(p.routine_name || '—')}</span>
+            <span class="mdeal-date">${fmtDateDisplay((p.finished_at || '').substring(0, 10))}</span>
+            ${kind === 'lost' && p.lost_reason ? `<span style="font-size:10px;color:var(--muted)">· ${escHtml(p.lost_reason)}</span>` : ''}
+          </div>
+        </div>
+      </div>`).join('');
+  el('modal-overlay').classList.add('show');
 }
 
 // ── Checagem barata de mudança (01/08) — achado real: o poll de fundo
