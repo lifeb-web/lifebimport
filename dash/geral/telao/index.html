@@ -50,11 +50,16 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 .h-sep{width:1px;height:24px;background:var(--border);flex-shrink:0}
 .h-title{font-size:11px;font-weight:800;color:var(--purple);letter-spacing:.6px;text-transform:uppercase;white-space:nowrap;min-width:74px}
 
+.h-toggles{display:flex;flex-direction:column;gap:4px;flex-shrink:0}
 .oseg{display:inline-flex;background:var(--bg);border-radius:10px;padding:3px;gap:2px;flex-shrink:0}
 .ochip{padding:6px 14px;border-radius:7px;border:none;font-family:var(--font);font-size:11px;font-weight:800;color:var(--muted);background:transparent;cursor:pointer;white-space:nowrap}
 .ochip.active[data-o="outbound"]{background:var(--purple);color:#fff;box-shadow:0 2px 6px -1px rgba(112,75,155,.35)}
 .ochip.active[data-o="inbound"]{background:var(--magenta);color:#fff;box-shadow:0 2px 6px -1px rgba(233,32,133,.35)}
 .ochip.active[data-o="both"]{background:linear-gradient(90deg,var(--purple),var(--magenta));color:#fff;box-shadow:0 2px 6px -1px rgba(112,75,155,.3)}
+/* achado 02/08 (SDR): faltava estado ativo pro toggle Vendas/SDR (só existia
+   pro Outbound/Inbound/Ambos) — mesmo padrão neutro já usado no .pchip.active
+   (var(--text)), pra não inventar uma 4ª cor no header. */
+.ochip.active[data-v]{background:var(--text);color:#fff;box-shadow:0 2px 6px -1px rgba(26,22,38,.25)}
 
 /* achado 15/07 (auditoria): #custom-panel/#month-pick-panel usam
    position:absolute + left:50% + translateX(-50%) esperando centralizar em
@@ -150,6 +155,12 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 
 /* HERO ROW: hero + 6 chips secundários, uma faixa só */
 #hero-row{display:grid;grid-template-columns:minmax(0,1.7fr) repeat(7,minmax(0,1fr));gap:8px;height:92px;flex-shrink:0}
+/* SDR (02/08) — mesma forma/altura do hero-row de Vendas (hero + 7 kchips),
+   só trocando de conteúdo. display:none por padrão (mesmo padrão de #mkt-row),
+   JS liga/desliga em setView() junto com #sdr-main. */
+#sdr-hero-row{display:none;grid-template-columns:minmax(0,1.7fr) repeat(7,minmax(0,1fr));gap:8px;height:92px;flex-shrink:0}
+#sdr-hero{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:10px 16px;display:flex;flex-direction:column;justify-content:center;gap:2px;position:relative;overflow:hidden;box-shadow:0 1px 2px rgba(26,22,38,.04),0 3px 10px -3px rgba(112,75,155,.16)}
+#sdr-hero::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(112,75,155,.06),transparent 60%);pointer-events:none}
 #hero{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:10px 16px;display:flex;flex-direction:column;justify-content:center;gap:2px;position:relative;overflow:hidden;cursor:pointer;box-shadow:0 1px 2px rgba(26,22,38,.04),0 3px 10px -3px rgba(112,75,155,.16)}
 #hero::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(112,75,155,.06),transparent 60%);pointer-events:none}
 .hero-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -185,6 +196,25 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 .ac-val{font-size:15px;font-weight:800;color:var(--purple);font-variant-numeric:proportional-nums}
 
 #main{flex:1;display:grid;grid-template-columns:22fr 46fr 32fr;gap:8px;overflow:hidden;min-height:0}
+/* SDR (02/08) — mesmas 3 colunas (22fr/46fr/32fr) do #main de Vendas, mesmo
+   flex:1 pra preencher o espaço restante do #body. display:none por padrão,
+   JS liga em setView(). */
+#sdr-main{display:none;grid-template-columns:22fr 46fr 32fr;gap:8px;overflow:hidden;min-height:0;flex:1}
+#sdr-col-left,#sdr-col-center,#sdr-col-right{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
+#sdr-cadencias-card,#sdr-atividades-card,#sdr-ligacoes-card,#sdr-won-card,#sdr-lost-card{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+/* Cadência/tipo de atividade têm nome de tamanho variável (dado externo do GS
+   Engage, ao contrário das etapas do funil principal, que são um set fixo e
+   curto) — .funil-name sozinho não tem ellipsis porque nunca precisou até
+   hoje. Classe extra só nas linhas do SDR, não mexe no funil principal. */
+.sdr-name-ellipsis{overflow:hidden;text-overflow:ellipsis;max-width:120px}
+/* achado 02/08 (teste com 50 cadências sintéticas): .funil-row herda
+   flex-shrink:1 do funil principal (onde faz sentido — sempre ~4-5 etapas
+   fixas, precisa espremer pra caber sem scroll). Dentro de .lb-rows (que É
+   scrollável), esse shrink competia com o scroll — em vez do card rolar
+   quando tem muita linha, as linhas espremiam até ficar ilegíveis/
+   sobrepostas. flex-shrink:0 força cada linha a manter altura mínima
+   legível; sobrando linha, agora é o scroll (autoScrollIfNeeded) que cuida. */
+#sdr-cadencias-rows .funil-row,#sdr-atividades-rows .funil-row,#sdr-ligacoes-rows .funil-row{flex-shrink:0}
 
 .card{background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 1px 2px rgba(26,22,38,.04),0 3px 10px -3px rgba(26,22,38,.07)}
 .card-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 8px;border-bottom:1px solid var(--border);flex-shrink:0}
@@ -370,6 +400,7 @@ footer strong{color:#fff}
   #htime{font-size:15px}
   #body{padding:6px 12px 6px;gap:5px}
   #hero-row{height:76px;gap:6px}
+  #sdr-hero-row{height:76px;gap:6px}
   #mkt-row{height:44px}
   .hero-val{font-size:21px}
   .kc-val{font-size:14px}
@@ -389,10 +420,16 @@ footer strong{color:#fff}
     <span class="h-title" id="h-title-text">Painel Geral</span>
   </div>
 
-  <div class="oseg">
-    <button class="ochip" data-o="outbound" onclick="setOrigin(this)">Outbound</button>
-    <button class="ochip" data-o="inbound" onclick="setOrigin(this)">Inbound</button>
-    <button class="ochip active" data-o="both" onclick="setOrigin(this)">Ambos</button>
+  <div class="h-toggles">
+    <div class="oseg">
+      <button class="ochip" data-o="outbound" onclick="setOrigin(this)">Outbound</button>
+      <button class="ochip" data-o="inbound" onclick="setOrigin(this)">Inbound</button>
+      <button class="ochip active" data-o="both" onclick="setOrigin(this)">Ambos</button>
+    </div>
+    <div class="oseg">
+      <button class="ochip active" data-v="vendas" onclick="setView(this)">Vendas</button>
+      <button class="ochip" data-v="sdr" onclick="setView(this)">SDR</button>
+    </div>
   </div>
 
   <div class="h-center">
@@ -543,6 +580,97 @@ footer strong{color:#fff}
           <span class="hd-total lost" id="lost-total"></span>
         </div>
         <div class="feed-scroll" id="lost-rows"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SDR (Felipe / GS Engage) — 02/08. Mesma forma do bloco Vendas acima
+       (hero+7 kchips, depois 3 colunas), display:none até setView() ligar. -->
+  <div id="sdr-hero-row">
+    <div id="sdr-hero" style="cursor:default">
+      <div class="hero-top"><span class="hero-label">Prospecções Ativas</span></div>
+      <div class="hero-val" id="sdr-hero-val"><span class="skel" style="width:80px;height:24px"></span></div>
+      <div class="hero-row2"><span class="hero-sub" id="sdr-hero-sub">carregando…</span></div>
+    </div>
+    <div class="kchip">
+      <span class="kc-label" title="% das prospecções que ENTRARAM neste período e já finalizaram (ganho ou perdido).">Conversão ⓘ</span>
+      <div class="kc-row"><span class="kc-val" id="sdr-k-conv"><span class="skel"></span></span></div>
+      <span class="kc-sub" id="sdr-k-conv-sub">—</span>
+    </div>
+    <div class="kchip" onclick="openSdrModal('won')">
+      <span class="kc-label">Ganhos</span>
+      <div class="kc-row"><span class="kc-val" id="sdr-k-ganhos"><span class="skel"></span></span></div>
+      <span class="kc-sub">no período</span>
+    </div>
+    <div class="kchip" onclick="openSdrModal('lost')">
+      <span class="kc-label">Perdidos</span>
+      <div class="kc-row"><span class="kc-val" id="sdr-k-perdidos"><span class="skel"></span></span></div>
+      <span class="kc-sub">no período</span>
+    </div>
+    <div class="kchip">
+      <span class="kc-label">Atividades Feitas</span>
+      <div class="kc-row"><span class="kc-val" id="sdr-k-ativfeitas"><span class="skel"></span></span></div>
+      <span class="kc-sub">no período</span>
+    </div>
+    <div class="kchip">
+      <span class="kc-label">Ligações</span>
+      <div class="kc-row"><span class="kc-val" id="sdr-k-ligacoes"><span class="skel"></span></span></div>
+      <span class="kc-sub">no período</span>
+    </div>
+    <div class="kchip">
+      <span class="kc-label">Duração Média</span>
+      <div class="kc-row"><span class="kc-val" id="sdr-k-duracao"><span class="skel"></span></span></div>
+      <span class="kc-sub">por ligação</span>
+    </div>
+    <div class="kchip">
+      <span class="kc-label">Não Lidas</span>
+      <div class="kc-row"><span class="kc-val" id="sdr-k-threads"><span class="skel"></span></span></div>
+      <span class="kc-sub" id="sdr-k-threads-sub">—</span>
+    </div>
+  </div>
+
+  <div id="sdr-main">
+    <div id="sdr-col-left">
+      <div class="card" id="sdr-cadencias-card">
+        <div class="card-hd">
+          <span class="card-hd-title">Cadências</span>
+          <span class="badge" id="sdr-cadencias-badge">—</span>
+        </div>
+        <div class="lb-rows" id="sdr-cadencias-rows"></div>
+      </div>
+    </div>
+
+    <div id="sdr-col-center">
+      <div class="card" id="sdr-atividades-card">
+        <div class="card-hd">
+          <span class="card-hd-title">Atividades por Tipo</span>
+          <span class="badge" id="sdr-atividades-badge">—</span>
+        </div>
+        <div class="lb-rows" id="sdr-atividades-rows"></div>
+      </div>
+      <div class="card" id="sdr-ligacoes-card">
+        <div class="card-hd">
+          <span class="card-hd-title">Ligações — Resultado</span>
+          <span class="badge" id="sdr-ligacoes-badge">—</span>
+        </div>
+        <div class="lb-rows" id="sdr-ligacoes-rows"></div>
+      </div>
+    </div>
+
+    <div id="sdr-col-right">
+      <div class="card" id="sdr-won-card">
+        <div class="card-hd">
+          <span class="card-hd-title">Prospecções Ganhas</span>
+          <span class="hd-total won" id="sdr-won-total"></span>
+        </div>
+        <div class="feed-scroll" id="sdr-won-rows"></div>
+      </div>
+      <div class="card" id="sdr-lost-card">
+        <div class="card-hd">
+          <span class="card-hd-title">Prospecções Perdidas</span>
+          <span class="hd-total lost" id="sdr-lost-total"></span>
+        </div>
+        <div class="feed-scroll" id="sdr-lost-rows"></div>
       </div>
     </div>
   </div>
@@ -1267,6 +1395,7 @@ async function loadData(force, silent) {
     hideErr();
     render(_data);
     renderDeltas(_data.kpis, prev && prev.kpis);
+    refreshSdrIfActive_();
     flashDot();
     try { localStorage.setItem('geral_telao_snapshot', JSON.stringify({ data: curr, savedAt: Date.now() })); } catch(_) {}
   } catch(e) {
@@ -1504,6 +1633,260 @@ function loadAdsSection(periodFrom, periodTo, inboundData, silent, prevPeriodFro
     el('mkt-acos-delta').innerHTML = '';
     el('mkt-inv-delta').innerHTML = '';
   }
+}
+
+// ============================================================
+// SDR (Felipe) — GS Engage (02/08). Mesmo padrão de fetch/compute do mobile
+// (dash/geral/index.html) — fetch/compute são cópia fiel (lógica pura, sem
+// HTML), só o render é próprio do telão (classes/IDs diferentes, mesmo
+// achado de 31/07 sobre o rep-view). Lazy: só busca quando a aba SDR é
+// aberta pela 1ª vez — nunca em segundo plano, pra não repetir o erro de
+// egress de 01/08.
+// ============================================================
+let _sdrRaw = null;
+let _sdrViewActive = false;
+let _sdrLoading = false;
+let _sdrLastData = null;
+
+async function fetchSdrTable_(table) {
+  const PAGE = 1000;
+  let all = [];
+  let from = 0;
+  while (true) {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/' + table + '?select=*', {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY, Range: from + '-' + (from + PAGE - 1) }
+    });
+    if (!res.ok) throw new Error('Supabase HTTP ' + res.status + ' (' + table + ')');
+    const rows = await res.json();
+    all = all.concat(rows);
+    if (rows.length < PAGE) break;
+    from += PAGE;
+  }
+  return all;
+}
+
+async function fetchSdrRaw() {
+  const [leads, prospections, activities, calls, threads] = await Promise.all([
+    fetchSdrTable_('dash_sdr_leads'),
+    fetchSdrTable_('dash_sdr_prospections'),
+    fetchSdrTable_('dash_sdr_activities'),
+    fetchSdrTable_('dash_sdr_calls'),
+    fetchSdrTable_('dash_sdr_threads')
+  ]);
+  return { leads, prospections, activities, calls, threads };
+}
+
+function setView(btn) {
+  const bar = btn.closest('.oseg');
+  bar.querySelectorAll('.ochip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  _sdrViewActive = btn.dataset.v === 'sdr';
+  el('hero-row').style.display = _sdrViewActive ? 'none' : '';
+  el('mkt-row').style.display  = _sdrViewActive ? 'none' : '';
+  el('main').style.display     = _sdrViewActive ? 'none' : '';
+  el('sdr-hero-row').style.display = _sdrViewActive ? 'grid' : 'none';
+  el('sdr-main').style.display     = _sdrViewActive ? 'grid' : 'none';
+  el('footer-mode').textContent = _sdrViewActive ? 'SDR (Felipe)' : ORIGIN_LABELS[_originMode];
+  if (_sdrViewActive) {
+    if (_sdrRaw && _data && _data.period) renderSdrSectionTelao(computeSdrData(_sdrRaw, _data.period.from, _data.period.to, _data.period.label));
+    loadSdrFresh_();
+  }
+}
+
+async function loadSdrFresh_() {
+  if (_sdrLoading) return;
+  _sdrLoading = true;
+  try {
+    _sdrRaw = await fetchSdrRaw();
+    if (_sdrViewActive && _data && _data.period) renderSdrSectionTelao(computeSdrData(_sdrRaw, _data.period.from, _data.period.to, _data.period.label));
+  } catch (e) {
+    console.warn('fetchSdrRaw falhou:', e.message);
+    if (!el('sdr-cadencias-rows').children.length) {
+      el('sdr-cadencias-rows').innerHTML = '<div class="feed-empty">Erro ao carregar dado do SDR — tenta de novo em instantes.</div>';
+    }
+  } finally {
+    _sdrLoading = false;
+  }
+}
+
+function refreshSdrIfActive_() {
+  if (_sdrViewActive && _sdrRaw && _data && _data.period) {
+    renderSdrSectionTelao(computeSdrData(_sdrRaw, _data.period.from, _data.period.to, _data.period.label));
+  }
+}
+
+// Cópia fiel de computeSdrData (dash/geral/index.html) — lógica pura, sem
+// HTML, mantida byte-idêntica de propósito (mesma fonte de verdade que já
+// foi testada no mobile). Qualquer mudança de regra de negócio tem que ser
+// replicada nos dois arquivos.
+function computeSdrData(raw, periodFrom, periodTo, periodLabel) {
+  const pf = new Date(periodFrom + 'T00:00:00');
+  const pt = new Date(periodTo + 'T23:59:59');
+  const inPeriod = (iso) => { if (!iso) return false; const d = new Date(iso); return d >= pf && d <= pt; };
+
+  const prospections = raw.prospections || [];
+  const activities = raw.activities || [];
+  const calls = raw.calls || [];
+  const threads = raw.threads || [];
+
+  const ativas = prospections.filter(p => p.status === 'IN_PROGRESS').length;
+  const wonInPeriod = prospections.filter(p => p.status === 'WON' && inPeriod(p.finished_at));
+  const lostInPeriod = prospections.filter(p => p.status === 'LOST' && inPeriod(p.finished_at));
+  const finishedTotal = wonInPeriod.length + lostInPeriod.length;
+  const conversao = finishedTotal > 0 ? Math.round((wonInPeriod.length / finishedTotal) * 1000) / 10 : null;
+
+  const byRoutine = {};
+  const ensureRoutine = (key) => { if (!byRoutine[key]) byRoutine[key] = { name: key, ativas: 0, ganhos: 0, perdidos: 0 }; return byRoutine[key]; };
+  prospections.forEach(p => { if (p.status === 'IN_PROGRESS') ensureRoutine(p.routine_name || 'Sem cadência').ativas++; });
+  wonInPeriod.forEach(p => { ensureRoutine(p.routine_name || 'Sem cadência').ganhos++; });
+  lostInPeriod.forEach(p => { ensureRoutine(p.routine_name || 'Sem cadência').perdidos++; });
+  const cadencias = Object.values(byRoutine).sort((a, b) => (b.ativas + b.ganhos + b.perdidos) - (a.ativas + a.ganhos + a.perdidos));
+
+  const TYPE_LABELS = { CALL: 'Ligação', WHATSAPP_MESSAGE: 'WhatsApp', SEARCH: 'Pesquisa', LINKEDIN_MESSAGE: 'LinkedIn', EMAIL: 'E-mail', SCHEDULE_MEETING: 'Reunião' };
+  const byType = {};
+  let feitasCount = 0;
+  activities.forEach(a => {
+    const ref = a.finished_at || a.scheduled_to;
+    if (!inPeriod(ref)) return;
+    const key = a.type || 'Outro';
+    if (!byType[key]) byType[key] = { type: key, label: TYPE_LABELS[key] || key, feitas: 0, agendadas: 0, ignoradas: 0 };
+    if (a.status === 'FINISHED') { byType[key].feitas++; feitasCount++; }
+    else if (a.status === 'SCHEDULED') byType[key].agendadas++;
+    else if (a.status === 'IGNORED') byType[key].ignoradas++;
+  });
+  const atividadesPorTipo = Object.values(byType).sort((a, b) => b.feitas - a.feitas);
+
+  const callsInPeriod = calls.filter(c => inPeriod(c.started_at));
+  const CALL_OUTCOME_LABELS = { MEANINGFUL: 'Com avanço', NOT_MEANINGFUL: 'Sem avanço', GATEKEEPER: 'Gatekeeper', UNAVAILABLE_PERSONA: 'Pessoa indisponível', WRONG_NUMBER: 'Número errado', NO_CONTACT: 'Sem contato' };
+  const byOutcome = {};
+  let totalDuration = 0;
+  callsInPeriod.forEach(c => {
+    const key = c.outcome || 'Outro';
+    byOutcome[key] = (byOutcome[key] || 0) + 1;
+    totalDuration += c.duration_in_seconds || 0;
+  });
+  const ligacoesPorOutcome = Object.keys(byOutcome).map(k => ({ outcome: k, label: CALL_OUTCOME_LABELS[k] || k, count: byOutcome[k] })).sort((a, b) => b.count - a.count);
+  const duracaoMediaMin = callsInPeriod.length > 0 ? Math.round(totalDuration / callsInPeriod.length / 60 * 10) / 10 : null;
+
+  const byReason = {};
+  lostInPeriod.forEach(p => { const key = p.lost_reason || 'Sem motivo registrado'; byReason[key] = (byReason[key] || 0) + 1; });
+  const perdidosPorMotivo = Object.keys(byReason).map(k => ({ reason: k, count: byReason[k] })).sort((a, b) => b.count - a.count);
+
+  const unreadCount = threads.filter(t => t.has_unread_messages).length;
+
+  return {
+    periodLabel,
+    kpis: { ativas, ganhos: wonInPeriod.length, perdidos: lostInPeriod.length, conversao, feitasCount, callsCount: callsInPeriod.length, duracaoMediaMin },
+    cadencias, atividadesPorTipo, ligacoesPorOutcome, perdidosPorMotivo,
+    threadsCount: threads.length, unreadCount,
+    wonList: wonInPeriod, lostList: lostInPeriod
+  };
+}
+
+function sdrLeadName_(leadId) {
+  if (!_sdrRaw) return '—';
+  const lead = _sdrRaw.leads.find(l => l.gs_id === leadId);
+  return lead ? (lead.company_name || lead.full_name || '—') : '—';
+}
+
+function sdrFunilRowTelao_(dotColor, name, count, maxCount, valText) {
+  const pct = Math.max((count / Math.max(maxCount, 1)) * 100, 3);
+  return `
+    <div class="funil-row" style="cursor:default">
+      <div class="funil-dot" style="background:${dotColor}"></div>
+      <span class="funil-name sdr-name-ellipsis" title="${escHtml(name)}">${escHtml(name)}</span>
+      <div class="funil-bar-wrap"><div class="funil-bar" style="width:${pct}%;background:${dotColor}"></div></div>
+      <span class="funil-n">${count}</span>
+      <span class="funil-v">${escHtml(valText || '')}</span>
+    </div>`;
+}
+
+function renderSdrSectionTelao(d) {
+  _sdrLastData = d;
+  setTextFlash('sdr-hero-val', String(d.kpis.ativas));
+  el('sdr-hero-sub').textContent = 'em cadência agora';
+  el('sdr-k-conv').textContent = d.kpis.conversao !== null ? d.kpis.conversao + '%' : '—';
+  const finishedTotal = d.kpis.ganhos + d.kpis.perdidos;
+  el('sdr-k-conv-sub').textContent = 'de ' + finishedTotal + ' finalizada' + (finishedTotal !== 1 ? 's' : '');
+  setTextFlash('sdr-k-ganhos', d.kpis.ganhos);
+  setTextFlash('sdr-k-perdidos', d.kpis.perdidos);
+  setTextFlash('sdr-k-ativfeitas', d.kpis.feitasCount);
+  setTextFlash('sdr-k-ligacoes', d.kpis.callsCount);
+  el('sdr-k-duracao').textContent = d.kpis.duracaoMediaMin !== null ? d.kpis.duracaoMediaMin + ' min' : '—';
+  el('sdr-k-threads').textContent = d.unreadCount;
+  el('sdr-k-threads-sub').textContent = 'de ' + d.threadsCount + ' ativa' + (d.threadsCount !== 1 ? 's' : '');
+
+  const maxCad = Math.max(...d.cadencias.map(c => c.ativas), 1);
+  el('sdr-cadencias-badge').textContent = d.cadencias.length + ' cadência' + (d.cadencias.length !== 1 ? 's' : '');
+  el('sdr-cadencias-rows').innerHTML = d.cadencias.length === 0
+    ? '<div class="feed-empty">Nenhuma cadência com dado ainda</div>'
+    : d.cadencias.map(c => sdrFunilRowTelao_('var(--purple)', c.name, c.ativas, maxCad, c.ganhos + 'G / ' + c.perdidos + 'P')).join('');
+  autoScrollIfNeeded('sdr-cadencias-rows');
+
+  const maxAtiv = Math.max(...d.atividadesPorTipo.map(t => t.feitas), 1);
+  el('sdr-atividades-badge').textContent = d.kpis.feitasCount + ' feita' + (d.kpis.feitasCount !== 1 ? 's' : '');
+  el('sdr-atividades-rows').innerHTML = d.atividadesPorTipo.length === 0
+    ? '<div class="feed-empty">Nenhuma atividade no período</div>'
+    : d.atividadesPorTipo.map(t => sdrFunilRowTelao_('var(--purple)', t.label, t.feitas, maxAtiv, t.agendadas + ' agend.' + (t.ignoradas > 0 ? ' · ' + t.ignoradas + ' ignor.' : ''))).join('');
+  autoScrollIfNeeded('sdr-atividades-rows');
+
+  const maxOut = Math.max(...d.ligacoesPorOutcome.map(o => o.count), 1);
+  el('sdr-ligacoes-badge').textContent = d.kpis.duracaoMediaMin !== null ? d.kpis.duracaoMediaMin + ' min méd.' : (d.kpis.callsCount + ' ligações');
+  el('sdr-ligacoes-rows').innerHTML = d.ligacoesPorOutcome.length === 0
+    ? '<div class="feed-empty">Nenhuma ligação no período</div>'
+    : d.ligacoesPorOutcome.map(o => sdrFunilRowTelao_(
+        o.outcome === 'MEANINGFUL' ? 'var(--green)' : (o.outcome === 'NO_CONTACT' || o.outcome === 'WRONG_NUMBER' ? 'var(--red)' : 'var(--amber)'),
+        o.label, o.count, maxOut, ''
+      )).join('');
+  autoScrollIfNeeded('sdr-ligacoes-rows');
+
+  el('sdr-won-total').textContent = d.wonList.length + ' no período';
+  el('sdr-won-rows').innerHTML = d.wonList.length === 0
+    ? '<div class="feed-empty">Nenhum ganho no período</div>'
+    : d.wonList.slice(0, 60).map(p => `
+      <div class="feed-row" style="cursor:default">
+        <div class="feed-dot fd-green"></div>
+        <div class="feed-info">
+          <div class="feed-co"><span class="og-title-text">${escHtml(sdrLeadName_(p.lead_id))}</span></div>
+          <div class="feed-rep">${escHtml(p.routine_name || '—')}</div>
+        </div>
+        <div class="feed-right">
+          <div class="feed-date">${fmtDateDisplay((p.finished_at || '').substring(0, 10))}</div>
+        </div>
+      </div>`).join('');
+  autoScrollIfNeeded('sdr-won-rows');
+
+  el('sdr-lost-total').textContent = d.lostList.length + ' no período';
+  el('sdr-lost-rows').innerHTML = d.lostList.length === 0
+    ? '<div class="feed-empty">Nenhum perdido no período</div>'
+    : d.lostList.slice(0, 60).map(p => `
+      <div class="feed-row" style="cursor:default">
+        <div class="feed-dot fd-red"></div>
+        <div class="feed-info">
+          <div class="feed-co"><span class="og-title-text">${escHtml(sdrLeadName_(p.lead_id))}</span></div>
+          <div class="feed-rep">${escHtml(p.routine_name || '—')}${p.lost_reason ? ' · ' + escHtml(p.lost_reason) : ''}</div>
+        </div>
+        <div class="feed-right">
+          <div class="feed-date">${fmtDateDisplay((p.finished_at || '').substring(0, 10))}</div>
+        </div>
+      </div>`).join('');
+  autoScrollIfNeeded('sdr-lost-rows');
+}
+
+function openSdrModal(kind) {
+  if (!_sdrLastData) return;
+  const list = kind === 'won' ? _sdrLastData.wonList : _sdrLastData.lostList;
+  el('modal-title').textContent = (kind === 'won' ? 'Prospecções Ganhas — ' : 'Prospecções Perdidas — ') + list.length;
+  el('modal-body').innerHTML = list.length === 0
+    ? '<div class="modal-empty">Nada aqui neste período</div>'
+    : list.map(p => `
+        <div class="mdeal-row" style="cursor:default">
+          <div class="mdeal-dot" style="background:${kind === 'won' ? 'var(--green)' : 'var(--red)'}"></div>
+          <span class="mdeal-title">${escHtml(sdrLeadName_(p.lead_id))}</span>
+          <span class="mdeal-rep">${escHtml(p.routine_name || '—')}${kind === 'lost' && p.lost_reason ? ' · ' + escHtml(p.lost_reason) : ''}</span>
+          <span class="mdeal-open">${fmtDateDisplay((p.finished_at || '').substring(0, 10))}</span>
+        </div>`).join('');
+  el('modal-overlay').classList.add('show');
 }
 
 function originBadge(o) {
