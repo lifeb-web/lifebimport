@@ -676,7 +676,7 @@ footer strong{color:#fff}
   </div>
 </div>
 
-<footer>Life B Import &nbsp;·&nbsp; <strong id="footer-mode">Painel Geral</strong> &nbsp;·&nbsp; Dados: Agendor &nbsp;·&nbsp; Auto-refresh 20s</footer>
+<footer>Life B Import &nbsp;·&nbsp; <strong id="footer-mode">Painel Geral</strong> &nbsp;·&nbsp; Dados: <span id="footer-source">Agendor</span> &nbsp;·&nbsp; Auto-refresh 20s</footer>
 
 <div id="modal-overlay" onclick="closeModal(event)">
   <div id="modal">
@@ -1143,12 +1143,24 @@ function tickClock() {
 setInterval(tickClock, 10000); tickClock();
 
 function setOrigin(btn) {
-  document.querySelectorAll('.ochip').forEach(b => b.classList.remove('active'));
+  // achado 02/08 (auditoria): seletor global pegava TODOS os .ochip da página,
+  // inclusive o toggle Vendas/SDR (que passou a existir hoje) — clicar
+  // Outbound/Inbound/Ambos com a aba SDR aberta apagava o destaque visual do
+  // botão "SDR" sem trocar de aba de verdade. Escopado igual setView() já fazia.
+  btn.closest('.oseg').querySelectorAll('.ochip').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   _originMode = btn.dataset.o;
   const label = ORIGIN_LABELS[_originMode];
-  el('h-title-text').textContent = label;
-  el('footer-mode').textContent = label;
+  // achado 02/08 (auditoria): escrevia h-title-text/footer-mode sem checar
+  // se a aba SDR estava ativa — trocar de origem com SDR aberto sobrescrevia
+  // "SDR (Felipe)" por "Outbound"/"Inbound"/"Ambos" sem NENHUM clique na aba,
+  // e nunca voltava sozinho (nem no auto-refresh seguinte). Agora só mexe
+  // nesses dois textos quando Vendas está ativo — setView() é quem manda
+  // quando é SDR.
+  if (!_sdrViewActive) {
+    el('h-title-text').textContent = label;
+    el('footer-mode').textContent = label;
+  }
   // Esconde na hora (síncrono) — antes só escondia depois do fetch terminar,
   // mostrando por um instante o Ads/CAC do Inbound anterior no modo Outbound.
   if (_originMode === 'outbound') el('mkt-row').classList.remove('show');
@@ -1459,7 +1471,17 @@ let _lastDealsStamp = null, _lastAdsStamp = null, _lastLeadsStamp = null;
 async function backgroundPollTick_() {
   try {
     const [dealsStamp, adsStamp, leadsStamp] = await Promise.all([
-      fetchLatestStamp_('dash_geral_deals', 'updated_at').catch(() => undefined),
+      // achado 02/08 (auditoria): 'updated_at' vem do próprio Agendor (só muda
+      // se o negócio foi mexido lá) — mas o sync também EXCLUI negócio que
+      // sumiu do Agendor (pruneStaleRows_) e recalcula 'stale' a cada rodada,
+      // nenhum dos dois toca 'updated_at'. Um negócio podia sumir do funil ou
+      // virar "Parado" sem o poll nunca perceber, até outro negócio qualquer
+      // mudar por coincidência. 'synced_at' é regravado em TODA linha viva a
+      // cada sync (webhook ou trigger de 5min) — poll passa a rodar a busca
+      // completa no mínimo 1x por ciclo de sync (bem mais raro que os antigos
+      // 20s, ainda uma fração pequena do egress do bug original), mas nunca
+      // mais cego a delete/stale.
+      fetchLatestStamp_('dash_geral_deals', 'synced_at').catch(() => undefined),
       fetchLatestStamp_('dash_geral_ads_daily', 'synced_at').catch(() => undefined),
       fetchLatestStamp_('dash_geral_leads_daily', 'synced_at').catch(() => undefined)
     ]);
@@ -1487,11 +1509,22 @@ function getBRTParts_() {
 
 // Robert (01/08): mais economia de egress — de madrugada e fim de semana
 // ninguém tá olhando o telão de verdade, não precisa checar a cada 20s.
+// achado 02/08 (auditoria): os valores originais (6h noite / 24h fim de
+// semana) eram reavaliados só quando o poll seguinte disparava, não no
+// instante exato em que a janela terminava — dependendo de que horas entrou
+// no modo lento, a cadeia podia só voltar a 20s às 10h de SEGUNDA (simulado:
+// sex 22h -> +6h -> sáb 4h -> +6h -> sáb 10h -> +24h -> dom 10h -> +24h ->
+// seg 10h), congelado bem no horário em que a diretoria/comercial chega e
+// olha o painel. Valores reduzidos (1h/2h) — simulado em 3 pontos de entrada
+// diferentes (sex 22h, sáb 22h30, dom 23h50): todos recuperam 20s normal até
+// no máximo ~5h50 da manhã, nunca mais durante expediente. Egress continua
+// desprezível perto do problema original (poucas dezenas de checagens no
+// fim de semana inteiro, vs. os ~4.320/dia do bug de 20s fixo).
 function backgroundPollDelayMs_() {
   const { hour, isWeekend } = getBRTParts_();
   const isNight = hour >= 22 || hour < 5; // 22h-5h BRT
-  if (isNight) return 6 * 60 * 60 * 1000;    // ~1x cobrindo a janela inteira da madrugada
-  if (isWeekend) return 24 * 60 * 60 * 1000; // 1x por dia no fim de semana
+  if (isNight) return 1 * 60 * 60 * 1000;    // reavalia de hora em hora até sair da madrugada
+  if (isWeekend) return 2 * 60 * 60 * 1000;  // reavalia de 2h em 2h até segunda começar
   return BG_POLL_MS;
 }
 
@@ -1687,6 +1720,13 @@ function setView(btn) {
   el('sdr-hero-row').style.display = _sdrViewActive ? 'grid' : 'none';
   el('sdr-main').style.display     = _sdrViewActive ? 'grid' : 'none';
   el('footer-mode').textContent = _sdrViewActive ? 'SDR (Felipe)' : ORIGIN_LABELS[_originMode];
+  // achado 02/08 (auditoria): h-title-text (label perto do logo) e o rótulo
+  // de fonte do rodapé só eram escritos por setOrigin() — entrar em SDR sem
+  // nunca ter tocado o filtro de origem deixava os dois textos errados
+  // ("Painel Geral"/"Dados: Agendor") mesmo com a aba SDR (dado do GS Engage,
+  // não do Agendor) claramente ativa.
+  el('h-title-text').textContent = _sdrViewActive ? 'SDR (Felipe)' : ORIGIN_LABELS[_originMode];
+  el('footer-source').textContent = _sdrViewActive ? 'GS Engage' : 'Agendor';
   if (_sdrViewActive) {
     if (_sdrRaw && _data && _data.period) renderSdrSectionTelao(computeSdrData(_sdrRaw, _data.period.from, _data.period.to, _data.period.label));
     loadSdrFresh_();
@@ -1763,7 +1803,7 @@ function computeSdrData(raw, periodFrom, periodTo, periodLabel) {
   callsInPeriod.forEach(c => {
     const key = c.outcome || 'Outro';
     byOutcome[key] = (byOutcome[key] || 0) + 1;
-    totalDuration += c.duration_in_seconds || 0;
+    totalDuration += Math.max(c.duration_in_seconds || 0, 0);
   });
   const ligacoesPorOutcome = Object.keys(byOutcome).map(k => ({ outcome: k, label: CALL_OUTCOME_LABELS[k] || k, count: byOutcome[k] })).sort((a, b) => b.count - a.count);
   const duracaoMediaMin = callsInPeriod.length > 0 ? Math.round(totalDuration / callsInPeriod.length / 60 * 10) / 10 : null;
