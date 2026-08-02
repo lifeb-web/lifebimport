@@ -1105,6 +1105,14 @@ function setPeriod(btn) {
     renderCustomCalendar();
     return;
   }
+  // achado 02/08 (auditoria): sair do "Personalizado" no meio de uma seleção
+  // (só a data de início escolhida) sem resetar deixava _cpRangeStart "órfão"
+  // — reabrir o calendário depois e clicar em UMA data só (esperando começar
+  // do zero) na verdade completava a faixa antiga em silêncio (cpSelectDay
+  // só reinicia quando a nova data é ANTERIOR ao início guardado), aplicando
+  // um intervalo que o usuário nunca escolheu de propósito. Qualquer chip
+  // que não seja "Personalizado" abandona a seleção em andamento.
+  _cpRangeStart = null; _cpRangeEnd = null;
   if (_period === 'month_pick') {
     mp.classList.add('show'); cd.classList.remove('show');
     renderMonthGrid();
