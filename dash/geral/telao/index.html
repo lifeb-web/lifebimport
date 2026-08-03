@@ -167,6 +167,11 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 #sdr-hero-row{display:none;grid-template-columns:minmax(0,1.7fr) repeat(7,minmax(0,1fr));gap:8px;height:92px;flex-shrink:0}
 #sdr-hero{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:10px 16px;display:flex;flex-direction:column;justify-content:center;gap:2px;position:relative;overflow:hidden;box-shadow:0 1px 2px rgba(26,22,38,.04),0 3px 10px -3px rgba(112,75,155,.16)}
 #sdr-hero::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(112,75,155,.06),transparent 60%);pointer-events:none}
+/* Ads (02/08) — mesma forma/altura do hero-row de Vendas/SDR (hero + 7
+   kchips). display:none por padrão, JS liga/desliga em setView(). */
+#ads-hero-row{display:none;grid-template-columns:minmax(0,1.7fr) repeat(7,minmax(0,1fr));gap:8px;height:92px;flex-shrink:0}
+#ads-hero{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:10px 16px;display:flex;flex-direction:column;justify-content:center;gap:2px;position:relative;overflow:hidden;box-shadow:0 1px 2px rgba(26,22,38,.04),0 3px 10px -3px rgba(112,75,155,.16)}
+#ads-hero::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(112,75,155,.06),transparent 60%);pointer-events:none}
 #hero{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:10px 16px;display:flex;flex-direction:column;justify-content:center;gap:2px;position:relative;overflow:hidden;cursor:pointer;box-shadow:0 1px 2px rgba(26,22,38,.04),0 3px 10px -3px rgba(112,75,155,.16)}
 #hero::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(112,75,155,.06),transparent 60%);pointer-events:none}
 .hero-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -208,6 +213,20 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 #sdr-main{display:none;grid-template-columns:22fr 46fr 32fr;gap:8px;overflow:hidden;min-height:0;flex:1}
 #sdr-col-left,#sdr-col-center,#sdr-col-right{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
 #sdr-cadencias-card,#sdr-atividades-card,#sdr-ligacoes-card,#sdr-won-card,#sdr-lost-card{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+#ads-main{display:none;grid-template-columns:22fr 46fr 32fr;gap:8px;overflow:hidden;min-height:0;flex:1}
+#ads-col-left,#ads-col-center,#ads-col-right{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
+#ads-campanhas-card,#ads-adsets-card,#ads-anuncios-card{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+/* Nome de campanha/conjunto é dado externo (tamanho variável) — mesma
+   lógica do achado do SDR: .funil-name sem ellipsis próprio. */
+#ads-campanhas-rows .funil-name,#ads-adsets-rows .funil-name{overflow:hidden;text-overflow:ellipsis;max-width:150px}
+/* achado 02/08 (mesmo padrão do SDR): .funil-row/.funil-n herdam
+   flex-shrink:1 do funil principal — dentro de .lb-rows (scrollável) isso
+   competia com o scroll e espremia linha em vez de rolar. flex-shrink:0
+   preventivo aqui desde o início (já sabíamos do bug do SDR). */
+#ads-campanhas-rows .funil-row,#ads-adsets-rows .funil-row{flex-shrink:0}
+/* Anúncio com foto — 1ª vez que o telão mostra imagem de verdade. */
+.feed-thumb{width:32px;height:32px;border-radius:6px;object-fit:cover;flex-shrink:0;background:var(--bg);border:1px solid var(--border)}
+.feed-thumb-empty{width:32px;height:32px;border-radius:6px;flex-shrink:0;background:var(--bg);border:1px solid var(--border)}
 /* Cadência/tipo de atividade têm nome de tamanho variável (dado externo do GS
    Engage, ao contrário das etapas do funil principal, que são um set fixo e
    curto) — .funil-name sozinho não tem ellipsis porque nunca precisou até
@@ -407,6 +426,7 @@ footer strong{color:#fff}
   #body{padding:6px 12px 6px;gap:5px}
   #hero-row{height:76px;gap:6px}
   #sdr-hero-row{height:76px;gap:6px}
+  #ads-hero-row{height:76px;gap:6px}
   #mkt-row{height:44px}
   .hero-val{font-size:21px}
   .kc-val{font-size:14px}
@@ -435,6 +455,7 @@ footer strong{color:#fff}
     <div class="oseg">
       <button class="ochip active" data-v="vendas" onclick="setView(this)">Vendas</button>
       <button class="ochip" data-v="sdr" onclick="setView(this)">SDR</button>
+      <button class="ochip" data-v="ads" onclick="setView(this)">Ads</button>
     </div>
   </div>
 
@@ -677,6 +698,84 @@ footer strong{color:#fff}
           <span class="hd-total lost" id="sdr-lost-total"></span>
         </div>
         <div class="feed-scroll" id="sdr-lost-rows"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ads (Meta) — hierarquia completa (02/08). Mesma forma do bloco SDR
+       acima (hero+7 kchips, depois 3 colunas), display:none até
+       setView() ligar. -->
+  <div id="ads-hero-row">
+    <div id="ads-hero" style="cursor:default">
+      <div class="hero-top"><span class="hero-label">Investimento em Ads</span></div>
+      <div class="hero-val" id="ads-hero-val"><span class="skel" style="width:80px;height:24px"></span></div>
+      <div class="hero-row2"><span class="hero-sub" id="ads-hero-sub">no período</span></div>
+    </div>
+    <div class="kchip">
+      <span class="kc-label">Impressões</span>
+      <div class="kc-row"><span class="kc-val" id="ads-k-impr"><span class="skel"></span></span></div>
+      <span class="kc-sub">no período</span>
+    </div>
+    <div class="kchip">
+      <span class="kc-label">Cliques</span>
+      <div class="kc-row"><span class="kc-val" id="ads-k-clicks"><span class="skel"></span></span></div>
+      <span class="kc-sub">no período</span>
+    </div>
+    <div class="kchip">
+      <span class="kc-label">CTR</span>
+      <div class="kc-row"><span class="kc-val" id="ads-k-ctr"><span class="skel"></span></span></div>
+      <span class="kc-sub">cliques / impr.</span>
+    </div>
+    <div class="kchip">
+      <span class="kc-label">CPM</span>
+      <div class="kc-row"><span class="kc-val" id="ads-k-cpm"><span class="skel"></span></span></div>
+      <span class="kc-sub">por mil impr.</span>
+    </div>
+    <div class="kchip">
+      <span class="kc-label">Campanhas</span>
+      <div class="kc-row"><span class="kc-val" id="ads-k-campanhas"><span class="skel"></span></span></div>
+      <span class="kc-sub" id="ads-k-campanhas-sub">—</span>
+    </div>
+    <div class="kchip">
+      <span class="kc-label">Conjuntos</span>
+      <div class="kc-row"><span class="kc-val" id="ads-k-adsets"><span class="skel"></span></span></div>
+      <span class="kc-sub" id="ads-k-adsets-sub">—</span>
+    </div>
+    <div class="kchip">
+      <span class="kc-label">Anúncios</span>
+      <div class="kc-row"><span class="kc-val" id="ads-k-ads"><span class="skel"></span></span></div>
+      <span class="kc-sub" id="ads-k-ads-sub">—</span>
+    </div>
+  </div>
+
+  <div id="ads-main">
+    <div id="ads-col-left">
+      <div class="card" id="ads-campanhas-card">
+        <div class="card-hd">
+          <span class="card-hd-title">Campanhas</span>
+          <span class="badge" id="ads-campanhas-badge">—</span>
+        </div>
+        <div class="lb-rows" id="ads-campanhas-rows"></div>
+      </div>
+    </div>
+
+    <div id="ads-col-center">
+      <div class="card" id="ads-adsets-card">
+        <div class="card-hd">
+          <span class="card-hd-title">Conjuntos de Anúncios</span>
+          <span class="badge" id="ads-adsets-badge">—</span>
+        </div>
+        <div class="lb-rows" id="ads-adsets-rows"></div>
+      </div>
+    </div>
+
+    <div id="ads-col-right">
+      <div class="card" id="ads-anuncios-card">
+        <div class="card-hd">
+          <span class="card-hd-title">Anúncios</span>
+          <span class="hd-total" id="ads-anuncios-total"></span>
+        </div>
+        <div class="feed-scroll" id="ads-anuncios-rows"></div>
       </div>
     </div>
   </div>
@@ -1162,8 +1261,8 @@ function setOrigin(btn) {
   // "SDR (Felipe)" por "Outbound"/"Inbound"/"Ambos" sem NENHUM clique na aba,
   // e nunca voltava sozinho (nem no auto-refresh seguinte). Agora só mexe
   // nesses dois textos quando Vendas está ativo — setView() é quem manda
-  // quando é SDR.
-  if (!_sdrViewActive) {
+  // quando é SDR/Ads.
+  if (!_sdrViewActive && !_adsViewActive) {
     el('h-title-text').textContent = label;
     el('footer-mode').textContent = label;
   }
@@ -1422,6 +1521,7 @@ async function loadData(force, silent) {
     render(_data);
     renderDeltas(_data.kpis, prev && prev.kpis);
     refreshSdrIfActive_();
+    refreshAdsHierarchyIfActive_();
     flashDot();
     try { localStorage.setItem('geral_telao_snapshot', JSON.stringify({ data: curr, savedAt: Date.now() })); } catch(_) {}
   } catch(e) {
@@ -1727,23 +1827,34 @@ function setView(btn) {
   const bar = btn.closest('.oseg');
   bar.querySelectorAll('.ochip').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  _sdrViewActive = btn.dataset.v === 'sdr';
-  el('hero-row').style.display = _sdrViewActive ? 'none' : '';
-  el('mkt-row').style.display  = _sdrViewActive ? 'none' : '';
-  el('main').style.display     = _sdrViewActive ? 'none' : '';
-  el('sdr-hero-row').style.display = _sdrViewActive ? 'grid' : 'none';
-  el('sdr-main').style.display     = _sdrViewActive ? 'grid' : 'none';
-  el('footer-mode').textContent = _sdrViewActive ? 'SDR (Felipe)' : ORIGIN_LABELS[_originMode];
+  // 02/08: 3º valor 'ads' adicionado ao toggle (era só vendas/sdr).
+  const view = btn.dataset.v; // 'vendas' | 'sdr' | 'ads'
+  _sdrViewActive = view === 'sdr';
+  _adsViewActive = view === 'ads';
+  el('hero-row').style.display = view === 'vendas' ? '' : 'none';
+  el('mkt-row').style.display  = view === 'vendas' ? '' : 'none';
+  el('main').style.display     = view === 'vendas' ? '' : 'none';
+  el('sdr-hero-row').style.display = view === 'sdr' ? 'grid' : 'none';
+  el('sdr-main').style.display     = view === 'sdr' ? 'grid' : 'none';
+  el('ads-hero-row').style.display = view === 'ads' ? 'grid' : 'none';
+  el('ads-main').style.display     = view === 'ads' ? 'grid' : 'none';
   // achado 02/08 (auditoria): h-title-text (label perto do logo) e o rótulo
-  // de fonte do rodapé só eram escritos por setOrigin() — entrar em SDR sem
-  // nunca ter tocado o filtro de origem deixava os dois textos errados
-  // ("Painel Geral"/"Dados: Agendor") mesmo com a aba SDR (dado do GS Engage,
-  // não do Agendor) claramente ativa.
-  el('h-title-text').textContent = _sdrViewActive ? 'SDR (Felipe)' : ORIGIN_LABELS[_originMode];
-  el('footer-source').textContent = _sdrViewActive ? 'GS Engage' : 'Agendor';
+  // de fonte do rodapé só eram escritos por setOrigin() — entrar em SDR/Ads
+  // sem nunca ter tocado o filtro de origem deixava os dois textos errados
+  // ("Painel Geral"/"Dados: Agendor") mesmo com uma aba de fonte diferente
+  // claramente ativa.
+  const label = view === 'sdr' ? 'SDR (Felipe)' : (view === 'ads' ? 'Meta Ads' : ORIGIN_LABELS[_originMode]);
+  const source = view === 'sdr' ? 'GS Engage' : (view === 'ads' ? 'Meta Ads' : 'Agendor');
+  el('footer-mode').textContent = label;
+  el('h-title-text').textContent = label;
+  el('footer-source').textContent = source;
   if (_sdrViewActive) {
     if (_sdrRaw && _data && _data.period) renderSdrSectionTelao(computeSdrData(_sdrRaw, _data.period.from, _data.period.to, _data.period.label));
     loadSdrFresh_();
+  }
+  if (_adsViewActive) {
+    if (_adsHierarchyRaw && _data && _data.period) renderAdsHierarchySectionTelao(computeAdsHierarchyData(_adsHierarchyRaw, _data.period.from, _data.period.to, _data.period.label));
+    loadAdsHierarchyFresh_();
   }
 }
 
@@ -1940,6 +2051,229 @@ function openSdrModal(kind) {
           <span class="mdeal-rep">${escHtml(p.routine_name || '—')}${kind === 'lost' && p.lost_reason ? ' · ' + escHtml(p.lost_reason) : ''}</span>
           <span class="mdeal-open">${fmtDateDisplay((p.finished_at || '').substring(0, 10))}</span>
         </div>`).join('');
+  el('modal-overlay').classList.add('show');
+}
+
+// ============================================================
+// ADS (Meta) — hierarquia completa (02/08). Mesmo padrão de fetch/compute
+// da aba SDR — computeAdsHierarchyData() é cópia byte-a-byte do mobile
+// (lógica pura, sem HTML), só o render é próprio do telão.
+// ============================================================
+const ADS_STORAGE_PUBLIC_BASE = SUPABASE_URL + '/storage/v1/object/public/ads-creatives/';
+let _adsHierarchyRaw = null;
+let _adsViewActive = false;
+let _adsHierarchyLoading = false;
+let _adsHierarchyLastData = null;
+
+async function fetchAdsHierarchyTable_(table) {
+  const PAGE = 1000;
+  let all = [];
+  let from = 0;
+  while (true) {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/' + table + '?select=*', {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY, Range: from + '-' + (from + PAGE - 1) }
+    });
+    if (!res.ok) throw new Error('Supabase HTTP ' + res.status + ' (' + table + ')');
+    const rows = await res.json();
+    all = all.concat(rows);
+    if (rows.length < PAGE) break;
+    from += PAGE;
+  }
+  return all;
+}
+
+async function fetchAdsHierarchyRaw() {
+  const [campaigns, adsets, ads, daily, creatives] = await Promise.all([
+    fetchAdsHierarchyTable_('dash_ads_campaigns'),
+    fetchAdsHierarchyTable_('dash_ads_adsets'),
+    fetchAdsHierarchyTable_('dash_ads_ads'),
+    fetchAdsHierarchyTable_('dash_ads_daily'),
+    fetchAdsHierarchyTable_('dash_ads_creatives')
+  ]);
+  return { campaigns, adsets, ads, daily, creatives };
+}
+
+async function loadAdsHierarchyFresh_() {
+  if (_adsHierarchyLoading) return;
+  _adsHierarchyLoading = true;
+  try {
+    _adsHierarchyRaw = await fetchAdsHierarchyRaw();
+    if (_adsViewActive && _data && _data.period) renderAdsHierarchySectionTelao(computeAdsHierarchyData(_adsHierarchyRaw, _data.period.from, _data.period.to, _data.period.label));
+  } catch (e) {
+    console.warn('fetchAdsHierarchyRaw falhou:', e.message);
+    if (!el('ads-campanhas-rows').children.length) {
+      el('ads-campanhas-rows').innerHTML = '<div class="feed-empty">Erro ao carregar dado do Ads — tenta de novo em instantes.</div>';
+    }
+  } finally {
+    _adsHierarchyLoading = false;
+  }
+}
+
+function refreshAdsHierarchyIfActive_() {
+  if (_adsViewActive && _adsHierarchyRaw && _data && _data.period) {
+    renderAdsHierarchySectionTelao(computeAdsHierarchyData(_adsHierarchyRaw, _data.period.from, _data.period.to, _data.period.label));
+  }
+}
+
+// Cópia fiel de computeAdsHierarchyData (dash/geral/index.html) — lógica
+// pura, sem HTML, mantida byte-idêntica de propósito (mesma fonte de
+// verdade já testada no mobile). reach/frequency de propósito fora do
+// agregado por período — não são somáveis dia-a-dia sem superestimar.
+function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
+  const daily = raw.daily || [];
+  const inPeriod = daily.filter(d => d.date >= periodFrom && d.date <= periodTo);
+
+  function aggByEntity(type) {
+    const map = {};
+    inPeriod.filter(d => d.entity_type === type).forEach(d => {
+      if (!map[d.entity_id]) map[d.entity_id] = { spend: 0, impressions: 0, clicks: 0 };
+      const m = map[d.entity_id];
+      m.spend += d.spend || 0;
+      m.impressions += d.impressions || 0;
+      m.clicks += d.clicks || 0;
+    });
+    return map;
+  }
+  const campaignMetrics = aggByEntity('campaign');
+  const adsetMetrics = aggByEntity('adset');
+  const adMetrics = aggByEntity('ad');
+
+  const totals = { spend: 0, impressions: 0, clicks: 0 };
+  Object.values(campaignMetrics).forEach(m => { totals.spend += m.spend; totals.impressions += m.impressions; totals.clicks += m.clicks; });
+  const totalCtr = totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : null;
+  const totalCpm = totals.impressions > 0 ? (totals.spend / totals.impressions) * 1000 : null;
+
+  const campaignsById = {}; (raw.campaigns || []).forEach(c => campaignsById[c.id] = c);
+  const adsetsById = {}; (raw.adsets || []).forEach(a => adsetsById[a.id] = a);
+  const creativesById = {}; (raw.creatives || []).forEach(c => creativesById[c.id] = c);
+
+  const activeCampaignsCount = (raw.campaigns || []).filter(c => c.status === 'ACTIVE').length;
+
+  function withMetrics(entityId, metricsMap) {
+    const m = metricsMap[entityId] || { spend: 0, impressions: 0, clicks: 0 };
+    return { spend: m.spend, impressions: m.impressions, clicks: m.clicks, ctr: m.impressions > 0 ? (m.clicks / m.impressions) * 100 : null };
+  }
+
+  const campaignsList = (raw.campaigns || []).map(c => Object.assign({ id: c.id, name: c.name, status: c.status }, withMetrics(c.id, campaignMetrics)))
+    .sort((a, b) => b.spend - a.spend);
+
+  const adsetsList = (raw.adsets || []).map(a => {
+    const camp = campaignsById[a.campaign_id];
+    return Object.assign({ id: a.id, name: a.name, status: a.status, campaignName: camp ? camp.name : '—' }, withMetrics(a.id, adsetMetrics));
+  }).sort((a, b) => b.spend - a.spend);
+
+  const adsList = (raw.ads || []).map(ad => {
+    const camp = campaignsById[ad.campaign_id];
+    const adset = adsetsById[ad.adset_id];
+    const creative = ad.creative_id ? creativesById[ad.creative_id] : null;
+    return Object.assign({
+      id: ad.id, name: ad.name, status: ad.status,
+      campaignName: camp ? camp.name : '—', adsetName: adset ? adset.name : '—',
+      thumbUrl: creative && creative.thumbnail_storage_path ? (ADS_STORAGE_PUBLIC_BASE + creative.thumbnail_storage_path) : null
+    }, withMetrics(ad.id, adMetrics));
+  }).sort((a, b) => b.spend - a.spend);
+
+  return {
+    periodLabel,
+    kpis: { spend: totals.spend, impressions: totals.impressions, clicks: totals.clicks, ctr: totalCtr, cpm: totalCpm, activeCampaigns: activeCampaignsCount, totalCampaigns: (raw.campaigns || []).length,
+      activeAdsets: (raw.adsets || []).filter(a => a.status === 'ACTIVE').length, totalAdsets: (raw.adsets || []).length,
+      activeAds: (raw.ads || []).filter(a => a.status === 'ACTIVE').length, totalAds: (raw.ads || []).length },
+    campaignsList, adsetsList, adsList
+  };
+}
+
+function adsFunilRowTelao_(dotColor, name, spend, maxSpend, subText, onclickAttr) {
+  const pct = Math.max((spend / Math.max(maxSpend, 1)) * 100, 3);
+  return `
+    <div class="funil-row" ${onclickAttr ? 'style="cursor:pointer" onclick="' + onclickAttr + '"' : 'style="cursor:default"'} title="${subText ? escHtml(subText) : ''}">
+      <div class="funil-dot" style="background:${dotColor}"></div>
+      <span class="funil-name" title="${escHtml(name)}">${escHtml(name)}</span>
+      <div class="funil-bar-wrap"><div class="funil-bar" style="width:${pct}%;background:${dotColor}"></div></div>
+      <span class="funil-v" style="font-size:12px;font-weight:800;color:var(--text)">${fmtMoney(spend)}</span>
+    </div>`;
+}
+
+function adRowTelao_(ad) {
+  const isPaused = ad.status !== 'ACTIVE';
+  const statusBadge = isPaused ? `<span class="og-pill" style="background:rgba(107,100,132,.12);color:var(--muted)">PAUSADO</span>` : '';
+  const thumb = ad.thumbUrl
+    ? `<img class="feed-thumb" src="${ad.thumbUrl}" loading="lazy" alt="">`
+    : `<div class="feed-thumb-empty"></div>`;
+  return `
+    <div class="feed-row" style="cursor:default">
+      ${thumb}
+      <div class="feed-info">
+        <div class="feed-co"><span class="og-title-text">${escHtml(ad.name)}</span>${statusBadge}</div>
+        <div class="feed-rep">${escHtml(ad.campaignName)} · ${escHtml(ad.adsetName)}</div>
+      </div>
+      <div class="feed-right">
+        <div class="feed-val">${fmtMoney(ad.spend)}</div>
+        <div class="feed-date">${ad.ctr !== null ? ad.ctr.toFixed(2) + '% CTR' : '—'}</div>
+      </div>
+    </div>`;
+}
+
+function renderAdsHierarchySectionTelao(d) {
+  _adsHierarchyLastData = d;
+  setTextFlash('ads-hero-val', fmtMoney(d.kpis.spend));
+  el('ads-hero-sub').textContent = 'no período';
+  el('ads-k-impr').textContent = d.kpis.impressions.toLocaleString('pt-BR');
+  el('ads-k-clicks').textContent = d.kpis.clicks.toLocaleString('pt-BR');
+  el('ads-k-ctr').textContent = d.kpis.ctr !== null ? d.kpis.ctr.toFixed(2) + '%' : '—';
+  el('ads-k-cpm').textContent = d.kpis.cpm !== null ? fmtMoney(d.kpis.cpm) : '—';
+  el('ads-k-campanhas').textContent = d.kpis.activeCampaigns;
+  el('ads-k-campanhas-sub').textContent = 'de ' + d.kpis.totalCampaigns;
+  el('ads-k-adsets').textContent = d.kpis.activeAdsets;
+  el('ads-k-adsets-sub').textContent = 'de ' + d.kpis.totalAdsets;
+  el('ads-k-ads').textContent = d.kpis.activeAds;
+  el('ads-k-ads-sub').textContent = 'de ' + d.kpis.totalAds;
+
+  el('ads-campanhas-badge').textContent = d.campaignsList.length + ' campanha' + (d.campaignsList.length !== 1 ? 's' : '');
+  const maxCampSpend = Math.max(...d.campaignsList.map(c => c.spend), 1);
+  el('ads-campanhas-rows').innerHTML = d.campaignsList.length === 0
+    ? '<div class="feed-empty">Nenhuma campanha sincronizada ainda</div>'
+    : d.campaignsList.map(c => adsFunilRowTelao_(
+        c.status === 'ACTIVE' ? 'var(--purple)' : 'var(--faint)',
+        c.name, c.spend, maxCampSpend,
+        c.ctr !== null ? c.ctr.toFixed(2) + '% CTR' : '—',
+        "openAdsCampaignModalTelao('" + c.id + "')"
+      )).join('');
+  autoScrollIfNeeded('ads-campanhas-rows');
+
+  el('ads-adsets-badge').textContent = d.adsetsList.length + ' conjunto' + (d.adsetsList.length !== 1 ? 's' : '');
+  const maxAdsetSpend = Math.max(...d.adsetsList.map(a => a.spend), 1);
+  el('ads-adsets-rows').innerHTML = d.adsetsList.length === 0
+    ? '<div class="feed-empty">Nenhum conjunto sincronizado ainda</div>'
+    : d.adsetsList.map(a => adsFunilRowTelao_(
+        a.status === 'ACTIVE' ? 'var(--purple)' : 'var(--faint)',
+        a.name, a.spend, maxAdsetSpend,
+        a.ctr !== null ? a.ctr.toFixed(2) + '% CTR' : '—'
+      )).join('');
+  autoScrollIfNeeded('ads-adsets-rows');
+
+  el('ads-anuncios-total').textContent = d.adsList.length + ' anúncio' + (d.adsList.length !== 1 ? 's' : '');
+  el('ads-anuncios-rows').innerHTML = d.adsList.length === 0
+    ? '<div class="feed-empty">Nenhum anúncio sincronizado ainda</div>'
+    : d.adsList.map(adRowTelao_).join('');
+  autoScrollIfNeeded('ads-anuncios-rows');
+}
+
+function openAdsCampaignModalTelao(campaignId) {
+  if (!_adsHierarchyLastData) return;
+  const camp = _adsHierarchyLastData.campaignsList.find(c => c.id === campaignId);
+  const adsets = _adsHierarchyLastData.adsetsList.filter(a => {
+    const raw = (_adsHierarchyRaw.adsets || []).find(x => x.id === a.id);
+    return raw && raw.campaign_id === campaignId;
+  }).sort((a, b) => b.spend - a.spend);
+  el('modal-title').textContent = (camp ? camp.name : 'Campanha') + ' — ' + adsets.length + ' conjunto' + (adsets.length !== 1 ? 's' : '');
+  el('modal-body').innerHTML = adsets.length === 0
+    ? '<div class="modal-empty">Nenhum conjunto com dado no período</div>'
+    : adsets.map(a => `
+      <div class="mdeal-row" style="cursor:default">
+        <div class="mdeal-dot" style="background:${a.status === 'ACTIVE' ? 'var(--purple)' : 'var(--faint)'}"></div>
+        <span class="mdeal-title">${escHtml(a.name)}</span>
+        <span class="mdeal-val">${fmtMoney(a.spend)}</span>
+      </div>`).join('');
   el('modal-overlay').classList.add('show');
 }
 
