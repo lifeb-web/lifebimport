@@ -213,7 +213,8 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
    JS liga em setView(). */
 #sdr-main{display:none;grid-template-columns:22fr 46fr 32fr;gap:8px;overflow:hidden;min-height:0;flex:1}
 #sdr-col-left,#sdr-col-center,#sdr-col-right{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
-#sdr-cadencias-card,#sdr-atividades-card,#sdr-ligacoes-card,#sdr-won-card,#sdr-lost-card{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+#sdr-cadencias-card,#sdr-atividades-card,#sdr-ligacoes-card,#sdr-won-card,#sdr-lost-card,#sdr-whatsapp-card{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+#sdr-whatsapp-chart{flex:1;display:flex;flex-direction:column;justify-content:center;padding:6px 14px 8px;min-height:0}
 #ads-main{display:none;grid-template-columns:22fr 46fr 32fr;gap:8px;overflow:hidden;min-height:0;flex:1}
 #ads-col-left,#ads-col-center,#ads-col-right{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
 #ads-campanhas-card,#ads-adsets-card,#ads-anuncios-card{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
@@ -674,9 +675,9 @@ footer strong{color:#fff}
       <span class="kc-sub">por ligação</span>
     </div>
     <div class="kchip">
-      <span class="kc-label">Não Lidas</span>
-      <div class="kc-row"><span class="kc-val" id="sdr-k-threads"><span class="skel"></span></span></div>
-      <span class="kc-sub" id="sdr-k-threads-sub">—</span>
+      <span class="kc-label">WhatsApp Enviados</span>
+      <div class="kc-row"><span class="kc-val" id="sdr-k-whatsapp"><span class="skel"></span></span></div>
+      <span class="kc-sub">no período</span>
     </div>
   </div>
 
@@ -698,6 +699,19 @@ footer strong{color:#fff}
           <span class="badge" id="sdr-atividades-badge">—</span>
         </div>
         <div class="lb-rows" id="sdr-atividades-rows"></div>
+      </div>
+      <!-- achado 03/08 (Robert: "não quero esse foco em ligações, ele usa
+           mais o whatsapp") — WhatsApp (1.513 msgs) é o canal Nº1 de
+           verdade, à frente de CALL (1.390, confirmado via API). Card
+           novo, posicionado ANTES de Ligações — dado real (volume de
+           envio por dia), "Não Lidas"/threads removido (confirmado 0 pra
+           conta inteira direto na API do GS Engage, recurso não usado). -->
+      <div class="card" id="sdr-whatsapp-card">
+        <div class="card-hd">
+          <span class="card-hd-title">WhatsApp — Atividade</span>
+          <span class="badge" id="sdr-whatsapp-badge">—</span>
+        </div>
+        <div id="sdr-whatsapp-chart"></div>
       </div>
       <div class="card" id="sdr-ligacoes-card">
         <div class="card-hd">
@@ -1883,15 +1897,17 @@ async function fetchSdrTable_(table) {
   return all;
 }
 
+// achado 03/08: dash_sdr_threads removido da busca — testei o endpoint
+// /conversations/threads direto na API do GS Engage e o total é 0 pra
+// conta inteira. Recurso que essa conta não usa, não sync quebrado.
 async function fetchSdrRaw() {
-  const [leads, prospections, activities, calls, threads] = await Promise.all([
+  const [leads, prospections, activities, calls] = await Promise.all([
     fetchSdrTable_('dash_sdr_leads'),
     fetchSdrTable_('dash_sdr_prospections'),
     fetchSdrTable_('dash_sdr_activities'),
-    fetchSdrTable_('dash_sdr_calls'),
-    fetchSdrTable_('dash_sdr_threads')
+    fetchSdrTable_('dash_sdr_calls')
   ]);
-  return { leads, prospections, activities, calls, threads };
+  return { leads, prospections, activities, calls };
 }
 
 function setView(btn) {
@@ -1964,7 +1980,6 @@ function computeSdrData(raw, periodFrom, periodTo, periodLabel) {
   const prospections = raw.prospections || [];
   const activities = raw.activities || [];
   const calls = raw.calls || [];
-  const threads = raw.threads || [];
 
   const ativas = prospections.filter(p => p.status === 'IN_PROGRESS').length;
   const wonInPeriod = prospections.filter(p => p.status === 'WON' && inPeriod(p.finished_at));
@@ -2009,13 +2024,20 @@ function computeSdrData(raw, periodFrom, periodTo, periodLabel) {
   lostInPeriod.forEach(p => { const key = p.lost_reason || 'Sem motivo registrado'; byReason[key] = (byReason[key] || 0) + 1; });
   const perdidosPorMotivo = Object.keys(byReason).map(k => ({ reason: k, count: byReason[k] })).sort((a, b) => b.count - a.count);
 
-  const unreadCount = threads.filter(t => t.has_unread_messages).length;
+  // achado 03/08 (Robert: "não quero esse foco em ligações, ele usa mais o
+  // whatsapp") — cópia fiel do mesmo bloco do mobile, ver comentário lá.
+  const whatsappByDate = {};
+  activities.filter(a => a.type === 'WHATSAPP_MESSAGE' && a.status === 'FINISHED' && inPeriod(a.finished_at)).forEach(a => {
+    const day = a.finished_at.slice(0, 10);
+    whatsappByDate[day] = (whatsappByDate[day] || 0) + 1;
+  });
+  const whatsappTrend = Object.keys(whatsappByDate).sort().map(date => ({ date, count: whatsappByDate[date] }));
+  const whatsappTotal = whatsappTrend.reduce((s, p) => s + p.count, 0);
 
   return {
     periodLabel,
-    kpis: { ativas, ganhos: wonInPeriod.length, perdidos: lostInPeriod.length, conversao, feitasCount, callsCount: callsInPeriod.length, duracaoMediaMin },
-    cadencias, atividadesPorTipo, ligacoesPorOutcome, perdidosPorMotivo,
-    threadsCount: threads.length, unreadCount,
+    kpis: { ativas, ganhos: wonInPeriod.length, perdidos: lostInPeriod.length, conversao, feitasCount, callsCount: callsInPeriod.length, duracaoMediaMin, whatsappTotal },
+    cadencias, atividadesPorTipo, ligacoesPorOutcome, perdidosPorMotivo, whatsappTrend,
     wonList: wonInPeriod, lostList: lostInPeriod
   };
 }
@@ -2041,6 +2063,37 @@ function sdrFunilRowTelao_(dotColor, name, count, maxCount, valText) {
     </div>`;
 }
 
+// Mesmo padrão do mobile (ver comentário lá), altura 100% do container flex
+// em vez de altura fixa — aqui o card ocupa o espaço que sobrar na coluna.
+function renderWhatsappTrendChart_(series, containerId) {
+  const box = el(containerId);
+  if (!series || series.length < 2) {
+    box.innerHTML = '<div class="feed-empty">' + (series && series.length === 1 ? 'Só 1 dia com envio nesse período' : 'Nenhum WhatsApp enviado nesse período') + '</div>';
+    return;
+  }
+  const W = 600, H = 100, PAD_L = 4, PAD_R = 4, PAD_T = 8, PAD_B = 6;
+  const n = series.length;
+  const maxCount = Math.max(...series.map(p => p.count), 1);
+  const x = i => PAD_L + (n === 1 ? 0 : (i / (n - 1)) * (W - PAD_L - PAD_R));
+  const y = v => H - PAD_B - (v / maxCount) * (H - PAD_T - PAD_B);
+  const pts = series.map((p, i) => [x(i), y(p.count)]);
+  const linePath = 'M' + pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('L');
+  const areaPath = linePath + ` L${x(n - 1).toFixed(1)},${H - PAD_B} L${x(0).toFixed(1)},${H - PAD_B} Z`;
+  const first = series[0], last = series[n - 1];
+  const fmtD = iso => { const p = iso.split('-'); return p[2] + '/' + p[1]; };
+  box.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:100%;display:block;min-height:0">
+      <line x1="${PAD_L}" y1="${H - PAD_B}" x2="${W - PAD_R}" y2="${H - PAD_B}" stroke="var(--border)" stroke-width="1"/>
+      <path d="${areaPath}" fill="#25D366" opacity="0.12" stroke="none"/>
+      <path d="${linePath}" fill="none" stroke="#25D366" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="${x(n - 1).toFixed(1)}" cy="${y(last.count).toFixed(1)}" r="4" fill="#25D366" stroke="var(--card)" stroke-width="2"/>
+    </svg>
+    <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);padding:2px 4px 0;font-weight:700;font-variant-numeric:tabular-nums;flex-shrink:0">
+      <span>${fmtD(first.date)} · ${first.count}</span>
+      <span style="color:#1DA851">${fmtD(last.date)} · ${last.count}</span>
+    </div>`;
+}
+
 function renderSdrSectionTelao(d) {
   _sdrLastData = d;
   setTextFlash('sdr-hero-val', String(d.kpis.ativas));
@@ -2053,8 +2106,9 @@ function renderSdrSectionTelao(d) {
   setTextFlash('sdr-k-ativfeitas', d.kpis.feitasCount);
   setTextFlash('sdr-k-ligacoes', d.kpis.callsCount);
   el('sdr-k-duracao').textContent = d.kpis.duracaoMediaMin !== null ? d.kpis.duracaoMediaMin + ' min' : '—';
-  el('sdr-k-threads').textContent = d.unreadCount;
-  el('sdr-k-threads-sub').textContent = 'de ' + d.threadsCount + ' ativa' + (d.threadsCount !== 1 ? 's' : '');
+  setTextFlash('sdr-k-whatsapp', d.kpis.whatsappTotal);
+  el('sdr-whatsapp-badge').textContent = d.kpis.whatsappTotal + ' no período';
+  renderWhatsappTrendChart_(d.whatsappTrend, 'sdr-whatsapp-chart');
 
   const maxCad = Math.max(...d.cadencias.map(c => c.ativas), 1);
   el('sdr-cadencias-badge').textContent = d.cadencias.length + ' cadência' + (d.cadencias.length !== 1 ? 's' : '');

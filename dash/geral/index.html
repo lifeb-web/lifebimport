@@ -608,6 +608,22 @@ footer strong{color:#fff}
       </div>
     </div>
 
+    <!-- achado 03/08 (Robert: "não quero esse foco em ligações, ele usa mais
+         o whatsapp") — confirmado ao vivo na API: WHATSAPP_MESSAGE (1.513)
+         é o canal Nº1 de verdade, à frente de CALL (1.390). "Threads
+         Ativas"/"Não Lidas" (dash_sdr_threads) mostrava 0/0 sempre —
+         testado direto no endpoint /conversations/threads da API do GS
+         Engage (com e sem filtro): total=0 pra conta inteira, recurso que
+         essa conta não usa (não é sync quebrado). Substituído por gráfico
+         de volume de envio por dia — dado real, mesmo princípio do gráfico
+         de gasto do Ads (contagem por dia é somável, diferente de threads). -->
+    <div>
+      <div class="sec-hd">WhatsApp — Atividade <span id="sdr-whatsapp-total" style="color:var(--purple);font-weight:800;text-transform:none;letter-spacing:0"></span></div>
+      <div id="sdr-whatsapp-card">
+        <div id="sdr-whatsapp-chart"></div>
+      </div>
+    </div>
+
     <div>
       <div class="sec-hd">Ligações — Resultado</div>
       <div id="sdr-ligacoes-card">
@@ -622,21 +638,6 @@ footer strong{color:#fff}
       </div>
     </div>
 
-    <div id="sdr-threads-section">
-      <div class="sec-hd">WhatsApp / Conversas</div>
-      <div class="kpi-strip" style="grid-template-columns:1fr 1fr">
-        <div class="kchip">
-          <span class="kc-label">Threads Ativas</span>
-          <div class="kc-row"><span class="kc-val" id="sdr-k-threads"><span class="skel"></span></span></div>
-          <span class="kc-sub">últimos contatos</span>
-        </div>
-        <div class="kchip">
-          <span class="kc-label">Não Lidas</span>
-          <div class="kc-row"><span class="kc-val" id="sdr-k-unread"><span class="skel"></span></span></div>
-          <span class="kc-sub">precisam de resposta</span>
-        </div>
-      </div>
-    </div>
   </div><!-- /sdr-view -->
 
   <div id="ads-view" style="display:none">
@@ -1623,15 +1624,19 @@ async function fetchSdrTable_(table) {
   return all;
 }
 
+// achado 03/08: dash_sdr_threads removido da busca — testei o endpoint
+// /conversations/threads direto na API do GS Engage (com e sem filtro de
+// lead) e o total é 0 pra conta inteira. Não é sync quebrado, é um recurso
+// (inbox de conversa) que essa conta não usa — buscar essa tabela vazia
+// toda vez era 1 chamada de rede sem propósito.
 async function fetchSdrRaw() {
-  const [leads, prospections, activities, calls, threads] = await Promise.all([
+  const [leads, prospections, activities, calls] = await Promise.all([
     fetchSdrTable_('dash_sdr_leads'),
     fetchSdrTable_('dash_sdr_prospections'),
     fetchSdrTable_('dash_sdr_activities'),
-    fetchSdrTable_('dash_sdr_calls'),
-    fetchSdrTable_('dash_sdr_threads')
+    fetchSdrTable_('dash_sdr_calls')
   ]);
-  return { leads, prospections, activities, calls, threads };
+  return { leads, prospections, activities, calls };
 }
 
 // Robert (01/08): SDR não tem polling automático de propósito (evita repetir
@@ -1705,7 +1710,6 @@ function computeSdrData(raw, periodFrom, periodTo, periodLabel) {
   const prospections = raw.prospections || [];
   const activities = raw.activities || [];
   const calls = raw.calls || [];
-  const threads = raw.threads || [];
 
   const ativas = prospections.filter(p => p.status === 'IN_PROGRESS').length;
   const wonInPeriod = prospections.filter(p => p.status === 'WON' && inPeriod(p.finished_at));
@@ -1750,13 +1754,29 @@ function computeSdrData(raw, periodFrom, periodTo, periodLabel) {
   lostInPeriod.forEach(p => { const key = p.lost_reason || 'Sem motivo registrado'; byReason[key] = (byReason[key] || 0) + 1; });
   const perdidosPorMotivo = Object.keys(byReason).map(k => ({ reason: k, count: byReason[k] })).sort((a, b) => b.count - a.count);
 
-  const unreadCount = threads.filter(t => t.has_unread_messages).length;
+  // achado 03/08 (Robert: "não quero esse foco em ligações, ele usa mais o
+  // whatsapp"): confirmado ao vivo na API — WHATSAPP_MESSAGE (1.513) é o
+  // canal Nº1 de verdade, à frente de CALL (1.390). "Threads Ativas"/"Não
+  // Lidas" (dash_sdr_threads) SEMPRE mostrava 0/0 — testei o endpoint
+  // /conversations/threads direto na API do GS Engage (com e sem filtro de
+  // lead): total=0 pra conta inteira. Não é bug de sync, é um recurso
+  // (inbox de conversa) que essa conta não usa — o WhatsApp real acontece
+  // via passo de cadência (Activity type=WHATSAPP_MESSAGE), sem endpoint
+  // dedicado de outcome/duração como as ligações têm (dash_sdr_calls). O
+  // dado que EXISTE de verdade e não é somável errado: volume de envio por
+  // dia — mesmo princípio do gráfico de gasto do Ads.
+  const whatsappByDate = {};
+  activities.filter(a => a.type === 'WHATSAPP_MESSAGE' && a.status === 'FINISHED' && inPeriod(a.finished_at)).forEach(a => {
+    const day = a.finished_at.slice(0, 10);
+    whatsappByDate[day] = (whatsappByDate[day] || 0) + 1;
+  });
+  const whatsappTrend = Object.keys(whatsappByDate).sort().map(date => ({ date, count: whatsappByDate[date] }));
+  const whatsappTotal = whatsappTrend.reduce((s, p) => s + p.count, 0);
 
   return {
     periodLabel,
-    kpis: { ativas, ganhos: wonInPeriod.length, perdidos: lostInPeriod.length, conversao, feitasCount, callsCount: callsInPeriod.length, duracaoMediaMin },
-    cadencias, atividadesPorTipo, ligacoesPorOutcome, perdidosPorMotivo,
-    threadsCount: threads.length, unreadCount,
+    kpis: { ativas, ganhos: wonInPeriod.length, perdidos: lostInPeriod.length, conversao, feitasCount, callsCount: callsInPeriod.length, duracaoMediaMin, whatsappTotal },
+    cadencias, atividadesPorTipo, ligacoesPorOutcome, perdidosPorMotivo, whatsappTrend,
     wonList: wonInPeriod, lostList: lostInPeriod
   };
 }
@@ -1774,6 +1794,40 @@ function sdrFunilRow_(dotColor, name, count, maxCount, valText, dropText) {
         <span class="abar-val">${count}${extra ? '<span class="abar-sub">' + escHtml(extra) + '</span>' : ''}</span>
       </div>
       <div class="abar-track"><div class="abar-fill" style="width:${pct}%;background:${dotColor}"></div></div>
+    </div>`;
+}
+
+// Mesmo padrão de renderSpendTrendChart_ (Ads), mas pra contagem inteira em
+// vez de dinheiro — WhatsApp enviado por dia é somável com segurança
+// (diferente do que aconteceria tentando "average por thread" sem threads).
+function renderWhatsappTrendChart_(series, containerId) {
+  const box = el(containerId);
+  if (!series || series.length < 2) {
+    box.innerHTML = series && series.length === 1
+      ? '<div class="feed-empty">Só 1 dia com envio nesse período — sem tendência pra mostrar</div>'
+      : '<div class="feed-empty">Nenhum WhatsApp enviado nesse período</div>';
+    return;
+  }
+  const W = 600, H = 120, PAD_L = 4, PAD_R = 4, PAD_T = 10, PAD_B = 8;
+  const n = series.length;
+  const maxCount = Math.max(...series.map(p => p.count), 1);
+  const x = i => PAD_L + (n === 1 ? 0 : (i / (n - 1)) * (W - PAD_L - PAD_R));
+  const y = v => H - PAD_B - (v / maxCount) * (H - PAD_T - PAD_B);
+  const pts = series.map((p, i) => [x(i), y(p.count)]);
+  const linePath = 'M' + pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('L');
+  const areaPath = linePath + ` L${x(n - 1).toFixed(1)},${H - PAD_B} L${x(0).toFixed(1)},${H - PAD_B} Z`;
+  const first = series[0], last = series[n - 1];
+  const fmtD = iso => { const p = iso.split('-'); return p[2] + '/' + p[1]; };
+  box.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:110px;display:block">
+      <line x1="${PAD_L}" y1="${H - PAD_B}" x2="${W - PAD_R}" y2="${H - PAD_B}" stroke="var(--border)" stroke-width="1"/>
+      <path d="${areaPath}" fill="#25D366" opacity="0.12" stroke="none"/>
+      <path d="${linePath}" fill="none" stroke="#25D366" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="${x(n - 1).toFixed(1)}" cy="${y(last.count).toFixed(1)}" r="4" fill="#25D366" stroke="var(--card)" stroke-width="2"/>
+    </svg>
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);padding:2px 4px 0;font-weight:700;font-variant-numeric:tabular-nums">
+      <span>${fmtD(first.date)} · ${first.count} envio${first.count !== 1 ? 's' : ''}</span>
+      <span style="color:#1DA851">${fmtD(last.date)} · ${last.count} envio${last.count !== 1 ? 's' : ''}</span>
     </div>`;
 }
 
@@ -1809,8 +1863,8 @@ function renderSdrSection(d) {
     ? '<div class="sdr-empty">Nenhum perdido no período</div>'
     : d.perdidosPorMotivo.map(r => `<div class="sdr-reason-row"><span class="sdr-reason-name">${escHtml(r.reason)}</span><span class="sdr-reason-count">${r.count}</span></div>`).join('');
 
-  el('sdr-k-threads').textContent = d.threadsCount;
-  el('sdr-k-unread').textContent = d.unreadCount;
+  el('sdr-whatsapp-total').textContent = d.kpis.whatsappTotal + ' enviado' + (d.kpis.whatsappTotal !== 1 ? 's' : '') + ' no período';
+  renderWhatsappTrendChart_(d.whatsappTrend, 'sdr-whatsapp-chart');
 }
 
 function sdrLeadName_(leadId) {
