@@ -225,8 +225,29 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
    preventivo aqui desde o início (já sabíamos do bug do SDR). */
 #ads-campanhas-rows .funil-row,#ads-adsets-rows .funil-row{flex-shrink:0}
 /* Anúncio com foto — 1ª vez que o telão mostra imagem de verdade. */
-.feed-thumb{width:32px;height:32px;border-radius:6px;object-fit:cover;flex-shrink:0;background:var(--bg);border:1px solid var(--border)}
-.feed-thumb-empty{width:32px;height:32px;border-radius:6px;flex-shrink:0;background:var(--bg);border:1px solid var(--border)}
+/* Ads (03/08) — thumbnail bem maior que antes de propósito (o criativo É
+   o produto sendo comparado, merece destaque — feedback do Robert de que
+   o painel "não parecia elite"). */
+.feed-thumb{width:48px;height:48px;border-radius:8px;object-fit:cover;flex-shrink:0;background:var(--bg);border:1px solid var(--border)}
+.feed-thumb-empty{width:48px;height:48px;border-radius:8px;flex-shrink:0;background:var(--bg);border:1px solid var(--border)}
+/* achado 03/08 (Robert): linha de 1 linha só (dot+nome+barra fina+valor)
+   cortava a barra numa coluna estreita (nome+valor sozinhos já tomavam
+   quase todo o espaço, sobrava ~8px pra barra virar um pontinho — medido
+   via CDP, confirmado). Padrão novo: rótulo+valor numa linha, BARRA
+   GROSSA numa linha própria por baixo, ocupando 100% da largura do card.
+   flex-shrink:0 desde o início (já sabíamos do bug de squeeze dentro de
+   .lb-rows scrollável, achado antes na seção SDR). */
+.abar-row{padding:7px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
+.abar-row:last-child{border-bottom:none}
+.abar-row[onclick]{cursor:pointer}
+.abar-row[onclick]:hover{background:#faf8fc}
+.abar-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:4px}
+.abar-name{font-size:11.5px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;display:flex;align-items:center;gap:5px}
+.abar-val{font-size:11.5px;font-weight:800;color:var(--text);flex-shrink:0;font-variant-numeric:tabular-nums}
+.abar-sub{font-size:9.5px;font-weight:600;color:var(--muted);flex-shrink:0;margin-left:5px}
+.abar-track{height:7px;background:#f0ebf8;border-radius:4px;overflow:hidden;box-shadow:inset 0 1px 2px rgba(90,58,128,.08)}
+.abar-fill{height:100%;border-radius:4px;min-width:4px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+.abar-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
 /* Cadência/tipo de atividade têm nome de tamanho variável (dado externo do GS
    Engage, ao contrário das etapas do funil principal, que são um set fixo e
    curto) — .funil-name sozinho não tem ellipsis porque nunca precisou até
@@ -1954,15 +1975,18 @@ function sdrLeadName_(leadId) {
   return lead ? (lead.company_name || lead.full_name || '—') : '—';
 }
 
+// achado 03/08 (Robert): mesmo bug/pedido do Ads — trocado pro padrão
+// .abar-row (rótulo+valor em cima, barra grossa full-width numa linha
+// própria embaixo). Assinatura mantida igual, só o HTML interno mudou.
 function sdrFunilRowTelao_(dotColor, name, count, maxCount, valText) {
   const pct = Math.max((count / Math.max(maxCount, 1)) * 100, 3);
   return `
-    <div class="funil-row" style="cursor:default">
-      <div class="funil-dot" style="background:${dotColor}"></div>
-      <span class="funil-name sdr-name-ellipsis" title="${escHtml(name)}">${escHtml(name)}</span>
-      <div class="funil-bar-wrap"><div class="funil-bar" style="width:${pct}%;background:${dotColor}"></div></div>
-      <span class="funil-n">${count}</span>
-      <span class="funil-v">${escHtml(valText || '')}</span>
+    <div class="abar-row">
+      <div class="abar-top">
+        <span class="abar-name" title="${escHtml(name)}"><span class="abar-dot" style="background:${dotColor}"></span>${escHtml(name)}</span>
+        <span class="abar-val">${count}${valText ? '<span class="abar-sub">' + escHtml(valText) + '</span>' : ''}</span>
+      </div>
+      <div class="abar-track"><div class="abar-fill" style="width:${pct}%;background:${dotColor}"></div></div>
     </div>`;
 }
 
@@ -2119,6 +2143,14 @@ function refreshAdsHierarchyIfActive_() {
 // pura, sem HTML, mantida byte-idêntica de propósito (mesma fonte de
 // verdade já testada no mobile). reach/frequency de propósito fora do
 // agregado por período — não são somáveis dia-a-dia sem superestimar.
+// achado 03/08 (Robert): mostrava campanha "[TRÁFEGO] POSTS INSTAGRAM"
+// (impulsionamento de post, sem relação com o projeto de vendas) e
+// campanhas pausadas/zeradas junto das ativas — poluía a lista principal.
+// Mesma campanha já é excluída no card de Investimento/CAC/ROAS de Vendas
+// (getAdsLiveFromMeta) — mantém a mesma regra aqui: sempre "tudo, menos
+// essa uma", nunca uma lista de inclusão que possa esquecer campanha nova.
+const ADS_EXCLUDE_CAMPAIGN_IDS = ['120242303144740451'];
+
 function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
   const daily = raw.daily || [];
   const inPeriod = daily.filter(d => d.date >= periodFrom && d.date <= periodTo);
@@ -2138,31 +2170,25 @@ function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
   const adsetMetrics = aggByEntity('adset');
   const adMetrics = aggByEntity('ad');
 
-  const totals = { spend: 0, impressions: 0, clicks: 0 };
-  Object.values(campaignMetrics).forEach(m => { totals.spend += m.spend; totals.impressions += m.impressions; totals.clicks += m.clicks; });
-  const totalCtr = totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : null;
-  const totalCpm = totals.impressions > 0 ? (totals.spend / totals.impressions) * 1000 : null;
-
-  const campaignsById = {}; (raw.campaigns || []).forEach(c => campaignsById[c.id] = c);
-  const adsetsById = {}; (raw.adsets || []).forEach(a => adsetsById[a.id] = a);
+  const campaignsRaw = (raw.campaigns || []).filter(c => !ADS_EXCLUDE_CAMPAIGN_IDS.includes(c.id));
+  const campaignsById = {}; campaignsRaw.forEach(c => campaignsById[c.id] = c);
+  const adsetsRaw = (raw.adsets || []).filter(a => campaignsById[a.campaign_id]); // conjunto da campanha excluída some junto
+  const adsetsById = {}; adsetsRaw.forEach(a => adsetsById[a.id] = a);
+  const adsRaw = (raw.ads || []).filter(ad => campaignsById[ad.campaign_id]); // anúncio da campanha excluída some junto
   const creativesById = {}; (raw.creatives || []).forEach(c => creativesById[c.id] = c);
-
-  const activeCampaignsCount = (raw.campaigns || []).filter(c => c.status === 'ACTIVE').length;
 
   function withMetrics(entityId, metricsMap) {
     const m = metricsMap[entityId] || { spend: 0, impressions: 0, clicks: 0 };
     return { spend: m.spend, impressions: m.impressions, clicks: m.clicks, ctr: m.impressions > 0 ? (m.clicks / m.impressions) * 100 : null };
   }
 
-  const campaignsList = (raw.campaigns || []).map(c => Object.assign({ id: c.id, name: c.name, status: c.status }, withMetrics(c.id, campaignMetrics)))
+  const campaignsAll = campaignsRaw.map(c => Object.assign({ id: c.id, name: c.name, status: c.status }, withMetrics(c.id, campaignMetrics)))
     .sort((a, b) => b.spend - a.spend);
-
-  const adsetsList = (raw.adsets || []).map(a => {
+  const adsetsAll = adsetsRaw.map(a => {
     const camp = campaignsById[a.campaign_id];
     return Object.assign({ id: a.id, name: a.name, status: a.status, campaignName: camp ? camp.name : '—' }, withMetrics(a.id, adsetMetrics));
   }).sort((a, b) => b.spend - a.spend);
-
-  const adsList = (raw.ads || []).map(ad => {
+  const adsAll = adsRaw.map(ad => {
     const camp = campaignsById[ad.campaign_id];
     const adset = adsetsById[ad.adset_id];
     const creative = ad.creative_id ? creativesById[ad.creative_id] : null;
@@ -2173,23 +2199,47 @@ function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
     }, withMetrics(ad.id, adMetrics));
   }).sort((a, b) => b.spend - a.spend);
 
+  // achado 02/08 (auditoria): total do topo tem que vir da MESMA lista que
+  // aparece embaixo (campanhas já excluídas/filtradas) — nunca somar direto
+  // do mapa bruto de métricas diárias, que pode ter entity_id "fantasma"
+  // (campanha deletada na Meta mas que ainda tinha spend nos últimos 30
+  // dias) sem explicação nenhuma pro usuário.
+  const totals = { spend: 0, impressions: 0, clicks: 0 };
+  campaignsAll.forEach(c => { totals.spend += c.spend; totals.impressions += c.impressions; totals.clicks += c.clicks; });
+  const totalCtr = totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : null;
+  const totalCpm = totals.impressions > 0 ? (totals.spend / totals.impressions) * 1000 : null;
+
+  // Lista principal mostra só ATIVAS (Robert: campanha pausada/zerada
+  // poluindo a lista) — o total continua contando todas (acima), e o badge
+  // de cada seção mostra "X ativas de Y no total", nada fica escondido.
+  const campaignsActive = campaignsAll.filter(c => c.status === 'ACTIVE');
+  const adsetsActive = adsetsAll.filter(a => a.status === 'ACTIVE');
+  const adsActive = adsAll.filter(a => a.status === 'ACTIVE');
+
   return {
     periodLabel,
-    kpis: { spend: totals.spend, impressions: totals.impressions, clicks: totals.clicks, ctr: totalCtr, cpm: totalCpm, activeCampaigns: activeCampaignsCount, totalCampaigns: (raw.campaigns || []).length,
-      activeAdsets: (raw.adsets || []).filter(a => a.status === 'ACTIVE').length, totalAdsets: (raw.adsets || []).length,
-      activeAds: (raw.ads || []).filter(a => a.status === 'ACTIVE').length, totalAds: (raw.ads || []).length },
-    campaignsList, adsetsList, adsList
+    kpis: {
+      spend: totals.spend, impressions: totals.impressions, clicks: totals.clicks, ctr: totalCtr, cpm: totalCpm,
+      activeCampaigns: campaignsActive.length, totalCampaigns: campaignsAll.length,
+      activeAdsets: adsetsActive.length, totalAdsets: adsetsAll.length,
+      activeAds: adsActive.length, totalAds: adsAll.length
+    },
+    campaignsList: campaignsActive, adsetsList: adsetsActive, adsList: adsActive
   };
 }
 
+// achado 03/08 (Robert): mesmo bug/pedido do SDR — trocado pro padrão
+// .abar-row (rótulo+valor em cima, barra grossa full-width numa linha
+// própria embaixo).
 function adsFunilRowTelao_(dotColor, name, spend, maxSpend, subText, onclickAttr) {
   const pct = Math.max((spend / Math.max(maxSpend, 1)) * 100, 3);
   return `
-    <div class="funil-row" ${onclickAttr ? 'style="cursor:pointer" onclick="' + onclickAttr + '"' : 'style="cursor:default"'} title="${subText ? escHtml(subText) : ''}">
-      <div class="funil-dot" style="background:${dotColor}"></div>
-      <span class="funil-name" title="${escHtml(name)}">${escHtml(name)}</span>
-      <div class="funil-bar-wrap"><div class="funil-bar" style="width:${pct}%;background:${dotColor}"></div></div>
-      <span class="funil-v" style="font-size:12px;font-weight:800;color:var(--text)">${fmtMoney(spend)}</span>
+    <div class="abar-row" ${onclickAttr ? 'onclick="' + onclickAttr + '"' : ''}>
+      <div class="abar-top">
+        <span class="abar-name" title="${escHtml(name)}"><span class="abar-dot" style="background:${dotColor}"></span>${escHtml(name)}</span>
+        <span class="abar-val">${fmtMoney(spend)}${subText ? '<span class="abar-sub">' + escHtml(subText) + '</span>' : ''}</span>
+      </div>
+      <div class="abar-track"><div class="abar-fill" style="width:${pct}%;background:${dotColor}"></div></div>
     </div>`;
 }
 
@@ -2228,32 +2278,32 @@ function renderAdsHierarchySectionTelao(d) {
   el('ads-k-ads').textContent = d.kpis.activeAds;
   el('ads-k-ads-sub').textContent = 'de ' + d.kpis.totalAds;
 
-  el('ads-campanhas-badge').textContent = d.campaignsList.length + ' campanha' + (d.campaignsList.length !== 1 ? 's' : '');
+  el('ads-campanhas-badge').textContent = d.campaignsList.length + ' de ' + d.kpis.totalCampaigns;
   const maxCampSpend = Math.max(...d.campaignsList.map(c => c.spend), 1);
   el('ads-campanhas-rows').innerHTML = d.campaignsList.length === 0
-    ? '<div class="feed-empty">Nenhuma campanha sincronizada ainda</div>'
+    ? '<div class="feed-empty">Nenhuma campanha ativa no momento</div>'
     : d.campaignsList.map(c => adsFunilRowTelao_(
-        c.status === 'ACTIVE' ? 'var(--purple)' : 'var(--faint)',
+        'var(--purple)',
         c.name, c.spend, maxCampSpend,
         c.ctr !== null ? c.ctr.toFixed(2) + '% CTR' : '—',
         "openAdsCampaignModalTelao('" + c.id + "')"
       )).join('');
   autoScrollIfNeeded('ads-campanhas-rows');
 
-  el('ads-adsets-badge').textContent = d.adsetsList.length + ' conjunto' + (d.adsetsList.length !== 1 ? 's' : '');
+  el('ads-adsets-badge').textContent = d.adsetsList.length + ' de ' + d.kpis.totalAdsets;
   const maxAdsetSpend = Math.max(...d.adsetsList.map(a => a.spend), 1);
   el('ads-adsets-rows').innerHTML = d.adsetsList.length === 0
-    ? '<div class="feed-empty">Nenhum conjunto sincronizado ainda</div>'
+    ? '<div class="feed-empty">Nenhum conjunto ativo no momento</div>'
     : d.adsetsList.map(a => adsFunilRowTelao_(
-        a.status === 'ACTIVE' ? 'var(--purple)' : 'var(--faint)',
+        'var(--purple)',
         a.name, a.spend, maxAdsetSpend,
         a.ctr !== null ? a.ctr.toFixed(2) + '% CTR' : '—'
       )).join('');
   autoScrollIfNeeded('ads-adsets-rows');
 
-  el('ads-anuncios-total').textContent = d.adsList.length + ' anúncio' + (d.adsList.length !== 1 ? 's' : '');
+  el('ads-anuncios-total').textContent = d.adsList.length + ' de ' + d.kpis.totalAds;
   el('ads-anuncios-rows').innerHTML = d.adsList.length === 0
-    ? '<div class="feed-empty">Nenhum anúncio sincronizado ainda</div>'
+    ? '<div class="feed-empty">Nenhum anúncio ativo no momento</div>'
     : d.adsList.map(adRowTelao_).join('');
   autoScrollIfNeeded('ads-anuncios-rows');
 }

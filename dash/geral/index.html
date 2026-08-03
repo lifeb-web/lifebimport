@@ -275,12 +275,32 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .feed-val.won{color:#15803d}
 .feed-val.lost{color:var(--red)}
 .feed-date{font-size:10px;color:var(--muted);font-weight:600}
-/* Ads (02/08) — 1ª vez que o painel mostra foto de verdade (thumbnail do
-   criativo). Quadrado fixo no lugar do .feed-dot (bolinha) que os outros
-   feeds usam — mesmo espaço reservado (flex-shrink:0), só maior. */
-.feed-thumb{width:34px;height:34px;border-radius:7px;object-fit:cover;flex-shrink:0;background:var(--bg);border:1px solid var(--border)}
-.feed-thumb-empty{width:34px;height:34px;border-radius:7px;flex-shrink:0;background:var(--bg);border:1px solid var(--border)}
+/* Ads (03/08) — thumbnail bem maior que o resto do painel de propósito
+   (o criativo É o produto que se está comparando, merece destaque visual —
+   feedback do Robert de que o painel "não parecia elite"). */
+.feed-thumb{width:56px;height:56px;border-radius:10px;object-fit:cover;flex-shrink:0;background:var(--bg);border:1px solid var(--border)}
+.feed-thumb-empty{width:56px;height:56px;border-radius:10px;flex-shrink:0;background:var(--bg);border:1px solid var(--border)}
 .feed-empty{padding:16px;text-align:center;color:var(--faint);font-size:12px;font-style:italic}
+
+/* achado 03/08 (Robert): as linhas de Campanhas/Cadências ficaram "corte
+   nos cantos" — o layout de 1 linha só (dot+nome+barra fina+valor) não
+   tem espaço sobrando pra barra numa coluna estreita (nome+valor sozinhos
+   já tomam quase tudo, sobra 8px pra barra virar praticamente um pontinho).
+   Padrão novo: rótulo+valor numa linha (justificados nas pontas, cada um
+   com o espaço que precisa), BARRA GROSSA numa linha própria por baixo,
+   ocupando 100% da largura do card — nunca mais disputa espaço com texto.
+   Reaproveitável em qualquer lista comparativa do painel (Ads, SDR). */
+.abar-row{padding:10px 14px;border-bottom:1px solid #f4f2f8;cursor:default}
+.abar-row:last-child{border-bottom:none}
+.abar-row[onclick]{cursor:pointer}
+.abar-row[onclick]:active{background:#faf8fc}
+.abar-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px}
+.abar-name{font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;display:flex;align-items:center;gap:6px}
+.abar-val{font-size:13px;font-weight:800;color:var(--text);flex-shrink:0;font-variant-numeric:tabular-nums}
+.abar-sub{font-size:10px;font-weight:600;color:var(--muted);flex-shrink:0;margin-left:6px}
+.abar-track{height:9px;background:#f0ebf8;border-radius:5px;overflow:hidden;box-shadow:inset 0 1px 2px rgba(90,58,128,.08)}
+.abar-fill{height:100%;border-radius:5px;min-width:5px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+.abar-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
 
 #modal-overlay{display:none;position:fixed;inset:0;background:rgba(26,22,38,.45);z-index:500;align-items:center;justify-content:center;padding:0}
 #modal-overlay.show{display:flex}
@@ -653,10 +673,10 @@ footer strong{color:#fff}
     </div>
 
     <div>
-      <div class="sec-hd">Campanhas</div>
+      <div class="sec-hd">Campanhas <span id="ads-campanhas-badge" style="color:var(--purple);font-weight:800;text-transform:none;letter-spacing:0"></span></div>
       <div id="ads-campanhas-card">
         <div class="funil-hd">
-          <span class="funil-title">Por investimento no período</span>
+          <span class="funil-title">Ativas, por investimento no período</span>
           <span class="funil-hint">toque para ver conjuntos</span>
         </div>
         <div id="ads-campanhas-rows"></div>
@@ -664,17 +684,17 @@ footer strong{color:#fff}
     </div>
 
     <div>
-      <div class="sec-hd">Conjuntos de Anúncios</div>
+      <div class="sec-hd">Conjuntos de Anúncios <span id="ads-adsets-badge" style="color:var(--purple);font-weight:800;text-transform:none;letter-spacing:0"></span></div>
       <div id="ads-adsets-card">
         <div id="ads-adsets-rows"></div>
       </div>
     </div>
 
     <div id="ads-feed-section">
-      <div class="sec-hd">Anúncios</div>
+      <div class="sec-hd">Anúncios <span id="ads-anuncios-badge" style="color:var(--purple);font-weight:800;text-transform:none;letter-spacing:0"></span></div>
       <div class="feed-card">
         <div class="feed-hd">
-          <span class="feed-title">Por investimento no período</span>
+          <span class="feed-title">Ativos, por investimento no período</span>
         </div>
         <div id="ads-anuncios-rows"></div>
       </div>
@@ -1676,18 +1696,19 @@ function computeSdrData(raw, periodFrom, periodTo, periodLabel) {
   };
 }
 
+// achado 03/08 (Robert): mesmo bug/pedido do Ads — trocado pro padrão
+// .abar-row (rótulo+valor em cima, barra grossa full-width numa linha
+// própria embaixo). Assinatura mantida igual, só o HTML interno mudou.
 function sdrFunilRow_(dotColor, name, count, maxCount, valText, dropText) {
-  const pct = Math.max((count / Math.max(maxCount, 1)) * 100, 4);
-  const drop = dropText ? `<span class="funil-drop" style="background:#fee2e2;color:#b91c1c">${dropText}</span>` : '<span></span>';
+  const pct = Math.max((count / Math.max(maxCount, 1)) * 100, 3);
+  const extra = [valText, dropText].filter(Boolean).join(' · ');
   return `
-    <div class="funil-row" style="cursor:default">
-      <div class="funil-stage-dot" style="background:${dotColor}"></div>
-      <span class="funil-stage-name" title="${escHtml(name)}">${escHtml(name)}</span>
-      <div class="funil-bar-wrap"><div class="funil-bar bar-o2" style="width:${pct}%;background:${dotColor}"></div></div>
-      <span class="funil-count">${count}</span>
-      <span class="funil-val">${escHtml(valText || '')}</span>
-      ${drop}
-      <span></span>
+    <div class="abar-row">
+      <div class="abar-top">
+        <span class="abar-name" title="${escHtml(name)}"><span class="abar-dot" style="background:${dotColor}"></span>${escHtml(name)}</span>
+        <span class="abar-val">${count}${extra ? '<span class="abar-sub">' + escHtml(extra) + '</span>' : ''}</span>
+      </div>
+      <div class="abar-track"><div class="abar-fill" style="width:${pct}%;background:${dotColor}"></div></div>
     </div>`;
 }
 
@@ -1829,6 +1850,14 @@ function refreshAdsHierarchyIfActive_() {
 // mostrar número que pode estar errado). spend/impressions/clicks SÃO
 // somáveis com segurança; ctr/cpm são recalculados a partir da SOMA (não
 // da média das taxas diárias), que é a forma matematicamente certa.
+// achado 03/08 (Robert): mostrava campanha "[TRÁFEGO] POSTS INSTAGRAM"
+// (impulsionamento de post, sem relação com o projeto de vendas) e
+// campanhas pausadas/zeradas junto das ativas — poluía a lista principal.
+// Mesma campanha já é excluída no card de Investimento/CAC/ROAS de Vendas
+// (getAdsLiveFromMeta) — mantém a mesma regra aqui: sempre "tudo, menos
+// essa uma", nunca uma lista de inclusão que possa esquecer campanha nova.
+const ADS_EXCLUDE_CAMPAIGN_IDS = ['120242303144740451'];
+
 function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
   const daily = raw.daily || [];
   const inPeriod = daily.filter(d => d.date >= periodFrom && d.date <= periodTo);
@@ -1848,31 +1877,25 @@ function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
   const adsetMetrics = aggByEntity('adset');
   const adMetrics = aggByEntity('ad');
 
-  const totals = { spend: 0, impressions: 0, clicks: 0 };
-  Object.values(campaignMetrics).forEach(m => { totals.spend += m.spend; totals.impressions += m.impressions; totals.clicks += m.clicks; });
-  const totalCtr = totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : null;
-  const totalCpm = totals.impressions > 0 ? (totals.spend / totals.impressions) * 1000 : null;
-
-  const campaignsById = {}; (raw.campaigns || []).forEach(c => campaignsById[c.id] = c);
-  const adsetsById = {}; (raw.adsets || []).forEach(a => adsetsById[a.id] = a);
+  const campaignsRaw = (raw.campaigns || []).filter(c => !ADS_EXCLUDE_CAMPAIGN_IDS.includes(c.id));
+  const campaignsById = {}; campaignsRaw.forEach(c => campaignsById[c.id] = c);
+  const adsetsRaw = (raw.adsets || []).filter(a => campaignsById[a.campaign_id]); // conjunto da campanha excluída some junto
+  const adsetsById = {}; adsetsRaw.forEach(a => adsetsById[a.id] = a);
+  const adsRaw = (raw.ads || []).filter(ad => campaignsById[ad.campaign_id]); // anúncio da campanha excluída some junto
   const creativesById = {}; (raw.creatives || []).forEach(c => creativesById[c.id] = c);
-
-  const activeCampaignsCount = (raw.campaigns || []).filter(c => c.status === 'ACTIVE').length;
 
   function withMetrics(entityId, metricsMap) {
     const m = metricsMap[entityId] || { spend: 0, impressions: 0, clicks: 0 };
     return { spend: m.spend, impressions: m.impressions, clicks: m.clicks, ctr: m.impressions > 0 ? (m.clicks / m.impressions) * 100 : null };
   }
 
-  const campaignsList = (raw.campaigns || []).map(c => Object.assign({ id: c.id, name: c.name, status: c.status }, withMetrics(c.id, campaignMetrics)))
+  const campaignsAll = campaignsRaw.map(c => Object.assign({ id: c.id, name: c.name, status: c.status }, withMetrics(c.id, campaignMetrics)))
     .sort((a, b) => b.spend - a.spend);
-
-  const adsetsList = (raw.adsets || []).map(a => {
+  const adsetsAll = adsetsRaw.map(a => {
     const camp = campaignsById[a.campaign_id];
     return Object.assign({ id: a.id, name: a.name, status: a.status, campaignName: camp ? camp.name : '—' }, withMetrics(a.id, adsetMetrics));
   }).sort((a, b) => b.spend - a.spend);
-
-  const adsList = (raw.ads || []).map(ad => {
+  const adsAll = adsRaw.map(ad => {
     const camp = campaignsById[ad.campaign_id];
     const adset = adsetsById[ad.adset_id];
     const creative = ad.creative_id ? creativesById[ad.creative_id] : null;
@@ -1883,22 +1906,48 @@ function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
     }, withMetrics(ad.id, adMetrics));
   }).sort((a, b) => b.spend - a.spend);
 
+  // achado 02/08 (auditoria): total do topo tem que vir da MESMA lista que
+  // aparece embaixo (campanhas já excluídas/filtradas) — nunca somar direto
+  // do mapa bruto de métricas diárias, que pode ter entity_id "fantasma"
+  // (campanha deletada na Meta mas que ainda tinha spend nos últimos 30
+  // dias) sem explicação nenhuma pro usuário.
+  const totals = { spend: 0, impressions: 0, clicks: 0 };
+  campaignsAll.forEach(c => { totals.spend += c.spend; totals.impressions += c.impressions; totals.clicks += c.clicks; });
+  const totalCtr = totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : null;
+  const totalCpm = totals.impressions > 0 ? (totals.spend / totals.impressions) * 1000 : null;
+
+  // Lista principal mostra só ATIVAS (Robert: campanha pausada/zerada
+  // poluindo a lista) — o total continua contando todas (acima), e o badge
+  // de cada seção mostra "X ativas de Y no total", nada fica escondido.
+  const campaignsActive = campaignsAll.filter(c => c.status === 'ACTIVE');
+  const adsetsActive = adsetsAll.filter(a => a.status === 'ACTIVE');
+  const adsActive = adsAll.filter(a => a.status === 'ACTIVE');
+
   return {
     periodLabel,
-    kpis: { spend: totals.spend, impressions: totals.impressions, clicks: totals.clicks, ctr: totalCtr, cpm: totalCpm, activeCampaigns: activeCampaignsCount, totalCampaigns: (raw.campaigns || []).length },
-    campaignsList, adsetsList, adsList
+    kpis: {
+      spend: totals.spend, impressions: totals.impressions, clicks: totals.clicks, ctr: totalCtr, cpm: totalCpm,
+      activeCampaigns: campaignsActive.length, totalCampaigns: campaignsAll.length,
+      activeAdsets: adsetsActive.length, totalAdsets: adsetsAll.length,
+      activeAds: adsActive.length, totalAds: adsAll.length
+    },
+    campaignsList: campaignsActive, adsetsList: adsetsActive, adsList: adsActive
   };
 }
 
+// achado 03/08 (Robert): layout de 1 linha só cortava a barra numa coluna
+// estreita (nome+valor sozinhos já tomavam quase todo o espaço). Trocado
+// pro padrão .abar-row (rótulo+valor em cima, barra grossa full-width
+// embaixo, numa linha própria — nunca mais disputa espaço com texto).
 function adsFunilRow_(dotColor, name, spend, maxSpend, subText, onclickAttr) {
-  const pct = Math.max((spend / Math.max(maxSpend, 1)) * 100, 4);
+  const pct = Math.max((spend / Math.max(maxSpend, 1)) * 100, 3);
   return `
-    <div class="funil-row ads-row" ${onclickAttr ? 'style="cursor:pointer" onclick="' + onclickAttr + '"' : 'style="cursor:default"'} title="${subText ? escHtml(subText) : ''}">
-      <div class="funil-stage-dot" style="background:${dotColor}"></div>
-      <span class="funil-stage-name" title="${escHtml(name)}">${escHtml(name)}</span>
-      <div class="funil-bar-wrap"><div class="funil-bar bar-o2" style="width:${pct}%;background:${dotColor}"></div></div>
-      <span class="funil-count" style="font-size:13px">${fmtMoney(spend)}</span>
-      <span></span>
+    <div class="abar-row" ${onclickAttr ? 'onclick="' + onclickAttr + '"' : ''}>
+      <div class="abar-top">
+        <span class="abar-name" title="${escHtml(name)}"><span class="abar-dot" style="background:${dotColor}"></span>${escHtml(name)}</span>
+        <span class="abar-val">${fmtMoney(spend)}${subText ? '<span class="abar-sub">' + escHtml(subText) + '</span>' : ''}</span>
+      </div>
+      <div class="abar-track"><div class="abar-fill" style="width:${pct}%;background:${dotColor}"></div></div>
     </div>`;
 }
 
@@ -1933,27 +1982,30 @@ function renderAdsHierarchySection(d) {
   el('ads-k-campanhas').textContent = d.kpis.activeCampaigns;
   el('ads-k-campanhas-sub').textContent = 'de ' + d.kpis.totalCampaigns + ' no total';
 
+  el('ads-campanhas-badge').textContent = d.campaignsList.length + ' de ' + d.kpis.totalCampaigns;
   const maxCampSpend = Math.max(...d.campaignsList.map(c => c.spend), 1);
   el('ads-campanhas-rows').innerHTML = d.campaignsList.length === 0
-    ? '<div class="feed-empty">Nenhuma campanha sincronizada ainda</div>'
+    ? '<div class="feed-empty">Nenhuma campanha ativa no momento</div>'
     : d.campaignsList.map(c => adsFunilRow_(
-        c.status === 'ACTIVE' ? 'var(--purple)' : 'var(--faint)',
+        'var(--purple)',
         c.name, c.spend, maxCampSpend,
         c.ctr !== null ? c.ctr.toFixed(2) + '% CTR' : '—',
         "openAdsCampaignModal('" + c.id + "')"
       )).join('');
 
+  el('ads-adsets-badge').textContent = d.adsetsList.length + ' de ' + d.kpis.totalAdsets;
   const maxAdsetSpend = Math.max(...d.adsetsList.map(a => a.spend), 1);
   el('ads-adsets-rows').innerHTML = d.adsetsList.length === 0
-    ? '<div class="feed-empty">Nenhum conjunto sincronizado ainda</div>'
+    ? '<div class="feed-empty">Nenhum conjunto ativo no momento</div>'
     : d.adsetsList.slice(0, 20).map(a => adsFunilRow_(
-        a.status === 'ACTIVE' ? 'var(--purple)' : 'var(--faint)',
+        'var(--purple)',
         a.name, a.spend, maxAdsetSpend,
         a.ctr !== null ? a.ctr.toFixed(2) + '% CTR' : '—'
       )).join('');
 
+  el('ads-anuncios-badge').textContent = d.adsList.length + ' de ' + d.kpis.totalAds;
   el('ads-anuncios-rows').innerHTML = d.adsList.length === 0
-    ? '<div class="feed-empty">Nenhum anúncio sincronizado ainda</div>'
+    ? '<div class="feed-empty">Nenhum anúncio ativo no momento</div>'
     : d.adsList.slice(0, 30).map(adRow_).join('');
 }
 
