@@ -218,6 +218,8 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 #ads-main{display:none;grid-template-columns:22fr 46fr 32fr;gap:8px;overflow:hidden;min-height:0;flex:1}
 #ads-col-left,#ads-col-center,#ads-col-right{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
 #ads-campanhas-card,#ads-adsets-card,#ads-anuncios-card{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+#ads-trend-card{height:130px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden}
+#ads-trend-chart{flex:1;display:flex;flex-direction:column;justify-content:center;padding:4px 14px 8px;min-height:0}
 /* Nome de campanha/conjunto é dado externo (tamanho variável) — mesma
    lógica do achado do SDR: .funil-name sem ellipsis próprio. */
 #ads-campanhas-rows .funil-name,#ads-adsets-rows .funil-name{overflow:hidden;text-overflow:ellipsis;max-width:150px}
@@ -845,6 +847,18 @@ footer strong{color:#fff}
     </div>
 
     <div id="ads-col-center">
+      <!-- achado 03/08 (Robert, olhando o telão de verdade: "não vi nenhum
+           gráfico ainda, talvez você tá editando só no mobile") — tinha um
+           motivo real: o gráfico de tendência de gasto só tinha ido pro
+           mobile (só a sparkline do hero ia pro telão, decisão de espaço
+           que não bastou pro que ele queria ver na TV). Card fixo de 130px
+           aqui, resto do espaço continua com Conjuntos (flex:1). -->
+      <div class="card" id="ads-trend-card">
+        <div class="card-hd">
+          <span class="card-hd-title">Investimento por Dia</span>
+        </div>
+        <div id="ads-trend-chart"></div>
+      </div>
       <div class="card" id="ads-adsets-card">
         <div class="card-hd">
           <span class="card-hd-title">Conjuntos de Anúncios</span>
@@ -2480,6 +2494,42 @@ function bucketizeByIndex_(series, n) {
   return vals;
 }
 
+// achado 03/08 (Robert, olhando o telão de verdade: "não vi nenhum gráfico
+// ainda... talvez você tá editando só no mobile") — real: o gráfico de
+// tendência de gasto só tinha ido pro mobile na rodada 2 (só a sparkline do
+// hero foi pro telão, decisão de espaço que não bastou). Card fixo de
+// 130px no col-center do Ads resolve isso — mesmo padrão do
+// renderSpendTrendChart_ do mobile, altura 100% do container em vez de
+// altura fixa em px (aqui quem define a altura é o card CSS).
+function renderSpendTrendChart_(series, containerId) {
+  const box = el(containerId);
+  if (!series || series.length < 2) {
+    box.innerHTML = '<div class="feed-empty">Sem dias suficientes nesse período pra mostrar tendência</div>';
+    return;
+  }
+  const W = 600, H = 100, PAD_L = 4, PAD_R = 4, PAD_T = 8, PAD_B = 6;
+  const n = series.length;
+  const maxSpend = Math.max(...series.map(p => p.spend), 1);
+  const x = i => PAD_L + (n === 1 ? 0 : (i / (n - 1)) * (W - PAD_L - PAD_R));
+  const y = v => H - PAD_B - (v / maxSpend) * (H - PAD_T - PAD_B);
+  const pts = series.map((p, i) => [x(i), y(p.spend)]);
+  const linePath = 'M' + pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('L');
+  const areaPath = linePath + ` L${x(n - 1).toFixed(1)},${H - PAD_B} L${x(0).toFixed(1)},${H - PAD_B} Z`;
+  const first = series[0], last = series[n - 1];
+  const fmtD = iso => { const p = iso.split('-'); return p[2] + '/' + p[1]; };
+  box.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:100%;display:block;min-height:0">
+      <line x1="${PAD_L}" y1="${H - PAD_B}" x2="${W - PAD_R}" y2="${H - PAD_B}" stroke="var(--border)" stroke-width="1"/>
+      <path d="${areaPath}" fill="var(--purple)" opacity="0.1" stroke="none"/>
+      <path d="${linePath}" fill="none" stroke="var(--purple)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="${x(n - 1).toFixed(1)}" cy="${y(last.spend).toFixed(1)}" r="4" fill="var(--purple)" stroke="var(--card)" stroke-width="2"/>
+    </svg>
+    <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);padding:2px 4px 0;font-weight:700;font-variant-numeric:tabular-nums;flex-shrink:0">
+      <span>${fmtD(first.date)} · ${fmtMoney(first.spend)}</span>
+      <span style="color:var(--purple)">${fmtD(last.date)} · ${fmtMoney(last.spend)}</span>
+    </div>`;
+}
+
 function renderAdsHierarchySectionTelao(d) {
   _adsHierarchyLastData = d;
   setTextFlash('ads-hero-val', fmtMoney(d.kpis.spend));
@@ -2487,6 +2537,7 @@ function renderAdsHierarchySectionTelao(d) {
     ? '⚠ dado só desde ' + (function(){ var p = d.earliestDailyDate.split('-'); return p[2]+'/'+p[1]; })()
     : 'no período';
   el('ads-hero-spark').innerHTML = d.trendSeries.length >= 2 ? sparklineSVG(bucketizeByIndex_(d.trendSeries, 8), '#704B9B') : '';
+  renderSpendTrendChart_(d.trendSeries, 'ads-trend-chart');
   el('ads-k-leads').textContent = d.kpis.leads;
   el('ads-k-cac').textContent = d.kpis.cac !== null ? fmtMoney(Math.round(d.kpis.cac)) : '—';
   el('ads-k-cpl').textContent = d.kpis.cpl !== null ? fmtMoney(Math.round(d.kpis.cpl)) : '—';
