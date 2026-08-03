@@ -169,7 +169,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 #sdr-hero::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(112,75,155,.06),transparent 60%);pointer-events:none}
 /* Ads (02/08) — mesma forma/altura do hero-row de Vendas/SDR (hero + 7
    kchips). display:none por padrão, JS liga/desliga em setView(). */
-#ads-hero-row{display:none;grid-template-columns:minmax(0,1.7fr) repeat(7,minmax(0,1fr));gap:8px;height:92px;flex-shrink:0}
+#ads-hero-row{display:none;grid-template-columns:minmax(0,1.7fr) repeat(8,minmax(0,1fr));gap:8px;height:92px;flex-shrink:0}
 #ads-hero{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:10px 16px;display:flex;flex-direction:column;justify-content:center;gap:2px;position:relative;overflow:hidden;box-shadow:0 1px 2px rgba(26,22,38,.04),0 3px 10px -3px rgba(112,75,155,.16)}
 #ads-hero::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(112,75,155,.06),transparent 60%);pointer-events:none}
 #hero{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:10px 16px;display:flex;flex-direction:column;justify-content:center;gap:2px;position:relative;overflow:hidden;cursor:pointer;box-shadow:0 1px 2px rgba(26,22,38,.04),0 3px 10px -3px rgba(112,75,155,.16)}
@@ -242,7 +242,8 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 .abar-row[onclick]{cursor:pointer}
 .abar-row[onclick]:hover{background:#faf8fc}
 .abar-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:4px}
-.abar-name{font-size:11.5px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;display:flex;align-items:center;gap:5px}
+.abar-name{font-size:11.5px;font-weight:700;color:var(--text);min-width:0;display:flex;align-items:center;gap:5px}
+.abar-name-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .abar-val{font-size:11.5px;font-weight:800;color:var(--text);flex-shrink:0;font-variant-numeric:tabular-nums}
 .abar-sub{font-size:9.5px;font-weight:600;color:var(--muted);flex-shrink:0;margin-left:5px}
 .abar-track{height:7px;background:#f0ebf8;border-radius:4px;overflow:hidden;box-shadow:inset 0 1px 2px rgba(90,58,128,.08)}
@@ -766,6 +767,11 @@ footer strong{color:#fff}
       <span class="kc-label">Anúncios</span>
       <div class="kc-row"><span class="kc-val" id="ads-k-ads"><span class="skel"></span></span></div>
       <span class="kc-sub" id="ads-k-ads-sub">—</span>
+    </div>
+    <div class="kchip" title="Soma do alcance diário — aproximado, pode superestimar (mesma pessoa alcançada em dias diferentes conta mais de uma vez).">
+      <span class="kc-label">Alcance</span>
+      <div class="kc-row"><span class="kc-val" id="ads-k-reach"><span class="skel"></span></span></div>
+      <span class="kc-sub">~ aproximado</span>
     </div>
   </div>
 
@@ -1983,7 +1989,7 @@ function sdrFunilRowTelao_(dotColor, name, count, maxCount, valText) {
   return `
     <div class="abar-row">
       <div class="abar-top">
-        <span class="abar-name" title="${escHtml(name)}"><span class="abar-dot" style="background:${dotColor}"></span>${escHtml(name)}</span>
+        <span class="abar-name" title="${escHtml(name)}"><span class="abar-dot" style="background:${dotColor}"></span><span class="abar-name-text">${escHtml(name)}</span></span>
         <span class="abar-val">${count}${valText ? '<span class="abar-sub">' + escHtml(valText) + '</span>' : ''}</span>
       </div>
       <div class="abar-track"><div class="abar-fill" style="width:${pct}%;background:${dotColor}"></div></div>
@@ -2151,6 +2157,37 @@ function refreshAdsHierarchyIfActive_() {
 // essa uma", nunca uma lista de inclusão que possa esquecer campanha nova.
 const ADS_EXCLUDE_CAMPAIGN_IDS = ['120242303144740451'];
 
+// Cópia fiel de groupAdsByCreative_ (dash/geral/index.html) — ver comentário
+// lá pro raciocínio completo (group-by-NOME, não creative_id).
+function groupAdsByCreative_(ads) {
+  const groups = {};
+  const order = [];
+  ads.forEach(ad => {
+    const key = 'n:' + (ad.name || ad.id);
+    if (!groups[key]) {
+      groups[key] = { key, name: ad.name, thumbUrl: ad.thumbUrl, campaignNames: new Set(), adsetNames: new Set(), spend: 0, impressions: 0, clicks: 0, count: 0, memberIds: [] };
+      order.push(key);
+    }
+    const g = groups[key];
+    if (!g.thumbUrl && ad.thumbUrl) g.thumbUrl = ad.thumbUrl;
+    g.campaignNames.add(ad.campaignName);
+    g.adsetNames.add(ad.adsetName);
+    g.spend += ad.spend; g.impressions += ad.impressions; g.clicks += ad.clicks;
+    g.count++;
+    g.memberIds.push(ad.id);
+  });
+  return order.map(key => {
+    const g = groups[key];
+    return {
+      key: g.key, name: g.name, thumbUrl: g.thumbUrl,
+      campaignsCount: g.campaignNames.size, adsetsCount: g.adsetNames.size,
+      spend: g.spend, impressions: g.impressions, clicks: g.clicks,
+      ctr: g.impressions > 0 ? (g.clicks / g.impressions) * 100 : null,
+      count: g.count, memberIds: g.memberIds
+    };
+  }).sort((a, b) => b.spend - a.spend);
+}
+
 function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
   const daily = raw.daily || [];
   const inPeriod = daily.filter(d => d.date >= periodFrom && d.date <= periodTo);
@@ -2158,11 +2195,12 @@ function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
   function aggByEntity(type) {
     const map = {};
     inPeriod.filter(d => d.entity_type === type).forEach(d => {
-      if (!map[d.entity_id]) map[d.entity_id] = { spend: 0, impressions: 0, clicks: 0 };
+      if (!map[d.entity_id]) map[d.entity_id] = { spend: 0, impressions: 0, clicks: 0, reach: 0 };
       const m = map[d.entity_id];
       m.spend += d.spend || 0;
       m.impressions += d.impressions || 0;
       m.clicks += d.clicks || 0;
+      m.reach += d.reach || 0;
     });
     return map;
   }
@@ -2193,7 +2231,7 @@ function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
     const adset = adsetsById[ad.adset_id];
     const creative = ad.creative_id ? creativesById[ad.creative_id] : null;
     return Object.assign({
-      id: ad.id, name: ad.name, status: ad.status,
+      id: ad.id, name: ad.name, status: ad.status, creative_id: ad.creative_id || null,
       campaignName: camp ? camp.name : '—', adsetName: adset ? adset.name : '—',
       thumbUrl: creative && creative.thumbnail_storage_path ? (ADS_STORAGE_PUBLIC_BASE + creative.thumbnail_storage_path) : null
     }, withMetrics(ad.id, adMetrics));
@@ -2209,22 +2247,47 @@ function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
   const totalCtr = totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : null;
   const totalCpm = totals.impressions > 0 ? (totals.spend / totals.impressions) * 1000 : null;
 
+  // achado 03/08 (Robert pediu "alcance"): reach NÃO é somável dia-a-dia sem
+  // superestimar (mesma pessoa em 2 dias conta 2x) — mostrado como
+  // aproximação explícita (tooltip no kchip), nunca como número exato.
+  let totalReach = 0;
+  Object.keys(campaignMetrics).forEach(id => { if (campaignsById[id]) totalReach += campaignMetrics[id].reach; });
+
+  // Série de gasto diário (só campanhas incluídas) pro gráfico de tendência —
+  // gasto É somável com segurança (diferente de reach/frequency).
+  const spendByDate = {};
+  inPeriod.filter(d => d.entity_type === 'campaign' && campaignsById[d.entity_id]).forEach(d => {
+    spendByDate[d.date] = (spendByDate[d.date] || 0) + (d.spend || 0);
+  });
+  const trendSeries = Object.keys(spendByDate).sort().map(date => ({ date, spend: spendByDate[date] }));
+
+  // achado 03/08 (Robert: "todos os períodos"): o sync só traz uma janela
+  // rolante recente (ADS_H_DAYS no .gs) — se o período pedido começa ANTES
+  // do dado mais antigo que o Supabase realmente tem, o número mostrado
+  // seria silenciosamente igual ao de uma janela menor. earliestDailyDate
+  // vem do dataset INTEIRO (não só do período filtrado) pra detectar isso.
+  const allDates = daily.map(d => d.date).filter(Boolean).sort();
+  const earliestDailyDate = allDates.length ? allDates[0] : null;
+  const periodTruncated = !!(earliestDailyDate && periodFrom < earliestDailyDate && periodFrom !== periodTo);
+
   // Lista principal mostra só ATIVAS (Robert: campanha pausada/zerada
   // poluindo a lista) — o total continua contando todas (acima), e o badge
   // de cada seção mostra "X ativas de Y no total", nada fica escondido.
   const campaignsActive = campaignsAll.filter(c => c.status === 'ACTIVE');
   const adsetsActive = adsetsAll.filter(a => a.status === 'ACTIVE');
   const adsActive = adsAll.filter(a => a.status === 'ACTIVE');
+  const adGroupsActive = groupAdsByCreative_(adsActive);
+  const adGroupsAll = groupAdsByCreative_(adsAll);
 
   return {
-    periodLabel,
+    periodLabel, trendSeries, earliestDailyDate, periodTruncated,
     kpis: {
-      spend: totals.spend, impressions: totals.impressions, clicks: totals.clicks, ctr: totalCtr, cpm: totalCpm,
+      spend: totals.spend, impressions: totals.impressions, clicks: totals.clicks, ctr: totalCtr, cpm: totalCpm, reach: totalReach,
       activeCampaigns: campaignsActive.length, totalCampaigns: campaignsAll.length,
       activeAdsets: adsetsActive.length, totalAdsets: adsetsAll.length,
-      activeAds: adsActive.length, totalAds: adsAll.length
+      activeAds: adGroupsActive.length, totalAds: adGroupsAll.length
     },
-    campaignsList: campaignsActive, adsetsList: adsetsActive, adsList: adsActive
+    campaignsList: campaignsActive, adsetsList: adsetsActive, adsList: adGroupsActive
   };
 }
 
@@ -2236,37 +2299,65 @@ function adsFunilRowTelao_(dotColor, name, spend, maxSpend, subText, onclickAttr
   return `
     <div class="abar-row" ${onclickAttr ? 'onclick="' + onclickAttr + '"' : ''}>
       <div class="abar-top">
-        <span class="abar-name" title="${escHtml(name)}"><span class="abar-dot" style="background:${dotColor}"></span>${escHtml(name)}</span>
+        <span class="abar-name" title="${escHtml(name)}"><span class="abar-dot" style="background:${dotColor}"></span><span class="abar-name-text">${escHtml(name)}</span></span>
         <span class="abar-val">${fmtMoney(spend)}${subText ? '<span class="abar-sub">' + escHtml(subText) + '</span>' : ''}</span>
       </div>
       <div class="abar-track"><div class="abar-fill" style="width:${pct}%;background:${dotColor}"></div></div>
     </div>`;
 }
 
-function adRowTelao_(ad) {
-  const isPaused = ad.status !== 'ACTIVE';
-  const statusBadge = isPaused ? `<span class="og-pill" style="background:rgba(107,100,132,.12);color:var(--muted)">PAUSADO</span>` : '';
-  const thumb = ad.thumbUrl
-    ? `<img class="feed-thumb" src="${ad.thumbUrl}" loading="lazy" alt="">`
+function adGroupRowTelao_(g) {
+  const thumb = g.thumbUrl
+    ? `<img class="feed-thumb" src="${g.thumbUrl}" loading="lazy" alt="">`
     : `<div class="feed-thumb-empty"></div>`;
+  const variBadge = g.count > 1 ? `<span class="og-pill" style="background:rgba(146,96,200,.14);color:var(--purple)">${g.count}x</span>` : '';
+  const scopeText = g.campaignsCount > 1 ? g.campaignsCount + ' campanhas' : (g.adsetsCount > 1 ? g.adsetsCount + ' conjuntos' : '1 anúncio só');
   return `
-    <div class="feed-row" style="cursor:default">
+    <div class="feed-row" onclick="openAdGroupModalTelao('${g.key.replace(/'/g, "\\'")}')">
       ${thumb}
       <div class="feed-info">
-        <div class="feed-co"><span class="og-title-text">${escHtml(ad.name)}</span>${statusBadge}</div>
-        <div class="feed-rep">${escHtml(ad.campaignName)} · ${escHtml(ad.adsetName)}</div>
+        <div class="feed-co"><span class="og-title-text">${escHtml(g.name)}</span>${variBadge}</div>
+        <div class="feed-rep">${escHtml(scopeText)}</div>
       </div>
       <div class="feed-right">
-        <div class="feed-val">${fmtMoney(ad.spend)}</div>
-        <div class="feed-date">${ad.ctr !== null ? ad.ctr.toFixed(2) + '% CTR' : '—'}</div>
+        <div class="feed-val">${fmtMoney(g.spend)}</div>
+        <div class="feed-date">${g.ctr !== null ? g.ctr.toFixed(2) + '% CTR' : '—'}</div>
       </div>
     </div>`;
+}
+
+function openAdGroupModalTelao(key) {
+  if (!_adsHierarchyLastData) return;
+  const g = _adsHierarchyLastData.adsList.find(x => x.key === key);
+  if (!g) return;
+  const members = (_adsHierarchyRaw.ads || []).filter(a => g.memberIds.includes(a.id));
+  const campaignsById = {}; (_adsHierarchyRaw.campaigns || []).forEach(c => campaignsById[c.id] = c);
+  const adsetsById = {}; (_adsHierarchyRaw.adsets || []).forEach(a => adsetsById[a.id] = a);
+  el('modal-title').textContent = g.name + ' — ' + members.length + (members.length !== 1 ? ' variações' : ' variação');
+  el('modal-body').innerHTML = members.length === 0
+    ? '<div class="modal-empty">Nenhuma variação encontrada</div>'
+    : members.map(a => {
+        const adset = adsetsById[a.adset_id];
+        const camp = campaignsById[a.campaign_id];
+        return `
+      <div class="mdeal-row" style="cursor:default">
+        <div class="mdeal-dot" style="background:${a.status === 'ACTIVE' ? 'var(--purple)' : 'var(--faint)'}"></div>
+        <div class="mdeal-title-line" style="flex:1;min-width:0;flex-direction:column;align-items:flex-start;gap:1px">
+          <span class="mdeal-title" style="display:block">${escHtml(adset ? adset.name : '—')}</span>
+          <span style="font-size:11px;color:var(--muted);font-weight:600">${escHtml(camp ? camp.name : '—')}</span>
+        </div>
+      </div>`;
+      }).join('');
+  el('modal-overlay').classList.add('show');
 }
 
 function renderAdsHierarchySectionTelao(d) {
   _adsHierarchyLastData = d;
   setTextFlash('ads-hero-val', fmtMoney(d.kpis.spend));
-  el('ads-hero-sub').textContent = 'no período';
+  el('ads-hero-sub').textContent = d.periodTruncated
+    ? '⚠ dado só desde ' + (function(){ var p = d.earliestDailyDate.split('-'); return p[2]+'/'+p[1]; })()
+    : 'no período';
+  el('ads-k-reach').textContent = '~' + d.kpis.reach.toLocaleString('pt-BR');
   el('ads-k-impr').textContent = d.kpis.impressions.toLocaleString('pt-BR');
   el('ads-k-clicks').textContent = d.kpis.clicks.toLocaleString('pt-BR');
   el('ads-k-ctr').textContent = d.kpis.ctr !== null ? d.kpis.ctr.toFixed(2) + '%' : '—';
@@ -2304,7 +2395,7 @@ function renderAdsHierarchySectionTelao(d) {
   el('ads-anuncios-total').textContent = d.adsList.length + ' de ' + d.kpis.totalAds;
   el('ads-anuncios-rows').innerHTML = d.adsList.length === 0
     ? '<div class="feed-empty">Nenhum anúncio ativo no momento</div>'
-    : d.adsList.map(adRowTelao_).join('');
+    : d.adsList.map(adGroupRowTelao_).join('');
   autoScrollIfNeeded('ads-anuncios-rows');
 }
 

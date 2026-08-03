@@ -295,7 +295,8 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .abar-row[onclick]{cursor:pointer}
 .abar-row[onclick]:active{background:#faf8fc}
 .abar-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px}
-.abar-name{font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;display:flex;align-items:center;gap:6px}
+.abar-name{font-size:13px;font-weight:700;color:var(--text);min-width:0;display:flex;align-items:center;gap:6px}
+.abar-name-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .abar-val{font-size:13px;font-weight:800;color:var(--text);flex-shrink:0;font-variant-numeric:tabular-nums}
 .abar-sub{font-size:10px;font-weight:600;color:var(--muted);flex-shrink:0;margin-left:6px}
 .abar-track{height:9px;background:#f0ebf8;border-radius:5px;overflow:hidden;box-shadow:inset 0 1px 2px rgba(90,58,128,.08)}
@@ -670,6 +671,17 @@ footer strong{color:#fff}
         <div class="kc-row"><span class="kc-val" id="ads-k-campanhas"><span class="skel"></span></span></div>
         <span class="kc-sub" id="ads-k-campanhas-sub">—</span>
       </div>
+      <div class="kchip" title="Soma do alcance diário — pode superestimar levemente, já que a mesma pessoa alcançada em dias diferentes conta mais de uma vez (Meta não permite deduplicar alcance de vários dias sem uma chamada dedicada por período).">
+        <span class="kc-label">Alcance</span>
+        <div class="kc-row"><span class="kc-val" id="ads-k-reach"><span class="skel"></span></span></div>
+        <span class="kc-sub">~ aproximado, ver nota</span>
+      </div>
+    </div>
+    <div id="ads-period-warning" style="display:none;margin:-4px 0 10px;padding:8px 12px;border-radius:10px;background:rgba(240,216,120,.15);border:1px solid rgba(212,175,55,.35);font-size:12px;color:var(--muted)"></div>
+
+    <div id="ads-trend-card" style="margin-bottom:14px">
+      <div class="sec-hd">Investimento por dia</div>
+      <div id="ads-trend-chart"></div>
     </div>
 
     <div>
@@ -694,7 +706,7 @@ footer strong{color:#fff}
       <div class="sec-hd">Anúncios <span id="ads-anuncios-badge" style="color:var(--purple);font-weight:800;text-transform:none;letter-spacing:0"></span></div>
       <div class="feed-card">
         <div class="feed-hd">
-          <span class="feed-title">Ativos, por investimento no período</span>
+          <span class="feed-title">Agrupado por criativo · toque para ver variações</span>
         </div>
         <div id="ads-anuncios-rows"></div>
       </div>
@@ -1705,7 +1717,7 @@ function sdrFunilRow_(dotColor, name, count, maxCount, valText, dropText) {
   return `
     <div class="abar-row">
       <div class="abar-top">
-        <span class="abar-name" title="${escHtml(name)}"><span class="abar-dot" style="background:${dotColor}"></span>${escHtml(name)}</span>
+        <span class="abar-name" title="${escHtml(name)}"><span class="abar-dot" style="background:${dotColor}"></span><span class="abar-name-text">${escHtml(name)}</span></span>
         <span class="abar-val">${count}${extra ? '<span class="abar-sub">' + escHtml(extra) + '</span>' : ''}</span>
       </div>
       <div class="abar-track"><div class="abar-fill" style="width:${pct}%;background:${dotColor}"></div></div>
@@ -1858,6 +1870,45 @@ function refreshAdsHierarchyIfActive_() {
 // essa uma", nunca uma lista de inclusão que possa esquecer campanha nova.
 const ADS_EXCLUDE_CAMPAIGN_IDS = ['120242303144740451'];
 
+// achado 03/08 (Robert: "mostrando vários anúncios repetidos"): 126 de 150
+// ads ativos dividem NOME com outro ad (confirmado via query direta —
+// só 17 grupos de nome cobrindo 117 dos 126). Agrupar por creative_id foi
+// testado primeiro mas rendeu 101 grupos — muitos ads com o MESMO nome
+// visível têm creative_id diferente (variação pequena de imagem por
+// cidade/público), então group-by-creative não resolvia a sensação de
+// repetição que o Robert via na tela. Group-by-NOME é o que bate com o
+// que ele reclamou (o rótulo repetido é o que salta aos olhos) e reflete a
+// convenção real da conta: mesmo conceito de anúncio, reaproveitado em
+// vários conjuntos/públicos — não é bug de sync.
+function groupAdsByCreative_(ads) {
+  const groups = {};
+  const order = [];
+  ads.forEach(ad => {
+    const key = 'n:' + (ad.name || ad.id);
+    if (!groups[key]) {
+      groups[key] = { key, name: ad.name, thumbUrl: ad.thumbUrl, campaignNames: new Set(), adsetNames: new Set(), spend: 0, impressions: 0, clicks: 0, count: 0, memberIds: [] };
+      order.push(key);
+    }
+    const g = groups[key];
+    if (!g.thumbUrl && ad.thumbUrl) g.thumbUrl = ad.thumbUrl;
+    g.campaignNames.add(ad.campaignName);
+    g.adsetNames.add(ad.adsetName);
+    g.spend += ad.spend; g.impressions += ad.impressions; g.clicks += ad.clicks;
+    g.count++;
+    g.memberIds.push(ad.id);
+  });
+  return order.map(key => {
+    const g = groups[key];
+    return {
+      key: g.key, name: g.name, thumbUrl: g.thumbUrl,
+      campaignsCount: g.campaignNames.size, adsetsCount: g.adsetNames.size,
+      spend: g.spend, impressions: g.impressions, clicks: g.clicks,
+      ctr: g.impressions > 0 ? (g.clicks / g.impressions) * 100 : null,
+      count: g.count, memberIds: g.memberIds
+    };
+  }).sort((a, b) => b.spend - a.spend);
+}
+
 function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
   const daily = raw.daily || [];
   const inPeriod = daily.filter(d => d.date >= periodFrom && d.date <= periodTo);
@@ -1865,11 +1916,12 @@ function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
   function aggByEntity(type) {
     const map = {};
     inPeriod.filter(d => d.entity_type === type).forEach(d => {
-      if (!map[d.entity_id]) map[d.entity_id] = { spend: 0, impressions: 0, clicks: 0 };
+      if (!map[d.entity_id]) map[d.entity_id] = { spend: 0, impressions: 0, clicks: 0, reach: 0 };
       const m = map[d.entity_id];
       m.spend += d.spend || 0;
       m.impressions += d.impressions || 0;
       m.clicks += d.clicks || 0;
+      m.reach += d.reach || 0;
     });
     return map;
   }
@@ -1900,7 +1952,7 @@ function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
     const adset = adsetsById[ad.adset_id];
     const creative = ad.creative_id ? creativesById[ad.creative_id] : null;
     return Object.assign({
-      id: ad.id, name: ad.name, status: ad.status,
+      id: ad.id, name: ad.name, status: ad.status, creative_id: ad.creative_id || null,
       campaignName: camp ? camp.name : '—', adsetName: adset ? adset.name : '—',
       thumbUrl: creative && creative.thumbnail_storage_path ? (ADS_STORAGE_PUBLIC_BASE + creative.thumbnail_storage_path) : null
     }, withMetrics(ad.id, adMetrics));
@@ -1916,22 +1968,47 @@ function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
   const totalCtr = totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : null;
   const totalCpm = totals.impressions > 0 ? (totals.spend / totals.impressions) * 1000 : null;
 
+  // achado 03/08 (Robert pediu "alcance"): reach NÃO é somável dia-a-dia sem
+  // superestimar (mesma pessoa em 2 dias conta 2x) — mostrado como
+  // aproximação explícita (tooltip no kchip), nunca como número exato.
+  let totalReach = 0;
+  Object.keys(campaignMetrics).forEach(id => { if (campaignsById[id]) totalReach += campaignMetrics[id].reach; });
+
+  // Série de gasto diário (só campanhas incluídas) pro gráfico de tendência —
+  // gasto É somável com segurança (diferente de reach/frequency).
+  const spendByDate = {};
+  inPeriod.filter(d => d.entity_type === 'campaign' && campaignsById[d.entity_id]).forEach(d => {
+    spendByDate[d.date] = (spendByDate[d.date] || 0) + (d.spend || 0);
+  });
+  const trendSeries = Object.keys(spendByDate).sort().map(date => ({ date, spend: spendByDate[date] }));
+
+  // achado 03/08 (Robert: "todos os períodos"): o sync só traz uma janela
+  // rolante recente (ADS_H_DAYS no .gs) — se o período pedido começa ANTES
+  // do dado mais antigo que o Supabase realmente tem, o número mostrado
+  // seria silenciosamente igual ao de uma janela menor. earliestDailyDate
+  // vem do dataset INTEIRO (não só do período filtrado) pra detectar isso.
+  const allDates = daily.map(d => d.date).filter(Boolean).sort();
+  const earliestDailyDate = allDates.length ? allDates[0] : null;
+  const periodTruncated = !!(earliestDailyDate && periodFrom < earliestDailyDate && periodFrom !== periodTo);
+
   // Lista principal mostra só ATIVAS (Robert: campanha pausada/zerada
   // poluindo a lista) — o total continua contando todas (acima), e o badge
   // de cada seção mostra "X ativas de Y no total", nada fica escondido.
   const campaignsActive = campaignsAll.filter(c => c.status === 'ACTIVE');
   const adsetsActive = adsetsAll.filter(a => a.status === 'ACTIVE');
   const adsActive = adsAll.filter(a => a.status === 'ACTIVE');
+  const adGroupsActive = groupAdsByCreative_(adsActive);
+  const adGroupsAll = groupAdsByCreative_(adsAll);
 
   return {
-    periodLabel,
+    periodLabel, trendSeries, earliestDailyDate, periodTruncated,
     kpis: {
-      spend: totals.spend, impressions: totals.impressions, clicks: totals.clicks, ctr: totalCtr, cpm: totalCpm,
+      spend: totals.spend, impressions: totals.impressions, clicks: totals.clicks, ctr: totalCtr, cpm: totalCpm, reach: totalReach,
       activeCampaigns: campaignsActive.length, totalCampaigns: campaignsAll.length,
       activeAdsets: adsetsActive.length, totalAdsets: adsetsAll.length,
-      activeAds: adsActive.length, totalAds: adsAll.length
+      activeAds: adGroupsActive.length, totalAds: adGroupsAll.length
     },
-    campaignsList: campaignsActive, adsetsList: adsetsActive, adsList: adsActive
+    campaignsList: campaignsActive, adsetsList: adsetsActive, adsList: adGroupsActive
   };
 }
 
@@ -1944,30 +2021,88 @@ function adsFunilRow_(dotColor, name, spend, maxSpend, subText, onclickAttr) {
   return `
     <div class="abar-row" ${onclickAttr ? 'onclick="' + onclickAttr + '"' : ''}>
       <div class="abar-top">
-        <span class="abar-name" title="${escHtml(name)}"><span class="abar-dot" style="background:${dotColor}"></span>${escHtml(name)}</span>
+        <span class="abar-name" title="${escHtml(name)}"><span class="abar-dot" style="background:${dotColor}"></span><span class="abar-name-text">${escHtml(name)}</span></span>
         <span class="abar-val">${fmtMoney(spend)}${subText ? '<span class="abar-sub">' + escHtml(subText) + '</span>' : ''}</span>
       </div>
       <div class="abar-track"><div class="abar-fill" style="width:${pct}%;background:${dotColor}"></div></div>
     </div>`;
 }
 
-function adRow_(ad) {
-  const isPaused = ad.status !== 'ACTIVE';
-  const statusBadge = isPaused ? `<span class="og-pill" style="background:var(--border);color:var(--muted)">pausado</span>` : '';
-  const thumb = ad.thumbUrl
-    ? `<img class="feed-thumb" src="${ad.thumbUrl}" loading="lazy" alt="">`
+function adGroupRow_(g) {
+  const thumb = g.thumbUrl
+    ? `<img class="feed-thumb" src="${g.thumbUrl}" loading="lazy" alt="">`
     : `<div class="feed-thumb-empty"></div>`;
+  const variBadge = g.count > 1 ? `<span class="og-pill" style="background:rgba(146,96,200,.14);color:var(--purple)">${g.count}x</span>` : '';
+  const scopeText = g.campaignsCount > 1 ? g.campaignsCount + ' campanhas' : (g.adsetsCount > 1 ? g.adsetsCount + ' conjuntos' : '1 anúncio só');
   return `
-    <div class="feed-row" style="cursor:default">
+    <div class="feed-row" onclick="openAdGroupModal('${g.key.replace(/'/g, "\\'")}')">
       ${thumb}
       <div class="feed-info">
-        <div class="feed-co"><span class="og-title-text">${escHtml(ad.name)}</span>${statusBadge}</div>
-        <div class="feed-rep">${escHtml(ad.campaignName)} · ${escHtml(ad.adsetName)}</div>
+        <div class="feed-co"><span class="og-title-text">${escHtml(g.name)}</span>${variBadge}</div>
+        <div class="feed-rep">${escHtml(scopeText)}</div>
       </div>
       <div class="feed-right">
-        <div class="feed-val">${fmtMoney(ad.spend)}</div>
-        <div class="feed-date">${ad.ctr !== null ? ad.ctr.toFixed(2) + '% CTR' : '—'}</div>
+        <div class="feed-val">${fmtMoney(g.spend)}</div>
+        <div class="feed-date">${g.ctr !== null ? g.ctr.toFixed(2) + '% CTR' : '—'}</div>
       </div>
+    </div>`;
+}
+
+function openAdGroupModal(key) {
+  if (!_adsHierarchyLastData) return;
+  const g = _adsHierarchyLastData.adsList.find(x => x.key === key);
+  if (!g) return;
+  const members = (_adsHierarchyRaw.ads || []).filter(a => g.memberIds.includes(a.id));
+  const campaignsById = {}; (_adsHierarchyRaw.campaigns || []).forEach(c => campaignsById[c.id] = c);
+  const adsetsById = {}; (_adsHierarchyRaw.adsets || []).forEach(a => adsetsById[a.id] = a);
+  el('modal-title').textContent = g.name + ' — ' + members.length + (members.length !== 1 ? ' variações' : ' variação');
+  el('modal-body').innerHTML = members.length === 0
+    ? '<div class="modal-empty">Nenhuma variação encontrada</div>'
+    : members.sort((a, b) => (adsetsById[b.adset_id] ? 1 : 0)).map(a => {
+        const adset = adsetsById[a.adset_id];
+        const camp = campaignsById[a.campaign_id];
+        return `
+      <div class="mdeal-row" style="cursor:default">
+        <div class="mdeal-dot" style="background:${a.status === 'ACTIVE' ? 'var(--purple)' : 'var(--faint)'}"></div>
+        <div class="mdeal-title-line" style="flex:1;min-width:0;flex-direction:column;align-items:flex-start;gap:1px">
+          <span class="mdeal-title" style="display:block">${escHtml(adset ? adset.name : '—')}</span>
+          <span style="font-size:11px;color:var(--muted);font-weight:600">${escHtml(camp ? camp.name : '—')}</span>
+        </div>
+      </div>`;
+      }).join('');
+  el('modal-overlay').classList.add('show');
+}
+
+// achado 03/08 (Robert: "gráficos se necessário, nível agência de
+// performance"): dataviz skill — job "trend over time" = line/area, 1 série
+// não precisa de legenda (o título já diz o que é), rótulo direto nas
+// pontas em vez de eixo cheio (mesmo espírito do sparkline de stat-tile).
+function renderSpendTrendChart_(series, containerId) {
+  const box = el(containerId);
+  if (!series || series.length < 2) {
+    box.innerHTML = '<div class="feed-empty">Sem dias suficientes nesse período pra mostrar tendência</div>';
+    return;
+  }
+  const W = 600, H = 120, PAD_L = 4, PAD_R = 4, PAD_T = 10, PAD_B = 8;
+  const n = series.length;
+  const maxSpend = Math.max(...series.map(p => p.spend), 1);
+  const x = i => PAD_L + (n === 1 ? 0 : (i / (n - 1)) * (W - PAD_L - PAD_R));
+  const y = v => H - PAD_B - (v / maxSpend) * (H - PAD_T - PAD_B);
+  const pts = series.map((p, i) => [x(i), y(p.spend)]);
+  const linePath = 'M' + pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('L');
+  const areaPath = linePath + ` L${x(n - 1).toFixed(1)},${H - PAD_B} L${x(0).toFixed(1)},${H - PAD_B} Z`;
+  const first = series[0], last = series[n - 1];
+  const fmtD = iso => { const p = iso.split('-'); return p[2] + '/' + p[1]; };
+  box.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:110px;display:block">
+      <line x1="${PAD_L}" y1="${H - PAD_B}" x2="${W - PAD_R}" y2="${H - PAD_B}" stroke="var(--border)" stroke-width="1"/>
+      <path d="${areaPath}" fill="var(--purple)" opacity="0.1" stroke="none"/>
+      <path d="${linePath}" fill="none" stroke="var(--purple)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="${x(n - 1).toFixed(1)}" cy="${y(last.spend).toFixed(1)}" r="4" fill="var(--purple)" stroke="var(--card)" stroke-width="2"/>
+    </svg>
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);padding:2px 4px 0;font-weight:700;font-variant-numeric:tabular-nums">
+      <span>${fmtD(first.date)} · ${fmtMoney(first.spend)}</span>
+      <span style="color:var(--purple)">${fmtD(last.date)} · ${fmtMoney(last.spend)}</span>
     </div>`;
 }
 
@@ -1979,8 +2114,20 @@ function renderAdsHierarchySection(d) {
   el('ads-k-clicks').textContent = d.kpis.clicks.toLocaleString('pt-BR');
   el('ads-k-ctr').textContent = d.kpis.ctr !== null ? d.kpis.ctr.toFixed(2) + '%' : '—';
   el('ads-k-cpm').textContent = d.kpis.cpm !== null ? fmtMoney(d.kpis.cpm) : '—';
+  el('ads-k-reach').textContent = '~' + d.kpis.reach.toLocaleString('pt-BR');
   el('ads-k-campanhas').textContent = d.kpis.activeCampaigns;
   el('ads-k-campanhas-sub').textContent = 'de ' + d.kpis.totalCampaigns + ' no total';
+
+  const warnBox = el('ads-period-warning');
+  if (d.periodTruncated) {
+    const ep = d.earliestDailyDate.split('-');
+    warnBox.style.display = 'block';
+    warnBox.textContent = '⚠ o dado sincronizado do Ads só cobre a partir de ' + ep[2] + '/' + ep[1] + '/' + ep[0] + ' — este período pode estar mostrando menos do que o real (backfill histórico pendente).';
+  } else {
+    warnBox.style.display = 'none';
+  }
+
+  renderSpendTrendChart_(d.trendSeries, 'ads-trend-chart');
 
   el('ads-campanhas-badge').textContent = d.campaignsList.length + ' de ' + d.kpis.totalCampaigns;
   const maxCampSpend = Math.max(...d.campaignsList.map(c => c.spend), 1);
@@ -2006,7 +2153,7 @@ function renderAdsHierarchySection(d) {
   el('ads-anuncios-badge').textContent = d.adsList.length + ' de ' + d.kpis.totalAds;
   el('ads-anuncios-rows').innerHTML = d.adsList.length === 0
     ? '<div class="feed-empty">Nenhum anúncio ativo no momento</div>'
-    : d.adsList.slice(0, 30).map(adRow_).join('');
+    : d.adsList.slice(0, 20).map(adGroupRow_).join('');
 }
 
 function openAdsCampaignModal(campaignId) {
