@@ -170,6 +170,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 /* Ads (02/08) — mesma forma/altura do hero-row de Vendas/SDR (hero + 7
    kchips). display:none por padrão, JS liga/desliga em setView(). */
 #ads-hero-row{display:none;grid-template-columns:minmax(0,1.7fr) repeat(8,minmax(0,1fr));gap:8px;height:92px;flex-shrink:0}
+#ads-hero-row2{display:none;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;height:72px;flex-shrink:0}
 #ads-hero{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:10px 16px;display:flex;flex-direction:column;justify-content:center;gap:2px;position:relative;overflow:hidden;box-shadow:0 1px 2px rgba(26,22,38,.04),0 3px 10px -3px rgba(112,75,155,.16)}
 #ads-hero::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(112,75,155,.06),transparent 60%);pointer-events:none}
 #hero{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:10px 16px;display:flex;flex-direction:column;justify-content:center;gap:2px;position:relative;overflow:hidden;cursor:pointer;box-shadow:0 1px 2px rgba(26,22,38,.04),0 3px 10px -3px rgba(112,75,155,.16)}
@@ -449,6 +450,7 @@ footer strong{color:#fff}
   #hero-row{height:76px;gap:6px}
   #sdr-hero-row{height:76px;gap:6px}
   #ads-hero-row{height:76px;gap:6px}
+  #ads-hero-row2{height:60px;gap:6px}
   #mkt-row{height:44px}
   .hero-val{font-size:21px}
   .kc-val{font-size:14px}
@@ -729,7 +731,7 @@ footer strong{color:#fff}
        setView() ligar. -->
   <div id="ads-hero-row">
     <div id="ads-hero" style="cursor:default">
-      <div class="hero-top"><span class="hero-label">Investimento em Ads</span></div>
+      <div class="hero-top"><span class="hero-label">Investimento em Ads</span><span id="ads-hero-spark"></span></div>
       <div class="hero-val" id="ads-hero-val"><span class="skel" style="width:80px;height:24px"></span></div>
       <div class="hero-row2"><span class="hero-sub" id="ads-hero-sub">no período</span></div>
     </div>
@@ -772,6 +774,38 @@ footer strong{color:#fff}
       <span class="kc-label">Alcance</span>
       <div class="kc-row"><span class="kc-val" id="ads-k-reach"><span class="skel"></span></span></div>
       <span class="kc-sub">~ aproximado</span>
+    </div>
+  </div>
+
+  <!-- achado 03/08 (Robert: "já calculamos CPL/ROAS/ACOS, uai") — mesmo
+       card/fórmula do "Investimento & Aquisição" de Vendas, sempre Inbound
+       (Ads só gera lead Inbound). 2ª linha de kchips pra não espremer os
+       9 já existentes numa fileira só (ilegível de longe numa TV). -->
+  <div id="ads-hero-row2">
+    <div class="kchip">
+      <span class="kc-label">Leads Recebidos</span>
+      <div class="kc-row"><span class="kc-val" id="ads-k-leads"><span class="skel"></span></span></div>
+      <span class="kc-sub">no período</span>
+    </div>
+    <div class="kchip">
+      <span class="kc-label">CAC</span>
+      <div class="kc-row"><span class="kc-val" id="ads-k-cac"><span class="skel"></span></span></div>
+      <span class="kc-sub">por cliente fechado</span>
+    </div>
+    <div class="kchip">
+      <span class="kc-label">CPL</span>
+      <div class="kc-row"><span class="kc-val" id="ads-k-cpl"><span class="skel"></span></span></div>
+      <span class="kc-sub">por lead recebido</span>
+    </div>
+    <div class="kchip">
+      <span class="kc-label">ROAS</span>
+      <div class="kc-row"><span class="kc-val" id="ads-k-roas"><span class="skel"></span></span></div>
+      <span class="kc-sub">retorno por real</span>
+    </div>
+    <div class="kchip">
+      <span class="kc-label">ACOS</span>
+      <div class="kc-row"><span class="kc-val" id="ads-k-acos"><span class="skel"></span></span></div>
+      <span class="kc-sub">% faturamento em ads</span>
     </div>
   </div>
 
@@ -1863,8 +1897,9 @@ function setView(btn) {
   el('main').style.display     = view === 'vendas' ? '' : 'none';
   el('sdr-hero-row').style.display = view === 'sdr' ? 'grid' : 'none';
   el('sdr-main').style.display     = view === 'sdr' ? 'grid' : 'none';
-  el('ads-hero-row').style.display = view === 'ads' ? 'grid' : 'none';
-  el('ads-main').style.display     = view === 'ads' ? 'grid' : 'none';
+  el('ads-hero-row').style.display  = view === 'ads' ? 'grid' : 'none';
+  el('ads-hero-row2').style.display = view === 'ads' ? 'grid' : 'none';
+  el('ads-main').style.display      = view === 'ads' ? 'grid' : 'none';
   // achado 02/08 (auditoria): h-title-text (label perto do logo) e o rótulo
   // de fonte do rodapé só eram escritos por setOrigin() — entrar em SDR/Ads
   // sem nunca ter tocado o filtro de origem deixava os dois textos errados
@@ -2247,6 +2282,19 @@ function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
   const totalCtr = totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : null;
   const totalCpm = totals.impressions > 0 ? (totals.spend / totals.impressions) * 1000 : null;
 
+  // achado 03/08 (Robert: "já calculamos CPL/ROAS/ACOS, usamos no dash de
+  // Vendas, uai") — cópia fiel do mesmo bloco do mobile (ver comentário lá
+  // pro raciocínio completo). SEMPRE Inbound aqui, independente do chip
+  // Outbound/Inbound/Ambos selecionado — Ads só gera lead Inbound.
+  const adsLeadsPeriodo = leadsUnicosLocal(periodFrom, periodTo);
+  const adsIbData = computeDashboardData(_rawDeals || [], 'inbound', 'custom', periodFrom, periodTo, todayLocalStr());
+  const adsReceitaPeriodo = adsIbData.kpis.ganhoValor;
+  const adsFechadosPeriodo = adsIbData.kpis.ganhoCont;
+  const adsCac  = (totals.spend > 0 && adsFechadosPeriodo > 0) ? totals.spend / adsFechadosPeriodo : null;
+  const adsCpl  = (totals.spend > 0 && adsLeadsPeriodo > 0) ? totals.spend / adsLeadsPeriodo : null;
+  const adsRoas = (totals.spend > 0 && adsReceitaPeriodo > 0) ? adsReceitaPeriodo / totals.spend : null;
+  const adsAcos = (totals.spend > 0 && adsReceitaPeriodo > 0) ? (totals.spend / adsReceitaPeriodo) * 100 : null;
+
   // achado 03/08 (Robert pediu "alcance"): reach NÃO é somável dia-a-dia sem
   // superestimar (mesma pessoa em 2 dias conta 2x) — mostrado como
   // aproximação explícita (tooltip no kchip), nunca como número exato.
@@ -2283,6 +2331,7 @@ function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
     periodLabel, trendSeries, earliestDailyDate, periodTruncated,
     kpis: {
       spend: totals.spend, impressions: totals.impressions, clicks: totals.clicks, ctr: totalCtr, cpm: totalCpm, reach: totalReach,
+      leads: adsLeadsPeriodo, cac: adsCac, cpl: adsCpl, roas: adsRoas, acos: adsAcos,
       activeCampaigns: campaignsActive.length, totalCampaigns: campaignsAll.length,
       activeAdsets: adsetsActive.length, totalAdsets: adsetsAll.length,
       activeAds: adGroupsActive.length, totalAds: adGroupsAll.length
@@ -2351,12 +2400,29 @@ function openAdGroupModalTelao(key) {
   el('modal-overlay').classList.add('show');
 }
 
+function bucketizeByIndex_(series, n) {
+  if (!series || series.length === 0) return [];
+  if (series.length <= n) return series.map(p => p.spend);
+  const vals = new Array(n).fill(0);
+  series.forEach((p, i) => {
+    const idx = Math.min(n - 1, Math.floor((i / series.length) * n));
+    vals[idx] += p.spend;
+  });
+  return vals;
+}
+
 function renderAdsHierarchySectionTelao(d) {
   _adsHierarchyLastData = d;
   setTextFlash('ads-hero-val', fmtMoney(d.kpis.spend));
   el('ads-hero-sub').textContent = d.periodTruncated
     ? '⚠ dado só desde ' + (function(){ var p = d.earliestDailyDate.split('-'); return p[2]+'/'+p[1]; })()
     : 'no período';
+  el('ads-hero-spark').innerHTML = d.trendSeries.length >= 2 ? sparklineSVG(bucketizeByIndex_(d.trendSeries, 8), '#704B9B') : '';
+  el('ads-k-leads').textContent = d.kpis.leads;
+  el('ads-k-cac').textContent = d.kpis.cac !== null ? fmtMoney(Math.round(d.kpis.cac)) : '—';
+  el('ads-k-cpl').textContent = d.kpis.cpl !== null ? fmtMoney(Math.round(d.kpis.cpl)) : '—';
+  el('ads-k-roas').textContent = d.kpis.roas !== null ? d.kpis.roas.toFixed(2) + 'x' : '—';
+  el('ads-k-acos').textContent = d.kpis.acos !== null ? d.kpis.acos.toFixed(1) + '%' : '—';
   el('ads-k-reach').textContent = '~' + d.kpis.reach.toLocaleString('pt-BR');
   el('ads-k-impr').textContent = d.kpis.impressions.toLocaleString('pt-BR');
   el('ads-k-clicks').textContent = d.kpis.clicks.toLocaleString('pt-BR');
@@ -2388,7 +2454,8 @@ function renderAdsHierarchySectionTelao(d) {
     : d.adsetsList.map(a => adsFunilRowTelao_(
         'var(--purple)',
         a.name, a.spend, maxAdsetSpend,
-        a.ctr !== null ? a.ctr.toFixed(2) + '% CTR' : '—'
+        a.ctr !== null ? a.ctr.toFixed(2) + '% CTR' : '—',
+        "openAdsAdsetModalTelao('" + a.id + "')"
       )).join('');
   autoScrollIfNeeded('ads-adsets-rows');
 
@@ -2414,6 +2481,25 @@ function openAdsCampaignModalTelao(campaignId) {
         <div class="mdeal-dot" style="background:${a.status === 'ACTIVE' ? 'var(--purple)' : 'var(--faint)'}"></div>
         <span class="mdeal-title">${escHtml(a.name)}</span>
         <span class="mdeal-val">${fmtMoney(a.spend)}</span>
+      </div>`).join('');
+  el('modal-overlay').classList.add('show');
+}
+
+// achado 03/08 (Robert: "quero tudo clicável") — mesma lógica do mobile.
+function openAdsAdsetModalTelao(adsetId) {
+  if (!_adsHierarchyLastData) return;
+  const adset = _adsHierarchyLastData.adsetsList.find(a => a.id === adsetId);
+  const adIdsInAdset = new Set((_adsHierarchyRaw.ads || []).filter(a => a.adset_id === adsetId).map(a => a.id));
+  const groups = _adsHierarchyLastData.adsList.filter(g => g.memberIds.some(id => adIdsInAdset.has(id)))
+    .sort((a, b) => b.spend - a.spend);
+  el('modal-title').textContent = (adset ? adset.name : 'Conjunto') + ' — ' + groups.length + ' anúncio' + (groups.length !== 1 ? 's' : '');
+  el('modal-body').innerHTML = groups.length === 0
+    ? '<div class="modal-empty">Nenhum anúncio com dado no período</div>'
+    : groups.map(g => `
+      <div class="mdeal-row" style="cursor:default">
+        <div class="mdeal-dot" style="background:var(--purple)"></div>
+        <span class="mdeal-title">${escHtml(g.name)}</span>
+        <span class="mdeal-val">${fmtMoney(g.spend)}</span>
       </div>`).join('');
   el('modal-overlay').classList.add('show');
 }

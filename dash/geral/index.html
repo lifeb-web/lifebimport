@@ -122,7 +122,9 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .sec-hd{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--faint);padding:0 2px 5px}
 
 /* HERO — o único número que responde "está tudo bem?" */
-#hero{background:var(--card);border-radius:16px;border:1px solid var(--border);padding:18px 18px 16px;position:relative;overflow:hidden;cursor:pointer;box-shadow:0 1px 3px rgba(26,22,38,.05),0 8px 24px -8px rgba(112,75,155,.18)}
+#hero,#ads-hero{background:var(--card);border-radius:16px;border:1px solid var(--border);padding:18px 18px 16px;position:relative;overflow:hidden;box-shadow:0 1px 3px rgba(26,22,38,.05),0 8px 24px -8px rgba(112,75,155,.18)}
+#hero{cursor:pointer}
+#ads-hero{margin-bottom:12px}
 #hero::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(112,75,155,.05),transparent 60%);pointer-events:none}
 .hero-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
 .hero-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--muted)}
@@ -640,12 +642,21 @@ footer strong{color:#fff}
   <div id="ads-view" style="display:none">
     <div class="sec-hd">Meta Ads · <span id="ads-period-label" style="color:var(--purple);font-weight:800">90 dias</span></div>
 
-    <div class="kpi-strip">
-      <div class="kchip">
-        <span class="kc-label">Investimento</span>
-        <div class="kc-row"><span class="kc-val" id="ads-k-spend"><span class="skel"></span></span></div>
-        <span class="kc-sub">no período</span>
+    <!-- HERO — mesmo componente do "Ganho no período" de Vendas (achado
+         03/08: Robert reclamou que Ads não tinha "cara de dash", Investimento
+         era só mais um chip pequeno igual todos os outros). -->
+    <div id="ads-hero">
+      <div class="hero-top">
+        <span class="hero-label">Investimento em Ads</span>
+        <span class="hero-spark" id="ads-hero-spark"></span>
       </div>
+      <div class="hero-val" id="ads-hero-val"><span class="skel" style="width:180px;height:32px"></span></div>
+      <div class="hero-row">
+        <span class="hero-sub">no período</span>
+      </div>
+    </div>
+
+    <div class="kpi-strip">
       <div class="kchip">
         <span class="kc-label">Impressões</span>
         <div class="kc-row"><span class="kc-val" id="ads-k-impr"><span class="skel"></span></span></div>
@@ -678,6 +689,39 @@ footer strong{color:#fff}
       </div>
     </div>
     <div id="ads-period-warning" style="display:none;margin:-4px 0 10px;padding:8px 12px;border-radius:10px;background:rgba(240,216,120,.15);border:1px solid rgba(212,175,55,.35);font-size:12px;color:var(--muted)"></div>
+
+    <!-- achado 03/08 (Robert: "já calculamos CPL/ROAS/ACOS, usamos no dash
+         de Vendas, uai") — MESMO card/fórmula de lá, só que sempre Inbound
+         (Ads só gera lead Inbound), independente do chip Outbound/Inbound/
+         Ambos lá em cima. Zero rede nova, mesmo dado já carregado. -->
+    <div class="sec-hd">Leads &amp; Retorno (Inbound)</div>
+    <div class="kpi-strip" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr);margin-bottom:14px">
+      <div class="kchip">
+        <span class="kc-label">Leads Recebidos</span>
+        <div class="kc-row"><span class="kc-val" id="ads-k-leads"><span class="skel"></span></span></div>
+        <span class="kc-sub">no período</span>
+      </div>
+      <div class="kchip">
+        <span class="kc-label">CAC</span>
+        <div class="kc-row"><span class="kc-val" id="ads-k-cac"><span class="skel"></span></span></div>
+        <span class="kc-sub">custo por cliente fechado</span>
+      </div>
+      <div class="kchip">
+        <span class="kc-label">CPL</span>
+        <div class="kc-row"><span class="kc-val" id="ads-k-cpl"><span class="skel"></span></span></div>
+        <span class="kc-sub">custo por lead recebido</span>
+      </div>
+      <div class="kchip">
+        <span class="kc-label">ROAS</span>
+        <div class="kc-row"><span class="kc-val" id="ads-k-roas"><span class="skel"></span></span></div>
+        <span class="kc-sub">retorno por real investido</span>
+      </div>
+      <div class="kchip" style="grid-column:1/-1">
+        <span class="kc-label">ACOS</span>
+        <div class="kc-row"><span class="kc-val" id="ads-k-acos"><span class="skel"></span></span></div>
+        <span class="kc-sub">% do faturamento gasto em ads no período</span>
+      </div>
+    </div>
 
     <div id="ads-trend-card" style="margin-bottom:14px">
       <div class="sec-hd">Investimento por dia</div>
@@ -1968,6 +2012,24 @@ function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
   const totalCtr = totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : null;
   const totalCpm = totals.impressions > 0 ? (totals.spend / totals.impressions) * 1000 : null;
 
+  // achado 03/08 (Robert: "já calculamos CPL/ROAS/ACOS, usamos no dash de
+  // Vendas, uai" — ele tinha razão, eu tinha confundido "métrica de conta
+  // já pronta" com "quebra por campanha" que precisaria de infra nova).
+  // MESMA fórmula/fonte do card "Investimento & Aquisição" de Vendas
+  // (loadAdsSection) — Leads via leadsUnicosLocal (dedup por contato,
+  // já carregado), receita/fechados via computeDashboardData escopado
+  // Inbound (SEMPRE Inbound aqui, independente do chip Outbound/Inbound/
+  // Ambos selecionado lá em cima — Ads só gera lead Inbound por definição).
+  // Zero rede nova: tudo já estava carregado no cliente.
+  const adsLeadsPeriodo = leadsUnicosLocal(periodFrom, periodTo);
+  const adsIbData = computeDashboardData(_rawDeals || [], 'inbound', 'custom', periodFrom, periodTo, todayLocalStr());
+  const adsReceitaPeriodo = adsIbData.kpis.ganhoValor;
+  const adsFechadosPeriodo = adsIbData.kpis.ganhoCont;
+  const adsCac  = (totals.spend > 0 && adsFechadosPeriodo > 0) ? totals.spend / adsFechadosPeriodo : null;
+  const adsCpl  = (totals.spend > 0 && adsLeadsPeriodo > 0) ? totals.spend / adsLeadsPeriodo : null;
+  const adsRoas = (totals.spend > 0 && adsReceitaPeriodo > 0) ? adsReceitaPeriodo / totals.spend : null;
+  const adsAcos = (totals.spend > 0 && adsReceitaPeriodo > 0) ? (totals.spend / adsReceitaPeriodo) * 100 : null;
+
   // achado 03/08 (Robert pediu "alcance"): reach NÃO é somável dia-a-dia sem
   // superestimar (mesma pessoa em 2 dias conta 2x) — mostrado como
   // aproximação explícita (tooltip no kchip), nunca como número exato.
@@ -2004,6 +2066,7 @@ function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
     periodLabel, trendSeries, earliestDailyDate, periodTruncated,
     kpis: {
       spend: totals.spend, impressions: totals.impressions, clicks: totals.clicks, ctr: totalCtr, cpm: totalCpm, reach: totalReach,
+      leads: adsLeadsPeriodo, cac: adsCac, cpl: adsCpl, roas: adsRoas, acos: adsAcos,
       activeCampaigns: campaignsActive.length, totalCampaigns: campaignsAll.length,
       activeAdsets: adsetsActive.length, totalAdsets: adsetsAll.length,
       activeAds: adGroupsActive.length, totalAds: adGroupsAll.length
@@ -2106,10 +2169,22 @@ function renderSpendTrendChart_(series, containerId) {
     </div>`;
 }
 
+function bucketizeByIndex_(series, n) {
+  if (!series || series.length === 0) return [];
+  if (series.length <= n) return series.map(p => p.spend);
+  const vals = new Array(n).fill(0);
+  series.forEach((p, i) => {
+    const idx = Math.min(n - 1, Math.floor((i / series.length) * n));
+    vals[idx] += p.spend;
+  });
+  return vals;
+}
+
 function renderAdsHierarchySection(d) {
   _adsHierarchyLastData = d;
   el('ads-period-label').textContent = d.periodLabel;
-  el('ads-k-spend').textContent = fmtMoney(d.kpis.spend);
+  setTextFlash('ads-hero-val', fmtMoney(d.kpis.spend));
+  el('ads-hero-spark').innerHTML = d.trendSeries.length >= 2 ? sparklineSVG(bucketizeByIndex_(d.trendSeries, 8), '#704B9B') : '';
   el('ads-k-impr').textContent = d.kpis.impressions.toLocaleString('pt-BR');
   el('ads-k-clicks').textContent = d.kpis.clicks.toLocaleString('pt-BR');
   el('ads-k-ctr').textContent = d.kpis.ctr !== null ? d.kpis.ctr.toFixed(2) + '%' : '—';
@@ -2117,6 +2192,11 @@ function renderAdsHierarchySection(d) {
   el('ads-k-reach').textContent = '~' + d.kpis.reach.toLocaleString('pt-BR');
   el('ads-k-campanhas').textContent = d.kpis.activeCampaigns;
   el('ads-k-campanhas-sub').textContent = 'de ' + d.kpis.totalCampaigns + ' no total';
+  el('ads-k-leads').textContent = d.kpis.leads;
+  el('ads-k-cac').textContent = d.kpis.cac !== null ? fmtMoney(Math.round(d.kpis.cac)) : '—';
+  el('ads-k-cpl').textContent = d.kpis.cpl !== null ? fmtMoney(Math.round(d.kpis.cpl)) : '—';
+  el('ads-k-roas').textContent = d.kpis.roas !== null ? d.kpis.roas.toFixed(2) + 'x' : '—';
+  el('ads-k-acos').textContent = d.kpis.acos !== null ? d.kpis.acos.toFixed(1) + '%' : '—';
 
   const warnBox = el('ads-period-warning');
   if (d.periodTruncated) {
@@ -2147,7 +2227,8 @@ function renderAdsHierarchySection(d) {
     : d.adsetsList.slice(0, 20).map(a => adsFunilRow_(
         'var(--purple)',
         a.name, a.spend, maxAdsetSpend,
-        a.ctr !== null ? a.ctr.toFixed(2) + '% CTR' : '—'
+        a.ctr !== null ? a.ctr.toFixed(2) + '% CTR' : '—',
+        "openAdsAdsetModal('" + a.id + "')"
       )).join('');
 
   el('ads-anuncios-badge').textContent = d.adsList.length + ' de ' + d.kpis.totalAds;
@@ -2173,6 +2254,29 @@ function openAdsCampaignModal(campaignId) {
           <span class="mdeal-title">${escHtml(a.name)}</span>
         </div>
         <span class="mdeal-val">${fmtMoney(a.spend)}</span>
+      </div>`).join('');
+  el('modal-overlay').classList.add('show');
+}
+
+// achado 03/08 (Robert: "quero tudo clicável") — Campanhas já abria modal,
+// Conjuntos não. Mesmo padrão, listando os grupos de anúncio (já agrupados
+// por nome) que pertencem a esse conjunto específico.
+function openAdsAdsetModal(adsetId) {
+  if (!_adsHierarchyLastData) return;
+  const adset = _adsHierarchyLastData.adsetsList.find(a => a.id === adsetId);
+  const adIdsInAdset = new Set((_adsHierarchyRaw.ads || []).filter(a => a.adset_id === adsetId).map(a => a.id));
+  const groups = _adsHierarchyLastData.adsList.filter(g => g.memberIds.some(id => adIdsInAdset.has(id)))
+    .sort((a, b) => b.spend - a.spend);
+  el('modal-title').textContent = (adset ? adset.name : 'Conjunto') + ' — ' + groups.length + ' anúncio' + (groups.length !== 1 ? 's' : '');
+  el('modal-body').innerHTML = groups.length === 0
+    ? '<div class="modal-empty">Nenhum anúncio com dado no período</div>'
+    : groups.map(g => `
+      <div class="mdeal-row" style="cursor:default">
+        <div class="mdeal-dot" style="background:var(--purple)"></div>
+        <div class="mdeal-title-line" style="flex:1;min-width:0">
+          <span class="mdeal-title">${escHtml(g.name)}</span>
+        </div>
+        <span class="mdeal-val">${fmtMoney(g.spend)}</span>
       </div>`).join('');
   el('modal-overlay').classList.add('show');
 }
