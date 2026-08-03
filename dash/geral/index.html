@@ -170,6 +170,12 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .sdr-reason-count{font-size:13px;font-weight:800;color:var(--red);flex-shrink:0;font-variant-numeric:tabular-nums}
 .sdr-empty{padding:20px 16px;text-align:center;color:var(--faint);font-size:12.5px;font-style:italic}
 .funil-row{position:relative;padding:10px 14px;display:grid;grid-template-columns:10px minmax(0,148px) minmax(20px,1fr) 26px 68px 40px 12px;column-gap:6px;align-items:center;border-bottom:1px solid #f4f2f8;cursor:pointer}
+/* Ads (02/08) — .funil-row original foi desenhado pra um NÚMERO curto
+   (contagem tipo "20") na coluna de 26px — valor em R$ (ex "R$1.234,56")
+   cortava com "…" nela. Campanha/conjunto de Ads não tem uma contagem
+   pequena pra mostrar, só o valor investido — override dedicado com 1
+   coluna larga (90px) no lugar das 3 estreitas (count/val/drop). */
+.funil-row.ads-row{grid-template-columns:10px minmax(0,130px) minmax(20px,1fr) 90px 12px}
 .funil-row:last-child{border-bottom:none}
 .funil-row:hover{background:#faf8fc}
 /* achado 13/07 (Robert: conversão por etapa "confusa", pediu seta como o Agendor
@@ -269,6 +275,11 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .feed-val.won{color:#15803d}
 .feed-val.lost{color:var(--red)}
 .feed-date{font-size:10px;color:var(--muted);font-weight:600}
+/* Ads (02/08) — 1ª vez que o painel mostra foto de verdade (thumbnail do
+   criativo). Quadrado fixo no lugar do .feed-dot (bolinha) que os outros
+   feeds usam — mesmo espaço reservado (flex-shrink:0), só maior. */
+.feed-thumb{width:34px;height:34px;border-radius:7px;object-fit:cover;flex-shrink:0;background:var(--bg);border:1px solid var(--border)}
+.feed-thumb-empty{width:34px;height:34px;border-radius:7px;flex-shrink:0;background:var(--bg);border:1px solid var(--border)}
 .feed-empty{padding:16px;text-align:center;color:var(--faint);font-size:12px;font-style:italic}
 
 #modal-overlay{display:none;position:fixed;inset:0;background:rgba(26,22,38,.45);z-index:500;align-items:center;justify-content:center;padding:0}
@@ -360,6 +371,7 @@ footer strong{color:#fff}
   <div class="oseg">
     <button class="ochip active" data-v="vendas" onclick="setView(this)">Vendas</button>
     <button class="ochip" data-v="sdr" onclick="setView(this)">SDR</button>
+    <button class="ochip" data-v="ads" onclick="setView(this)">Ads</button>
   </div>
 </div>
 
@@ -603,6 +615,71 @@ footer strong{color:#fff}
       </div>
     </div>
   </div><!-- /sdr-view -->
+
+  <div id="ads-view" style="display:none">
+    <div class="sec-hd">Meta Ads · <span id="ads-period-label" style="color:var(--purple);font-weight:800">90 dias</span></div>
+
+    <div class="kpi-strip">
+      <div class="kchip">
+        <span class="kc-label">Investimento</span>
+        <div class="kc-row"><span class="kc-val" id="ads-k-spend"><span class="skel"></span></span></div>
+        <span class="kc-sub">no período</span>
+      </div>
+      <div class="kchip">
+        <span class="kc-label">Impressões</span>
+        <div class="kc-row"><span class="kc-val" id="ads-k-impr"><span class="skel"></span></span></div>
+        <span class="kc-sub">no período</span>
+      </div>
+      <div class="kchip">
+        <span class="kc-label">Cliques</span>
+        <div class="kc-row"><span class="kc-val" id="ads-k-clicks"><span class="skel"></span></span></div>
+        <span class="kc-sub">no período</span>
+      </div>
+      <div class="kchip">
+        <span class="kc-label">CTR</span>
+        <div class="kc-row"><span class="kc-val" id="ads-k-ctr"><span class="skel"></span></span></div>
+        <span class="kc-sub">cliques / impressões</span>
+      </div>
+      <div class="kchip">
+        <span class="kc-label">CPM</span>
+        <div class="kc-row"><span class="kc-val" id="ads-k-cpm"><span class="skel"></span></span></div>
+        <span class="kc-sub">custo por mil impressões</span>
+      </div>
+      <div class="kchip">
+        <span class="kc-label">Campanhas Ativas</span>
+        <div class="kc-row"><span class="kc-val" id="ads-k-campanhas"><span class="skel"></span></span></div>
+        <span class="kc-sub" id="ads-k-campanhas-sub">—</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-hd">Campanhas</div>
+      <div id="ads-campanhas-card">
+        <div class="funil-hd">
+          <span class="funil-title">Por investimento no período</span>
+          <span class="funil-hint">toque para ver conjuntos</span>
+        </div>
+        <div id="ads-campanhas-rows"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-hd">Conjuntos de Anúncios</div>
+      <div id="ads-adsets-card">
+        <div id="ads-adsets-rows"></div>
+      </div>
+    </div>
+
+    <div id="ads-feed-section">
+      <div class="sec-hd">Anúncios</div>
+      <div class="feed-card">
+        <div class="feed-hd">
+          <span class="feed-title">Por investimento no período</span>
+        </div>
+        <div id="ads-anuncios-rows"></div>
+      </div>
+    </div>
+  </div><!-- /ads-view -->
 </div>
 
 <footer>Life B Import &nbsp;·&nbsp; <strong id="footer-mode">Painel Geral</strong> &nbsp;·&nbsp; Dados: <span id="footer-source">Agendor</span></footer>
@@ -1079,8 +1156,8 @@ function setOrigin(btn) {
   // "SDR (Felipe)" por "Outbound"/"Inbound"/"Ambos" sem NENHUM clique na aba,
   // e nunca voltava sozinho (nem no auto-refresh seguinte). Agora só mexe
   // nesses dois textos quando Vendas está ativo — setView() é quem manda
-  // quando é SDR.
-  if (!_sdrViewActive) {
+  // quando é SDR/Ads.
+  if (!_sdrViewActive && !_adsViewActive) {
     el('h-title-text').textContent = label;
     el('footer-mode').textContent = label;
   }
@@ -1323,6 +1400,7 @@ async function loadData(force, silent) {
     render(_data);
     renderDeltas(_data.kpis, prev && prev.kpis);
     refreshSdrIfActive_();
+    refreshAdsHierarchyIfActive_();
     flashDot();
     try { localStorage.setItem('geral_snapshot', JSON.stringify({ data: curr, savedAt: Date.now() })); } catch(_) {}
   } catch(e) {
@@ -1481,20 +1559,31 @@ function setView(btn) {
   const bar = btn.closest('.oseg');
   bar.querySelectorAll('.ochip').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  _sdrViewActive = btn.dataset.v === 'sdr';
-  el('vendas-view').style.display = _sdrViewActive ? 'none' : '';
-  el('sdr-view').style.display = _sdrViewActive ? '' : 'none';
+  // 02/08: 3º valor 'ads' adicionado ao toggle (era só vendas/sdr) — mesmo
+  // padrão, cada view é uma aba exclusiva.
+  const view = btn.dataset.v; // 'vendas' | 'sdr' | 'ads'
+  _sdrViewActive = view === 'sdr';
+  _adsViewActive = view === 'ads';
+  el('vendas-view').style.display = view === 'vendas' ? '' : 'none';
+  el('sdr-view').style.display = view === 'sdr' ? '' : 'none';
+  el('ads-view').style.display = view === 'ads' ? '' : 'none';
   // achado 02/08 (auditoria): faltava aqui — h-title-text/footer-mode/
   // footer-source só eram escritos por setOrigin(), nunca por setView().
-  // Entrar em SDR (sem nunca ter tocado o filtro de origem) deixava os 3
-  // textos errados ("Painel Geral"/"Dados: Agendor") mesmo com a aba SDR
-  // (dado do GS Engage, não do Agendor) claramente ativa.
-  el('h-title-text').textContent = _sdrViewActive ? 'SDR (Felipe)' : ORIGIN_LABELS[_originMode];
-  el('footer-mode').textContent = _sdrViewActive ? 'SDR (Felipe)' : ORIGIN_LABELS[_originMode];
-  el('footer-source').textContent = _sdrViewActive ? 'GS Engage' : 'Agendor';
+  // Entrar em SDR/Ads (sem nunca ter tocado o filtro de origem) deixava os
+  // 3 textos errados ("Painel Geral"/"Dados: Agendor") mesmo com uma aba
+  // de fonte diferente claramente ativa.
+  const label = view === 'sdr' ? 'SDR (Felipe)' : (view === 'ads' ? 'Meta Ads' : ORIGIN_LABELS[_originMode]);
+  const source = view === 'sdr' ? 'GS Engage' : (view === 'ads' ? 'Meta Ads' : 'Agendor');
+  el('h-title-text').textContent = label;
+  el('footer-mode').textContent = label;
+  el('footer-source').textContent = source;
   if (_sdrViewActive) {
     if (_sdrRaw && _data && _data.period) renderSdrSection(computeSdrData(_sdrRaw, _data.period.from, _data.period.to, _data.period.label));
     loadSdrFresh_();
+  }
+  if (_adsViewActive) {
+    if (_adsHierarchyRaw && _data && _data.period) renderAdsHierarchySection(computeAdsHierarchyData(_adsHierarchyRaw, _data.period.from, _data.period.to, _data.period.label));
+    loadAdsHierarchyFresh_();
   }
 }
 
@@ -1663,6 +1752,228 @@ function openSdrModal(kind) {
             ${kind === 'lost' && p.lost_reason ? `<span style="font-size:10px;color:var(--muted)">· ${escHtml(p.lost_reason)}</span>` : ''}
           </div>
         </div>
+      </div>`).join('');
+  el('modal-overlay').classList.add('show');
+}
+
+// ============================================================
+// ADS (Meta) — hierarquia completa (Campanha → Conjunto → Anúncio) com
+// criativo (02/08). Mesmo padrão de fetch/compute/render da aba SDR —
+// lazy (só busca quando a aba abre), zero polling automático em segundo
+// plano. DIFERENTE do card "Investimento/CAC/CPL/ROAS/ACOS" que já existe
+// dentro da aba Vendas (esse continua igual, spend agregado da conta
+// inteira, sync próprio via LEADS_PROXY/dash_geral_ads_daily) — esta aba
+// nova é o detalhe completo por campanha/conjunto/anúncio, sync próprio
+// via supabase-sync-ads-hierarquia.gs → dash_ads_*.
+// ============================================================
+const ADS_STORAGE_PUBLIC_BASE = SUPABASE_URL + '/storage/v1/object/public/ads-creatives/';
+let _adsHierarchyRaw = null;
+let _adsViewActive = false;
+let _adsHierarchyLoading = false;
+let _adsHierarchyLastData = null;
+
+async function fetchAdsHierarchyTable_(table) {
+  const PAGE = 1000;
+  let all = [];
+  let from = 0;
+  while (true) {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/' + table + '?select=*', {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY, Range: from + '-' + (from + PAGE - 1) }
+    });
+    if (!res.ok) throw new Error('Supabase HTTP ' + res.status + ' (' + table + ')');
+    const rows = await res.json();
+    all = all.concat(rows);
+    if (rows.length < PAGE) break;
+    from += PAGE;
+  }
+  return all;
+}
+
+async function fetchAdsHierarchyRaw() {
+  const [campaigns, adsets, ads, daily, creatives] = await Promise.all([
+    fetchAdsHierarchyTable_('dash_ads_campaigns'),
+    fetchAdsHierarchyTable_('dash_ads_adsets'),
+    fetchAdsHierarchyTable_('dash_ads_ads'),
+    fetchAdsHierarchyTable_('dash_ads_daily'),
+    fetchAdsHierarchyTable_('dash_ads_creatives')
+  ]);
+  return { campaigns, adsets, ads, daily, creatives };
+}
+
+async function loadAdsHierarchyFresh_() {
+  if (_adsHierarchyLoading) return;
+  _adsHierarchyLoading = true;
+  try {
+    _adsHierarchyRaw = await fetchAdsHierarchyRaw();
+    if (_adsViewActive && _data && _data.period) renderAdsHierarchySection(computeAdsHierarchyData(_adsHierarchyRaw, _data.period.from, _data.period.to, _data.period.label));
+  } catch (e) {
+    console.warn('fetchAdsHierarchyRaw falhou:', e.message);
+    if (!el('ads-campanhas-rows').children.length) {
+      el('ads-campanhas-rows').innerHTML = '<div class="feed-empty">Erro ao carregar dado do Ads — tenta de novo em instantes.</div>';
+    }
+  } finally {
+    _adsHierarchyLoading = false;
+  }
+}
+
+function refreshAdsHierarchyIfActive_() {
+  if (_adsViewActive && _adsHierarchyRaw && _data && _data.period) {
+    renderAdsHierarchySection(computeAdsHierarchyData(_adsHierarchyRaw, _data.period.from, _data.period.to, _data.period.label));
+  }
+}
+
+// achado 02/08 (decisão deliberada, mesma lógica de "results" no sync):
+// reach/frequency NÃO são somáveis dia-a-dia — somar reach de vários dias
+// SUPERESTIMA (a mesma pessoa vista em 2 dias diferentes conta 2x), então
+// ficam de fora do agregado por período aqui (mesmo princípio de nunca
+// mostrar número que pode estar errado). spend/impressions/clicks SÃO
+// somáveis com segurança; ctr/cpm são recalculados a partir da SOMA (não
+// da média das taxas diárias), que é a forma matematicamente certa.
+function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
+  const daily = raw.daily || [];
+  const inPeriod = daily.filter(d => d.date >= periodFrom && d.date <= periodTo);
+
+  function aggByEntity(type) {
+    const map = {};
+    inPeriod.filter(d => d.entity_type === type).forEach(d => {
+      if (!map[d.entity_id]) map[d.entity_id] = { spend: 0, impressions: 0, clicks: 0 };
+      const m = map[d.entity_id];
+      m.spend += d.spend || 0;
+      m.impressions += d.impressions || 0;
+      m.clicks += d.clicks || 0;
+    });
+    return map;
+  }
+  const campaignMetrics = aggByEntity('campaign');
+  const adsetMetrics = aggByEntity('adset');
+  const adMetrics = aggByEntity('ad');
+
+  const totals = { spend: 0, impressions: 0, clicks: 0 };
+  Object.values(campaignMetrics).forEach(m => { totals.spend += m.spend; totals.impressions += m.impressions; totals.clicks += m.clicks; });
+  const totalCtr = totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : null;
+  const totalCpm = totals.impressions > 0 ? (totals.spend / totals.impressions) * 1000 : null;
+
+  const campaignsById = {}; (raw.campaigns || []).forEach(c => campaignsById[c.id] = c);
+  const adsetsById = {}; (raw.adsets || []).forEach(a => adsetsById[a.id] = a);
+  const creativesById = {}; (raw.creatives || []).forEach(c => creativesById[c.id] = c);
+
+  const activeCampaignsCount = (raw.campaigns || []).filter(c => c.status === 'ACTIVE').length;
+
+  function withMetrics(entityId, metricsMap) {
+    const m = metricsMap[entityId] || { spend: 0, impressions: 0, clicks: 0 };
+    return { spend: m.spend, impressions: m.impressions, clicks: m.clicks, ctr: m.impressions > 0 ? (m.clicks / m.impressions) * 100 : null };
+  }
+
+  const campaignsList = (raw.campaigns || []).map(c => Object.assign({ id: c.id, name: c.name, status: c.status }, withMetrics(c.id, campaignMetrics)))
+    .sort((a, b) => b.spend - a.spend);
+
+  const adsetsList = (raw.adsets || []).map(a => {
+    const camp = campaignsById[a.campaign_id];
+    return Object.assign({ id: a.id, name: a.name, status: a.status, campaignName: camp ? camp.name : '—' }, withMetrics(a.id, adsetMetrics));
+  }).sort((a, b) => b.spend - a.spend);
+
+  const adsList = (raw.ads || []).map(ad => {
+    const camp = campaignsById[ad.campaign_id];
+    const adset = adsetsById[ad.adset_id];
+    const creative = ad.creative_id ? creativesById[ad.creative_id] : null;
+    return Object.assign({
+      id: ad.id, name: ad.name, status: ad.status,
+      campaignName: camp ? camp.name : '—', adsetName: adset ? adset.name : '—',
+      thumbUrl: creative && creative.thumbnail_storage_path ? (ADS_STORAGE_PUBLIC_BASE + creative.thumbnail_storage_path) : null
+    }, withMetrics(ad.id, adMetrics));
+  }).sort((a, b) => b.spend - a.spend);
+
+  return {
+    periodLabel,
+    kpis: { spend: totals.spend, impressions: totals.impressions, clicks: totals.clicks, ctr: totalCtr, cpm: totalCpm, activeCampaigns: activeCampaignsCount, totalCampaigns: (raw.campaigns || []).length },
+    campaignsList, adsetsList, adsList
+  };
+}
+
+function adsFunilRow_(dotColor, name, spend, maxSpend, subText, onclickAttr) {
+  const pct = Math.max((spend / Math.max(maxSpend, 1)) * 100, 4);
+  return `
+    <div class="funil-row ads-row" ${onclickAttr ? 'style="cursor:pointer" onclick="' + onclickAttr + '"' : 'style="cursor:default"'} title="${subText ? escHtml(subText) : ''}">
+      <div class="funil-stage-dot" style="background:${dotColor}"></div>
+      <span class="funil-stage-name" title="${escHtml(name)}">${escHtml(name)}</span>
+      <div class="funil-bar-wrap"><div class="funil-bar bar-o2" style="width:${pct}%;background:${dotColor}"></div></div>
+      <span class="funil-count" style="font-size:13px">${fmtMoney(spend)}</span>
+      <span></span>
+    </div>`;
+}
+
+function adRow_(ad) {
+  const isPaused = ad.status !== 'ACTIVE';
+  const statusBadge = isPaused ? `<span class="og-pill" style="background:var(--border);color:var(--muted)">pausado</span>` : '';
+  const thumb = ad.thumbUrl
+    ? `<img class="feed-thumb" src="${ad.thumbUrl}" loading="lazy" alt="">`
+    : `<div class="feed-thumb-empty"></div>`;
+  return `
+    <div class="feed-row" style="cursor:default">
+      ${thumb}
+      <div class="feed-info">
+        <div class="feed-co"><span class="og-title-text">${escHtml(ad.name)}</span>${statusBadge}</div>
+        <div class="feed-rep">${escHtml(ad.campaignName)} · ${escHtml(ad.adsetName)}</div>
+      </div>
+      <div class="feed-right">
+        <div class="feed-val">${fmtMoney(ad.spend)}</div>
+        <div class="feed-date">${ad.ctr !== null ? ad.ctr.toFixed(2) + '% CTR' : '—'}</div>
+      </div>
+    </div>`;
+}
+
+function renderAdsHierarchySection(d) {
+  _adsHierarchyLastData = d;
+  el('ads-period-label').textContent = d.periodLabel;
+  el('ads-k-spend').textContent = fmtMoney(d.kpis.spend);
+  el('ads-k-impr').textContent = d.kpis.impressions.toLocaleString('pt-BR');
+  el('ads-k-clicks').textContent = d.kpis.clicks.toLocaleString('pt-BR');
+  el('ads-k-ctr').textContent = d.kpis.ctr !== null ? d.kpis.ctr.toFixed(2) + '%' : '—';
+  el('ads-k-cpm').textContent = d.kpis.cpm !== null ? fmtMoney(d.kpis.cpm) : '—';
+  el('ads-k-campanhas').textContent = d.kpis.activeCampaigns;
+  el('ads-k-campanhas-sub').textContent = 'de ' + d.kpis.totalCampaigns + ' no total';
+
+  const maxCampSpend = Math.max(...d.campaignsList.map(c => c.spend), 1);
+  el('ads-campanhas-rows').innerHTML = d.campaignsList.length === 0
+    ? '<div class="feed-empty">Nenhuma campanha sincronizada ainda</div>'
+    : d.campaignsList.map(c => adsFunilRow_(
+        c.status === 'ACTIVE' ? 'var(--purple)' : 'var(--faint)',
+        c.name, c.spend, maxCampSpend,
+        c.ctr !== null ? c.ctr.toFixed(2) + '% CTR' : '—',
+        "openAdsCampaignModal('" + c.id + "')"
+      )).join('');
+
+  const maxAdsetSpend = Math.max(...d.adsetsList.map(a => a.spend), 1);
+  el('ads-adsets-rows').innerHTML = d.adsetsList.length === 0
+    ? '<div class="feed-empty">Nenhum conjunto sincronizado ainda</div>'
+    : d.adsetsList.slice(0, 20).map(a => adsFunilRow_(
+        a.status === 'ACTIVE' ? 'var(--purple)' : 'var(--faint)',
+        a.name, a.spend, maxAdsetSpend,
+        a.ctr !== null ? a.ctr.toFixed(2) + '% CTR' : '—'
+      )).join('');
+
+  el('ads-anuncios-rows').innerHTML = d.adsList.length === 0
+    ? '<div class="feed-empty">Nenhum anúncio sincronizado ainda</div>'
+    : d.adsList.slice(0, 30).map(adRow_).join('');
+}
+
+function openAdsCampaignModal(campaignId) {
+  if (!_adsHierarchyLastData) return;
+  const camp = _adsHierarchyLastData.campaignsList.find(c => c.id === campaignId);
+  const adsets = _adsHierarchyLastData.adsetsList.filter(a => {
+    const raw = (_adsHierarchyRaw.adsets || []).find(x => x.id === a.id);
+    return raw && raw.campaign_id === campaignId;
+  }).sort((a, b) => b.spend - a.spend);
+  el('modal-title').textContent = (camp ? camp.name : 'Campanha') + ' — ' + adsets.length + ' conjunto' + (adsets.length !== 1 ? 's' : '');
+  el('modal-body').innerHTML = adsets.length === 0
+    ? '<div class="modal-empty">Nenhum conjunto com dado no período</div>'
+    : adsets.map(a => `
+      <div class="mdeal-row" style="cursor:default">
+        <div class="mdeal-dot" style="background:${a.status === 'ACTIVE' ? 'var(--purple)' : 'var(--faint)'}"></div>
+        <div class="mdeal-title-line" style="flex:1;min-width:0">
+          <span class="mdeal-title">${escHtml(a.name)}</span>
+        </div>
+        <span class="mdeal-val">${fmtMoney(a.spend)}</span>
       </div>`).join('');
   el('modal-overlay').classList.add('show');
 }
