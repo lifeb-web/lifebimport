@@ -169,7 +169,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 #sdr-hero::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(112,75,155,.06),transparent 60%);pointer-events:none}
 /* Ads (02/08) — mesma forma/altura do hero-row de Vendas/SDR (hero + 7
    kchips). display:none por padrão, JS liga/desliga em setView(). */
-#ads-hero-row{display:none;grid-template-columns:minmax(0,1.7fr) repeat(8,minmax(0,1fr));gap:8px;height:92px;flex-shrink:0}
+#ads-hero-row{display:none;grid-template-columns:minmax(0,1.5fr) repeat(9,minmax(0,1fr));gap:7px;height:92px;flex-shrink:0}
 #ads-hero-row2{display:none;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;height:72px;flex-shrink:0}
 #ads-hero{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:10px 16px;display:flex;flex-direction:column;justify-content:center;gap:2px;position:relative;overflow:hidden;box-shadow:0 1px 2px rgba(26,22,38,.04),0 3px 10px -3px rgba(112,75,155,.16)}
 #ads-hero::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(112,75,155,.06),transparent 60%);pointer-events:none}
@@ -729,16 +729,30 @@ footer strong{color:#fff}
   <!-- Ads (Meta) — hierarquia completa (02/08). Mesma forma do bloco SDR
        acima (hero+7 kchips, depois 3 colunas), display:none até
        setView() ligar. -->
+  <!-- achado 03/08 (Robert: "alcance na frente de impressões e frequência
+       depois, organizar os cards pra ficarem coerentes") — ordem: Alcance→
+       Impressões→Frequência (audiência), Cliques→CTR→CPM (performance),
+       Campanhas→Conjuntos→Anúncios (estrutura da conta). -->
   <div id="ads-hero-row">
     <div id="ads-hero" style="cursor:default">
       <div class="hero-top"><span class="hero-label">Investimento em Ads</span><span id="ads-hero-spark"></span></div>
       <div class="hero-val" id="ads-hero-val"><span class="skel" style="width:80px;height:24px"></span></div>
       <div class="hero-row2"><span class="hero-sub" id="ads-hero-sub">no período</span></div>
     </div>
+    <div class="kchip" title="Soma do alcance diário — aproximado, pode superestimar (mesma pessoa alcançada em dias diferentes conta mais de uma vez).">
+      <span class="kc-label">Alcance</span>
+      <div class="kc-row"><span class="kc-val" id="ads-k-reach"><span class="skel"></span></span></div>
+      <span class="kc-sub">~ aproximado</span>
+    </div>
     <div class="kchip">
       <span class="kc-label">Impressões</span>
       <div class="kc-row"><span class="kc-val" id="ads-k-impr"><span class="skel"></span></span></div>
       <span class="kc-sub">no período</span>
+    </div>
+    <div class="kchip">
+      <span class="kc-label">Frequência</span>
+      <div class="kc-row"><span class="kc-val" id="ads-k-freq"><span class="skel"></span></span></div>
+      <span class="kc-sub">impr. / alcance</span>
     </div>
     <div class="kchip">
       <span class="kc-label">Cliques</span>
@@ -770,17 +784,13 @@ footer strong{color:#fff}
       <div class="kc-row"><span class="kc-val" id="ads-k-ads"><span class="skel"></span></span></div>
       <span class="kc-sub" id="ads-k-ads-sub">—</span>
     </div>
-    <div class="kchip" title="Soma do alcance diário — aproximado, pode superestimar (mesma pessoa alcançada em dias diferentes conta mais de uma vez).">
-      <span class="kc-label">Alcance</span>
-      <div class="kc-row"><span class="kc-val" id="ads-k-reach"><span class="skel"></span></span></div>
-      <span class="kc-sub">~ aproximado</span>
-    </div>
   </div>
 
-  <!-- achado 03/08 (Robert: "já calculamos CPL/ROAS/ACOS, uai") — mesmo
-       card/fórmula do "Investimento & Aquisição" de Vendas, sempre Inbound
-       (Ads só gera lead Inbound). 2ª linha de kchips pra não espremer os
-       9 já existentes numa fileira só (ilegível de longe numa TV). -->
+  <!-- achado 03/08 (Robert: "já calculamos CPL/ROAS/ACOS, uai" / "CPL do
+       lado de leads recebidos") — mesmo card/fórmula do "Investimento &
+       Aquisição" de Vendas, sempre Inbound (Ads só gera lead Inbound).
+       Ordem: Leads+CPL juntos (custo de aquisição de lead), CAC+ROAS
+       juntos (economia do fechamento), ACOS sozinho (visão geral %). -->
   <div id="ads-hero-row2">
     <div class="kchip">
       <span class="kc-label">Leads Recebidos</span>
@@ -788,14 +798,14 @@ footer strong{color:#fff}
       <span class="kc-sub">no período</span>
     </div>
     <div class="kchip">
-      <span class="kc-label">CAC</span>
-      <div class="kc-row"><span class="kc-val" id="ads-k-cac"><span class="skel"></span></span></div>
-      <span class="kc-sub">por cliente fechado</span>
-    </div>
-    <div class="kchip">
       <span class="kc-label">CPL</span>
       <div class="kc-row"><span class="kc-val" id="ads-k-cpl"><span class="skel"></span></span></div>
       <span class="kc-sub">por lead recebido</span>
+    </div>
+    <div class="kchip">
+      <span class="kc-label">CAC</span>
+      <div class="kc-row"><span class="kc-val" id="ads-k-cac"><span class="skel"></span></span></div>
+      <span class="kc-sub">por cliente fechado</span>
     </div>
     <div class="kchip">
       <span class="kc-label">ROAS</span>
@@ -2301,6 +2311,11 @@ function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
   let totalReach = 0;
   Object.keys(campaignMetrics).forEach(id => { if (campaignsById[id]) totalReach += campaignMetrics[id].reach; });
 
+  // achado 03/08 (Robert pediu "frequência"): impressões totais ÷ alcance
+  // total (mesmo jeito que a Meta calcula pro período inteiro) — os 2 já
+  // calculados acima, nenhum dado novo.
+  const totalFrequency = totalReach > 0 ? totals.impressions / totalReach : null;
+
   // Série de gasto diário (só campanhas incluídas) pro gráfico de tendência —
   // gasto É somável com segurança (diferente de reach/frequency).
   const spendByDate = {};
@@ -2330,7 +2345,7 @@ function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
   return {
     periodLabel, trendSeries, earliestDailyDate, periodTruncated,
     kpis: {
-      spend: totals.spend, impressions: totals.impressions, clicks: totals.clicks, ctr: totalCtr, cpm: totalCpm, reach: totalReach,
+      spend: totals.spend, impressions: totals.impressions, clicks: totals.clicks, ctr: totalCtr, cpm: totalCpm, reach: totalReach, frequency: totalFrequency,
       leads: adsLeadsPeriodo, cac: adsCac, cpl: adsCpl, roas: adsRoas, acos: adsAcos,
       activeCampaigns: campaignsActive.length, totalCampaigns: campaignsAll.length,
       activeAdsets: adsetsActive.length, totalAdsets: adsetsAll.length,
@@ -2424,6 +2439,7 @@ function renderAdsHierarchySectionTelao(d) {
   el('ads-k-roas').textContent = d.kpis.roas !== null ? d.kpis.roas.toFixed(2) + 'x' : '—';
   el('ads-k-acos').textContent = d.kpis.acos !== null ? d.kpis.acos.toFixed(1) + '%' : '—';
   el('ads-k-reach').textContent = '~' + d.kpis.reach.toLocaleString('pt-BR');
+  el('ads-k-freq').textContent = d.kpis.frequency !== null ? d.kpis.frequency.toFixed(2) + 'x' : '—';
   el('ads-k-impr').textContent = d.kpis.impressions.toLocaleString('pt-BR');
   el('ads-k-clicks').textContent = d.kpis.clicks.toLocaleString('pt-BR');
   el('ads-k-ctr').textContent = d.kpis.ctr !== null ? d.kpis.ctr.toFixed(2) + '%' : '—';

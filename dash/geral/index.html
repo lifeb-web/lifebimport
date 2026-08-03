@@ -656,11 +656,25 @@ footer strong{color:#fff}
       </div>
     </div>
 
+    <!-- achado 03/08 (Robert: "alcance na frente de impressões e frequência
+         depois, tem que organizar os cards pra ficarem coerentes") — ordem:
+         Alcance→Impressões→Frequência (audiência), Cliques→CTR→CPM
+         (performance), Campanhas Ativas (estrutura) full-width no fim. -->
     <div class="kpi-strip">
+      <div class="kchip" title="Soma do alcance diário — pode superestimar levemente, já que a mesma pessoa alcançada em dias diferentes conta mais de uma vez (Meta não permite deduplicar alcance de vários dias sem uma chamada dedicada por período).">
+        <span class="kc-label">Alcance</span>
+        <div class="kc-row"><span class="kc-val" id="ads-k-reach"><span class="skel"></span></span></div>
+        <span class="kc-sub">~ aproximado, ver nota</span>
+      </div>
       <div class="kchip">
         <span class="kc-label">Impressões</span>
         <div class="kc-row"><span class="kc-val" id="ads-k-impr"><span class="skel"></span></span></div>
         <span class="kc-sub">no período</span>
+      </div>
+      <div class="kchip">
+        <span class="kc-label">Frequência</span>
+        <div class="kc-row"><span class="kc-val" id="ads-k-freq"><span class="skel"></span></span></div>
+        <span class="kc-sub">impressões / alcance</span>
       </div>
       <div class="kchip">
         <span class="kc-label">Cliques</span>
@@ -677,15 +691,10 @@ footer strong{color:#fff}
         <div class="kc-row"><span class="kc-val" id="ads-k-cpm"><span class="skel"></span></span></div>
         <span class="kc-sub">custo por mil impressões</span>
       </div>
-      <div class="kchip">
+      <div class="kchip" style="grid-column:1/-1">
         <span class="kc-label">Campanhas Ativas</span>
         <div class="kc-row"><span class="kc-val" id="ads-k-campanhas"><span class="skel"></span></span></div>
         <span class="kc-sub" id="ads-k-campanhas-sub">—</span>
-      </div>
-      <div class="kchip" title="Soma do alcance diário — pode superestimar levemente, já que a mesma pessoa alcançada em dias diferentes conta mais de uma vez (Meta não permite deduplicar alcance de vários dias sem uma chamada dedicada por período).">
-        <span class="kc-label">Alcance</span>
-        <div class="kc-row"><span class="kc-val" id="ads-k-reach"><span class="skel"></span></span></div>
-        <span class="kc-sub">~ aproximado, ver nota</span>
       </div>
     </div>
     <div id="ads-period-warning" style="display:none;margin:-4px 0 10px;padding:8px 12px;border-radius:10px;background:rgba(240,216,120,.15);border:1px solid rgba(212,175,55,.35);font-size:12px;color:var(--muted)"></div>
@@ -702,14 +711,14 @@ footer strong{color:#fff}
         <span class="kc-sub">no período</span>
       </div>
       <div class="kchip">
-        <span class="kc-label">CAC</span>
-        <div class="kc-row"><span class="kc-val" id="ads-k-cac"><span class="skel"></span></span></div>
-        <span class="kc-sub">custo por cliente fechado</span>
-      </div>
-      <div class="kchip">
         <span class="kc-label">CPL</span>
         <div class="kc-row"><span class="kc-val" id="ads-k-cpl"><span class="skel"></span></span></div>
         <span class="kc-sub">custo por lead recebido</span>
+      </div>
+      <div class="kchip">
+        <span class="kc-label">CAC</span>
+        <div class="kc-row"><span class="kc-val" id="ads-k-cac"><span class="skel"></span></span></div>
+        <span class="kc-sub">custo por cliente fechado</span>
       </div>
       <div class="kchip">
         <span class="kc-label">ROAS</span>
@@ -2036,6 +2045,12 @@ function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
   let totalReach = 0;
   Object.keys(campaignMetrics).forEach(id => { if (campaignsById[id]) totalReach += campaignMetrics[id].reach; });
 
+  // achado 03/08 (Robert pediu "frequência"): mesma regra do Alcance — não dá
+  // pra somar frequência diária (é uma razão, não uma contagem). O jeito
+  // certo (igual a própria Meta calcula pro período inteiro) é impressões
+  // totais ÷ alcance total — os 2 já calculados acima, nenhum dado novo.
+  const totalFrequency = totalReach > 0 ? totals.impressions / totalReach : null;
+
   // Série de gasto diário (só campanhas incluídas) pro gráfico de tendência —
   // gasto É somável com segurança (diferente de reach/frequency).
   const spendByDate = {};
@@ -2065,7 +2080,7 @@ function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
   return {
     periodLabel, trendSeries, earliestDailyDate, periodTruncated,
     kpis: {
-      spend: totals.spend, impressions: totals.impressions, clicks: totals.clicks, ctr: totalCtr, cpm: totalCpm, reach: totalReach,
+      spend: totals.spend, impressions: totals.impressions, clicks: totals.clicks, ctr: totalCtr, cpm: totalCpm, reach: totalReach, frequency: totalFrequency,
       leads: adsLeadsPeriodo, cac: adsCac, cpl: adsCpl, roas: adsRoas, acos: adsAcos,
       activeCampaigns: campaignsActive.length, totalCampaigns: campaignsAll.length,
       activeAdsets: adsetsActive.length, totalAdsets: adsetsAll.length,
@@ -2190,6 +2205,7 @@ function renderAdsHierarchySection(d) {
   el('ads-k-ctr').textContent = d.kpis.ctr !== null ? d.kpis.ctr.toFixed(2) + '%' : '—';
   el('ads-k-cpm').textContent = d.kpis.cpm !== null ? fmtMoney(d.kpis.cpm) : '—';
   el('ads-k-reach').textContent = '~' + d.kpis.reach.toLocaleString('pt-BR');
+  el('ads-k-freq').textContent = d.kpis.frequency !== null ? d.kpis.frequency.toFixed(2) + 'x' : '—';
   el('ads-k-campanhas').textContent = d.kpis.activeCampaigns;
   el('ads-k-campanhas-sub').textContent = 'de ' + d.kpis.totalCampaigns + ' no total';
   el('ads-k-leads').textContent = d.kpis.leads;
