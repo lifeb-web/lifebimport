@@ -693,7 +693,7 @@ footer strong{color:#fff}
         <span class="kc-sub">custo por mil impressões</span>
       </div>
       <div class="kchip" style="grid-column:1/-1">
-        <span class="kc-label">Campanhas Ativas</span>
+        <span class="kc-label">Campanhas c/ Investimento</span>
         <div class="kc-row"><span class="kc-val" id="ads-k-campanhas"><span class="skel"></span></span></div>
         <span class="kc-sub" id="ads-k-campanhas-sub">—</span>
       </div>
@@ -742,7 +742,7 @@ footer strong{color:#fff}
       <div class="sec-hd">Campanhas <span id="ads-campanhas-badge" style="color:var(--purple);font-weight:800;text-transform:none;letter-spacing:0"></span></div>
       <div id="ads-campanhas-card">
         <div class="funil-hd">
-          <span class="funil-title">Ativas, por investimento no período</span>
+          <span class="funil-title">Com investimento no período</span>
           <span class="funil-hint">toque para ver conjuntos</span>
         </div>
         <div id="ads-campanhas-rows"></div>
@@ -1993,7 +1993,7 @@ function groupAdsByCreative_(ads) {
   ads.forEach(ad => {
     const key = 'n:' + (ad.name || ad.id);
     if (!groups[key]) {
-      groups[key] = { key, name: ad.name, thumbUrl: ad.thumbUrl, campaignNames: new Set(), adsetNames: new Set(), spend: 0, impressions: 0, clicks: 0, count: 0, memberIds: [] };
+      groups[key] = { key, name: ad.name, thumbUrl: ad.thumbUrl, campaignNames: new Set(), adsetNames: new Set(), spend: 0, impressions: 0, clicks: 0, count: 0, memberIds: [], anyActive: false };
       order.push(key);
     }
     const g = groups[key];
@@ -2003,6 +2003,7 @@ function groupAdsByCreative_(ads) {
     g.spend += ad.spend; g.impressions += ad.impressions; g.clicks += ad.clicks;
     g.count++;
     g.memberIds.push(ad.id);
+    if (ad.status === 'ACTIVE') g.anyActive = true;
   });
   return order.map(key => {
     const g = groups[key];
@@ -2011,7 +2012,7 @@ function groupAdsByCreative_(ads) {
       campaignsCount: g.campaignNames.size, adsetsCount: g.adsetNames.size,
       spend: g.spend, impressions: g.impressions, clicks: g.clicks,
       ctr: g.impressions > 0 ? (g.clicks / g.impressions) * 100 : null,
-      count: g.count, memberIds: g.memberIds
+      count: g.count, memberIds: g.memberIds, allPaused: !g.anyActive
     };
   }).sort((a, b) => b.spend - a.spend);
 }
@@ -2122,12 +2123,22 @@ function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
   const earliestDailyDate = allDates.length ? allDates[0] : null;
   const periodTruncated = !!(earliestDailyDate && periodFrom < earliestDailyDate && periodFrom !== periodTo);
 
-  // Lista principal mostra só ATIVAS (Robert: campanha pausada/zerada
-  // poluindo a lista) — o total continua contando todas (acima), e o badge
-  // de cada seção mostra "X ativas de Y no total", nada fica escondido.
-  const campaignsActive = campaignsAll.filter(c => c.status === 'ACTIVE');
-  const adsetsActive = adsetsAll.filter(a => a.status === 'ACTIVE');
-  const adsActive = adsAll.filter(a => a.status === 'ACTIVE');
+  // achado 03/08 (Robert: "campanhas inativas trazer só se tiver coerente,
+  // você precisa pensar como especialista") — filtro por status ATIVO
+  // (como era até agora) é period-INDEPENDENTE: uma campanha pausada HOJE
+  // mas que gastou dinheiro de verdade dentro do período escolhido
+  // desaparecia da lista mesmo assim (o total lá em cima continuava
+  // contando o gasto dela — números não batiam com o que aparecia embaixo).
+  // E uma campanha ativa AGORA com R$0 gasto no período escolhido aparecia
+  // mesmo sem ter feito nada nesse período. Filtro certo: "teve investimento
+  // NESSE período" — reflete o que realmente aconteceu na janela escolhida,
+  // não o status atual (foto de agora). Campanha pausada que gastou some só
+  // quando o gasto dela também some do total — sempre coerente entre o
+  // número de cima e a lista de baixo. Status atual (pausada) vira um
+  // badge na própria linha (abaixo), não um filtro nem uma lista separada.
+  const campaignsActive = campaignsAll.filter(c => c.spend > 0);
+  const adsetsActive = adsetsAll.filter(a => a.spend > 0);
+  const adsActive = adsAll.filter(a => a.spend > 0);
   const adGroupsActive = groupAdsByCreative_(adsActive);
   const adGroupsAll = groupAdsByCreative_(adsAll);
 
@@ -2148,12 +2159,16 @@ function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
 // estreita (nome+valor sozinhos já tomavam quase todo o espaço). Trocado
 // pro padrão .abar-row (rótulo+valor em cima, barra grossa full-width
 // embaixo, numa linha própria — nunca mais disputa espaço com texto).
-function adsFunilRow_(dotColor, name, spend, maxSpend, subText, onclickAttr) {
+// achado 03/08: lista agora mostra por "teve investimento no período", não
+// por status atual — badge "pausada" avisa quando o status ATUAL não é
+// mais ACTIVE, sem esconder a linha (o gasto é real, aconteceu de verdade).
+function adsFunilRow_(dotColor, name, spend, maxSpend, subText, onclickAttr, isPaused) {
   const pct = Math.max((spend / Math.max(maxSpend, 1)) * 100, 3);
+  const pausedBadge = isPaused ? '<span class="og-pill" style="background:var(--border);color:var(--muted);margin-left:5px">pausada</span>' : '';
   return `
     <div class="abar-row" ${onclickAttr ? 'onclick="' + onclickAttr + '"' : ''}>
       <div class="abar-top">
-        <span class="abar-name" title="${escHtml(name)}"><span class="abar-dot" style="background:${dotColor}"></span><span class="abar-name-text">${escHtml(name)}</span></span>
+        <span class="abar-name" title="${escHtml(name)}"><span class="abar-dot" style="background:${dotColor}"></span><span class="abar-name-text">${escHtml(name)}</span>${pausedBadge}</span>
         <span class="abar-val">${fmtMoney(spend)}${subText ? '<span class="abar-sub">' + escHtml(subText) + '</span>' : ''}</span>
       </div>
       <div class="abar-track"><div class="abar-fill" style="width:${pct}%;background:${dotColor}"></div></div>
@@ -2165,12 +2180,13 @@ function adGroupRow_(g) {
     ? `<img class="feed-thumb" src="${g.thumbUrl}" loading="lazy" alt="">`
     : `<div class="feed-thumb-empty"></div>`;
   const variBadge = g.count > 1 ? `<span class="og-pill" style="background:rgba(146,96,200,.14);color:var(--purple)">${g.count}x</span>` : '';
+  const pausedBadge = g.allPaused ? '<span class="og-pill" style="background:var(--border);color:var(--muted)">pausado</span>' : '';
   const scopeText = g.campaignsCount > 1 ? g.campaignsCount + ' campanhas' : (g.adsetsCount > 1 ? g.adsetsCount + ' conjuntos' : '1 anúncio só');
   return `
     <div class="feed-row" onclick="openAdGroupModal('${g.key.replace(/'/g, "\\'")}')">
       ${thumb}
       <div class="feed-info">
-        <div class="feed-co"><span class="og-title-text">${escHtml(g.name)}</span>${variBadge}</div>
+        <div class="feed-co"><span class="og-title-text">${escHtml(g.name)}</span>${variBadge}${pausedBadge}</div>
         <div class="feed-rep">${escHtml(scopeText)}</div>
       </div>
       <div class="feed-right">
@@ -2282,28 +2298,30 @@ function renderAdsHierarchySection(d) {
   el('ads-campanhas-badge').textContent = d.campaignsList.length + ' de ' + d.kpis.totalCampaigns;
   const maxCampSpend = Math.max(...d.campaignsList.map(c => c.spend), 1);
   el('ads-campanhas-rows').innerHTML = d.campaignsList.length === 0
-    ? '<div class="feed-empty">Nenhuma campanha ativa no momento</div>'
+    ? '<div class="feed-empty">Nenhuma campanha com investimento no período</div>'
     : d.campaignsList.map(c => adsFunilRow_(
         'var(--purple)',
         c.name, c.spend, maxCampSpend,
         c.ctr !== null ? c.ctr.toFixed(2) + '% CTR' : '—',
-        "openAdsCampaignModal('" + c.id + "')"
+        "openAdsCampaignModal('" + c.id + "')",
+        c.status !== 'ACTIVE'
       )).join('');
 
   el('ads-adsets-badge').textContent = d.adsetsList.length + ' de ' + d.kpis.totalAdsets;
   const maxAdsetSpend = Math.max(...d.adsetsList.map(a => a.spend), 1);
   el('ads-adsets-rows').innerHTML = d.adsetsList.length === 0
-    ? '<div class="feed-empty">Nenhum conjunto ativo no momento</div>'
+    ? '<div class="feed-empty">Nenhum conjunto com investimento no período</div>'
     : d.adsetsList.slice(0, 20).map(a => adsFunilRow_(
         'var(--purple)',
         a.name, a.spend, maxAdsetSpend,
         a.ctr !== null ? a.ctr.toFixed(2) + '% CTR' : '—',
-        "openAdsAdsetModal('" + a.id + "')"
+        "openAdsAdsetModal('" + a.id + "')",
+        a.status !== 'ACTIVE'
       )).join('');
 
   el('ads-anuncios-badge').textContent = d.adsList.length + ' de ' + d.kpis.totalAds;
   el('ads-anuncios-rows').innerHTML = d.adsList.length === 0
-    ? '<div class="feed-empty">Nenhum anúncio ativo no momento</div>'
+    ? '<div class="feed-empty">Nenhum anúncio com investimento no período</div>'
     : d.adsList.slice(0, 20).map(adGroupRow_).join('');
 }
 
