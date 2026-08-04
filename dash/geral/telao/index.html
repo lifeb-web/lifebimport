@@ -1246,17 +1246,26 @@ let _reqSeq = 0;
 // cima do MESMO snapshot já carregado. Só o botão ↻ manual (force=true) e o
 // poll de fundo (scheduleBackgroundPoll) tocam a rede de verdade.
 let _rawDeals     = null;
-// Gasto diário do Meta Ads (dash_geral_ads_daily) — mesma ideia, achado 15/07:
-// era a ÚLTIMA parte do painel ainda dependente de rede (e da API do Meta,
-// rate-limited) numa troca de filtro. Buscado junto de _rawDeals, somado
-// localmente por período em loadAdsSection().
+// Gasto diário do Meta Ads — achado 04/08: a tabela antiga (dash_geral_ads_daily,
+// sync .gs próprio syncAdsDailyToSupabase()/10min) parou de sincronizar em 02/08
+// sem se autocorrigir — a função não tinha try/catch em volta da chamada à API
+// do Meta, e um rate-limit transitório (mesma classe do achado de 03/08 no sync
+// de hierarquia) bastou pra o Apps Script desativar o gatilho depois de falhar
+// repetido. A hierarquia de Ads (dash_ads_daily, aba Ads) usa um sync DIFERENTE
+// que já sobreviveu ao mesmo rate-limit e está fresco — em vez de só remendar o
+// sync antigo, elimina a dependência dele de vez: Investimento passa a ler da
+// MESMA fonte que a aba Ads já usa (1 sync a menos pra quebrar, 1 chamada a
+// menos na conta do Meta). entity_type=eq.campaign evita contar 2x (a tabela
+// também guarda linha por adset/ad); ADS_EXCLUDE_CAMPAIGN_IDS aplica a MESMA
+// exclusão (post de Instagram sem relação com vendas) que a aba Ads já usa.
 let _adsRawDaily     = null;
 async function fetchAdsRawDaily() {
   const PAGE = 1000;
   let all = [];
   let from = 0;
+  const excludeFilter = 'entity_id=not.in.(' + ADS_EXCLUDE_CAMPAIGN_IDS.join(',') + ')';
   while (true) {
-    const res = await fetch(SUPABASE_URL + '/rest/v1/dash_geral_ads_daily?select=*', {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/dash_ads_daily?select=date,spend&entity_type=eq.campaign&' + excludeFilter, {
       headers: {
         apikey: SUPABASE_ANON_KEY,
         Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
@@ -1272,7 +1281,11 @@ async function fetchAdsRawDaily() {
     if (all.length >= total || chunk.length < PAGE) break;
     from += PAGE;
   }
-  return all;
+  // dash_ads_daily tem 1 linha por campanha por dia — soma por data pra virar
+  // o mesmo formato {date, spend_net} que loadAdsSection() já espera.
+  const byDate = {};
+  all.forEach(r => { byDate[r.date] = (byDate[r.date] || 0) + (parseFloat(r.spend) || 0); });
+  return Object.keys(byDate).map(date => ({ date, spend_net: Math.round(byDate[date] * 100) / 100 }));
 }
 
 // Leads únicos (dedup por contato) pro CPL — achado 31/07: era a ÚLTIMA parte
@@ -1695,7 +1708,7 @@ async function backgroundPollTick_() {
       // 20s, ainda uma fração pequena do egress do bug original), mas nunca
       // mais cego a delete/stale.
       fetchLatestStamp_('dash_geral_deals', 'synced_at').catch(() => undefined),
-      fetchLatestStamp_('dash_geral_ads_daily', 'synced_at').catch(() => undefined),
+      fetchLatestStamp_('dash_ads_daily', 'synced_at').catch(() => undefined),
       fetchLatestStamp_('dash_geral_leads_daily', 'synced_at').catch(() => undefined)
     ]);
     const changed =
