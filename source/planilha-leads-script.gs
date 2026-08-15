@@ -60,15 +60,27 @@ function doPost(e) {
 }
 
 // ── GS ENGAGE: cria lead INBOUND e enrola na cadência inbound ────────
-function _sendLeadToGSEngage(gsKey, nome, telefone, origem, pagina, cnpj, campanha, conjunto, anuncio) {
+// achado 15/07 (Robert: "às vezes cai, às vezes não" — lead sumia sem deixar
+// rastro): era 1 tentativa só, e o chamador (doPost) engolia qualquer erro
+// num catch vazio. Agora tenta até 3x com pausa curta; se mesmo assim falhar,
+// grava numa aba própria (GSEngage_Falhas) pra um trigger reprocessar depois
+// — nunca mais perde lead em silêncio. opts.isRetry=true (usado por
+// retryGSEngageFalhas) evita registrar uma SEGUNDA entrada na fila.
+function _sendLeadToGSEngage(gsKey, nome, telefone, origem, pagina, cnpj, campanha, conjunto, anuncio, opts) {
+  opts = opts || {};
   var GS_BASE = 'https://api.gsengage.com/api/v1';
   var INBOUND_ROUTINE_ID = '6a3065cb2e916c2f2e1ce4b2';
 
   var partes    = nome.split(/\s+/);
   var firstName = partes[0];
   var lastName  = partes.slice(1).join(' ') || '';
-  var digits    = telefone.replace(/\D/g, '');
-  var fone      = digits.indexOf('55') === 0 ? '+' + digits : '+55' + digits;
+  // achado 15/07: telefone com DDD 55 (Rio Grande do Sul) sem código de país
+  // (ex: "55991234567", 11 dígitos) era confundido com "já tem +55" só por
+  // começar com esse número — virava "+5599..." faltando o código de país de
+  // verdade. Corrigido: decide pelo TAMANHO do número (10/11 dígitos = local,
+  // sempre ganha +55; 12/13 = já tem código de país), não mais pelo prefixo.
+  var digits = String(telefone).replace(/\D/g, '');
+  var fone   = (digits.length === 12 || digits.length === 13) ? '+' + digits : '+55' + digits;
 
   // Campos personalizados no GS (atribuição completa) — nomes batem com os criados no GS Engage.
   var customFields = {};
@@ -94,28 +106,136 @@ function _sendLeadToGSEngage(gsKey, nome, telefone, origem, pagina, cnpj, campan
     'Accept': 'application/json'
   };
 
-  var respLead = UrlFetchApp.fetch(GS_BASE + '/leads?apiKey=' + gsKey, {
-    method:             'post',
-    contentType:        'application/json',
-    headers:            headers,
-    payload:            JSON.stringify(leadPayload),
-    muteHttpExceptions: true
+  var leadId = _postToGSEngageWithRetry_(GS_BASE + '/leads?apiKey=' + gsKey, leadPayload, headers, function(respText) {
+    try {
+      var d = JSON.parse(respText);
+      return (d.data && (d.data.id || d.data._id)) || null;
+    } catch (_) { return null; }
   });
-  var leadData = JSON.parse(respLead.getContentText());
-  var leadId   = (leadData.data && (leadData.data.id || leadData.data._id)) || null;
+
   if (!leadId) {
-    Logger.log('GS Engage lead error (' + respLead.getResponseCode() + '): ' + respLead.getContentText().slice(0, 200));
-    return;
+    if (!opts.isRetry) registrarFalhaGSEngage_(nome, telefone, origem, pagina, cnpj, campanha, conjunto, anuncio);
+    Logger.log('GS Engage: lead "' + nome + '" falhou após retries' + (opts.isRetry ? ' (reprocessamento)' : '') + ' — ' + (opts.isRetry ? 'segue na fila' : 'gravado em GSEngage_Falhas'));
+    return false;
   }
 
-  var respProsp = UrlFetchApp.fetch(GS_BASE + '/prospections?apiKey=' + gsKey, {
-    method:             'post',
-    contentType:        'application/json',
-    headers:            headers,
-    payload:            JSON.stringify({ leadId: leadId, routineId: INBOUND_ROUTINE_ID }),
-    muteHttpExceptions: true
+  // 03/08: pequena espera antes de matricular na rotina — achado real (Robert: "sempre que alguem cadastra
+  // ta chegando isso", mensagem de "matriculei automatico" do worker aparecendo em TODA matricula da LP).
+  // Suspeita: o GS Engage pode nao estar pronto pra aceitar a matricula um instante depois de criar o lead
+  // (corrida). O retry de 3x abaixo já ajuda se o GS devolver erro HTTP nessa janela, mas se ele devolver
+  // "sucesso" mesmo sem indexar direito (mesma classe de comportamento já vista em outras APIs do projeto —
+  // 200 que não persiste de verdade), o retry por erro HTTP não pega isso. Essa espera ANTES da 1ª tentativa
+  // reduz a chance de cair bem nesse instante.
+  Utilities.sleep(1500);
+
+  var prospOk = _postToGSEngageWithRetry_(GS_BASE + '/prospections?apiKey=' + gsKey, { leadId: leadId, routineId: INBOUND_ROUTINE_ID }, headers, function(_respText, code) {
+    return (code >= 200 && code < 300) ? true : null;
   });
-  Logger.log('GS Engage enrolled ' + leadId + ' → status ' + respProsp.getResponseCode());
+  Logger.log('GS Engage enrolled ' + leadId + (prospOk ? '' : ' (lead criado, mas prospecção/cadência falhou — verificar manualmente no GS Engage)'));
+  return true;
+}
+
+// ── POST com até 3 tentativas (pausas curtas: 0ms, 400ms, 1000ms — total
+// ~1,4s no pior caso, aceitável mesmo dentro do doPost síncrono que responde
+// o formulário da LP). parseSuccess(bodyText, httpCode) decide se aquela
+// tentativa deu certo; retorna o valor de sucesso (ex: o leadId) ou
+// null/false pra tentar de novo. Usado tanto pra criar o lead quanto pra
+// prospecção — nunca lança exceção, sempre retorna null em vez disso. ──
+function _postToGSEngageWithRetry_(url, payload, headers, parseSuccess) {
+  var delays = [0, 400, 1000];
+  for (var i = 0; i < delays.length; i++) {
+    if (delays[i] > 0) Utilities.sleep(delays[i]);
+    try {
+      var resp = UrlFetchApp.fetch(url, {
+        method: 'post', contentType: 'application/json', headers: headers,
+        payload: JSON.stringify(payload), muteHttpExceptions: true
+      });
+      var code = resp.getResponseCode();
+      var text = resp.getContentText();
+      var ok = parseSuccess(text, code);
+      if (ok) return ok;
+      Logger.log('GS Engage tentativa ' + (i + 1) + '/3 falhou (HTTP ' + code + '): ' + text.slice(0, 200));
+    } catch (eFetch) {
+      Logger.log('GS Engage tentativa ' + (i + 1) + '/3 lançou exceção: ' + eFetch.message);
+    }
+  }
+  return null;
+}
+
+// ── Fila de reprocessamento — aba "GSEngage_Falhas" na MESMA planilha.
+// Criada sozinha na primeira falha, sem setup manual. ──
+function registrarFalhaGSEngage_(nome, telefone, origem, pagina, cnpj, campanha, conjunto, anuncio) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('GSEngage_Falhas');
+    if (!sheet) {
+      sheet = ss.insertSheet('GSEngage_Falhas');
+      sheet.appendRow(['Timestamp', 'Nome', 'Telefone', 'Origem', 'Pagina', 'CNPJ', 'Campanha', 'Conjunto', 'Anuncio', 'Tentativas']);
+    }
+    sheet.appendRow([new Date(), nome, telefone, origem, pagina, cnpj, campanha, conjunto, anuncio, 0]);
+  } catch (eReg) {
+    Logger.log('ERRO ao registrar falha do GS Engage na fila: ' + eReg.message);
+  }
+}
+
+// ── Reprocessa a fila — chamado por trigger de tempo (a cada 15min, ver
+// instalarRetryGSEngageTrigger). Percorre de BAIXO pra CIMA (deleteRow
+// desloca as linhas abaixo pra cima — de cima pra baixo pularia a linha
+// seguinte por engano). Remove da fila no sucesso; desiste (loga, mas
+// mantém a linha visível pra conferência manual) depois de
+// GSENGAGE_MAX_TENTATIVAS — protege contra fila crescendo pra sempre com
+// um lead genuinamente inválido (telefone impossível, etc). ──
+var GSENGAGE_MAX_TENTATIVAS = 10;
+function retryGSEngageFalhas() {
+  var gsKey = PropertiesService.getScriptProperties().getProperty('GS_API_KEY');
+  if (!gsKey) { Logger.log('retryGSEngageFalhas: GS_API_KEY não configurado.'); return; }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('GSEngage_Falhas');
+  if (!sheet) return; // nunca teve falha nenhuma — nada a fazer
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return; // só cabeçalho
+
+  var processados = 0, sucesso = 0, desistidos = 0;
+
+  for (var row = lastRow; row >= 2; row--) {
+    var vals = sheet.getRange(row, 1, 1, 10).getValues()[0];
+    var nome = vals[1], telefone = vals[2], origem = vals[3], pagina = vals[4],
+        cnpj = vals[5], campanha = vals[6], conjunto = vals[7], anuncio = vals[8];
+    var tentativas = Number(vals[9]) || 0;
+
+    if (!nome || !telefone) { sheet.deleteRow(row); continue; } // linha corrompida/vazia
+
+    processados++;
+    var ok = _sendLeadToGSEngage(gsKey, nome, telefone, origem, pagina, cnpj, campanha, conjunto, anuncio, { isRetry: true });
+    if (ok) {
+      sheet.deleteRow(row);
+      sucesso++;
+    } else if (tentativas + 1 >= GSENGAGE_MAX_TENTATIVAS) {
+      Logger.log('GS Engage: desistindo do lead "' + nome + '" após ' + GSENGAGE_MAX_TENTATIVAS + ' tentativas — verificar manualmente na aba GSEngage_Falhas.');
+      sheet.getRange(row, 10).setValue(tentativas + 1);
+      desistidos++;
+    } else {
+      sheet.getRange(row, 10).setValue(tentativas + 1);
+    }
+  }
+
+  Logger.log('retryGSEngageFalhas: ' + processados + ' processado(s), ' + sucesso + ' com sucesso, ' + desistidos + ' desistido(s) (>= ' + GSENGAGE_MAX_TENTATIVAS + ' tentativas).');
+}
+
+// ── Instala o trigger de reprocessamento — rodar 1x manualmente. ──
+function instalarRetryGSEngageTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'retryGSEngageFalhas') ScriptApp.deleteTrigger(t);
+  });
+
+  ScriptApp.newTrigger('retryGSEngageFalhas')
+    .timeBased()
+    .everyMinutes(15)
+    .create();
+
+  Logger.log('Trigger instalado: retryGSEngageFalhas → a cada 15 minutos.');
 }
 
 // ── PUSH NOTIFICATION (OneSignal) ────────────────────────────
