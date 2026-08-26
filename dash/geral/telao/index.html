@@ -1900,24 +1900,39 @@ function renderBiaSectionTelao(s) {
 
   // Motor Proativo — o card "ao vivo" de verdade (achado 26/08: Robert
   // pediu explicitamente esse card, não existia antes, só um número solto).
+  // Achado 26/08 (Robert, ao vivo, confuso com "Seria Enviado" aparecendo):
+  // o `resultado` bruto que a Bia grava hoje MISTURA vocabulário de
+  // simulação (nunca agiu de verdade — "seria_enviado", "*_simulada") com
+  // vocabulário de ação real ("*_ao_vivo", e variantes sem sufixo claro
+  // tratadas como reais por padrão). Antes disso ficava tudo com a mesma
+  // cor/peso, parecendo "tudo real". Agora cada linha é marcada — nunca
+  // reescrevo/escondo o dado, só deixo claro qual é qual.
+  const isSimulado_ = (k) => /simulad|^seria_?/.test(String(k || '').toLowerCase());
   el('bia-motor-badge').textContent = s.motorProativoHoje + ' evento' + (s.motorProativoHoje === 1 ? '' : 's') + ' hoje';
   const porResultado = Object.entries(s.motorPorResultado || {}).sort((a, b) => b[1] - a[1]);
   const maxMotor = Math.max(...porResultado.map(x => x[1]), 1);
   el('bia-motor-breakdown').innerHTML = porResultado.length === 0
     ? '<div class="feed-empty">Nenhum evento hoje ainda</div>'
-    : porResultado.map(([k, v], i) => ga4Row_(GA4_S[i % GA4_S.length], prettyLabel_(k), v, maxMotor)).join('');
+    : porResultado.map(([k, v]) => {
+        const sim = isSimulado_(k);
+        return ga4Row_(sim ? '#9b93b0' : '#22C35D', (sim ? '🧪 ' : '✅ ') + prettyLabel_(k), v, maxMotor, sim ? 'simulação' : 'real');
+      }).join('');
   const recentes = s.motorRecentes || [];
   el('bia-motor-feed').innerHTML = recentes.length === 0
     ? '<div class="feed-empty">Sem atividade recente</div>'
-    : recentes.map(e => `
+    : recentes.map(e => {
+        const sim = isSimulado_(e.resultado) || isSimulado_(e.estagio);
+        return `
       <div class="bia-motor-row">
-        <div class="bia-motor-dot"></div>
+        <div class="bia-motor-dot" style="background:${sim ? '#9b93b0' : '#22C35D'}"></div>
         <div class="bia-motor-main">
           <b>${escHtml(e.repNome || 'Motor Proativo')}</b> — ${escHtml(prettyLabel_(e.estagio))} → ${escHtml(prettyLabel_(e.resultado))}
+          <span style="color:${sim ? 'var(--faint)' : '#22C35D'};font-weight:800;font-size:9px;text-transform:uppercase;margin-left:4px">${sim ? '🧪 simulação' : '✅ real'}</span>
           ${e.dealId ? `<span style="color:var(--faint)"> · deal ${escHtml(String(e.dealId))}</span>` : ''}
         </div>
         <div class="bia-motor-time">${timeAgo_(e.ts)}</div>
-      </div>`).join('');
+      </div>`;
+      }).join('');
 
   const gv = (n) => n > 0 ? 'crit' : 'good';
   el('bia-gate-fing').textContent = s.gates.fing; el('bia-gate-fing').className = 'v ' + gv(s.gates.fing);
