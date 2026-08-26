@@ -202,8 +202,16 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 /* Card "Ao vivo" (achado 25-26/08, referência Yanmei live-card) — destaque
    visual próprio (borda+glow verde pulsante), separado do grid filtrado por
    período: Realtime API não respeita _period, é sempre "agora". */
-#ga4-live-card{border:1.5px solid #22C35D;box-shadow:0 0 0 3px rgba(34,195,93,.12)}
-#ga4-live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#22C35D;margin-right:6px;animation:ga4pulse 1.6s ease-in-out infinite}
+/* 26/08: "Ao Vivo" com destaque de verdade — preenchido, primeiro card da
+   fileira, igual ao tratamento do card AO VIVO na referência real
+   (dashboard-telao.html standalone). Antes era só mais um kchip com borda
+   fina, do mesmo tamanho dos outros 7 (achado do Robert: "card ao vivo deve
+   tá na esquerda com destaque"). */
+#ga4-live-card{background:linear-gradient(135deg,#1a9e4f,#22C35D);border:none;box-shadow:0 4px 14px -4px rgba(34,195,93,.55)}
+#ga4-live-card .kc-label{color:rgba(255,255,255,.85)}
+#ga4-live-card .kc-val{color:#fff;font-size:20px}
+#ga4-live-card .kc-sub{color:rgba(255,255,255,.8)}
+#ga4-live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#fff;margin-right:6px;animation:ga4pulse 1.6s ease-in-out infinite}
 @keyframes ga4pulse{0%,100%{opacity:1}50%{opacity:.35}}
 
 /* BIA (25-26/08, redesenhado 26/08 depois de comparar com a referência real
@@ -328,11 +336,13 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 .abar-row:last-child{border-bottom:none}
 .abar-row[onclick]{cursor:pointer}
 .abar-row[onclick]:hover{background:#faf8fc}
+.abar-row-active{background:#f0ebf8}
+.abar-row-active .abar-name{color:var(--purple)}
 .abar-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:4px}
 .abar-name{font-size:11.5px;font-weight:700;color:var(--text);min-width:0;display:flex;align-items:center;gap:5px}
 .abar-name-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .abar-val{font-size:11.5px;font-weight:800;color:var(--text);flex-shrink:0;font-variant-numeric:tabular-nums}
-.abar-sub{font-size:9.5px;font-weight:600;color:var(--muted);flex-shrink:0;margin-left:5px}
+.abar-sub{font-size:10.5px;font-weight:600;color:var(--muted);flex-shrink:0;margin-left:3px}
 .abar-track{height:7px;background:#f0ebf8;border-radius:4px;overflow:hidden;box-shadow:inset 0 1px 2px rgba(90,58,128,.08)}
 .abar-fill{height:100%;border-radius:4px;min-width:4px;transition:width .6s cubic-bezier(.4,0,.2,1)}
 .abar-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
@@ -1074,6 +1084,11 @@ footer strong{color:#fff}
        Script já implantado (lifeb-ga4-proxy.gs) — nunca do Supabase, dado
        sempre ao vivo por período. -->
   <div id="ga4-hero-row">
+    <div class="kchip" id="ga4-live-card">
+      <span class="kc-label"><span id="ga4-live-dot"></span>Ao Vivo Agora</span>
+      <div class="kc-row"><span class="kc-val" id="ga4-k-live"><span class="skel"></span></span></div>
+      <span class="kc-sub">Tempo real · atualiza automaticamente</span>
+    </div>
     <div class="kchip kchip-b" style="--accent-color:var(--purple)">
       <span class="kc-label">Usuários Ativos<span id="ga4-hero-spark" style="float:right"></span></span>
       <div class="kc-row"><span class="kc-val" id="ga4-hero-val"><span class="skel"></span></span></div>
@@ -1109,21 +1124,21 @@ footer strong{color:#fff}
       <div class="kc-row"><span class="kc-val" id="ga4-k-leads"><span class="skel"></span></span></div>
       <span class="kc-sub">Lead_Formulario</span>
     </div>
-    <div class="kchip" id="ga4-live-card">
-      <span class="kc-label"><span id="ga4-live-dot"></span>Ao Vivo Agora</span>
-      <div class="kc-row"><span class="kc-val" id="ga4-k-live"><span class="skel"></span></span></div>
-      <span class="kc-sub">Realtime · atualiza a cada refresh</span>
-    </div>
   </div>
 
   <div id="ga4-main">
     <div id="ga4-col-left">
-      <div class="card" id="ga4-pages-card" style="flex:1;display:flex;flex-direction:column;min-height:0">
+      <!-- 26/08: funil ("Eventos de Conversão") movido pra esquerda — mesma
+           posição do funil de Vendas/LTV e da referência real
+           (dashboard-telao.html standalone), achado do Robert ("funil tem
+           que estar na esquerda como está no dash inteiro"). -->
+      <div class="card" id="ga4-funil-card" style="flex:1;display:flex;flex-direction:column;min-height:0">
         <div class="card-hd">
-          <span class="card-hd-title">Top Páginas</span>
-          <span class="badge" id="ga4-pages-badge">carregando…</span>
+          <span class="card-hd-title">Eventos de Conversão</span>
+          <span class="badge" id="ga4-funil-badge">carregando…</span>
         </div>
-        <div class="funil-body" id="ga4-pages-rows" style="flex:1;min-height:0;overflow-y:auto;justify-content:flex-start;gap:2px"></div>
+        <div id="ga4-funil-rows" style="flex:1;min-height:0;overflow-y:auto;padding:2px 14px"></div>
+        <div id="ga4-funil-rates" style="display:none;padding:8px 14px 12px;flex-shrink:0"></div>
       </div>
     </div>
 
@@ -1145,19 +1160,12 @@ footer strong{color:#fff}
     </div>
 
     <div id="ga4-col-right">
-      <!-- 26/08: unificado num painel só ("Eventos de Conversão"), igual o
-           padrão real da referência (dashboard-telao.html standalone) —
-           ícone + nome + barra fina roxa + número grande, formulário e
-           scroll na MESMA lista, com selos de taxa (Envio/Abandono) embaixo.
-           Antes estava partido em 2 cards com o estilo de barra errado
-           (achado do Robert, "não mostra o funil como no link"). -->
-      <div class="card" id="ga4-funil-card" style="flex:1;display:flex;flex-direction:column;min-height:0">
+      <div class="card" id="ga4-pages-card" style="flex:1;display:flex;flex-direction:column;min-height:0">
         <div class="card-hd">
-          <span class="card-hd-title">Eventos de Conversão</span>
-          <span class="badge" id="ga4-funil-badge">carregando…</span>
+          <span class="card-hd-title">Top Páginas</span>
+          <span class="badge" id="ga4-pages-badge">carregando…</span>
         </div>
-        <div id="ga4-funil-rows" style="flex:1;min-height:0;overflow-y:auto;padding:2px 14px"></div>
-        <div id="ga4-funil-rates" style="display:none;padding:8px 14px 12px;flex-shrink:0"></div>
+        <div class="funil-body" id="ga4-pages-rows" style="flex:1;min-height:0;overflow-y:auto;justify-content:flex-start;gap:2px"></div>
       </div>
     </div>
   </div>
@@ -1297,6 +1305,10 @@ const ORIGIN_LABELS = { outbound: 'Outbound', inbound: 'Inbound', both: 'Painel 
 const STAGE_ORD = { '3771722':'o1', '3771723':'o2', '3771724':'o2', '3771725':'o3' };
 const ORD_DOT   = { o1:'#b09bd6', o2:'#9260c8', o3:'#5a3a80' };
 const STAGE_LABEL = { o1:'Conexão', o2:'Diag./Solução', o3:'Negociação' };
+// 26/08: mesmo vocabulário de STAGE_ORD/ORD_DOT, versão LTV (3 etapas, tom
+// rosa da aba — mesmo hue do hero/spark #E92085, claro→escuro).
+const LTV_STAGE_ORD = { '3861835':'o1', '3861836':'o2', '3861837':'o3' };
+const LTV_ORD_DOT   = { o1:'#f2a6cc', o2:'#e94f9c', o3:'#a3145f' };
 
 // ============================================================
 // FONTE DE DADOS — migrado 15/07 de "chamar o Agendor ao vivo via proxy
@@ -1679,6 +1691,25 @@ function computeLtvData(allRows, originFilter, periodType, customFrom, customTo,
 // novas (video1/video2/rmk/apresentacao-*) já aparecem sozinhas.
 const GA4_PROXY_URL = 'https://script.google.com/macros/s/AKfycbxGFDgwJhRVHFUYuOc6KRpZgRQ8CLyeNocnmIZqVASQSUt6350m11RzSdvJcWSMnTYzyw/exec';
 const GA4_S = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'];
+// 26/08 (Robert, confirmado por ele mesmo: "video1 supermercado video2
+// drogarias / principal etc") — nome amigável em vez do path técnico cru
+// ("olha que lixo... sem essas barras"). video1/video2/"/" vieram
+// confirmados por ele; o resto é tradução literal do próprio slug da URL
+// (apresentacao-farma → "Apresentação — Farma"), não é interpretação nova.
+const GA4_PAGE_NAMES = {
+  '/': 'Principal',
+  '/video1/': 'Vídeo — Supermercado',
+  '/video2/': 'Vídeo — Drogarias',
+  '/redefarma/': 'Rede Farma',
+  '/redesuper/': 'Rede Super',
+  '/apresentacao-farma/': 'Apresentação — Farma',
+  '/apresentacao-super/': 'Apresentação — Super',
+  '/lifeb/': 'Life B (institucional)'
+};
+function ga4FriendlyPage_(path) {
+  if (!path || path === '/') return 'Principal';
+  return GA4_PAGE_NAMES[path] || path;
+}
 
 function ga4Val_(resp, i) {
   return resp && resp.rows && resp.rows[0] && resp.rows[0].metricValues[i] ? Number(resp.rows[0].metricValues[i].value) : 0;
@@ -1696,14 +1727,25 @@ async function fetchGa4Json_(action, startDate, endDate) {
   if (!r.ok) throw new Error('GA4 ' + action + ' HTTP ' + r.status);
   return r.json();
 }
+// 26/08 (achado real durante teste ao vivo: 1 das 7 chamadas em paralelo pro
+// proxy Apps Script voltou HTTP 404 sob rajada — provável limite de execução
+// concorrente do lado do Google, não bug nosso). Antes usava Promise.all: 1
+// falha isolada derrubava a leitura inteira (_ga4Raw ficava null, aba inteira
+// travava em "carregando…" pro resto do ciclo de refresh). Promise.allSettled
+// deixa o que veio OK renderizar mesmo se 1 endpoint falhar isoladamente.
 async function fetchGa4Raw(startDate, endDate) {
-  const [summary, chart, pages, cities, sources, events, leads] = await Promise.all([
-    fetchGa4Json_('summary', startDate, endDate), fetchGa4Json_('chart', startDate, endDate),
-    fetchGa4Json_('pages', startDate, endDate), fetchGa4Json_('cities', startDate, endDate),
-    fetchGa4Json_('sources', startDate, endDate), fetchGa4Json_('events', startDate, endDate),
-    fetchGa4Json_('leads', startDate, endDate)
-  ]);
-  return { summary, chart, pages, cities, sources, events, leads };
+  const actions = ['summary', 'chart', 'pages', 'cities', 'sources', 'events', 'leads'];
+  const results = await Promise.allSettled(actions.map(a => fetchGa4Json_(a, startDate, endDate)));
+  const out = {};
+  results.forEach((r, i) => {
+    if (r.status === 'fulfilled') {
+      out[actions[i]] = r.value;
+    } else {
+      console.warn('GA4 ' + actions[i] + ' falhou isoladamente:', r.reason && r.reason.message);
+      out[actions[i]] = null;
+    }
+  });
+  return out;
 }
 
 // Função pura de cálculo — sem HTML, mesma convenção do resto do painel.
@@ -1716,8 +1758,22 @@ function computeGa4Data(raw) {
   // antigo do período à direita (onde a bolinha de destaque do sparkline
   // fica) — sinalizava tendência ao contrário.
   const chartPts = ga4Rows_(raw.chart).map(r => r.vals[0]);
-  const pages = ga4Rows_(raw.pages).map(r => ({ path: r.dims[0], users: r.vals[0], sessions: r.vals[1], views: r.vals[2] }));
-  const cities = ga4Rows_(raw.cities).map(r => ({ name: (r.dims[1] && r.dims[1] !== '(not set)') ? r.dims[1] : r.dims[0], users: r.vals[0] }));
+  // 26/08: `/dash/` (o próprio Dashboard Geral, aparecia rastreado por causa
+  // dos nossos próprios testes/refresh) fora da lista — não é página de
+  // marketing (Robert: "dash não pode aparecer aqui né burro").
+  const pages = ga4Rows_(raw.pages)
+    .filter(r => !/^\/dash(\/|$)/.test(r.dims[0] || ''))
+    .map(r => ({ path: r.dims[0], users: r.vals[0], sessions: r.vals[1], views: r.vals[2] }));
+  // 26/08 (Robert: "cidades não tá aparecendo estados também") — antes
+  // escolhia SÓ região OU SÓ cidade (o que tivesse valor), descartando a
+  // outra dimensão. GA4 manda region (dims[0]) + city (dims[1]) separados;
+  // agora mostra os dois juntos quando disponíveis.
+  const cities = ga4Rows_(raw.cities).map(r => {
+    const region = (r.dims[0] && r.dims[0] !== '(not set)') ? r.dims[0] : null;
+    const city = (r.dims[1] && r.dims[1] !== '(not set)') ? r.dims[1] : null;
+    const name = (city && region) ? (city + ' — ' + region) : (city || region || 'Não identificado');
+    return { name, users: r.vals[0] };
+  });
   const sources = ga4Rows_(raw.sources).map(r => ({ name: r.dims[0], users: r.vals[0], sessions: r.vals[1] }));
   const eventsMap = {};
   ga4Rows_(raw.events).forEach(r => { eventsMap[r.dims[0]] = r.vals[0]; });
@@ -1739,7 +1795,7 @@ function fmtInt_(n) { return (n || 0).toLocaleString('pt-BR'); }
 // Mesmo template de sdrFunilRowTelao_, mas vira <a> de verdade quando tem
 // href (Top Páginas → URL real do site) — "tudo que puder ser clicável deve
 // ser" (referência Yanmei).
-function ga4Row_(dotColor, name, count, maxCount, valText, href) {
+function ga4Row_(dotColor, name, count, maxCount, valText, href, onclick) {
   const pct = Math.max((count / Math.max(maxCount, 1)) * 100, 3);
   const tag = href ? 'a' : 'div';
   // Achado da revisão de segurança (25-26/08): href monta URL a partir de
@@ -1748,12 +1804,19 @@ function ga4Row_(dotColor, name, count, maxCount, valText, href) {
   // atributo (XSS via atributo). encodeURI trata o path como URL de verdade,
   // escHtml garante que nenhuma aspa sobrevive dentro do atributo href.
   const safeHref = href ? escHtml(encodeURI(href)) : '';
-  const openTag = href ? `<a class="abar-row" href="${safeHref}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;display:block">` : '<div class="abar-row">';
+  const clickAttr = onclick ? ` onclick="${onclick}" style="cursor:pointer"` : '';
+  const openTag = href ? `<a class="abar-row" href="${safeHref}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;display:block">` : `<div class="abar-row"${clickAttr}>`;
+  // 26/08 (Robert, achado real com print colado: "16161.757 sessões" —
+  // 2 números diferentes emendados sem separador nenhum): `count` não
+  // passava por fmtInt_ (perdia o separador de milhar) e ficava colado
+  // direto no texto do sub-valor, sem "·"/espaço/parênteses entre os dois.
+  // Agora o valor principal também usa fmtInt_ e o sub-valor vem com "·"
+  // explícito na frente — impossível ler como um número só.
   return `
     ${openTag}
       <div class="abar-top">
         <span class="abar-name" title="${escHtml(name)}"><span class="abar-dot" style="background:${dotColor}"></span><span class="abar-name-text">${escHtml(name)}</span></span>
-        <span class="abar-val">${count}${valText ? '<span class="abar-sub">' + escHtml(valText) + '</span>' : ''}</span>
+        <span class="abar-val">${fmtInt_(count)}${valText ? '<span class="abar-sub"> · ' + escHtml(valText) + '</span>' : ''}</span>
       </div>
       <div class="abar-track"><div class="abar-fill" style="width:${pct}%;background:${dotColor}"></div></div>
     </${tag}>`;
@@ -1772,7 +1835,7 @@ function renderGa4SectionTelao(d) {
   el('ga4-pages-badge').textContent = d.pages.length + ' páginas';
   const maxPages = Math.max(...d.pages.map(p => p.users), 1);
   el('ga4-pages-rows').innerHTML = d.pages.slice(0, 10).map((p, i) =>
-    ga4Row_(GA4_S[i % GA4_S.length], p.path || '/', p.users, maxPages, fmtInt_(p.views) + ' views', 'https://projetojlbv.com.br' + p.path)
+    ga4Row_(GA4_S[i % GA4_S.length], ga4FriendlyPage_(p.path), p.users, maxPages, fmtInt_(p.views) + ' visualizações', 'https://projetojlbv.com.br' + p.path)
   ).join('');
 
   el('ga4-sources-badge').textContent = d.sources.length + ' fontes';
@@ -1833,13 +1896,16 @@ function ga4EventRow_(icon, nome, count, maxCount) {
 }
 
 let _ga4ViewActive = false;
+let _ga4EverActivated = false;
 let _ga4Raw = null;
 let _ga4Loading = false;
-async function loadGa4Fresh_() {
-  if (_ga4Loading || !_data || !_data.period) return;
+async function loadGa4Fresh_(fromOverride, toOverride) {
+  const from = fromOverride || (_data && _data.period && _data.period.from);
+  const to = toOverride || (_data && _data.period && _data.period.to);
+  if (_ga4Loading || !from || !to) return;
   _ga4Loading = true;
   try {
-    _ga4Raw = await fetchGa4Raw(_data.period.from, _data.period.to);
+    _ga4Raw = await fetchGa4Raw(from, to);
     if (_ga4ViewActive) renderGa4SectionTelao(computeGa4Data(_ga4Raw));
     // Realtime é sempre "agora" — não depende do período, busca à parte e
     // não bloqueia o resto do render se falhar/demorar.
@@ -1878,28 +1944,53 @@ async function fetchBiaSnapshot() {
   return r.json();
 }
 
+// 26/08 (Robert: "achei o gráfico uma porcaria") — antes eram 2 séries de
+// escala bem diferente (R$ vs contagem de notificações) na MESMA área/eixo,
+// cada uma normalizada pro seu próprio máximo sem dizer isso em lugar
+// nenhum — dá pra ler 2 picos "iguais" que na verdade são grandezas sem
+// nenhuma relação visual válida (exatamente o erro #1 do skill de dataviz:
+// nunca eixo duplo, 2 medidas de escala diferente = 2 gráficos). Vira 2
+// paineizinhos lado a lado, cada um com sua própria escala, valor de hoje
+// em destaque e área preenchida (sparkline "hero", 1 métrica por painel).
 function renderBiaTrendChart_(dias, custo, notif, containerId) {
   const box = el(containerId);
   const n = dias.length;
   if (n < 2) { box.innerHTML = '<div class="feed-empty">Sem tendência suficiente ainda</div>'; return; }
-  const W = 600, H = 110, PAD_L = 4, PAD_R = 4, PAD_T = 10, PAD_B = 16;
-  const maxCusto = Math.max(...custo, 1), maxNotif = Math.max(...notif, 1);
-  const x = i => PAD_L + (i / (n - 1)) * (W - PAD_L - PAD_R);
-  const yFor = (max) => (v) => H - PAD_B - (v / max) * (H - PAD_T - PAD_B);
-  const yCusto = yFor(maxCusto), yNotif = yFor(maxNotif);
-  const path = (vals, yf) => 'M' + vals.map((v, i) => x(i).toFixed(1) + ',' + yf(v).toFixed(1)).join('L');
   box.innerHTML = `
-    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:100%;display:block;min-height:0">
-      <line x1="${PAD_L}" y1="${H - PAD_B}" x2="${W - PAD_R}" y2="${H - PAD_B}" stroke="var(--border)" stroke-width="1"/>
-      <path d="${path(custo, yCusto)}" fill="none" stroke="var(--magenta)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="${path(notif, yNotif)}" fill="none" stroke="var(--purple)" stroke-width="2" stroke-dasharray="4,3" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-    <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);padding:0 4px;font-weight:700">
-      <span>${dias[0]}</span><span>${dias[n - 1]}</span>
-    </div>
-    <div style="display:flex;gap:14px;font-size:10px;font-weight:700;padding:2px 4px 0">
-      <span style="color:var(--magenta)">● Custo (R$${custo[n - 1].toFixed(2)} hoje)</span>
-      <span style="color:var(--purple)">- - Notificações (${notif[n - 1]} hoje)</span>
+    <div style="display:flex;height:100%">
+      <div style="flex:1;min-width:0">${biaTrendPanel_('Custo (R$)', dias, custo, '#E92085', v => 'R$ ' + (v || 0).toFixed(2))}</div>
+      <div style="width:1px;background:var(--border);flex-shrink:0;margin:4px 10px"></div>
+      <div style="flex:1;min-width:0">${biaTrendPanel_('Notificações', dias, notif, 'var(--purple)', v => fmtInt_(v))}</div>
+    </div>`;
+}
+function biaTrendPanel_(label, dias, vals, color, fmtVal) {
+  const n = vals.length;
+  const W = 280, H = 90, PAD_L = 3, PAD_R = 3, PAD_T = 8, PAD_B = 3;
+  const max = Math.max(...vals, 0.0001);
+  const x = i => PAD_L + (i / (n - 1)) * (W - PAD_L - PAD_R);
+  const y = v => H - PAD_B - (v / max) * (H - PAD_T - PAD_B);
+  const linePath = 'M' + vals.map((v, i) => x(i).toFixed(1) + ',' + y(v).toFixed(1)).join('L');
+  const areaPath = linePath + ` L${x(n - 1).toFixed(1)},${(H - PAD_B).toFixed(1)} L${x(0).toFixed(1)},${(H - PAD_B).toFixed(1)} Z`;
+  const today = vals[n - 1];
+  const gid = 'biaTrendGrad_' + label.replace(/[^a-zA-Z0-9]/g, '');
+  return `
+    <div style="display:flex;flex-direction:column;height:100%">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;padding:0 4px 2px;flex-shrink:0">
+        <span style="font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">${escHtml(label)}</span>
+        <span style="font-size:16px;font-weight:800;color:${color}">${fmtVal(today)}<span style="font-size:9px;font-weight:700;color:var(--faint);margin-left:3px">hoje</span></span>
+      </div>
+      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;flex:1;min-height:0;display:block">
+        <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${color}" stop-opacity=".25"/>
+          <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+        </linearGradient></defs>
+        <path d="${areaPath}" fill="url(#${gid})" stroke="none"/>
+        <path d="${linePath}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="${x(n - 1).toFixed(1)}" cy="${y(today).toFixed(1)}" r="3.2" fill="${color}"/>
+      </svg>
+      <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--faint);padding:2px 4px 0;flex-shrink:0">
+        <span>${escHtml(dias[0])}</span><span>${escHtml(dias[n - 1])}</span>
+      </div>
     </div>`;
 }
 
@@ -1914,6 +2005,45 @@ function timeAgo_(ts) {
   if (mins < 60) return mins + 'min atrás';
   const h = Math.floor(mins / 60);
   return h + 'h' + (mins % 60 ? (mins % 60) + 'min' : '') + ' atrás';
+}
+
+// 26/08 (Robert: "não tem nada clicável, quase não serve pra nada a aba da
+// BIA") — clicar numa linha do resumo filtra o feed abaixo pra só aquele
+// resultado (clique de novo limpa). Isolado em função própria (em vez de
+// dentro de renderBiaSectionTelao) pra filterBiaMotorFeed_ poder re-renderizar
+// só esse pedaço no clique, sem redesenhar o gráfico de tendência inteiro.
+let _biaMotorFilter = null;
+function renderBiaMotorSection_(s) {
+  const porResultado = Object.entries(s.motorPorResultado || {}).sort((a, b) => b[1] - a[1]);
+  const maxMotor = Math.max(...porResultado.map(x => x[1]), 1);
+  el('bia-motor-breakdown').innerHTML = porResultado.length === 0
+    ? '<div class="feed-empty">Nenhum evento hoje ainda</div>'
+    : porResultado.map(([k, v], i) => {
+        const row = ga4Row_(GA4_S[i % GA4_S.length], prettyLabel_(k), v, maxMotor, '', '', `filterBiaMotorFeed_('${k.replace(/'/g, "\\'")}')`);
+        return _biaMotorFilter === k ? row.replace('class="abar-row"', 'class="abar-row abar-row-active"') : row;
+      }).join('');
+
+  const recentes = s.motorRecentes || [];
+  const filtered = _biaMotorFilter ? recentes.filter(e => (e.resultado || e.estagio || '?') === _biaMotorFilter) : recentes;
+  el('bia-motor-feed').innerHTML = filtered.length === 0
+    ? `<div class="feed-empty">${_biaMotorFilter ? 'Nenhum evento desse tipo na janela recente' : 'Sem atividade recente'}</div>`
+    : filtered.map(e => `
+      <div class="bia-motor-row">
+        <div class="bia-motor-dot"></div>
+        <div class="bia-motor-main">
+          <b>${escHtml(e.repNome || 'Motor Proativo')}</b> — ${escHtml(prettyLabel_(e.estagio))} → ${escHtml(prettyLabel_(e.resultado))}
+          ${e.dealId ? `<span style="color:var(--faint)"> · deal ${escHtml(String(e.dealId))}</span>` : ''}
+        </div>
+        <div class="bia-motor-time">${timeAgo_(e.ts)}</div>
+      </div>`).join('');
+
+  el('bia-motor-badge').textContent = _biaMotorFilter
+    ? filtered.length + ' de ' + (s.motorProativoHoje || 0) + ' · filtro: ' + prettyLabel_(_biaMotorFilter) + ' (clique de novo p/ limpar)'
+    : (s.motorProativoHoje || 0) + ' evento' + (s.motorProativoHoje === 1 ? '' : 's') + ' hoje';
+}
+function filterBiaMotorFeed_(key) {
+  _biaMotorFilter = (_biaMotorFilter === key) ? null : key;
+  if (_biaSnap) renderBiaMotorSection_(_biaSnap);
 }
 
 function renderBiaSectionTelao(s) {
@@ -1943,7 +2073,6 @@ function renderBiaSectionTelao(s) {
   // (só prettificado), sem inventar um veredito real/simulado que eu não
   // consigo confirmar de dentro do worker (só leitura, nunca vi o código
   // que decide enviar ou não).
-  el('bia-motor-badge').textContent = s.motorProativoHoje + ' evento' + (s.motorProativoHoje === 1 ? '' : 's') + ' hoje';
   // Achado 26/08 (auditoria): a BIA cacheia snapshot a cada 10min (cron do
   // worker) — sem mostrar a hora do sync, um número "parado" pode parecer
   // errado comparado ao /custo ao vivo. Visível no rodapé (texto, não só
@@ -1951,25 +2080,7 @@ function renderBiaSectionTelao(s) {
   if (_biaViewActive && s.syncedAt) {
     el('footer-source').textContent = 'bia-dash-sync (sinc. ' + new Date(s.syncedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + ')';
   }
-  const porResultado = Object.entries(s.motorPorResultado || {}).sort((a, b) => b[1] - a[1]);
-  const maxMotor = Math.max(...porResultado.map(x => x[1]), 1);
-  el('bia-motor-breakdown').innerHTML = porResultado.length === 0
-    ? '<div class="feed-empty">Nenhum evento hoje ainda</div>'
-    : porResultado.map(([k, v], i) => ga4Row_(GA4_S[i % GA4_S.length], prettyLabel_(k), v, maxMotor)).join('');
-  const recentes = s.motorRecentes || [];
-  el('bia-motor-feed').innerHTML = recentes.length === 0
-    ? '<div class="feed-empty">Sem atividade recente</div>'
-    : recentes.map(e => {
-        return `
-      <div class="bia-motor-row">
-        <div class="bia-motor-dot"></div>
-        <div class="bia-motor-main">
-          <b>${escHtml(e.repNome || 'Motor Proativo')}</b> — ${escHtml(prettyLabel_(e.estagio))} → ${escHtml(prettyLabel_(e.resultado))}
-          ${e.dealId ? `<span style="color:var(--faint)"> · deal ${escHtml(String(e.dealId))}</span>` : ''}
-        </div>
-        <div class="bia-motor-time">${timeAgo_(e.ts)}</div>
-      </div>`;
-      }).join('');
+  renderBiaMotorSection_(s);
 
   const gv = (n) => n > 0 ? 'crit' : 'good';
   el('bia-gate-fing').textContent = s.gates.fing; el('bia-gate-fing').className = 'v ' + gv(s.gates.fing);
@@ -1996,9 +2107,13 @@ function renderBiaSectionTelao(s) {
   el('bia-deploy-falhas').textContent = s.deploy.falhas;
   el('bia-deploy-falhas').className = 'v ' + (s.deploy.falhas > 0 ? 'crit' : 'good');
   el('bia-deploy-desde').textContent = s.deploy.desdeInicioLog || '—';
+  // 26/08 (Robert: "não tem nada clicável") — resumo vinha cortado em 90
+  // caracteres sem jeito nenhum de ler o resto. Guarda o log completo em
+  // _biaDeployLog e abre modal com o texto inteiro no clique.
   const log = (s.deploy.log || []).slice().reverse();
-  el('bia-deploy-rows').innerHTML = log.length === 0 ? '<div class="feed-empty">Nenhum deploy registrado ainda</div>' : log.map(d => `
-    <div class="feed-row" style="cursor:default">
+  _biaDeployLog = log;
+  el('bia-deploy-rows').innerHTML = log.length === 0 ? '<div class="feed-empty">Nenhum deploy registrado ainda</div>' : log.map((d, i) => `
+    <div class="feed-row" onclick="openBiaDeployModal_(${i})" style="cursor:pointer">
       <div class="feed-dot ${d.suiteFalhou > 0 ? 'fd-red' : 'fd-green'}"></div>
       <div class="feed-info">
         <div class="feed-co"><span class="og-title-text">${escHtml((d.resumo || '').slice(0, 90))}${(d.resumo || '').length > 90 ? '…' : ''}</span></div>
@@ -2008,6 +2123,21 @@ function renderBiaSectionTelao(s) {
         <div class="feed-date">${d.ts ? new Date(d.ts).toLocaleDateString('pt-BR') : ''}</div>
       </div>
     </div>`).join('');
+}
+let _biaDeployLog = [];
+function openBiaDeployModal_(i) {
+  const d = _biaDeployLog[i];
+  if (!d) return;
+  el('modal-title').textContent = d.ts ? new Date(d.ts).toLocaleString('pt-BR') : 'Registro de deploy';
+  el('modal-body').innerHTML = `
+    <div style="padding:14px 18px">
+      <div style="display:flex;gap:16px;margin-bottom:12px;font-size:13px">
+        <span><b>Suíte:</b> ${escHtml(String(d.suiteTotal ?? '—'))}</span>
+        <span style="color:${d.suiteFalhou > 0 ? 'var(--red)' : 'var(--green)'}"><b>Falhas:</b> ${escHtml(String(d.suiteFalhou ?? 0))}</span>
+      </div>
+      <div style="font-size:14px;line-height:1.6;white-space:pre-wrap">${escHtml(d.resumo || 'Sem resumo registrado.')}</div>
+    </div>`;
+  el('modal-overlay').classList.add('show');
 }
 
 async function loadBiaFresh_() {
@@ -2737,6 +2867,7 @@ function loadAdsSection(periodFrom, periodTo, inboundData, silent, prevPeriodFro
 // egress de 01/08.
 // ============================================================
 let _sdrRaw = null;
+let _ltvData = null;
 let _ltvViewActive = false;
 let _sdrViewActive = false;
 let _sdrLoading = false;
@@ -2818,8 +2949,24 @@ function setView(btn) {
     loadAdsHierarchyFresh_();
   }
   if (_ga4ViewActive) {
-    if (_ga4Raw) renderGa4SectionTelao(computeGa4Data(_ga4Raw));
-    loadGa4Fresh_();
+    // 26/08 (Robert: "quando selecionar o painel de GA4 deve selecionar por
+    // padrão o filtro hoje pra ficar mais coerente") — só na 1ª ativação da
+    // aba nesta sessão (não força "Hoje" de novo toda vez que volta pra
+    // GA4, senão o filtro global de Vendas/LTV/SDR/Ads ficaria resetando
+    // sozinho a cada troca de aba). Data explícita (getPeriodDatesClient)
+    // em vez de depender de _data.period pra não correr risco de ler o
+    // período antigo antes do loadData(false) disparado por setPeriod
+    // terminar (é assíncrono).
+    if (!_ga4EverActivated) {
+      _ga4EverActivated = true;
+      const hojeChip = document.querySelector('.pchip[data-p="today"]');
+      if (hojeChip && _period !== 'today') setPeriod(hojeChip);
+      const hojeRange = getPeriodDatesClient('today', null, null, todayLocalStr());
+      loadGa4Fresh_(hojeRange.from, hojeRange.to);
+    } else {
+      if (_ga4Raw) renderGa4SectionTelao(computeGa4Data(_ga4Raw));
+      loadGa4Fresh_();
+    }
   }
   if (_biaViewActive) {
     if (_biaSnap) renderBiaSectionTelao(_biaSnap);
@@ -2834,6 +2981,7 @@ function renderLtvIfPossible_() {
   if (!_ltvViewActive || !_rawDeals || !_data || !_data.period) return;
   const effPeriodType = _period === 'month_pick' ? 'custom' : _period;
   const ltv = computeLtvData(_rawDeals, _originMode, effPeriodType, _customFrom, _customTo, todayLocalStr());
+  _ltvData = ltv;
   renderLtvSectionTelao(ltv);
 }
 
@@ -2866,10 +3014,62 @@ function renderLtvSectionTelao(d) {
   el('ltv-k-leads').textContent = k.leadsNoPeriodo !== undefined ? String(k.leadsNoPeriodo) : '—';
 
   el('ltv-funil-badge').textContent = k.ativos + ' ativos';
-  const maxF = Math.max(...d.funnel.map(s => s.reached ?? s.count), 1);
-  el('ltv-funil-rows').innerHTML = d.funnel.slice().sort((a,b)=>a.seq-b.seq).map(s =>
-    sdrFunilRowTelao_('#E92085', s.name, s.reached ?? s.count, maxF, fmtMoney(s.value))
-  ).join('');
+  // 26/08 (Robert: "aba de ltv não tem os cálculos do funil de conversão por
+  // etapa como em vendas") — antes usava sdrFunilRowTelao_ (barra genérica,
+  // sem % de conversão entre etapas). Agora reaproveita o MESMO padrão rico
+  // de renderFunil (seta ↓XX% avançaram, pill de perdidos por etapa, linhas
+  // de Ganhos/Perdidos com conversão sequencial) — só troca STAGE_ORD/ORD_DOT
+  // pelas versões LTV e o alvo dos cliques pros modais próprios da aba.
+  const nfLtv = d.funnel.slice().sort((a,b) => a.seq - b.seq);
+  const perdidoValorLtv = (d.recentLost || []).reduce((s, x) => s + (x.value || 0), 0);
+  const maxF = Math.max(...nfLtv.map(s => s.reached ?? s.count), k.ganhoCont || 0, k.perdidoCont || 0, 1);
+  const convFromLtv = (count, prevCount) => prevCount > 0 ? Math.round((count / prevCount) * 100) : null;
+  const reachedLastLtv = nfLtv.length ? (nfLtv[nfLtv.length-1].reached ?? nfLtv[nfLtv.length-1].count) : 0;
+
+  const stageRowsLtv = nfLtv.map((s, i) => {
+    const reached = s.reached ?? s.count;
+    const pct = Math.max((reached / maxF) * 100, 3);
+    const ord = LTV_STAGE_ORD[String(s.stageId)] || 'o2';
+    const conv = i === 0 ? null : convFromLtv(reached, nfLtv[i-1].reached ?? nfLtv[i-1].count);
+    const connector = conv !== null ? `
+      <div class="funil-conn" title="Conversão de ${escHtml(nfLtv[i-1].name)} → ${escHtml(s.name)}">
+        <span class="funil-conn-arrow">↓</span><span class="funil-conn-pct">${conv}% avançaram</span>
+      </div>` : '';
+    const lostPill = s.lost > 0 ? `<span class="drop-pill" style="background:#fee2e2;color:#b91c1c" title="Perdidos nesta etapa">${s.lost} perdido${s.lost === 1 ? '' : 's'}</span>` : '';
+    return `
+      <div class="funil-row" onclick="openLtvStageModal('${s.stageId}','${escHtml(s.name)}')">
+        ${connector}
+        <div class="funil-dot" style="background:${LTV_ORD_DOT[ord]}"></div>
+        <span class="funil-name">${s.name}</span>
+        <div class="funil-bar-wrap"><div class="funil-bar" style="width:${pct}%;background:${LTV_ORD_DOT[ord]}"></div></div>
+        <span class="funil-n">${reached}</span>
+        <span class="funil-v">${fmtMoney(s.value)}</span>
+        ${lostPill}
+      </div>`;
+  }).join('');
+
+  const outcomeRowLtv = (name, count, value, color, onclick, stageBase) => {
+    const pct = stageBase !== undefined ? convFromLtv(count, stageBase) : null;
+    const barPct = Math.max((count / maxF) * 100, 3);
+    const isSequential = stageBase !== undefined;
+    const connector = (isSequential && pct !== null) ? `
+      <div class="funil-conn" title="Conversão da etapa anterior">
+        <span class="funil-conn-arrow" style="color:#15803d">↓</span><span class="funil-conn-pct" style="color:#15803d">${pct}% fecharam</span>
+      </div>` : '';
+    return `
+      <div class="funil-row" onclick="${onclick}" style="border-top:2px solid var(--border);padding-top:8px">
+        ${connector}
+        <div class="funil-dot" style="background:var(--${color})"></div>
+        <span class="funil-name">${name}</span>
+        <div class="funil-bar-wrap"><div class="funil-bar" style="width:${barPct}%;background:var(--${color})"></div></div>
+        <span class="funil-n">${count}</span>
+        <span class="funil-v">${value > 0 ? fmtMoney(value) : '—'}</span>
+      </div>`;
+  };
+
+  el('ltv-funil-rows').innerHTML = stageRowsLtv
+    + outcomeRowLtv('Recompras', k.ganhoCont || 0, k.ganhoValor || 0, 'green', 'openLtvWonModal()', reachedLastLtv)
+    + outcomeRowLtv('Perdidos', k.perdidoCont || 0, perdidoValorLtv, 'red', 'openLtvLostModal()');
 
   el('ltv-rep-badge').textContent = d.reps.length + ' reps';
   const maxPipeline = Math.max(...d.reps.map(r => r.pipeline), 1);
@@ -4356,6 +4556,61 @@ function openLostModal() {
   el('modal-title').textContent = 'Perdidos no Período — ' + deals.length;
   el('modal-body').innerHTML = deals.length === 0
     ? '<div class="modal-empty">Nenhum perdido no período</div>'
+    : deals.map(d => `
+        <a class="mdeal-row" href="${AGENDOR_DEAL}${d.id}" target="_blank">
+          <div class="mdeal-dot" style="background:var(--red)"></div>
+          <span class="mdeal-title"><span class="og-title-text">${escHtml(d.title)}</span>${originBadge(d._origin)}</span>
+          <span class="mdeal-rep">${escHtml(d.rep||'—')}</span>
+          <span class="mdeal-val" style="color:var(--red)">${d.value > 0 ? fmtMoney(d.value) : '—'}</span>
+          <span class="mdeal-open">${fmtDateDisplay(d.closedAt)}</span>
+          <span class="mdeal-open">↗</span>
+        </a>`).join('');
+  el('modal-overlay').classList.add('show');
+}
+
+// 26/08 — trio espelhando openStageModal/openWonModal/openLostModal, mas lendo
+// de _ltvData (cache do último render da aba LTV) em vez de _data (Vendas).
+function openLtvStageModal(stageId, stageName) {
+  if (!_ltvData) return;
+  const deals = (_ltvData.deals || []).filter(d => String(d.stageId) === String(stageId));
+  const ord = LTV_STAGE_ORD[String(stageId)] || 'o2';
+  el('modal-title').textContent = stageName + ' — ' + deals.length + ' negócios';
+  el('modal-body').innerHTML = deals.length === 0
+    ? '<div class="modal-empty">Nenhum negócio nesta etapa</div>'
+    : deals.map(d => `
+      <a class="mdeal-row" href="${AGENDOR_DEAL}${d.id}" target="_blank">
+        <div class="mdeal-dot" style="background:${LTV_ORD_DOT[ord]}"></div>
+        <span class="mdeal-title"><span class="og-title-text">${escHtml(d.title)}</span>${originBadge(d._origin)}</span>
+        <span class="mdeal-rep">${escHtml(d.rep||'—')}</span>
+        <span class="mdeal-val">${fmtMoney(d.value)}</span>
+        ${d.frozen ? '<span class="mdeal-stale" title="Congelado (pausa deliberada)">🧊</span>' : (d.stale ? '<span class="mdeal-stale" title="Sem toque +7 dias">⚠️</span>' : '')}
+        <span class="mdeal-open">↗</span>
+      </a>`).join('');
+  el('modal-overlay').classList.add('show');
+}
+function openLtvWonModal() {
+  if (!_ltvData) return;
+  const deals = _ltvData.recentWon;
+  el('modal-title').textContent = 'Recompras Fechadas — ' + deals.length;
+  el('modal-body').innerHTML = deals.length === 0
+    ? '<div class="modal-empty">Nenhuma recompra fechada no período</div>'
+    : deals.map(d => `
+        <a class="mdeal-row" href="${AGENDOR_DEAL}${d.id}" target="_blank">
+          <div class="mdeal-dot" style="background:var(--green)"></div>
+          <span class="mdeal-title"><span class="og-title-text">${escHtml(d.title)}</span>${originBadge(d._origin)}</span>
+          <span class="mdeal-rep">${escHtml(d.rep||'—')}</span>
+          <span class="mdeal-val" style="color:#15803d">${fmtMoney(d.value)}</span>
+          <span class="mdeal-open">${fmtDateDisplay(d.closedAt)}</span>
+          <span class="mdeal-open">↗</span>
+        </a>`).join('');
+  el('modal-overlay').classList.add('show');
+}
+function openLtvLostModal() {
+  if (!_ltvData) return;
+  const deals = _ltvData.recentLost;
+  el('modal-title').textContent = 'Ciclos Perdidos — ' + deals.length;
+  el('modal-body').innerHTML = deals.length === 0
+    ? '<div class="modal-empty">Nenhum ciclo perdido no período</div>'
     : deals.map(d => `
         <a class="mdeal-row" href="${AGENDOR_DEAL}${d.id}" target="_blank">
           <div class="mdeal-dot" style="background:var(--red)"></div>
