@@ -439,6 +439,13 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 #col-right{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
 #won-card{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
 #lost-card{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+/* Achado 26/08 (auditoria visual): a aba LTV nunca ganhou o flex:1 que
+   Vendas/SDR/Ads/BIA já têm nos cards — colunas ficavam com até 81% de
+   espaço vazio. Mesmo padrão exato dos cards de Vendas acima. */
+#ltv-funil-card{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+#ltv-rep-card{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+#ltv-won-card{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+#ltv-lost-card{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
 .feed-scroll{flex:1;overflow-y:auto;min-height:0;scrollbar-width:none}
 .feed-scroll::-webkit-scrollbar{display:none}
 .feed-row{padding:7px 12px;display:flex;align-items:center;gap:9px;border-bottom:1px solid var(--border);cursor:pointer;text-decoration:none}
@@ -1937,6 +1944,13 @@ function renderBiaSectionTelao(s) {
   // consigo confirmar de dentro do worker (só leitura, nunca vi o código
   // que decide enviar ou não).
   el('bia-motor-badge').textContent = s.motorProativoHoje + ' evento' + (s.motorProativoHoje === 1 ? '' : 's') + ' hoje';
+  // Achado 26/08 (auditoria): a BIA cacheia snapshot a cada 10min (cron do
+  // worker) — sem mostrar a hora do sync, um número "parado" pode parecer
+  // errado comparado ao /custo ao vivo. Visível no rodapé (texto, não só
+  // tooltip — telão não tem mouse pra hover).
+  if (_biaViewActive && s.syncedAt) {
+    el('footer-source').textContent = 'bia-dash-sync (sinc. ' + new Date(s.syncedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + ')';
+  }
   const porResultado = Object.entries(s.motorPorResultado || {}).sort((a, b) => b[1] - a[1]);
   const maxMotor = Math.max(...porResultado.map(x => x[1]), 1);
   el('bia-motor-breakdown').innerHTML = porResultado.length === 0
