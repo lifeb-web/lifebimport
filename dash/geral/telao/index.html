@@ -952,6 +952,24 @@ const STAGES = {
   '3771724': { name: 'Solução', color: 'orange', seq: 3 },
   '3771725': { name: 'Negociação', color: 'green', seq: 4 }
 };
+// Achado 25/08 (Robert): desde que o funil de Pós-venda (LTV) foi criado no
+// Agendor, seus negócios entravam misturados nos KPIs de Vendas (mesma
+// tabela `dash_geral_deals`, sync sem distinção de funil), diluindo a taxa
+// de conversão real. `dash_geral_deals` ainda não tem coluna de funil/
+// pipeline (precisaria de migração de schema + mudança no `supabase-sync.gs`
+// — pendente, ver MISSAO-DASH-GERAL-BIA-LTV-GA4-25ago.md). Fix imediato sem
+// mudança de schema: os 2 funis hoje têm conjuntos de stage_id disjuntos —
+// conferido ao vivo contra a base real (282 negócios, zero stage_id fora
+// desses 2 conjuntos) — então classificar por stage_id é exato pro estado
+// atual. Se um 3º funil aparecer ou o Agendor reusar um stage_id entre
+// funis, isso precisa virar filtro por funnel_id de verdade.
+const ACQ_STAGE_IDS = new Set(['3771722', '3771723', '3771724', '3771725']);
+const POSVENDA_STAGE_IDS = new Set(['3861835', '3861836', '3861837']);
+const LTV_STAGES = {
+  '3861835': { name: 'Ciclo Ativo', color: 'blue', seq: 1 },
+  '3861836': { name: 'Contato de Reposição', color: 'purple', seq: 2 },
+  '3861837': { name: 'Negociação de Reposição', color: 'green', seq: 3 }
+};
 
 function fmtDateUTC(d) {
   const y = d.getUTCFullYear();
