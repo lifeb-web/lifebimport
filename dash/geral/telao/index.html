@@ -1222,7 +1222,7 @@ footer strong{color:#fff}
           <span class="card-hd-title">Estado / Cidade</span>
           <span class="badge" id="ga4-cities-badge"></span>
         </div>
-        <div class="ga4-table-scroll">
+        <div class="ga4-table-scroll" id="ga4-cities-scroll">
           <table>
             <thead><tr><th>Estado</th><th class="ga4-th-left">Cidade</th><th>Visit.</th><th>Leads</th></tr></thead>
             <tbody id="ga4-cities-rows"></tbody>
@@ -1234,7 +1234,7 @@ footer strong{color:#fff}
           <span class="card-hd-title">Origem do Tráfego</span>
           <span class="badge" id="ga4-sources-badge"></span>
         </div>
-        <div class="ga4-table-scroll">
+        <div class="ga4-table-scroll" id="ga4-sources-scroll">
           <table>
             <thead><tr><th>De onde veio</th><th>Visit.</th><th>Leads</th></tr></thead>
             <tbody id="ga4-sources-rows"></tbody>
@@ -1246,7 +1246,7 @@ footer strong{color:#fff}
           <span class="card-hd-title">Por Página</span>
           <span class="badge" id="ga4-pages-badge">carregando…</span>
         </div>
-        <div class="ga4-table-scroll">
+        <div class="ga4-table-scroll" id="ga4-pages-scroll">
           <table>
             <thead><tr><th>Página</th><th>Visit.</th><th>Leads</th></tr></thead>
             <tbody id="ga4-pages-rows"></tbody>
@@ -1369,7 +1369,7 @@ footer strong{color:#fff}
           <span class="card-hd-title">Deploys por Dia</span>
           <span class="badge" id="bia-deploy-freq-badge"></span>
         </div>
-        <div style="flex:1;min-height:0;padding:8px 14px" id="bia-deploy-freq-chart"></div>
+        <div style="flex:1;min-height:0;padding:8px 14px;display:flex;flex-direction:column" id="bia-deploy-freq-chart"></div>
       </div>
     </div>
   </div>
@@ -2104,8 +2104,8 @@ function renderGa4SectionTelao(d) {
   if (d.chartPts.length > 1) el('ga4-hero-spark').innerHTML = sparklineSVG(d.chartPts, '#704B9B');
 
   // 26/08: painel "Visitantes" · maior card da aba, igual a referência real
-  // (dashboard-telao.html). Reaproveita biaTrendPanel_ (mesmo componente do
-  // gráfico da BIA — 1 métrica, escala própria, área preenchida).
+  // (dashboard-telao.html). Chart.js de barra — o mesmo padrão foi depois
+  // reaproveitado nos gráficos de tendência da BIA (renderBiaBarChart_).
   el('ga4-visitors-badge').textContent = fmtInt_(d.activeUsers) + ' no período';
   renderGa4VisitorsChart_(d.chartDias, d.chartPts);
 
@@ -2134,6 +2134,7 @@ function renderGa4SectionTelao(d) {
       <td>${p.leads > 0 ? fmtInt_(p.leads) : '<span style="font-size:11px;color:var(--muted);font-weight:600">—</span>'}</td>
     </tr>`;
   }).join('');
+  autoScrollIfNeeded('ga4-pages-scroll');
 
   el('ga4-sources-badge').textContent = d.sources.length + ' fontes';
   el('ga4-sources-rows').innerHTML = d.sources.length === 0 ? ga4EmptyRow_(3) : d.sources.slice(0, 15).map(s => `<tr>
@@ -2141,6 +2142,7 @@ function renderGa4SectionTelao(d) {
       <td>${fmtInt_(s.users)}</td>
       <td>${s.leads > 0 ? fmtInt_(s.leads) : '<span style="font-size:11px;color:var(--muted);font-weight:600">—</span>'}</td>
     </tr>`).join('');
+  autoScrollIfNeeded('ga4-sources-scroll');
 
   el('ga4-cities-badge').textContent = d.cities.length + ' cidades';
   el('ga4-cities-rows').innerHTML = d.cities.length === 0 ? ga4EmptyRow_(4) : d.cities.slice(0, 25).map(c => `<tr>
@@ -2149,6 +2151,7 @@ function renderGa4SectionTelao(d) {
       <td>${fmtInt_(c.users)}</td>
       <td>${c.leads > 0 ? fmtInt_(c.leads) : '<span style="font-size:11px;color:var(--muted);font-weight:600">—</span>'}</td>
     </tr>`).join('');
+  autoScrollIfNeeded('ga4-cities-scroll');
 
   // 26/08: painel único "Eventos de Conversão" · formulário + scroll na
   // mesma lista, ícone+barra fina+número grande, igual a referência real
@@ -2267,75 +2270,73 @@ async function fetchBiaSnapshot(periodo) {
 // nenhuma relação visual válida (exatamente o erro #1 do skill de dataviz:
 // nunca eixo duplo, 2 medidas de escala diferente = 2 gráficos). Vira 2
 // paineizinhos lado a lado, cada um com sua própria escala, valor de hoje
-// em destaque e área preenchida (sparkline "hero", 1 métrica por painel).
+// em destaque.
+//
+// 🔴 FIX 26/08 nº2 (Robert, depois do fix do traço grosso: "ainda acho
+// esses gráficos de linha meio inúteis... tem que ser algo visual e útil,
+// pesquisa na net seila usa skill") — reli o skill de dataviz junto: pra
+// magnitude discreta em poucas categorias (3 a 14 dias), o guia é direto —
+// "o job da forma decide o tipo, e linha/área suavizada implica tendência
+// CONTÍNUA que esses 3-14 pontos não têm de verdade" (a curva Catmull-Rom
+// literalmente inventava uma forma entre os pontos reais). Trocado pra
+// Chart.js de barra, mesma lib/config/estilo já aprovado por ele no
+// "Visitantes" do GA4 (comparação lado a lado com a referência real) —
+// cada dia vira uma barra discreta e honesta, tooltip nativo ao passar o
+// mouse, hoje destacado com cor cheia vs. dias anteriores com tinta clara.
+function hexToRgba_(hex, alpha) {
+  const h = String(hex).replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16), g = parseInt(h.substring(2, 4), 16), b = parseInt(h.substring(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+let _biaCharts = {};
+function renderBiaBarChart_(canvasId, dias, vals, colorHex, fmtVal) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  if (_biaCharts[canvasId]) { _biaCharts[canvasId].destroy(); delete _biaCharts[canvasId]; }
+  const n = vals.length;
+  const bg = vals.map((_, i) => i === n - 1 ? hexToRgba_(colorHex, .85) : hexToRgba_(colorHex, .22));
+  const border = vals.map((_, i) => i === n - 1 ? colorHex : hexToRgba_(colorHex, .5));
+  _biaCharts[canvasId] = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: { labels: dias, datasets: [{ data: vals, backgroundColor: bg, borderColor: border, borderWidth: 1.5, borderRadius: 5, borderSkipped: false, maxBarThickness: 46 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor: '#221B32', padding: 10, displayColors: false, callbacks: { label: c => ' ' + fmtVal(c.parsed.y) } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#6b6484', font: { size: 9, weight: '700' }, maxRotation: 0 }, border: { display: false } },
+        y: { grid: { color: 'rgba(0,0,0,.05)' }, ticks: { color: '#6b6484', font: { size: 10 }, precision: 0 }, border: { display: false }, beginAtZero: true }
+      }
+    }
+  });
+}
+function biaTrendHeroHeader_(label, valText, color) {
+  return `<div style="display:flex;justify-content:space-between;align-items:baseline;padding:0 4px 4px;flex-shrink:0">
+    <span style="font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">${escHtml(label)}</span>
+    <span style="font-size:16px;font-weight:800;color:${color}">${valText}<span style="font-size:9px;font-weight:700;color:var(--faint);margin-left:3px">hoje</span></span>
+  </div>`;
+}
 function renderBiaTrendChart_(dias, custo, notif, containerId) {
   const box = el(containerId);
   const n = dias.length;
   if (n < 2) { box.innerHTML = '<div class="feed-empty">Sem tendência suficiente ainda</div>'; return; }
+  const custoHoje = custo[custo.length - 1] || 0, notifHoje = notif[notif.length - 1] || 0;
   box.innerHTML = `
     <div style="display:flex;height:100%">
-      <div style="flex:1;min-width:0">${biaTrendPanel_('Custo (R$)', dias, custo, '#E92085', v => 'R$ ' + (v || 0).toFixed(2))}</div>
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;height:100%">
+        ${biaTrendHeroHeader_('Custo (R$)', 'R$ ' + custoHoje.toFixed(2), '#E92085')}
+        <div style="flex:1;min-height:0"><canvas id="bia-chart-custo"></canvas></div>
+      </div>
       <div style="width:1px;background:var(--border);flex-shrink:0;margin:4px 10px"></div>
-      <div style="flex:1;min-width:0">${biaTrendPanel_('Notificações', dias, notif, 'var(--purple)', v => fmtInt_(v))}</div>
-    </div>`;
-}
-// 🔴 FIX 26/08 (Robert: "os gráficos ficaram horríveis, coisa grossa...
-// até o que tava antes tava melhor") — achado real: o traço da linha
-// escala junto com o tamanho do card (SVG com preserveAspectRatio="none"
-// e viewBox estreito, W=280) — reaproveitei essa mesma função pro card
-// "Deploys por Dia", que é BEM mais largo (~600px) que os paineizinhos
-// lado a lado de Custo/Notificações onde ela nasceu (~290px cada), e o
-// traço ficava proporcionalmente 2x mais grosso nesse card largo, sem
-// limite nenhum. Corrigido: viewBox bem mais largo (W=900, quase sempre
-// maior que o container real, então o traço só ENCOLHE, nunca engrossa) +
-// vector-effect="non-scaling-stroke" (largura do traço fixa em pixels de
-// tela, redundância de segurança) + curva suavizada (Catmull-Rom→Bézier,
-// em vez de segmentos retos com picos angulosos).
-function smoothPath_(pts) {
-  if (pts.length < 2) return '';
-  if (pts.length === 2) return `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)} L${pts[1][0].toFixed(1)},${pts[1][1].toFixed(1)}`;
-  let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
-  for (let i = 0; i < pts.length - 1; i++) {
-    const p0 = pts[i === 0 ? 0 : i - 1];
-    const p1 = pts[i];
-    const p2 = pts[i + 1];
-    const p3 = pts[i + 2 < pts.length ? i + 2 : i + 1];
-    const cp1x = p1[0] + (p2[0] - p0[0]) / 6, cp1y = p1[1] + (p2[1] - p0[1]) / 6;
-    const cp2x = p2[0] - (p3[0] - p1[0]) / 6, cp2y = p2[1] - (p3[1] - p1[1]) / 6;
-    d += ` C${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
-  }
-  return d;
-}
-function biaTrendPanel_(label, dias, vals, color, fmtVal) {
-  const n = vals.length;
-  const W = 900, H = 220, PAD_L = 6, PAD_R = 6, PAD_T = 18, PAD_B = 6;
-  const max = Math.max(...vals, 0.0001);
-  const x = i => PAD_L + (n === 1 ? 0 : (i / (n - 1)) * (W - PAD_L - PAD_R));
-  const y = v => H - PAD_B - (v / max) * (H - PAD_T - PAD_B);
-  const pts = vals.map((v, i) => [x(i), y(v)]);
-  const linePath = smoothPath_(pts);
-  const areaPath = linePath + ` L${x(n - 1).toFixed(1)},${(H - PAD_B).toFixed(1)} L${x(0).toFixed(1)},${(H - PAD_B).toFixed(1)} Z`;
-  const today = vals[n - 1];
-  const gid = 'biaTrendGrad_' + label.replace(/[^a-zA-Z0-9]/g, '');
-  return `
-    <div style="display:flex;flex-direction:column;height:100%">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;padding:0 4px 2px;flex-shrink:0">
-        <span style="font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">${escHtml(label)}</span>
-        <span style="font-size:16px;font-weight:800;color:${color}">${fmtVal(today)}<span style="font-size:9px;font-weight:700;color:var(--faint);margin-left:3px">hoje</span></span>
-      </div>
-      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;flex:1;min-height:0;display:block">
-        <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="${color}" stop-opacity=".22"/>
-          <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
-        </linearGradient></defs>
-        <path d="${areaPath}" fill="url(#${gid})" stroke="none"/>
-        <path d="${linePath}" fill="none" stroke="${color}" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/>
-        <circle cx="${x(n - 1).toFixed(1)}" cy="${y(today).toFixed(1)}" r="3" fill="${color}" vector-effect="non-scaling-stroke"/>
-      </svg>
-      <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--faint);padding:2px 4px 0;flex-shrink:0">
-        <span>${escHtml(dias[0])}</span><span>${escHtml(dias[n - 1])}</span>
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;height:100%">
+        ${biaTrendHeroHeader_('Notificações', fmtInt_(notifHoje), '#704B9B')}
+        <div style="flex:1;min-height:0"><canvas id="bia-chart-notif"></canvas></div>
       </div>
     </div>`;
+  renderBiaBarChart_('bia-chart-custo', dias, custo, '#E92085', v => 'R$ ' + (v || 0).toFixed(2));
+  renderBiaBarChart_('bia-chart-notif', dias, notif, '#704B9B', v => fmtInt_(v));
 }
 
 function prettyLabel_(s) {
@@ -2378,6 +2379,7 @@ function renderBiaMotorSection_(s) {
         const row = ga4Row_(GA4_S[i % GA4_S.length], prettyLabel_(k), v, maxMotor, '', '', `filterBiaMotorFeed_('${escJsAttr_(k)}')`);
         return _biaMotorFilter === k ? row.replace('class="abar-row"', 'class="abar-row abar-row-active"') : row;
       }).join('');
+  autoScrollIfNeeded('bia-motor-breakdown');
 
   const recentes = s.motorRecentes || [];
   const filtered = _biaMotorFilter ? recentes.filter(e => (e.resultado || e.estagio || '?') === _biaMotorFilter) : recentes;
@@ -2392,6 +2394,7 @@ function renderBiaMotorSection_(s) {
         </div>
         <div class="bia-motor-time">${timeAgo_(e.ts)}</div>
       </div>`).join('');
+  autoScrollIfNeeded('bia-motor-feed');
 
   el('bia-motor-badge').textContent = _biaMotorFilter
     ? filtered.length + ' de ' + (s.motorProativoHoje || 0) + ' · filtro: ' + prettyLabel_(_biaMotorFilter) + ' (clique de novo p/ limpar)'
@@ -2503,9 +2506,14 @@ function renderBiaSectionTelao(s) {
   const diasDeploy = Object.keys(byDay);
   const countsDeploy = diasDeploy.map(dia => byDay[dia]);
   el('bia-deploy-freq-badge').textContent = log.length + ' deploy' + (log.length !== 1 ? 's' : '') + ' · ' + diasDeploy.length + ' dia' + (diasDeploy.length !== 1 ? 's' : '');
-  el('bia-deploy-freq-chart').innerHTML = diasDeploy.length > 1
-    ? biaTrendPanel_('Deploys por dia', diasDeploy, countsDeploy, 'var(--purple)', fmtInt_)
-    : '<div class="feed-empty">Pouco histórico ainda pra mostrar tendência</div>';
+  if (diasDeploy.length > 1) {
+    const hojeCount = countsDeploy[countsDeploy.length - 1] || 0;
+    el('bia-deploy-freq-chart').innerHTML = biaTrendHeroHeader_('Deploys por dia', fmtInt_(hojeCount), '#704B9B') +
+      '<div style="flex:1;min-height:0"><canvas id="bia-chart-deploys"></canvas></div>';
+    renderBiaBarChart_('bia-chart-deploys', diasDeploy, countsDeploy, '#704B9B', v => fmtInt_(v) + ' deploy' + (v !== 1 ? 's' : ''));
+  } else {
+    el('bia-deploy-freq-chart').innerHTML = '<div class="feed-empty">Pouco histórico ainda pra mostrar tendência</div>';
+  }
 }
 
 async function loadBiaFresh_() {
@@ -3493,6 +3501,7 @@ function renderLtvSectionTelao(d) {
           <div class="feed-date">${fmtDateDisplay(x.closedAt)}</div>
         </div>
       </a>`).join('');
+  autoScrollIfNeeded('ltv-won-rows');
 
   el('ltv-lost-total').textContent = k.perdidoCont + ' ciclos';
   el('ltv-lost-rows').innerHTML = d.recentLost.length === 0
@@ -3509,6 +3518,7 @@ function renderLtvSectionTelao(d) {
           <div class="feed-date">${fmtDateDisplay(x.closedAt)}</div>
         </div>
       </a>`).join('');
+  autoScrollIfNeeded('ltv-lost-rows');
 }
 
 async function loadSdrFresh_() {
