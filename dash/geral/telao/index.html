@@ -191,9 +191,10 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 #ltv-col-right{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
 /* GA4 (25-26/08) — mesma forma/altura do hero-row de Vendas/SDR/LTV (hero +
    7 kchips). display:none por padrão, JS liga/desliga em setView(). */
-#ga4-hero-row{display:none;grid-template-columns:minmax(0,1.7fr) repeat(7,minmax(0,1fr));gap:8px;height:92px;flex-shrink:0}
-#ga4-hero{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:10px 16px;display:flex;flex-direction:column;justify-content:center;gap:2px;position:relative;overflow:hidden;box-shadow:0 1px 2px rgba(26,22,38,.04),0 3px 10px -3px rgba(112,75,155,.16)}
-#ga4-hero::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(112,75,155,.06),transparent 60%);pointer-events:none}
+/* 26/08: uniformizado com o resto da aba GA4 (referência: dashboard-telao.html
+   standalone) — 8 kchips do mesmo tamanho com borda de cor cheia, sem 1
+   card blown-up maior que os outros. */
+#ga4-hero-row{display:none;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px;height:80px;flex-shrink:0}
 #ga4-main{display:none;grid-template-columns:30fr 38fr 32fr;gap:8px;overflow:hidden;min-height:0;flex:1}
 #ga4-col-left{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
 #ga4-col-center{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
@@ -205,27 +206,39 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 #ga4-live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#22C35D;margin-right:6px;animation:ga4pulse 1.6s ease-in-out infinite}
 @keyframes ga4pulse{0%,100%{opacity:1}50%{opacity:.35}}
 
-/* BIA (25-26/08) — mesma forma do bloco GA4/Ads (hero+7 kchips, depois 3
-   colunas), display:none até setView() ligar. Dado vem do worker isolado
-   novo bia-dash-sync (GET /api/snapshot), nunca do gs-agendor-worker
-   direto. Hero é o próprio "card ao vivo" (pedido do Robert): glow
-   pulsante roxo/magenta, sinaliza a Bia trabalhando agora. */
-#bia-hero-row{display:none;grid-template-columns:minmax(0,1.9fr) repeat(6,minmax(0,1fr));gap:8px;height:92px;flex-shrink:0}
-#bia-hero{background:linear-gradient(135deg,var(--purple),var(--magenta));border-radius:12px;padding:10px 16px;display:flex;flex-direction:column;justify-content:center;gap:2px;position:relative;overflow:hidden;box-shadow:0 3px 14px -3px rgba(112,75,155,.45);color:#fff}
-#bia-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 85% 20%,rgba(255,255,255,.25),transparent 55%);pointer-events:none;animation:biaglow 3s ease-in-out infinite}
-@keyframes biaglow{0%,100%{opacity:.6}50%{opacity:1}}
-#bia-hero .hero-label{color:rgba(255,255,255,.85)}
-#bia-hero .hero-sub{color:rgba(255,255,255,.85)}
-#bia-live-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#fff;margin-right:7px;box-shadow:0 0 0 0 rgba(255,255,255,.7);animation:biapulse 1.8s ease-in-out infinite}
-@keyframes biapulse{0%{box-shadow:0 0 0 0 rgba(255,255,255,.5)}70%{box-shadow:0 0 0 8px rgba(255,255,255,0)}100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}}
-#bia-main{display:none;grid-template-columns:26fr 40fr 34fr;gap:8px;overflow:hidden;min-height:0;flex:1}
+/* BIA (25-26/08, redesenhado 26/08 depois de comparar com a referência real
+   do Robert — dashboard-telao.html do GA4 standalone) — display:none até
+   setView() ligar. Dado vem do worker isolado bia-dash-sync (GET
+   /api/snapshot), nunca do gs-agendor-worker direto. Removido o conceito de
+   hero-gradiente-pulsante ("card ao vivo" de custo) a pedido explícito do
+   Robert ("pode tirar esse ao vivo, não queria custo ao vivo, fraco e
+   pobre") — em troca, todos os 7 kchips ficam do MESMO tamanho (igual a
+   referência), cada um com borda de cor cheia (.kchip-b) e o "ao vivo" de
+   verdade vira o card de Motor Proativo (é a Bia agindo agora, não um
+   número financeiro pulsando).*/
+#bia-hero-row{display:none;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;height:80px;flex-shrink:0}
+#bia-main{display:none;grid-template-columns:32fr 34fr 34fr;gap:8px;overflow:hidden;min-height:0;flex:1}
 #bia-col-left{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
 #bia-col-center{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
 #bia-col-right{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
 #bia-sdr-cards{display:flex;flex-direction:column;gap:6px;padding:8px 14px}
 .bia-sdr-card{display:flex;align-items:center;gap:8px;background:var(--bg);border-radius:9px;padding:7px 10px;font-size:.8rem;font-weight:700}
 .bia-sdr-avatar{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.62rem;background:linear-gradient(135deg,var(--purple),var(--magenta))}
-#bia-trend-chart{padding:8px 14px 4px}
+#bia-trend-chart{padding:8px 14px 4px;flex-shrink:0}
+/* Motor Proativo — o card "ao vivo" de verdade: header com dot pulsante
+   (a Bia agindo, não um custo), breakdown por resultado + feed dos eventos
+   mais recentes, ocupando a coluna inteira (flex:1 em cada filho). */
+#bia-motor-card{flex:1;display:flex;flex-direction:column;min-height:0}
+#bia-motor-live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#22C35D;margin-right:6px;animation:biamotorpulse 1.6s ease-in-out infinite}
+@keyframes biamotorpulse{0%,100%{opacity:1}50%{opacity:.3}}
+#bia-motor-breakdown{flex-shrink:0;max-height:38%;overflow-y:auto}
+#bia-motor-feed{flex:1;min-height:0}
+.bia-motor-row{display:flex;gap:8px;align-items:flex-start;padding:6px 14px;border-bottom:1px solid var(--border);font-size:11.5px}
+.bia-motor-row:last-child{border-bottom:none}
+.bia-motor-dot{width:6px;height:6px;border-radius:50%;background:var(--purple);margin-top:5px;flex-shrink:0}
+.bia-motor-main{flex:1;min-width:0}
+.bia-motor-main b{font-weight:800}
+.bia-motor-time{color:var(--faint);font-size:10px;white-space:nowrap;flex-shrink:0}
 .stat-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px;font-weight:700}
 .stat-row:last-child{border-bottom:none}
 .stat-row .k{color:var(--muted);font-weight:600}
@@ -233,6 +246,13 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 .stat-row .v.crit{color:var(--red)}
 .stat-row .v.warn{color:var(--amber)}
 .stat-row .v.good{color:var(--green)}
+/* Achado 26/08 (Robert, reação forte comparando com dashboard-telao.html do
+   GA4 standalone): kchip com sombra suave sozinha lia "fraco" ao lado da
+   referência, que usa borda de cor cheia no topo de cada card — identidade
+   visual forte por métrica, não decoração sutil. Mantém o .kchip base (usado
+   em Vendas/SDR/Ads, não mexido) e adiciona esse modificador só onde a
+   própria auditoria pediu mais densidade (GA4/BIA). */
+.kchip-b{border-top:4px solid var(--accent-color, var(--purple))}
 #ads-hero-row2{display:none;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;height:72px;flex-shrink:0}
 #ads-hero{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:10px 16px;display:flex;flex-direction:column;justify-content:center;gap:2px;position:relative;overflow:hidden;box-shadow:0 1px 2px rgba(26,22,38,.04),0 3px 10px -3px rgba(112,75,155,.16)}
 #ads-hero::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(112,75,155,.06),transparent 60%);pointer-events:none}
@@ -1047,37 +1067,37 @@ footer strong{color:#fff}
        Script já implantado (lifeb-ga4-proxy.gs) — nunca do Supabase, dado
        sempre ao vivo por período. -->
   <div id="ga4-hero-row">
-    <div id="ga4-hero" style="cursor:default">
-      <div class="hero-top"><span class="hero-label">Usuários Ativos</span><span id="ga4-hero-spark"></span></div>
-      <div class="hero-val" id="ga4-hero-val"><span class="skel" style="width:80px;height:24px"></span></div>
-      <div class="hero-row2"><span class="hero-sub" id="ga4-hero-sub">no período</span></div>
+    <div class="kchip kchip-b" style="--accent-color:var(--purple)">
+      <span class="kc-label">Usuários Ativos<span id="ga4-hero-spark" style="float:right"></span></span>
+      <div class="kc-row"><span class="kc-val" id="ga4-hero-val"><span class="skel"></span></span></div>
+      <span class="kc-sub" id="ga4-hero-sub">no período</span>
     </div>
-    <div class="kchip">
+    <div class="kchip kchip-b" style="--accent-color:var(--magenta)">
       <span class="kc-label">Sessões</span>
       <div class="kc-row"><span class="kc-val" id="ga4-k-sessions"><span class="skel"></span></span></div>
       <span class="kc-sub">no período</span>
     </div>
-    <div class="kchip">
+    <div class="kchip kchip-b" style="--accent-color:var(--s5)">
       <span class="kc-label">Visualizações</span>
       <div class="kc-row"><span class="kc-val" id="ga4-k-views"><span class="skel"></span></span></div>
       <span class="kc-sub">páginas vistas</span>
     </div>
-    <div class="kchip">
+    <div class="kchip kchip-b" style="--accent-color:var(--red)">
       <span class="kc-label" title="% de sessões de 1 página só, sem interação — menor é melhor.">Rejeição ⓘ</span>
       <div class="kc-row"><span class="kc-val" id="ga4-k-bounce"><span class="skel"></span></span></div>
       <span class="kc-sub">menor é melhor</span>
     </div>
-    <div class="kchip">
+    <div class="kchip kchip-b" style="--accent-color:var(--s1)">
       <span class="kc-label">Duração Média</span>
       <div class="kc-row"><span class="kc-val" id="ga4-k-duration"><span class="skel"></span></span></div>
       <span class="kc-sub">por sessão</span>
     </div>
-    <div class="kchip">
+    <div class="kchip kchip-b" style="--accent-color:var(--amber)">
       <span class="kc-label">Abriu Formulário</span>
       <div class="kc-row"><span class="kc-val" id="ga4-k-abriu"><span class="skel"></span></span></div>
       <span class="kc-sub">no período</span>
     </div>
-    <div class="kchip">
+    <div class="kchip kchip-b" style="--accent-color:var(--green)">
       <span class="kc-label">Leads (GA4)</span>
       <div class="kc-row"><span class="kc-val" id="ga4-k-leads"><span class="skel"></span></span></div>
       <span class="kc-sub">Lead_Formulario</span>
@@ -1091,29 +1111,29 @@ footer strong{color:#fff}
 
   <div id="ga4-main">
     <div id="ga4-col-left">
-      <div class="card" id="ga4-pages-card">
+      <div class="card" id="ga4-pages-card" style="flex:1;display:flex;flex-direction:column;min-height:0">
         <div class="card-hd">
           <span class="card-hd-title">Top Páginas</span>
           <span class="badge" id="ga4-pages-badge">carregando…</span>
         </div>
-        <div class="funil-body" id="ga4-pages-rows"></div>
+        <div class="funil-body" id="ga4-pages-rows" style="flex:1;min-height:0;overflow-y:auto;justify-content:flex-start;gap:2px"></div>
       </div>
     </div>
 
     <div id="ga4-col-center">
-      <div class="card" id="ga4-sources-card">
+      <div class="card" id="ga4-sources-card" style="flex:1;display:flex;flex-direction:column;min-height:0">
         <div class="card-hd">
           <span class="card-hd-title">Fontes de Tráfego</span>
           <span class="badge" id="ga4-sources-badge"></span>
         </div>
-        <div class="funil-body" id="ga4-sources-rows"></div>
+        <div class="funil-body" id="ga4-sources-rows" style="flex:1;min-height:0;overflow-y:auto;justify-content:flex-start;gap:2px"></div>
       </div>
-      <div class="card" id="ga4-cities-card">
+      <div class="card" id="ga4-cities-card" style="flex:1;display:flex;flex-direction:column;min-height:0">
         <div class="card-hd">
           <span class="card-hd-title">Cidades</span>
           <span class="badge" id="ga4-cities-badge"></span>
         </div>
-        <div class="funil-body" id="ga4-cities-rows"></div>
+        <div class="funil-body" id="ga4-cities-rows" style="flex:1;min-height:0;overflow-y:auto;justify-content:flex-start;gap:2px"></div>
       </div>
     </div>
 
@@ -1125,52 +1145,54 @@ footer strong{color:#fff}
         </div>
         <div class="funil-body" id="ga4-funil-rows"></div>
       </div>
-      <div class="card" id="ga4-events-card">
+      <div class="card" id="ga4-events-card" style="flex:1;display:flex;flex-direction:column;min-height:0">
         <div class="card-hd">
           <span class="card-hd-title">Eventos — Scroll</span>
           <span class="badge" id="ga4-events-badge"></span>
         </div>
-        <div class="funil-body" id="ga4-events-rows"></div>
+        <div class="funil-body" id="ga4-events-rows" style="flex:1;min-height:0;overflow-y:auto;justify-content:flex-start;gap:8px"></div>
       </div>
     </div>
   </div>
 
-  <!-- BIA (25-26/08) — lê do worker isolado bia-dash-sync (GET /api/snapshot),
-       nunca do gs-agendor-worker direto. Hero é o "card ao vivo": glow
-       roxo/magenta pulsante, sinaliza a Bia trabalhando agora. -->
+  <!-- BIA (25-26/08, redesenhado 26/08) — lê do worker isolado bia-dash-sync
+       (GET /api/snapshot), nunca do gs-agendor-worker direto. 7 kchips do
+       MESMO tamanho com borda de cor cheia (referência: dashboard-telao.html
+       do GA4 standalone). "Ao vivo" de verdade é o Motor Proativo agindo,
+       não um número de custo pulsando. -->
   <div id="bia-hero-row">
-    <div id="bia-hero" style="cursor:default">
-      <div class="hero-top"><span class="hero-label"><span id="bia-live-dot"></span>BIA — AO VIVO</span></div>
-      <div class="hero-val" id="bia-hero-val" style="color:#fff"><span class="skel" style="width:120px;height:24px;background:rgba(255,255,255,.3)"></span></div>
-      <div class="hero-row2"><span class="hero-sub" id="bia-hero-sub">carregando…</span></div>
+    <div class="kchip kchip-b" style="--accent-color:var(--purple)">
+      <span class="kc-label">Gasto Hoje</span>
+      <div class="kc-row"><span class="kc-val" id="bia-k-gasto"><span class="skel"></span></span></div>
+      <span class="kc-sub" id="bia-k-gasto-sub">chamadas hoje</span>
     </div>
-    <div class="kchip">
+    <div class="kchip kchip-b" style="--accent-color:var(--magenta)">
       <span class="kc-label">Mês (IA)</span>
       <div class="kc-row"><span class="kc-val" id="bia-k-mes"><span class="skel"></span></span></div>
       <span class="kc-sub" id="bia-k-mes-sub">projeção</span>
     </div>
-    <div class="kchip">
+    <div class="kchip kchip-b" id="bia-kchip-total" style="--accent-color:var(--green)">
       <span class="kc-label">Total Projetado</span>
       <div class="kc-row"><span class="kc-val" id="bia-k-total"><span class="skel"></span></span></div>
       <span class="kc-sub" id="bia-k-teto">teto —</span>
     </div>
-    <div class="kchip">
+    <div class="kchip kchip-b" style="--accent-color:var(--green)">
       <span class="kc-label">Economia Cache</span>
       <div class="kc-row"><span class="kc-val" id="bia-k-economia"><span class="skel"></span></span></div>
       <span class="kc-sub" id="bia-k-cache-pct">— hoje</span>
     </div>
-    <div class="kchip">
+    <div class="kchip kchip-b" style="--accent-color:var(--s1)">
       <span class="kc-label">Leads Monitor.</span>
       <div class="kc-row"><span class="kc-val" id="bia-k-leads"><span class="skel"></span></span></div>
       <span class="kc-sub">Agendor</span>
     </div>
-    <div class="kchip">
+    <div class="kchip kchip-b" style="--accent-color:var(--s5)">
       <span class="kc-label">Mensagens Hoje</span>
       <div class="kc-row"><span class="kc-val" id="bia-k-msgs"><span class="skel"></span></span></div>
       <span class="kc-sub">envios totais</span>
     </div>
-    <div class="kchip">
-      <span class="kc-label">Motor Proativo</span>
+    <div class="kchip kchip-b" style="--accent-color:var(--amber)">
+      <span class="kc-label"><span id="bia-live-dot" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--amber);margin-right:4px"></span>Motor Proativo</span>
       <div class="kc-row"><span class="kc-val" id="bia-k-motor"><span class="skel"></span></span></div>
       <span class="kc-sub">eventos hoje</span>
     </div>
@@ -1178,9 +1200,20 @@ footer strong{color:#fff}
 
   <div id="bia-main">
     <div id="bia-col-left">
+      <div class="card" id="bia-motor-card">
+        <div class="card-hd">
+          <span class="card-hd-title"><span id="bia-motor-live-dot"></span>Motor Proativo — Ao Vivo</span>
+          <span class="badge" id="bia-motor-badge">carregando…</span>
+        </div>
+        <div class="funil-body" id="bia-motor-breakdown" style="justify-content:flex-start;gap:2px;flex:none"></div>
+        <div class="feed-scroll" id="bia-motor-feed"></div>
+      </div>
+    </div>
+
+    <div id="bia-col-center">
       <div class="card" id="bia-gates-card">
         <div class="card-hd">
-          <span class="card-hd-title">Gates de Confiança</span>
+          <span class="card-hd-title">Confiança &amp; Saúde</span>
           <span class="badge" id="bia-gates-badge">hoje</span>
         </div>
         <div style="padding:2px 14px">
@@ -1188,28 +1221,17 @@ footer strong{color:#fff}
           <div class="stat-row"><span class="k">Negação sem consultar</span><span class="v" id="bia-gate-neg">—</span></div>
           <div class="stat-row"><span class="k">Número sem consultar</span><span class="v" id="bia-gate-afd">—</span></div>
           <div class="stat-row"><span class="k">Contagem ≠ lista</span><span class="v" id="bia-gate-3b">—</span></div>
-        </div>
-      </div>
-      <div class="card" id="bia-cerebro-card" style="flex:1">
-        <div class="card-hd">
-          <span class="card-hd-title">Saúde</span>
-          <span class="badge" id="bia-cerebro-badge"></span>
-        </div>
-        <div style="padding:2px 14px">
           <div class="stat-row"><span class="k">Cérebro — última resposta</span><span class="v" id="bia-cerebro-min">—</span></div>
           <div class="stat-row"><span class="k">Respostas da Bia (hoje)</span><span class="v" id="bia-respostas">—</span></div>
           <div class="stat-row"><span class="k">Aprovações pendentes</span><span class="v" id="bia-aprovacoes">—</span></div>
         </div>
       </div>
-    </div>
-
-    <div id="bia-col-center">
-      <div class="card" id="bia-trend-card">
+      <div class="card" id="bia-trend-card" style="flex:1;display:flex;flex-direction:column;min-height:0">
         <div class="card-hd">
           <span class="card-hd-title">Tendência — Custo × Notificações (14 dias)</span>
           <span class="badge" id="bia-trend-badge"></span>
         </div>
-        <div id="bia-trend-chart"></div>
+        <div id="bia-trend-chart" style="flex:1;min-height:0"></div>
       </div>
       <div class="card" id="bia-sdr-card">
         <div class="card-hd">
@@ -1221,17 +1243,17 @@ footer strong{color:#fff}
     </div>
 
     <div id="bia-col-right">
-      <div class="card" id="bia-deploy-card">
+      <div class="card" id="bia-deploy-card" style="flex:1;display:flex;flex-direction:column;min-height:0">
         <div class="card-hd">
           <span class="card-hd-title">Log de Deploy</span>
           <span class="badge" id="bia-deploy-badge"></span>
         </div>
-        <div style="padding:2px 14px">
+        <div style="padding:2px 14px;flex-shrink:0">
           <div class="stat-row"><span class="k">Suíte atual</span><span class="v good" id="bia-deploy-suite">—</span></div>
           <div class="stat-row"><span class="k">Falhas</span><span class="v" id="bia-deploy-falhas">—</span></div>
           <div class="stat-row"><span class="k">Desde início do log</span><span class="v" id="bia-deploy-desde">—</span></div>
         </div>
-        <div class="feed-scroll" id="bia-deploy-rows" style="flex:1"></div>
+        <div class="feed-scroll" id="bia-deploy-rows" style="flex:1;min-height:0"></div>
       </div>
     </div>
   </div>
@@ -1748,13 +1770,13 @@ function renderGa4SectionTelao(d) {
 
   el('ga4-sources-badge').textContent = d.sources.length + ' fontes';
   const maxSrc = Math.max(...d.sources.map(s => s.users), 1);
-  el('ga4-sources-rows').innerHTML = d.sources.slice(0, 8).map((s, i) =>
+  el('ga4-sources-rows').innerHTML = d.sources.slice(0, 12).map((s, i) =>
     ga4Row_(GA4_S[i % GA4_S.length], s.name, s.users, maxSrc, fmtInt_(s.sessions) + ' sessões')
   ).join('');
 
   el('ga4-cities-badge').textContent = d.cities.length + ' cidades';
   const maxCity = Math.max(...d.cities.map(c => c.users), 1);
-  el('ga4-cities-rows').innerHTML = d.cities.slice(0, 6).map((c, i) =>
+  el('ga4-cities-rows').innerHTML = d.cities.slice(0, 20).map((c, i) =>
     ga4Row_(GA4_S[i % GA4_S.length], c.name, c.users, maxCity)
   ).join('');
 
@@ -1848,20 +1870,54 @@ function renderBiaTrendChart_(dias, custo, notif, containerId) {
     </div>`;
 }
 
-function renderBiaSectionTelao(s) {
-  el('bia-hero-val').textContent = fmtMoney(s.totalProjetado);
-  const pct = s.tetoMes > 0 ? Math.round((s.totalProjetado / s.tetoMes) * 100) : 0;
-  el('bia-hero-sub').textContent = pct + '% do teto (R$ ' + s.tetoMes.toLocaleString('pt-BR') + ') · sincronizado ' + new Date(s.syncedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+function prettyLabel_(s) {
+  if (!s) return '—';
+  return String(s).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+function timeAgo_(ts) {
+  if (!ts) return '';
+  const mins = Math.round((Date.now() - ts) / 60000);
+  if (mins < 1) return 'agora';
+  if (mins < 60) return mins + 'min atrás';
+  const h = Math.floor(mins / 60);
+  return h + 'h' + (mins % 60 ? (mins % 60) + 'min' : '') + ' atrás';
+}
 
+function renderBiaSectionTelao(s) {
+  el('bia-k-gasto').textContent = fmtMoney(s.gastoHoje);
+  el('bia-k-gasto-sub').textContent = s.chamadasHoje + ' chamada' + (s.chamadasHoje === 1 ? '' : 's') + ' hoje';
   el('bia-k-mes').textContent = fmtMoney(s.mesIA);
   el('bia-k-mes-sub').textContent = 'proj. ' + fmtMoney(s.mesIAProjecao);
   el('bia-k-total').textContent = fmtMoney(s.totalProjetado);
   el('bia-k-teto').textContent = 'teto ' + fmtMoney(s.tetoMes);
+  const pct = s.tetoMes > 0 ? (s.totalProjetado / s.tetoMes) : 0;
+  el('bia-kchip-total').style.setProperty('--accent-color', pct >= 1 ? 'var(--red)' : pct >= 0.85 ? 'var(--amber)' : 'var(--green)');
   el('bia-k-economia').textContent = fmtMoney(s.economizouHoje);
   el('bia-k-cache-pct').textContent = s.cachePct + '% cache hoje';
   el('bia-k-leads').textContent = String(s.leadsMonitor);
   el('bia-k-msgs').textContent = String(s.mensagensHoje);
   el('bia-k-motor').textContent = String(s.motorProativoHoje);
+
+  // Motor Proativo — o card "ao vivo" de verdade (achado 26/08: Robert
+  // pediu explicitamente esse card, não existia antes, só um número solto).
+  el('bia-motor-badge').textContent = s.motorProativoHoje + ' evento' + (s.motorProativoHoje === 1 ? '' : 's') + ' hoje';
+  const porResultado = Object.entries(s.motorPorResultado || {}).sort((a, b) => b[1] - a[1]);
+  const maxMotor = Math.max(...porResultado.map(x => x[1]), 1);
+  el('bia-motor-breakdown').innerHTML = porResultado.length === 0
+    ? '<div class="feed-empty">Nenhum evento hoje ainda</div>'
+    : porResultado.map(([k, v], i) => ga4Row_(GA4_S[i % GA4_S.length], prettyLabel_(k), v, maxMotor)).join('');
+  const recentes = s.motorRecentes || [];
+  el('bia-motor-feed').innerHTML = recentes.length === 0
+    ? '<div class="feed-empty">Sem atividade recente</div>'
+    : recentes.map(e => `
+      <div class="bia-motor-row">
+        <div class="bia-motor-dot"></div>
+        <div class="bia-motor-main">
+          <b>${escHtml(e.repNome || 'Motor Proativo')}</b> — ${escHtml(prettyLabel_(e.estagio))} → ${escHtml(prettyLabel_(e.resultado))}
+          ${e.dealId ? `<span style="color:var(--faint)"> · deal ${escHtml(String(e.dealId))}</span>` : ''}
+        </div>
+        <div class="bia-motor-time">${timeAgo_(e.ts)}</div>
+      </div>`).join('');
 
   const gv = (n) => n > 0 ? 'crit' : 'good';
   el('bia-gate-fing').textContent = s.gates.fing; el('bia-gate-fing').className = 'v ' + gv(s.gates.fing);
@@ -1872,7 +1928,7 @@ function renderBiaSectionTelao(s) {
   el('bia-cerebro-min').textContent = s.cerebroMin != null ? s.cerebroMin + ' min atrás' : '—';
   el('bia-respostas').textContent = String(s.respostasBiaHoje);
   el('bia-aprovacoes').textContent = String(s.aprovacoesPendentes);
-  el('bia-cerebro-badge').textContent = s.erros && s.erros.length ? '⚠ parcial' : 'ok';
+  el('bia-gates-badge').textContent = s.erros && s.erros.length ? '⚠ parcial' : 'hoje';
 
   el('bia-trend-badge').textContent = '14 dias';
   renderBiaTrendChart_(s.trend.dias, s.trend.custo, s.trend.notif, 'bia-trend-chart');
@@ -1911,7 +1967,7 @@ async function loadBiaFresh_() {
   } catch (e) {
     console.warn('fetchBiaSnapshot falhou:', e.message);
     if (_biaViewActive && !_biaSnap) {
-      el('bia-hero-sub').textContent = 'Erro ao carregar — tenta de novo em instantes.';
+      el('bia-motor-breakdown').innerHTML = '<div class="feed-empty">Erro ao carregar — tenta de novo em instantes.</div>';
     }
   } finally {
     _biaLoading = false;
