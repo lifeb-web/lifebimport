@@ -1177,7 +1177,7 @@ footer strong{color:#fff}
        não um número de custo pulsando. -->
   <div id="bia-hero-row">
     <div class="kchip kchip-b" style="--accent-color:var(--purple)">
-      <span class="kc-label">Gasto Hoje</span>
+      <span class="kc-label" id="bia-k-gasto-label">Gasto Hoje</span>
       <div class="kc-row"><span class="kc-val" id="bia-k-gasto"><span class="skel"></span></span></div>
       <span class="kc-sub" id="bia-k-gasto-sub">chamadas hoje</span>
     </div>
@@ -1202,7 +1202,7 @@ footer strong{color:#fff}
       <span class="kc-sub">Agendor</span>
     </div>
     <div class="kchip kchip-b" style="--accent-color:var(--s5)">
-      <span class="kc-label">Mensagens Hoje</span>
+      <span class="kc-label" id="bia-k-msgs-label">Mensagens Hoje</span>
       <div class="kc-row"><span class="kc-val" id="bia-k-msgs"><span class="skel"></span></span></div>
       <span class="kc-sub">envios totais</span>
     </div>
@@ -1928,18 +1928,35 @@ function refreshGa4IfActive_() {
   }
 }
 
-// ── BIA (25-26/08) — lê do worker isolado bia-dash-sync (GET /api/snapshot),
-// NUNCA do gs-agendor-worker direto. Dado é "hoje + últimos 14 dias" (mesma
-// janela que o próprio /custo da Bia usa) — não segue o filtro de período
-// global porque a fonte não é uma série arbitrária por data, é um snapshot
-// (mesma natureza do card "Ao Vivo Agora" do GA4).
+// ── BIA (25-26/08, corrigido 26/08) — lê do worker isolado bia-dash-sync
+// (GET /api/snapshot), NUNCA do gs-agendor-worker direto.
+// 🔴 CORRIGIDO 26/08 (Robert, bravo com razão: "a aba bia não tá respeitando
+// os filtros porra nenhuma"): eu tinha documentado aqui embaixo que a BIA
+// "não segue o filtro de período global" — isso era ERRADO, ou pelo menos
+// incompleto. Investiguei o /custo (gs-agendor-worker, só leitura) e achei
+// que ele JÁ suporta ?periodo=hoje|7d|30d|mes desde 20/08 (outra sessão da
+// Bia construiu isso), com valores REAIS diferentes por período (confirmado
+// com curl: Gasto 7d=R$48,72 vs Gasto 30d=R$345,93 vs Gasto hoje=R$8,62) —
+// eu só nunca tinha repassado o período escolhido pro worker isolado. Agora
+// repassa: Gasto/Mensagens/Economia seguem o filtro de verdade pros 4
+// períodos que o /custo aceita. O resto (Mês (IA), Total Projetado, Leads
+// Monitor., Motor Proativo, Gates, Cérebro) CONTINUA fixo de propósito —
+// são contadores "agora"/"mês corrente" sem histórico nenhum pra agregar
+// por período (confirmado com curl: valor idêntico nos 4 períodos testados)
+// — mesma limitação que o próprio /custo já documenta e rotula.
 const BIA_SYNC_URL = 'https://bia-dash-sync.robert131196.workers.dev/api/snapshot';
+// Só 4 períodos têm equivalente exato no /custo. Os outros (Ontem, Mês
+// anterior, 60/90 dias, Total, Personalizado, Mês escolhido) não têm nenhuma
+// janela correspondente lá — cai pra "Hoje" com aviso visível no rodapé em
+// vez de aproximar errado ou fingir que segue o filtro.
+const BIA_PERIODO_MAP = { today: 'hoje', week: '7d', month: 'mes', '30d': '30d' };
+function biaPeriodoFor_(period) { return BIA_PERIODO_MAP[period] || null; }
 let _biaViewActive = false;
 let _biaSnap = null;
 let _biaLoading = false;
 
-async function fetchBiaSnapshot() {
-  const r = await fetch(BIA_SYNC_URL);
+async function fetchBiaSnapshot(periodo) {
+  const r = await fetch(BIA_SYNC_URL + '?periodo=' + (periodo || 'hoje'));
   if (!r.ok) throw new Error('bia-dash-sync HTTP ' + r.status);
   return r.json();
 }
@@ -2059,8 +2076,13 @@ function filterBiaMotorFeed_(key) {
 }
 
 function renderBiaSectionTelao(s) {
+  // 26/08 (fix do "não respeita filtro"): Gasto/Mensagens/Economia agora
+  // vêm de verdade no período pedido (s.periodoLabel confirma qual o
+  // worker aplicou) — rótulo do card muda junto, não fica preso em "Hoje".
+  const pLabel = s.periodoLabel || 'Hoje';
+  el('bia-k-gasto-label').textContent = 'Gasto ' + pLabel;
   el('bia-k-gasto').textContent = fmtMoney(s.gastoHoje);
-  el('bia-k-gasto-sub').textContent = s.chamadasHoje + ' chamada' + (s.chamadasHoje === 1 ? '' : 's') + ' hoje';
+  el('bia-k-gasto-sub').textContent = s.chamadasHoje + ' chamada' + (s.chamadasHoje === 1 ? '' : 's');
   el('bia-k-mes').textContent = fmtMoney(s.mesIA);
   el('bia-k-mes-sub').textContent = 'proj. ' + fmtMoney(s.mesIAProjecao);
   el('bia-k-total').textContent = fmtMoney(s.totalProjetado);
@@ -2068,8 +2090,9 @@ function renderBiaSectionTelao(s) {
   const pct = s.tetoMes > 0 ? (s.totalProjetado / s.tetoMes) : 0;
   el('bia-kchip-total').style.setProperty('--accent-color', pct >= 1 ? 'var(--red)' : pct >= 0.85 ? 'var(--amber)' : 'var(--green)');
   el('bia-k-economia').textContent = fmtMoney(s.economizouHoje);
-  el('bia-k-cache-pct').textContent = s.cachePct + '% cache hoje';
+  el('bia-k-cache-pct').textContent = s.cachePct + '% cache';
   el('bia-k-leads').textContent = String(s.leadsMonitor);
+  el('bia-k-msgs-label').textContent = 'Mensagens ' + pLabel;
   el('bia-k-msgs').textContent = String(s.mensagensHoje);
   el('bia-k-motor').textContent = String(s.motorProativoHoje);
 
@@ -2090,7 +2113,16 @@ function renderBiaSectionTelao(s) {
   // errado comparado ao /custo ao vivo. Visível no rodapé (texto, não só
   // tooltip — telão não tem mouse pra hover).
   if (_biaViewActive && s.syncedAt) {
-    el('footer-source').textContent = 'bia-dash-sync (sinc. ' + new Date(s.syncedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + ')';
+    const syncTxt = 'bia-dash-sync (sinc. ' + new Date(s.syncedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + ')';
+    // 26/08: só 4 dos ~11 períodos do dash têm equivalente exato no /custo
+    // (Hoje/Esta semana≈7d/Este mês/30 dias). Pros outros, o Gasto/Mensagens
+    // acima ficam mostrando "Hoje" — aviso explícito aqui em vez de deixar
+    // parecer que seguiu um período que na verdade não seguiu.
+    const currentLabel = (_data && _data.period && _data.period.label) || '';
+    const unsupported = _period && !biaPeriodoFor_(_period);
+    el('footer-source').textContent = unsupported
+      ? syncTxt + ' · período "' + currentLabel + '" não suportado pela BIA (só Hoje/Semana/Mês/30 dias) — mostrando Hoje'
+      : syncTxt;
   }
   renderBiaMotorSection_(s);
 
@@ -2156,7 +2188,7 @@ async function loadBiaFresh_() {
   if (_biaLoading) return;
   _biaLoading = true;
   try {
-    _biaSnap = await fetchBiaSnapshot();
+    _biaSnap = await fetchBiaSnapshot(biaPeriodoFor_(_period) || 'hoje');
     if (_biaViewActive) renderBiaSectionTelao(_biaSnap);
   } catch (e) {
     console.warn('fetchBiaSnapshot falhou:', e.message);
