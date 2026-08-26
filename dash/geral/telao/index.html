@@ -236,10 +236,15 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 .ga4-table-card th:first-child,.ga4-table-card th.ga4-th-left{text-align:left}
 .ga4-table-card tbody tr{border-bottom:1px solid var(--border)}
 .ga4-table-card tbody tr:last-child{border-bottom:none}
-.ga4-table-card td{padding:7px 6px;font-weight:500;font-size:13px;max-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ga4-table-card td:not(:first-child){text-align:right;font-weight:700;font-size:14px;color:var(--purple);max-width:none;white-space:nowrap}
-.ga4-pg-legenda{display:block;font-weight:700;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis}
-.ga4-pg-path{display:block;font-size:9px;color:var(--muted);font-family:monospace;margin-top:1px;overflow:hidden;text-overflow:ellipsis}
+/* 🔴 FIX 26/08 (Robert, colou o painel real: "várias coisas cortadas, dá
+   pra entender porra nenhuma") — nome/origem/página truncavam com "..." e
+   sem jeito de revelar o resto numa TV sem mouse. Agora quebra linha em vez
+   de cortar; seguro desde a rodada anterior, que já deu scroll automático
+   pra essas 3 tabelas (linha mais alta não é mais problema). */
+.ga4-table-card td{padding:7px 6px;font-weight:500;font-size:13px;white-space:normal;word-break:break-word;overflow-wrap:anywhere}
+.ga4-table-card td:not(:first-child){text-align:right;font-weight:700;font-size:14px;color:var(--purple);white-space:nowrap}
+.ga4-pg-legenda{display:block;font-weight:700;font-size:13px;color:var(--text);white-space:normal;word-break:break-word}
+.ga4-pg-path{display:block;font-size:9px;color:var(--muted);font-family:monospace;margin-top:1px;white-space:normal;word-break:break-word}
 .ga4-td-left{text-align:left!important;font-weight:500!important}
 
 /* BIA (25-26/08, redesenhado 26/08 depois de comparar com a referência real
@@ -1224,7 +1229,7 @@ footer strong{color:#fff}
         </div>
         <div class="ga4-table-scroll" id="ga4-cities-scroll">
           <table>
-            <thead><tr><th>Estado</th><th class="ga4-th-left">Cidade</th><th>Visit.</th><th>Leads</th></tr></thead>
+            <thead><tr><th>UF</th><th class="ga4-th-left">Cidade</th><th>Visit.</th><th>Leads</th></tr></thead>
             <tbody id="ga4-cities-rows"></tbody>
           </table>
         </div>
@@ -1848,6 +1853,56 @@ Object.keys(TRADUZ_ESTADO_MAP).forEach(k => { TRADUZ_ESTADO_NORM[_semAcento(k)] 
 function traduzEstado_(s) {
   return TRADUZ_ESTADO_NORM[_semAcento(s)] || s;
 }
+// 🔴 FIX 26/08 (Robert, colou o painel real: "em estado usa só a sigla") —
+// nome de estado por extenso ocupava a coluna toda numa tabela que já é
+// apertada. Sigla oficial das 26 UFs + DF; estado fora do Brasil (ex.:
+// "North Carolina", visitante real via VPN/bot) não tem sigla nossa —
+// mantém o nome cheio em vez de inventar uma abreviação errada.
+const UF_SIGLA_MAP = {
+  'Acre':'AC','Alagoas':'AL','Amapá':'AP','Amazonas':'AM','Bahia':'BA','Ceará':'CE',
+  'Distrito Federal':'DF','Espírito Santo':'ES','Goiás':'GO','Maranhão':'MA',
+  'Mato Grosso':'MT','Mato Grosso do Sul':'MS','Minas Gerais':'MG','Pará':'PA',
+  'Paraíba':'PB','Paraná':'PR','Pernambuco':'PE','Piauí':'PI','Rio de Janeiro':'RJ',
+  'Rio Grande do Norte':'RN','Rio Grande do Sul':'RS','Rondônia':'RO','Roraima':'RR',
+  'Santa Catarina':'SC','São Paulo':'SP','Sergipe':'SE','Tocantins':'TO'
+};
+function ufSigla_(estadoTraduzido) {
+  return UF_SIGLA_MAP[estadoTraduzido] || estadoTraduzido;
+}
+// 🔴 FIX 26/08 (Robert, colou o painel real: "Goiania"/"Brasilia"/
+// "Pirenopolis" sem acento) — o GA4 devolve nome de cidade sem acentuação
+// em boa parte dos casos (base de geolocalização própria dele, não é bug
+// meu pra "corrigir" na origem). Dicionário de restauração — mesmo padrão
+// de chave normalizada (_semAcento) já usado no TRADUZ_ESTADO_NORM — cobre
+// as capitais + cidades que já apareceram no tráfego real. Cidade que não
+// está aqui mantém o nome como o GA4 mandou (nunca inventa acento pra
+// nome desconhecido).
+const TRADUZ_CIDADE_MAP = {
+  'Rio Branco':'Rio Branco','Maceio':'Maceió','Macapa':'Macapá','Manaus':'Manaus',
+  'Salvador':'Salvador','Fortaleza':'Fortaleza','Brasilia':'Brasília','Vitoria':'Vitória',
+  'Goiania':'Goiânia','Sao Luis':'São Luís','Cuiaba':'Cuiabá','Campo Grande':'Campo Grande',
+  'Belo Horizonte':'Belo Horizonte','Belem':'Belém','Joao Pessoa':'João Pessoa',
+  'Curitiba':'Curitiba','Recife':'Recife','Teresina':'Teresina','Rio de Janeiro':'Rio de Janeiro',
+  'Natal':'Natal','Porto Alegre':'Porto Alegre','Porto Velho':'Porto Velho','Boa Vista':'Boa Vista',
+  'Florianopolis':'Florianópolis','Sao Paulo':'São Paulo','Aracaju':'Aracaju','Palmas':'Palmas',
+  'Rio Verde':'Rio Verde','Bela Vista de Goias':'Bela Vista de Goiás','Novo Gama':'Novo Gama',
+  'Pirenopolis':'Pirenópolis','Uruacu':'Uruaçu','Araxa':'Araxá','Barbacena':'Barbacena',
+  'Divinopolis':'Divinópolis','Passos':'Passos','Uberaba':'Uberaba','Umuarama':'Umuarama',
+  'Sao Joao Batista':'São João Batista','Anapolis':'Anápolis','Aparecida de Goiania':'Aparecida de Goiânia',
+  'Uberlandia':'Uberlândia','Contagem':'Contagem','Juiz de Fora':'Juiz de Fora',
+  'Ribeirao Preto':'Ribeirão Preto','Sorocaba':'Sorocaba','Campinas':'Campinas','Santos':'Santos',
+  'Niteroi':'Niterói','Duque de Caxias':'Duque de Caxias','Sao Jose dos Campos':'São José dos Campos',
+  'Londrina':'Londrina','Maringa':'Maringá','Cascavel':'Cascavel','Caxias do Sul':'Caxias do Sul',
+  'Pelotas':'Pelotas','Joinville':'Joinville','Feira de Santana':'Feira de Santana',
+  'Vitoria da Conquista':'Vitória da Conquista','Montes Claros':'Montes Claros',
+  'Governador Valadares':'Governador Valadares','Ipatinga':'Ipatinga','Varginha':'Varginha',
+  'Pocos de Caldas':'Poços de Caldas', 'Blumenau':'Blumenau'
+};
+const TRADUZ_CIDADE_NORM = {};
+Object.keys(TRADUZ_CIDADE_MAP).forEach(k => { TRADUZ_CIDADE_NORM[_semAcento(k)] = TRADUZ_CIDADE_MAP[k]; });
+function traduzCidade_(cityRaw) {
+  return TRADUZ_CIDADE_NORM[_semAcento(cityRaw)] || cityRaw;
+}
 // Copiado verbatim de dashboard-telao.html (traduzOrigem).
 function traduzOrigem_(raw) {
   const s = (raw || '').trim().toLowerCase().replace(/\s+/g, ' ');
@@ -1855,6 +1910,14 @@ function traduzOrigem_(raw) {
     '(direct) / (none)'          : 'Acesso Direto',
     '(not set) / (not set)'      : 'Não identificado',
     '(not set)'                  : 'Não identificado',
+    // 🔴 FIX 26/08 (Robert, colou o painel real: "(data not available)" sem
+    // tradução, linha separada de "Não identificado" sem explicação) — são
+    // 2 coisas técnicas DIFERENTES do GA4: "(not set)" é dimensão vazia/sem
+    // config; "(data not available)" é o GA4 retendo o dado por causa de
+    // consentimento de cookies/privacidade do visitante (Consent Mode) —
+    // rótulo próprio, não junta com "Não identificado" pra não afirmar uma
+    // causa que não é essa.
+    '(data not available)'       : 'Dado indisponível (privacidade)',
     'google / organic'           : 'Google (orgânico)',
     'google / cpc'               : 'Google Ads',
     'fb / paid'                  : 'Facebook Ads',
@@ -1993,8 +2056,8 @@ function computeGa4Data(raw) {
 
   const cities = ga4Rows_(raw.cities).map(r => {
     const regionRaw = r.dims[0] || '', cityRaw = r.dims[1] || '';
-    const region = traduzEstado_(regionRaw);
-    const city = (!cityRaw || cityRaw === '(not set)' || /^\d{5,}/.test(cityRaw)) ? 'Não identificada' : cityRaw;
+    const region = ufSigla_(traduzEstado_(regionRaw));
+    const city = (!cityRaw || cityRaw === '(not set)' || /^\d{5,}/.test(cityRaw)) ? 'Não identificada' : traduzCidade_(cityRaw);
     return { region, city, users: r.vals[0], leads: leadsByCityMap[regionRaw + '||' + cityRaw] || 0 };
   }).sort((a, b) => b.leads - a.leads || b.users - a.users);
 
