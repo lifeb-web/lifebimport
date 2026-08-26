@@ -352,6 +352,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
    competia com o scroll e espremia linha em vez de rolar. flex-shrink:0
    preventivo aqui desde o início (já sabíamos do bug do SDR). */
 #ads-campanhas-rows .funil-row,#ads-adsets-rows .funil-row{flex-shrink:0}
+.ads-rank-badge{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:rgba(146,96,200,.16);color:var(--purple);font-size:9px;font-weight:800;margin-right:5px;flex-shrink:0}
 /* Anúncio com foto — 1ª vez que o telão mostra imagem de verdade. */
 /* Ads (03/08) — thumbnail bem maior que antes de propósito (o criativo É
    o produto sendo comparado, merece destaque — feedback do Robert de que
@@ -1866,8 +1867,13 @@ const UF_SIGLA_MAP = {
   'Rio Grande do Norte':'RN','Rio Grande do Sul':'RS','Rondônia':'RO','Roraima':'RR',
   'Santa Catarina':'SC','São Paulo':'SP','Sergipe':'SE','Tocantins':'TO'
 };
+// 🔴 FIX 26/08 nº2 (Robert: "começa a falar em inglês") — estado fora do
+// Brasil (ex.: "North Carolina", visitante real via VPN/bot) não tinha
+// sigla nossa e caía pro nome em inglês cru na tabela. "Exterior" cobre
+// qualquer estado fora do mapa sem inventar sigla errada nem deixar texto
+// em inglês solto no meio do painel.
 function ufSigla_(estadoTraduzido) {
-  return UF_SIGLA_MAP[estadoTraduzido] || estadoTraduzido;
+  return UF_SIGLA_MAP[estadoTraduzido] || 'Exterior';
 }
 // 🔴 FIX 26/08 (Robert, colou o painel real: "Goiania"/"Brasilia"/
 // "Pirenopolis" sem acento) — o GA4 devolve nome de cidade sem acentuação
@@ -2457,7 +2463,7 @@ function renderBiaMotorSection_(s) {
         </div>
         <div class="bia-motor-time">${timeAgo_(e.ts)}</div>
       </div>`).join('');
-  autoScrollIfNeeded('bia-motor-feed');
+  autoScrollIfNeeded('bia-motor-feed', { sig: filtered.map(e => e.ts).join(',') });
 
   el('bia-motor-badge').textContent = _biaMotorFilter
     ? filtered.length + ' de ' + (s.motorProativoHoje || 0) + ' · filtro: ' + prettyLabel_(_biaMotorFilter) + ' (clique de novo p/ limpar)'
@@ -4030,9 +4036,12 @@ function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
   const adsRaw = (raw.ads || []).filter(ad => campaignsById[ad.campaign_id]); // anúncio da campanha excluída some junto
   const creativesById = {}; (raw.creatives || []).forEach(c => creativesById[c.id] = c);
 
+  // 26/08 (Robert, 2ª vez: "não mudou porra nenhuma... fazer um dash
+  // profissional de meta ads") — CPC por campanha/conjunto/anúncio, dado
+  // real (spend/clicks já existem por entidade, só faltava dividir).
   function withMetrics(entityId, metricsMap) {
     const m = metricsMap[entityId] || { spend: 0, impressions: 0, clicks: 0 };
-    return { spend: m.spend, impressions: m.impressions, clicks: m.clicks, ctr: m.impressions > 0 ? (m.clicks / m.impressions) * 100 : null };
+    return { spend: m.spend, impressions: m.impressions, clicks: m.clicks, ctr: m.impressions > 0 ? (m.clicks / m.impressions) * 100 : null, cpc: m.clicks > 0 ? m.spend / m.clicks : null };
   }
 
   const campaignsAll = campaignsRaw.map(c => Object.assign({ id: c.id, name: c.name, status: c.status }, withMetrics(c.id, campaignMetrics)))
@@ -4142,15 +4151,21 @@ function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
 // existe, `d.kpis.ctr`) — sinal real de eficiência relativa, não fabricado.
 // ctrSignal: 'good' (CTR ≥30% acima da média), 'bad' (≤30% abaixo), null
 // (dentro da faixa normal, sem destaque).
-function adsFunilRowTelao_(dotColor, name, spend, maxSpend, subText, onclickAttr, isPaused, ctrSignal) {
+// 26/08 (2ª rodada, Robert repetiu: "não mudou porra nenhuma... dash
+// profissional") — rank recebe o 1º/2º/3º lugar em gasto (lista já vem
+// ordenada por spend antes de chegar aqui) — visual de "top performer",
+// igual dashboard de mídia paga de verdade. Sem badge do 4º em diante pra
+// não virar numeração poluída numa lista que pode ter dezenas de linhas.
+function adsFunilRowTelao_(dotColor, name, spend, maxSpend, subText, onclickAttr, isPaused, ctrSignal, rank) {
   const pct = Math.max((spend / Math.max(maxSpend, 1)) * 100, 3);
   const pausedBadge = isPaused ? '<span class="og-pill" style="background:rgba(107,100,132,.12);color:var(--muted)">pausada</span>' : '';
   const signalColor = ctrSignal === 'good' ? 'var(--green)' : (ctrSignal === 'bad' ? 'var(--red)' : null);
   const signalDot = signalColor ? `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${signalColor};margin-right:4px;vertical-align:middle" title="${ctrSignal === 'good' ? 'CTR bem acima da média da conta' : 'CTR bem abaixo da média da conta'}"></span>` : '';
+  const rankBadge = (rank && rank <= 3) ? `<span class="ads-rank-badge">${rank}</span>` : '';
   return `
     <div class="abar-row" ${onclickAttr ? 'onclick="' + onclickAttr + '"' : ''}>
       <div class="abar-top">
-        <span class="abar-name" title="${escHtml(name)}"><span class="abar-dot" style="background:${dotColor}"></span><span class="abar-name-text">${escHtml(name)}</span>${pausedBadge}</span>
+        <span class="abar-name" title="${escHtml(name)}">${rankBadge}<span class="abar-dot" style="background:${dotColor}"></span><span class="abar-name-text">${escHtml(name)}</span>${pausedBadge}</span>
         <span class="abar-val">${fmtMoney(spend)}${subText ? '<span class="abar-sub"> · ' + signalDot + escHtml(subText) + '</span>' : ''}</span>
       </div>
       <div class="abar-track"><div class="abar-fill" style="width:${pct}%;background:${dotColor}"></div></div>
@@ -4218,36 +4233,22 @@ function bucketizeByIndex_(series, n) {
 // ainda... talvez você tá editando só no mobile") — real: o gráfico de
 // tendência de gasto só tinha ido pro mobile na rodada 2 (só a sparkline do
 // hero foi pro telão, decisão de espaço que não bastou). Card fixo de
-// 130px no col-center do Ads resolve isso — mesmo padrão do
-// renderSpendTrendChart_ do mobile, altura 100% do container em vez de
-// altura fixa em px (aqui quem define a altura é o card CSS).
+// 130px no col-center do Ads resolve isso.
+// 🔴 FIX 26/08 (2ª rodada, Robert: "dash profissional de meta ads") —
+// mesma troca SVG-de-linha→Chart.js-de-barra da BIA (renderBiaBarChart_,
+// já genérica o bastante pra reusar aqui sem duplicar nada): poucos dias
+// de gasto é magnitude discreta, barra é mais honesta que curva suavizada.
 function renderSpendTrendChart_(series, containerId) {
   const box = el(containerId);
   if (!series || series.length < 2) {
     box.innerHTML = '<div class="feed-empty">Sem dias suficientes nesse período pra mostrar tendência</div>';
     return;
   }
-  const W = 600, H = 100, PAD_L = 4, PAD_R = 4, PAD_T = 8, PAD_B = 6;
-  const n = series.length;
-  const maxSpend = Math.max(...series.map(p => p.spend), 1);
-  const x = i => PAD_L + (n === 1 ? 0 : (i / (n - 1)) * (W - PAD_L - PAD_R));
-  const y = v => H - PAD_B - (v / maxSpend) * (H - PAD_T - PAD_B);
-  const pts = series.map((p, i) => [x(i), y(p.spend)]);
-  const linePath = 'M' + pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('L');
-  const areaPath = linePath + ` L${x(n - 1).toFixed(1)},${H - PAD_B} L${x(0).toFixed(1)},${H - PAD_B} Z`;
-  const first = series[0], last = series[n - 1];
   const fmtD = iso => { const p = iso.split('-'); return p[2] + '/' + p[1]; };
-  box.innerHTML = `
-    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:100%;display:block;min-height:0">
-      <line x1="${PAD_L}" y1="${H - PAD_B}" x2="${W - PAD_R}" y2="${H - PAD_B}" stroke="var(--border)" stroke-width="1"/>
-      <path d="${areaPath}" fill="var(--purple)" opacity="0.1" stroke="none"/>
-      <path d="${linePath}" fill="none" stroke="var(--purple)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="${x(n - 1).toFixed(1)}" cy="${y(last.spend).toFixed(1)}" r="4" fill="var(--purple)" stroke="var(--card)" stroke-width="2"/>
-    </svg>
-    <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);padding:2px 4px 0;font-weight:700;font-variant-numeric:tabular-nums;flex-shrink:0">
-      <span>${fmtD(first.date)} · ${fmtMoney(first.spend)}</span>
-      <span style="color:var(--purple)">${fmtD(last.date)} · ${fmtMoney(last.spend)}</span>
-    </div>`;
+  const dias = series.map(p => fmtD(p.date));
+  const vals = series.map(p => p.spend);
+  box.innerHTML = '<div style="flex:1;min-height:0;width:100%"><canvas id="ads-trend-canvas"></canvas></div>';
+  renderBiaBarChart_('ads-trend-canvas', dias, vals, '#704B9B', v => fmtMoney(v));
 }
 
 function renderAdsHierarchySectionTelao(d) {
@@ -4284,17 +4285,26 @@ function renderAdsHierarchySectionTelao(d) {
     return null;
   };
 
+  // 26/08 (2ª rodada — CPC junto do CTR na mesma linha, dado real por
+  // entidade; rank 1-3 vira badge, lista já vem ordenada por spend).
+  const subTextComEficiencia_ = (ctr, cpc) => {
+    if (ctr === null) return '—';
+    let t = ctr.toFixed(2) + '% CTR';
+    if (cpc !== null) t += ' · ' + fmtMoney(cpc) + '/clique';
+    return t;
+  };
   el('ads-campanhas-badge').textContent = d.campaignsList.length + ' de ' + d.kpis.totalCampaigns;
   const maxCampSpend = Math.max(...d.campaignsList.map(c => c.spend), 1);
   el('ads-campanhas-rows').innerHTML = d.campaignsList.length === 0
     ? '<div class="feed-empty">Nenhuma campanha com investimento no período</div>'
-    : d.campaignsList.map(c => adsFunilRowTelao_(
+    : d.campaignsList.map((c, i) => adsFunilRowTelao_(
         'var(--purple)',
         c.name, c.spend, maxCampSpend,
-        c.ctr !== null ? c.ctr.toFixed(2) + '% CTR' : '—',
+        subTextComEficiencia_(c.ctr, c.cpc),
         "openAdsCampaignModalTelao('" + escJsAttr_(c.id) + "')",
         c.status !== 'ACTIVE',
-        ctrSignal_(c.ctr)
+        ctrSignal_(c.ctr),
+        i + 1
       )).join('');
   autoScrollIfNeeded('ads-campanhas-rows');
 
@@ -4302,13 +4312,14 @@ function renderAdsHierarchySectionTelao(d) {
   const maxAdsetSpend = Math.max(...d.adsetsList.map(a => a.spend), 1);
   el('ads-adsets-rows').innerHTML = d.adsetsList.length === 0
     ? '<div class="feed-empty">Nenhum conjunto com investimento no período</div>'
-    : d.adsetsList.map(a => adsFunilRowTelao_(
+    : d.adsetsList.map((a, i) => adsFunilRowTelao_(
         'var(--purple)',
         a.name, a.spend, maxAdsetSpend,
-        a.ctr !== null ? a.ctr.toFixed(2) + '% CTR' : '—',
+        subTextComEficiencia_(a.ctr, a.cpc),
         "openAdsAdsetModalTelao('" + escJsAttr_(a.id) + "')",
         a.status !== 'ACTIVE',
-        ctrSignal_(a.ctr)
+        ctrSignal_(a.ctr),
+        i + 1
       )).join('');
   autoScrollIfNeeded('ads-adsets-rows');
 
@@ -4800,7 +4811,15 @@ function autoScrollIfNeeded(elId, opts) {
   // terminava — ficava voltando pro topo sem parar, visualmente "piscando".
   // Agora só reinicia se o conteúdo realmente mudou (hash do innerHTML já
   // escrito por quem chamou esta função).
-  const sig = simpleHash(el2.innerHTML);
+  // 🔴 FIX 26/08 (Robert: "meio scroll bugadão, tudo tremendo" — achado na
+  // aba BIA): hash do innerHTML falha quando a lista tem texto que muda
+  // sozinho a cada poll SEM dado novo nenhum — feed do Motor Proativo usa
+  // timeAgo_() ("9min atrás" → "10min atrás"), então o hash mudava a cada
+  // 20s mesmo sem evento novo, reiniciando o scroll pro topo sem parar
+  // (mesma classe do bug de 15/07, gatilho diferente). opts.sig deixa quem
+  // chama passar uma identidade estável (ex: só os IDs/timestamps reais dos
+  // itens) em vez do HTML renderizado inteiro.
+  const sig = (opts && opts.sig !== undefined) ? opts.sig : simpleHash(el2.innerHTML);
   if (_autoScrollSignature[elId] === sig && _autoScrollTimers[elId]) return;
   _autoScrollSignature[elId] = sig;
 
