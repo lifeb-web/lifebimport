@@ -1295,7 +1295,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // por REPS), só o card pessoal dela some do ranking.
 const REPS = {
   '976406': 'Iramar', '977487': 'Natanael', '977488': 'Janeth',
-  '977499': 'Sâmilla', '977506': 'Washington', '983372': 'Flávia'
+  '977499': 'Sâmilla', '977506': 'Washington', '983372': 'Flávia',
+  '987866': 'Anderson'
 };
 const STAGES = {
   '3771722': { name: 'Conexão', color: 'blue', seq: 1 },
@@ -1679,7 +1680,13 @@ async function fetchGa4Raw(startDate, endDate) {
 // Função pura de cálculo — sem HTML, mesma convenção do resto do painel.
 function computeGa4Data(raw) {
   const s = raw.summary;
-  const chartPts = ga4Rows_(raw.chart).map(r => r.vals[0]).reverse();
+  // Achado da auditoria 25-26/08: a API do GA4 já devolve `chart` em ordem
+  // cronológica ASCENDENTE (mais antigo primeiro) — igual sparkBuckets()/
+  // bucketizeByIndex_() de Vendas/LTV/Ads, que nunca usam .reverse(). Um
+  // .reverse() aqui invertia a ordem, plotando hoje à esquerda e o dia mais
+  // antigo do período à direita (onde a bolinha de destaque do sparkline
+  // fica) — sinalizava tendência ao contrário.
+  const chartPts = ga4Rows_(raw.chart).map(r => r.vals[0]);
   const pages = ga4Rows_(raw.pages).map(r => ({ path: r.dims[0], users: r.vals[0], sessions: r.vals[1], views: r.vals[2] }));
   const cities = ga4Rows_(raw.cities).map(r => ({ name: (r.dims[1] && r.dims[1] !== '(not set)') ? r.dims[1] : r.dims[0], users: r.vals[0] }));
   const sources = ga4Rows_(raw.sources).map(r => ({ name: r.dims[0], users: r.vals[0], sessions: r.vals[1] }));
