@@ -1081,6 +1081,13 @@ footer strong{color:#fff}
           <span class="card-hd-title">Campanhas</span>
           <span class="badge" id="ads-campanhas-badge">—</span>
         </div>
+        <!-- 26/08 (Robert: "lista de conjuntos não adianta nada... fazer
+             dash profissional") — legenda do sinal de eficiência (dot
+             colorido comparando CTR de cada linha com a média da conta). -->
+        <div style="padding:0 14px 4px;font-size:9px;color:var(--faint);font-weight:600;display:flex;gap:10px;flex-shrink:0">
+          <span><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:3px;vertical-align:middle"></span>CTR bem acima da média</span>
+          <span><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--red);margin-right:3px;vertical-align:middle"></span>bem abaixo</span>
+        </div>
         <div class="lb-rows" id="ads-campanhas-rows"></div>
       </div>
     </div>
@@ -3988,14 +3995,26 @@ function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
 // status atual — badge "pausada" avisa sem esconder a linha.
 // 🔴 FIX 26/08 (mesmo achado do ga4Row_/sdrFunilRowTelao_ no mesmo dia):
 // valor e sub-texto (ex: "% CTR") vinham colados sem separador.
-function adsFunilRowTelao_(dotColor, name, spend, maxSpend, subText, onclickAttr, isPaused) {
+// 26/08 (2ª rodada, Robert: "aquela lista de conjuntos no meio não adianta
+// nada... fazer um dash profissional de meta ads, útil, fácil de
+// entender") — achado real: a lista só tinha gasto+CTR cru, ranqueada por
+// gasto, sem NENHUM sinal de se aquele gasto está performando bem ou mal.
+// Não dá pra inventar lead/CPL por conjunto (Meta e o CRM não cruzam nesse
+// nível — confirmado no compute, só existe agregado da conta inteira), mas
+// dá pra comparar CTR de cada linha com a MÉDIA DA CONTA (dado que já
+// existe, `d.kpis.ctr`) — sinal real de eficiência relativa, não fabricado.
+// ctrSignal: 'good' (CTR ≥30% acima da média), 'bad' (≤30% abaixo), null
+// (dentro da faixa normal, sem destaque).
+function adsFunilRowTelao_(dotColor, name, spend, maxSpend, subText, onclickAttr, isPaused, ctrSignal) {
   const pct = Math.max((spend / Math.max(maxSpend, 1)) * 100, 3);
   const pausedBadge = isPaused ? '<span class="og-pill" style="background:rgba(107,100,132,.12);color:var(--muted)">pausada</span>' : '';
+  const signalColor = ctrSignal === 'good' ? 'var(--green)' : (ctrSignal === 'bad' ? 'var(--red)' : null);
+  const signalDot = signalColor ? `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${signalColor};margin-right:4px;vertical-align:middle" title="${ctrSignal === 'good' ? 'CTR bem acima da média da conta' : 'CTR bem abaixo da média da conta'}"></span>` : '';
   return `
     <div class="abar-row" ${onclickAttr ? 'onclick="' + onclickAttr + '"' : ''}>
       <div class="abar-top">
         <span class="abar-name" title="${escHtml(name)}"><span class="abar-dot" style="background:${dotColor}"></span><span class="abar-name-text">${escHtml(name)}</span>${pausedBadge}</span>
-        <span class="abar-val">${fmtMoney(spend)}${subText ? '<span class="abar-sub"> · ' + escHtml(subText) + '</span>' : ''}</span>
+        <span class="abar-val">${fmtMoney(spend)}${subText ? '<span class="abar-sub"> · ' + signalDot + escHtml(subText) + '</span>' : ''}</span>
       </div>
       <div class="abar-track"><div class="abar-fill" style="width:${pct}%;background:${dotColor}"></div></div>
     </div>`;
@@ -4120,6 +4139,14 @@ function renderAdsHierarchySectionTelao(d) {
   el('ads-k-ads').textContent = d.kpis.activeAds;
   el('ads-k-ads-sub').textContent = 'de ' + d.kpis.totalAds;
 
+  const avgCtr = d.kpis.ctr;
+  const ctrSignal_ = (ctr) => {
+    if (ctr === null || avgCtr === null || avgCtr <= 0) return null;
+    if (ctr >= avgCtr * 1.3) return 'good';
+    if (ctr <= avgCtr * 0.7) return 'bad';
+    return null;
+  };
+
   el('ads-campanhas-badge').textContent = d.campaignsList.length + ' de ' + d.kpis.totalCampaigns;
   const maxCampSpend = Math.max(...d.campaignsList.map(c => c.spend), 1);
   el('ads-campanhas-rows').innerHTML = d.campaignsList.length === 0
@@ -4129,7 +4156,8 @@ function renderAdsHierarchySectionTelao(d) {
         c.name, c.spend, maxCampSpend,
         c.ctr !== null ? c.ctr.toFixed(2) + '% CTR' : '—',
         "openAdsCampaignModalTelao('" + escJsAttr_(c.id) + "')",
-        c.status !== 'ACTIVE'
+        c.status !== 'ACTIVE',
+        ctrSignal_(c.ctr)
       )).join('');
   autoScrollIfNeeded('ads-campanhas-rows');
 
@@ -4142,7 +4170,8 @@ function renderAdsHierarchySectionTelao(d) {
         a.name, a.spend, maxAdsetSpend,
         a.ctr !== null ? a.ctr.toFixed(2) + '% CTR' : '—',
         "openAdsAdsetModalTelao('" + escJsAttr_(a.id) + "')",
-        a.status !== 'ACTIVE'
+        a.status !== 'ACTIVE',
+        ctrSignal_(a.ctr)
       )).join('');
   autoScrollIfNeeded('ads-adsets-rows');
 
