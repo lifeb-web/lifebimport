@@ -1740,25 +1740,31 @@ async function fetchGa4Json_(action, startDate, endDate) {
   if (!r.ok) throw new Error('GA4 ' + action + ' HTTP ' + r.status);
   return r.json();
 }
-// 26/08 (achado real durante teste ao vivo: 1 das 7 chamadas em paralelo pro
-// proxy Apps Script voltou HTTP 404 sob rajada — provável limite de execução
-// concorrente do lado do Google, não bug nosso). Antes usava Promise.all: 1
-// falha isolada derrubava a leitura inteira (_ga4Raw ficava null, aba inteira
-// travava em "carregando…" pro resto do ciclo de refresh). Promise.allSettled
-// deixa o que veio OK renderizar mesmo se 1 endpoint falhar isoladamente.
+// 26/08 (Robert: "os filtros estão muito lentos na aba da bia e ga4... não
+// tá usando nossa estrutura como no dash de vendas ou como no dash da
+// yanmei, supabase etc") — achado real: fetchGa4Raw batia direto nas 7 ações
+// do Apps Script TODA vez que o período mudava (vários segundos —
+// principalmente em período curto, onde a API GA4 troca pra granularidade
+// de hora). Vendas/LTV/SDR/Ads são rápidos porque leem de algo JÁ
+// sincronizado e só recomputam no cliente. Mesmo padrão aplicado aqui:
+// ga4-dash-cache (worker novo, isolado, mesmo desenho do bia-dash-sync) tem
+// um cron de 10min que pré-busca os 5 períodos mais comuns (hoje/ontem/
+// semana/mês/30 dias) e cacheia em KV — leitura vira <1s em vez de vários
+// segundos. Períodos raros (Mês ant./60/90 dias/Total/Personalizado/
+// 📅Mês) caem no fallback sem cache (from/to explícito), mais lento mas
+// raramente usados — não vale manter mais 6 chaves sincronizadas por isso.
+const GA4_CACHE_URL = 'https://ga4-dash-cache.robert131196.workers.dev/api/bundle';
+const GA4_CACHE_PERIODO_MAP = { today: 'hoje', yesterday: 'ontem', week: 'semana', month: 'mes', '30d': '30d' };
 async function fetchGa4Raw(startDate, endDate) {
-  const actions = ['summary', 'chart', 'pages', 'cities', 'sources', 'events', 'leads'];
-  const results = await Promise.allSettled(actions.map(a => fetchGa4Json_(a, startDate, endDate)));
-  const out = {};
-  results.forEach((r, i) => {
-    if (r.status === 'fulfilled') {
-      out[actions[i]] = r.value;
-    } else {
-      console.warn('GA4 ' + actions[i] + ' falhou isoladamente:', r.reason && r.reason.message);
-      out[actions[i]] = null;
-    }
-  });
-  return out;
+  const cachePeriodo = GA4_CACHE_PERIODO_MAP[_period];
+  const url = cachePeriodo
+    ? `${GA4_CACHE_URL}?periodo=${cachePeriodo}`
+    : `${GA4_CACHE_URL}?from=${startDate}&to=${endDate}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('ga4-dash-cache HTTP ' + r.status);
+  const payload = await r.json();
+  if (payload.error) throw new Error('ga4-dash-cache: ' + payload.error);
+  return payload.bundle;
 }
 
 // Função pura de cálculo — sem HTML, mesma convenção do resto do painel.
