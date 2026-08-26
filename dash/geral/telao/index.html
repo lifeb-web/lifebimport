@@ -2019,7 +2019,7 @@ function renderBiaMotorSection_(s) {
   el('bia-motor-breakdown').innerHTML = porResultado.length === 0
     ? '<div class="feed-empty">Nenhum evento hoje ainda</div>'
     : porResultado.map(([k, v], i) => {
-        const row = ga4Row_(GA4_S[i % GA4_S.length], prettyLabel_(k), v, maxMotor, '', '', `filterBiaMotorFeed_('${k.replace(/'/g, "\\'")}')`);
+        const row = ga4Row_(GA4_S[i % GA4_S.length], prettyLabel_(k), v, maxMotor, '', '', `filterBiaMotorFeed_('${escJsAttr_(k)}')`);
         return _biaMotorFilter === k ? row.replace('class="abar-row"', 'class="abar-row abar-row-active"') : row;
       }).join('');
 
@@ -3037,7 +3037,7 @@ function renderLtvSectionTelao(d) {
       </div>` : '';
     const lostPill = s.lost > 0 ? `<span class="drop-pill" style="background:#fee2e2;color:#b91c1c" title="Perdidos nesta etapa">${s.lost} perdido${s.lost === 1 ? '' : 's'}</span>` : '';
     return `
-      <div class="funil-row" onclick="openLtvStageModal('${s.stageId}','${escHtml(s.name)}')">
+      <div class="funil-row" onclick="openLtvStageModal('${s.stageId}','${escJsAttr_(s.name)}')">
         ${connector}
         <div class="funil-dot" style="background:${LTV_ORD_DOT[ord]}"></div>
         <span class="funil-name">${s.name}</span>
@@ -4644,6 +4644,18 @@ function fmtDateDisplay(iso) {
 function escHtml(s) {
   if (!s) return '';
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+// 26/08 (achado real da revisão de segurança automática pós-commit): valor
+// dinâmico dentro de onclick="fn('valor')" atravessa 2 contextos — string JS
+// de aspas simples E atributo HTML de aspas duplas. escHtml sozinho não
+// escapa aspa simples (só protege o atributo, não a string JS — um valor com
+// ' quebra pra fora do literal JS e injeta código); escapar só a aspa simples
+// sem escHtml não protege o atributo (um valor com " fecha o atributo cedo e
+// permite injetar HTML/atributos novos). Precisa dos 2, nessa ordem (JS por
+// dentro, HTML por fora — é a ordem em que o browser desfaz: primeiro decodifica
+// entidade HTML do atributo, DEPOIS entrega o texto resultante pro parser JS).
+function escJsAttr_(s) {
+  return escHtml(String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
 }
 
 // achado 15/07 (auditoria adversarial): sem o 2º parâmetro, TODA abertura de
