@@ -1996,7 +1996,19 @@ function biaTrendPanel_(label, dias, vals, color, fmtVal) {
 
 function prettyLabel_(s) {
   if (!s) return '—';
-  return String(s).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  let out = String(s).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  // 26/08 (Robert, confirmado ao vivo 3x na mesma manhã — a última bem
+  // direta: "pq ainda tá seria enviado se eu já disse que a porra tá ativa
+  // não tem mais nada simulado"): "seria_"/"_simulada" é convenção de
+  // nomenclatura INTERNA/histórica do sistema da Bia (gs-agendor-worker,
+  // fora do meu acesso de escrita) — ele confirmou repetidamente que TODA
+  // ação aqui é real e já foi enviada, isso é FATO afirmado por ele, não
+  // inferência minha sobre o que a string quer dizer (diferente do erro
+  // corrigido antes, onde EU inventei uma classificação real/simulado sem
+  // prova). Só troca a PALAVRA que informa errado no rótulo exibido — a
+  // chave crua (resultado) usada pro filtro clicável continua intacta.
+  out = out.replace(/^Seria\s+/i, '').replace(/\s*Simulad[ao]\b/gi, '');
+  return out.trim() || '—';
 }
 function timeAgo_(ts) {
   if (!ts) return '';
