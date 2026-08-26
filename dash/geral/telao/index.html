@@ -1138,19 +1138,19 @@ footer strong{color:#fff}
     </div>
 
     <div id="ga4-col-right">
-      <div class="card" id="ga4-funil-card">
+      <!-- 26/08: unificado num painel só ("Eventos de Conversão"), igual o
+           padrão real da referência (dashboard-telao.html standalone) —
+           ícone + nome + barra fina roxa + número grande, formulário e
+           scroll na MESMA lista, com selos de taxa (Envio/Abandono) embaixo.
+           Antes estava partido em 2 cards com o estilo de barra errado
+           (achado do Robert, "não mostra o funil como no link"). -->
+      <div class="card" id="ga4-funil-card" style="flex:1;display:flex;flex-direction:column;min-height:0">
         <div class="card-hd">
-          <span class="card-hd-title">Funil de Formulário</span>
+          <span class="card-hd-title">Eventos de Conversão</span>
           <span class="badge" id="ga4-funil-badge">carregando…</span>
         </div>
-        <div class="funil-body" id="ga4-funil-rows"></div>
-      </div>
-      <div class="card" id="ga4-events-card" style="flex:1;display:flex;flex-direction:column;min-height:0">
-        <div class="card-hd">
-          <span class="card-hd-title">Eventos — Scroll</span>
-          <span class="badge" id="ga4-events-badge"></span>
-        </div>
-        <div class="funil-body" id="ga4-events-rows" style="flex:1;min-height:0;overflow-y:auto;justify-content:flex-start;gap:8px"></div>
+        <div id="ga4-funil-rows" style="flex:1;min-height:0;overflow-y:auto;padding:2px 14px"></div>
+        <div id="ga4-funil-rates" style="display:none;padding:8px 14px 12px;flex-shrink:0"></div>
       </div>
     </div>
   </div>
@@ -1780,23 +1780,49 @@ function renderGa4SectionTelao(d) {
     ga4Row_(GA4_S[i % GA4_S.length], c.name, c.users, maxCity)
   ).join('');
 
+  // 26/08: painel único "Eventos de Conversão" — formulário + scroll na
+  // mesma lista, ícone+barra fina+número grande, igual a referência real
+  // (dashboard-telao.html). Reaproveita .funil-row/.funil-bar-wrap/.funil-n
+  // já usados pelo funil de Vendas (mesmo componente visual do painel).
   const abriu = d.eventsMap['Abrir_Formulario'] || 0, preencheu = d.eventsMap['Preencheu_Formulario'] || 0,
-        lead = d.eventsMap['Lead_Formulario'] || 0, abandonou = d.eventsMap['Abandonou_Formulario'] || 0;
+        lead = d.eventsMap['Lead_Formulario'] || 0, abandonou = d.eventsMap['Abandonou_Formulario'] || 0,
+        pulou = d.eventsMap['Pular_Formulario'] || 0;
   el('ga4-funil-badge').textContent = fmtInt_(abriu) + ' aberturas';
-  const maxFunilForm = Math.max(abriu, 1);
-  el('ga4-funil-rows').innerHTML = [
-    ga4Row_('#22C35D', 'Abriu Formulário', abriu, maxFunilForm),
-    ga4Row_('#1baf7a', 'Preencheu', preencheu, maxFunilForm),
-    ga4Row_('#008300', 'Virou Lead', lead, maxFunilForm),
-    ga4Row_('#dc2626', 'Abandonou', abandonou, maxFunilForm)
-  ].join('');
+  const eventRows = [
+    { icon: '📋', nome: 'Formulário aberto', v: abriu },
+    { icon: '✍️', nome: 'Preencheu', v: preencheu },
+    { icon: '🎯', nome: 'Lead gerado', v: lead },
+    { icon: '❌', nome: 'Abandonou', v: abandonou }
+  ];
+  if (pulou > 0) eventRows.push({ icon: '⏭️', nome: 'Pulou o formulário', v: pulou });
+  [['👀', '25% da página', 'ScrollDepth_25'], ['📖', '50% da página', 'ScrollDepth_50'], ['🔥', '75% da página', 'ScrollDepth_75'], ['✅', 'Leu a página inteira', 'ScrollDepth_100']]
+    .forEach(([icon, nome, key]) => eventRows.push({ icon, nome, v: d.eventsMap[key] || 0 }));
+  const maxEvent = Math.max(...eventRows.map(r => r.v), 1);
+  el('ga4-funil-rows').innerHTML = eventRows.map(r => ga4EventRow_(r.icon, r.nome, r.v, maxEvent)).join('');
 
-  const scrollKeys = ['ScrollDepth_25', 'ScrollDepth_50', 'ScrollDepth_75', 'ScrollDepth_100'];
-  const maxScroll = Math.max(...scrollKeys.map(k => d.eventsMap[k] || 0), 1);
-  el('ga4-events-badge').textContent = fmtInt_(d.eventsMap['ScrollDepth_25'] || 0) + ' no topo';
-  el('ga4-events-rows').innerHTML = scrollKeys.map((k, i) =>
-    ga4Row_(GA4_S[i % GA4_S.length], k.replace('ScrollDepth_', '') + '% da página', d.eventsMap[k] || 0, maxScroll)
-  ).join('');
+  // Selos de taxa (Envio/Abandono/Pulo sobre quem abriu), mesmo padrão da
+  // referência — só aparece se o formulário teve abertura real no período.
+  if (abriu > 0) {
+    const pill = (label, val, cor) => `<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;background:${cor}22;border:1px solid ${cor}55;margin:2px 4px 2px 0">
+      <span style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">${label}</span>
+      <b style="font-size:13px;font-weight:800;color:${cor}">${Math.min(Math.round(val / abriu * 100), 100)}%</b>
+    </span>`;
+    el('ga4-funil-rates').style.display = 'block';
+    el('ga4-funil-rates').innerHTML = pill('Envio', lead, '#22C35D') + pill('Abandono', abandonou, '#dc2626') + (pulou > 0 ? pill('Pulo', pulou, '#f59e0b') : '');
+  } else {
+    el('ga4-funil-rates').style.display = 'none';
+  }
+}
+
+function ga4EventRow_(icon, nome, count, maxCount) {
+  const pct = Math.max((count / Math.max(maxCount, 1)) * 100, 3);
+  return `
+    <div class="funil-row" style="cursor:default">
+      <span style="font-size:15px;flex-shrink:0;width:20px;text-align:center">${icon}</span>
+      <span class="funil-name" style="min-width:150px;max-width:170px;overflow:hidden;text-overflow:ellipsis">${escHtml(nome)}</span>
+      <div class="funil-bar-wrap"><div class="funil-bar" style="width:${pct}%;background:linear-gradient(90deg,var(--purple),var(--purple-l))"></div></div>
+      <span class="funil-n" style="color:var(--purple);font-size:20px">${fmtInt_(count)}</span>
+    </div>`;
 }
 
 let _ga4ViewActive = false;
