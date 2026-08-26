@@ -400,6 +400,7 @@ footer strong{color:#fff}
 
 <div id="period-bar">
   <button class="pchip" data-p="today"      onclick="setPeriod(this)">Hoje</button>
+  <button class="pchip" data-p="yesterday"  onclick="setPeriod(this)">Ontem</button>
   <button class="pchip" data-p="week"       onclick="setPeriod(this)">Esta semana</button>
   <button class="pchip active" data-p="month" onclick="setPeriod(this)">Este mês</button>
   <button class="pchip" data-p="prev_month" onclick="setPeriod(this)">Mês ant.</button>
@@ -848,6 +849,9 @@ function getPeriodDatesClient(type, from, to, todayStr) {
 
   if (type === 'today') {
     fromDate = todayStr; toDate = todayStr; label = 'Hoje';
+  } else if (type === 'yesterday') {
+    const y = new Date(nowUtc); y.setUTCDate(nowUtc.getUTCDate() - 1);
+    fromDate = fmtDateUTC(y); toDate = fmtDateUTC(y); label = 'Ontem';
   } else if (type === 'week') {
     const dow = nowUtc.getUTCDay() || 7;
     const mon = new Date(nowUtc); mon.setUTCDate(nowUtc.getUTCDate() - dow + 1);
