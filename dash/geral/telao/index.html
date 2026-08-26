@@ -199,7 +199,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 /* 26/08: uniformizado com o resto da aba GA4 (referência: dashboard-telao.html
    standalone) — 8 kchips do mesmo tamanho com borda de cor cheia, sem 1
    card blown-up maior que os outros. */
-#ga4-hero-row{display:none;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px;height:80px;flex-shrink:0}
+#ga4-hero-row{display:none;grid-template-columns:repeat(9,minmax(0,1fr));gap:8px;height:80px;flex-shrink:0}
 #ga4-main{display:none;grid-template-columns:26fr 42fr 32fr;gap:8px;overflow:hidden;min-height:0;flex:1}
 #ga4-col-left{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
 #ga4-col-center{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
@@ -219,6 +219,15 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 #ga4-live-card .kc-label{color:rgba(255,255,255,.85)}
 #ga4-live-card .kc-val{color:#fff;font-size:20px}
 #ga4-live-card .kc-sub{color:rgba(255,255,255,.8)}
+/* 🔴 FIX 26/08 nº2 (Robert: "o card de ao vivo pode ficar com os dados
+   mais centralizados e simples, assim: Ao vivo / 1 / visitantes agora") —
+   mesma estrutura simples da referência (card-rt): rótulo, número grande,
+   subtítulo, tudo centralizado em vez do padrão alinhado à esquerda dos
+   outros kchips. */
+#ga4-live-card{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+#ga4-live-card .kc-label{display:flex;align-items:center;gap:5px;justify-content:center}
+#ga4-live-card .kc-row{justify-content:center}
+#ga4-live-card .kc-val{font-size:28px}
 #ga4-live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#fff;margin-right:6px;animation:ga4pulse 1.6s ease-in-out infinite}
 @keyframes ga4pulse{0%,100%{opacity:1}50%{opacity:.35}}
 
@@ -1137,9 +1146,9 @@ footer strong{color:#fff}
        sempre ao vivo por período. -->
   <div id="ga4-hero-row">
     <div class="kchip" id="ga4-live-card">
-      <span class="kc-label"><span id="ga4-live-dot"></span>Ao Vivo Agora</span>
+      <span class="kc-label"><span id="ga4-live-dot"></span>Ao vivo</span>
       <div class="kc-row"><span class="kc-val" id="ga4-k-live"><span class="skel"></span></span></div>
-      <span class="kc-sub">Tempo real · atualiza automaticamente</span>
+      <span class="kc-sub">visitantes agora</span>
     </div>
     <div class="kchip kchip-b" style="--accent-color:var(--purple)">
       <span class="kc-label">Usuários Ativos<span id="ga4-hero-spark" style="float:right"></span></span>
@@ -1150,6 +1159,14 @@ footer strong{color:#fff}
       <span class="kc-label">Sessões</span>
       <div class="kc-row"><span class="kc-val" id="ga4-k-sessions"><span class="skel"></span></span></div>
       <span class="kc-sub">no período</span>
+    </div>
+    <!-- 🔴 FIX 26/08 nº2 (Robert: "não colocou a conversão da página, uma
+         das métricas mais importantes") — mesma fórmula da referência
+         (loadStats): leads / usuários ativos × 100. -->
+    <div class="kchip kchip-b" style="--accent-color:var(--green)">
+      <span class="kc-label">Taxa de Conversão</span>
+      <div class="kc-row"><span class="kc-val" id="ga4-k-conv"><span class="skel"></span></span></div>
+      <span class="kc-sub">leads por visitante</span>
     </div>
     <div class="kchip kchip-b" style="--accent-color:var(--s5)">
       <span class="kc-label">Visualizações</span>
@@ -2027,6 +2044,13 @@ function computeGa4Data(raw) {
     const d = r.dims[0] || '';
     return isHourly ? (d + 'h') : (d.length === 8 ? d.slice(6, 8) + '/' + d.slice(4, 6) : d);
   });
+  // 26/08 nº2 (Robert: "não colocou as bolinhas no gráfico de leads igual
+  // no dash original") — leadsByHour/leadsByDate vêm na MESMA dimensão bruta
+  // (hora sem zero à esquerda / AAAAMMDD) que raw.chart usa, então o lookup
+  // é por dims[0] cru, igual chartRows — sem reformatar nada aqui.
+  const leadsChartMap = {};
+  ga4Rows_(isHourly ? raw.leadsByHour : raw.leadsByDate).forEach(r => { leadsChartMap[r.dims[0]] = r.vals[0]; });
+  const chartLeadsPts = chartRows.map(r => leadsChartMap[r.dims[0]] || 0);
   // 26/08 (Robert comparou lado a lado com dashboard-telao.html original
   // dele e achou "bem mais bonito" · motivo real: lá Páginas/Fontes/Cidades
   // cruzam com Leads por linha, mesclam duplicata (ex: "/video2" e
@@ -2060,11 +2084,32 @@ function computeGa4Data(raw) {
   });
   const pages = [...pagesMerged.values()].sort((a, b) => b.leads - a.leads || b.users - a.users);
 
-  const cities = ga4Rows_(raw.cities).map(r => {
+  // 🔴 FIX 26/08 nº2 (Robert: "vários leads foram de outros estados sem ser
+  // DF, o GA4 tem que pegar isso, investiga esse trackeamento") — achado
+  // real conferindo o bundle bruto: a ação 'cities' (usuários por
+  // região+cidade) só devolve até 20 linhas (limite do próprio GA4/proxy,
+  // ranqueado por VOLUME DE VISITANTE), enquanto 'leadsByCity' devolvia 79
+  // linhas no mesmo período — uma cidade com poucos visitantes mas que
+  // gerou lead simplesmente não entrava no top 20 por usuário, então o
+  // JOIN (feito só sobre as linhas de 'cities') descartava o lead de vez,
+  // mesmo ele tendo acontecido de verdade. Corrigido: constrói o mapa a
+  // partir da UNIÃO das duas listas (cidade que só aparece em leadsByCity
+  // entra com users=0, nunca o contrário) — nenhum lead real desaparece
+  // mais só porque a cidade dele não tava no topo de visitantes.
+  const citiesMap = new Map();
+  ga4Rows_(raw.cities).forEach(r => {
     const regionRaw = r.dims[0] || '', cityRaw = r.dims[1] || '';
+    citiesMap.set(regionRaw + '||' + cityRaw, { regionRaw, cityRaw, users: r.vals[0] });
+  });
+  ga4Rows_(raw.leadsByCity).forEach(r => {
+    const regionRaw = r.dims[0] || '', cityRaw = r.dims[1] || '';
+    const key = regionRaw + '||' + cityRaw;
+    if (!citiesMap.has(key)) citiesMap.set(key, { regionRaw, cityRaw, users: 0 });
+  });
+  const cities = [...citiesMap.values()].map(({ regionRaw, cityRaw, users }) => {
     const region = ufSigla_(traduzEstado_(regionRaw));
     const city = (!cityRaw || cityRaw === '(not set)' || /^\d{5,}/.test(cityRaw)) ? 'Não identificada' : traduzCidade_(cityRaw);
-    return { region, city, users: r.vals[0], leads: leadsByCityMap[regionRaw + '||' + cityRaw] || 0 };
+    return { region, city, users, leads: leadsByCityMap[regionRaw + '||' + cityRaw] || 0 };
   }).sort((a, b) => b.leads - a.leads || b.users - a.users);
 
   const sourcesMerged = new Map();
@@ -2085,7 +2130,7 @@ function computeGa4Data(raw) {
   ga4Rows_(raw.events).forEach(r => { eventsMap[r.dims[0]] = r.vals[0]; });
   return {
     activeUsers: ga4Val_(s, 0), sessions: ga4Val_(s, 1), views: ga4Val_(s, 2), bounce: ga4Val_(s, 3), avgDur: ga4Val_(s, 4),
-    chartPts, chartDias, pages, cities, sources, eventsMap
+    chartPts, chartDias, chartLeadsPts, pages, cities, sources, eventsMap
   };
 }
 
@@ -2131,11 +2176,14 @@ function ga4Row_(dotColor, name, count, maxCount, valText, href, onclick) {
 // "olha como é bem mais bonito") — troca do SVG desenhado à mão (biaTrendPanel_)
 // por Chart.js de verdade, mesma lib/config que a referência usa: barra com
 // eixo/grid visível, destaque de cor na hora/dia atual, tooltip nativo.
-// Config simplificada em relação ao original (sem a linha de leads
-// sobreposta nem a média móvel de 3 pontos — portar isso exigiria mais 1-2
-// fetches de "leads" por hora/dia, escopo maior do que o pedido agora).
+// 🔴 FIX 26/08 nº2 (Robert: "não colocou as bolinhas no gráfico de leads
+// igual no dash original") — dataset extra `type:'line', showLine:false`
+// (só os pontos, sem linha conectando) sobreposto às barras, exatamente a
+// config da referência (loadChart): raio 5 (7 no hover) só onde teve lead,
+// raio 0/transparente onde não teve — "bolinha" flutua em cima da barra
+// daquela hora/dia que gerou lead.
 let _ga4VisitorsChart = null;
-function renderGa4VisitorsChart_(dias, vals) {
+function renderGa4VisitorsChart_(dias, vals, leadsVals) {
   const canvas = el('ga4-visitors-chart');
   const avisoEl = el('ga4-visitors-aviso');
   if (_ga4VisitorsChart) { _ga4VisitorsChart.destroy(); _ga4VisitorsChart = null; }
@@ -2144,14 +2192,33 @@ function renderGa4VisitorsChart_(dias, vals) {
   const lastIdx = dias.length - 1;
   const bg = dias.map((_, i) => i === lastIdx ? 'rgba(233,32,133,.8)' : 'rgba(112,75,155,.22)');
   const border = dias.map((_, i) => i === lastIdx ? '#E92085' : '#704B9B');
+  const leads = leadsVals || dias.map(() => 0);
+  const hasLeads = leads.some(v => v > 0);
   _ga4VisitorsChart = new Chart(canvas.getContext('2d'), {
-    type: 'bar',
-    data: { labels: dias, datasets: [{ label: isHourly ? 'Visitantes' : 'Usuários Ativos', data: vals, backgroundColor: bg, borderColor: border, borderWidth: 1.5, borderRadius: 5, borderSkipped: false }] },
+    data: {
+      labels: dias,
+      datasets: [
+        { type: 'bar', label: isHourly ? 'Visitantes' : 'Usuários Ativos', data: vals, backgroundColor: bg, borderColor: border, borderWidth: 1.5, borderRadius: 5, borderSkipped: false, order: 2 },
+        ...(hasLeads ? [{
+          type: 'line', label: 'Leads', data: leads,
+          borderColor: 'transparent', backgroundColor: '#E92085',
+          pointBackgroundColor: leads.map(v => v > 0 ? '#E92085' : 'transparent'),
+          pointBorderColor: leads.map(v => v > 0 ? '#fff' : 'transparent'),
+          pointBorderWidth: 1.5,
+          pointRadius: leads.map(v => v > 0 ? 5 : 0),
+          pointHoverRadius: leads.map(v => v > 0 ? 7 : 0),
+          showLine: false, clip: false, order: 1
+        }] : [])
+      ]
+    },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
-        tooltip: { backgroundColor: '#221B32', padding: 12, callbacks: { label: c => ' ' + c.parsed.y + ' visitante' + (c.parsed.y !== 1 ? 's' : '') } }
+        tooltip: {
+          backgroundColor: '#221B32', padding: 12,
+          callbacks: { label: c => c.dataset.label === 'Leads' ? ` 🎯 ${c.parsed.y} lead${c.parsed.y !== 1 ? 's' : ''}` : ` ${c.parsed.y} visitante${c.parsed.y !== 1 ? 's' : ''}` }
+        }
       },
       scales: {
         x: { grid: { display: false }, ticks: { color: '#6b6484', font: { size: 10 }, maxRotation: 0 }, border: { display: false } },
@@ -2176,9 +2243,11 @@ function renderGa4SectionTelao(d) {
   // (dashboard-telao.html). Chart.js de barra — o mesmo padrão foi depois
   // reaproveitado nos gráficos de tendência da BIA (renderBiaBarChart_).
   el('ga4-visitors-badge').textContent = fmtInt_(d.activeUsers) + ' no período';
-  renderGa4VisitorsChart_(d.chartDias, d.chartPts);
+  renderGa4VisitorsChart_(d.chartDias, d.chartPts, d.chartLeadsPts);
 
   el('ga4-k-sessions').textContent = fmtInt_(d.sessions);
+  const leadsGa4_ = d.eventsMap['Lead_Formulario'] || 0;
+  el('ga4-k-conv').textContent = d.activeUsers > 0 ? (leadsGa4_ / d.activeUsers * 100).toFixed(1) + '%' : '—';
   el('ga4-k-views').textContent = fmtInt_(d.views);
   el('ga4-k-bounce').textContent = fmtPct1_(d.bounce);
   el('ga4-k-duration').textContent = fmtSeconds_(d.avgDur);
@@ -2214,7 +2283,7 @@ function renderGa4SectionTelao(d) {
   autoScrollIfNeeded('ga4-sources-scroll');
 
   el('ga4-cities-badge').textContent = d.cities.length + ' cidades';
-  el('ga4-cities-rows').innerHTML = d.cities.length === 0 ? ga4EmptyRow_(4) : d.cities.slice(0, 25).map(c => `<tr>
+  el('ga4-cities-rows').innerHTML = d.cities.length === 0 ? ga4EmptyRow_(4) : d.cities.slice(0, 60).map(c => `<tr>
       <td>${escHtml(c.region)}</td>
       <td class="ga4-td-left">${escHtml(c.city)}</td>
       <td>${fmtInt_(c.users)}</td>
@@ -2222,25 +2291,25 @@ function renderGa4SectionTelao(d) {
     </tr>`).join('');
   autoScrollIfNeeded('ga4-cities-scroll');
 
-  // 26/08: painel único "Eventos de Conversão" · formulário + scroll na
-  // mesma lista, ícone+barra fina+número grande, igual a referência real
-  // (dashboard-telao.html). Reaproveita .funil-row/.funil-bar-wrap/.funil-n
-  // já usados pelo funil de Vendas (mesmo componente visual do painel).
-  const abriu = d.eventsMap['Abrir_Formulario'] || 0, preencheu = d.eventsMap['Preencheu_Formulario'] || 0,
+  // 🔴 FIX 26/08 nº2 (Robert: "no funil você tirou a palavra leu, é pra
+  // deixar como no original") — a referência não usa ordem fixa nenhuma:
+  // pega a ordem que o próprio GA4 devolve (por contagem, maior primeiro) e
+  // só troca ícone/nome/descrição via um dicionário (EVENTOS_META). Minha
+  // versão tinha ordem hardcoded (formulário primeiro, scroll por último) e
+  // um evento a mais que a referência não mostra (Preencheu_Formulario) —
+  // portado o dicionário verbatim do dashboard-telao.html (nome+desc
+  // idênticos, inclusive "Abandonou o formulário" por extenso) e a lista
+  // agora respeita a ordem natural de d.eventsMap (que já preserva a ordem
+  // de chegada da API, igual a referência faz com d.rows).
+  const abriu = d.eventsMap['Abrir_Formulario'] || 0,
         lead = d.eventsMap['Lead_Formulario'] || 0, abandonou = d.eventsMap['Abandonou_Formulario'] || 0,
         pulou = d.eventsMap['Pular_Formulario'] || 0;
   el('ga4-funil-badge').textContent = fmtInt_(abriu) + ' aberturas';
-  const eventRows = [
-    { icon: '📋', nome: 'Formulário aberto', v: abriu },
-    { icon: '✍️', nome: 'Preencheu', v: preencheu },
-    { icon: '🎯', nome: 'Lead gerado', v: lead },
-    { icon: '❌', nome: 'Abandonou', v: abandonou }
-  ];
-  if (pulou > 0) eventRows.push({ icon: '⏭️', nome: 'Pulou o formulário', v: pulou });
-  [['👀', '25% da página', 'ScrollDepth_25'], ['📖', '50% da página', 'ScrollDepth_50'], ['🔥', '75% da página', 'ScrollDepth_75'], ['✅', 'Leu a página inteira', 'ScrollDepth_100']]
-    .forEach(([icon, nome, key]) => eventRows.push({ icon, nome, v: d.eventsMap[key] || 0 }));
+  const eventRows = Object.keys(d.eventsMap)
+    .filter(k => GA4_EVENTOS_META[k])
+    .map(k => Object.assign({ v: d.eventsMap[k] }, GA4_EVENTOS_META[k]));
   const maxEvent = Math.max(...eventRows.map(r => r.v), 1);
-  el('ga4-funil-rows').innerHTML = eventRows.map(r => ga4EventRow_(r.icon, r.nome, r.v, maxEvent)).join('');
+  el('ga4-funil-rows').innerHTML = eventRows.map(r => ga4EventRow_(r.icon, r.nome, r.desc, r.v, maxEvent)).join('');
 
   // Selos de taxa (Envio/Abandono/Pulo sobre quem abriu), mesmo padrão da
   // referência — só aparece se o formulário teve abertura real no período.
@@ -2256,12 +2325,28 @@ function renderGa4SectionTelao(d) {
   }
 }
 
-function ga4EventRow_(icon, nome, count, maxCount) {
+// 🔴 FIX 26/08 nº2 — porte verbatim do dicionário EVENTOS_META da
+// referência (nome+desc idênticos, char a char), pra ga4EventRow_ mostrar a
+// descrição em 2ª linha igual o original faz.
+const GA4_EVENTOS_META = {
+  'Lead_Formulario':      { icon: '🎯', nome: 'Lead gerado',           desc: 'Formulário enviado com nome + telefone' },
+  'Abrir_Formulario':     { icon: '📋', nome: 'Formulário aberto',     desc: 'Visitante abriu o formulário de contato' },
+  'Abandonou_Formulario': { icon: '❌', nome: 'Abandonou o formulário', desc: 'Fechou o formulário sem enviar' },
+  'Pular_Formulario':     { icon: '⏭️', nome: 'Pulou o formulário',    desc: 'Clicou em "Pular e ir direto para o WhatsApp"' },
+  'ScrollDepth_25':       { icon: '👀', nome: 'Rolou 25% da página',   desc: 'Passou do primeiro quarto do conteúdo' },
+  'ScrollDepth_50':       { icon: '📖', nome: 'Rolou 50% da página',   desc: 'Chegou na metade do conteúdo' },
+  'ScrollDepth_75':       { icon: '🔥', nome: 'Rolou 75% da página',   desc: 'Quase no final, alto engajamento' },
+  'ScrollDepth_100':      { icon: '✅', nome: 'Leu a página inteira',  desc: 'Chegou ao fim com engajamento máximo' }
+};
+function ga4EventRow_(icon, nome, desc, count, maxCount) {
   const pct = Math.max((count / Math.max(maxCount, 1)) * 100, 3);
   return `
     <div class="funil-row" style="cursor:default">
       <span style="font-size:15px;flex-shrink:0;width:20px;text-align:center">${icon}</span>
-      <span class="funil-name" style="min-width:150px;max-width:170px;overflow:hidden;text-overflow:ellipsis">${escHtml(nome)}</span>
+      <span class="funil-name" style="display:flex;flex-direction:column;min-width:150px;max-width:170px;white-space:normal;gap:1px">
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(nome)}</span>
+        <span style="font-size:9px;font-weight:600;color:var(--faint);white-space:normal">${escHtml(desc)}</span>
+      </span>
       <div class="funil-bar-wrap"><div class="funil-bar" style="width:${pct}%;background:linear-gradient(90deg,var(--purple),var(--purple-l))"></div></div>
       <span class="funil-n" style="color:var(--purple);font-size:20px">${fmtInt_(count)}</span>
     </div>`;
