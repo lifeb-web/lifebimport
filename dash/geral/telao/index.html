@@ -1322,7 +1322,7 @@ footer strong{color:#fff}
           <div class="stat-row"><span class="k">Negação sem consultar</span><span class="v" id="bia-gate-neg">—</span></div>
           <div class="stat-row"><span class="k">Número sem consultar</span><span class="v" id="bia-gate-afd">—</span></div>
           <div class="stat-row"><span class="k">Contagem ≠ lista</span><span class="v" id="bia-gate-3b">—</span></div>
-          <div class="stat-row"><span class="k">Cérebro — última resposta</span><span class="v" id="bia-cerebro-min">—</span></div>
+          <div class="stat-row"><span class="k">Cérebro: última resposta</span><span class="v" id="bia-cerebro-min">—</span></div>
           <div class="stat-row"><span class="k">Respostas da Bia (hoje)</span><span class="v" id="bia-respostas">—</span></div>
           <div class="stat-row"><span class="k">Aprovações pendentes</span><span class="v" id="bia-aprovacoes">—</span></div>
         </div>
@@ -3650,10 +3650,10 @@ function sdrLeadName_(leadId) {
 // função (usada em TODAS as linhas do SDR: Por SDR/Cadências/Atividades/
 // Ligações) nunca recebeu o mesmo fix. count agora passa por fmtInt_ e o
 // sub-valor vem com " · " explícito na frente.
-function sdrFunilRowTelao_(dotColor, name, count, maxCount, valText) {
+function sdrFunilRowTelao_(dotColor, name, count, maxCount, valText, onclickAttr) {
   const pct = Math.max((count / Math.max(maxCount, 1)) * 100, 3);
   return `
-    <div class="abar-row">
+    <div class="abar-row" ${onclickAttr ? 'onclick="' + onclickAttr + '"' : ''}>
       <div class="abar-top">
         <span class="abar-name" title="${escHtml(name)}"><span class="abar-dot" style="background:${dotColor}"></span><span class="abar-name-text">${escHtml(name)}</span></span>
         <span class="abar-val">${fmtInt_(count)}${valText ? '<span class="abar-sub"> · ' + escHtml(valText) + '</span>' : ''}</span>
@@ -3713,7 +3713,7 @@ function renderSdrSectionTelao(d) {
   el('sdr-porsdr-badge').textContent = d.porSdr.length + ' SDR' + (d.porSdr.length !== 1 ? 's' : '');
   el('sdr-porsdr-rows').innerHTML = d.porSdr.length === 0
     ? '<div class="feed-empty">Sem SDR com dado no período</div>'
-    : d.porSdr.map(s => sdrFunilRowTelao_('var(--magenta)', s.name, s.feitas, maxPorSdr, s.ganhos + 'G / ' + s.perdidos + 'P' + (s.conversao !== null ? ' · ' + s.conversao + '%' : ''))).join('');
+    : d.porSdr.map(s => sdrFunilRowTelao_('var(--magenta)', s.name, s.feitas, maxPorSdr, s.ganhos + 'G / ' + s.perdidos + 'P' + (s.conversao !== null ? ' · ' + s.conversao + '%' : ''), `openSdrRepModal_('${escJsAttr_(s.name)}')`)).join('');
   autoScrollIfNeeded('sdr-porsdr-rows');
 
   const maxCad = Math.max(...d.cadencias.map(c => c.ativas), 1);
@@ -3786,6 +3786,42 @@ function openSdrModal(kind) {
           <span class="mdeal-rep">${escHtml(p.routine_name || '—')}${kind === 'lost' && p.lost_reason ? ' · ' + escHtml(p.lost_reason) : ''}</span>
           <span class="mdeal-open">${fmtDateDisplay((p.finished_at || '').substring(0, 10))}</span>
         </div>`).join('');
+  el('modal-overlay').classList.add('show');
+}
+
+// 26/08 (Robert: "temos dois sdrs, precisa dividir tudo... algo de
+// especialista nessa aba sdr") — clicar num nome em "Por SDR" abre a visão
+// individual daquela pessoa, mesmo padrão de openRepModal (Vendas): filtra
+// o RAW por responsible_name ANTES de rodar o mesmo motor (computeSdrData),
+// reusa 100% a mesma lógica de negócio, zero duplicação. Ligações ficam de
+// fora (dash_sdr_calls não tem responsible_name — mesma limitação já
+// documentada no compute).
+function openSdrRepModal_(repName) {
+  if (!_sdrRaw || !_data || !_data.period) return;
+  const filtered = {
+    prospections: (_sdrRaw.prospections || []).filter(p => (p.responsible_name || 'Sem responsável') === repName),
+    activities: (_sdrRaw.activities || []).filter(a => (a.responsible_name || 'Sem responsável') === repName),
+    calls: []
+  };
+  const effPeriodType = _period === 'month_pick' ? 'custom' : _period;
+  const range = getPeriodDatesClient(effPeriodType, _customFrom, _customTo, todayLocalStr());
+  const d = computeSdrData(filtered, range.from, range.to, range.label);
+  el('modal-title').textContent = repName;
+  const kpi = (lbl, val, color) => `<div class="rv-kpi"><span class="rv-k-lbl">${lbl}</span><div class="rv-k-row"><span class="rv-k-val"${color ? ' style="color:' + color + '"' : ''}>${val}</span></div></div>`;
+  const maxCad = Math.max(...d.cadencias.map(c => c.ativas), 1);
+  el('modal-body').innerHTML = `
+    <div style="padding:14px 18px">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+        ${kpi('Ganhos', d.kpis.ganhos, 'var(--green)')}
+        ${kpi('Perdidos', d.kpis.perdidos, 'var(--red)')}
+        ${kpi('Conversão', d.kpis.conversao !== null ? d.kpis.conversao + '%' : '—')}
+        ${kpi('Atividades Feitas', d.kpis.feitasCount)}
+        ${kpi('WhatsApp Enviados', d.kpis.whatsappTotal)}
+        ${kpi('Prospecções Ativas', d.kpis.ativas)}
+      </div>
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);margin-bottom:8px">Cadências desta pessoa</div>
+      ${d.cadencias.length === 0 ? '<div class="modal-empty">Nenhuma cadência com dado no período</div>' : d.cadencias.map(c => sdrFunilRowTelao_('var(--purple)', c.name, c.ativas, maxCad, c.ganhos + 'G / ' + c.perdidos + 'P')).join('')}
+    </div>`;
   el('modal-overlay').classList.add('show');
 }
 
