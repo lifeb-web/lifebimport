@@ -831,6 +831,24 @@ const STAGES = {
   '3771724': { name: 'Solução', color: 'orange', seq: 3 },
   '3771725': { name: 'Negociação', color: 'green', seq: 4 }
 };
+// Achado 25/08 (Robert): desde que o funil de Pós-venda (LTV) foi criado no
+// Agendor, seus negócios entravam misturados nos KPIs de Vendas (mesma
+// tabela `dash_geral_deals`, sync sem distinção de funil), diluindo a taxa
+// de conversão real. `dash_geral_deals` ainda não tem coluna de funil/
+// pipeline (precisaria de migração de schema + mudança no `supabase-sync.gs`
+// — pendente, ver MISSAO-DASH-GERAL-BIA-LTV-GA4-25ago.md). Fix imediato sem
+// mudança de schema: os 2 funis hoje têm conjuntos de stage_id disjuntos —
+// conferido ao vivo contra a base real (282 negócios, zero stage_id fora
+// desses 2 conjuntos) — então classificar por stage_id é exato pro estado
+// atual. Se um 3º funil aparecer ou o Agendor reusar um stage_id entre
+// funis, isso precisa virar filtro por funnel_id de verdade.
+const ACQ_STAGE_IDS = new Set(['3771722', '3771723', '3771724', '3771725']);
+const POSVENDA_STAGE_IDS = new Set(['3861835', '3861836', '3861837']);
+const LTV_STAGES = {
+  '3861835': { name: 'Ciclo Ativo', color: 'blue', seq: 1 },
+  '3861836': { name: 'Contato de Reposição', color: 'purple', seq: 2 },
+  '3861837': { name: 'Negociação de Reposição', color: 'green', seq: 3 }
+};
 
 function fmtDateUTC(d) {
   const y = d.getUTCFullYear();
@@ -888,7 +906,8 @@ function getPeriodDatesClient(type, from, to, todayStr) {
 
 // Opera sobre deals já filtrados por origem e sem negócio congelado
 // (ongoingAtivo), mais won/lost já filtrados pelo período (por closed_at).
-function aggregateClient(ongoingAtivo, won, lost, period) {
+function aggregateClient(ongoingAtivo, won, lost, period, stagesConfig) {
+  stagesConfig = stagesConfig || STAGES;
   const periodFrom = new Date(period.from + 'T00:00:00');
   const periodTo = new Date(period.to + 'T23:59:59');
 
@@ -898,13 +917,13 @@ function aggregateClient(ongoingAtivo, won, lost, period) {
       id: parseInt(id), name: REPS[id],
       ativos: 0, pipeline: 0, stale: 0,
       ganhoValor: 0, ganhoCont: 0, perdidoCont: 0,
-      dealsByStage: { '3771722': 0, '3771723': 0, '3771724': 0, '3771725': 0 }
+      dealsByStage: Object.keys(stagesConfig).reduce((o, sid) => (o[sid] = 0, o), {})
     };
   });
 
   const stageMap = {};
-  Object.keys(STAGES).forEach(sid => {
-    stageMap[sid] = { stageId: parseInt(sid), name: STAGES[sid].name, color: STAGES[sid].color, seq: STAGES[sid].seq, count: 0, value: 0, countPeriodo: 0 };
+  Object.keys(stagesConfig).forEach(sid => {
+    stageMap[sid] = { stageId: parseInt(sid), name: stagesConfig[sid].name, color: stagesConfig[sid].color, seq: stagesConfig[sid].seq, count: 0, value: 0, countPeriodo: 0 };
   });
 
   const allDeals = [];
@@ -973,7 +992,7 @@ function aggregateClient(ongoingAtivo, won, lost, period) {
   let perdidoCont = 0;
   const recentLost = [];
   const lostByStage = {};
-  Object.keys(STAGES).forEach(sid => { lostByStage[sid] = 0; });
+  Object.keys(stagesConfig).forEach(sid => { lostByStage[sid] = 0; });
   lost.forEach(d => {
     const rid = String(d.owner_id || '');
     const sid = String(d.stage_id || '');
@@ -1036,7 +1055,10 @@ function computeDashboardData(allRows, originFilter, periodType, customFrom, cus
   const periodFrom = new Date(period.from + 'T00:00:00');
   const periodTo = new Date(period.to + 'T23:59:59');
 
-  const byOrigin = originFilter === 'both' ? allRows : allRows.filter(d => d.origin === originFilter);
+  // Fix 25/08: exclui negócios do funil de Pós-venda (LTV) — ver comentário
+  // junto de ACQ_STAGE_IDS/POSVENDA_STAGE_IDS acima.
+  const acqRows = allRows.filter(d => ACQ_STAGE_IDS.has(String(d.stage_id)));
+  const byOrigin = originFilter === 'both' ? acqRows : acqRows.filter(d => d.origin === originFilter);
 
   const ongoingAll = byOrigin.filter(d => d.status === 'ongoing'); // inclui frozen — usado no leadsNoPeriodo
   const wonAll = byOrigin.filter(d => d.status === 'won');
@@ -1067,6 +1089,63 @@ function computeDashboardData(allRows, originFilter, periodType, customFrom, cus
   const ongoingAtivo = ongoingAll.filter(d => !d.frozen);
 
   const result = aggregateClient(ongoingAtivo, periodWon, periodLost, period);
+  result.kpis.leadsNoPeriodo = leadsNoPeriodo;
+  result.kpis.conversao = leadsNoPeriodo > 0 ? Math.round((result.kpis.ganhoCont / leadsNoPeriodo) * 1000) / 10 : null;
+  result.reps.forEach(r => {
+    const rl = repLeadsMap[String(r.id)] || 0;
+    r.leadsNoPeriodo = rl;
+    r.conversao = rl > 0 ? Math.round((r.ganhoCont / rl) * 1000) / 10 : null;
+  });
+
+  return {
+    ok: true,
+    kpis: result.kpis,
+    funnel: result.funnel,
+    reps: result.reps,
+    deals: result.deals,
+    recentWon: result.recentWon,
+    recentLost: result.recentLost,
+    period,
+    truncated: false,
+    updatedAt: new Date().toISOString()
+  };
+}
+
+// Espelho de computeDashboardData, mas pro funil de Pós-venda (LTV) — mesmo
+// _rawDeals já buscado (zero fetch novo), mesma assinatura, mesmo filtro de
+// período/origem/frozen; só troca o conjunto de stage_id e o vocabulário de
+// etapa (LTV_STAGES). Criado 25-26/08 junto do fix de conversão acima.
+function computeLtvData(allRows, originFilter, periodType, customFrom, customTo, todayStr) {
+  const period = getPeriodDatesClient(periodType, customFrom, customTo, todayStr);
+  const periodFrom = new Date(period.from + 'T00:00:00');
+  const periodTo = new Date(period.to + 'T23:59:59');
+
+  const ltvRows = allRows.filter(d => POSVENDA_STAGE_IDS.has(String(d.stage_id)));
+  const byOrigin = originFilter === 'both' ? ltvRows : ltvRows.filter(d => d.origin === originFilter);
+
+  const ongoingAll = byOrigin.filter(d => d.status === 'ongoing');
+  const wonAll = byOrigin.filter(d => d.status === 'won');
+  const lostAll = byOrigin.filter(d => d.status === 'lost');
+
+  const periodWon = wonAll.filter(d => d.closed_at && new Date(d.closed_at) >= periodFrom && new Date(d.closed_at) <= periodTo);
+  const periodLost = lostAll.filter(d => d.closed_at && new Date(d.closed_at) >= periodFrom && new Date(d.closed_at) <= periodTo);
+
+  let leadsNoPeriodo = 0;
+  const repLeadsMap = {};
+  ongoingAll.concat(wonAll).concat(lostAll).forEach(d => {
+    if (d.created_at) {
+      const c = new Date(d.created_at);
+      if (c >= periodFrom && c <= periodTo) {
+        leadsNoPeriodo++;
+        const rid = String(d.owner_id || '');
+        if (rid) repLeadsMap[rid] = (repLeadsMap[rid] || 0) + 1;
+      }
+    }
+  });
+
+  const ongoingAtivo = ongoingAll.filter(d => !d.frozen);
+
+  const result = aggregateClient(ongoingAtivo, periodWon, periodLost, period, LTV_STAGES);
   result.kpis.leadsNoPeriodo = leadsNoPeriodo;
   result.kpis.conversao = leadsNoPeriodo > 0 ? Math.round((result.kpis.ganhoCont / leadsNoPeriodo) * 1000) / 10 : null;
   result.reps.forEach(r => {
