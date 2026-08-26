@@ -5,6 +5,11 @@
 <meta name="robots" content="noindex,nofollow">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Life B | Painel Comercial — Telão</title>
+<!-- 26/08: Chart.js pro gráfico "Visitantes" do GA4 — mesma lib/versão do
+     dashboard-telao.html original do Robert (comparou lado a lado, gráfico
+     desenhado à mão em SVG ficava "fraco" perto do bar chart com eixo/
+     grid de verdade que o Chart.js já dava de graça lá). -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g" crossorigin="anonymous"></script>
 <link rel="icon" type="image/x-icon" href="../favicon/favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="../favicon/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="../favicon/favicon-16x16.png">
@@ -206,13 +211,36 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
    fileira, igual ao tratamento do card AO VIVO na referência real
    (dashboard-telao.html standalone). Antes era só mais um kchip com borda
    fina, do mesmo tamanho dos outros 7 (achado do Robert: "card ao vivo deve
-   tá na esquerda com destaque"). */
-#ga4-live-card{background:linear-gradient(135deg,#1a9e4f,#22C35D);border:none;box-shadow:0 4px 14px -4px rgba(34,195,93,.55)}
+   tá na esquerda com destaque"). Cor corrigida de verde pra ROXO (26/08,
+   2ª rodada) — Robert comparou print a print com o original dele, lá o
+   card "AO VIVO" é `linear-gradient(135deg,var(--purple) 0%,#9260c8 100%)`,
+   não verde. Copiado exato (mesma paleta --purple já usada neste arquivo). */
+#ga4-live-card{background:linear-gradient(135deg,var(--purple) 0%,#9260c8 100%);border:none;box-shadow:0 4px 14px -4px rgba(112,75,155,.55)}
 #ga4-live-card .kc-label{color:rgba(255,255,255,.85)}
 #ga4-live-card .kc-val{color:#fff;font-size:20px}
 #ga4-live-card .kc-sub{color:rgba(255,255,255,.8)}
 #ga4-live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#fff;margin-right:6px;animation:ga4pulse 1.6s ease-in-out infinite}
 @keyframes ga4pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* 26/08: Fontes/Cidades/Páginas viraram tabela de colunas — CSS copiado
+   quase verbatim do dashboard-telao.html original (mesma sensação visual:
+   header em caps cinza, linhas com borda fina, número em roxo à direita),
+   escopado em .ga4-table-card pra não vazar pro resto do painel. */
+.ga4-table-card{overflow:hidden}
+.ga4-table-scroll{flex:1;min-height:0;overflow-y:auto;padding:0 14px 8px}
+.ga4-table-scroll::-webkit-scrollbar{width:3px}
+.ga4-table-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.ga4-table-card table{width:100%;border-collapse:collapse}
+.ga4-table-card thead tr{border-bottom:2px solid var(--border)}
+.ga4-table-card th{padding:6px 6px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);text-align:right;white-space:nowrap;position:sticky;top:0;background:var(--card)}
+.ga4-table-card th:first-child,.ga4-table-card th.ga4-th-left{text-align:left}
+.ga4-table-card tbody tr{border-bottom:1px solid var(--border)}
+.ga4-table-card tbody tr:last-child{border-bottom:none}
+.ga4-table-card td{padding:7px 6px;font-weight:500;font-size:13px;max-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ga4-table-card td:not(:first-child){text-align:right;font-weight:700;font-size:14px;color:var(--purple);max-width:none;white-space:nowrap}
+.ga4-pg-legenda{display:block;font-weight:700;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis}
+.ga4-pg-path{display:block;font-size:9px;color:var(--muted);font-family:monospace;margin-top:1px;overflow:hidden;text-overflow:ellipsis}
+.ga4-td-left{text-align:left!important;font-weight:500!important}
 
 /* BIA (25-26/08, redesenhado 26/08 depois de comparar com a referência real
    do Robert — dashboard-telao.html do GA4 standalone) — display:none até
@@ -1154,31 +1182,51 @@ footer strong{color:#fff}
           <span class="card-hd-title">Visitantes</span>
           <span class="badge" id="ga4-visitors-badge"></span>
         </div>
-        <div id="ga4-visitors-chart" style="flex:1;min-height:0;padding:8px 14px"></div>
+        <div style="flex:1;min-height:0;padding:8px 14px;position:relative"><canvas id="ga4-visitors-chart"></canvas></div>
+        <div id="ga4-visitors-aviso" style="font-size:11px;color:var(--muted);text-align:center;padding:0 14px 8px;flex-shrink:0"></div>
       </div>
     </div>
 
+    <!-- 26/08: Fontes/Cidades/Páginas viraram tabela de colunas (com Leads
+         cruzado por linha), igual ao dashboard-telao.html original do
+         Robert — antes eram barras de progresso tipo funil, ele comparou
+         lado a lado e achou "bem mais bonito" o padrão de tabela. -->
     <div id="ga4-col-right">
-      <div class="card" id="ga4-sources-card" style="flex:1;display:flex;flex-direction:column;min-height:0">
+      <div class="card ga4-table-card" id="ga4-cities-card" style="flex:1.1;display:flex;flex-direction:column;min-height:0">
         <div class="card-hd">
-          <span class="card-hd-title">Fontes de Tráfego</span>
-          <span class="badge" id="ga4-sources-badge"></span>
-        </div>
-        <div class="funil-body" id="ga4-sources-rows" style="flex:1;min-height:0;overflow-y:auto;justify-content:flex-start;gap:2px"></div>
-      </div>
-      <div class="card" id="ga4-cities-card" style="flex:1;display:flex;flex-direction:column;min-height:0">
-        <div class="card-hd">
-          <span class="card-hd-title">Cidades</span>
+          <span class="card-hd-title">Estado / Cidade</span>
           <span class="badge" id="ga4-cities-badge"></span>
         </div>
-        <div class="funil-body" id="ga4-cities-rows" style="flex:1;min-height:0;overflow-y:auto;justify-content:flex-start;gap:2px"></div>
+        <div class="ga4-table-scroll">
+          <table>
+            <thead><tr><th>Estado</th><th class="ga4-th-left">Cidade</th><th>Visit.</th><th>Leads</th></tr></thead>
+            <tbody id="ga4-cities-rows"></tbody>
+          </table>
+        </div>
       </div>
-      <div class="card" id="ga4-pages-card" style="flex:1;display:flex;flex-direction:column;min-height:0">
+      <div class="card ga4-table-card" id="ga4-sources-card" style="flex:1;display:flex;flex-direction:column;min-height:0">
         <div class="card-hd">
-          <span class="card-hd-title">Top Páginas</span>
+          <span class="card-hd-title">Origem do Tráfego</span>
+          <span class="badge" id="ga4-sources-badge"></span>
+        </div>
+        <div class="ga4-table-scroll">
+          <table>
+            <thead><tr><th>De onde veio</th><th>Visit.</th><th>Leads</th></tr></thead>
+            <tbody id="ga4-sources-rows"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card ga4-table-card" id="ga4-pages-card" style="flex:1.2;display:flex;flex-direction:column;min-height:0">
+        <div class="card-hd">
+          <span class="card-hd-title">Por Página</span>
           <span class="badge" id="ga4-pages-badge">carregando…</span>
         </div>
-        <div class="funil-body" id="ga4-pages-rows" style="flex:1;min-height:0;overflow-y:auto;justify-content:flex-start;gap:2px"></div>
+        <div class="ga4-table-scroll">
+          <table>
+            <thead><tr><th>Página</th><th>Visit.</th><th>Leads</th></tr></thead>
+            <tbody id="ga4-pages-rows"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -1704,24 +1752,100 @@ function computeLtvData(allRows, originFilter, periodType, customFrom, customTo,
 // novas (video1/video2/rmk/apresentacao-*) já aparecem sozinhas.
 const GA4_PROXY_URL = 'https://script.google.com/macros/s/AKfycbxGFDgwJhRVHFUYuOc6KRpZgRQ8CLyeNocnmIZqVASQSUt6350m11RzSdvJcWSMnTYzyw/exec';
 const GA4_S = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'];
-// 26/08 (Robert, confirmado por ele mesmo: "video1 supermercado video2
-// drogarias / principal etc") — nome amigável em vez do path técnico cru
-// ("olha que lixo... sem essas barras"). video1/video2/"/" vieram
-// confirmados por ele; o resto é tradução literal do próprio slug da URL
-// (apresentacao-farma → "Apresentação — Farma"), não é interpretação nova.
+// 26/08, corrigido de novo depois que Robert mostrou o dashboard-telao.html
+// original dele lado a lado ("olha como é bem mais bonito que a porcaria
+// que você fez") — achei que ele MESMO já tinha esse dicionário oficial
+// (PAGINAS_LEGENDAS) construído naquele arquivo, copiado aqui verbatim (não
+// é tradução minha) + as páginas que só existem neste dashboard novo
+// (apresentacao-*/lifeb), mantidas com tradução literal do slug.
 const GA4_PAGE_NAMES = {
-  '/': 'Principal',
-  '/video1/': 'Vídeo — Supermercado',
-  '/video2/': 'Vídeo — Drogarias',
-  '/redefarma/': 'Rede Farma',
-  '/redesuper/': 'Rede Super',
+  '/': 'Página Principal (2 imagens)',
+  '/direto/': 'Pg. Direta - só WhatsApp',
+  '/video1/': 'Página com Vídeo - Supermercado',
+  '/video1-direto/': 'Vídeo + WhatsApp Direto',
+  '/video2/': 'Página com Vídeo - Farmácia',
+  '/redefarma/': 'Página Redes - Farmácia (20+ lojas)',
+  '/redesuper/': 'Página Redes - Supermercado (10+ lojas)',
+  '/rmk/': 'Remarketing - foco em objeção',
+  '/contato/': 'Contato via Consultor',
   '/apresentacao-farma/': 'Apresentação — Farma',
   '/apresentacao-super/': 'Apresentação — Super',
   '/lifeb/': 'Life B (institucional)'
 };
 function ga4FriendlyPage_(path) {
-  if (!path || path === '/') return 'Principal';
+  if (!path || path === '/') return GA4_PAGE_NAMES['/'];
   return GA4_PAGE_NAMES[path] || path;
+}
+// Copiado verbatim de dashboard-telao.html (traduzEstado) — mesmo mapa que
+// resolve "State of Goias" → "Goiás" no dashboard original do Robert.
+// 26/08: achado real testando com dado ao vivo — o GA4 devolve "State of
+// Sao Paulo" (SEM acento), mas o mapa original (copiado do dashboard-telao.
+// html do Robert) só tinha a chave acentuada ("State of São Paulo"), então
+// nunca batia pra SP/CE/PA/etc — caía no fallback (mostrava a string crua
+// em inglês, cortada pela tabela). Normaliza os dois lados (chave do mapa E
+// valor recebido) tirando acento antes de comparar — o valor EXIBIDO
+// continua com acento certo (vem do lado direito do mapa, nunca do lado
+// esquerdo normalizado).
+function _semAcento(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
+const TRADUZ_ESTADO_MAP = {
+  'State of Goias':'Goiás','State of São Paulo':'São Paulo','State of Minas Gerais':'Minas Gerais',
+  'State of Rio de Janeiro':'Rio de Janeiro','State of Bahia':'Bahia','State of Paraná':'Paraná',
+  'State of Rio Grande do Sul':'Rio Grande do Sul','State of Santa Catarina':'Santa Catarina',
+  'State of Pernambuco':'Pernambuco','State of Ceará':'Ceará','State of Mato Grosso':'Mato Grosso',
+  'State of Mato Grosso do Sul':'Mato Grosso do Sul','Mato Grosso do Sul':'Mato Grosso do Sul',
+  'State of Pará':'Pará','State of Maranhão':'Maranhão',
+  'State of Amazonas':'Amazonas','Amazonas':'Amazonas',
+  'State of Espírito Santo':'Espírito Santo','State of Rondônia':'Rondônia',
+  'State of Tocantins':'Tocantins','State of Piauí':'Piauí','State of Alagoas':'Alagoas',
+  'State of Sergipe':'Sergipe','State of Paraíba':'Paraíba','State of Rio Grande do Norte':'Rio Grande do Norte',
+  'State of Acre':'Acre','Acre':'Acre',
+  'State of Amapá':'Amapá','Amapá':'Amapá',
+  'State of Roraima':'Roraima','Roraima':'Roraima',
+  'Federal District':'Distrito Federal','(not set)':'Não identificado',
+};
+const TRADUZ_ESTADO_NORM = {};
+Object.keys(TRADUZ_ESTADO_MAP).forEach(k => { TRADUZ_ESTADO_NORM[_semAcento(k)] = TRADUZ_ESTADO_MAP[k]; });
+function traduzEstado_(s) {
+  return TRADUZ_ESTADO_NORM[_semAcento(s)] || s;
+}
+// Copiado verbatim de dashboard-telao.html (traduzOrigem).
+function traduzOrigem_(raw) {
+  const s = (raw || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const exact = {
+    '(direct) / (none)'          : 'Acesso Direto',
+    '(not set) / (not set)'      : 'Não identificado',
+    '(not set)'                  : 'Não identificado',
+    'google / organic'           : 'Google (orgânico)',
+    'google / cpc'               : 'Google Ads',
+    'fb / paid'                  : 'Facebook Ads',
+    'ig / paid'                  : 'Instagram Ads',
+    'whatsapp / referral'        : 'WhatsApp (link compartilhado)',
+    'youtube.com / referral'     : 'YouTube (link compartilhado)',
+  };
+  if (exact[s]) return exact[s];
+  if (/^(facebook|l\.facebook\.com|m\.facebook\.com|facebook\.com)\s*\//.test(s)) {
+    if (/\/(cpc|paid[-\s]?social|paid)/.test(s)) return 'Facebook Ads';
+    if (/\/organic/.test(s))                      return 'Facebook (orgânico)';
+    if (/\/referral/.test(s))                     return 'Facebook (link)';
+    return 'Facebook';
+  }
+  if (/^(instagram|l\.instagram\.com|instagram\.com)\s*\//.test(s)) {
+    if (/\/(cpc|paid[-\s]?social|paid)/.test(s)) return 'Instagram Ads';
+    if (/\/organic/.test(s))                     return 'Instagram (orgânico)';
+    if (/\/referral/.test(s))                    return 'Instagram (link)';
+    return 'Instagram';
+  }
+  if (/^(whatsapp|api\.whatsapp\.com|wa\.me)\s*\//.test(s)) return 'WhatsApp';
+  if (/^(youtube\.com|youtu\.be)\s*\//.test(s)) return 'YouTube';
+  if (/^google\s*\//.test(s)) return 'Google';
+  if (/eventsmanager|business\.facebook/.test(s)) return 'Facebook';
+  return s
+    .replace(/\s*\/\s*referral/, ' (link)')
+    .replace(/\s*\/\s*organic/, ' (orgânico)')
+    .replace(/\s*\/\s*cpc/, ' (pago)')
+    .replace(/\s*\/\s*paid[-\s]?social/, ' (pago)')
+    .replace(/\s*\/\s*paid/, ' (pago)')
+    .replace(/\s*\/\s*\(none\)/, '');
 }
 
 function ga4Val_(resp, i) {
@@ -1794,29 +1918,65 @@ function computeGa4Data(raw) {
     const d = r.dims[0] || '';
     return isHourly ? (d + 'h') : (d.length === 8 ? d.slice(6, 8) + '/' + d.slice(4, 6) : d);
   });
-  // 26/08: `/dash/` (o próprio Dashboard Geral, aparecia rastreado por causa
-  // dos nossos próprios testes/refresh) fora da lista — não é página de
+  // 26/08 (Robert comparou lado a lado com dashboard-telao.html original
+  // dele e achou "bem mais bonito" — motivo real: lá Páginas/Fontes/Cidades
+  // cruzam com Leads por linha, mesclam duplicata (ex: "/video2" e
+  // "/video2/" viram 1 só; "facebook.com/referral" e "m.facebook.com/
+  // referral" viram 1 "Facebook (link)"), e ordenam por leads primeiro —
+  // nada disso existia aqui. Portado verbatim da lógica de loadPages/
+  // loadCities/loadSources do arquivo original dele.
+  const normPath = p => (p && !p.endsWith('/')) ? p + '/' : (p || '/');
+  const leadsByPath = {};
+  ga4Rows_(raw.leads).forEach(r => { const k = normPath(r.dims[0]); leadsByPath[k] = (leadsByPath[k] || 0) + r.vals[0]; });
+  const leadsBySourceMap = {};
+  ga4Rows_(raw.leadsBySource).forEach(r => { leadsBySourceMap[r.dims[0]] = (leadsBySourceMap[r.dims[0]] || 0) + r.vals[0]; });
+  const leadsByCityMap = {};
+  ga4Rows_(raw.leadsByCity).forEach(r => { const k = (r.dims[0] || '') + '||' + (r.dims[1] || ''); leadsByCityMap[k] = (leadsByCityMap[k] || 0) + r.vals[0]; });
+
+  // `/dash/` (o próprio Dashboard Geral, aparecia rastreado por causa dos
+  // nossos próprios testes/refresh) fora da lista — não é página de
   // marketing (Robert: "dash não pode aparecer aqui né burro").
-  const pages = ga4Rows_(raw.pages)
-    .filter(r => !/^\/dash(\/|$)/.test(r.dims[0] || ''))
-    .map(r => ({ path: r.dims[0], users: r.vals[0], sessions: r.vals[1], views: r.vals[2] }));
-  // 26/08 (Robert: "cidades não tá aparecendo estados também") — antes
-  // escolhia SÓ região OU SÓ cidade (o que tivesse valor), descartando a
-  // outra dimensão. GA4 manda region (dims[0]) + city (dims[1]) separados;
-  // agora mostra os dois juntos quando disponíveis.
-  const cities = ga4Rows_(raw.cities).map(r => {
-    const region = (r.dims[0] && r.dims[0] !== '(not set)') ? r.dims[0] : null;
-    const city = (r.dims[1] && r.dims[1] !== '(not set)') ? r.dims[1] : null;
-    const name = (city && region) ? (city + ' — ' + region) : (city || region || 'Não identificado');
-    return { name, users: r.vals[0] };
+  const pagesMerged = new Map();
+  ga4Rows_(raw.pages).forEach(r => {
+    const rawPath = r.dims[0] || '';
+    if (/^\/dash(\/|$)/.test(rawPath)) return;
+    const path = normPath(rawPath);
+    const leadsN = leadsByPath[path] || 0;
+    if (pagesMerged.has(path)) {
+      const ex = pagesMerged.get(path);
+      ex.users += r.vals[0]; ex.sessions += r.vals[1]; ex.views += r.vals[2];
+    } else {
+      pagesMerged.set(path, { path, users: r.vals[0], sessions: r.vals[1], views: r.vals[2], leads: leadsN });
+    }
   });
-  const sources = ga4Rows_(raw.sources).map(r => ({ name: r.dims[0], users: r.vals[0], sessions: r.vals[1] }));
+  const pages = [...pagesMerged.values()].sort((a, b) => b.leads - a.leads || b.users - a.users);
+
+  const cities = ga4Rows_(raw.cities).map(r => {
+    const regionRaw = r.dims[0] || '', cityRaw = r.dims[1] || '';
+    const region = traduzEstado_(regionRaw);
+    const city = (!cityRaw || cityRaw === '(not set)' || /^\d{5,}/.test(cityRaw)) ? 'Não identificada' : cityRaw;
+    return { region, city, users: r.vals[0], leads: leadsByCityMap[regionRaw + '||' + cityRaw] || 0 };
+  }).sort((a, b) => b.leads - a.leads || b.users - a.users);
+
+  const sourcesMerged = new Map();
+  ga4Rows_(raw.sources).forEach(r => {
+    const raw0 = r.dims[0];
+    const name = traduzOrigem_(raw0);
+    const leadsN = leadsBySourceMap[raw0] || 0;
+    if (sourcesMerged.has(name)) {
+      const ex = sourcesMerged.get(name);
+      ex.users += r.vals[0]; ex.sessions += r.vals[1]; ex.leads += leadsN;
+    } else {
+      sourcesMerged.set(name, { name, users: r.vals[0], sessions: r.vals[1], leads: leadsN });
+    }
+  });
+  const sources = [...sourcesMerged.values()].sort((a, b) => b.leads - a.leads || b.users - a.users);
+
   const eventsMap = {};
   ga4Rows_(raw.events).forEach(r => { eventsMap[r.dims[0]] = r.vals[0]; });
-  const leads = ga4Rows_(raw.leads).map(r => ({ path: r.dims[0], count: r.vals[0] }));
   return {
     activeUsers: ga4Val_(s, 0), sessions: ga4Val_(s, 1), views: ga4Val_(s, 2), bounce: ga4Val_(s, 3), avgDur: ga4Val_(s, 4),
-    chartPts, chartDias, pages, cities, sources, eventsMap, leads
+    chartPts, chartDias, pages, cities, sources, eventsMap
   };
 }
 
@@ -1858,6 +2018,47 @@ function ga4Row_(dotColor, name, count, maxCount, valText, href, onclick) {
     </${tag}>`;
 }
 
+// 26/08 (Robert comparou lado a lado com dashboard-telao.html original:
+// "olha como é bem mais bonito") — troca do SVG desenhado à mão (biaTrendPanel_)
+// por Chart.js de verdade, mesma lib/config que a referência usa: barra com
+// eixo/grid visível, destaque de cor na hora/dia atual, tooltip nativo.
+// Config simplificada em relação ao original (sem a linha de leads
+// sobreposta nem a média móvel de 3 pontos — portar isso exigiria mais 1-2
+// fetches de "leads" por hora/dia, escopo maior do que o pedido agora).
+let _ga4VisitorsChart = null;
+function renderGa4VisitorsChart_(dias, vals) {
+  const canvas = el('ga4-visitors-chart');
+  const avisoEl = el('ga4-visitors-aviso');
+  if (_ga4VisitorsChart) { _ga4VisitorsChart.destroy(); _ga4VisitorsChart = null; }
+  if (!dias.length) { avisoEl.textContent = ''; return; }
+  const isHourly = /h$/.test(dias[0]);
+  const lastIdx = dias.length - 1;
+  const bg = dias.map((_, i) => i === lastIdx ? 'rgba(233,32,133,.8)' : 'rgba(112,75,155,.22)');
+  const border = dias.map((_, i) => i === lastIdx ? '#E92085' : '#704B9B');
+  _ga4VisitorsChart = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: { labels: dias, datasets: [{ label: isHourly ? 'Visitantes' : 'Usuários Ativos', data: vals, backgroundColor: bg, borderColor: border, borderWidth: 1.5, borderRadius: 5, borderSkipped: false }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor: '#221B32', padding: 12, callbacks: { label: c => ' ' + c.parsed.y + ' visitante' + (c.parsed.y !== 1 ? 's' : '') } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#6b6484', font: { size: 10 }, maxRotation: 0 }, border: { display: false } },
+        y: { grid: { color: 'rgba(0,0,0,.05)' }, ticks: { color: '#6b6484', font: { size: 11 }, precision: 0 }, border: { display: false }, beginAtZero: true }
+      }
+    }
+  });
+  const maxVal = Math.max(...vals, 0);
+  if (maxVal > 0) {
+    const peakIdx = vals.indexOf(maxVal);
+    avisoEl.textContent = `Pico: ${dias[peakIdx]} com ${maxVal} visitante${maxVal !== 1 ? 's' : ''}.`;
+  } else {
+    avisoEl.textContent = '';
+  }
+}
+
 function renderGa4SectionTelao(d) {
   el('ga4-hero-val').textContent = fmtInt_(d.activeUsers);
   if (d.chartPts.length > 1) el('ga4-hero-spark').innerHTML = sparklineSVG(d.chartPts, '#704B9B');
@@ -1866,10 +2067,7 @@ function renderGa4SectionTelao(d) {
   // (dashboard-telao.html). Reaproveita biaTrendPanel_ (mesmo componente do
   // gráfico da BIA — 1 métrica, escala própria, área preenchida).
   el('ga4-visitors-badge').textContent = fmtInt_(d.activeUsers) + ' no período';
-  const visitorsLabel = 'Usuários Ativos' + (d.chartDias.length && /h$/.test(d.chartDias[0]) ? ' por hora' : ' por dia');
-  el('ga4-visitors-chart').innerHTML = d.chartDias.length > 1
-    ? biaTrendPanel_(visitorsLabel, d.chartDias, d.chartPts, 'var(--purple)', fmtInt_)
-    : '<div class="feed-empty">Sem dado suficiente no período</div>';
+  renderGa4VisitorsChart_(d.chartDias, d.chartPts);
 
   el('ga4-k-sessions').textContent = fmtInt_(d.sessions);
   el('ga4-k-views').textContent = fmtInt_(d.views);
@@ -1878,23 +2076,39 @@ function renderGa4SectionTelao(d) {
   el('ga4-k-abriu').textContent = fmtInt_(d.eventsMap['Abrir_Formulario'] || 0);
   el('ga4-k-leads').textContent = fmtInt_(d.eventsMap['Lead_Formulario'] || 0);
 
+  // 26/08: tabela de colunas (Página/Visit./Leads) em vez de barra de
+  // progresso, igual dashboard-telao.html original — nome amigável do
+  // PAGINAS_LEGENDAS na linha de cima, path técnico pequeno embaixo (só
+  // quando existe legenda, mesmo padrão da referência).
+  const ga4EmptyRow_ = (n) => `<tr><td colspan="${n}" style="text-align:center;color:var(--faint);padding:14px 6px">Sem dado no período</td></tr>`;
   el('ga4-pages-badge').textContent = d.pages.length + ' páginas';
-  const maxPages = Math.max(...d.pages.map(p => p.users), 1);
-  el('ga4-pages-rows').innerHTML = d.pages.slice(0, 10).map((p, i) =>
-    ga4Row_(GA4_S[i % GA4_S.length], ga4FriendlyPage_(p.path), p.users, maxPages, fmtInt_(p.views) + ' visualizações', 'https://projetojlbv.com.br' + p.path)
-  ).join('');
+  el('ga4-pages-rows').innerHTML = d.pages.length === 0 ? ga4EmptyRow_(3) : d.pages.slice(0, 12).map(p => {
+    const legenda = GA4_PAGE_NAMES[p.path];
+    const safeHref = escHtml(encodeURI('https://projetojlbv.com.br' + p.path));
+    return `<tr>
+      <td><a href="${safeHref}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">
+        <span class="ga4-pg-legenda">${escHtml(legenda || p.path)}</span>
+        ${legenda ? `<span class="ga4-pg-path">${escHtml(p.path)}</span>` : ''}
+      </a></td>
+      <td>${fmtInt_(p.users)}</td>
+      <td>${p.leads > 0 ? fmtInt_(p.leads) : '<span style="font-size:11px;color:var(--muted);font-weight:600">—</span>'}</td>
+    </tr>`;
+  }).join('');
 
   el('ga4-sources-badge').textContent = d.sources.length + ' fontes';
-  const maxSrc = Math.max(...d.sources.map(s => s.users), 1);
-  el('ga4-sources-rows').innerHTML = d.sources.slice(0, 12).map((s, i) =>
-    ga4Row_(GA4_S[i % GA4_S.length], s.name, s.users, maxSrc, fmtInt_(s.sessions) + ' sessões')
-  ).join('');
+  el('ga4-sources-rows').innerHTML = d.sources.length === 0 ? ga4EmptyRow_(3) : d.sources.slice(0, 15).map(s => `<tr>
+      <td>${escHtml(s.name)}</td>
+      <td>${fmtInt_(s.users)}</td>
+      <td>${s.leads > 0 ? fmtInt_(s.leads) : '<span style="font-size:11px;color:var(--muted);font-weight:600">—</span>'}</td>
+    </tr>`).join('');
 
   el('ga4-cities-badge').textContent = d.cities.length + ' cidades';
-  const maxCity = Math.max(...d.cities.map(c => c.users), 1);
-  el('ga4-cities-rows').innerHTML = d.cities.slice(0, 20).map((c, i) =>
-    ga4Row_(GA4_S[i % GA4_S.length], c.name, c.users, maxCity)
-  ).join('');
+  el('ga4-cities-rows').innerHTML = d.cities.length === 0 ? ga4EmptyRow_(4) : d.cities.slice(0, 25).map(c => `<tr>
+      <td>${escHtml(c.region)}</td>
+      <td class="ga4-td-left">${escHtml(c.city)}</td>
+      <td>${fmtInt_(c.users)}</td>
+      <td>${c.leads > 0 ? fmtInt_(c.leads) : '<span style="font-size:11px;color:var(--muted);font-weight:600">—</span>'}</td>
+    </tr>`).join('');
 
   // 26/08: painel único "Eventos de Conversão" — formulário + scroll na
   // mesma lista, ícone+barra fina+número grande, igual a referência real
