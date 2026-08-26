@@ -195,7 +195,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
    standalone) — 8 kchips do mesmo tamanho com borda de cor cheia, sem 1
    card blown-up maior que os outros. */
 #ga4-hero-row{display:none;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px;height:80px;flex-shrink:0}
-#ga4-main{display:none;grid-template-columns:30fr 38fr 32fr;gap:8px;overflow:hidden;min-height:0;flex:1}
+#ga4-main{display:none;grid-template-columns:26fr 42fr 32fr;gap:8px;overflow:hidden;min-height:0;flex:1}
 #ga4-col-left{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
 #ga4-col-center{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
 #ga4-col-right{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
@@ -1143,6 +1143,22 @@ footer strong{color:#fff}
     </div>
 
     <div id="ga4-col-center">
+      <!-- 26/08 (Robert: "não conseguiu organizar melhor as coisas") —
+           antes Fontes+Cidades ficavam espremidas aqui (metade da coluna
+           cada), e não existia o painel "Visitantes" que a referência real
+           tem como o maior/mais importante da tela. Agora o centro é só
+           esse gráfico (maior painel, igual a referência), e Fontes/
+           Cidades/Páginas viraram uma coluna só empilhada à direita. -->
+      <div class="card" id="ga4-visitors-card" style="flex:1;display:flex;flex-direction:column;min-height:0">
+        <div class="card-hd">
+          <span class="card-hd-title">Visitantes</span>
+          <span class="badge" id="ga4-visitors-badge"></span>
+        </div>
+        <div id="ga4-visitors-chart" style="flex:1;min-height:0;padding:8px 14px"></div>
+      </div>
+    </div>
+
+    <div id="ga4-col-right">
       <div class="card" id="ga4-sources-card" style="flex:1;display:flex;flex-direction:column;min-height:0">
         <div class="card-hd">
           <span class="card-hd-title">Fontes de Tráfego</span>
@@ -1157,9 +1173,6 @@ footer strong{color:#fff}
         </div>
         <div class="funil-body" id="ga4-cities-rows" style="flex:1;min-height:0;overflow-y:auto;justify-content:flex-start;gap:2px"></div>
       </div>
-    </div>
-
-    <div id="ga4-col-right">
       <div class="card" id="ga4-pages-card" style="flex:1;display:flex;flex-direction:column;min-height:0">
         <div class="card-hd">
           <span class="card-hd-title">Top Páginas</span>
@@ -1757,7 +1770,24 @@ function computeGa4Data(raw) {
   // .reverse() aqui invertia a ordem, plotando hoje à esquerda e o dia mais
   // antigo do período à direita (onde a bolinha de destaque do sparkline
   // fica) — sinalizava tendência ao contrário.
-  const chartPts = ga4Rows_(raw.chart).map(r => r.vals[0]);
+  // 26/08 (Robert: "não conseguiu organizar melhor as coisas") — antes só
+  // usava o valor (vals[0]) pro sparkline pequeno do kchip; a referência
+  // real tem um painel "Visitantes" grande, que faltava por completo aqui.
+  // Achado ao testar com período "Hoje" (startDate===endDate): a API troca
+  // a dimensão de "date" (AAAAMMDD, já vem cronológica) pra "hour" (só o
+  // número da hora, "0".."23", e SEM ordem cronológica — vem tipo
+  // 0,1,10,3,5... string-order da própria API, confirmado com curl real).
+  // Sem reordenar, o gráfico ziguezagueava entre horas fora de ordem.
+  const chartRowsRaw = ga4Rows_(raw.chart);
+  const isHourly = chartRowsRaw.length > 0 && (chartRowsRaw[0].dims[0] || '').length <= 2;
+  const chartRows = isHourly
+    ? chartRowsRaw.slice().sort((a, b) => Number(a.dims[0]) - Number(b.dims[0]))
+    : chartRowsRaw;
+  const chartPts = chartRows.map(r => r.vals[0]);
+  const chartDias = chartRows.map(r => {
+    const d = r.dims[0] || '';
+    return isHourly ? (d + 'h') : (d.length === 8 ? d.slice(6, 8) + '/' + d.slice(4, 6) : d);
+  });
   // 26/08: `/dash/` (o próprio Dashboard Geral, aparecia rastreado por causa
   // dos nossos próprios testes/refresh) fora da lista — não é página de
   // marketing (Robert: "dash não pode aparecer aqui né burro").
@@ -1780,7 +1810,7 @@ function computeGa4Data(raw) {
   const leads = ga4Rows_(raw.leads).map(r => ({ path: r.dims[0], count: r.vals[0] }));
   return {
     activeUsers: ga4Val_(s, 0), sessions: ga4Val_(s, 1), views: ga4Val_(s, 2), bounce: ga4Val_(s, 3), avgDur: ga4Val_(s, 4),
-    chartPts, pages, cities, sources, eventsMap, leads
+    chartPts, chartDias, pages, cities, sources, eventsMap, leads
   };
 }
 
@@ -1825,6 +1855,16 @@ function ga4Row_(dotColor, name, count, maxCount, valText, href, onclick) {
 function renderGa4SectionTelao(d) {
   el('ga4-hero-val').textContent = fmtInt_(d.activeUsers);
   if (d.chartPts.length > 1) el('ga4-hero-spark').innerHTML = sparklineSVG(d.chartPts, '#704B9B');
+
+  // 26/08: painel "Visitantes" — maior card da aba, igual a referência real
+  // (dashboard-telao.html). Reaproveita biaTrendPanel_ (mesmo componente do
+  // gráfico da BIA — 1 métrica, escala própria, área preenchida).
+  el('ga4-visitors-badge').textContent = fmtInt_(d.activeUsers) + ' no período';
+  const visitorsLabel = 'Usuários Ativos' + (d.chartDias.length && /h$/.test(d.chartDias[0]) ? ' por hora' : ' por dia');
+  el('ga4-visitors-chart').innerHTML = d.chartDias.length > 1
+    ? biaTrendPanel_(visitorsLabel, d.chartDias, d.chartPts, 'var(--purple)', fmtInt_)
+    : '<div class="feed-empty">Sem dado suficiente no período</div>';
+
   el('ga4-k-sessions').textContent = fmtInt_(d.sessions);
   el('ga4-k-views').textContent = fmtInt_(d.views);
   el('ga4-k-bounce').textContent = fmtPct1_(d.bounce);
