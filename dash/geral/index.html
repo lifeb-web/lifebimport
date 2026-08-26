@@ -503,6 +503,15 @@ footer strong{color:#fff}
         <div class="kc-row"><span class="kc-val" id="mkt-inv"><span class="skel"></span></span><span class="kc-delta" id="mkt-inv-delta"></span></div>
         <span class="kc-sub">no período selecionado</span>
       </div>
+      <!-- 🔴 FIX 26/08 (Robert: "no cardizinho custo por lead acho que
+           você consegue colocar a quantidade de leads no período
+           filtrado") — card próprio, mesmo padrão do telão, deixa 6 cards
+           (3 linhas x 2 colunas) em vez de 5 sobrando um sozinho. -->
+      <div class="kchip">
+        <span class="kc-label">Leads Recebidos</span>
+        <div class="kc-row"><span class="kc-val" id="mkt-leads"><span class="skel"></span></span><span class="kc-delta" id="mkt-leads-delta"></span></div>
+        <span class="kc-sub">no período selecionado</span>
+      </div>
       <div class="kchip">
         <span class="kc-label">CAC</span>
         <div class="kc-row"><span class="kc-val" id="mkt-cac"><span class="skel"></span></span><span class="kc-delta" id="mkt-cac-delta"></span></div>
@@ -518,7 +527,7 @@ footer strong{color:#fff}
         <div class="kc-row"><span class="kc-val" id="mkt-roas"><span class="skel"></span></span><span class="kc-delta" id="mkt-roas-delta"></span></div>
         <span class="kc-sub">retorno por real investido</span>
       </div>
-      <div class="kchip" style="grid-column:1/-1">
+      <div class="kchip">
         <span class="kc-label">ACOS</span>
         <div class="kc-row"><span class="kc-val" id="mkt-acos"><span class="skel"></span></span><span class="kc-delta" id="mkt-acos-delta"></span></div>
         <span class="kc-sub">% do faturamento gasto em ads no período</span>
@@ -1652,6 +1661,7 @@ function loadAdsSection(periodFrom, periodTo, inboundData, silent, prevPeriodFro
 
   el('mkt-updated').textContent = ultimaData ? 'sincronizado · ' + fmtDisplayISO(ultimaData) : '';
   el('mkt-inv').textContent  = inv > 0 ? fmtMoney(inv) : '—';
+  el('mkt-leads').textContent = leadsPeriodo > 0 ? leadsPeriodo.toLocaleString('pt-BR') : '—';
   el('mkt-cac').textContent  = (inv > 0 && fechadosPeriodo > 0) ? fmtMoney(Math.round(inv / fechadosPeriodo)) : '—';
   el('mkt-cpl').textContent  = (inv > 0 && leadsPeriodo > 0) ? fmtMoney(Math.round(inv / leadsPeriodo)) : '—';
   el('mkt-roas').textContent = (inv > 0 && receitaPeriodo > 0) ? (receitaPeriodo / inv).toFixed(2) + 'x' : '—';
@@ -1686,6 +1696,9 @@ function loadAdsSection(periodFrom, periodTo, inboundData, silent, prevPeriodFro
     // de verde/vermelho, pra não sugerir um julgamento que a métrica sozinha
     // não sustenta.
     el('mkt-inv-delta').innerHTML  = kcDeltaHTML(pctDelta(inv, prevInv), false, true);
+    // 26/08 (Robert: "coloca a quantidade de leads no período filtrado") —
+    // mais leads é sempre bom, sem direção invertida (igual Investimento).
+    el('mkt-leads-delta').innerHTML = kcDeltaHTML(pctDelta(leadsPeriodo, prevLeadsPeriodo));
   } else {
     // achado 15/07 (Robert): sem período anterior válido (ex: "Total") —
     // limpa em vez de deixar seta do filtro ANTERIOR grudada na tela.
@@ -1694,6 +1707,7 @@ function loadAdsSection(periodFrom, periodTo, inboundData, silent, prevPeriodFro
     el('mkt-cpl-delta').innerHTML = '';
     el('mkt-acos-delta').innerHTML = '';
     el('mkt-inv-delta').innerHTML = '';
+    el('mkt-leads-delta').innerHTML = '';
   }
 }
 
