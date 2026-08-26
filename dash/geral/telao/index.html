@@ -23,6 +23,11 @@
   --o1:#b09bd6; --o2:#9260c8; --o3:#5a3a80;
   --text:#1a1626; --muted:#6b6484; --faint:#9b93b0; --bg:#f6f5f9;
   --card:#ffffff; --border:#eae7f2; --font:'Montserrat',sans-serif;
+  /* Paleta categórica dedicada (25-26/08, referência Yanmei) — nunca reusar
+     --purple/--magenta em série de múltiplos dados (fontes/eventos/páginas
+     da aba GA4), pra não embaralhar cor-de-marca com cor-de-série. */
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100;
+  --s5:#e87ba4; --s6:#008300; --s7:#4a3aa7; --s8:#e34948;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{width:100%;height:100vh;overflow:hidden;background:var(--bg)}
@@ -184,6 +189,21 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 #ltv-col-left{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
 #ltv-col-center{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
 #ltv-col-right{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
+/* GA4 (25-26/08) — mesma forma/altura do hero-row de Vendas/SDR/LTV (hero +
+   7 kchips). display:none por padrão, JS liga/desliga em setView(). */
+#ga4-hero-row{display:none;grid-template-columns:minmax(0,1.7fr) repeat(7,minmax(0,1fr));gap:8px;height:92px;flex-shrink:0}
+#ga4-hero{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:10px 16px;display:flex;flex-direction:column;justify-content:center;gap:2px;position:relative;overflow:hidden;box-shadow:0 1px 2px rgba(26,22,38,.04),0 3px 10px -3px rgba(112,75,155,.16)}
+#ga4-hero::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(112,75,155,.06),transparent 60%);pointer-events:none}
+#ga4-main{display:none;grid-template-columns:30fr 38fr 32fr;gap:8px;overflow:hidden;min-height:0;flex:1}
+#ga4-col-left{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
+#ga4-col-center{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
+#ga4-col-right{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
+/* Card "Ao vivo" (achado 25-26/08, referência Yanmei live-card) — destaque
+   visual próprio (borda+glow verde pulsante), separado do grid filtrado por
+   período: Realtime API não respeita _period, é sempre "agora". */
+#ga4-live-card{border:1.5px solid #22C35D;box-shadow:0 0 0 3px rgba(34,195,93,.12)}
+#ga4-live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#22C35D;margin-right:6px;animation:ga4pulse 1.6s ease-in-out infinite}
+@keyframes ga4pulse{0%,100%{opacity:1}50%{opacity:.35}}
 #ads-hero-row2{display:none;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;height:72px;flex-shrink:0}
 #ads-hero{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:10px 16px;display:flex;flex-direction:column;justify-content:center;gap:2px;position:relative;overflow:hidden;box-shadow:0 1px 2px rgba(26,22,38,.04),0 3px 10px -3px rgba(112,75,155,.16)}
 #ads-hero::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(112,75,155,.06),transparent 60%);pointer-events:none}
@@ -498,6 +518,7 @@ footer strong{color:#fff}
       <button class="ochip" data-v="ltv" onclick="setView(this)">LTV</button>
       <button class="ochip" data-v="sdr" onclick="setView(this)">SDR</button>
       <button class="ochip" data-v="ads" onclick="setView(this)">Ads</button>
+      <button class="ochip" data-v="ga4" onclick="setView(this)">GA4</button>
     </div>
   </div>
 
@@ -990,6 +1011,99 @@ footer strong{color:#fff}
       </div>
     </div>
   </div>
+
+  <!-- GA4 (25-26/08) — mesma forma do bloco Ads acima (hero+7 kchips, depois
+       3 colunas), display:none até setView() ligar. Lê direto do proxy Apps
+       Script já implantado (lifeb-ga4-proxy.gs) — nunca do Supabase, dado
+       sempre ao vivo por período. -->
+  <div id="ga4-hero-row">
+    <div id="ga4-hero" style="cursor:default">
+      <div class="hero-top"><span class="hero-label">Usuários Ativos</span><span id="ga4-hero-spark"></span></div>
+      <div class="hero-val" id="ga4-hero-val"><span class="skel" style="width:80px;height:24px"></span></div>
+      <div class="hero-row2"><span class="hero-sub" id="ga4-hero-sub">no período</span></div>
+    </div>
+    <div class="kchip">
+      <span class="kc-label">Sessões</span>
+      <div class="kc-row"><span class="kc-val" id="ga4-k-sessions"><span class="skel"></span></span></div>
+      <span class="kc-sub">no período</span>
+    </div>
+    <div class="kchip">
+      <span class="kc-label">Visualizações</span>
+      <div class="kc-row"><span class="kc-val" id="ga4-k-views"><span class="skel"></span></span></div>
+      <span class="kc-sub">páginas vistas</span>
+    </div>
+    <div class="kchip">
+      <span class="kc-label" title="% de sessões de 1 página só, sem interação — menor é melhor.">Rejeição ⓘ</span>
+      <div class="kc-row"><span class="kc-val" id="ga4-k-bounce"><span class="skel"></span></span></div>
+      <span class="kc-sub">menor é melhor</span>
+    </div>
+    <div class="kchip">
+      <span class="kc-label">Duração Média</span>
+      <div class="kc-row"><span class="kc-val" id="ga4-k-duration"><span class="skel"></span></span></div>
+      <span class="kc-sub">por sessão</span>
+    </div>
+    <div class="kchip">
+      <span class="kc-label">Abriu Formulário</span>
+      <div class="kc-row"><span class="kc-val" id="ga4-k-abriu"><span class="skel"></span></span></div>
+      <span class="kc-sub">no período</span>
+    </div>
+    <div class="kchip">
+      <span class="kc-label">Leads (GA4)</span>
+      <div class="kc-row"><span class="kc-val" id="ga4-k-leads"><span class="skel"></span></span></div>
+      <span class="kc-sub">Lead_Formulario</span>
+    </div>
+    <div class="kchip" id="ga4-live-card">
+      <span class="kc-label"><span id="ga4-live-dot"></span>Ao Vivo Agora</span>
+      <div class="kc-row"><span class="kc-val" id="ga4-k-live"><span class="skel"></span></span></div>
+      <span class="kc-sub">Realtime · atualiza a cada refresh</span>
+    </div>
+  </div>
+
+  <div id="ga4-main">
+    <div id="ga4-col-left">
+      <div class="card" id="ga4-pages-card">
+        <div class="card-hd">
+          <span class="card-hd-title">Top Páginas</span>
+          <span class="badge" id="ga4-pages-badge">carregando…</span>
+        </div>
+        <div class="funil-body" id="ga4-pages-rows"></div>
+      </div>
+    </div>
+
+    <div id="ga4-col-center">
+      <div class="card" id="ga4-sources-card">
+        <div class="card-hd">
+          <span class="card-hd-title">Fontes de Tráfego</span>
+          <span class="badge" id="ga4-sources-badge"></span>
+        </div>
+        <div class="funil-body" id="ga4-sources-rows"></div>
+      </div>
+      <div class="card" id="ga4-cities-card">
+        <div class="card-hd">
+          <span class="card-hd-title">Cidades</span>
+          <span class="badge" id="ga4-cities-badge"></span>
+        </div>
+        <div class="funil-body" id="ga4-cities-rows"></div>
+      </div>
+    </div>
+
+    <div id="ga4-col-right">
+      <div class="card" id="ga4-funil-card">
+        <div class="card-hd">
+          <span class="card-hd-title">Funil de Formulário</span>
+          <span class="badge" id="ga4-funil-badge">carregando…</span>
+        </div>
+        <div class="funil-body" id="ga4-funil-rows"></div>
+      </div>
+      <div class="card" id="ga4-events-card">
+        <div class="card-hd">
+          <span class="card-hd-title">Eventos — Scroll</span>
+          <span class="badge" id="ga4-events-badge"></span>
+        </div>
+        <div class="funil-body" id="ga4-events-rows"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <footer>Life B Import &nbsp;·&nbsp; <strong id="footer-mode">Painel Geral</strong> &nbsp;·&nbsp; Dados: <span id="footer-source">Agendor</span> &nbsp;·&nbsp; Auto-refresh 20s</footer>
@@ -1393,6 +1507,160 @@ function computeLtvData(allRows, originFilter, periodType, customFrom, customTo,
     truncated: false,
     updatedAt: new Date().toISOString()
   };
+}
+
+// ── GA4 (25-26/08) — lê direto do proxy Apps Script JÁ IMPLANTADO
+// (lifeb-ga4-proxy.gs, mesmo usado por dashboard-ga4.html/dashboard-telao.html
+// standalone) via startDate/endDate — nunca via Supabase, dado sempre ao
+// vivo por período (mesmo filtro global _period do resto do painel).
+// Não precisou mexer/reimplantar Apps Script nenhum: a query de páginas do
+// proxy já é dinâmica (dimensions:[pagePath], sem lista fixa), então LPs
+// novas (video1/video2/rmk/apresentacao-*) já aparecem sozinhas.
+const GA4_PROXY_URL = 'https://script.google.com/macros/s/AKfycbxGFDgwJhRVHFUYuOc6KRpZgRQ8CLyeNocnmIZqVASQSUt6350m11RzSdvJcWSMnTYzyw/exec';
+const GA4_S = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'];
+
+function ga4Val_(resp, i) {
+  return resp && resp.rows && resp.rows[0] && resp.rows[0].metricValues[i] ? Number(resp.rows[0].metricValues[i].value) : 0;
+}
+function ga4Rows_(resp) {
+  if (!resp || !resp.rows) return [];
+  return resp.rows.map(r => ({
+    dims: (r.dimensionValues || []).map(x => x.value),
+    vals: (r.metricValues || []).map(x => Number(x.value))
+  }));
+}
+async function fetchGa4Json_(action, startDate, endDate) {
+  const url = `${GA4_PROXY_URL}?action=${action}&startDate=${startDate}&endDate=${endDate}`;
+  const r = await fetch(url, { redirect: 'follow' });
+  if (!r.ok) throw new Error('GA4 ' + action + ' HTTP ' + r.status);
+  return r.json();
+}
+async function fetchGa4Raw(startDate, endDate) {
+  const [summary, chart, pages, cities, sources, events, leads] = await Promise.all([
+    fetchGa4Json_('summary', startDate, endDate), fetchGa4Json_('chart', startDate, endDate),
+    fetchGa4Json_('pages', startDate, endDate), fetchGa4Json_('cities', startDate, endDate),
+    fetchGa4Json_('sources', startDate, endDate), fetchGa4Json_('events', startDate, endDate),
+    fetchGa4Json_('leads', startDate, endDate)
+  ]);
+  return { summary, chart, pages, cities, sources, events, leads };
+}
+
+// Função pura de cálculo — sem HTML, mesma convenção do resto do painel.
+function computeGa4Data(raw) {
+  const s = raw.summary;
+  const chartPts = ga4Rows_(raw.chart).map(r => r.vals[0]).reverse();
+  const pages = ga4Rows_(raw.pages).map(r => ({ path: r.dims[0], users: r.vals[0], sessions: r.vals[1], views: r.vals[2] }));
+  const cities = ga4Rows_(raw.cities).map(r => ({ name: (r.dims[1] && r.dims[1] !== '(not set)') ? r.dims[1] : r.dims[0], users: r.vals[0] }));
+  const sources = ga4Rows_(raw.sources).map(r => ({ name: r.dims[0], users: r.vals[0], sessions: r.vals[1] }));
+  const eventsMap = {};
+  ga4Rows_(raw.events).forEach(r => { eventsMap[r.dims[0]] = r.vals[0]; });
+  const leads = ga4Rows_(raw.leads).map(r => ({ path: r.dims[0], count: r.vals[0] }));
+  return {
+    activeUsers: ga4Val_(s, 0), sessions: ga4Val_(s, 1), views: ga4Val_(s, 2), bounce: ga4Val_(s, 3), avgDur: ga4Val_(s, 4),
+    chartPts, pages, cities, sources, eventsMap, leads
+  };
+}
+
+function fmtSeconds_(sec) {
+  sec = Math.round(sec || 0);
+  const m = Math.floor(sec / 60), s2 = sec % 60;
+  return m > 0 ? (m + 'm ' + s2 + 's') : (s2 + 's');
+}
+function fmtPct1_(x) { return (Math.round((x || 0) * 1000) / 10) + '%'; }
+function fmtInt_(n) { return (n || 0).toLocaleString('pt-BR'); }
+
+// Mesmo template de sdrFunilRowTelao_, mas vira <a> de verdade quando tem
+// href (Top Páginas → URL real do site) — "tudo que puder ser clicável deve
+// ser" (referência Yanmei).
+function ga4Row_(dotColor, name, count, maxCount, valText, href) {
+  const pct = Math.max((count / Math.max(maxCount, 1)) * 100, 3);
+  const tag = href ? 'a' : 'div';
+  const openTag = href ? `<a class="abar-row" href="${href}" target="_blank" style="text-decoration:none;color:inherit;display:block">` : '<div class="abar-row">';
+  return `
+    ${openTag}
+      <div class="abar-top">
+        <span class="abar-name" title="${escHtml(name)}"><span class="abar-dot" style="background:${dotColor}"></span><span class="abar-name-text">${escHtml(name)}</span></span>
+        <span class="abar-val">${count}${valText ? '<span class="abar-sub">' + escHtml(valText) + '</span>' : ''}</span>
+      </div>
+      <div class="abar-track"><div class="abar-fill" style="width:${pct}%;background:${dotColor}"></div></div>
+    </${tag}>`;
+}
+
+function renderGa4SectionTelao(d) {
+  el('ga4-hero-val').textContent = fmtInt_(d.activeUsers);
+  if (d.chartPts.length > 1) el('ga4-hero-spark').innerHTML = sparklineSVG(d.chartPts, '#704B9B');
+  el('ga4-k-sessions').textContent = fmtInt_(d.sessions);
+  el('ga4-k-views').textContent = fmtInt_(d.views);
+  el('ga4-k-bounce').textContent = fmtPct1_(d.bounce);
+  el('ga4-k-duration').textContent = fmtSeconds_(d.avgDur);
+  el('ga4-k-abriu').textContent = fmtInt_(d.eventsMap['Abrir_Formulario'] || 0);
+  el('ga4-k-leads').textContent = fmtInt_(d.eventsMap['Lead_Formulario'] || 0);
+
+  el('ga4-pages-badge').textContent = d.pages.length + ' páginas';
+  const maxPages = Math.max(...d.pages.map(p => p.users), 1);
+  el('ga4-pages-rows').innerHTML = d.pages.slice(0, 10).map((p, i) =>
+    ga4Row_(GA4_S[i % GA4_S.length], p.path || '/', p.users, maxPages, fmtInt_(p.views) + ' views', 'https://projetojlbv.com.br' + p.path)
+  ).join('');
+
+  el('ga4-sources-badge').textContent = d.sources.length + ' fontes';
+  const maxSrc = Math.max(...d.sources.map(s => s.users), 1);
+  el('ga4-sources-rows').innerHTML = d.sources.slice(0, 8).map((s, i) =>
+    ga4Row_(GA4_S[i % GA4_S.length], s.name, s.users, maxSrc, fmtInt_(s.sessions) + ' sessões')
+  ).join('');
+
+  el('ga4-cities-badge').textContent = d.cities.length + ' cidades';
+  const maxCity = Math.max(...d.cities.map(c => c.users), 1);
+  el('ga4-cities-rows').innerHTML = d.cities.slice(0, 6).map((c, i) =>
+    ga4Row_(GA4_S[i % GA4_S.length], c.name, c.users, maxCity)
+  ).join('');
+
+  const abriu = d.eventsMap['Abrir_Formulario'] || 0, preencheu = d.eventsMap['Preencheu_Formulario'] || 0,
+        lead = d.eventsMap['Lead_Formulario'] || 0, abandonou = d.eventsMap['Abandonou_Formulario'] || 0;
+  el('ga4-funil-badge').textContent = fmtInt_(abriu) + ' aberturas';
+  const maxFunilForm = Math.max(abriu, 1);
+  el('ga4-funil-rows').innerHTML = [
+    ga4Row_('#22C35D', 'Abriu Formulário', abriu, maxFunilForm),
+    ga4Row_('#1baf7a', 'Preencheu', preencheu, maxFunilForm),
+    ga4Row_('#008300', 'Virou Lead', lead, maxFunilForm),
+    ga4Row_('#dc2626', 'Abandonou', abandonou, maxFunilForm)
+  ].join('');
+
+  const scrollKeys = ['ScrollDepth_25', 'ScrollDepth_50', 'ScrollDepth_75', 'ScrollDepth_100'];
+  const maxScroll = Math.max(...scrollKeys.map(k => d.eventsMap[k] || 0), 1);
+  el('ga4-events-badge').textContent = fmtInt_(d.eventsMap['ScrollDepth_25'] || 0) + ' no topo';
+  el('ga4-events-rows').innerHTML = scrollKeys.map((k, i) =>
+    ga4Row_(GA4_S[i % GA4_S.length], k.replace('ScrollDepth_', '') + '% da página', d.eventsMap[k] || 0, maxScroll)
+  ).join('');
+}
+
+let _ga4ViewActive = false;
+let _ga4Raw = null;
+let _ga4Loading = false;
+async function loadGa4Fresh_() {
+  if (_ga4Loading || !_data || !_data.period) return;
+  _ga4Loading = true;
+  try {
+    _ga4Raw = await fetchGa4Raw(_data.period.from, _data.period.to);
+    if (_ga4ViewActive) renderGa4SectionTelao(computeGa4Data(_ga4Raw));
+    // Realtime é sempre "agora" — não depende do período, busca à parte e
+    // não bloqueia o resto do render se falhar/demorar.
+    fetchGa4Json_('realtime', '', '').then(rt => {
+      if (_ga4ViewActive) el('ga4-k-live').textContent = fmtInt_(ga4Val_(rt, 0));
+    }).catch(() => { if (_ga4ViewActive) el('ga4-k-live').textContent = '—'; });
+  } catch (e) {
+    console.warn('fetchGa4Raw falhou:', e.message);
+    if (_ga4ViewActive && !el('ga4-pages-rows').children.length) {
+      el('ga4-pages-rows').innerHTML = '<div class="feed-empty">Erro ao carregar GA4 — tenta de novo em instantes.</div>';
+    }
+  } finally {
+    _ga4Loading = false;
+  }
+}
+function refreshGa4IfActive_() {
+  if (_ga4ViewActive) {
+    if (_ga4Raw) renderGa4SectionTelao(computeGa4Data(_ga4Raw));
+    loadGa4Fresh_();
+  }
 }
 
 // Busca TODAS as linhas de dash_geral_deals (paginado — hoje ~150 linhas,
@@ -1829,6 +2097,7 @@ async function loadData(force, silent) {
     renderLtvIfPossible_();
     refreshSdrIfActive_();
     refreshAdsHierarchyIfActive_();
+    refreshGa4IfActive_();
     flashDot();
     try { localStorage.setItem('geral_telao_snapshot', JSON.stringify({ data: curr, savedAt: Date.now() })); } catch(_) {}
   } catch(e) {
@@ -2139,10 +2408,11 @@ function setView(btn) {
   btn.classList.add('active');
   // 02/08: 3º valor 'ads' adicionado ao toggle (era só vendas/sdr).
   // 25-26/08: 4º valor 'ltv' (funil de Pós-venda).
-  const view = btn.dataset.v; // 'vendas' | 'ltv' | 'sdr' | 'ads'
+  const view = btn.dataset.v; // 'vendas' | 'ltv' | 'sdr' | 'ads' | 'ga4'
   _ltvViewActive = view === 'ltv';
   _sdrViewActive = view === 'sdr';
   _adsViewActive = view === 'ads';
+  _ga4ViewActive = view === 'ga4';
   el('hero-row').style.display = view === 'vendas' ? '' : 'none';
   el('mkt-row').style.display  = view === 'vendas' ? '' : 'none';
   el('main').style.display     = view === 'vendas' ? '' : 'none';
@@ -2153,13 +2423,15 @@ function setView(btn) {
   el('ads-hero-row').style.display  = view === 'ads' ? 'grid' : 'none';
   el('ads-hero-row2').style.display = view === 'ads' ? 'grid' : 'none';
   el('ads-main').style.display      = view === 'ads' ? 'grid' : 'none';
+  el('ga4-hero-row').style.display = view === 'ga4' ? 'grid' : 'none';
+  el('ga4-main').style.display     = view === 'ga4' ? 'grid' : 'none';
   // achado 02/08 (auditoria): h-title-text (label perto do logo) e o rótulo
   // de fonte do rodapé só eram escritos por setOrigin() — entrar em SDR/Ads
   // sem nunca ter tocado o filtro de origem deixava os dois textos errados
   // ("Painel Geral"/"Dados: Agendor") mesmo com uma aba de fonte diferente
   // claramente ativa.
-  const label = view === 'ltv' ? 'LTV (Pós-venda)' : (view === 'sdr' ? 'SDR (Felipe)' : (view === 'ads' ? 'Meta Ads' : ORIGIN_LABELS[_originMode]));
-  const source = view === 'ltv' ? 'Agendor' : (view === 'sdr' ? 'GS Engage' : (view === 'ads' ? 'Meta Ads' : 'Agendor'));
+  const label = view === 'ltv' ? 'LTV (Pós-venda)' : (view === 'sdr' ? 'SDR (Felipe)' : (view === 'ads' ? 'Meta Ads' : (view === 'ga4' ? 'GA4 Analytics' : ORIGIN_LABELS[_originMode])));
+  const source = view === 'ltv' ? 'Agendor' : (view === 'sdr' ? 'GS Engage' : (view === 'ads' ? 'Meta Ads' : (view === 'ga4' ? 'Google Analytics' : 'Agendor')));
   el('footer-mode').textContent = label;
   el('h-title-text').textContent = label;
   el('footer-source').textContent = source;
@@ -2171,6 +2443,10 @@ function setView(btn) {
   if (_adsViewActive) {
     if (_adsHierarchyRaw && _data && _data.period) renderAdsHierarchySectionTelao(computeAdsHierarchyData(_adsHierarchyRaw, _data.period.from, _data.period.to, _data.period.label));
     loadAdsHierarchyFresh_();
+  }
+  if (_ga4ViewActive) {
+    if (_ga4Raw) renderGa4SectionTelao(computeGa4Data(_ga4Raw));
+    loadGa4Fresh_();
   }
 }
 
