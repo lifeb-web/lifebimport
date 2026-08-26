@@ -365,19 +365,27 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 #sdr-col-left,#sdr-col-center,#sdr-col-right{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
 #sdr-cadencias-card,#sdr-atividades-card,#sdr-ligacoes-card,#sdr-won-card,#sdr-lost-card,#sdr-whatsapp-card{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
 #sdr-whatsapp-chart{flex:1;display:flex;flex-direction:column;justify-content:center;padding:6px 14px 8px;min-height:0}
-#ads-main{display:none;grid-template-columns:22fr 46fr 32fr;gap:8px;overflow:hidden;min-height:0;flex:1}
+/* 🔴 FIX 26/08 nº2 (árvore Campanha→Conjunto) — esquerda ganhou mais
+   largura (22fr→32fr): agora é o conteúdo principal (nome de campanha +
+   conjuntos indentados), não uma lista simples de 1 nível só. Centro caiu
+   (46fr→38fr): só tem o gráfico agora, não precisa mais da largura extra
+   que sustentava a lista de Conjuntos que morava ali antes. */
+#ads-main{display:none;grid-template-columns:32fr 38fr 30fr;gap:8px;overflow:hidden;min-height:0;flex:1}
 #ads-col-left,#ads-col-center,#ads-col-right{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
-#ads-campanhas-card,#ads-adsets-card,#ads-anuncios-card{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
-#ads-trend-card{height:130px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden}
+#ads-campanhas-card,#ads-anuncios-card{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+/* coluna central só tem esse card agora (Conjuntos de Anúncios virou
+   parte da árvore na esquerda); flex:1 em vez de altura fixa de 130px,
+   ocupa a coluna inteira. */
+#ads-trend-card{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
 #ads-trend-chart{flex:1;display:flex;flex-direction:column;justify-content:center;padding:4px 14px 8px;min-height:0}
 /* Nome de campanha/conjunto é dado externo (tamanho variável) — mesma
    lógica do achado do SDR: .funil-name sem ellipsis próprio. */
-#ads-campanhas-rows .funil-name,#ads-adsets-rows .funil-name{overflow:hidden;text-overflow:ellipsis;max-width:150px}
+#ads-campanhas-rows .funil-name{overflow:hidden;text-overflow:ellipsis;max-width:150px}
 /* achado 02/08 (mesmo padrão do SDR): .funil-row/.funil-n herdam
    flex-shrink:1 do funil principal — dentro de .lb-rows (scrollável) isso
    competia com o scroll e espremia linha em vez de rolar. flex-shrink:0
    preventivo aqui desde o início (já sabíamos do bug do SDR). */
-#ads-campanhas-rows .funil-row,#ads-adsets-rows .funil-row{flex-shrink:0}
+#ads-campanhas-rows .funil-row{flex-shrink:0}
 .ads-rank-badge{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:rgba(146,96,200,.16);color:var(--purple);font-size:9px;font-weight:800;margin-right:5px;flex-shrink:0}
 /* Anúncio com foto — 1ª vez que o telão mostra imagem de verdade. */
 /* Ads (03/08) — thumbnail bem maior que antes de propósito (o criativo É
@@ -1109,41 +1117,39 @@ footer strong{color:#fff}
 
   <div id="ads-main">
     <div id="ads-col-left">
+      <!-- 26/08 nº2 (Robert: "aquela listona de conjuntos no meio não é
+           coerente... gostei mais da direção de árvore") — Campanhas e
+           Conjuntos eram 2 listas PARALELAS da mesma hierarquia (Campanha
+           contém Conjunto), sem nenhuma relação visual entre elas — 46
+           conjuntos soltos, sem dizer de qual campanha cada um é. Virou
+           árvore de verdade: clicar na campanha expande/colapsa os
+           conjuntos DELA, indentados logo abaixo — mesmo padrão do
+           Gerenciador de Anúncios da Meta. Card "Conjuntos de Anúncios"
+           da coluna central foi removido (a árvore já cobre esse nível). -->
       <div class="card" id="ads-campanhas-card">
         <div class="card-hd">
-          <span class="card-hd-title">Campanhas</span>
+          <span class="card-hd-title">Campanhas &amp; Conjuntos</span>
           <span class="badge" id="ads-campanhas-badge">—</span>
         </div>
-        <!-- 26/08 (Robert: "lista de conjuntos não adianta nada... fazer
-             dash profissional") — legenda do sinal de eficiência (dot
-             colorido comparando CTR de cada linha com a média da conta). -->
         <div style="padding:0 14px 4px;font-size:9px;color:var(--faint);font-weight:600;display:flex;gap:10px;flex-shrink:0">
           <span><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:3px;vertical-align:middle"></span>CTR bem acima da média</span>
           <span><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--red);margin-right:3px;vertical-align:middle"></span>bem abaixo</span>
+          <span style="margin-left:auto">▸ clique pra abrir os conjuntos</span>
         </div>
         <div class="lb-rows" id="ads-campanhas-rows"></div>
       </div>
     </div>
 
     <div id="ads-col-center">
-      <!-- achado 03/08 (Robert, olhando o telão de verdade: "não vi nenhum
-           gráfico ainda, talvez você tá editando só no mobile") — tinha um
-           motivo real: o gráfico de tendência de gasto só tinha ido pro
-           mobile (só a sparkline do hero ia pro telão, decisão de espaço
-           que não bastou pro que ele queria ver na TV). Card fixo de 130px
-           aqui, resto do espaço continua com Conjuntos (flex:1). -->
-      <div class="card" id="ads-trend-card">
+      <!-- 26/08 nº2: com "Conjuntos de Anúncios" removido daqui (virou
+           parte da árvore na coluna esquerda), o gráfico de tendência
+           ganhou a coluna inteira pra ele — flex:1 em vez de altura fixa
+           de 130px, bem mais legível com o mês inteiro de dado. -->
+      <div class="card" id="ads-trend-card" style="flex:1">
         <div class="card-hd">
           <span class="card-hd-title">Investimento por Dia</span>
         </div>
         <div id="ads-trend-chart"></div>
-      </div>
-      <div class="card" id="ads-adsets-card">
-        <div class="card-hd">
-          <span class="card-hd-title">Conjuntos de Anúncios</span>
-          <span class="badge" id="ads-adsets-badge">—</span>
-        </div>
-        <div class="lb-rows" id="ads-adsets-rows"></div>
       </div>
     </div>
 
@@ -4154,9 +4160,12 @@ function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
 
   const campaignsAll = campaignsRaw.map(c => Object.assign({ id: c.id, name: c.name, status: c.status }, withMetrics(c.id, campaignMetrics)))
     .sort((a, b) => b.spend - a.spend);
+  // 26/08 (2ª rodada — árvore Campanha→Conjunto): campaignId cru, pra
+  // agrupar conjunto dentro da campanha dele sem precisar comparar nome
+  // (nome pode repetir entre campanhas diferentes).
   const adsetsAll = adsetsRaw.map(a => {
     const camp = campaignsById[a.campaign_id];
-    return Object.assign({ id: a.id, name: a.name, status: a.status, campaignName: camp ? camp.name : '—' }, withMetrics(a.id, adsetMetrics));
+    return Object.assign({ id: a.id, name: a.name, status: a.status, campaignId: a.campaign_id, campaignName: camp ? camp.name : '—' }, withMetrics(a.id, adsetMetrics));
   }).sort((a, b) => b.spend - a.spend);
   const adsAll = adsRaw.map(ad => {
     const camp = campaignsById[ad.campaign_id];
@@ -4402,34 +4411,7 @@ function renderAdsHierarchySectionTelao(d) {
     return t;
   };
   el('ads-campanhas-badge').textContent = d.campaignsList.length + ' de ' + d.kpis.totalCampaigns;
-  const maxCampSpend = Math.max(...d.campaignsList.map(c => c.spend), 1);
-  el('ads-campanhas-rows').innerHTML = d.campaignsList.length === 0
-    ? '<div class="feed-empty">Nenhuma campanha com investimento no período</div>'
-    : d.campaignsList.map((c, i) => adsFunilRowTelao_(
-        'var(--purple)',
-        c.name, c.spend, maxCampSpend,
-        subTextComEficiencia_(c.ctr, c.cpc),
-        "openAdsCampaignModalTelao('" + escJsAttr_(c.id) + "')",
-        c.status !== 'ACTIVE',
-        ctrSignal_(c.ctr),
-        i + 1
-      )).join('');
-  autoScrollIfNeeded('ads-campanhas-rows');
-
-  el('ads-adsets-badge').textContent = d.adsetsList.length + ' de ' + d.kpis.totalAdsets;
-  const maxAdsetSpend = Math.max(...d.adsetsList.map(a => a.spend), 1);
-  el('ads-adsets-rows').innerHTML = d.adsetsList.length === 0
-    ? '<div class="feed-empty">Nenhum conjunto com investimento no período</div>'
-    : d.adsetsList.map((a, i) => adsFunilRowTelao_(
-        'var(--purple)',
-        a.name, a.spend, maxAdsetSpend,
-        subTextComEficiencia_(a.ctr, a.cpc),
-        "openAdsAdsetModalTelao('" + escJsAttr_(a.id) + "')",
-        a.status !== 'ACTIVE',
-        ctrSignal_(a.ctr),
-        i + 1
-      )).join('');
-  autoScrollIfNeeded('ads-adsets-rows');
+  renderAdsCampaignTree_(d, subTextComEficiencia_, ctrSignal_);
 
   el('ads-anuncios-total').textContent = d.adsList.length + ' de ' + d.kpis.totalAds;
   el('ads-anuncios-rows').innerHTML = d.adsList.length === 0
@@ -4438,23 +4420,46 @@ function renderAdsHierarchySectionTelao(d) {
   autoScrollIfNeeded('ads-anuncios-rows');
 }
 
-function openAdsCampaignModalTelao(campaignId) {
-  if (!_adsHierarchyLastData) return;
-  const camp = _adsHierarchyLastData.campaignsList.find(c => c.id === campaignId);
-  const adsets = _adsHierarchyLastData.adsetsList.filter(a => {
-    const raw = (_adsHierarchyRaw.adsets || []).find(x => x.id === a.id);
-    return raw && raw.campaign_id === campaignId;
-  }).sort((a, b) => b.spend - a.spend);
-  el('modal-title').textContent = (camp ? camp.name : 'Campanha') + ' · ' + adsets.length + ' conjunto' + (adsets.length !== 1 ? 's' : '');
-  el('modal-body').innerHTML = adsets.length === 0
-    ? '<div class="modal-empty">Nenhum conjunto com dado no período</div>'
-    : adsets.map(a => `
-      <div class="mdeal-row" style="cursor:default">
-        <div class="mdeal-dot" style="background:${a.status === 'ACTIVE' ? 'var(--purple)' : 'var(--faint)'}"></div>
-        <span class="mdeal-title">${escHtml(a.name)}</span>
-        <span class="mdeal-val">${fmtMoney(a.spend)}</span>
-      </div>`).join('');
-  el('modal-overlay').classList.add('show');
+// 26/08 nº2 (Robert aprovou a direção "árvore" depois de eu apresentar 2
+// opções: cortar a lista ou juntar Campanha+Conjunto numa hierarquia de
+// verdade) — clicar na campanha expande/colapsa os conjuntos DELA
+// indentados logo abaixo, dentro da mesma lista (sem modal). Substituiu
+// openAdsCampaignModalTelao (o clique agora expande em vez de abrir popup).
+let _adsExpandedCampaigns = new Set();
+function toggleAdsCampaignTree_(campaignId) {
+  if (_adsExpandedCampaigns.has(campaignId)) _adsExpandedCampaigns.delete(campaignId);
+  else _adsExpandedCampaigns.add(campaignId);
+  if (_adsHierarchyLastData) renderAdsHierarchySectionTelao(_adsHierarchyLastData);
+}
+function renderAdsCampaignTree_(d, subTextFn, ctrSignalFn) {
+  const maxCampSpend = Math.max(...d.campaignsList.map(c => c.spend), 1);
+  if (d.campaignsList.length === 0) {
+    el('ads-campanhas-rows').innerHTML = '<div class="feed-empty">Nenhuma campanha com investimento no período</div>';
+    return;
+  }
+  const html = d.campaignsList.map((c, i) => {
+    const expanded = _adsExpandedCampaigns.has(c.id);
+    const arrow = expanded ? '▾ ' : '▸ ';
+    const campRow = adsFunilRowTelao_(
+      'var(--purple)', arrow + c.name, c.spend, maxCampSpend,
+      subTextFn(c.ctr, c.cpc), `toggleAdsCampaignTree_('${escJsAttr_(c.id)}')`,
+      c.status !== 'ACTIVE', ctrSignalFn(c.ctr), i + 1
+    );
+    if (!expanded) return campRow;
+    const filhos = d.adsetsList.filter(a => a.campaignId === c.id);
+    if (filhos.length === 0) {
+      return campRow + '<div class="feed-empty" style="padding-left:26px;font-size:11px">Nenhum conjunto com investimento no período</div>';
+    }
+    const maxFilhoSpend = Math.max(...filhos.map(a => a.spend), 1);
+    const filhosHtml = filhos.map(a => `<div style="padding-left:22px;border-left:2px solid var(--border);margin-left:8px">${adsFunilRowTelao_(
+      'var(--purple-l)', a.name, a.spend, maxFilhoSpend,
+      subTextFn(a.ctr, a.cpc), "openAdsAdsetModalTelao('" + escJsAttr_(a.id) + "')",
+      a.status !== 'ACTIVE', ctrSignalFn(a.ctr)
+    )}</div>`).join('');
+    return campRow + filhosHtml;
+  }).join('');
+  el('ads-campanhas-rows').innerHTML = html;
+  autoScrollIfNeeded('ads-campanhas-rows');
 }
 
 // achado 03/08 (Robert: "quero tudo clicável") — mesma lógica do mobile.
