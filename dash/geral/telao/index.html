@@ -2279,13 +2279,41 @@ function renderBiaTrendChart_(dias, custo, notif, containerId) {
       <div style="flex:1;min-width:0">${biaTrendPanel_('Notificações', dias, notif, 'var(--purple)', v => fmtInt_(v))}</div>
     </div>`;
 }
+// 🔴 FIX 26/08 (Robert: "os gráficos ficaram horríveis, coisa grossa...
+// até o que tava antes tava melhor") — achado real: o traço da linha
+// escala junto com o tamanho do card (SVG com preserveAspectRatio="none"
+// e viewBox estreito, W=280) — reaproveitei essa mesma função pro card
+// "Deploys por Dia", que é BEM mais largo (~600px) que os paineizinhos
+// lado a lado de Custo/Notificações onde ela nasceu (~290px cada), e o
+// traço ficava proporcionalmente 2x mais grosso nesse card largo, sem
+// limite nenhum. Corrigido: viewBox bem mais largo (W=900, quase sempre
+// maior que o container real, então o traço só ENCOLHE, nunca engrossa) +
+// vector-effect="non-scaling-stroke" (largura do traço fixa em pixels de
+// tela, redundância de segurança) + curva suavizada (Catmull-Rom→Bézier,
+// em vez de segmentos retos com picos angulosos).
+function smoothPath_(pts) {
+  if (pts.length < 2) return '';
+  if (pts.length === 2) return `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)} L${pts[1][0].toFixed(1)},${pts[1][1].toFixed(1)}`;
+  let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i === 0 ? 0 : i - 1];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2 < pts.length ? i + 2 : i + 1];
+    const cp1x = p1[0] + (p2[0] - p0[0]) / 6, cp1y = p1[1] + (p2[1] - p0[1]) / 6;
+    const cp2x = p2[0] - (p3[0] - p1[0]) / 6, cp2y = p2[1] - (p3[1] - p1[1]) / 6;
+    d += ` C${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+  }
+  return d;
+}
 function biaTrendPanel_(label, dias, vals, color, fmtVal) {
   const n = vals.length;
-  const W = 280, H = 90, PAD_L = 3, PAD_R = 3, PAD_T = 8, PAD_B = 3;
+  const W = 900, H = 220, PAD_L = 6, PAD_R = 6, PAD_T = 18, PAD_B = 6;
   const max = Math.max(...vals, 0.0001);
-  const x = i => PAD_L + (i / (n - 1)) * (W - PAD_L - PAD_R);
+  const x = i => PAD_L + (n === 1 ? 0 : (i / (n - 1)) * (W - PAD_L - PAD_R));
   const y = v => H - PAD_B - (v / max) * (H - PAD_T - PAD_B);
-  const linePath = 'M' + vals.map((v, i) => x(i).toFixed(1) + ',' + y(v).toFixed(1)).join('L');
+  const pts = vals.map((v, i) => [x(i), y(v)]);
+  const linePath = smoothPath_(pts);
   const areaPath = linePath + ` L${x(n - 1).toFixed(1)},${(H - PAD_B).toFixed(1)} L${x(0).toFixed(1)},${(H - PAD_B).toFixed(1)} Z`;
   const today = vals[n - 1];
   const gid = 'biaTrendGrad_' + label.replace(/[^a-zA-Z0-9]/g, '');
@@ -2297,12 +2325,12 @@ function biaTrendPanel_(label, dias, vals, color, fmtVal) {
       </div>
       <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;flex:1;min-height:0;display:block">
         <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="${color}" stop-opacity=".25"/>
+          <stop offset="0%" stop-color="${color}" stop-opacity=".22"/>
           <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
         </linearGradient></defs>
         <path d="${areaPath}" fill="url(#${gid})" stroke="none"/>
-        <path d="${linePath}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-        <circle cx="${x(n - 1).toFixed(1)}" cy="${y(today).toFixed(1)}" r="3.2" fill="${color}"/>
+        <path d="${linePath}" fill="none" stroke="${color}" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="${x(n - 1).toFixed(1)}" cy="${y(today).toFixed(1)}" r="3" fill="${color}" vector-effect="non-scaling-stroke"/>
       </svg>
       <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--faint);padding:2px 4px 0;flex-shrink:0">
         <span>${escHtml(dias[0])}</span><span>${escHtml(dias[n - 1])}</span>
