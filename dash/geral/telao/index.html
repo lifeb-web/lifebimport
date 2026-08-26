@@ -1575,7 +1575,13 @@ function fmtInt_(n) { return (n || 0).toLocaleString('pt-BR'); }
 function ga4Row_(dotColor, name, count, maxCount, valText, href) {
   const pct = Math.max((count / Math.max(maxCount, 1)) * 100, 3);
   const tag = href ? 'a' : 'div';
-  const openTag = href ? `<a class="abar-row" href="${href}" target="_blank" style="text-decoration:none;color:inherit;display:block">` : '<div class="abar-row">';
+  // Achado da revisão de segurança (25-26/08): href monta URL a partir de
+  // pagePath do GA4 (dimensão que reflete path real requisitado no site —
+  // não confiável). Sem escapar, um path malicioso com aspas quebraria o
+  // atributo (XSS via atributo). encodeURI trata o path como URL de verdade,
+  // escHtml garante que nenhuma aspa sobrevive dentro do atributo href.
+  const safeHref = href ? escHtml(encodeURI(href)) : '';
+  const openTag = href ? `<a class="abar-row" href="${safeHref}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;display:block">` : '<div class="abar-row">';
   return `
     ${openTag}
       <div class="abar-top">
