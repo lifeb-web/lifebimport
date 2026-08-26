@@ -1826,6 +1826,7 @@ async function loadData(force, silent) {
     hideErr();
     render(_data);
     renderDeltas(_data.kpis, prev && prev.kpis);
+    renderLtvIfPossible_();
     refreshSdrIfActive_();
     refreshAdsHierarchyIfActive_();
     flashDot();
@@ -2181,6 +2182,104 @@ function renderLtvIfPossible_() {
   const effPeriodType = _period === 'month_pick' ? 'custom' : _period;
   const ltv = computeLtvData(_rawDeals, _originMode, effPeriodType, _customFrom, _customTo, todayLocalStr());
   renderLtvSectionTelao(ltv);
+}
+
+// Render da aba LTV — mesmo vocabulário visual de Vendas/SDR (hero+kchips+
+// funil+ranking+feed), reaproveitando helpers genéricos já existentes
+// (sparklineSVG, sdrFunilRowTelao_, fmtMoney, escHtml, AGENDOR_DEAL) em vez
+// de duplicar CSS/markup novo. Ranking e feed aqui não abrem modal (só
+// Vendas tem openRepModal/openWonModal/etc. hoje) — linhas de negócio
+// continuam clicáveis de verdade pro Agendor (feed-row já é <a href>).
+function renderLtvSectionTelao(d) {
+  const k = d.kpis;
+  el('ltv-hero-val').textContent = fmtMoney(k.ganhoValor);
+  el('ltv-hero-sub').textContent = k.ganhoCont + ' negócio' + (k.ganhoCont !== 1 ? 's' : '');
+  if (d.period) {
+    const buckets = sparkBuckets(d.recentWon, d.period.from, d.period.to);
+    el('ltv-hero-spark').innerHTML = sparklineSVG(buckets, '#E92085');
+  }
+
+  el('ltv-k-pipeline').textContent = fmtMoney(k.pipelineTotal);
+  const withVal = (d.deals || []).filter(x => (x.value || 0) > 0).length;
+  el('ltv-k-ativos').textContent = withVal + ' precificado' + (withVal !== 1 ? 's' : '') + ' de ' + (k.ativos || 0);
+  el('ltv-k-conv').textContent = k.conversao !== null ? k.conversao + '%' : '—';
+  el('ltv-k-conv-base').textContent = 'de ' + (k.leadsNoPeriodo || 0) + ' ciclos';
+  el('ltv-k-ticket').textContent = k.ticketMedio > 0 ? fmtMoney(k.ticketMedio) : '—';
+  el('ltv-k-prazo').textContent = k.prazoMedio ? k.prazoMedio + (k.prazoMedio === 1 ? ' dia' : ' dias') : '—';
+  el('ltv-k-prazo-sub').textContent = (k.prazoCount < k.ganhoCont && k.ganhoCont > 0) ? ('de ' + k.prazoCount + ' de ' + k.ganhoCont + ' negócios') : 'até fechar';
+  el('ltv-k-stale').textContent = String(k.staleTotal);
+  el('ltv-k-stale-sub').textContent = k.staleTotal > 0 ? '+7 dias' : 'em dia';
+  el('ltv-k-perdido').textContent = String(k.perdidoCont);
+  el('ltv-k-leads').textContent = k.leadsNoPeriodo !== undefined ? String(k.leadsNoPeriodo) : '—';
+
+  el('ltv-funil-badge').textContent = k.ativos + ' ativos';
+  const maxF = Math.max(...d.funnel.map(s => s.reached ?? s.count), 1);
+  el('ltv-funil-rows').innerHTML = d.funnel.slice().sort((a,b)=>a.seq-b.seq).map(s =>
+    sdrFunilRowTelao_('#E92085', s.name, s.reached ?? s.count, maxF, fmtMoney(s.value))
+  ).join('');
+
+  el('ltv-rep-badge').textContent = d.reps.length + ' reps';
+  const maxPipeline = Math.max(...d.reps.map(r => r.pipeline), 1);
+  el('ltv-lb-rows').innerHTML = d.reps.map((r, i) => {
+    const rank = ['🥇','🥈','🥉','4️⃣','5️⃣'][i] || (i+1)+'°';
+    const pipelinePct = Math.max((r.pipeline / maxPipeline) * 100, 3);
+    const convClass = r.conversao === null ? 'nil' : (r.conversao < 20 ? 'low' : '');
+    const convText  = r.conversao !== null ? r.conversao + '%' : '—';
+    const staleText = r.stale > 0 ? `<span class="lb-stale">⚠${r.stale}</span>` : '';
+    return `
+      <div class="lb-row ${i===0?'gold':''}">
+        <div class="lb-top-row">
+          <span class="lb-rank">${rank}</span>
+          <span class="lb-name">${escHtml(r.name)}</span>
+          <span class="lb-conv ${convClass}">${convText}</span>
+          <div class="pipeline-cell">
+            <span class="pipeline-val">${r.pipeline > 0 ? fmtMoney(r.pipeline) : '—'}</span>
+            <div class="pipeline-bar-wrap"><div class="pipeline-bar" style="width:${pipelinePct}%"></div></div>
+          </div>
+          <span class="lb-num">${fmtMoney(r.ganhoValor)}</span>
+          <span class="lb-num" style="min-width:36px">${r.ativos}${staleText}</span>
+        </div>
+        <div class="lb-sub">
+          <span>Ganhos <b>${r.ganhoCont}</b></span>
+          <span>Ticket médio <b>${r.ticketMedio > 0 ? fmtMoney(r.ticketMedio) : '—'}</b></span>
+          <span>Perdidos <b>${r.perdidoCont}</b></span>
+          <span>Ciclos <b>${r.leadsNoPeriodo || 0}</b></span>
+        </div>
+      </div>`;
+  }).join('');
+  autoScrollIfNeeded('ltv-lb-rows');
+
+  el('ltv-won-total').textContent = fmtMoney(k.ganhoValor);
+  el('ltv-won-rows').innerHTML = d.recentWon.length === 0
+    ? '<div class="feed-empty">Nenhuma recompra fechada no período</div>'
+    : d.recentWon.slice(0, 60).map(x => `
+      <a class="feed-row" href="${AGENDOR_DEAL}${x.id}" target="_blank">
+        <div class="feed-dot fd-green"></div>
+        <div class="feed-info">
+          <div class="feed-co"><span class="og-title-text">${escHtml(x.title)}</span>${originBadge(x._origin)}</div>
+          <div class="feed-rep">${escHtml(x.rep||'—')}</div>
+        </div>
+        <div class="feed-right">
+          <div class="feed-val won">${fmtMoney(x.value)}</div>
+          <div class="feed-date">${fmtDateDisplay(x.closedAt)}</div>
+        </div>
+      </a>`).join('');
+
+  el('ltv-lost-total').textContent = k.perdidoCont + ' ciclos';
+  el('ltv-lost-rows').innerHTML = d.recentLost.length === 0
+    ? '<div class="feed-empty">Nenhum ciclo perdido no período</div>'
+    : d.recentLost.slice(0, 60).map(x => `
+      <a class="feed-row" href="${AGENDOR_DEAL}${x.id}" target="_blank">
+        <div class="feed-dot fd-red"></div>
+        <div class="feed-info">
+          <div class="feed-co"><span class="og-title-text">${escHtml(x.title)}</span>${originBadge(x._origin)}</div>
+          <div class="feed-rep">${escHtml(x.rep||'—')}</div>
+        </div>
+        <div class="feed-right">
+          <div class="feed-val lost">${x.value > 0 ? fmtMoney(x.value) : '—'}</div>
+          <div class="feed-date">${fmtDateDisplay(x.closedAt)}</div>
+        </div>
+      </a>`).join('');
 }
 
 async function loadSdrFresh_() {
