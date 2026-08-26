@@ -1936,7 +1936,6 @@ function ga4EventRow_(icon, nome, count, maxCount) {
 }
 
 let _ga4ViewActive = false;
-let _ga4EverActivated = false;
 let _ga4Raw = null;
 let _ga4Loading = false;
 async function loadGa4Fresh_(fromOverride, toOverride) {
@@ -3033,26 +3032,25 @@ function setView(btn) {
     loadAdsHierarchyFresh_();
   }
   if (_ga4ViewActive) {
-    // 26/08 (Robert: "quando selecionar o painel de GA4 deve selecionar por
-    // padrão o filtro hoje pra ficar mais coerente") — só na 1ª ativação da
-    // aba nesta sessão (não força "Hoje" de novo toda vez que volta pra
-    // GA4, senão o filtro global de Vendas/LTV/SDR/Ads ficaria resetando
-    // sozinho a cada troca de aba). Data explícita (getPeriodDatesClient)
-    // em vez de depender de _data.period pra não correr risco de ler o
-    // período antigo antes do loadData(false) disparado por setPeriod
-    // terminar (é assíncrono).
-    if (!_ga4EverActivated) {
-      _ga4EverActivated = true;
-      const hojeChip = document.querySelector('.pchip[data-p="today"]');
-      if (hojeChip && _period !== 'today') setPeriod(hojeChip);
-      const hojeRange = getPeriodDatesClient('today', null, null, todayLocalStr());
-      loadGa4Fresh_(hojeRange.from, hojeRange.to);
-    } else {
-      if (_ga4Raw) renderGa4SectionTelao(computeGa4Data(_ga4Raw));
-      loadGa4Fresh_();
-    }
+    // 26/08 (Robert, 2x — a 2ª vez explícita "tanto ga4 quanto ia QUANDO
+    // FOREM ESCOLHIDOS deve ficar por padrão no filtro hoje"): não é só a
+    // 1ª ativação da sessão, é TODA VEZ que a aba é selecionada. Aceita a
+    // consequência de que isso também muda o filtro global (Vendas/LTV/SDR/
+    // Ads voltam a refletir "Hoje" depois) — é o comportamento pedido, 2x.
+    // Data explícita (getPeriodDatesClient) em vez de depender de
+    // _data.period pra não correr risco de ler o período antigo antes do
+    // loadData(false) disparado por setPeriod terminar (é assíncrono).
+    const hojeChip = document.querySelector('.pchip[data-p="today"]');
+    if (hojeChip && _period !== 'today') setPeriod(hojeChip);
+    const hojeRange = getPeriodDatesClient('today', null, null, todayLocalStr());
+    loadGa4Fresh_(hojeRange.from, hojeRange.to);
   }
   if (_biaViewActive) {
+    // Mesmo comportamento pedido pro GA4, agora também na BIA — 2 tabs que
+    // fazem mais sentido "ao vivo/hoje" por padrão do que herdando o
+    // período de Vendas.
+    const hojeChip2 = document.querySelector('.pchip[data-p="today"]');
+    if (hojeChip2 && _period !== 'today') setPeriod(hojeChip2);
     if (_biaSnap) renderBiaSectionTelao(_biaSnap);
     loadBiaFresh_();
   }
