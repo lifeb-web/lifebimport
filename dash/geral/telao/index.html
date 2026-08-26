@@ -2410,37 +2410,28 @@ function renderBiaSectionTelao(s) {
   el('bia-deploy-falhas').textContent = s.deploy.falhas;
   el('bia-deploy-falhas').className = 'v ' + (s.deploy.falhas > 0 ? 'crit' : 'good');
   el('bia-deploy-desde').textContent = s.deploy.desdeInicioLog || '—';
-  // 26/08 (Robert: "não tem nada clicável") — resumo vinha cortado em 90
-  // caracteres sem jeito nenhum de ler o resto. Guarda o log completo em
-  // _biaDeployLog e abre modal com o texto inteiro no clique.
+  // 🔴 FIX 26/08 (Robert, achado grave: "essas infos aqui no dash da bia
+  // são muito pessoais... pensa o pessoal ler isso? rede de segurança
+  // mentirosa"): o "resumo" de cada deploy é changelog interno de
+  // engenharia — nome de cliente real, empresa citada de forma crítica,
+  // achado de segurança/LGPD, tudo em texto livre. Não tem lugar num
+  // telão. Removido de vez (o worker bia-dash-sync já nem manda mais esse
+  // campo — filtrado na origem). Card agora mostra só o que é seguro:
+  // suíte, falhas, data. Removida também a interação de abrir modal com o
+  // texto completo (openBiaDeployModal_/_biaDeployLog) — não faz sentido
+  // mais sem o resumo pra mostrar.
   const log = (s.deploy.log || []).slice().reverse();
-  _biaDeployLog = log;
-  el('bia-deploy-rows').innerHTML = log.length === 0 ? '<div class="feed-empty">Nenhum deploy registrado ainda</div>' : log.map((d, i) => `
-    <div class="feed-row" onclick="openBiaDeployModal_(${i})" style="cursor:pointer">
+  el('bia-deploy-rows').innerHTML = log.length === 0 ? '<div class="feed-empty">Nenhum deploy registrado ainda</div>' : log.map(d => `
+    <div class="feed-row" style="cursor:default">
       <div class="feed-dot ${d.suiteFalhou > 0 ? 'fd-red' : 'fd-green'}"></div>
       <div class="feed-info">
-        <div class="feed-co"><span class="og-title-text">${escHtml((d.resumo || '').slice(0, 90))}${(d.resumo || '').length > 90 ? '…' : ''}</span></div>
-        <div class="feed-rep">Suíte ${d.suiteTotal || '—'} · ${d.suiteFalhou || 0} falha${d.suiteFalhou === 1 ? '' : 's'}</div>
+        <div class="feed-co">Suíte ${d.suiteTotal || '—'}</div>
+        <div class="feed-rep">${d.suiteFalhou || 0} falha${d.suiteFalhou === 1 ? '' : 's'}</div>
       </div>
       <div class="feed-right">
         <div class="feed-date">${d.ts ? new Date(d.ts).toLocaleDateString('pt-BR') : ''}</div>
       </div>
     </div>`).join('');
-}
-let _biaDeployLog = [];
-function openBiaDeployModal_(i) {
-  const d = _biaDeployLog[i];
-  if (!d) return;
-  el('modal-title').textContent = d.ts ? new Date(d.ts).toLocaleString('pt-BR') : 'Registro de deploy';
-  el('modal-body').innerHTML = `
-    <div style="padding:14px 18px">
-      <div style="display:flex;gap:16px;margin-bottom:12px;font-size:13px">
-        <span><b>Suíte:</b> ${escHtml(String(d.suiteTotal ?? '—'))}</span>
-        <span style="color:${d.suiteFalhou > 0 ? 'var(--red)' : 'var(--green)'}"><b>Falhas:</b> ${escHtml(String(d.suiteFalhou ?? 0))}</span>
-      </div>
-      <div style="font-size:14px;line-height:1.6;white-space:pre-wrap">${escHtml(d.resumo || 'Sem resumo registrado.')}</div>
-    </div>`;
-  el('modal-overlay').classList.add('show');
 }
 
 async function loadBiaFresh_() {
