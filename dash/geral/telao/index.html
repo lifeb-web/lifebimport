@@ -3707,7 +3707,7 @@ function adGroupRowTelao_(g) {
   const pausedBadge = g.allPaused ? '<span class="og-pill" style="background:rgba(107,100,132,.12);color:var(--muted)">pausado</span>' : '';
   const scopeText = g.campaignsCount > 1 ? g.campaignsCount + ' campanhas' : (g.adsetsCount > 1 ? g.adsetsCount + ' conjuntos' : '1 anúncio só');
   return `
-    <div class="feed-row" onclick="openAdGroupModalTelao('${g.key.replace(/'/g, "\\'")}')">
+    <div class="feed-row" onclick="openAdGroupModalTelao('${escJsAttr_(g.key)}')">
       ${thumb}
       <div class="feed-info">
         <div class="feed-co"><span class="og-title-text">${escHtml(g.name)}</span>${variBadge}${pausedBadge}</div>
@@ -3826,7 +3826,7 @@ function renderAdsHierarchySectionTelao(d) {
         'var(--purple)',
         c.name, c.spend, maxCampSpend,
         c.ctr !== null ? c.ctr.toFixed(2) + '% CTR' : '—',
-        "openAdsCampaignModalTelao('" + c.id + "')",
+        "openAdsCampaignModalTelao('" + escJsAttr_(c.id) + "')",
         c.status !== 'ACTIVE'
       )).join('');
   autoScrollIfNeeded('ads-campanhas-rows');
@@ -3839,7 +3839,7 @@ function renderAdsHierarchySectionTelao(d) {
         'var(--purple)',
         a.name, a.spend, maxAdsetSpend,
         a.ctr !== null ? a.ctr.toFixed(2) + '% CTR' : '—',
-        "openAdsAdsetModalTelao('" + a.id + "')",
+        "openAdsAdsetModalTelao('" + escJsAttr_(a.id) + "')",
         a.status !== 'ACTIVE'
       )).join('');
   autoScrollIfNeeded('ads-adsets-rows');
