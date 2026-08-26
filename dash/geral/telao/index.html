@@ -175,6 +175,15 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 /* Ads (02/08) — mesma forma/altura do hero-row de Vendas/SDR (hero + 7
    kchips). display:none por padrão, JS liga/desliga em setView(). */
 #ads-hero-row{display:none;grid-template-columns:minmax(0,1.5fr) repeat(9,minmax(0,1fr));gap:7px;height:92px;flex-shrink:0}
+/* LTV/Pós-venda (25-26/08) — mesma forma/altura do hero-row de Vendas/SDR
+   (hero + 7 kchips). display:none por padrão, JS liga/desliga em setView(). */
+#ltv-hero-row{display:none;grid-template-columns:minmax(0,1.7fr) repeat(7,minmax(0,1fr));gap:8px;height:92px;flex-shrink:0}
+#ltv-hero{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:10px 16px;display:flex;flex-direction:column;justify-content:center;gap:2px;position:relative;overflow:hidden;box-shadow:0 1px 2px rgba(26,22,38,.04),0 3px 10px -3px rgba(233,32,133,.16)}
+#ltv-hero::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(233,32,133,.06),transparent 60%);pointer-events:none}
+#ltv-main{display:none;grid-template-columns:22fr 46fr 32fr;gap:8px;overflow:hidden;min-height:0;flex:1}
+#ltv-col-left{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
+#ltv-col-center{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
+#ltv-col-right{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
 #ads-hero-row2{display:none;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;height:72px;flex-shrink:0}
 #ads-hero{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:10px 16px;display:flex;flex-direction:column;justify-content:center;gap:2px;position:relative;overflow:hidden;box-shadow:0 1px 2px rgba(26,22,38,.04),0 3px 10px -3px rgba(112,75,155,.16)}
 #ads-hero::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(112,75,155,.06),transparent 60%);pointer-events:none}
@@ -486,6 +495,7 @@ footer strong{color:#fff}
     </div>
     <div class="oseg">
       <button class="ochip active" data-v="vendas" onclick="setView(this)">Vendas</button>
+      <button class="ochip" data-v="ltv" onclick="setView(this)">LTV</button>
       <button class="ochip" data-v="sdr" onclick="setView(this)">SDR</button>
       <button class="ochip" data-v="ads" onclick="setView(this)">Ads</button>
     </div>
@@ -744,6 +754,102 @@ footer strong{color:#fff}
           <span class="hd-total lost" id="sdr-lost-total"></span>
         </div>
         <div class="feed-scroll" id="sdr-lost-rows"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LTV / Pós-venda (25-26/08) — mesma forma do bloco Vendas/SDR (hero+7
+       kchips, depois 3 colunas), display:none até setView() ligar. Dados do
+       MESMO _rawDeals já buscado pra Vendas (computeLtvData filtra pelo
+       funil de Pós-venda), zero fetch novo. -->
+  <div id="ltv-hero-row">
+    <div id="ltv-hero" style="cursor:default">
+      <div class="hero-top"><span class="hero-label">Ganho em Reposição</span><span id="ltv-hero-spark"></span></div>
+      <div class="hero-val" id="ltv-hero-val"><span class="skel" style="width:120px;height:24px"></span></div>
+      <div class="hero-row2"><span class="hero-sub" id="ltv-hero-sub">carregando…</span></div>
+    </div>
+    <div class="kchip">
+      <span class="kc-label">Pipeline Reposição</span>
+      <div class="kc-row"><span class="kc-val" id="ltv-k-pipeline"><span class="skel"></span></span></div>
+      <span class="kc-sub" id="ltv-k-ativos">—</span>
+    </div>
+    <div class="kchip">
+      <span class="kc-label" title="% dos ciclos de reposição que ENTRARAM neste período e já fecharam nova compra.">Conversão ⓘ</span>
+      <div class="kc-row"><span class="kc-val" id="ltv-k-conv"><span class="skel"></span></span></div>
+      <span class="kc-sub" id="ltv-k-conv-base">—</span>
+    </div>
+    <div class="kchip">
+      <span class="kc-label">Ticket Médio</span>
+      <div class="kc-row"><span class="kc-val" id="ltv-k-ticket"><span class="skel"></span></span></div>
+      <span class="kc-sub">por recompra</span>
+    </div>
+    <div class="kchip">
+      <span class="kc-label">Prazo Médio</span>
+      <div class="kc-row"><span class="kc-val" id="ltv-k-prazo"><span class="skel"></span></span></div>
+      <span class="kc-sub" id="ltv-k-prazo-sub">até fechar</span>
+    </div>
+    <div class="kchip">
+      <span class="kc-label">Parados</span>
+      <div class="kc-row"><span class="kc-val" id="ltv-k-stale"><span class="skel"></span></span></div>
+      <span class="kc-sub warn" id="ltv-k-stale-sub">+7 dias</span>
+    </div>
+    <div class="kchip">
+      <span class="kc-label">Perdidos</span>
+      <div class="kc-row"><span class="kc-val" id="ltv-k-perdido"><span class="skel"></span></span></div>
+      <span class="kc-sub">no período</span>
+    </div>
+    <div class="kchip">
+      <span class="kc-label">Ciclos Distrib.</span>
+      <div class="kc-row"><span class="kc-val" id="ltv-k-leads"><span class="skel"></span></span></div>
+      <span class="kc-sub">no CRM</span>
+    </div>
+  </div>
+
+  <div id="ltv-main">
+    <div id="ltv-col-left">
+      <div class="card" id="ltv-funil-card">
+        <div class="card-hd">
+          <span class="card-hd-title">Funil de Reposição</span>
+          <span class="badge" id="ltv-funil-badge">carregando…</span>
+        </div>
+        <div class="funil-body" id="ltv-funil-rows"></div>
+      </div>
+    </div>
+
+    <div id="ltv-col-center">
+      <div class="card" id="ltv-rep-card">
+        <div class="card-hd">
+          <span class="card-hd-title">Ranking Representantes — Reposição</span>
+          <span class="badge" id="ltv-rep-badge"></span>
+        </div>
+        <div class="lb-header">
+          <div class="lb-grid">
+            <span></span>
+            <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);text-align:center">Nome</span>
+            <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);text-align:center">Conv.</span>
+            <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);text-align:center">Pipeline</span>
+            <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);text-align:center">Ganhos</span>
+            <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);text-align:center">Ativos</span>
+          </div>
+        </div>
+        <div class="lb-rows" id="ltv-lb-rows"></div>
+      </div>
+    </div>
+
+    <div id="ltv-col-right">
+      <div class="card" id="ltv-won-card">
+        <div class="card-hd">
+          <span class="card-hd-title">Recompras Fechadas</span>
+          <span class="hd-total won" id="ltv-won-total"></span>
+        </div>
+        <div class="feed-scroll" id="ltv-won-rows"></div>
+      </div>
+      <div class="card" id="ltv-lost-card">
+        <div class="card-hd">
+          <span class="card-hd-title">Ciclos Perdidos</span>
+          <span class="hd-total lost" id="ltv-lost-total"></span>
+        </div>
+        <div class="feed-scroll" id="ltv-lost-rows"></div>
       </div>
     </div>
   </div>
@@ -1991,6 +2097,7 @@ function loadAdsSection(periodFrom, periodTo, inboundData, silent, prevPeriodFro
 // egress de 01/08.
 // ============================================================
 let _sdrRaw = null;
+let _ltvViewActive = false;
 let _sdrViewActive = false;
 let _sdrLoading = false;
 let _sdrLastData = null;
@@ -2030,12 +2137,16 @@ function setView(btn) {
   bar.querySelectorAll('.ochip').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   // 02/08: 3º valor 'ads' adicionado ao toggle (era só vendas/sdr).
-  const view = btn.dataset.v; // 'vendas' | 'sdr' | 'ads'
+  // 25-26/08: 4º valor 'ltv' (funil de Pós-venda).
+  const view = btn.dataset.v; // 'vendas' | 'ltv' | 'sdr' | 'ads'
+  _ltvViewActive = view === 'ltv';
   _sdrViewActive = view === 'sdr';
   _adsViewActive = view === 'ads';
   el('hero-row').style.display = view === 'vendas' ? '' : 'none';
   el('mkt-row').style.display  = view === 'vendas' ? '' : 'none';
   el('main').style.display     = view === 'vendas' ? '' : 'none';
+  el('ltv-hero-row').style.display = view === 'ltv' ? 'grid' : 'none';
+  el('ltv-main').style.display     = view === 'ltv' ? 'grid' : 'none';
   el('sdr-hero-row').style.display = view === 'sdr' ? 'grid' : 'none';
   el('sdr-main').style.display     = view === 'sdr' ? 'grid' : 'none';
   el('ads-hero-row').style.display  = view === 'ads' ? 'grid' : 'none';
@@ -2046,11 +2157,12 @@ function setView(btn) {
   // sem nunca ter tocado o filtro de origem deixava os dois textos errados
   // ("Painel Geral"/"Dados: Agendor") mesmo com uma aba de fonte diferente
   // claramente ativa.
-  const label = view === 'sdr' ? 'SDR (Felipe)' : (view === 'ads' ? 'Meta Ads' : ORIGIN_LABELS[_originMode]);
-  const source = view === 'sdr' ? 'GS Engage' : (view === 'ads' ? 'Meta Ads' : 'Agendor');
+  const label = view === 'ltv' ? 'LTV (Pós-venda)' : (view === 'sdr' ? 'SDR (Felipe)' : (view === 'ads' ? 'Meta Ads' : ORIGIN_LABELS[_originMode]));
+  const source = view === 'ltv' ? 'Agendor' : (view === 'sdr' ? 'GS Engage' : (view === 'ads' ? 'Meta Ads' : 'Agendor'));
   el('footer-mode').textContent = label;
   el('h-title-text').textContent = label;
   el('footer-source').textContent = source;
+  if (_ltvViewActive) renderLtvIfPossible_();
   if (_sdrViewActive) {
     if (_sdrRaw && _data && _data.period) renderSdrSectionTelao(computeSdrData(_sdrRaw, _data.period.from, _data.period.to, _data.period.label));
     loadSdrFresh_();
@@ -2059,6 +2171,16 @@ function setView(btn) {
     if (_adsHierarchyRaw && _data && _data.period) renderAdsHierarchySectionTelao(computeAdsHierarchyData(_adsHierarchyRaw, _data.period.from, _data.period.to, _data.period.label));
     loadAdsHierarchyFresh_();
   }
+}
+
+// LTV reaproveita o MESMO _rawDeals já buscado pra Vendas — nunca busca nada
+// novo, só recalcula (computeLtvData) sempre que a aba fica ativa ou um
+// ciclo novo de loadData termina, espelhando refreshSdrIfActive_().
+function renderLtvIfPossible_() {
+  if (!_ltvViewActive || !_rawDeals || !_data || !_data.period) return;
+  const effPeriodType = _period === 'month_pick' ? 'custom' : _period;
+  const ltv = computeLtvData(_rawDeals, _originMode, effPeriodType, _customFrom, _customTo, todayLocalStr());
+  renderLtvSectionTelao(ltv);
 }
 
 async function loadSdrFresh_() {
