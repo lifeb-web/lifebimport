@@ -1174,6 +1174,17 @@ footer strong{color:#fff}
       <div class="kc-row"><span class="kc-val" id="ga4-k-live"><span class="skel"></span></span></div>
       <span class="kc-sub">visitantes agora</span>
     </div>
+    <!-- 🔴 FIX 26/08 nº3 (Robert: "leads deve vir logo depois e antes de
+         conversão... abriu formulário não precisa de card individual, já
+         tá destacado no funil... posicione numa ordem coerente pensando
+         em marketing") — reordenado com lógica de funil de aquisição:
+         VOLUME (Usuários→Sessões→Visualizações) → QUALIDADE/ENGAJAMENTO
+         (Páginas/Sessão→Duração→Rejeição) → RESULTADO (Leads→Conversão),
+         do topo do funil pro fundo. "Abriu Formulário" removido (já é uma
+         linha do próprio funil de eventos, card duplicava a mesma info);
+         "Páginas / Sessão" entrou no lugar — métrica padrão de qualquer
+         relatório de analytics sério, mede profundidade de navegação,
+         dado 100% real (views/sessions, sem inventar nada novo no back). -->
     <div class="kchip kchip-b" style="--accent-color:var(--purple)">
       <span class="kc-label">Usuários Ativos<span id="ga4-hero-spark" style="float:right"></span></span>
       <div class="kc-row"><span class="kc-val" id="ga4-hero-val"><span class="skel"></span></span></div>
@@ -1184,38 +1195,35 @@ footer strong{color:#fff}
       <div class="kc-row"><span class="kc-val" id="ga4-k-sessions"><span class="skel"></span></span></div>
       <span class="kc-sub">no período</span>
     </div>
-    <!-- 🔴 FIX 26/08 nº2 (Robert: "não colocou a conversão da página, uma
-         das métricas mais importantes") — mesma fórmula da referência
-         (loadStats): leads / usuários ativos × 100. -->
-    <div class="kchip kchip-b" style="--accent-color:var(--green)">
-      <span class="kc-label">Taxa de Conversão</span>
-      <div class="kc-row"><span class="kc-val" id="ga4-k-conv"><span class="skel"></span></span></div>
-      <span class="kc-sub">leads por visitante</span>
-    </div>
     <div class="kchip kchip-b" style="--accent-color:var(--s5)">
       <span class="kc-label">Visualizações</span>
       <div class="kc-row"><span class="kc-val" id="ga4-k-views"><span class="skel"></span></span></div>
       <span class="kc-sub">páginas vistas</span>
+    </div>
+    <div class="kchip kchip-b" style="--accent-color:var(--s1)">
+      <span class="kc-label">Páginas / Sessão</span>
+      <div class="kc-row"><span class="kc-val" id="ga4-k-ppv"><span class="skel"></span></span></div>
+      <span class="kc-sub">profundidade de navegação</span>
+    </div>
+    <div class="kchip kchip-b" style="--accent-color:var(--amber)">
+      <span class="kc-label">Duração Média</span>
+      <div class="kc-row"><span class="kc-val" id="ga4-k-duration"><span class="skel"></span></span></div>
+      <span class="kc-sub">por sessão</span>
     </div>
     <div class="kchip kchip-b" style="--accent-color:var(--red)">
       <span class="kc-label" title="% de sessões de 1 página só, sem interação. Menor é melhor.">Rejeição ⓘ</span>
       <div class="kc-row"><span class="kc-val" id="ga4-k-bounce"><span class="skel"></span></span></div>
       <span class="kc-sub">menor é melhor</span>
     </div>
-    <div class="kchip kchip-b" style="--accent-color:var(--s1)">
-      <span class="kc-label">Duração Média</span>
-      <div class="kc-row"><span class="kc-val" id="ga4-k-duration"><span class="skel"></span></span></div>
-      <span class="kc-sub">por sessão</span>
-    </div>
-    <div class="kchip kchip-b" style="--accent-color:var(--amber)">
-      <span class="kc-label">Abriu Formulário</span>
-      <div class="kc-row"><span class="kc-val" id="ga4-k-abriu"><span class="skel"></span></span></div>
-      <span class="kc-sub">no período</span>
-    </div>
     <div class="kchip kchip-b" style="--accent-color:var(--green)">
       <span class="kc-label">Leads (GA4)</span>
       <div class="kc-row"><span class="kc-val" id="ga4-k-leads"><span class="skel"></span></span></div>
       <span class="kc-sub">Lead_Formulario</span>
+    </div>
+    <div class="kchip kchip-b" style="--accent-color:var(--green)">
+      <span class="kc-label">Taxa de Conversão</span>
+      <div class="kc-row"><span class="kc-val" id="ga4-k-conv"><span class="skel"></span></span></div>
+      <span class="kc-sub">leads por visitante</span>
     </div>
   </div>
 
@@ -2271,12 +2279,15 @@ function renderGa4SectionTelao(d) {
 
   el('ga4-k-sessions').textContent = fmtInt_(d.sessions);
   const leadsGa4_ = d.eventsMap['Lead_Formulario'] || 0;
-  el('ga4-k-conv').textContent = d.activeUsers > 0 ? (leadsGa4_ / d.activeUsers * 100).toFixed(1) + '%' : '—';
   el('ga4-k-views').textContent = fmtInt_(d.views);
-  el('ga4-k-bounce').textContent = fmtPct1_(d.bounce);
+  // 🔴 FIX 26/08 nº3 — "Páginas / Sessão" no lugar de "Abriu Formulário"
+  // (que já é 1 linha do próprio funil de eventos, ao lado). Dado 100%
+  // real: views/sessions, sem depender de nenhum campo novo do proxy.
+  el('ga4-k-ppv').textContent = d.sessions > 0 ? (d.views / d.sessions).toFixed(1) : '—';
   el('ga4-k-duration').textContent = fmtSeconds_(d.avgDur);
-  el('ga4-k-abriu').textContent = fmtInt_(d.eventsMap['Abrir_Formulario'] || 0);
-  el('ga4-k-leads').textContent = fmtInt_(d.eventsMap['Lead_Formulario'] || 0);
+  el('ga4-k-bounce').textContent = fmtPct1_(d.bounce);
+  el('ga4-k-leads').textContent = fmtInt_(leadsGa4_);
+  el('ga4-k-conv').textContent = d.activeUsers > 0 ? (leadsGa4_ / d.activeUsers * 100).toFixed(1) + '%' : '—';
 
   // 26/08: tabela de colunas (Página/Visit./Leads) em vez de barra de
   // progresso, igual dashboard-telao.html original — nome amigável do
