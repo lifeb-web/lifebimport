@@ -3200,10 +3200,25 @@ function openAdGroupModal(key) {
 // performance"): dataviz skill — job "trend over time" = line/area, 1 série
 // não precisa de legenda (o título já diz o que é), rótulo direto nas
 // pontas em vez de eixo cheio (mesmo espírito do sparkline de stat-tile).
+// 🔴 FIX 27/08 (mesmo achado do telão, mesmo dia — Robert: "não podemos
+// deixar vazio, as coisas tem que ter sempre utilidade"): período "Hoje" (1
+// dia só) sempre caía na mensagem de "sem dias suficientes", mesmo com
+// investimento real acontecendo agora. 0 dias = sem gasto real no período
+// (mensagem honesta); 1 dia = valor do dia como stat grande (linha/área não
+// faz sentido matemático pra 1 ponto, mas o espaço nunca fica vazio); 2+
+// dias = gráfico normal.
 function renderSpendTrendChart_(series, containerId) {
   const box = el(containerId);
-  if (!series || series.length < 2) {
-    box.innerHTML = '<div class="feed-empty">Sem dias suficientes nesse período pra mostrar tendência</div>';
+  if (!series || series.length === 0) {
+    box.innerHTML = '<div class="feed-empty">Sem investimento registrado nesse período</div>';
+    return;
+  }
+  if (series.length === 1) {
+    const fmtD1 = iso => { const p = iso.split('-'); return p[2] + '/' + p[1]; };
+    box.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:110px;gap:3px">
+      <div style="font-size:10.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Investimento em ${fmtD1(series[0].date)}</div>
+      <div style="font-size:24px;font-weight:800;color:var(--purple)">${fmtMoney(series[0].spend)}</div>
+    </div>`;
     return;
   }
   const W = 600, H = 120, PAD_L = 4, PAD_R = 4, PAD_T = 10, PAD_B = 8;

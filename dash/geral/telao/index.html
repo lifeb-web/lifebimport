@@ -580,6 +580,15 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
    coexistindo, isolados um do outro). */
 .expand-btn{position:absolute;top:10px;right:10px;width:22px;height:22px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:11px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2}
 .expand-btn:hover{background:var(--bg);color:var(--purple);border-color:var(--purple-l)}
+/* 🔴 FIX 27/08 (Robert: "vi algumas coisas sobrepondo... no cantinho dos
+cards onde você colocou o botão pra expandir") — confirmado ao vivo via CDP:
+o botão nunca reservava espaço nenhum no cabeçalho, então sobrepunha o
+badge/contagem em TODOS os 19 cards (não era caso isolado — .card-hd usa
+justify-content:space-between, o badge já encosta na borda direita, e o
+botão absoluto fica bem em cima dessa mesma borda). .has-expand (marcado nos
+19 cards que ganharam o botão) reserva a folga certa no cabeçalho pra
+qualquer badge/contagem nunca mais entrar embaixo do botão. */
+.card.has-expand .card-hd{padding-right:38px}
 /* z-index ABAIXO do #modal-overlay (500) de propósito — se um clique
    dentro do card expandido abrir um modal de detalhe (ex: campanha,
    SDR), esse tem que aparecer por cima do expand, não escondido atrás
@@ -824,7 +833,7 @@ footer strong{color:#fff}
     </div>
 
     <div id="col-center">
-      <div class="card" id="rep-card"><button class="expand-btn" data-target="lb-rows" data-title="Ranking Representantes">⤢</button>
+      <div class="card has-expand" id="rep-card"><button class="expand-btn" data-target="lb-rows" data-title="Ranking Representantes">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Ranking Representantes</span>
           <span class="badge" id="rep-badge"></span>
@@ -844,14 +853,14 @@ footer strong{color:#fff}
     </div>
 
     <div id="col-right">
-      <div class="card" id="won-card"><button class="expand-btn" data-target="won-rows" data-title="Negócios Ganhos">⤢</button>
+      <div class="card has-expand" id="won-card"><button class="expand-btn" data-target="won-rows" data-title="Negócios Ganhos">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Negócios Ganhos</span>
           <span class="hd-total won" id="won-total"></span>
         </div>
         <div class="feed-scroll" id="won-rows"></div>
       </div>
-      <div class="card" id="lost-card"><button class="expand-btn" data-target="lost-rows" data-title="Negócios Perdidos">⤢</button>
+      <div class="card has-expand" id="lost-card"><button class="expand-btn" data-target="lost-rows" data-title="Negócios Perdidos">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Negócios Perdidos</span>
           <span class="hd-total lost" id="lost-total"></span>
@@ -912,14 +921,14 @@ footer strong{color:#fff}
            e Felipe") — card novo, lê responsible_name dinamicamente (nunca
            hardcoda nome), então aparece sozinho quando o dado de mais
            gente entrar. -->
-      <div class="card" id="sdr-porsdr-card" style="flex:1;display:flex;flex-direction:column;min-height:0"><button class="expand-btn" data-target="sdr-porsdr-rows" data-title="Por SDR">⤢</button>
+      <div class="card has-expand" id="sdr-porsdr-card" style="flex:1;display:flex;flex-direction:column;min-height:0"><button class="expand-btn" data-target="sdr-porsdr-rows" data-title="Por SDR">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Por SDR</span>
           <span class="badge" id="sdr-porsdr-badge">—</span>
         </div>
         <div class="lb-rows" id="sdr-porsdr-rows"></div>
       </div>
-      <div class="card" id="sdr-cadencias-card" style="flex:1;display:flex;flex-direction:column;min-height:0"><button class="expand-btn" data-target="sdr-cadencias-rows" data-title="Cadências">⤢</button>
+      <div class="card has-expand" id="sdr-cadencias-card" style="flex:1;display:flex;flex-direction:column;min-height:0"><button class="expand-btn" data-target="sdr-cadencias-rows" data-title="Cadências">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Cadências</span>
           <span class="badge" id="sdr-cadencias-badge">—</span>
@@ -929,7 +938,7 @@ footer strong{color:#fff}
     </div>
 
     <div id="sdr-col-center">
-      <div class="card" id="sdr-atividades-card"><button class="expand-btn" data-target="sdr-atividades-rows" data-title="Atividades por Tipo">⤢</button>
+      <div class="card has-expand" id="sdr-atividades-card"><button class="expand-btn" data-target="sdr-atividades-rows" data-title="Atividades por Tipo">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Atividades por Tipo</span>
           <span class="badge" id="sdr-atividades-badge">—</span>
@@ -949,7 +958,7 @@ footer strong{color:#fff}
         </div>
         <div id="sdr-whatsapp-chart"></div>
       </div>
-      <div class="card" id="sdr-ligacoes-card"><button class="expand-btn" data-target="sdr-ligacoes-rows" data-title="Resultado das Ligações">⤢</button>
+      <div class="card has-expand" id="sdr-ligacoes-card"><button class="expand-btn" data-target="sdr-ligacoes-rows" data-title="Resultado das Ligações">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Resultado das Ligações</span>
           <span class="badge" id="sdr-ligacoes-badge">—</span>
@@ -959,14 +968,14 @@ footer strong{color:#fff}
     </div>
 
     <div id="sdr-col-right">
-      <div class="card" id="sdr-won-card"><button class="expand-btn" data-target="sdr-won-rows" data-title="Prospecções Ganhas">⤢</button>
+      <div class="card has-expand" id="sdr-won-card"><button class="expand-btn" data-target="sdr-won-rows" data-title="Prospecções Ganhas">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Prospecções Ganhas</span>
           <span class="hd-total won" id="sdr-won-total"></span>
         </div>
         <div class="feed-scroll" id="sdr-won-rows"></div>
       </div>
-      <div class="card" id="sdr-lost-card"><button class="expand-btn" data-target="sdr-lost-rows" data-title="Prospecções Perdidas">⤢</button>
+      <div class="card has-expand" id="sdr-lost-card"><button class="expand-btn" data-target="sdr-lost-rows" data-title="Prospecções Perdidas">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Prospecções Perdidas</span>
           <span class="hd-total lost" id="sdr-lost-total"></span>
@@ -1035,7 +1044,7 @@ footer strong{color:#fff}
     </div>
 
     <div id="ltv-col-center">
-      <div class="card" id="ltv-rep-card"><button class="expand-btn" data-target="ltv-lb-rows" data-title="Ranking Representantes (Reposição)">⤢</button>
+      <div class="card has-expand" id="ltv-rep-card"><button class="expand-btn" data-target="ltv-lb-rows" data-title="Ranking Representantes (Reposição)">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Ranking Representantes (Reposição)</span>
           <span class="badge" id="ltv-rep-badge"></span>
@@ -1055,14 +1064,14 @@ footer strong{color:#fff}
     </div>
 
     <div id="ltv-col-right">
-      <div class="card" id="ltv-won-card"><button class="expand-btn" data-target="ltv-won-rows" data-title="Recompras Fechadas">⤢</button>
+      <div class="card has-expand" id="ltv-won-card"><button class="expand-btn" data-target="ltv-won-rows" data-title="Recompras Fechadas">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Recompras Fechadas</span>
           <span class="hd-total won" id="ltv-won-total"></span>
         </div>
         <div class="feed-scroll" id="ltv-won-rows"></div>
       </div>
-      <div class="card" id="ltv-lost-card"><button class="expand-btn" data-target="ltv-lost-rows" data-title="Ciclos Perdidos">⤢</button>
+      <div class="card has-expand" id="ltv-lost-card"><button class="expand-btn" data-target="ltv-lost-rows" data-title="Ciclos Perdidos">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Ciclos Perdidos</span>
           <span class="hd-total lost" id="ltv-lost-total"></span>
@@ -1176,7 +1185,7 @@ footer strong{color:#fff}
            conjuntos DELA, indentados logo abaixo — mesmo padrão do
            Gerenciador de Anúncios da Meta. Card "Conjuntos de Anúncios"
            da coluna central foi removido (a árvore já cobre esse nível). -->
-      <div class="card" id="ads-campanhas-card"><button class="expand-btn" data-target="ads-campanhas-rows" data-title="Campanhas e Conjuntos">⤢</button>
+      <div class="card has-expand" id="ads-campanhas-card"><button class="expand-btn" data-target="ads-campanhas-rows" data-title="Campanhas e Conjuntos">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Campanhas &amp; Conjuntos</span>
           <span class="badge" id="ads-campanhas-badge">—</span>
@@ -1205,7 +1214,7 @@ footer strong{color:#fff}
     </div>
 
     <div id="ads-col-right">
-      <div class="card" id="ads-anuncios-card"><button class="expand-btn" data-target="ads-anuncios-rows" data-title="Anúncios">⤢</button>
+      <div class="card has-expand" id="ads-anuncios-card"><button class="expand-btn" data-target="ads-anuncios-rows" data-title="Anúncios">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Anúncios</span>
           <span class="hd-total" id="ads-anuncios-total"></span>
@@ -1332,7 +1341,7 @@ footer strong{color:#fff}
          Robert — antes eram barras de progresso tipo funil, ele comparou
          lado a lado e achou "bem mais bonito" o padrão de tabela. -->
     <div id="ga4-col-right">
-      <div class="card ga4-table-card" id="ga4-cities-card" style="flex:1.1;display:flex;flex-direction:column;min-height:0"><button class="expand-btn" data-target="ga4-cities-scroll" data-title="Estado e Cidade">⤢</button>
+      <div class="card ga4-table-card has-expand" id="ga4-cities-card" style="flex:1.1;display:flex;flex-direction:column;min-height:0"><button class="expand-btn" data-target="ga4-cities-scroll" data-title="Estado e Cidade">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Estado / Cidade</span>
           <span class="badge" id="ga4-cities-badge"></span>
@@ -1344,7 +1353,7 @@ footer strong{color:#fff}
           </table>
         </div>
       </div>
-      <div class="card ga4-table-card" id="ga4-sources-card" style="flex:1;display:flex;flex-direction:column;min-height:0"><button class="expand-btn" data-target="ga4-sources-scroll" data-title="Origem do Tráfego">⤢</button>
+      <div class="card ga4-table-card has-expand" id="ga4-sources-card" style="flex:1;display:flex;flex-direction:column;min-height:0"><button class="expand-btn" data-target="ga4-sources-scroll" data-title="Origem do Tráfego">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Origem do Tráfego</span>
           <span class="badge" id="ga4-sources-badge"></span>
@@ -1356,7 +1365,7 @@ footer strong{color:#fff}
           </table>
         </div>
       </div>
-      <div class="card ga4-table-card" id="ga4-pages-card" style="flex:1.2;display:flex;flex-direction:column;min-height:0"><button class="expand-btn" data-target="ga4-pages-scroll" data-title="Por Página">⤢</button>
+      <div class="card ga4-table-card has-expand" id="ga4-pages-card" style="flex:1.2;display:flex;flex-direction:column;min-height:0"><button class="expand-btn" data-target="ga4-pages-scroll" data-title="Por Página">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Por Página</span>
           <span class="badge" id="ga4-pages-badge">carregando…</span>
@@ -1437,14 +1446,14 @@ footer strong{color:#fff}
            rodando ao mesmo tempo, sem nenhuma separação visual — parecia 1
            lista só rolando de forma inconsistente. Virou 2 cards de
            verdade, cada um com seu card-hd/borda/badge próprios. -->
-      <div class="card" id="bia-motor-resumo-card" style="flex:0 0 auto;max-height:175px"><button class="expand-btn" data-target="bia-motor-breakdown" data-title="Resumo do Motor Proativo">⤢</button>
+      <div class="card has-expand" id="bia-motor-resumo-card" style="flex:0 0 auto;max-height:175px"><button class="expand-btn" data-target="bia-motor-breakdown" data-title="Resumo do Motor Proativo">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title"><span id="bia-motor-live-dot"></span>Motor Proativo ao Vivo</span>
           <span class="badge" id="bia-motor-badge">carregando…</span>
         </div>
         <div class="funil-body" id="bia-motor-breakdown" style="justify-content:flex-start;gap:2px"></div>
       </div>
-      <div class="card" id="bia-motor-feed-card" style="flex:1"><button class="expand-btn" data-target="bia-motor-feed" data-title="Eventos Recentes">⤢</button>
+      <div class="card has-expand" id="bia-motor-feed-card" style="flex:1"><button class="expand-btn" data-target="bia-motor-feed" data-title="Eventos Recentes">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Eventos Recentes</span>
           <span class="badge" id="bia-motor-feed-badge"></span>
@@ -4859,13 +4868,28 @@ function bucketizeByIndex_(series, n) {
 // mesma troca SVG-de-linha→Chart.js-de-barra da BIA (renderBiaBarChart_,
 // já genérica o bastante pra reusar aqui sem duplicar nada): poucos dias
 // de gasto é magnitude discreta, barra é mais honesta que curva suavizada.
+// 🔴 FIX 27/08 (Robert: "não podemos deixar vazio, as coisas tem que ter
+// sempre utilidade") — período "Hoje" (1 dia só) sempre caía na mensagem de
+// "sem dias suficientes", mesmo com investimento real acontecendo agora.
+// Card nunca fica vazio de propósito: 0 dias = realmente não teve gasto
+// nenhum no período (mensagem honesta, diferente da anterior); 1 dia = o
+// valor daquele dia mostrado como stat grande (gráfico de tendência não faz
+// sentido matematicamente pra 1 ponto só, mas o espaço sempre mostra algo
+// útil); 2+ dias = gráfico de barra normal.
 function renderSpendTrendChart_(series, containerId) {
   const box = el(containerId);
-  if (!series || series.length < 2) {
-    box.innerHTML = '<div class="feed-empty">Sem dias suficientes nesse período pra mostrar tendência</div>';
+  if (!series || series.length === 0) {
+    box.innerHTML = '<div class="feed-empty">Sem investimento registrado nesse período</div>';
     return;
   }
   const fmtD = iso => { const p = iso.split('-'); return p[2] + '/' + p[1]; };
+  if (series.length === 1) {
+    box.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:3px">
+      <div style="font-size:10.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Investimento em ${fmtD(series[0].date)}</div>
+      <div style="font-size:26px;font-weight:800;color:var(--purple)">${fmtMoney(series[0].spend)}</div>
+    </div>`;
+    return;
+  }
   const dias = series.map(p => fmtD(p.date));
   const vals = series.map(p => p.spend);
   box.innerHTML = '<div style="flex:1;min-height:0;width:100%"><canvas id="ads-trend-canvas"></canvas></div>';
