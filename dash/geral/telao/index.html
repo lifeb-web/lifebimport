@@ -290,10 +290,27 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 /* Motor Proativo — o card "ao vivo" de verdade: header com dot pulsante
    (a Bia agindo, não um custo), breakdown por resultado + feed dos eventos
    mais recentes, ocupando a coluna inteira (flex:1 em cada filho). */
+/* 🔴 FIX 26/08 nº2 (Robert: "metade dele tá branco kkk pelo amor de
+   deus genio") — achado real medindo ao vivo: card do resumo tinha
+   flex:1 (mesma "fatia" proporcional do card do feed), mas o conteúdo
+   dele é uma lista FIXA de ~14 tipos de resultado (não cresce com o
+   tempo) que só ocupava 112px dentro de um card de quase 296px —
+   quase metade vazia. flex:0 0 auto + max-height (baseado no conteúdo
+   real, com scroll se algum dia crescer) em vez de dividir a coluna
+   em proporção fixa; o card do feed (que sim cresce, até 60 itens)
+   absorve todo o resto do espaço. */
 #bia-motor-resumo-card,#bia-motor-feed-card{display:flex;flex-direction:column;min-height:0}
 #bia-motor-live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#22C35D;margin-right:6px;animation:biamotorpulse 1.6s ease-in-out infinite}
 @keyframes biamotorpulse{0%,100%{opacity:1}50%{opacity:.3}}
-#bia-motor-breakdown{flex-shrink:0;max-height:38%;overflow-y:auto}
+/* 🔴 FIX 26/08 nº3 — max-height:38% era relativo ao card ANTIGO (bem
+   maior, flex:1 ocupando ~296px, onde 38% fazia sentido). Com o card
+   agora do tamanho do próprio conteúdo (flex:0 0 auto;max-height:175px
+   no pai), esse 38% sobrando batia um teto de ~66px ANTES de usar o
+   espaço real disponível — sobrava vazio embaixo mesmo já tendo espaço
+   de pai livre. flex:1 (ocupa todo o espaço restante do card, que já
+   tem seu próprio teto) resolve — scroll automático já cobre o caso de
+   ter mais itens do que cabe. */
+#bia-motor-breakdown{flex:1;min-height:0;overflow-y:auto}
 #bia-motor-feed{flex:1;min-height:0}
 .bia-motor-row{display:flex;gap:8px;align-items:flex-start;padding:6px 14px;border-bottom:1px solid var(--border);font-size:11.5px}
 .bia-motor-row:last-child{border-bottom:none}
@@ -750,8 +767,12 @@ footer strong{color:#fff}
   <div id="mkt-row">
     <div class="achip"><span class="ac-label">Investimento Ads<span class="ac-tag">IN</span> <span id="mkt-updated" style="text-transform:none;font-weight:600"></span></span><span class="ac-val" id="mkt-inv"><span class="skel"></span></span><span class="kc-delta" id="mkt-inv-delta"></span></div>
     <div class="achip"><span class="ac-label">Leads Recebidos<span class="ac-tag">IN</span></span><span class="ac-val" id="mkt-leads"><span class="skel"></span></span><span class="kc-delta" id="mkt-leads-delta"></span></div>
-    <div class="achip"><span class="ac-label" title="Custo de Aquisição de Cliente">CAC: Custo por Venda<span class="ac-tag">IN</span></span><span class="ac-val" id="mkt-cac"><span class="skel"></span></span><span class="kc-delta" id="mkt-cac-delta"></span></div>
+    <!-- 🔴 FIX 26/08 (Robert: "coloque o CAC depois do custo por lead") —
+         ordem de funil: Investimento → Leads → CPL (custo pra conseguir
+         1 lead) → CAC (custo pra fechar 1 cliente, etapa seguinte) →
+         ROAS → ACOS. -->
     <div class="achip"><span class="ac-label" title="Custo Por Lead">CPL: Custo por Lead<span class="ac-tag">IN</span></span><span class="ac-val" id="mkt-cpl"><span class="skel"></span></span><span class="kc-delta" id="mkt-cpl-delta"></span></div>
+    <div class="achip"><span class="ac-label" title="Custo de Aquisição de Cliente">CAC: Custo por Venda<span class="ac-tag">IN</span></span><span class="ac-val" id="mkt-cac"><span class="skel"></span></span><span class="kc-delta" id="mkt-cac-delta"></span></div>
     <div class="achip"><span class="ac-label" title="Return On Ad Spend">ROAS: Retorno s/ Investido<span class="ac-tag">IN</span></span><span class="ac-val" id="mkt-roas"><span class="skel"></span></span><span class="kc-delta" id="mkt-roas-delta"></span></div>
     <div class="achip"><span class="ac-label" title="Advertising Cost of Sale">ACOS: % Gasto / Receita<span class="ac-tag">IN</span></span><span class="ac-val" id="mkt-acos"><span class="skel"></span></span><span class="kc-delta" id="mkt-acos-delta"></span></div>
   </div>
@@ -1200,10 +1221,19 @@ footer strong{color:#fff}
       <div class="kc-row"><span class="kc-val" id="ga4-k-views"><span class="skel"></span></span></div>
       <span class="kc-sub">páginas vistas</span>
     </div>
+    <!-- 🔴 FIX 26/08 nº4 (Robert: "Páginas/Sessão sendo que as landing
+         pages não têm duas páginas, são páginas únicas") — "Páginas por
+         Sessão" é métrica clássica de site com navegação entre páginas;
+         aqui cada LP é isolada, não existe "navegar" pra outra página no
+         mesmo domínio, então o número não media o que o rótulo dizia.
+         "Leitura Completa" (% que chegou no ScrollDepth_100) é o
+         equivalente certo pra uma LP de página única: profundidade de
+         ENGAJAMENTO com o conteúdo dessa página, não navegação entre
+         páginas que não existem. -->
     <div class="kchip kchip-b" style="--accent-color:var(--s1)">
-      <span class="kc-label">Páginas / Sessão</span>
+      <span class="kc-label">Leitura Completa</span>
       <div class="kc-row"><span class="kc-val" id="ga4-k-ppv"><span class="skel"></span></span></div>
-      <span class="kc-sub">profundidade de navegação</span>
+      <span class="kc-sub">chegou ao fim da página</span>
     </div>
     <div class="kchip kchip-b" style="--accent-color:var(--amber)">
       <span class="kc-label">Duração Média</span>
@@ -1362,14 +1392,14 @@ footer strong{color:#fff}
            rodando ao mesmo tempo, sem nenhuma separação visual — parecia 1
            lista só rolando de forma inconsistente. Virou 2 cards de
            verdade, cada um com seu card-hd/borda/badge próprios. -->
-      <div class="card" id="bia-motor-resumo-card" style="flex:1">
+      <div class="card" id="bia-motor-resumo-card" style="flex:0 0 auto;max-height:175px">
         <div class="card-hd">
           <span class="card-hd-title"><span id="bia-motor-live-dot"></span>Motor Proativo ao Vivo</span>
           <span class="badge" id="bia-motor-badge">carregando…</span>
         </div>
         <div class="funil-body" id="bia-motor-breakdown" style="justify-content:flex-start;gap:2px"></div>
       </div>
-      <div class="card" id="bia-motor-feed-card" style="flex:1.6">
+      <div class="card" id="bia-motor-feed-card" style="flex:1">
         <div class="card-hd">
           <span class="card-hd-title">Eventos Recentes</span>
           <span class="badge" id="bia-motor-feed-badge"></span>
