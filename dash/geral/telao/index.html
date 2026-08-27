@@ -445,7 +445,9 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
    legível; sobrando linha, agora é o scroll (autoScrollIfNeeded) que cuida. */
 #sdr-cadencias-rows .funil-row,#sdr-atividades-rows .funil-row,#sdr-ligacoes-rows .funil-row{flex-shrink:0}
 
-.card{background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 1px 2px rgba(26,22,38,.04),0 3px 10px -3px rgba(26,22,38,.07)}
+/* position:relative pra .expand-btn (position:absolute) ancorar no
+   canto do card certo, nunca na página inteira. */
+.card{position:relative;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 1px 2px rgba(26,22,38,.04),0 3px 10px -3px rgba(26,22,38,.07)}
 .card-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 8px;border-bottom:1px solid var(--border);flex-shrink:0}
 .card-hd-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--text)}
 .badge{font-size:9px;font-weight:700;padding:2px 8px;border-radius:12px;border:1px solid rgba(112,75,155,.2);color:var(--purple);background:rgba(112,75,155,.06);white-space:nowrap}
@@ -563,6 +565,33 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 .og-pill{font-size:9px;font-weight:800;padding:1px 7px;border-radius:6px;margin-left:6px;letter-spacing:.3px;flex-shrink:0;white-space:nowrap;vertical-align:middle}
 .og-out{background:rgba(112,75,155,.14);color:var(--purple)}
 .og-in{background:rgba(233,32,133,.14);color:var(--magenta)}
+
+/* 🔴 FIX 26/08 (Robert: "em todo card de lista ou que for conveniente
+   ser expansível, caso clique no ícone no cantinho, como já temos
+   nesse dash ou no da Yanmei, pra dar pra visualizar melhor") — mesmo
+   padrão exato do dashboard-telao.html da Yanmei (.expand-btn/
+   .expand-overlay/.expand-modal, função openExpand/closeExpand):
+   clona o innerHTML já renderizado do card pro modal (nunca refaz
+   fetch/recalcula nada, nunca reusa o mesmo nó DOM — innerHTML sempre
+   gera nós novos, evita herdar o listener de auto-scroll que fica só
+   no elemento fonte). IDs "expand*" de propósito, pra nunca colidir
+   com o sistema de modal já existente (#modal-overlay/#modal, usado
+   pros drill-downs de campanha/SDR/etc — são 2 mecanismos diferentes
+   coexistindo, isolados um do outro). */
+.expand-btn{position:absolute;top:10px;right:10px;width:22px;height:22px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:11px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2}
+.expand-btn:hover{background:var(--bg);color:var(--purple);border-color:var(--purple-l)}
+/* z-index ABAIXO do #modal-overlay (500) de propósito — se um clique
+   dentro do card expandido abrir um modal de detalhe (ex: campanha,
+   SDR), esse tem que aparecer por cima do expand, não escondido atrás
+   dele (ação mais recente do usuário sempre no topo da pilha). */
+.expand-overlay{position:fixed;inset:0;background:rgba(26,22,38,.55);display:none;align-items:center;justify-content:center;z-index:450;padding:24px}
+.expand-overlay.show{display:flex}
+.expand-modal{background:var(--card);border-radius:16px;width:min(1100px,92vw);max-height:86vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(26,22,38,.3)}
+.expand-modal-hd{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0}
+.expand-modal-title{font-size:13px;font-weight:800;color:var(--text)}
+.expand-modal-close{background:none;border:1.5px solid var(--border);border-radius:8px;width:30px;height:30px;font-size:14px;cursor:pointer;color:var(--muted)}
+.expand-modal-close:hover{color:var(--red);border-color:var(--red)}
+.expand-modal-body{flex:1;overflow-y:auto;padding:8px 0}
 
 #modal-overlay{display:none;position:fixed;inset:0;background:rgba(26,22,38,.45);z-index:500;align-items:center;justify-content:center;padding:24px}
 #modal-overlay.show{display:flex}
@@ -795,7 +824,7 @@ footer strong{color:#fff}
     </div>
 
     <div id="col-center">
-      <div class="card" id="rep-card">
+      <div class="card" id="rep-card"><button class="expand-btn" data-target="lb-rows" data-title="Ranking Representantes">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Ranking Representantes</span>
           <span class="badge" id="rep-badge"></span>
@@ -815,14 +844,14 @@ footer strong{color:#fff}
     </div>
 
     <div id="col-right">
-      <div class="card" id="won-card">
+      <div class="card" id="won-card"><button class="expand-btn" data-target="won-rows" data-title="Negócios Ganhos">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Negócios Ganhos</span>
           <span class="hd-total won" id="won-total"></span>
         </div>
         <div class="feed-scroll" id="won-rows"></div>
       </div>
-      <div class="card" id="lost-card">
+      <div class="card" id="lost-card"><button class="expand-btn" data-target="lost-rows" data-title="Negócios Perdidos">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Negócios Perdidos</span>
           <span class="hd-total lost" id="lost-total"></span>
@@ -883,14 +912,14 @@ footer strong{color:#fff}
            e Felipe") — card novo, lê responsible_name dinamicamente (nunca
            hardcoda nome), então aparece sozinho quando o dado de mais
            gente entrar. -->
-      <div class="card" id="sdr-porsdr-card" style="flex:1;display:flex;flex-direction:column;min-height:0">
+      <div class="card" id="sdr-porsdr-card" style="flex:1;display:flex;flex-direction:column;min-height:0"><button class="expand-btn" data-target="sdr-porsdr-rows" data-title="Por SDR">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Por SDR</span>
           <span class="badge" id="sdr-porsdr-badge">—</span>
         </div>
         <div class="lb-rows" id="sdr-porsdr-rows"></div>
       </div>
-      <div class="card" id="sdr-cadencias-card" style="flex:1;display:flex;flex-direction:column;min-height:0">
+      <div class="card" id="sdr-cadencias-card" style="flex:1;display:flex;flex-direction:column;min-height:0"><button class="expand-btn" data-target="sdr-cadencias-rows" data-title="Cadências">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Cadências</span>
           <span class="badge" id="sdr-cadencias-badge">—</span>
@@ -900,7 +929,7 @@ footer strong{color:#fff}
     </div>
 
     <div id="sdr-col-center">
-      <div class="card" id="sdr-atividades-card">
+      <div class="card" id="sdr-atividades-card"><button class="expand-btn" data-target="sdr-atividades-rows" data-title="Atividades por Tipo">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Atividades por Tipo</span>
           <span class="badge" id="sdr-atividades-badge">—</span>
@@ -920,7 +949,7 @@ footer strong{color:#fff}
         </div>
         <div id="sdr-whatsapp-chart"></div>
       </div>
-      <div class="card" id="sdr-ligacoes-card">
+      <div class="card" id="sdr-ligacoes-card"><button class="expand-btn" data-target="sdr-ligacoes-rows" data-title="Resultado das Ligações">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Resultado das Ligações</span>
           <span class="badge" id="sdr-ligacoes-badge">—</span>
@@ -930,14 +959,14 @@ footer strong{color:#fff}
     </div>
 
     <div id="sdr-col-right">
-      <div class="card" id="sdr-won-card">
+      <div class="card" id="sdr-won-card"><button class="expand-btn" data-target="sdr-won-rows" data-title="Prospecções Ganhas">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Prospecções Ganhas</span>
           <span class="hd-total won" id="sdr-won-total"></span>
         </div>
         <div class="feed-scroll" id="sdr-won-rows"></div>
       </div>
-      <div class="card" id="sdr-lost-card">
+      <div class="card" id="sdr-lost-card"><button class="expand-btn" data-target="sdr-lost-rows" data-title="Prospecções Perdidas">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Prospecções Perdidas</span>
           <span class="hd-total lost" id="sdr-lost-total"></span>
@@ -1006,7 +1035,7 @@ footer strong{color:#fff}
     </div>
 
     <div id="ltv-col-center">
-      <div class="card" id="ltv-rep-card">
+      <div class="card" id="ltv-rep-card"><button class="expand-btn" data-target="ltv-lb-rows" data-title="Ranking Representantes (Reposição)">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Ranking Representantes (Reposição)</span>
           <span class="badge" id="ltv-rep-badge"></span>
@@ -1026,14 +1055,14 @@ footer strong{color:#fff}
     </div>
 
     <div id="ltv-col-right">
-      <div class="card" id="ltv-won-card">
+      <div class="card" id="ltv-won-card"><button class="expand-btn" data-target="ltv-won-rows" data-title="Recompras Fechadas">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Recompras Fechadas</span>
           <span class="hd-total won" id="ltv-won-total"></span>
         </div>
         <div class="feed-scroll" id="ltv-won-rows"></div>
       </div>
-      <div class="card" id="ltv-lost-card">
+      <div class="card" id="ltv-lost-card"><button class="expand-btn" data-target="ltv-lost-rows" data-title="Ciclos Perdidos">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Ciclos Perdidos</span>
           <span class="hd-total lost" id="ltv-lost-total"></span>
@@ -1147,7 +1176,7 @@ footer strong{color:#fff}
            conjuntos DELA, indentados logo abaixo — mesmo padrão do
            Gerenciador de Anúncios da Meta. Card "Conjuntos de Anúncios"
            da coluna central foi removido (a árvore já cobre esse nível). -->
-      <div class="card" id="ads-campanhas-card">
+      <div class="card" id="ads-campanhas-card"><button class="expand-btn" data-target="ads-campanhas-rows" data-title="Campanhas e Conjuntos">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Campanhas &amp; Conjuntos</span>
           <span class="badge" id="ads-campanhas-badge">—</span>
@@ -1176,7 +1205,7 @@ footer strong{color:#fff}
     </div>
 
     <div id="ads-col-right">
-      <div class="card" id="ads-anuncios-card">
+      <div class="card" id="ads-anuncios-card"><button class="expand-btn" data-target="ads-anuncios-rows" data-title="Anúncios">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Anúncios</span>
           <span class="hd-total" id="ads-anuncios-total"></span>
@@ -1303,7 +1332,7 @@ footer strong{color:#fff}
          Robert — antes eram barras de progresso tipo funil, ele comparou
          lado a lado e achou "bem mais bonito" o padrão de tabela. -->
     <div id="ga4-col-right">
-      <div class="card ga4-table-card" id="ga4-cities-card" style="flex:1.1;display:flex;flex-direction:column;min-height:0">
+      <div class="card ga4-table-card" id="ga4-cities-card" style="flex:1.1;display:flex;flex-direction:column;min-height:0"><button class="expand-btn" data-target="ga4-cities-scroll" data-title="Estado e Cidade">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Estado / Cidade</span>
           <span class="badge" id="ga4-cities-badge"></span>
@@ -1315,7 +1344,7 @@ footer strong{color:#fff}
           </table>
         </div>
       </div>
-      <div class="card ga4-table-card" id="ga4-sources-card" style="flex:1;display:flex;flex-direction:column;min-height:0">
+      <div class="card ga4-table-card" id="ga4-sources-card" style="flex:1;display:flex;flex-direction:column;min-height:0"><button class="expand-btn" data-target="ga4-sources-scroll" data-title="Origem do Tráfego">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Origem do Tráfego</span>
           <span class="badge" id="ga4-sources-badge"></span>
@@ -1327,7 +1356,7 @@ footer strong{color:#fff}
           </table>
         </div>
       </div>
-      <div class="card ga4-table-card" id="ga4-pages-card" style="flex:1.2;display:flex;flex-direction:column;min-height:0">
+      <div class="card ga4-table-card" id="ga4-pages-card" style="flex:1.2;display:flex;flex-direction:column;min-height:0"><button class="expand-btn" data-target="ga4-pages-scroll" data-title="Por Página">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Por Página</span>
           <span class="badge" id="ga4-pages-badge">carregando…</span>
@@ -1393,14 +1422,14 @@ footer strong{color:#fff}
            rodando ao mesmo tempo, sem nenhuma separação visual — parecia 1
            lista só rolando de forma inconsistente. Virou 2 cards de
            verdade, cada um com seu card-hd/borda/badge próprios. -->
-      <div class="card" id="bia-motor-resumo-card" style="flex:0 0 auto;max-height:175px">
+      <div class="card" id="bia-motor-resumo-card" style="flex:0 0 auto;max-height:175px"><button class="expand-btn" data-target="bia-motor-breakdown" data-title="Resumo do Motor Proativo">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title"><span id="bia-motor-live-dot"></span>Motor Proativo ao Vivo</span>
           <span class="badge" id="bia-motor-badge">carregando…</span>
         </div>
         <div class="funil-body" id="bia-motor-breakdown" style="justify-content:flex-start;gap:2px"></div>
       </div>
-      <div class="card" id="bia-motor-feed-card" style="flex:1">
+      <div class="card" id="bia-motor-feed-card" style="flex:1"><button class="expand-btn" data-target="bia-motor-feed" data-title="Eventos Recentes">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Eventos Recentes</span>
           <span class="badge" id="bia-motor-feed-badge"></span>
@@ -1482,6 +1511,19 @@ footer strong{color:#fff}
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
     <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<!-- 26/08 (Robert: "card de lista expansível, ícone no cantinho, como
+     já temos no dash da Yanmei") — modal isolado do #modal-overlay
+     acima (mecanismo diferente, nunca colidem). -->
+<div class="expand-overlay" id="expandOverlay">
+  <div class="expand-modal" onclick="event.stopPropagation()">
+    <div class="expand-modal-hd">
+      <span class="expand-modal-title" id="expandModalTitle"></span>
+      <button class="expand-modal-close" id="expandModalClose">✕</button>
+    </div>
+    <div class="expand-modal-body" id="expandModalBody"></div>
   </div>
 </div>
 
@@ -4687,6 +4729,15 @@ function renderAdsHierarchySectionTelao(d) {
 // openAdsCampaignModalTelao (o clique agora expande em vez de abrir popup).
 let _adsExpandedCampaigns = new Set();
 function toggleAdsCampaignTree_(campaignId) {
+  // 26/08 (achado testando o card expansível novo): esta função
+  // re-renderiza o elemento ORIGINAL (fora do modal), nunca o clone
+  // dentro de #expandModalBody — clicar numa campanha com o card
+  // "Campanhas & Conjuntos" expandido deixava o clone "congelado" sem
+  // mudar nada visível, enquanto o card de verdade por trás do overlay
+  // mudava sem o usuário ver. Fecha o expand ANTES de re-renderizar —
+  // o resultado aparece imediato no card real, sem clone desatualizado.
+  const expandOv = el('expandOverlay');
+  if (expandOv && expandOv.classList.contains('show')) closeExpand();
   if (_adsExpandedCampaigns.has(campaignId)) _adsExpandedCampaigns.delete(campaignId);
   else _adsExpandedCampaigns.add(campaignId);
   if (_adsHierarchyLastData) renderAdsHierarchySectionTelao(_adsHierarchyLastData);
@@ -5569,6 +5620,30 @@ function closeModal(e) {
   if (!e || e.target === el('modal-overlay')) { el('modal-overlay').classList.remove('show'); el('modal').classList.remove('modal-rep'); }
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { el('modal-overlay').classList.remove('show'); el('modal').classList.remove('modal-rep'); } });
+
+// 26/08 (Robert: "card de lista expansível, ícone no cantinho, como já
+// temos no dash da Yanmei") — porte verbatim do openExpand/closeExpand
+// de lá: clona o innerHTML já renderizado do card (nunca refaz fetch
+// nem recalcula nada), nunca reusa o mesmo nó DOM (innerHTML sempre
+// gera nós novos e "mudos" — evita herdar o listener de auto-scroll,
+// que fica preso só no elemento fonte).
+function openExpand(targetId, title) {
+  const src = el(targetId);
+  if (!src) return;
+  el('expandModalTitle').textContent = title;
+  el('expandModalBody').innerHTML = src.innerHTML;
+  el('expandOverlay').classList.add('show');
+}
+function closeExpand() {
+  el('expandOverlay').classList.remove('show');
+}
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.expand-btn');
+  if (btn) { openExpand(btn.dataset.target, btn.dataset.title); return; }
+  if (e.target.id === 'expandOverlay') closeExpand();
+});
+el('expandModalClose').addEventListener('click', closeExpand);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeExpand(); });
 
 // ── UTILS ─────────────────────────────────────────────────────
 function el(id) { return document.getElementById(id); }
