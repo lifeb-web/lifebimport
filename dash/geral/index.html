@@ -82,7 +82,16 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
    descer pra uma linha própria quando não cabe, sem cortar nada. */
 #origin-bar{background:#fff;border-bottom:1px solid var(--border);padding:10px 14px;display:flex;flex-wrap:wrap;justify-content:center;gap:8px;row-gap:6px;flex-shrink:0}
 #origin-bar::-webkit-scrollbar{display:none}
-.oseg{display:inline-flex;background:var(--bg);border-radius:12px;padding:3px;gap:2px;flex-shrink:0}
+/* 🔴 FIX 27/08 (BIA mobile, achado real testando 320px via CDP): o grupo de
+   abas (Vendas/LTV/SDR/Ads/GA4) já vinha bem no limite de 320px — o 6º chip
+   (BIA) estourava o `.oseg` pra ~383px, ~63px além da viewport. flex-wrap
+   sozinho no #origin-bar só decide se o GRUPO INTEIRO cai pra outra linha,
+   nunca quebra os botões DENTRO de um mesmo .oseg (flex-shrink:0 em cada
+   .ochip). max-width:100% + flex-wrap aqui deixa o próprio grupo de abas
+   quebrar em 2 linhas quando não couber, sem overflow horizontal invisível
+   (mesma preocupação já documentada no #origin-bar) e sem afetar o grupo de
+   3 chips (Outbound/Inbound/Ambos), que já cabe numa linha só. */
+.oseg{display:inline-flex;flex-wrap:wrap;justify-content:center;max-width:100%;background:var(--bg);border-radius:12px;padding:3px;gap:2px;flex-shrink:0}
 .ochip{padding:8px 14px;border-radius:9px;border:none;font-family:var(--font);font-size:12px;font-weight:800;color:var(--muted);background:transparent;cursor:pointer;transition:all .18s;white-space:nowrap;flex-shrink:0}
 .ochip.active[data-o="outbound"]{background:var(--purple);color:#fff;box-shadow:0 2px 6px -1px rgba(112,75,155,.35)}
 .ochip.active[data-o="inbound"]{background:var(--magenta);color:#fff;box-shadow:0 2px 6px -1px rgba(233,32,133,.35)}
@@ -204,6 +213,38 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .ga4-pg-legenda{display:block;font-weight:700;font-size:13px;color:var(--text);white-space:normal;word-break:break-word}
 .ga4-pg-path{display:block;font-size:9px;color:var(--muted);font-family:monospace;margin-top:1px;white-space:normal;word-break:break-word}
 .ga4-td-left{text-align:left!important;font-weight:500!important}
+
+/* BIA (27/08, paridade com o telão, dash/geral/telao/index.html) — painel de
+   monitoramento do agente de IA. Lê do worker isolado bia-dash-sync (GET
+   /api/snapshot), nunca do gs-agendor-worker direto. Layout empilhado do
+   mobile (telão usa 3 colunas fixas que não existem aqui) — reaproveita
+   .kpi-strip/.feed-card/.abar-row/.feed-row já existentes, sem nenhum padrão
+   de UI novo (sem card expansível — mobile já rola a página inteira, listas
+   usam scroll interno via max-height, mesmo padrão de #feed-won-rows). */
+.stat-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;font-weight:700}
+.stat-row:last-child{border-bottom:none}
+.stat-row .k{color:var(--muted);font-weight:600}
+.stat-row .v{font-variant-numeric:tabular-nums;color:var(--text)}
+.stat-row .v.crit{color:var(--red)}
+.stat-row .v.warn{color:var(--amber)}
+.stat-row .v.good{color:var(--green)}
+/* Total Projetado × teto do mês — mesmo alerta semântico do .kc-sub.warn
+   (usado no Rejeição do GA4), só faltava a variante crítica (estourou o
+   teto) pro card "Total Projetado" da BIA. */
+.kc-sub.crit{color:var(--red)}
+/* Motor Proativo ao vivo — dot pulsante (achado 26/08 no telão: "ao vivo" de
+   verdade é a Bia agindo agora, não um número de custo pulsando). */
+#bia-motor-live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#22C35D;margin-right:6px;animation:biamotorpulse 1.6s ease-in-out infinite}
+@keyframes biamotorpulse{0%,100%{opacity:1}50%{opacity:.3}}
+/* Estrutura SDR — avatar com iniciais + pill de cargo, mesmo template do
+   telão (card pequeno, dinâmico, nunca hardcoded a nomes específicos). */
+.bia-sdr-card{display:flex;align-items:center;gap:8px;background:var(--bg);border-radius:9px;padding:9px 12px;font-size:.82rem;font-weight:700}
+.bia-sdr-avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.62rem;background:linear-gradient(135deg,var(--purple),var(--magenta));flex-shrink:0}
+/* Motor Proativo (breakdown ~14 tipos) e Eventos Recentes (até 60 itens)
+   podem crescer bastante — mesmo padrão de #feed-won-rows/#ga4-table-scroll:
+   teto de altura + scroll interno em vez de tomar a página inteira. */
+#bia-motor-breakdown{max-height:260px;overflow-y:auto}
+#bia-motor-feed{max-height:280px;overflow-y:auto}
 
 @keyframes skel{0%{background-position:200% 0}100%{background-position:-200% 0}}
 .skel{display:inline-block;height:.9em;background:linear-gradient(90deg,#e8e4f0 25%,#d0cae6 50%,#e8e4f0 75%);background-size:200% 100%;animation:skel 1.4s linear infinite;border-radius:4px;min-width:60px}
@@ -349,6 +390,10 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .abar-row:last-child{border-bottom:none}
 .abar-row[onclick]{cursor:pointer}
 .abar-row[onclick]:active{background:#faf8fc}
+/* 27/08 (BIA, paridade com o telão) — estado de linha selecionada, usado no
+   filtro clicável do Motor Proativo (toque de novo pra limpar). */
+.abar-row-active{background:#f0ebf8}
+.abar-row-active .abar-name{color:var(--purple)}
 .abar-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px}
 .abar-name{font-size:13px;font-weight:700;color:var(--text);min-width:0;display:flex;align-items:center;gap:6px}
 .abar-name-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
@@ -450,6 +495,7 @@ footer strong{color:#fff}
     <button class="ochip" data-v="sdr" onclick="setView(this)">SDR</button>
     <button class="ochip" data-v="ads" onclick="setView(this)">Ads</button>
     <button class="ochip" data-v="ga4" onclick="setView(this)">GA4</button>
+    <button class="ochip" data-v="bia" onclick="setView(this)">BIA</button>
   </div>
 </div>
 
@@ -1042,6 +1088,112 @@ footer strong{color:#fff}
       </div>
     </div>
   </div><!-- /ga4-view -->
+
+  <!-- BIA (27/08, paridade com o telão, dash/geral/telao/index.html) — painel
+       de monitoramento do agente de IA "Bia" (WhatsApp com os representantes).
+       Lê do worker isolado bia-dash-sync (GET /api/snapshot), nunca do
+       gs-agendor-worker direto. -->
+  <div id="bia-view" style="display:none">
+    <div class="sec-hd">Bia (IA)</div>
+
+    <!-- Correção de honestidade de dado (26/08 no telão): a fonte da BIA só
+         suporta hoje/7 dias/30 dias/mês — os outros 7 períodos do dash caem
+         SILENCIOSAMENTE no fallback "Hoje" do lado do worker. Banner
+         obrigatório, não cosmético — sem ele o mobile mostraria dado de Hoje
+         disfarçado de outro período, sem avisar ninguém. -->
+    <div id="bia-periodo-aviso" style="display:none;background:#fff3cd;border:1px solid #e8c468;color:#8a6100;font-size:11px;font-weight:700;padding:8px 12px;border-radius:8px;margin-bottom:10px">
+      ⚠ Este período não é suportado pela BIA (fonte só tem Hoje/7 dias/30 dias/Este mês) — mostrando dado de Hoje.
+    </div>
+
+    <div class="kpi-strip">
+      <div class="kchip">
+        <span class="kc-label" id="bia-k-gasto-label">Gasto Hoje</span>
+        <div class="kc-row"><span class="kc-val" id="bia-k-gasto"><span class="skel"></span></span></div>
+        <span class="kc-sub" id="bia-k-gasto-sub">chamadas hoje</span>
+      </div>
+      <div class="kchip">
+        <span class="kc-label">Mês (IA)</span>
+        <div class="kc-row"><span class="kc-val" id="bia-k-mes"><span class="skel"></span></span></div>
+        <span class="kc-sub" id="bia-k-mes-sub">projeção</span>
+      </div>
+      <div class="kchip">
+        <span class="kc-label">Total Projetado</span>
+        <div class="kc-row"><span class="kc-val" id="bia-k-total"><span class="skel"></span></span></div>
+        <span class="kc-sub" id="bia-k-teto">teto —</span>
+      </div>
+      <div class="kchip">
+        <span class="kc-label">Economia Cache</span>
+        <div class="kc-row"><span class="kc-val" id="bia-k-economia"><span class="skel"></span></span></div>
+        <span class="kc-sub" id="bia-k-cache-pct">— hoje</span>
+      </div>
+      <div class="kchip">
+        <span class="kc-label">Leads Monitor.</span>
+        <div class="kc-row"><span class="kc-val" id="bia-k-leads"><span class="skel"></span></span></div>
+        <span class="kc-sub">Agendor</span>
+      </div>
+      <div class="kchip">
+        <span class="kc-label" id="bia-k-msgs-label">Mensagens Hoje</span>
+        <div class="kc-row"><span class="kc-val" id="bia-k-msgs"><span class="skel"></span></span></div>
+        <span class="kc-sub">envios totais</span>
+      </div>
+      <div class="kchip">
+        <span class="kc-label"><span id="bia-live-dot" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--amber);margin-right:4px"></span>Motor Proativo</span>
+        <div class="kc-row"><span class="kc-val" id="bia-k-motor"><span class="skel"></span></span></div>
+        <span class="kc-sub">eventos hoje</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-hd"><span id="bia-motor-live-dot"></span>Motor Proativo ao Vivo <span id="bia-motor-badge" style="color:var(--purple);font-weight:800;text-transform:none;letter-spacing:0"></span></div>
+      <div class="feed-card">
+        <div id="bia-motor-breakdown"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-hd">Eventos Recentes <span id="bia-motor-feed-badge" style="color:var(--purple);font-weight:800;text-transform:none;letter-spacing:0"></span></div>
+      <div class="feed-card">
+        <div id="bia-motor-feed"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-hd">Confiança &amp; Saúde <span id="bia-gates-badge" style="color:var(--purple);font-weight:800;text-transform:none;letter-spacing:0"></span></div>
+      <div class="feed-card" style="padding:2px 14px">
+        <div class="stat-row"><span class="k">🚨 Fingimento pego</span><span class="v" id="bia-gate-fing">—</span></div>
+        <div class="stat-row"><span class="k">Negação sem consultar</span><span class="v" id="bia-gate-neg">—</span></div>
+        <div class="stat-row"><span class="k">Número sem consultar</span><span class="v" id="bia-gate-afd">—</span></div>
+        <div class="stat-row"><span class="k">Contagem ≠ lista</span><span class="v" id="bia-gate-3b">—</span></div>
+        <div class="stat-row"><span class="k">Cérebro: última resposta</span><span class="v" id="bia-cerebro-min">—</span></div>
+        <div class="stat-row"><span class="k">Respostas da Bia (hoje)</span><span class="v" id="bia-respostas">—</span></div>
+        <div class="stat-row"><span class="k">Aprovações pendentes</span><span class="v" id="bia-aprovacoes">—</span></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-hd">Tendência de Custo × Notificações <span id="bia-trend-badge" style="color:var(--purple);font-weight:800;text-transform:none;letter-spacing:0"></span></div>
+      <div class="feed-card" style="padding:10px 10px 4px" id="bia-trend-chart"></div>
+    </div>
+
+    <div>
+      <div class="sec-hd">Estrutura SDR <span id="bia-sdr-badge" style="color:var(--purple);font-weight:800;text-transform:none;letter-spacing:0"></span></div>
+      <div id="bia-sdr-cards" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+
+    <div>
+      <div class="sec-hd">Saúde do Deploy <span id="bia-deploy-badge" style="color:var(--purple);font-weight:800;text-transform:none;letter-spacing:0"></span></div>
+      <div class="feed-card" style="padding:2px 14px">
+        <div class="stat-row"><span class="k">Suíte atual</span><span class="v good" id="bia-deploy-suite">—</span></div>
+        <div class="stat-row"><span class="k">Falhas</span><span class="v" id="bia-deploy-falhas">—</span></div>
+        <div class="stat-row"><span class="k">Desde início do log</span><span class="v" id="bia-deploy-desde">—</span></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-hd">Deploys por Dia <span id="bia-deploy-freq-badge" style="color:var(--purple);font-weight:800;text-transform:none;letter-spacing:0"></span></div>
+      <div class="feed-card" style="padding:10px 10px 4px" id="bia-deploy-freq-chart"></div>
+    </div>
+  </div><!-- /bia-view -->
 </div>
 
 <footer>Life B Import &nbsp;·&nbsp; <strong id="footer-mode">Painel Geral</strong> &nbsp;·&nbsp; Dados: <span id="footer-source">Agendor</span></footer>
@@ -1485,12 +1637,20 @@ let _originMode = 'both';
 // origem) a cada mudança, restaura ANTES do primeiro loadData() do boot.
 const UI_STATE_KEY = 'dash_geral_mobile_ui_state_v1';
 function _currentViewName_() {
-  return _ltvViewActive ? 'ltv' : _sdrViewActive ? 'sdr' : _adsViewActive ? 'ads' : _ga4ViewActive ? 'ga4' : 'vendas';
+  return _ltvViewActive ? 'ltv' : _sdrViewActive ? 'sdr' : _adsViewActive ? 'ads' : _ga4ViewActive ? 'ga4' : _biaViewActive ? 'bia' : 'vendas';
 }
 function saveUiState_() {
   try {
+    // 🔴 FIX 27/08 (mesmo achado do telão no mesmo dia): enquanto em GA4/BIA,
+    // _period está forçado pra "Hoje" (ver restorePeriodBeforeSpecial_ mais
+    // abaixo) — salvar ESSE valor faria um reload no meio de uma visita à
+    // GA4/BIA persistir "Hoje" como se fosse o período real de Vendas,
+    // contaminando o resting state esperado mesmo depois do usuário sair da
+    // aba. Salva o período de ANTES (memorizado em _periodBeforeSpecialTab_)
+    // quando existir.
+    const realPeriod = _periodBeforeSpecialTab_ || { period: _period, customFrom: _customFrom, customTo: _customTo };
     localStorage.setItem(UI_STATE_KEY, JSON.stringify({
-      view: _currentViewName_(), period: _period, customFrom: _customFrom, customTo: _customTo, origin: _originMode
+      view: _currentViewName_(), period: realPeriod.period, customFrom: realPeriod.customFrom, customTo: realPeriod.customTo, origin: _originMode
     }));
   } catch (e) { /* localStorage indisponível — não é crítico, segue sem persistir */ }
 }
@@ -1669,7 +1829,7 @@ function setOrigin(btn) {
   // adicionada separadamente na condição acima. Trocado pra 1 flag "estou em
   // Vendas" (mesmo padrão já adotado no telão) — não quebra de novo se uma
   // aba nova aparecer no futuro sem alguém lembrar de enumerar aqui.
-  const _emVendas = !_ltvViewActive && !_sdrViewActive && !_adsViewActive && !_ga4ViewActive;
+  const _emVendas = !_ltvViewActive && !_sdrViewActive && !_adsViewActive && !_ga4ViewActive && !_biaViewActive;
   if (_emVendas) {
     el('h-title-text').textContent = label;
     el('footer-mode').textContent = label;
@@ -1919,6 +2079,7 @@ async function loadData(force, silent) {
     refreshSdrIfActive_();
     refreshAdsHierarchyIfActive_();
     refreshGa4IfActive_();
+    refreshBiaIfActive_();
     flashDot();
     try { localStorage.setItem('geral_snapshot', JSON.stringify({ data: curr, savedAt: Date.now() })); } catch(_) {}
   } catch(e) {
@@ -2281,6 +2442,30 @@ async function fetchSdrRaw() {
   return { leads, prospections, activities, calls };
 }
 
+// 🔴 FIX 27/08 (mesmo achado do telão no mesmo dia): GA4/BIA forçam o filtro
+// GLOBAL pra "Hoje" quando selecionadas (decisão já tomada e mantida — 2
+// abas que fazem mais sentido "ao vivo/hoje" por padrão), mas isso vazava pra
+// Vendas/LTV/SDR/Ads: sair da GA4/BIA deixava o resto do dash preso em "Hoje"
+// até alguém trocar manualmente. Com o estado sobrevivendo ao auto-reload
+// (saveUiState_/restoreUiStateBeforeLoad_), esse "Hoje" vazado virava
+// PERMANENTE. Memoriza o período real de antes de entrar em GA4/BIA (só na
+// 1ª vez, não sobrescreve se já estava dentro de ga4<->bia) e restaura ao
+// voltar pra qualquer aba que usa o filtro global de verdade.
+let _periodBeforeSpecialTab_ = null;
+function restorePeriodBeforeSpecial_() {
+  const saved = _periodBeforeSpecialTab_;
+  _periodBeforeSpecialTab_ = null;
+  _period = saved ? saved.period : 'month'; // sem memória (ex.: sessão já carregou direto em ga4/bia) -> padrão real do dash
+  _customFrom = saved ? saved.customFrom : null;
+  _customTo = saved ? saved.customTo : null;
+  _monthPickLabel = saved ? saved.monthPickLabel : '';
+  _mpSelYear = saved ? saved.mpSelYear : null;
+  _mpSelMonth = saved ? saved.mpSelMonth : null;
+  const chip = document.querySelector('.pchip[data-p="' + _period + '"]');
+  if (chip) { document.querySelectorAll('.pchip').forEach(b => b.classList.remove('active')); chip.classList.add('active'); }
+  loadData(false);
+}
+
 // Robert (01/08): SDR não tem polling automático de propósito (evita repetir
 // o erro de egress) — mas precisa parecer atualizado. Solução: mostra na
 // hora o que já tem em memória (se já visitou antes, zero espera) E busca
@@ -2292,25 +2477,34 @@ function setView(btn) {
   bar.querySelectorAll('.ochip').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   // 26/08: 4º valor 'ltv' adicionado ao toggle (era vendas/sdr/ads).
-  // 27/08: 5º valor 'ga4' (Analytics de tráfego/comportamento) — paridade
-  // com o telão. Mesmo padrão, cada view é uma aba exclusiva.
-  const view = btn.dataset.v; // 'vendas' | 'ltv' | 'sdr' | 'ads' | 'ga4'
+  // 27/08: 5º valor 'ga4' (Analytics de tráfego/comportamento) e 6º 'bia'
+  // (painel de monitoramento do agente de IA) — paridade com o telão. Mesmo
+  // padrão, cada view é uma aba exclusiva.
+  const view = btn.dataset.v; // 'vendas' | 'ltv' | 'sdr' | 'ads' | 'ga4' | 'bia'
+  const _wasSpecialTab_ = _ga4ViewActive || _biaViewActive;
+  const _willBeSpecialTab_ = view === 'ga4' || view === 'bia';
+  if (_willBeSpecialTab_ && !_wasSpecialTab_ && !_periodBeforeSpecialTab_) {
+    _periodBeforeSpecialTab_ = { period: _period, customFrom: _customFrom, customTo: _customTo, monthPickLabel: _monthPickLabel, mpSelYear: _mpSelYear, mpSelMonth: _mpSelMonth };
+  }
   _ltvViewActive = view === 'ltv';
   _sdrViewActive = view === 'sdr';
   _adsViewActive = view === 'ads';
   _ga4ViewActive = view === 'ga4';
+  _biaViewActive = view === 'bia';
+  if (_wasSpecialTab_ && !_willBeSpecialTab_) restorePeriodBeforeSpecial_();
   el('vendas-view').style.display = view === 'vendas' ? '' : 'none';
   el('ltv-view').style.display = view === 'ltv' ? '' : 'none';
   el('sdr-view').style.display = view === 'sdr' ? '' : 'none';
   el('ads-view').style.display = view === 'ads' ? '' : 'none';
   el('ga4-view').style.display = view === 'ga4' ? '' : 'none';
+  el('bia-view').style.display = view === 'bia' ? '' : 'none';
   // achado 02/08 (auditoria): faltava aqui — h-title-text/footer-mode/
   // footer-source só eram escritos por setOrigin(), nunca por setView().
   // Entrar em SDR/Ads (sem nunca ter tocado o filtro de origem) deixava os
   // 3 textos errados ("Painel Geral"/"Dados: Agendor") mesmo com uma aba
   // de fonte diferente claramente ativa.
-  const label = view === 'ltv' ? 'LTV (Pós-venda)' : (view === 'sdr' ? 'SDR (Felipe)' : (view === 'ads' ? 'Meta Ads' : (view === 'ga4' ? 'GA4 Analytics' : ORIGIN_LABELS[_originMode])));
-  const source = view === 'ltv' ? 'Agendor' : (view === 'sdr' ? 'GS Engage' : (view === 'ads' ? 'Meta Ads' : (view === 'ga4' ? 'Google Analytics' : 'Agendor')));
+  const label = view === 'ltv' ? 'LTV (Pós-venda)' : (view === 'sdr' ? 'SDR (Felipe)' : (view === 'ads' ? 'Meta Ads' : (view === 'ga4' ? 'GA4 Analytics' : (view === 'bia' ? 'Bia (IA)' : ORIGIN_LABELS[_originMode]))));
+  const source = view === 'ltv' ? 'Agendor' : (view === 'sdr' ? 'GS Engage' : (view === 'ads' ? 'Meta Ads' : (view === 'ga4' ? 'Google Analytics' : (view === 'bia' ? 'bia-dash-sync' : 'Agendor'))));
   el('h-title-text').textContent = label;
   el('footer-mode').textContent = label;
   el('footer-source').textContent = source;
@@ -2337,6 +2531,15 @@ function setView(btn) {
     if (hojeChip && _period !== 'today') setPeriod(hojeChip);
     const hojeRange = getPeriodDatesClient('today', null, null, todayLocalStr());
     loadGa4Fresh_(hojeRange.from, hojeRange.to);
+  }
+  if (_biaViewActive) {
+    // Mesmo comportamento pedido pro GA4 (2x no telão), agora também na BIA
+    // — 2 abas que fazem mais sentido "ao vivo/hoje" por padrão do que
+    // herdando o período de Vendas.
+    const hojeChip2 = document.querySelector('.pchip[data-p="today"]');
+    if (hojeChip2 && _period !== 'today') setPeriod(hojeChip2);
+    if (_biaSnap) renderBiaSection(_biaSnap);
+    loadBiaFresh_();
   }
   saveUiState_();
 }
@@ -3565,6 +3768,289 @@ function refreshGa4IfActive_() {
   if (_ga4ViewActive) {
     if (_ga4Raw) renderGa4Section(computeGa4Data(_ga4Raw));
     loadGa4Fresh_();
+  }
+}
+
+// ── BIA (27/08) — mobile completo, paridade com o telão (dash/geral/telao/
+// index.html). Lê do worker isolado bia-dash-sync (GET /api/snapshot),
+// NUNCA do gs-agendor-worker direto (API read-only, fora do escopo desta
+// sessão). Só 4 dos ~11 períodos do dash têm equivalente exato no worker
+// (Hoje/Semana≈7d/Mês/30 dias) — os outros caem no fallback "Hoje" do lado
+// de lá, com aviso explícito (#bia-periodo-aviso) em vez de deixar a
+// inconsistência silenciosa (mesmo fix de honestidade de dado feito no
+// telão em 26/08).
+const BIA_SYNC_URL = 'https://bia-dash-sync.robert131196.workers.dev/api/snapshot';
+const BIA_PERIODO_MAP = { today: 'hoje', week: '7d', month: 'mes', '30d': '30d' };
+function biaPeriodoFor_(period) { return BIA_PERIODO_MAP[period] || null; }
+let _biaViewActive = false;
+let _biaSnap = null;
+let _biaLoading = false;
+
+async function fetchBiaSnapshot(periodo) {
+  const r = await fetch(BIA_SYNC_URL + '?periodo=' + (periodo || 'hoje'));
+  if (!r.ok) throw new Error('bia-dash-sync HTTP ' + r.status);
+  return r.json();
+}
+
+function hexToRgba_(hex, alpha) {
+  const h = String(hex).replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16), g = parseInt(h.substring(2, 4), 16), b = parseInt(h.substring(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+// Gráfico genérico Chart.js — porte verbatim do telão (renderBiaBarChart_):
+// barra discreta por padrão, vira linha preenchida acima de 45 pontos
+// (período longo ilegível em barra fina), linha de média móvel tracejada
+// com 8+ pontos, eixo Y formatado via opts.yFmt. Usado pela Tendência e por
+// Deploys por Dia. maxTicksLimit reduzido de 12 (telão, tela larga) pra 8
+// — adaptação de densidade pro canvas mais estreito do mobile (320-428px).
+let _biaCharts = {};
+function renderBiaBarChart_(canvasId, dias, vals, colorHex, fmtVal, opts) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  if (_biaCharts[canvasId]) { _biaCharts[canvasId].destroy(); delete _biaCharts[canvasId]; }
+  const n = vals.length;
+  const yFmt = (opts && opts.yFmt) || (v => v);
+  const useLine = n > 45;
+  const bg = vals.map((_, i) => i === n - 1 ? hexToRgba_(colorHex, .85) : hexToRgba_(colorHex, .22));
+  const border = vals.map((_, i) => i === n - 1 ? colorHex : hexToRgba_(colorHex, .5));
+  const datasets = useLine
+    ? [{ type: 'line', data: vals, borderColor: colorHex, backgroundColor: hexToRgba_(colorHex, .12), borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, pointHoverBackgroundColor: colorHex, fill: true, tension: .3, order: 2 }]
+    : [{ type: 'bar', data: vals, backgroundColor: bg, borderColor: border, borderWidth: 1.5, borderRadius: 5, borderSkipped: false, maxBarThickness: 46, order: 2 }];
+  if (n >= 8) {
+    const media = vals.map((_, i) => {
+      const janela = vals.slice(Math.max(0, i - 2), i + 3);
+      return janela.reduce((a, b) => a + b, 0) / janela.length;
+    });
+    datasets.push({ type: 'line', data: media, borderColor: 'rgba(107,100,132,.55)', borderWidth: 2, borderDash: [5, 4], pointRadius: 0, fill: false, tension: .4, order: 1 });
+  }
+  _biaCharts[canvasId] = new Chart(canvas.getContext('2d'), {
+    data: { labels: dias, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor: '#221B32', padding: 10, displayColors: false, filter: item => item.datasetIndex === 0, callbacks: { label: c => ' ' + fmtVal(c.parsed.y) } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#6b6484', font: { size: 9, weight: '700' }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, border: { display: false } },
+        y: { grid: { color: 'rgba(0,0,0,.05)' }, ticks: { color: '#6b6484', font: { size: 10 }, precision: 0, callback: yFmt }, border: { display: false }, beginAtZero: true }
+      }
+    }
+  });
+}
+function biaTrendHeroHeader_(label, valText, color) {
+  return `<div style="display:flex;justify-content:space-between;align-items:baseline;padding:0 2px 4px">
+    <span style="font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">${escHtml(label)}</span>
+    <span style="font-size:16px;font-weight:800;color:${color}">${valText}<span style="font-size:9px;font-weight:700;color:var(--faint);margin-left:3px">hoje</span></span>
+  </div>`;
+}
+// Adaptado do telão: lá os 2 painéis (Custo/Notificações) ficam lado a lado
+// num card só de 3 colunas fixas; aqui empilham (2 seções cheias, 1 por
+// linha) — o mobile não tem largura pra 2 gráficos + divisor lado a lado
+// de forma legível (mesma classe de adaptação já usada no kpi-strip 2
+// colunas em vez do grid de 9 do telão).
+function renderBiaTrendChart_(dias, custo, notif, containerId) {
+  const box = el(containerId);
+  const n = dias.length;
+  if (n < 2) { box.innerHTML = '<div class="feed-empty">Sem tendência suficiente ainda</div>'; return; }
+  const custoHoje = custo[custo.length - 1] || 0, notifHoje = notif[notif.length - 1] || 0;
+  box.innerHTML = `
+    ${biaTrendHeroHeader_('Custo (R$)', 'R$ ' + custoHoje.toFixed(2), '#E92085')}
+    <div style="height:170px"><canvas id="bia-chart-custo"></canvas></div>
+    <div style="height:1px;background:var(--border);margin:12px 0 10px"></div>
+    ${biaTrendHeroHeader_('Notificações', fmtInt_(notifHoje), '#704B9B')}
+    <div style="height:170px"><canvas id="bia-chart-notif"></canvas></div>`;
+  renderBiaBarChart_('bia-chart-custo', dias, custo, '#E92085', v => 'R$ ' + (v || 0).toFixed(2), { yFmt: v => 'R$' + Math.round(v) });
+  renderBiaBarChart_('bia-chart-notif', dias, notif, '#704B9B', v => fmtInt_(v));
+}
+
+function prettyLabel_(s) {
+  if (!s) return '—';
+  let out = String(s).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  // Convenção de nomenclatura INTERNA/histórica do sistema da Bia
+  // (gs-agendor-worker, fora do acesso de escrita desta sessão) — confirmado
+  // pelo Robert que "seria_"/"_simulada" é só rótulo legado, TODA ação já é
+  // real e enviada. Só troca a palavra exibida — a chave crua usada pro
+  // filtro clicável continua intacta.
+  out = out.replace(/^Seria\s+/i, '').replace(/\s*Simulad[ao]\b/gi, '');
+  return out.trim() || '—';
+}
+function timeAgo_(ts) {
+  if (!ts) return '';
+  const mins = Math.round((Date.now() - ts) / 60000);
+  if (mins < 1) return 'agora';
+  if (mins < 60) return mins + 'min atrás';
+  const h = Math.floor(mins / 60);
+  return h + 'h' + (mins % 60 ? (mins % 60) + 'min' : '') + ' atrás';
+}
+
+// Paleta cíclica pro breakdown do Motor Proativo — "resultados" são
+// categorias abertas (~14 tipos), sem cor semântica fixa (diferente de
+// Confiança & Saúde, que usa crit/warn/good). Mesma paleta do GA4_S do
+// telão, renomeada (não é específica de GA4).
+const BIA_S = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'];
+// Mesmo padrão .abar-row já usado em Ads/GA4 (rótulo+valor em cima, barra
+// full-width embaixo) — clicável (toque filtra o feed abaixo pra só aquele
+// resultado, toque de novo limpa).
+function biaMotorRow_(dotColor, name, count, maxCount, onclickAttr) {
+  const pct = Math.max((count / Math.max(maxCount, 1)) * 100, 3);
+  return `
+    <div class="abar-row" onclick="${onclickAttr}">
+      <div class="abar-top">
+        <span class="abar-name" title="${escHtml(name)}"><span class="abar-dot" style="background:${dotColor}"></span><span class="abar-name-text">${escHtml(name)}</span></span>
+        <span class="abar-val">${fmtInt_(count)}</span>
+      </div>
+      <div class="abar-track"><div class="abar-fill" style="width:${pct}%;background:${dotColor}"></div></div>
+    </div>`;
+}
+
+let _biaMotorFilter = null;
+function renderBiaMotorSection_(s) {
+  const porResultado = Object.entries(s.motorPorResultado || {}).sort((a, b) => b[1] - a[1]);
+  const maxMotor = Math.max(...porResultado.map(x => x[1]), 1);
+  el('bia-motor-breakdown').innerHTML = porResultado.length === 0
+    ? '<div class="feed-empty">Nenhum evento hoje ainda</div>'
+    : porResultado.map(([k, v], i) => {
+        const row = biaMotorRow_(BIA_S[i % BIA_S.length], prettyLabel_(k), v, maxMotor, `filterBiaMotorFeed_('${escJsAttr_(k)}')`);
+        return _biaMotorFilter === k ? row.replace('class="abar-row"', 'class="abar-row abar-row-active"') : row;
+      }).join('');
+
+  // Eventos Recentes — reaproveita .feed-row (mesmo componente de
+  // Won/Lost/Ads) em vez do .bia-motor-row próprio do telão.
+  const recentes = s.motorRecentes || [];
+  const filtered = _biaMotorFilter ? recentes.filter(e => (e.resultado || e.estagio || '?') === _biaMotorFilter) : recentes;
+  el('bia-motor-feed').innerHTML = filtered.length === 0
+    ? `<div class="feed-empty">${_biaMotorFilter ? 'Nenhum evento desse tipo na janela recente' : 'Sem atividade recente'}</div>`
+    : filtered.map(e => `
+      <div class="feed-row" style="cursor:default">
+        <div class="feed-info">
+          <div class="feed-co">${escHtml(e.repNome || 'Motor Proativo')}</div>
+          <div class="feed-rep">${escHtml(prettyLabel_(e.estagio))} → ${escHtml(prettyLabel_(e.resultado))}${e.dealId ? ' · deal ' + escHtml(String(e.dealId)) : ''}</div>
+        </div>
+        <div class="feed-right"><div class="feed-date">${timeAgo_(e.ts)}</div></div>
+      </div>`).join('');
+
+  // Badge do resumo mostra o total fixo (não muda com o filtro); badge do
+  // feed mostra o resultado do filtro aplicado, que é onde o filtro atua.
+  el('bia-motor-badge').textContent = (s.motorProativoHoje || 0) + ' evento' + (s.motorProativoHoje === 1 ? '' : 's') + ' hoje';
+  el('bia-motor-feed-badge').textContent = _biaMotorFilter
+    ? filtered.length + ' de ' + (s.motorProativoHoje || 0) + ' · filtro: ' + prettyLabel_(_biaMotorFilter) + ' (toque de novo p/ limpar)'
+    : filtered.length + ' recentes';
+}
+function filterBiaMotorFeed_(key) {
+  _biaMotorFilter = (_biaMotorFilter === key) ? null : key;
+  if (_biaSnap) renderBiaMotorSection_(_biaSnap);
+}
+
+function renderBiaSection(s) {
+  // Aviso explícito quando o período pedido não é suportado pela fonte
+  // (worker só tem hoje/7d/30d/mes) em vez de deixar a discordância entre
+  // o chip selecionado e o dado mostrado silenciosa.
+  el('bia-periodo-aviso').style.display = (biaPeriodoFor_(_period) === null) ? 'block' : 'none';
+  const pLabel = s.periodoLabel || 'Hoje';
+  el('bia-k-gasto-label').textContent = 'Gasto ' + pLabel;
+  el('bia-k-gasto').textContent = fmtMoney(s.gastoHoje);
+  el('bia-k-gasto-sub').textContent = s.chamadasHoje + ' chamada' + (s.chamadasHoje === 1 ? '' : 's');
+  el('bia-k-mes').textContent = fmtMoney(s.mesIA);
+  el('bia-k-mes-sub').textContent = 'proj. ' + fmtMoney(s.mesIAProjecao);
+  el('bia-k-total').textContent = fmtMoney(s.totalProjetado);
+  el('bia-k-teto').textContent = 'teto ' + fmtMoney(s.tetoMes);
+  const pct = s.tetoMes > 0 ? (s.totalProjetado / s.tetoMes) : 0;
+  el('bia-k-teto').className = 'kc-sub' + (pct >= 1 ? ' crit' : pct >= 0.85 ? ' warn' : '');
+  el('bia-k-economia').textContent = fmtMoney(s.economizouHoje);
+  el('bia-k-cache-pct').textContent = s.cachePct + '% cache';
+  el('bia-k-leads').textContent = String(s.leadsMonitor);
+  el('bia-k-msgs-label').textContent = 'Mensagens ' + pLabel;
+  el('bia-k-msgs').textContent = String(s.mensagensHoje);
+  el('bia-k-motor').textContent = String(s.motorProativoHoje);
+
+  // BIA cacheia snapshot a cada 10min (cron do worker) — sem mostrar a hora
+  // do sync, um número "parado" pode parecer errado comparado a outra fonte
+  // ao vivo. Visível no rodapé (texto, não só tooltip).
+  if (_biaViewActive && s.syncedAt) {
+    const syncTxt = 'bia-dash-sync (sinc. ' + new Date(s.syncedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + ')';
+    const currentLabel = (_data && _data.period && _data.period.label) || '';
+    const unsupported = _period && !biaPeriodoFor_(_period);
+    el('footer-source').textContent = unsupported
+      ? syncTxt + ' · período "' + currentLabel + '" não suportado pela BIA (só Hoje/Semana/Mês/30 dias), mostrando Hoje'
+      : syncTxt;
+  }
+  renderBiaMotorSection_(s);
+
+  const gv = (n) => n > 0 ? 'crit' : 'good';
+  el('bia-gate-fing').textContent = s.gates.fing; el('bia-gate-fing').className = 'v ' + gv(s.gates.fing);
+  el('bia-gate-neg').textContent = s.gates.neg; el('bia-gate-neg').className = 'v ' + gv(s.gates.neg);
+  el('bia-gate-afd').textContent = s.gates.afd; el('bia-gate-afd').className = 'v ' + (s.gates.afd > 0 ? 'warn' : 'good');
+  el('bia-gate-3b').textContent = s.gates.gate3b; el('bia-gate-3b').className = 'v ' + (s.gates.gate3b > 0 ? 'warn' : 'good');
+
+  el('bia-cerebro-min').textContent = s.cerebroMin != null ? s.cerebroMin + ' min atrás' : '—';
+  el('bia-respostas').textContent = String(s.respostasBiaHoje);
+  el('bia-aprovacoes').textContent = String(s.aprovacoesPendentes);
+  el('bia-gates-badge').textContent = s.erros && s.erros.length ? '⚠ parcial' : 'hoje';
+
+  // "N dias" dinâmico (reflete s.trend.dias.length de verdade) — não um
+  // literal fixo "14 dias" (fix real feito no telão em 27/08: mentiria se a
+  // janela do worker mudasse).
+  el('bia-trend-badge').textContent = (s.trend.dias ? s.trend.dias.length : 14) + ' dias';
+  renderBiaTrendChart_(s.trend.dias, s.trend.custo, s.trend.notif, 'bia-trend-chart');
+
+  el('bia-sdr-badge').textContent = s.sdrsConhecidosAgendor + ' no Agendor';
+  el('bia-sdr-cards').innerHTML = (s.sdrCards || []).map(c => c.nome ?
+    `<div class="bia-sdr-card"><span class="bia-sdr-avatar">${escHtml(c.nome.slice(0, 2).toUpperCase())}</span>${escHtml(c.nome)}<span style="margin-left:auto;font-size:.62rem;padding:2px 8px;border-radius:20px;background:#dcfce7;color:#166534;font-weight:800">${escHtml(c.cargo || 'SDR')}</span></div>` :
+    `<div class="bia-sdr-card" style="opacity:.55">não cadastrado</div>`
+  ).join('') || '<div class="feed-empty">Sem SDR cadastrado</div>';
+
+  el('bia-deploy-badge').textContent = s.deploy.registrados + ' registrados';
+  el('bia-deploy-suite').textContent = s.deploy.suiteAtual || '—';
+  el('bia-deploy-falhas').textContent = s.deploy.falhas;
+  el('bia-deploy-falhas').className = 'v ' + (s.deploy.falhas > 0 ? 'crit' : 'good');
+  el('bia-deploy-desde').textContent = s.deploy.desdeInicioLog || '—';
+
+  // Lista crua de deploys (30 linhas quase idênticas) vira gráfico de
+  // frequência por dia — mesmo dado seguro (ts/suiteTotal/suiteFalhou, sem
+  // texto sensível), forma mais rica de mostrar atividade de manutenção.
+  const log = s.deploy.log || [];
+  const byDay = {};
+  log.forEach(d => {
+    if (!d.ts) return;
+    const day = new Date(d.ts).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    byDay[day] = (byDay[day] || 0) + 1;
+  });
+  const diasDeploy = Object.keys(byDay);
+  const countsDeploy = diasDeploy.map(dia => byDay[dia]);
+  el('bia-deploy-freq-badge').textContent = log.length + ' deploy' + (log.length !== 1 ? 's' : '') + ' · ' + diasDeploy.length + ' dia' + (diasDeploy.length !== 1 ? 's' : '');
+  if (diasDeploy.length > 1) {
+    const hojeCount = countsDeploy[countsDeploy.length - 1] || 0;
+    el('bia-deploy-freq-chart').innerHTML = biaTrendHeroHeader_('Deploys por dia', fmtInt_(hojeCount), '#704B9B') +
+      '<div style="height:170px"><canvas id="bia-chart-deploys"></canvas></div>';
+    renderBiaBarChart_('bia-chart-deploys', diasDeploy, countsDeploy, '#704B9B', v => fmtInt_(v) + ' deploy' + (v !== 1 ? 's' : ''));
+  } else {
+    el('bia-deploy-freq-chart').innerHTML = '<div class="feed-empty">Pouco histórico ainda pra mostrar tendência</div>';
+  }
+}
+
+async function loadBiaFresh_() {
+  if (_biaLoading) return;
+  _biaLoading = true;
+  try {
+    _biaSnap = await fetchBiaSnapshot(biaPeriodoFor_(_period) || 'hoje');
+    if (_biaViewActive) renderBiaSection(_biaSnap);
+  } catch (e) {
+    console.warn('fetchBiaSnapshot falhou:', e.message);
+    if (_biaViewActive && !_biaSnap) {
+      el('bia-motor-breakdown').innerHTML = '<div class="feed-empty">Erro ao carregar. Tenta de novo em instantes.</div>';
+    }
+  } finally {
+    _biaLoading = false;
+  }
+}
+// Chamado a cada loadData() (troca de período/origem) e pelo poll de fundo —
+// mesma cadeia que o resto do painel usa (refreshSdrIfActive_/
+// refreshGa4IfActive_), nunca um timer próprio.
+function refreshBiaIfActive_() {
+  if (_biaViewActive) {
+    if (_biaSnap) renderBiaSection(_biaSnap);
+    loadBiaFresh_();
   }
 }
 
