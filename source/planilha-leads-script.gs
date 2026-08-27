@@ -59,6 +59,49 @@ function doPost(e) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+// 🔴 27/08 (achados reais, mesmo dia): (1) Adriana Valentim digitou "(21) 09923-2680" no formulário — falta
+// o "9" de celular, GS Engage recusa "mobiles[0].value" com razão, e SEM esta correção o lead nunca vinga
+// (fila de retentativa tenta pra sempre um telefone que NUNCA vai passar). Robert: "quase todo mundo manda
+// mensagem no zap porque além de cadastrar tem o botão de chamar no zap... faz sentido cadastrar mesmo com
+// telefone errado porque o SDR corrige o telefone quando o cliente chama; se não chamar, marca como perdido,
+// motivo erro na lista." Ou seja: perder o REGISTRO por telefone mal-formatado é pior que ter o registro com
+// telefone placeholder — o SDR sempre corrige via o contato real que chega por fora. (2) Wellingta do Prado
+// foi cadastrada 2x no GS Engage no mesmo dia — a planilha nunca checava se o lead JÁ existia antes de criar
+// (o worker do Cloudflare, rede de segurança, cria de backup depois de ~33min sem achar nada; quando a
+// planilha consegue DEPOIS, numa tentativa atrasada, duplica). Corrigido: dedup por telefone (últimos 8
+// dígitos, criado nas últimas 24h) ANTES de criar — mesmo critério já usado pelo worker.
+function _gsEngageBuscarPorTelefone_(gsKey, telefoneDigits, headers) {
+  var f8 = String(telefoneDigits || '').slice(-8);
+  if (f8.length !== 8) return null; // telefone curto demais pra buscar — não bloqueia criação
+  try {
+    for (var pg = 1; pg <= 2; pg++) {
+      var url = 'https://api.gsengage.com/api/v1/leads?apiKey=' + gsKey + '&limit=100&page=' + pg + '&search=' + f8;
+      var resp = UrlFetchApp.fetch(url, { method: 'get', headers: headers, muteHttpExceptions: true });
+      if (resp.getResponseCode() !== 200) return null; // busca falhou → fail-open, não trava a criação
+      var data = JSON.parse(resp.getContentText()).data || [];
+      for (var i = 0; i < data.length; i++) {
+        var lead = data[i];
+        var tels = (lead.mobiles || []).concat(lead.phones || []).map(function(t) { return String((t && t.value) || '').replace(/\D/g, ''); });
+        var idadeMs = new Date() - new Date(lead.createdAt || 0);
+        var bateTelefone = false;
+        for (var j = 0; j < tels.length; j++) { if (tels[j].indexOf(f8) !== -1) { bateTelefone = true; break; } }
+        if (bateTelefone && idadeMs < 86400000) return lead;
+      }
+      if (data.length < 100) break;
+    }
+  } catch (e) {}
+  return null;
+}
+function _gsEngageTelefoneRejeitado_(respText) {
+  return /"mobiles"|"phones"/.test(respText || '') && /inv[aá]lido/i.test(respText || '');
+}
+function _gsEngagePlaceholderMesmoDDD_(foneOriginal) {
+  var digitos = String(foneOriginal || '').replace(/\D/g, '').replace(/^55/, '');
+  var ddd = digitos.substring(0, 2);
+  if (!/^\d{2}$/.test(ddd)) return null; // não deu pra extrair DDD plausível — não arrisca chutar
+  return '+55' + ddd + '900000000';
+}
+
 // ── GS ENGAGE: cria lead INBOUND e enrola na cadência inbound ────────
 // achado 15/07 (Robert: "às vezes cai, às vezes não" — lead sumia sem deixar
 // rastro): era 1 tentativa só, e o chamador (doPost) engolia qualquer erro
@@ -106,12 +149,38 @@ function _sendLeadToGSEngage(gsKey, nome, telefone, origem, pagina, cnpj, campan
     'Accept': 'application/json'
   };
 
-  var leadId = _postToGSEngageWithRetry_(GS_BASE + '/leads?apiKey=' + gsKey, leadPayload, headers, function(respText) {
+  // 🔴 27/08: dedup ANTES de criar — se um lead com este telefone já existe (criado nas últimas 24h, pelo
+  // worker de backup OU por uma execução anterior desta própria função), não cria de novo. Fail-open: se a
+  // busca falhar/der erro, segue pra criação normal (nunca trava um lead legítimo por causa de uma busca
+  // instável).
+  var _jaExiste = _gsEngageBuscarPorTelefone_(gsKey, digits, headers);
+  if (_jaExiste) {
+    Logger.log('GS Engage: lead "' + nome + '" já existe (id ' + _jaExiste.id + ', mesmo telefone, <24h) — não duplica.');
+    return true;
+  }
+
+  var _leadResult = _postToGSEngageWithRetry_(GS_BASE + '/leads?apiKey=' + gsKey, leadPayload, headers, function(respText) {
     try {
       var d = JSON.parse(respText);
       return (d.data && (d.data.id || d.data._id)) || null;
     } catch (_) { return null; }
   });
+  var leadId = _leadResult.value;
+
+  // 🔴 27/08: telefone rejeitado por FORMATO (não outro motivo) → tenta de novo com placeholder do mesmo DDD,
+  // guardando o telefone original em "Observação SDR" pro SDR corrigir quando o cliente chamar no WhatsApp.
+  if (!leadId && _gsEngageTelefoneRejeitado_(_leadResult.lastText)) {
+    var _placeholder = _gsEngagePlaceholderMesmoDDD_(fone);
+    if (_placeholder) {
+      var leadPayloadFallback = JSON.parse(JSON.stringify(leadPayload)); // clone raso, evita mutar o original
+      leadPayloadFallback.mobiles = [{ value: _placeholder }];
+      leadPayloadFallback.customFields['Observação SDR'] = '⚠️ Telefone do formulário era inválido: "' + fone + '" — aguarda contato real do cliente via WhatsApp (botão da LP) pra corrigir. Se não chamar, marcar perdido (motivo: erro na lista).';
+      var _leadResult2 = _postToGSEngageWithRetry_(GS_BASE + '/leads?apiKey=' + gsKey, leadPayloadFallback, headers, function(respText) {
+        try { var d = JSON.parse(respText); return (d.data && (d.data.id || d.data._id)) || null; } catch (_) { return null; }
+      });
+      if (_leadResult2.value) { leadId = _leadResult2.value; Logger.log('GS Engage: telefone inválido, criado com placeholder ' + _placeholder + ' — lead "' + nome + '" preservado (id ' + leadId + ').'); }
+    }
+  }
 
   if (!leadId) {
     if (!opts.isRetry) registrarFalhaGSEngage_(nome, telefone, origem, pagina, cnpj, campanha, conjunto, anuncio);
@@ -130,7 +199,7 @@ function _sendLeadToGSEngage(gsKey, nome, telefone, origem, pagina, cnpj, campan
 
   var prospOk = _postToGSEngageWithRetry_(GS_BASE + '/prospections?apiKey=' + gsKey, { leadId: leadId, routineId: INBOUND_ROUTINE_ID }, headers, function(_respText, code) {
     return (code >= 200 && code < 300) ? true : null;
-  });
+  }).value;
   Logger.log('GS Engage enrolled ' + leadId + (prospOk ? '' : ' (lead criado, mas prospecção/cadência falhou — verificar manualmente no GS Engage)'));
   return true;
 }
@@ -138,11 +207,16 @@ function _sendLeadToGSEngage(gsKey, nome, telefone, origem, pagina, cnpj, campan
 // ── POST com até 3 tentativas (pausas curtas: 0ms, 400ms, 1000ms — total
 // ~1,4s no pior caso, aceitável mesmo dentro do doPost síncrono que responde
 // o formulário da LP). parseSuccess(bodyText, httpCode) decide se aquela
-// tentativa deu certo; retorna o valor de sucesso (ex: o leadId) ou
-// null/false pra tentar de novo. Usado tanto pra criar o lead quanto pra
-// prospecção — nunca lança exceção, sempre retorna null em vez disso. ──
+// tentativa deu certo; retorna {value, lastText, lastCode} — value é o valor
+// de sucesso (ex: o leadId) ou null se as 3 tentativas falharam. Usado tanto
+// pra criar o lead quanto pra prospecção — nunca lança exceção.
+// 🔴 27/08: passou a devolver `lastText`/`lastCode` da ÚLTIMA tentativa (antes só devolvia `value`) — o
+// fallback de telefone inválido precisa inspecionar a mensagem de erro real do GS Engage pra saber SE foi
+// rejeição de formato de telefone (aí vale tentar de novo com placeholder) ou outro motivo qualquer (aí não
+// vale, cai direto pra fila de falha como sempre foi).
 function _postToGSEngageWithRetry_(url, payload, headers, parseSuccess) {
   var delays = [0, 400, 1000];
+  var lastText = '', lastCode = 0;
   for (var i = 0; i < delays.length; i++) {
     if (delays[i] > 0) Utilities.sleep(delays[i]);
     try {
@@ -152,14 +226,16 @@ function _postToGSEngageWithRetry_(url, payload, headers, parseSuccess) {
       });
       var code = resp.getResponseCode();
       var text = resp.getContentText();
+      lastText = text; lastCode = code;
       var ok = parseSuccess(text, code);
-      if (ok) return ok;
+      if (ok) return { value: ok, lastText: text, lastCode: code };
       Logger.log('GS Engage tentativa ' + (i + 1) + '/3 falhou (HTTP ' + code + '): ' + text.slice(0, 200));
     } catch (eFetch) {
       Logger.log('GS Engage tentativa ' + (i + 1) + '/3 lançou exceção: ' + eFetch.message);
+      lastText = String(eFetch.message || eFetch);
     }
   }
-  return null;
+  return { value: null, lastText: lastText, lastCode: lastCode };
 }
 
 // ── Fila de reprocessamento — aba "GSEngage_Falhas" na MESMA planilha.
@@ -206,6 +282,11 @@ function retryGSEngageFalhas() {
     var tentativas = Number(vals[9]) || 0;
 
     if (!nome || !telefone) { sheet.deleteRow(row); continue; } // linha corrompida/vazia
+    // 🔴 FIX 27/08 (achado real: entrada de 17/07 com 3944 tentativas já — o limite de 10 nunca realmente
+    // parava nada, só LOGAVA "desistindo" e continuava chamando `_sendLeadToGSEngage` a cada 15min pra
+    // sempre, gastando quota do Apps Script à toa num lead que já provou não vingar). Já esgotou → pula,
+    // não tenta de novo (a linha continua visível na aba pra conferência manual, só para de bater na API).
+    if (tentativas >= GSENGAGE_MAX_TENTATIVAS) continue;
 
     processados++;
     var ok = _sendLeadToGSEngage(gsKey, nome, telefone, origem, pagina, cnpj, campanha, conjunto, anuncio, { isRetry: true });
