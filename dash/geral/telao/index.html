@@ -2953,8 +2953,16 @@ function _currentViewName_() {
 }
 function saveUiState_() {
   try {
+    // 🔴 FIX 27/08 (Robert: "por padrão o dash deve carregar em vendas e
+    // esse mês... como estava"): enquanto em GA4/BIA, _period está forçado
+    // pra "Hoje" (ver restorePeriodBeforeSpecial_ acima) — salvar ESSE valor
+    // faria um reload no meio de uma visita à GA4/BIA persistir "Hoje" como
+    // se fosse o período real de Vendas, contaminando o resting state
+    // esperado mesmo depois do usuário sair da aba. Salva o período de
+    // ANTES (memorizado em _periodBeforeSpecialTab_) quando existir.
+    const realPeriod = _periodBeforeSpecialTab_ || { period: _period, customFrom: _customFrom, customTo: _customTo };
     localStorage.setItem(UI_STATE_KEY, JSON.stringify({
-      view: _currentViewName_(), period: _period, customFrom: _customFrom, customTo: _customTo, origin: _originMode
+      view: _currentViewName_(), period: realPeriod.period, customFrom: realPeriod.customFrom, customTo: realPeriod.customTo, origin: _originMode
     }));
   } catch (e) { /* localStorage indisponível (modo privado, storage cheio) — não é crítico, segue sem persistir */ }
 }
@@ -3736,6 +3744,34 @@ async function fetchSdrRaw() {
   return { leads, prospections, activities, calls };
 }
 
+// 🔴 FIX 27/08 (Robert: "por padrão o dash deve carregar em vendas e esse mês
+// filtrados ambos in e out como estava... em ga4 e bia sim pode ficar em hoje
+// quando muda pq faz sentido") — GA4/BIA forçam o filtro GLOBAL pra "Hoje" (ver
+// comentário de 26/08 mais abaixo, decisão já tomada e mantida), mas isso
+// vazava pra Vendas/LTV/SDR/Ads: sair da GA4/BIA deixava o resto do dash preso
+// em "Hoje" até alguém trocar manualmente. Isso sempre foi um detalhe menor
+// (um F5 normal já resetava pro padrão do HTML), mas agora que o estado
+// sobrevive ao auto-reload (saveUiState_/restoreUiStateBeforeLoad_), esse
+// "Hoje" vazado virava PERMANENTE — o telão podia ficar preso fora do
+// resting state esperado (Vendas · Este mês · Ambos) indefinidamente.
+// Memoriza o período real de antes de entrar em GA4/BIA (só na PRIMEIRA vez,
+// não sobrescreve se already dentro de ga4<->bia) e restaura ao voltar pra
+// qualquer aba que usa o filtro global de verdade.
+let _periodBeforeSpecialTab_ = null;
+function restorePeriodBeforeSpecial_() {
+  const saved = _periodBeforeSpecialTab_;
+  _periodBeforeSpecialTab_ = null;
+  _period = saved ? saved.period : 'month'; // sem memória (ex.: sessão já carregou direto em ga4/bia) -> cai no padrão real do dash
+  _customFrom = saved ? saved.customFrom : null;
+  _customTo = saved ? saved.customTo : null;
+  _monthPickLabel = saved ? saved.monthPickLabel : '';
+  _mpSelYear = saved ? saved.mpSelYear : null;
+  _mpSelMonth = saved ? saved.mpSelMonth : null;
+  const chip = document.querySelector('.pchip[data-p="' + _period + '"]');
+  if (chip) { document.querySelectorAll('.pchip').forEach(b => b.classList.remove('active')); chip.classList.add('active'); }
+  loadData(false);
+}
+
 function setView(btn) {
   const bar = btn.closest('.oseg');
   bar.querySelectorAll('.ochip').forEach(b => b.classList.remove('active'));
@@ -3743,11 +3779,17 @@ function setView(btn) {
   // 02/08: 3º valor 'ads' adicionado ao toggle (era só vendas/sdr).
   // 25-26/08: 4º valor 'ltv' (funil de Pós-venda).
   const view = btn.dataset.v; // 'vendas' | 'ltv' | 'sdr' | 'ads' | 'ga4' | 'bia'
+  const _wasSpecialTab_ = _ga4ViewActive || _biaViewActive;
+  const _willBeSpecialTab_ = view === 'ga4' || view === 'bia';
+  if (_willBeSpecialTab_ && !_wasSpecialTab_ && !_periodBeforeSpecialTab_) {
+    _periodBeforeSpecialTab_ = { period: _period, customFrom: _customFrom, customTo: _customTo, monthPickLabel: _monthPickLabel, mpSelYear: _mpSelYear, mpSelMonth: _mpSelMonth };
+  }
   _ltvViewActive = view === 'ltv';
   _sdrViewActive = view === 'sdr';
   _adsViewActive = view === 'ads';
   _ga4ViewActive = view === 'ga4';
   _biaViewActive = view === 'bia';
+  if (_wasSpecialTab_ && !_willBeSpecialTab_) restorePeriodBeforeSpecial_();
   el('hero-row').style.display = view === 'vendas' ? '' : 'none';
   el('mkt-row').style.display  = view === 'vendas' ? '' : 'none';
   el('main').style.display     = view === 'vendas' ? '' : 'none';
