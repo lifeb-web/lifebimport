@@ -2227,45 +2227,61 @@ function ga4Row_(dotColor, name, count, maxCount, valText, href, onclick) {
 // raio 0/transparente onde não teve — "bolinha" flutua em cima da barra
 // daquela hora/dia que gerou lead.
 let _ga4VisitorsChart = null;
+// 🔴 FIX 26/08 nº4 (Robert: "melhora as visualizações de gráficos em
+// períodos grandes... gostamos de ver períodos maiores também") — mesma
+// lógica aplicada em renderBiaBarChart_: período longo (60/90 dias)
+// vira barrinha ilegível, troca pra linha preenchida acima de 45 pontos;
+// linha de média móvel tracejada com volume suficiente (8+ pontos);
+// eixo X limitado a 12 rótulos pra não virar texto espremido.
 function renderGa4VisitorsChart_(dias, vals, leadsVals) {
   const canvas = el('ga4-visitors-chart');
   const avisoEl = el('ga4-visitors-aviso');
   if (_ga4VisitorsChart) { _ga4VisitorsChart.destroy(); _ga4VisitorsChart = null; }
   if (!dias.length) { avisoEl.textContent = ''; return; }
   const isHourly = /h$/.test(dias[0]);
-  const lastIdx = dias.length - 1;
+  const n = dias.length;
+  const lastIdx = n - 1;
+  const useLine = n > 45;
   const bg = dias.map((_, i) => i === lastIdx ? 'rgba(233,32,133,.8)' : 'rgba(112,75,155,.22)');
   const border = dias.map((_, i) => i === lastIdx ? '#E92085' : '#704B9B');
   const leads = leadsVals || dias.map(() => 0);
   const hasLeads = leads.some(v => v > 0);
+  const principalLabel = isHourly ? 'Visitantes' : 'Usuários Ativos';
+  const datasets = [
+    useLine
+      ? { type: 'line', label: principalLabel, data: vals, borderColor: '#704B9B', backgroundColor: 'rgba(112,75,155,.14)', borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, pointHoverBackgroundColor: '#704B9B', fill: true, tension: .3, order: 3 }
+      : { type: 'bar', label: principalLabel, data: vals, backgroundColor: bg, borderColor: border, borderWidth: 1.5, borderRadius: 5, borderSkipped: false, order: 3 },
+    ...(hasLeads ? [{
+      type: 'line', label: 'Leads', data: leads,
+      borderColor: 'transparent', backgroundColor: '#E92085',
+      pointBackgroundColor: leads.map(v => v > 0 ? '#E92085' : 'transparent'),
+      pointBorderColor: leads.map(v => v > 0 ? '#fff' : 'transparent'),
+      pointBorderWidth: 1.5,
+      pointRadius: leads.map(v => v > 0 ? 5 : 0),
+      pointHoverRadius: leads.map(v => v > 0 ? 7 : 0),
+      showLine: false, clip: false, order: 1
+    }] : [])
+  ];
+  if (n >= 8) {
+    const media = vals.map((_, i) => {
+      const janela = vals.slice(Math.max(0, i - 2), i + 3);
+      return janela.reduce((a, b) => a + b, 0) / janela.length;
+    });
+    datasets.push({ type: 'line', label: 'Tendência', data: media, borderColor: 'rgba(107,100,132,.55)', borderWidth: 2, borderDash: [5, 4], pointRadius: 0, fill: false, tension: .4, order: 2 });
+  }
   _ga4VisitorsChart = new Chart(canvas.getContext('2d'), {
-    data: {
-      labels: dias,
-      datasets: [
-        { type: 'bar', label: isHourly ? 'Visitantes' : 'Usuários Ativos', data: vals, backgroundColor: bg, borderColor: border, borderWidth: 1.5, borderRadius: 5, borderSkipped: false, order: 2 },
-        ...(hasLeads ? [{
-          type: 'line', label: 'Leads', data: leads,
-          borderColor: 'transparent', backgroundColor: '#E92085',
-          pointBackgroundColor: leads.map(v => v > 0 ? '#E92085' : 'transparent'),
-          pointBorderColor: leads.map(v => v > 0 ? '#fff' : 'transparent'),
-          pointBorderWidth: 1.5,
-          pointRadius: leads.map(v => v > 0 ? 5 : 0),
-          pointHoverRadius: leads.map(v => v > 0 ? 7 : 0),
-          showLine: false, clip: false, order: 1
-        }] : [])
-      ]
-    },
+    data: { labels: dias, datasets },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: '#221B32', padding: 12,
+          backgroundColor: '#221B32', padding: 12, filter: item => item.dataset.label !== 'Tendência',
           callbacks: { label: c => c.dataset.label === 'Leads' ? ` 🎯 ${c.parsed.y} lead${c.parsed.y !== 1 ? 's' : ''}` : ` ${c.parsed.y} visitante${c.parsed.y !== 1 ? 's' : ''}` }
         }
       },
       scales: {
-        x: { grid: { display: false }, ticks: { color: '#6b6484', font: { size: 10 }, maxRotation: 0 }, border: { display: false } },
+        x: { grid: { display: false }, ticks: { color: '#6b6484', font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 12 }, border: { display: false } },
         y: { grid: { color: 'rgba(0,0,0,.05)' }, ticks: { color: '#6b6484', font: { size: 11 }, precision: 0 }, border: { display: false }, beginAtZero: true }
       }
     }
@@ -2490,25 +2506,49 @@ function hexToRgba_(hex, alpha) {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 let _biaCharts = {};
-function renderBiaBarChart_(canvasId, dias, vals, colorHex, fmtVal) {
+// 🔴 FIX 26/08 nº4 (Robert: "não tem uma linha traçada com alguma
+// média... algo profissional" + "melhora as visualizações em períodos
+// grandes, gostamos de ver períodos maiores também" + "não tem o cifrão
+// de valor") — 3 melhorias na função genérica (afeta BIA e Ads juntos,
+// mesmo código):
+// 1. opts.yFmt formata o eixo Y (ex: "R$ 350" em vez de "350" cru).
+// 2. Linha de média móvel tracejada sobreposta, mesmo padrão "Tendência"
+//    da referência real (dashboard-telao.html, loadChart) — só entra com
+//    volume suficiente pra fazer sentido (8+ pontos).
+// 3. Período muito longo (60/90 dias, Total) virava barrinha fina demais
+//    pra ler — mais de 45 pontos troca pra linha preenchida (mesma lib,
+//    mais legível com volume alto de dias); eixo X limita a 12 rótulos
+//    visíveis pra não virar uma faixa ilegível de texto espremido.
+function renderBiaBarChart_(canvasId, dias, vals, colorHex, fmtVal, opts) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
   if (_biaCharts[canvasId]) { _biaCharts[canvasId].destroy(); delete _biaCharts[canvasId]; }
   const n = vals.length;
+  const yFmt = (opts && opts.yFmt) || (v => v);
+  const useLine = n > 45;
   const bg = vals.map((_, i) => i === n - 1 ? hexToRgba_(colorHex, .85) : hexToRgba_(colorHex, .22));
   const border = vals.map((_, i) => i === n - 1 ? colorHex : hexToRgba_(colorHex, .5));
+  const datasets = useLine
+    ? [{ type: 'line', data: vals, borderColor: colorHex, backgroundColor: hexToRgba_(colorHex, .12), borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, pointHoverBackgroundColor: colorHex, fill: true, tension: .3, order: 2 }]
+    : [{ type: 'bar', data: vals, backgroundColor: bg, borderColor: border, borderWidth: 1.5, borderRadius: 5, borderSkipped: false, maxBarThickness: 46, order: 2 }];
+  if (n >= 8) {
+    const media = vals.map((_, i) => {
+      const janela = vals.slice(Math.max(0, i - 2), i + 3);
+      return janela.reduce((a, b) => a + b, 0) / janela.length;
+    });
+    datasets.push({ type: 'line', data: media, borderColor: 'rgba(107,100,132,.55)', borderWidth: 2, borderDash: [5, 4], pointRadius: 0, fill: false, tension: .4, order: 1 });
+  }
   _biaCharts[canvasId] = new Chart(canvas.getContext('2d'), {
-    type: 'bar',
-    data: { labels: dias, datasets: [{ data: vals, backgroundColor: bg, borderColor: border, borderWidth: 1.5, borderRadius: 5, borderSkipped: false, maxBarThickness: 46 }] },
+    data: { labels: dias, datasets },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
-        tooltip: { backgroundColor: '#221B32', padding: 10, displayColors: false, callbacks: { label: c => ' ' + fmtVal(c.parsed.y) } }
+        tooltip: { backgroundColor: '#221B32', padding: 10, displayColors: false, filter: item => item.datasetIndex === 0, callbacks: { label: c => ' ' + fmtVal(c.parsed.y) } }
       },
       scales: {
-        x: { grid: { display: false }, ticks: { color: '#6b6484', font: { size: 9, weight: '700' }, maxRotation: 0 }, border: { display: false } },
-        y: { grid: { color: 'rgba(0,0,0,.05)' }, ticks: { color: '#6b6484', font: { size: 10 }, precision: 0 }, border: { display: false }, beginAtZero: true }
+        x: { grid: { display: false }, ticks: { color: '#6b6484', font: { size: 9, weight: '700' }, maxRotation: 0, autoSkip: true, maxTicksLimit: 12 }, border: { display: false } },
+        y: { grid: { color: 'rgba(0,0,0,.05)' }, ticks: { color: '#6b6484', font: { size: 10 }, precision: 0, callback: yFmt }, border: { display: false }, beginAtZero: true }
       }
     }
   });
@@ -2536,7 +2576,7 @@ function renderBiaTrendChart_(dias, custo, notif, containerId) {
         <div style="flex:1;min-height:0"><canvas id="bia-chart-notif"></canvas></div>
       </div>
     </div>`;
-  renderBiaBarChart_('bia-chart-custo', dias, custo, '#E92085', v => 'R$ ' + (v || 0).toFixed(2));
+  renderBiaBarChart_('bia-chart-custo', dias, custo, '#E92085', v => 'R$ ' + (v || 0).toFixed(2), { yFmt: v => 'R$' + Math.round(v) });
   renderBiaBarChart_('bia-chart-notif', dias, notif, '#704B9B', v => fmtInt_(v));
 }
 
@@ -4118,15 +4158,33 @@ function refreshAdsHierarchyIfActive_() {
 // essa uma", nunca uma lista de inclusão que possa esquecer campanha nova.
 const ADS_EXCLUDE_CAMPAIGN_IDS = ['120242303144740451'];
 
+// 🔴 FIX 26/08 (Robert: "tirar as palavras cópias e identificar os
+// anúncios que são iguais e juntar tudo calculado certinho") — achado
+// real: group-by-nome (comentário acima) já agrupava "mesmo conceito de
+// anúncio reaproveitado", mas o Meta gera automaticamente um NOME
+// DIFERENTE quando duplica um anúncio ("AD X" vira "AD X — Cópia", "AD X
+// — Cópia 2"...) — isso quebrava o próprio agrupamento que existe pra
+// resolver exatamente esse tipo de duplicata, cada cópia virando uma
+// linha própria na lista. Nome normalizado (sufixo de cópia removido)
+// como CHAVE e como rótulo exibido — cópia funde com o original de
+// verdade, spend/clicks/impressions somados certinho.
+function normalizeAdName_(name) {
+  if (!name) return name;
+  return name
+    .replace(/\s*[-–—]\s*c[óo]pia(\s*\d+)?\s*$/i, '')
+    .replace(/\s*\(c[óo]pia(\s*\d+)?\)\s*$/i, '')
+    .trim();
+}
 // Cópia fiel de groupAdsByCreative_ (dash/geral/index.html) — ver comentário
 // lá pro raciocínio completo (group-by-NOME, não creative_id).
 function groupAdsByCreative_(ads) {
   const groups = {};
   const order = [];
   ads.forEach(ad => {
-    const key = 'n:' + (ad.name || ad.id);
+    const cleanName = normalizeAdName_(ad.name) || ad.id;
+    const key = 'n:' + cleanName;
     if (!groups[key]) {
-      groups[key] = { key, name: ad.name, thumbUrl: ad.thumbUrl, campaignNames: new Set(), adsetNames: new Set(), spend: 0, impressions: 0, clicks: 0, count: 0, memberIds: [], anyActive: false };
+      groups[key] = { key, name: cleanName, thumbUrl: ad.thumbUrl, campaignNames: new Set(), adsetNames: new Set(), spend: 0, impressions: 0, clicks: 0, count: 0, memberIds: [], anyActive: false };
       order.push(key);
     }
     const g = groups[key];
@@ -4316,6 +4374,9 @@ function adsFunilRowTelao_(dotColor, name, spend, maxSpend, subText, onclickAttr
     </div>`;
 }
 
+// 🔴 FIX 26/08 (Robert: "no card de anúncios só tem CTR e temos
+// espaço... colocar mais métricas") — CPC e CPM entram junto, dado real
+// (spend/clicks e spend/impressions, já vem agregado no grupo).
 function adGroupRowTelao_(g) {
   const thumb = g.thumbUrl
     ? `<img class="feed-thumb" src="${g.thumbUrl}" loading="lazy" alt="">`
@@ -4323,16 +4384,21 @@ function adGroupRowTelao_(g) {
   const variBadge = g.count > 1 ? `<span class="og-pill" style="background:rgba(146,96,200,.14);color:var(--purple)">${g.count}x</span>` : '';
   const pausedBadge = g.allPaused ? '<span class="og-pill" style="background:rgba(107,100,132,.12);color:var(--muted)">pausado</span>' : '';
   const scopeText = g.campaignsCount > 1 ? g.campaignsCount + ' campanhas' : (g.adsetsCount > 1 ? g.adsetsCount + ' conjuntos' : '1 anúncio só');
+  const cpc = g.clicks > 0 ? g.spend / g.clicks : null;
+  const cpm = g.impressions > 0 ? (g.spend / g.impressions) * 1000 : null;
+  const metricsText = g.ctr !== null
+    ? g.ctr.toFixed(2) + '% CTR' + (cpc !== null ? ' · ' + fmtMoney(cpc) + '/clique' : '')
+    : '—';
   return `
     <div class="feed-row" onclick="openAdGroupModalTelao('${escJsAttr_(g.key)}')">
       ${thumb}
       <div class="feed-info">
         <div class="feed-co"><span class="og-title-text">${escHtml(g.name)}</span>${variBadge}${pausedBadge}</div>
-        <div class="feed-rep">${escHtml(scopeText)}</div>
+        <div class="feed-rep">${escHtml(scopeText)}${cpm !== null ? ' · CPM ' + fmtMoney(cpm) : ''}</div>
       </div>
       <div class="feed-right">
         <div class="feed-val">${fmtMoney(g.spend)}</div>
-        <div class="feed-date">${g.ctr !== null ? g.ctr.toFixed(2) + '% CTR' : '—'}</div>
+        <div class="feed-date">${metricsText}</div>
       </div>
     </div>`;
 }
@@ -4392,7 +4458,7 @@ function renderSpendTrendChart_(series, containerId) {
   const dias = series.map(p => fmtD(p.date));
   const vals = series.map(p => p.spend);
   box.innerHTML = '<div style="flex:1;min-height:0;width:100%"><canvas id="ads-trend-canvas"></canvas></div>';
-  renderBiaBarChart_('ads-trend-canvas', dias, vals, '#704B9B', v => fmtMoney(v));
+  renderBiaBarChart_('ads-trend-canvas', dias, vals, '#704B9B', v => fmtMoney(v), { yFmt: v => 'R$' + Math.round(v) });
 }
 
 function renderAdsHierarchySectionTelao(d) {

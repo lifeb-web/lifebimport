@@ -2127,13 +2127,28 @@ const ADS_EXCLUDE_CAMPAIGN_IDS = ['120242303144740451'];
 // que ele reclamou (o rótulo repetido é o que salta aos olhos) e reflete a
 // convenção real da conta: mesmo conceito de anúncio, reaproveitado em
 // vários conjuntos/públicos — não é bug de sync.
+// 🔴 FIX 26/08 (Robert: "tirar as palavras cópias e identificar os
+// anúncios que são iguais e juntar tudo calculado certinho") — o Meta
+// gera automaticamente um NOME DIFERENTE quando duplica um anúncio
+// ("AD X" vira "AD X — Cópia", "AD X — Cópia 2"...), o que quebrava o
+// group-by-nome logo acima (pensado pra unir exatamente esse tipo de
+// duplicata). Nome normalizado (sufixo de cópia removido) como CHAVE e
+// como rótulo exibido.
+function normalizeAdName_(name) {
+  if (!name) return name;
+  return name
+    .replace(/\s*[-–—]\s*c[óo]pia(\s*\d+)?\s*$/i, '')
+    .replace(/\s*\(c[óo]pia(\s*\d+)?\)\s*$/i, '')
+    .trim();
+}
 function groupAdsByCreative_(ads) {
   const groups = {};
   const order = [];
   ads.forEach(ad => {
-    const key = 'n:' + (ad.name || ad.id);
+    const cleanName = normalizeAdName_(ad.name) || ad.id;
+    const key = 'n:' + cleanName;
     if (!groups[key]) {
-      groups[key] = { key, name: ad.name, thumbUrl: ad.thumbUrl, campaignNames: new Set(), adsetNames: new Set(), spend: 0, impressions: 0, clicks: 0, count: 0, memberIds: [], anyActive: false };
+      groups[key] = { key, name: cleanName, thumbUrl: ad.thumbUrl, campaignNames: new Set(), adsetNames: new Set(), spend: 0, impressions: 0, clicks: 0, count: 0, memberIds: [], anyActive: false };
       order.push(key);
     }
     const g = groups[key];
