@@ -290,7 +290,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 /* Motor Proativo — o card "ao vivo" de verdade: header com dot pulsante
    (a Bia agindo, não um custo), breakdown por resultado + feed dos eventos
    mais recentes, ocupando a coluna inteira (flex:1 em cada filho). */
-#bia-motor-card{flex:1;display:flex;flex-direction:column;min-height:0}
+#bia-motor-resumo-card,#bia-motor-feed-card{display:flex;flex-direction:column;min-height:0}
 #bia-motor-live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#22C35D;margin-right:6px;animation:biamotorpulse 1.6s ease-in-out infinite}
 @keyframes biamotorpulse{0%,100%{opacity:1}50%{opacity:.3}}
 #bia-motor-breakdown{flex-shrink:0;max-height:38%;overflow-y:auto}
@@ -1356,12 +1356,24 @@ footer strong{color:#fff}
 
   <div id="bia-main">
     <div id="bia-col-left">
-      <div class="card" id="bia-motor-card">
+      <!-- 🔴 FIX 26/08 (Robert: "podia ser dois cards com scroll, do jeito
+           que tá confundindo, gera um efeito estranho") — breakdown e feed
+           moravam no MESMO card, cada um com seu próprio scroll automático
+           rodando ao mesmo tempo, sem nenhuma separação visual — parecia 1
+           lista só rolando de forma inconsistente. Virou 2 cards de
+           verdade, cada um com seu card-hd/borda/badge próprios. -->
+      <div class="card" id="bia-motor-resumo-card" style="flex:1">
         <div class="card-hd">
           <span class="card-hd-title"><span id="bia-motor-live-dot"></span>Motor Proativo ao Vivo</span>
           <span class="badge" id="bia-motor-badge">carregando…</span>
         </div>
-        <div class="funil-body" id="bia-motor-breakdown" style="justify-content:flex-start;gap:2px;flex:none"></div>
+        <div class="funil-body" id="bia-motor-breakdown" style="justify-content:flex-start;gap:2px"></div>
+      </div>
+      <div class="card" id="bia-motor-feed-card" style="flex:1.6">
+        <div class="card-hd">
+          <span class="card-hd-title">Eventos Recentes</span>
+          <span class="badge" id="bia-motor-feed-badge"></span>
+        </div>
         <div class="feed-scroll" id="bia-motor-feed"></div>
       </div>
     </div>
@@ -2585,9 +2597,13 @@ function renderBiaMotorSection_(s) {
       </div>`).join('');
   autoScrollIfNeeded('bia-motor-feed', { sig: filtered.map(e => e.ts).join(',') });
 
-  el('bia-motor-badge').textContent = _biaMotorFilter
+  // 🔴 FIX 26/08 (2 cards separados) — badge do resumo mostra o total fixo
+  // (não muda com o filtro, é o card "ao vivo" de verdade); badge do feed
+  // mostra o resultado do filtro aplicado, que é onde o filtro atua.
+  el('bia-motor-badge').textContent = (s.motorProativoHoje || 0) + ' evento' + (s.motorProativoHoje === 1 ? '' : 's') + ' hoje';
+  el('bia-motor-feed-badge').textContent = _biaMotorFilter
     ? filtered.length + ' de ' + (s.motorProativoHoje || 0) + ' · filtro: ' + prettyLabel_(_biaMotorFilter) + ' (clique de novo p/ limpar)'
-    : (s.motorProativoHoje || 0) + ' evento' + (s.motorProativoHoje === 1 ? '' : 's') + ' hoje';
+    : filtered.length + ' recentes';
 }
 function filterBiaMotorFeed_(key) {
   _biaMotorFilter = (_biaMotorFilter === key) ? null : key;
