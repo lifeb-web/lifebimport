@@ -2139,9 +2139,20 @@ const GA4_CACHE_URL = 'https://ga4-dash-cache.robert131196.workers.dev/api/bundl
 const GA4_CACHE_PERIODO_MAP = { today: 'hoje', yesterday: 'ontem', week: 'semana', month: 'mes', '30d': '30d' };
 async function fetchGa4Raw(startDate, endDate) {
   const cachePeriodo = GA4_CACHE_PERIODO_MAP[_period];
+  // 🔴 FIX 27/08 (auditoria — bug real confirmado ao vivo): o worker
+  // ga4-dash-cache tinha `periodo = url.searchParams.get("periodo") ||
+  // "hoje"` — sem o parâmetro `periodo`, TODO período fora do mapa acima
+  // (Mês ant./60/90 dias/Total/Personalizado/📅Mês, ~6 dos 11 períodos do
+  // dash) caía no cache fixo de "Hoje" e IGNORAVA from/to por completo,
+  // mostrando dado de hoje disfarçado de qualquer outro período sem aviso
+  // nenhum. Corrigido na fonte (ga4-dash-cache/src/index.js, pendente
+  // deploy via wrangler) E aqui: mandar um `periodo=custom` (valor que
+  // nunca bate com nenhuma chave do cache do worker) junto do from/to força
+  // o worker — mesmo a versão antiga ainda no ar — a cair no branch de
+  // range livre de verdade em vez do fallback perigoso.
   const url = cachePeriodo
     ? `${GA4_CACHE_URL}?periodo=${cachePeriodo}`
-    : `${GA4_CACHE_URL}?from=${startDate}&to=${endDate}`;
+    : `${GA4_CACHE_URL}?from=${startDate}&to=${endDate}&periodo=custom`;
   const r = await fetch(url);
   if (!r.ok) throw new Error('ga4-dash-cache HTTP ' + r.status);
   const payload = await r.json();
@@ -2400,11 +2411,15 @@ function renderGa4SectionTelao(d) {
   // ScrollDepth_100), não "Páginas/Sessão" (métrica errada pra um site
   // de LPs isoladas, sem navegação entre páginas — ver comentário no
   // HTML do kchip).
-  el('ga4-k-ppv').textContent = d.activeUsers > 0 ? ((d.eventsMap['ScrollDepth_100'] || 0) / d.activeUsers * 100).toFixed(1) + '%' : '—';
+  // 🔴 FIX 27/08 (auditoria): faltava o mesmo teto de 100% que as pílulas
+  // Envio/Abandono/Pulo já usam logo abaixo — evento contado por sessão/
+  // disparo (não por usuário único), um visitante recorrente em 2+ sessões
+  // no período podia passar de 100%.
+  el('ga4-k-ppv').textContent = d.activeUsers > 0 ? Math.min(((d.eventsMap['ScrollDepth_100'] || 0) / d.activeUsers * 100), 100).toFixed(1) + '%' : '—';
   el('ga4-k-duration').textContent = fmtSeconds_(d.avgDur);
   el('ga4-k-bounce').textContent = fmtPct1_(d.bounce);
   el('ga4-k-leads').textContent = fmtInt_(leadsGa4_);
-  el('ga4-k-conv').textContent = d.activeUsers > 0 ? (leadsGa4_ / d.activeUsers * 100).toFixed(1) + '%' : '—';
+  el('ga4-k-conv').textContent = d.activeUsers > 0 ? Math.min((leadsGa4_ / d.activeUsers * 100), 100).toFixed(1) + '%' : '—';
 
   // 26/08: tabela de colunas (Página/Visit./Leads) em vez de barra de
   // progresso, igual dashboard-telao.html original — nome amigável do
@@ -2461,7 +2476,12 @@ function renderGa4SectionTelao(d) {
     .filter(k => GA4_EVENTOS_META[k])
     .map(k => Object.assign({ v: d.eventsMap[k] }, GA4_EVENTOS_META[k]));
   const maxEvent = Math.max(...eventRows.map(r => r.v), 1);
-  el('ga4-funil-rows').innerHTML = eventRows.map(r => ga4EventRow_(r.icon, r.nome, r.desc, r.v, maxEvent)).join('');
+  // 🔴 FIX 27/08 (auditoria): sem evento nenhum no período (ex.: madrugada
+  // sem tráfego), ficava em branco — as tabelas de Páginas/Fontes/Cidades já
+  // tratam isso via ga4EmptyRow_, esse card (baseado em div, não tabela) não.
+  el('ga4-funil-rows').innerHTML = eventRows.length === 0
+    ? `<div style="text-align:center;color:var(--faint);padding:14px 6px">Sem dado no período</div>`
+    : eventRows.map(r => ga4EventRow_(r.icon, r.nome, r.desc, r.v, maxEvent)).join('');
 
   // Selos de taxa (Envio/Abandono/Pulo sobre quem abriu), mesmo padrão da
   // referência — só aparece se o formulário teve abertura real no período.
@@ -2806,7 +2826,9 @@ function renderBiaSectionTelao(s) {
   el('bia-aprovacoes').textContent = String(s.aprovacoesPendentes);
   el('bia-gates-badge').textContent = s.erros && s.erros.length ? '⚠ parcial' : 'hoje';
 
-  el('bia-trend-badge').textContent = '14 dias';
+  // 🔴 FIX 27/08 (auditoria): "14 dias" era literal fixo — bate hoje por
+  // coincidência (janela real do worker), mas mentiria se a janela mudasse.
+  el('bia-trend-badge').textContent = (s.trend.dias ? s.trend.dias.length : 14) + ' dias';
   renderBiaTrendChart_(s.trend.dias, s.trend.custo, s.trend.notif, 'bia-trend-chart');
 
   el('bia-sdr-badge').textContent = s.sdrsConhecidosAgendor + ' no Agendor';
@@ -2994,10 +3016,30 @@ let _rawDeals     = null;
 // exclusão (post de Instagram sem relação com vendas) que a aba Ads já usa.
 let _adsRawDaily     = null;
 async function fetchAdsRawDaily() {
+  // 🔴 FIX 27/08 (auditoria — inconsistência real, hoje inofensiva): antes
+  // somava TODO dash_ads_daily (só descontando ADS_EXCLUDE_CAMPAIGN_IDS),
+  // sem a proteção que a aba Ads já tem contra campanha "fantasma" (apagada
+  // na Meta, mas com linha histórica de gasto ainda em dash_ads_daily) —
+  // ver ADS_EXCLUDE_CAMPAIGN_IDS mais abaixo. Hoje bate 100% (16/16
+  // campanhas idênticas nos 2 lados), mas sem essa checagem os dois
+  // "Investimento" podiam divergir silenciosamente no dia que uma campanha
+  // fosse removida da Meta com histórico de gasto. Busca os ids ainda
+  // válidos primeiro (mesma tabela que a aba Ads usa) e filtra por eles;
+  // se essa busca falhar, segue sem o filtro extra (degrada pro
+  // comportamento antigo, nunca quebra Investimento por causa disso).
+  let validIds = null;
+  try {
+    const campRes = await fetch(SUPABASE_URL + '/rest/v1/dash_ads_campaigns?select=id', {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY }
+    });
+    if (campRes.ok) validIds = (await campRes.json()).map(c => c.id);
+  } catch (e) { /* segue sem o filtro extra */ }
+
   const PAGE = 1000;
   let all = [];
   let from = 0;
-  const excludeFilter = 'entity_id=not.in.(' + ADS_EXCLUDE_CAMPAIGN_IDS.join(',') + ')';
+  const excludeFilter = 'entity_id=not.in.(' + ADS_EXCLUDE_CAMPAIGN_IDS.join(',') + ')'
+    + ((validIds && validIds.length) ? '&entity_id=in.(' + validIds.join(',') + ')' : '');
   while (true) {
     const res = await fetch(SUPABASE_URL + '/rest/v1/dash_ads_daily?select=date,spend&entity_type=eq.campaign&' + excludeFilter, {
       headers: {
@@ -4418,11 +4460,14 @@ function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
   const leadsCampanhaNoPeriodo = (raw.leadsCampanha || []).filter(l => l.lead_date >= periodFrom && l.lead_date <= periodTo);
   function contarLeadsUnicosPorChave_(campo) {
     const porValor = {};
+    let _semHashSeq = 0; // 🔴 FIX 27/08 (auditoria): antes descartava lead sem
+    // contact_hash — divergia de leadsUnicosLocal (que conta cada um deles
+    // como +1, igual aqui faz agora com uma chave sintética sempre única).
     leadsCampanhaNoPeriodo.forEach(l => {
       const valor = l[campo];
       if (!valor) return;
       if (!porValor[valor]) porValor[valor] = new Set();
-      if (l.contact_hash) porValor[valor].add(l.contact_hash);
+      porValor[valor].add(l.contact_hash || ('__sem_hash_' + (_semHashSeq++)));
     });
     const out = {};
     Object.keys(porValor).forEach(v => { out[v] = porValor[v].size; });
