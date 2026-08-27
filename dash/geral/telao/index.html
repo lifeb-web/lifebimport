@@ -2960,9 +2960,13 @@ function saveUiState_() {
     // se fosse o período real de Vendas, contaminando o resting state
     // esperado mesmo depois do usuário sair da aba. Salva o período de
     // ANTES (memorizado em _periodBeforeSpecialTab_) quando existir.
-    const realPeriod = _periodBeforeSpecialTab_ || { period: _period, customFrom: _customFrom, customTo: _customTo };
+    const realPeriod = _periodBeforeSpecialTab_ || { period: _period, customFrom: _customFrom, customTo: _customTo, monthPickLabel: _monthPickLabel, mpSelYear: _mpSelYear, mpSelMonth: _mpSelMonth };
     localStorage.setItem(UI_STATE_KEY, JSON.stringify({
-      view: _currentViewName_(), period: realPeriod.period, customFrom: realPeriod.customFrom, customTo: realPeriod.customTo, origin: _originMode
+      view: _currentViewName_(), period: realPeriod.period, customFrom: realPeriod.customFrom, customTo: realPeriod.customTo, origin: _originMode,
+      // 🔴 FIX 27/08 nº2 (auditoria de re-validação): faltava persistir o
+      // rótulo/seleção de "📅 Mês" — datas restauravam certas, mas o badge
+      // caía pro fallback genérico "01/03 → 31/03" em vez de "Março de 2026".
+      monthPickLabel: realPeriod.monthPickLabel, mpSelYear: realPeriod.mpSelYear, mpSelMonth: realPeriod.mpSelMonth
     }));
   } catch (e) { /* localStorage indisponível (modo privado, storage cheio) — não é crítico, segue sem persistir */ }
 }
@@ -2981,6 +2985,9 @@ function restoreUiStateBeforeLoad_() {
     // essas 2 variáveis direto quando _period for um desses valores.
     if (s.customFrom) _customFrom = s.customFrom;
     if (s.customTo) _customTo = s.customTo;
+    if (s.monthPickLabel) _monthPickLabel = s.monthPickLabel;
+    if (s.mpSelYear) _mpSelYear = s.mpSelYear;
+    if (s.mpSelMonth) _mpSelMonth = s.mpSelMonth;
     if (s.period) {
       const btn = document.querySelector('.pchip[data-p="' + s.period + '"]');
       if (btn) { document.querySelectorAll('.pchip').forEach(b => b.classList.remove('active')); btn.classList.add('active'); _period = s.period; }
@@ -4419,10 +4426,21 @@ const ADS_EXCLUDE_CAMPAIGN_IDS = ['120242303144740451'];
 // verdade, spend/clicks/impressions somados certinho.
 function normalizeAdName_(name) {
   if (!name) return name;
-  return name
-    .replace(/\s*[-–—]\s*c[óo]pia(\s*\d+)?\s*$/i, '')
-    .replace(/\s*\(c[óo]pia(\s*\d+)?\)\s*$/i, '')
-    .trim();
+  // 🔴 FIX 27/08 (auditoria de re-validação — bug real confirmado ao vivo):
+  // uma passada só remove UM sufixo "— Cópia" por chamada — "AD X — Cópia —
+  // Cópia 2" (Meta gera empilhado ao duplicar um anúncio já duplicado)
+  // virava "AD X — Cópia" em vez de "AD X", deixando o "copy-of-copy" sozinho
+  // num grupo separado em groupAdsByCreative_ (spend/CTR/CPL real divididos
+  // em vez de somados). Agora roda até estabilizar de verdade.
+  let curr = name, prev;
+  do {
+    prev = curr;
+    curr = curr
+      .replace(/\s*[-–—]\s*c[óo]pia(\s*\d+)?\s*$/i, '')
+      .replace(/\s*\(c[óo]pia(\s*\d+)?\)\s*$/i, '')
+      .trim();
+  } while (curr !== prev);
+  return curr;
 }
 // Cópia fiel de groupAdsByCreative_ (dash/geral/index.html) — ver comentário
 // lá pro raciocínio completo (group-by-NOME, não creative_id).

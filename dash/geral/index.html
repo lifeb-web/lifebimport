@@ -950,6 +950,7 @@ footer strong{color:#fff}
           <span class="funil-title">Com investimento no período</span>
           <span class="funil-hint">toque para ver conjuntos</span>
         </div>
+        <div id="ads-leads-cobertura" style="font-size:10px;color:var(--muted);font-weight:600;margin:-4px 0 6px"></div>
         <div id="ads-campanhas-rows"></div>
       </div>
     </div>
@@ -1648,9 +1649,13 @@ function saveUiState_() {
     // contaminando o resting state esperado mesmo depois do usuário sair da
     // aba. Salva o período de ANTES (memorizado em _periodBeforeSpecialTab_)
     // quando existir.
-    const realPeriod = _periodBeforeSpecialTab_ || { period: _period, customFrom: _customFrom, customTo: _customTo };
+    const realPeriod = _periodBeforeSpecialTab_ || { period: _period, customFrom: _customFrom, customTo: _customTo, monthPickLabel: _monthPickLabel, mpSelYear: _mpSelYear, mpSelMonth: _mpSelMonth };
     localStorage.setItem(UI_STATE_KEY, JSON.stringify({
-      view: _currentViewName_(), period: realPeriod.period, customFrom: realPeriod.customFrom, customTo: realPeriod.customTo, origin: _originMode
+      view: _currentViewName_(), period: realPeriod.period, customFrom: realPeriod.customFrom, customTo: realPeriod.customTo, origin: _originMode,
+      // 🔴 FIX 27/08 nº2 (mesmo achado do telão): faltava persistir o
+      // rótulo/seleção de "📅 Mês" — datas restauravam certas, mas o badge
+      // caía pro fallback genérico "01/03 → 31/03" em vez de "Março de 2026".
+      monthPickLabel: realPeriod.monthPickLabel, mpSelYear: realPeriod.mpSelYear, mpSelMonth: realPeriod.mpSelMonth
     }));
   } catch (e) { /* localStorage indisponível — não é crítico, segue sem persistir */ }
 }
@@ -1666,6 +1671,9 @@ function restoreUiStateBeforeLoad_() {
     }
     if (s.customFrom) _customFrom = s.customFrom;
     if (s.customTo) _customTo = s.customTo;
+    if (s.monthPickLabel) _monthPickLabel = s.monthPickLabel;
+    if (s.mpSelYear) _mpSelYear = s.mpSelYear;
+    if (s.mpSelMonth) _mpSelMonth = s.mpSelMonth;
     if (s.period) {
       const btn = document.querySelector('.pchip[data-p="' + s.period + '"]');
       if (btn) { document.querySelectorAll('.pchip').forEach(b => b.classList.remove('active')); btn.classList.add('active'); _period = s.period; }
@@ -2820,15 +2828,22 @@ async function fetchAdsHierarchyTable_(table) {
   return all;
 }
 
+// 🔴 FIX 27/08 (auditoria de re-validação — regressão de paridade real): o
+// telão ganhou CPL real por campanha/conjunto/anúncio em 26-27/08 (cruzamento
+// com a coluna CAMPANHA/CONJUNTO/ANÚNCIO da aba LEADS da planilha, tabela
+// dash_geral_leads_campanha) mas nunca foi portado pro mobile. Tabela pode
+// ainda não existir (Robert precisa rodar o sync) — .catch devolve lista
+// vazia em vez de derrubar o resto do painel.
 async function fetchAdsHierarchyRaw() {
-  const [campaigns, adsets, ads, daily, creatives] = await Promise.all([
+  const [campaigns, adsets, ads, daily, creatives, leadsCampanha] = await Promise.all([
     fetchAdsHierarchyTable_('dash_ads_campaigns'),
     fetchAdsHierarchyTable_('dash_ads_adsets'),
     fetchAdsHierarchyTable_('dash_ads_ads'),
     fetchAdsHierarchyTable_('dash_ads_daily'),
-    fetchAdsHierarchyTable_('dash_ads_creatives')
+    fetchAdsHierarchyTable_('dash_ads_creatives'),
+    fetchAdsHierarchyTable_('dash_geral_leads_campanha').catch(() => [])
   ]);
-  return { campaigns, adsets, ads, daily, creatives };
+  return { campaigns, adsets, ads, daily, creatives, leadsCampanha };
 }
 
 async function loadAdsHierarchyFresh_() {
@@ -2887,10 +2902,18 @@ const ADS_EXCLUDE_CAMPAIGN_IDS = ['120242303144740451'];
 // como rótulo exibido.
 function normalizeAdName_(name) {
   if (!name) return name;
-  return name
-    .replace(/\s*[-–—]\s*c[óo]pia(\s*\d+)?\s*$/i, '')
-    .replace(/\s*\(c[óo]pia(\s*\d+)?\)\s*$/i, '')
-    .trim();
+  // 🔴 FIX 27/08 (auditoria de re-validação — mesmo achado do telão): uma
+  // passada só remove UM sufixo "— Cópia" por chamada — "AD X — Cópia —
+  // Cópia 2" virava "AD X — Cópia" em vez de "AD X". Roda até estabilizar.
+  let curr = name, prev;
+  do {
+    prev = curr;
+    curr = curr
+      .replace(/\s*[-–—]\s*c[óo]pia(\s*\d+)?\s*$/i, '')
+      .replace(/\s*\(c[óo]pia(\s*\d+)?\)\s*$/i, '')
+      .trim();
+  } while (curr !== prev);
+  return curr;
 }
 function groupAdsByCreative_(ads) {
   const groups = {};
@@ -2899,7 +2922,7 @@ function groupAdsByCreative_(ads) {
     const cleanName = normalizeAdName_(ad.name) || ad.id;
     const key = 'n:' + cleanName;
     if (!groups[key]) {
-      groups[key] = { key, name: cleanName, thumbUrl: ad.thumbUrl, campaignNames: new Set(), adsetNames: new Set(), spend: 0, impressions: 0, clicks: 0, count: 0, memberIds: [], anyActive: false };
+      groups[key] = { key, name: cleanName, thumbUrl: ad.thumbUrl, campaignNames: new Set(), adsetNames: new Set(), spend: 0, impressions: 0, clicks: 0, count: 0, memberIds: [], anyActive: false, leadsReal: ad.leadsReal || 0 };
       order.push(key);
     }
     const g = groups[key];
@@ -2910,6 +2933,10 @@ function groupAdsByCreative_(ads) {
     g.count++;
     g.memberIds.push(ad.id);
     if (ad.status === 'ACTIVE') g.anyActive = true;
+    // leadsReal vem do lookup por NOME normalizado (mesma chave pra todo
+    // membro do grupo) — nunca somar entre membros, senão duplica a
+    // contagem do mesmo lead várias vezes.
+    if (ad.leadsReal > g.leadsReal) g.leadsReal = ad.leadsReal;
   });
   return order.map(key => {
     const g = groups[key];
@@ -2918,6 +2945,7 @@ function groupAdsByCreative_(ads) {
       campaignsCount: g.campaignNames.size, adsetsCount: g.adsetNames.size,
       spend: g.spend, impressions: g.impressions, clicks: g.clicks,
       ctr: g.impressions > 0 ? (g.clicks / g.impressions) * 100 : null,
+      leadsReal: g.leadsReal, cplReal: (g.spend > 0 && g.leadsReal > 0) ? g.spend / g.leadsReal : null,
       count: g.count, memberIds: g.memberIds, allPaused: !g.anyActive
     };
   }).sort((a, b) => b.spend - a.spend);
@@ -2950,16 +2978,48 @@ function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
   const adsRaw = (raw.ads || []).filter(ad => campaignsById[ad.campaign_id]); // anúncio da campanha excluída some junto
   const creativesById = {}; (raw.creatives || []).forEach(c => creativesById[c.id] = c);
 
-  function withMetrics(entityId, metricsMap) {
+  // 🔴 FIX 27/08 (auditoria — regressão de paridade real, mesmo recurso do
+  // telão 26-27/08): leads reais por NOME de campanha/conjunto/anúncio,
+  // cruzados com a coluna CAMPANHA/CONJUNTO/ANÚNCIO da aba LEADS da planilha
+  // (723 de 854 leads têm isso preenchido via UTM). Dedup por contact_hash
+  // dentro do período — mesma regra de leadsUnicosLocal (usada no CPL geral),
+  // agrupado por entidade em vez do total. Tabela pode não existir ainda —
+  // raw.leadsCampanha vem [] nesse caso, tudo aqui vira null com segurança
+  // (nunca 0 fingindo que sabe que não teve lead).
+  const leadsCampanhaNoPeriodo = (raw.leadsCampanha || []).filter(l => l.lead_date >= periodFrom && l.lead_date <= periodTo);
+  function contarLeadsUnicosPorChave_(campo) {
+    const porValor = {};
+    let _semHashSeq = 0; // lead sem contact_hash conta como +1 (igual leadsUnicosLocal), nunca é descartado.
+    leadsCampanhaNoPeriodo.forEach(l => {
+      const valor = l[campo];
+      if (!valor) return;
+      if (!porValor[valor]) porValor[valor] = new Set();
+      porValor[valor].add(l.contact_hash || ('__sem_hash_' + (_semHashSeq++)));
+    });
+    const out = {};
+    Object.keys(porValor).forEach(v => { out[v] = porValor[v].size; });
+    return out;
+  }
+  const leadsPorCampanha_ = contarLeadsUnicosPorChave_('campanha');
+  const leadsPorConjunto_ = contarLeadsUnicosPorChave_('conjunto');
+  const leadsPorAnuncio_ = contarLeadsUnicosPorChave_('anuncio');
+
+  function withMetrics(entityId, metricsMap, nome, leadsMap) {
     const m = metricsMap[entityId] || { spend: 0, impressions: 0, clicks: 0 };
-    return { spend: m.spend, impressions: m.impressions, clicks: m.clicks, ctr: m.impressions > 0 ? (m.clicks / m.impressions) * 100 : null };
+    const leadsReal = (nome && leadsMap && leadsMap[nome]) || 0;
+    return {
+      spend: m.spend, impressions: m.impressions, clicks: m.clicks,
+      ctr: m.impressions > 0 ? (m.clicks / m.impressions) * 100 : null,
+      leadsReal: leadsReal,
+      cplReal: (m.spend > 0 && leadsReal > 0) ? m.spend / leadsReal : null
+    };
   }
 
-  const campaignsAll = campaignsRaw.map(c => Object.assign({ id: c.id, name: c.name, status: c.status }, withMetrics(c.id, campaignMetrics)))
+  const campaignsAll = campaignsRaw.map(c => Object.assign({ id: c.id, name: c.name, status: c.status }, withMetrics(c.id, campaignMetrics, c.name, leadsPorCampanha_)))
     .sort((a, b) => b.spend - a.spend);
   const adsetsAll = adsetsRaw.map(a => {
     const camp = campaignsById[a.campaign_id];
-    return Object.assign({ id: a.id, name: a.name, status: a.status, campaignName: camp ? camp.name : '—' }, withMetrics(a.id, adsetMetrics));
+    return Object.assign({ id: a.id, name: a.name, status: a.status, campaignName: camp ? camp.name : '—' }, withMetrics(a.id, adsetMetrics, a.name, leadsPorConjunto_));
   }).sort((a, b) => b.spend - a.spend);
   const adsAll = adsRaw.map(ad => {
     const camp = campaignsById[ad.campaign_id];
@@ -2969,7 +3029,7 @@ function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
       id: ad.id, name: ad.name, status: ad.status, creative_id: ad.creative_id || null,
       campaignName: camp ? camp.name : '—', adsetName: adset ? adset.name : '—',
       thumbUrl: creative && creative.thumbnail_storage_path ? (ADS_STORAGE_PUBLIC_BASE + creative.thumbnail_storage_path) : null
-    }, withMetrics(ad.id, adMetrics));
+    }, withMetrics(ad.id, adMetrics, normalizeAdName_(ad.name), leadsPorAnuncio_));
   }).sort((a, b) => b.spend - a.spend);
 
   // achado 02/08 (auditoria): total do topo tem que vir da MESMA lista que
@@ -3048,6 +3108,11 @@ function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
   const adGroupsActive = groupAdsByCreative_(adsActive);
   const adGroupsAll = groupAdsByCreative_(adsAll);
 
+  // Cobertura do cruzamento lead×campanha, pra transparência (nunca esconder
+  // quando o dado é parcial). Soma os valores DISTINTOS por campanha — cada
+  // campanha já é uma chave própria, sem risco de contar a mesma pessoa 2x.
+  const leadsIdentificadosPorCampanha_ = Object.values(leadsPorCampanha_).reduce((a, b) => a + b, 0);
+
   return {
     periodLabel, trendSeries, earliestDailyDate, periodTruncated,
     kpis: {
@@ -3055,7 +3120,8 @@ function computeAdsHierarchyData(raw, periodFrom, periodTo, periodLabel) {
       leads: adsLeadsPeriodo, cac: adsCac, cpl: adsCpl, roas: adsRoas, acos: adsAcos,
       activeCampaigns: campaignsActive.length, totalCampaigns: campaignsAll.length,
       activeAdsets: adsetsActive.length, totalAdsets: adsetsAll.length,
-      activeAds: adGroupsActive.length, totalAds: adGroupsAll.length
+      activeAds: adGroupsActive.length, totalAds: adGroupsAll.length,
+      leadsIdentificados: leadsIdentificadosPorCampanha_
     },
     campaignsList: campaignsActive, adsetsList: adsetsActive, adsList: adGroupsActive
   };
@@ -3099,7 +3165,7 @@ function adGroupRow_(g) {
       </div>
       <div class="feed-right">
         <div class="feed-val">${fmtMoney(g.spend)}</div>
-        <div class="feed-date">${g.ctr !== null ? g.ctr.toFixed(2) + '% CTR' : '—'}</div>
+        <div class="feed-date">${g.ctr !== null ? g.ctr.toFixed(2) + '% CTR' + (g.cplReal ? ' · ' + fmtMoney(g.cplReal) + '/lead' : '') : '—'}</div>
       </div>
     </div>`;
 }
@@ -3203,14 +3269,26 @@ function renderAdsHierarchySection(d) {
 
   renderSpendTrendChart_(d.trendSeries, 'ads-trend-chart');
 
+  // 🔴 FIX 27/08 (auditoria — mesma regra do telão): CPL real (leads
+  // cruzados via planilha) tem prioridade sobre CTR-só quando existe pra
+  // essa entidade nesse período — nunca esconde a cobertura parcial.
+  const subTextComEficiencia_ = (ctr, cplReal, leadsReal) => {
+    if (ctr === null) return '—';
+    let t = ctr.toFixed(2) + '% CTR';
+    if (cplReal !== null && cplReal !== undefined) t += ' · ' + fmtMoney(cplReal) + '/lead (' + leadsReal + ')';
+    return t;
+  };
   el('ads-campanhas-badge').textContent = d.campaignsList.length + ' de ' + d.kpis.totalCampaigns;
+  el('ads-leads-cobertura').textContent = d.kpis.leadsIdentificados > 0
+    ? d.kpis.leadsIdentificados + ' de ' + d.kpis.leads + ' leads identificados por campanha'
+    : '';
   const maxCampSpend = Math.max(...d.campaignsList.map(c => c.spend), 1);
   el('ads-campanhas-rows').innerHTML = d.campaignsList.length === 0
     ? '<div class="feed-empty">Nenhuma campanha com investimento no período</div>'
     : d.campaignsList.map(c => adsFunilRow_(
         'var(--purple)',
         c.name, c.spend, maxCampSpend,
-        c.ctr !== null ? c.ctr.toFixed(2) + '% CTR' : '—',
+        subTextComEficiencia_(c.ctr, c.cplReal, c.leadsReal),
         "openAdsCampaignModal('" + c.id + "')",
         c.status !== 'ACTIVE'
       )).join('');
@@ -3222,7 +3300,7 @@ function renderAdsHierarchySection(d) {
     : d.adsetsList.slice(0, 20).map(a => adsFunilRow_(
         'var(--purple)',
         a.name, a.spend, maxAdsetSpend,
-        a.ctr !== null ? a.ctr.toFixed(2) + '% CTR' : '—',
+        subTextComEficiencia_(a.ctr, a.cplReal, a.leadsReal),
         "openAdsAdsetModal('" + a.id + "')",
         a.status !== 'ACTIVE'
       )).join('');
