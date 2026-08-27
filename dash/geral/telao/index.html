@@ -1459,14 +1459,30 @@ footer strong{color:#fff}
           <span class="card-hd-title">Confiança &amp; Saúde</span>
           <span class="badge" id="bia-gates-badge">hoje</span>
         </div>
+        <!-- 🔴 FIX 27/08 (Robert: "por que não respeita os filtros" de novo,
+        26/08 já tinha achado a causa mas nunca deixou claro NA TELA — só
+        num comentário de código. Depois, Robert: "pra mim tudo é filtravel,
+        basta saber tratar os dados corretamente" — ele tinha razão: o
+        sistema da Bia só guarda o contador de HOJE (sem histórico nenhum,
+        confirmado no KV), mas nada impede a gente de começar a GUARDAR esse
+        histórico a partir de agora. Tabela nova `dash_bia_gates_daily`
+        (bia-dash-sync grava 1 linha/dia via cron de 10min) — fing/neg/afd/
+        gate3b/Motor Proativo/Respostas agora somam de verdade o período
+        pedido (ver computeBiaGatesFromDaily_). Só não reconstrói o PASSADO
+        (esse dado nunca existiu antes de hoje) — aviso abaixo quando o
+        período pedido pede mais história do que já foi gravada. Cérebro e
+        Aprovações pendentes continuam "agora" de propósito — são medidores
+        do instante atual (fila/estado), não contadores do período, mesmo
+        princípio do Pipeline Ativo em Vendas. -->
         <div style="padding:2px 14px">
           <div class="stat-row"><span class="k">🚨 Fingimento pego</span><span class="v" id="bia-gate-fing">—</span></div>
           <div class="stat-row"><span class="k">Negação sem consultar</span><span class="v" id="bia-gate-neg">—</span></div>
           <div class="stat-row"><span class="k">Número sem consultar</span><span class="v" id="bia-gate-afd">—</span></div>
           <div class="stat-row"><span class="k">Contagem ≠ lista</span><span class="v" id="bia-gate-3b">—</span></div>
-          <div class="stat-row"><span class="k">Cérebro: última resposta</span><span class="v" id="bia-cerebro-min">—</span></div>
-          <div class="stat-row"><span class="k">Respostas da Bia (hoje)</span><span class="v" id="bia-respostas">—</span></div>
-          <div class="stat-row"><span class="k">Aprovações pendentes</span><span class="v" id="bia-aprovacoes">—</span></div>
+          <div class="stat-row"><span class="k">Cérebro: última resposta (agora)</span><span class="v" id="bia-cerebro-min">—</span></div>
+          <div class="stat-row"><span class="k">Respostas da Bia</span><span class="v" id="bia-respostas">—</span></div>
+          <div class="stat-row"><span class="k">Aprovações pendentes (agora)</span><span class="v" id="bia-aprovacoes">—</span></div>
+          <div id="bia-gates-historico-aviso" style="display:none;font-size:10.5px;color:var(--amber);padding:6px 0 2px;line-height:1.4"></div>
         </div>
       </div>
       <div class="card" id="bia-trend-card" style="flex:1;display:flex;flex-direction:column;min-height:0">
@@ -2783,7 +2799,17 @@ function renderBiaSectionTelao(s) {
   el('bia-k-leads').textContent = String(s.leadsMonitor);
   el('bia-k-msgs-label').textContent = 'Mensagens ' + pLabel;
   el('bia-k-msgs').textContent = String(s.mensagensHoje);
-  el('bia-k-motor').textContent = String(s.motorProativoHoje);
+
+  // 🔴 FIX 27/08: fing/neg/afd/gate3b/Motor Proativo/Respostas somados de
+  // verdade pelo período pedido (ver computeBiaGatesFromDaily_) em vez de
+  // sempre "hoje" — histórico só existe a partir de 27/08 (ver aviso).
+  const periodFromG = (_data && _data.period && _data.period.from) || todayLocalStr();
+  const periodToG = (_data && _data.period && _data.period.to) || todayLocalStr();
+  const gatesC = computeBiaGatesFromDaily_(_biaGatesDailyRaw, periodFromG, periodToG, todayLocalStr(), {
+    fing: s.gates.fing, neg: s.gates.neg, afd: s.gates.afd, gate3b: s.gates.gate3b,
+    motorProativo: s.motorProativoHoje, respostasBia: s.respostasBiaHoje
+  });
+  el('bia-k-motor').textContent = String(gatesC.motorProativo);
 
   // Motor Proativo — o card "ao vivo" de verdade (achado 26/08: Robert
   // pediu explicitamente esse card, não existia antes, só um número solto).
@@ -2816,15 +2842,27 @@ function renderBiaSectionTelao(s) {
   renderBiaMotorSection_(s);
 
   const gv = (n) => n > 0 ? 'crit' : 'good';
-  el('bia-gate-fing').textContent = s.gates.fing; el('bia-gate-fing').className = 'v ' + gv(s.gates.fing);
-  el('bia-gate-neg').textContent = s.gates.neg; el('bia-gate-neg').className = 'v ' + gv(s.gates.neg);
-  el('bia-gate-afd').textContent = s.gates.afd; el('bia-gate-afd').className = 'v ' + (s.gates.afd > 0 ? 'warn' : 'good');
-  el('bia-gate-3b').textContent = s.gates.gate3b; el('bia-gate-3b').className = 'v ' + (s.gates.gate3b > 0 ? 'warn' : 'good');
+  el('bia-gate-fing').textContent = gatesC.fing; el('bia-gate-fing').className = 'v ' + gv(gatesC.fing);
+  el('bia-gate-neg').textContent = gatesC.neg; el('bia-gate-neg').className = 'v ' + gv(gatesC.neg);
+  el('bia-gate-afd').textContent = gatesC.afd; el('bia-gate-afd').className = 'v ' + (gatesC.afd > 0 ? 'warn' : 'good');
+  el('bia-gate-3b').textContent = gatesC.gate3b; el('bia-gate-3b').className = 'v ' + (gatesC.gate3b > 0 ? 'warn' : 'good');
 
+  // Cérebro (última resposta) e Aprovações pendentes são MEDIDORES do
+  // instante atual (fila/estado agora), não contadores do período — nunca
+  // fazem sentido "somados por período" (mesmo princípio do Pipeline Ativo
+  // em Vendas, que também não filtra por período). Ficam sempre "agora".
   el('bia-cerebro-min').textContent = s.cerebroMin != null ? s.cerebroMin + ' min atrás' : '—';
-  el('bia-respostas').textContent = String(s.respostasBiaHoje);
+  el('bia-respostas').textContent = String(gatesC.respostasBia);
   el('bia-aprovacoes').textContent = String(s.aprovacoesPendentes);
-  el('bia-gates-badge').textContent = s.erros && s.erros.length ? '⚠ parcial' : 'hoje';
+  el('bia-gates-badge').textContent = s.erros && s.erros.length ? '⚠ parcial' : pLabel;
+  const gatesAvisoEl = el('bia-gates-historico-aviso');
+  if (gatesAvisoEl) {
+    gatesAvisoEl.style.display = gatesC.periodTruncated ? 'block' : 'none';
+    if (gatesC.periodTruncated) {
+      const ep = gatesC.earliestDate.split('-');
+      gatesAvisoEl.textContent = '⚠ histórico desses contadores só começou em ' + ep[2] + '/' + ep[1] + '/' + ep[0] + ' — dias antes disso não têm registro.';
+    }
+  }
 
   // 🔴 FIX 27/08 (auditoria): "14 dias" era literal fixo — bate hoje por
   // coincidência (janela real do worker), mas mentiria se a janela mudasse.
@@ -2877,11 +2915,65 @@ function renderBiaSectionTelao(s) {
   }
 }
 
+// 🔴 FIX 27/08 (Robert: "pra mim tudo é filtravel, basta saber tratar os
+// dados corretamente") — fing/neg/afd/gate3b/Motor Proativo/Respostas da
+// Bia só existiam como contador "hoje" (sem histórico nenhum guardado em
+// lugar nenhum). `bia-dash-sync` passou a gravar 1 linha por dia nessa
+// tabela nova (upsert a cada 10min, converge pro total real do dia até a
+// virada) — a partir de agora dá pra somar por período de verdade. Não
+// reconstrói o passado (esse dado nunca existiu antes de hoje).
+let _biaGatesDailyRaw = null;
+async function fetchBiaGatesDailyRaw() {
+  const PAGE = 1000;
+  let all = [];
+  let from = 0;
+  while (true) {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/dash_bia_gates_daily?select=*', {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY, Range: from + '-' + (from + PAGE - 1) }
+    });
+    if (!res.ok) throw new Error('Supabase HTTP ' + res.status);
+    const rows = await res.json();
+    all = all.concat(rows);
+    if (rows.length < PAGE) break;
+    from += PAGE;
+  }
+  return all;
+}
+
+// HOJE nunca vem da tabela histórica (só é gravada a cada 10min pelo cron —
+// podia estar até 10min desatualizada) — sempre soma os dias ANTERIORES a
+// hoje a partir do histórico real, e usa o snapshot AO VIVO do worker (s.*,
+// que é sempre "hoje" independente do período pedido) pra completar o dia
+// de hoje. Nunca inventa dia sem registro — periodTruncated avisa quando o
+// período pedido começa antes do 1º dia que já foi gravado.
+function computeBiaGatesFromDaily_(rawRows, periodFrom, periodTo, todayStr, liveToday) {
+  const rows = (rawRows || []).filter(r => r.date >= periodFrom && r.date <= periodTo && r.date !== todayStr);
+  const sum = (key) => rows.reduce((a, r) => a + (r[key] || 0), 0);
+  const includesToday = todayStr >= periodFrom && todayStr <= periodTo;
+  const allDates = (rawRows || []).map(r => r.date).filter(Boolean).sort();
+  const earliestDate = allDates.length ? allDates[0] : todayStr;
+  return {
+    fing: sum('fing_count') + (includesToday ? liveToday.fing : 0),
+    neg: sum('neg_count') + (includesToday ? liveToday.neg : 0),
+    afd: sum('afd_count') + (includesToday ? liveToday.afd : 0),
+    gate3b: sum('gate3b_count') + (includesToday ? liveToday.gate3b : 0),
+    motorProativo: sum('motor_proativo_count') + (includesToday ? liveToday.motorProativo : 0),
+    respostasBia: sum('respostas_bia') + (includesToday ? liveToday.respostasBia : 0),
+    earliestDate,
+    periodTruncated: periodFrom < earliestDate
+  };
+}
+
 async function loadBiaFresh_() {
   if (_biaLoading) return;
   _biaLoading = true;
   try {
-    _biaSnap = await fetchBiaSnapshot(biaPeriodoFor_(_period) || 'hoje');
+    const [snap, gatesDaily] = await Promise.all([
+      fetchBiaSnapshot(biaPeriodoFor_(_period) || 'hoje'),
+      fetchBiaGatesDailyRaw().catch((e) => { console.warn('fetchBiaGatesDailyRaw falhou:', e.message); return _biaGatesDailyRaw; })
+    ]);
+    _biaSnap = snap;
+    _biaGatesDailyRaw = gatesDaily;
     if (_biaViewActive) renderBiaSectionTelao(_biaSnap);
   } catch (e) {
     console.warn('fetchBiaSnapshot falhou:', e.message);
