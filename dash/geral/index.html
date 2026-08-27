@@ -5,6 +5,9 @@
 <meta name="robots" content="noindex,nofollow">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Life B | Painel Comercial</title>
+<!-- GA4 (paridade com o telão) — Chart.js pro gráfico "Visitantes", mesma
+     lib/versão do telão (dash/geral/telao/index.html). -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g" crossorigin="anonymous"></script>
 <link rel="icon" type="image/x-icon" href="favicon/favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon/favicon-16x16.png">
@@ -136,7 +139,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .sec-hd{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--faint);padding:0 2px 5px}
 
 /* HERO — o único número que responde "está tudo bem?" */
-#hero,#ads-hero,#ltv-hero{background:var(--card);border-radius:16px;border:1px solid var(--border);padding:18px 18px 16px;position:relative;overflow:hidden;box-shadow:0 1px 3px rgba(26,22,38,.05),0 8px 24px -8px rgba(112,75,155,.18)}
+#hero,#ads-hero,#ltv-hero,#ga4-hero{background:var(--card);border-radius:16px;border:1px solid var(--border);padding:18px 18px 16px;position:relative;overflow:hidden;box-shadow:0 1px 3px rgba(26,22,38,.05),0 8px 24px -8px rgba(112,75,155,.18)}
 #hero{cursor:pointer}
 #ads-hero{margin-bottom:12px}
 #hero::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(112,75,155,.05),transparent 60%);pointer-events:none}
@@ -165,6 +168,42 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .kc-delta.flat{color:var(--muted)}
 .kc-sub{font-size:10px;font-weight:600;color:var(--muted)}
 .kc-sub.warn{color:var(--amber)}
+
+/* GA4 (paridade com o telão, mesma referência visual do dashboard-telao.html
+   original do Robert) — card "Ao vivo" com destaque roxo preenchido, igual
+   ao telão (dash/geral/telao/index.html), só que como 1 dos 8 kchips do
+   .kpi-strip padrão do mobile (telão usa um grid próprio de 9 colunas fixo,
+   que não existe aqui — o hero "Usuários Ativos" já sai como #ga4-hero). */
+#ga4-live-card{background:linear-gradient(135deg,var(--purple) 0%,#9260c8 100%);border:none;box-shadow:0 4px 14px -4px rgba(112,75,155,.55);align-items:center;text-align:center}
+#ga4-live-card .kc-label{color:rgba(255,255,255,.85);display:flex;align-items:center;gap:5px;justify-content:center}
+#ga4-live-card .kc-val{color:#fff}
+#ga4-live-card .kc-sub{color:rgba(255,255,255,.8)}
+#ga4-live-card .kc-row{justify-content:center}
+#ga4-live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#fff;animation:ga4pulse 1.6s ease-in-out infinite}
+@keyframes ga4pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* Cidades/Fontes/Páginas — mesma tabela de colunas do telão (Robert comparou
+   com o dashboard-telao.html original e preferiu esse formato à barra de
+   progresso). No telão a altura já é limitada pelo layout fixo em coluna; no
+   mobile (página rola inteira) o limite vem de max-height + scroll interno,
+   mesmo padrão já usado em #feed-won-rows/#feed-lost-rows deste arquivo —
+   evita que "Cidades" (até 60 linhas) vire metade da página sozinha. */
+.ga4-table-scroll{max-height:320px;overflow-y:auto}
+.ga4-table-scroll::-webkit-scrollbar{width:3px}
+.ga4-table-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.ga4-table-card table{width:100%;border-collapse:collapse}
+.ga4-table-card thead tr{border-bottom:2px solid var(--border)}
+.ga4-table-card th{padding:8px 6px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);text-align:right;white-space:nowrap;position:sticky;top:0;background:var(--card)}
+.ga4-table-card th:first-child,.ga4-table-card th.ga4-th-left{text-align:left}
+.ga4-table-card th:first-child,.ga4-table-card td:first-child{padding-left:14px}
+.ga4-table-card th:last-child,.ga4-table-card td:last-child{padding-right:14px}
+.ga4-table-card tbody tr{border-bottom:1px solid var(--border)}
+.ga4-table-card tbody tr:last-child{border-bottom:none}
+.ga4-table-card td{padding:8px 6px;font-weight:500;font-size:13px;white-space:normal;word-break:break-word;overflow-wrap:anywhere}
+.ga4-table-card td:not(:first-child){text-align:right;font-weight:700;font-size:13px;color:var(--purple);white-space:nowrap}
+.ga4-pg-legenda{display:block;font-weight:700;font-size:13px;color:var(--text);white-space:normal;word-break:break-word}
+.ga4-pg-path{display:block;font-size:9px;color:var(--muted);font-family:monospace;margin-top:1px;white-space:normal;word-break:break-word}
+.ga4-td-left{text-align:left!important;font-weight:500!important}
 
 @keyframes skel{0%{background-position:200% 0}100%{background-position:-200% 0}}
 .skel{display:inline-block;height:.9em;background:linear-gradient(90deg,#e8e4f0 25%,#d0cae6 50%,#e8e4f0 75%);background-size:200% 100%;animation:skel 1.4s linear infinite;border-radius:4px;min-width:60px}
@@ -410,6 +449,7 @@ footer strong{color:#fff}
     <button class="ochip" data-v="ltv" onclick="setView(this)">LTV</button>
     <button class="ochip" data-v="sdr" onclick="setView(this)">SDR</button>
     <button class="ochip" data-v="ads" onclick="setView(this)">Ads</button>
+    <button class="ochip" data-v="ga4" onclick="setView(this)">GA4</button>
   </div>
 </div>
 
@@ -885,6 +925,123 @@ footer strong{color:#fff}
       </div>
     </div>
   </div><!-- /ads-view -->
+
+  <!-- GA4 (paridade com o telão, dash/geral/telao/index.html) — Analytics de
+       tráfego/comportamento do site (projetojlbv.com.br), lido do worker
+       ga4-dash-cache (isolado, mesmo desenho do bia-dash-sync). Nunca do
+       Supabase, dado sempre ao vivo por período. -->
+  <div id="ga4-view" style="display:none">
+    <div class="sec-hd">GA4 Analytics</div>
+
+    <div id="ga4-hero" style="cursor:default">
+      <div class="hero-top">
+        <span class="hero-label">Usuários Ativos</span>
+        <span class="hero-spark" id="ga4-hero-spark"></span>
+      </div>
+      <div class="hero-val" id="ga4-hero-val"><span class="skel" style="width:180px;height:32px"></span></div>
+      <div class="hero-row">
+        <span class="hero-sub">no período</span>
+      </div>
+    </div>
+
+    <div class="kpi-strip">
+      <div class="kchip" id="ga4-live-card">
+        <span class="kc-label"><span id="ga4-live-dot"></span>Ao vivo</span>
+        <div class="kc-row"><span class="kc-val" id="ga4-k-live"><span class="skel"></span></span></div>
+        <span class="kc-sub">visitantes agora</span>
+      </div>
+      <div class="kchip">
+        <span class="kc-label">Sessões</span>
+        <div class="kc-row"><span class="kc-val" id="ga4-k-sessions"><span class="skel"></span></span></div>
+        <span class="kc-sub">no período</span>
+      </div>
+      <div class="kchip">
+        <span class="kc-label">Visualizações</span>
+        <div class="kc-row"><span class="kc-val" id="ga4-k-views"><span class="skel"></span></span></div>
+        <span class="kc-sub">páginas vistas</span>
+      </div>
+      <!-- "Leitura Completa" (% que chegou no ScrollDepth_100), não "Páginas/
+           Sessão" — o site é feito de landing pages isoladas, sem navegação
+           interna entre páginas (mesma correção já aplicada no telão). -->
+      <div class="kchip">
+        <span class="kc-label">Leitura Completa</span>
+        <div class="kc-row"><span class="kc-val" id="ga4-k-ppv"><span class="skel"></span></span></div>
+        <span class="kc-sub">chegou ao fim da página</span>
+      </div>
+      <div class="kchip">
+        <span class="kc-label">Duração Média</span>
+        <div class="kc-row"><span class="kc-val" id="ga4-k-duration"><span class="skel"></span></span></div>
+        <span class="kc-sub">por sessão</span>
+      </div>
+      <div class="kchip">
+        <span class="kc-label" title="% de sessões de 1 página só, sem interação. Menor é melhor.">Rejeição ⓘ</span>
+        <div class="kc-row"><span class="kc-val" id="ga4-k-bounce"><span class="skel"></span></span></div>
+        <span class="kc-sub">menor é melhor</span>
+      </div>
+      <div class="kchip">
+        <span class="kc-label">Leads (GA4)</span>
+        <div class="kc-row"><span class="kc-val" id="ga4-k-leads"><span class="skel"></span></span></div>
+        <span class="kc-sub">Lead_Formulario</span>
+      </div>
+      <div class="kchip">
+        <span class="kc-label">Taxa de Conversão</span>
+        <div class="kc-row"><span class="kc-val" id="ga4-k-conv"><span class="skel"></span></span></div>
+        <span class="kc-sub">leads por visitante</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-hd">Visitantes <span id="ga4-visitors-badge" style="color:var(--purple);font-weight:800;text-transform:none;letter-spacing:0"></span></div>
+      <div class="feed-card" style="padding:10px 10px 4px">
+        <div style="position:relative;height:200px"><canvas id="ga4-visitors-chart"></canvas></div>
+        <div id="ga4-visitors-aviso" style="font-size:11px;color:var(--muted);text-align:center;padding:6px 4px 8px"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-hd">Eventos de Conversão <span id="ga4-funil-badge" style="color:var(--purple);font-weight:800;text-transform:none;letter-spacing:0"></span></div>
+      <div class="feed-card">
+        <div id="ga4-funil-rows"></div>
+        <div id="ga4-funil-rates" style="display:none;padding:10px 14px 12px"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-hd">Estado / Cidade <span id="ga4-cities-badge" style="color:var(--purple);font-weight:800;text-transform:none;letter-spacing:0"></span></div>
+      <div class="feed-card ga4-table-card">
+        <div class="ga4-table-scroll">
+          <table>
+            <thead><tr><th>UF</th><th class="ga4-th-left">Cidade</th><th>Visit.</th><th>Leads</th></tr></thead>
+            <tbody id="ga4-cities-rows"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-hd">Origem do Tráfego <span id="ga4-sources-badge" style="color:var(--purple);font-weight:800;text-transform:none;letter-spacing:0"></span></div>
+      <div class="feed-card ga4-table-card">
+        <div class="ga4-table-scroll">
+          <table>
+            <thead><tr><th>De onde veio</th><th>Visit.</th><th>Leads</th></tr></thead>
+            <tbody id="ga4-sources-rows"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-hd">Por Página <span id="ga4-pages-badge" style="color:var(--purple);font-weight:800;text-transform:none;letter-spacing:0"></span></div>
+      <div class="feed-card ga4-table-card">
+        <div class="ga4-table-scroll">
+          <table>
+            <thead><tr><th>Página</th><th>Visit.</th><th>Leads</th></tr></thead>
+            <tbody id="ga4-pages-rows"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div><!-- /ga4-view -->
 </div>
 
 <footer>Life B Import &nbsp;·&nbsp; <strong id="footer-mode">Painel Geral</strong> &nbsp;·&nbsp; Dados: <span id="footer-source">Agendor</span></footer>
@@ -1328,7 +1485,7 @@ let _originMode = 'both';
 // origem) a cada mudança, restaura ANTES do primeiro loadData() do boot.
 const UI_STATE_KEY = 'dash_geral_mobile_ui_state_v1';
 function _currentViewName_() {
-  return _ltvViewActive ? 'ltv' : _sdrViewActive ? 'sdr' : _adsViewActive ? 'ads' : 'vendas';
+  return _ltvViewActive ? 'ltv' : _sdrViewActive ? 'sdr' : _adsViewActive ? 'ads' : _ga4ViewActive ? 'ga4' : 'vendas';
 }
 function saveUiState_() {
   try {
@@ -1506,7 +1663,14 @@ function setOrigin(btn) {
   // sinistros e volta lá pra vendas"): _ltvViewActive precisa entrar nessa
   // checagem também, senão trocar Outbound/Inbound/Ambos com LTV aberto
   // sobrescreve o cabeçalho pra "Outbound" mesmo com o conteúdo certo na tela.
-  if (!_ltvViewActive && !_sdrViewActive && !_adsViewActive) {
+  // 🔴 FIX 27/08 (GA4 mobile, mesma reincidência já corrigida no telão):
+  // a checagem enumerava cada aba não-Vendas na mão (SDR/Ads) e nunca foi
+  // atualizada quando LTV nasceu — só não quebrou por sorte porque LTV foi
+  // adicionada separadamente na condição acima. Trocado pra 1 flag "estou em
+  // Vendas" (mesmo padrão já adotado no telão) — não quebra de novo se uma
+  // aba nova aparecer no futuro sem alguém lembrar de enumerar aqui.
+  const _emVendas = !_ltvViewActive && !_sdrViewActive && !_adsViewActive && !_ga4ViewActive;
+  if (_emVendas) {
     el('h-title-text').textContent = label;
     el('footer-mode').textContent = label;
   }
@@ -1754,6 +1918,7 @@ async function loadData(force, silent) {
     renderDeltas(_data.kpis, prev && prev.kpis);
     refreshSdrIfActive_();
     refreshAdsHierarchyIfActive_();
+    refreshGa4IfActive_();
     flashDot();
     try { localStorage.setItem('geral_snapshot', JSON.stringify({ data: curr, savedAt: Date.now() })); } catch(_) {}
   } catch(e) {
@@ -2126,23 +2291,26 @@ function setView(btn) {
   const bar = btn.closest('.oseg');
   bar.querySelectorAll('.ochip').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  // 26/08: 4º valor 'ltv' adicionado ao toggle (era vendas/sdr/ads) — mesmo
-  // padrão, cada view é uma aba exclusiva.
-  const view = btn.dataset.v; // 'vendas' | 'ltv' | 'sdr' | 'ads'
+  // 26/08: 4º valor 'ltv' adicionado ao toggle (era vendas/sdr/ads).
+  // 27/08: 5º valor 'ga4' (Analytics de tráfego/comportamento) — paridade
+  // com o telão. Mesmo padrão, cada view é uma aba exclusiva.
+  const view = btn.dataset.v; // 'vendas' | 'ltv' | 'sdr' | 'ads' | 'ga4'
   _ltvViewActive = view === 'ltv';
   _sdrViewActive = view === 'sdr';
   _adsViewActive = view === 'ads';
+  _ga4ViewActive = view === 'ga4';
   el('vendas-view').style.display = view === 'vendas' ? '' : 'none';
   el('ltv-view').style.display = view === 'ltv' ? '' : 'none';
   el('sdr-view').style.display = view === 'sdr' ? '' : 'none';
   el('ads-view').style.display = view === 'ads' ? '' : 'none';
+  el('ga4-view').style.display = view === 'ga4' ? '' : 'none';
   // achado 02/08 (auditoria): faltava aqui — h-title-text/footer-mode/
   // footer-source só eram escritos por setOrigin(), nunca por setView().
   // Entrar em SDR/Ads (sem nunca ter tocado o filtro de origem) deixava os
   // 3 textos errados ("Painel Geral"/"Dados: Agendor") mesmo com uma aba
   // de fonte diferente claramente ativa.
-  const label = view === 'ltv' ? 'LTV (Pós-venda)' : (view === 'sdr' ? 'SDR (Felipe)' : (view === 'ads' ? 'Meta Ads' : ORIGIN_LABELS[_originMode]));
-  const source = view === 'ltv' ? 'Agendor' : (view === 'sdr' ? 'GS Engage' : (view === 'ads' ? 'Meta Ads' : 'Agendor'));
+  const label = view === 'ltv' ? 'LTV (Pós-venda)' : (view === 'sdr' ? 'SDR (Felipe)' : (view === 'ads' ? 'Meta Ads' : (view === 'ga4' ? 'GA4 Analytics' : ORIGIN_LABELS[_originMode])));
+  const source = view === 'ltv' ? 'Agendor' : (view === 'sdr' ? 'GS Engage' : (view === 'ads' ? 'Meta Ads' : (view === 'ga4' ? 'Google Analytics' : 'Agendor')));
   el('h-title-text').textContent = label;
   el('footer-mode').textContent = label;
   el('footer-source').textContent = source;
@@ -2154,6 +2322,21 @@ function setView(btn) {
   if (_adsViewActive) {
     if (_adsHierarchyRaw && _data && _data.period) renderAdsHierarchySection(computeAdsHierarchyData(_adsHierarchyRaw, _data.period.from, _data.period.to, _data.period.label));
     loadAdsHierarchyFresh_();
+  }
+  if (_ga4ViewActive) {
+    // 26/08 no telão (Robert, 2x — a 2ª vez explícita "tanto ga4 quanto ia
+    // QUANDO FOREM ESCOLHIDOS deve ficar por padrão no filtro hoje"): não é
+    // só a 1ª ativação da sessão, é TODA VEZ que a aba é selecionada. Mesmo
+    // comportamento portado aqui — aceita a consequência de que isso também
+    // muda o filtro global (Vendas/LTV/SDR/Ads voltam a refletir "Hoje"
+    // depois), é o comportamento pedido. Data explícita (getPeriodDatesClient)
+    // em vez de depender de _data.period pra não correr risco de ler o
+    // período antigo antes do loadData(false) disparado por setPeriod
+    // terminar (é assíncrono).
+    const hojeChip = document.querySelector('.pchip[data-p="today"]');
+    if (hojeChip && _period !== 'today') setPeriod(hojeChip);
+    const hojeRange = getPeriodDatesClient('today', null, null, todayLocalStr());
+    loadGa4Fresh_(hojeRange.from, hojeRange.to);
   }
   saveUiState_();
 }
@@ -2889,6 +3072,500 @@ function openAdsAdsetModal(adsetId) {
         <span class="mdeal-val">${fmtMoney(g.spend)}</span>
       </div>`).join('');
   el('modal-overlay').classList.add('show');
+}
+
+// ============================================================
+// GA4 Analytics (27/08) — mobile completo, paridade com o telão
+// (dash/geral/telao/index.html). Lê direto do worker isolado ga4-dash-cache
+// (mesmo desenho do bia-dash-sync) — nunca do Supabase, dado sempre ao vivo
+// por período. computeGa4Data/renderGa4VisitorsChart_ portados verbatim do
+// telão (função pura de cálculo e gráfico Chart.js, sem HTML embutido);
+// renderGa4Section adaptado pro layout empilhado do mobile (o telão usa 3
+// colunas de largura fixa que não existem aqui).
+const GA4_PROXY_URL = 'https://script.google.com/macros/s/AKfycbxGFDgwJhRVHFUYuOc6KRpZgRQ8CLyeNocnmIZqVASQSUt6350m11RzSdvJcWSMnTYzyw/exec';
+async function fetchGa4Json_(action, startDate, endDate) {
+  const url = `${GA4_PROXY_URL}?action=${action}&startDate=${startDate}&endDate=${endDate}`;
+  const r = await fetch(url, { redirect: 'follow' });
+  if (!r.ok) throw new Error('GA4 ' + action + ' HTTP ' + r.status);
+  return r.json();
+}
+
+// ga4-dash-cache tem um cron de 10min que pré-busca os 5 períodos mais
+// comuns (hoje/ontem/semana/mês/30 dias) e cacheia em KV — leitura vira <1s
+// em vez de vários segundos. Períodos raros (Mês ant./60/90 dias/Total/
+// Personalizado/📅Mês) caem no fallback sem cache (from/to explícito) — mais
+// lento, mas SEM aviso de período não suportado (diferente da BIA/
+// BIA_PERIODO_MAP): o fallback sempre calcula com from/to reais, nunca
+// retorna null nem substitui silenciosamente por outro período.
+// 🔴 FIX 27/08 (mesmo achado da auditoria em andamento no telão, dash/geral/
+// telao/index.html): o worker ga4-dash-cache tem `periodo = ... || "hoje"`
+// no servidor — sem o parâmetro `periodo`, o fallback caía no cache fixo de
+// "Hoje" e ignorava from/to por completo. Manda `periodo=custom` (chave que
+// nunca bate no cache do worker) junto do from/to pra forçar o branch de
+// range livre de verdade em vez desse fallback perigoso.
+const GA4_CACHE_URL = 'https://ga4-dash-cache.robert131196.workers.dev/api/bundle';
+const GA4_CACHE_PERIODO_MAP = { today: 'hoje', yesterday: 'ontem', week: 'semana', month: 'mes', '30d': '30d' };
+async function fetchGa4Raw(startDate, endDate) {
+  const cachePeriodo = GA4_CACHE_PERIODO_MAP[_period];
+  const url = cachePeriodo
+    ? `${GA4_CACHE_URL}?periodo=${cachePeriodo}`
+    : `${GA4_CACHE_URL}?from=${startDate}&to=${endDate}&periodo=custom`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('ga4-dash-cache HTTP ' + r.status);
+  const payload = await r.json();
+  if (payload.error) throw new Error('ga4-dash-cache: ' + payload.error);
+  return payload.bundle;
+}
+
+function ga4Val_(resp, i) {
+  return resp && resp.rows && resp.rows[0] && resp.rows[0].metricValues[i] ? Number(resp.rows[0].metricValues[i].value) : 0;
+}
+function ga4Rows_(resp) {
+  if (!resp || !resp.rows) return [];
+  return resp.rows.map(r => ({
+    dims: (r.dimensionValues || []).map(x => x.value),
+    vals: (r.metricValues || []).map(x => Number(x.value))
+  }));
+}
+
+// Nomes amigáveis das páginas do site (projetojlbv.com.br) — mesmo
+// dicionário do telão (PAGINAS_LEGENDAS do dashboard-telao.html original).
+const GA4_PAGE_NAMES = {
+  '/': 'Página Principal (2 imagens)',
+  '/direto/': 'Pg. Direta - só WhatsApp',
+  '/video1/': 'Página com Vídeo - Supermercado',
+  '/video1-direto/': 'Vídeo + WhatsApp Direto',
+  '/video2/': 'Página com Vídeo - Farmácia',
+  '/redefarma/': 'Página Redes - Farmácia (20+ lojas)',
+  '/redesuper/': 'Página Redes - Supermercado (10+ lojas)',
+  '/rmk/': 'Remarketing - foco em objeção',
+  '/contato/': 'Contato via Consultor',
+  '/apresentacao-farma/': 'Apresentação Farma',
+  '/apresentacao-super/': 'Apresentação Super',
+  '/lifeb/': 'Life B (institucional)'
+};
+
+// Estado (GA4 devolve em inglês, às vezes sem acento) → nome PT-BR. Chaves
+// normalizadas sem acento pra bater com as duas variações que a API manda.
+function _semAcento(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
+const TRADUZ_ESTADO_MAP = {
+  'State of Goias':'Goiás','State of São Paulo':'São Paulo','State of Minas Gerais':'Minas Gerais',
+  'State of Rio de Janeiro':'Rio de Janeiro','State of Bahia':'Bahia','State of Paraná':'Paraná',
+  'State of Rio Grande do Sul':'Rio Grande do Sul','State of Santa Catarina':'Santa Catarina',
+  'State of Pernambuco':'Pernambuco','State of Ceará':'Ceará','State of Mato Grosso':'Mato Grosso',
+  'State of Mato Grosso do Sul':'Mato Grosso do Sul','Mato Grosso do Sul':'Mato Grosso do Sul',
+  'State of Pará':'Pará','State of Maranhão':'Maranhão',
+  'State of Amazonas':'Amazonas','Amazonas':'Amazonas',
+  'State of Espírito Santo':'Espírito Santo','State of Rondônia':'Rondônia',
+  'State of Tocantins':'Tocantins','State of Piauí':'Piauí','State of Alagoas':'Alagoas',
+  'State of Sergipe':'Sergipe','State of Paraíba':'Paraíba','State of Rio Grande do Norte':'Rio Grande do Norte',
+  'State of Acre':'Acre','Acre':'Acre',
+  'State of Amapá':'Amapá','Amapá':'Amapá',
+  'State of Roraima':'Roraima','Roraima':'Roraima',
+  'Federal District':'Distrito Federal','(not set)':'Não identificado',
+};
+const TRADUZ_ESTADO_NORM = {};
+Object.keys(TRADUZ_ESTADO_MAP).forEach(k => { TRADUZ_ESTADO_NORM[_semAcento(k)] = TRADUZ_ESTADO_MAP[k]; });
+function traduzEstado_(s) {
+  return TRADUZ_ESTADO_NORM[_semAcento(s)] || s;
+}
+// Sigla oficial das 26 UFs + DF; estado fora do Brasil (VPN/bot) mostra
+// "Exterior" em vez de inventar sigla errada ou deixar nome em inglês.
+const UF_SIGLA_MAP = {
+  'Acre':'AC','Alagoas':'AL','Amapá':'AP','Amazonas':'AM','Bahia':'BA','Ceará':'CE',
+  'Distrito Federal':'DF','Espírito Santo':'ES','Goiás':'GO','Maranhão':'MA',
+  'Mato Grosso':'MT','Mato Grosso do Sul':'MS','Minas Gerais':'MG','Pará':'PA',
+  'Paraíba':'PB','Paraná':'PR','Pernambuco':'PE','Piauí':'PI','Rio de Janeiro':'RJ',
+  'Rio Grande do Norte':'RN','Rio Grande do Sul':'RS','Rondônia':'RO','Roraima':'RR',
+  'Santa Catarina':'SC','São Paulo':'SP','Sergipe':'SE','Tocantins':'TO'
+};
+function ufSigla_(estadoTraduzido) {
+  return UF_SIGLA_MAP[estadoTraduzido] || 'Exterior';
+}
+// GA4 devolve cidade sem acento em boa parte dos casos — dicionário de
+// restauração das capitais + cidades que já apareceram no tráfego real.
+// Cidade que não está aqui mantém o nome como o GA4 mandou.
+const TRADUZ_CIDADE_MAP = {
+  'Rio Branco':'Rio Branco','Maceio':'Maceió','Macapa':'Macapá','Manaus':'Manaus',
+  'Salvador':'Salvador','Fortaleza':'Fortaleza','Brasilia':'Brasília','Vitoria':'Vitória',
+  'Goiania':'Goiânia','Sao Luis':'São Luís','Cuiaba':'Cuiabá','Campo Grande':'Campo Grande',
+  'Belo Horizonte':'Belo Horizonte','Belem':'Belém','Joao Pessoa':'João Pessoa',
+  'Curitiba':'Curitiba','Recife':'Recife','Teresina':'Teresina','Rio de Janeiro':'Rio de Janeiro',
+  'Natal':'Natal','Porto Alegre':'Porto Alegre','Porto Velho':'Porto Velho','Boa Vista':'Boa Vista',
+  'Florianopolis':'Florianópolis','Sao Paulo':'São Paulo','Aracaju':'Aracaju','Palmas':'Palmas',
+  'Rio Verde':'Rio Verde','Bela Vista de Goias':'Bela Vista de Goiás','Novo Gama':'Novo Gama',
+  'Pirenopolis':'Pirenópolis','Uruacu':'Uruaçu','Araxa':'Araxá','Barbacena':'Barbacena',
+  'Divinopolis':'Divinópolis','Passos':'Passos','Uberaba':'Uberaba','Umuarama':'Umuarama',
+  'Sao Joao Batista':'São João Batista','Anapolis':'Anápolis','Aparecida de Goiania':'Aparecida de Goiânia',
+  'Uberlandia':'Uberlândia','Contagem':'Contagem','Juiz de Fora':'Juiz de Fora',
+  'Ribeirao Preto':'Ribeirão Preto','Sorocaba':'Sorocaba','Campinas':'Campinas','Santos':'Santos',
+  'Niteroi':'Niterói','Duque de Caxias':'Duque de Caxias','Sao Jose dos Campos':'São José dos Campos',
+  'Londrina':'Londrina','Maringa':'Maringá','Cascavel':'Cascavel','Caxias do Sul':'Caxias do Sul',
+  'Pelotas':'Pelotas','Joinville':'Joinville','Feira de Santana':'Feira de Santana',
+  'Vitoria da Conquista':'Vitória da Conquista','Montes Claros':'Montes Claros',
+  'Governador Valadares':'Governador Valadares','Ipatinga':'Ipatinga','Varginha':'Varginha',
+  'Pocos de Caldas':'Poços de Caldas', 'Blumenau':'Blumenau'
+};
+const TRADUZ_CIDADE_NORM = {};
+Object.keys(TRADUZ_CIDADE_MAP).forEach(k => { TRADUZ_CIDADE_NORM[_semAcento(k)] = TRADUZ_CIDADE_MAP[k]; });
+function traduzCidade_(cityRaw) {
+  return TRADUZ_CIDADE_NORM[_semAcento(cityRaw)] || cityRaw;
+}
+function traduzOrigem_(raw) {
+  const s = (raw || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const exact = {
+    '(direct) / (none)'          : 'Acesso Direto',
+    '(not set) / (not set)'      : 'Não identificado',
+    '(not set)'                  : 'Não identificado',
+    '(data not available)'       : 'Dado indisponível (privacidade)',
+    'google / organic'           : 'Google (orgânico)',
+    'google / cpc'               : 'Google Ads',
+    'fb / paid'                  : 'Facebook Ads',
+    'ig / paid'                  : 'Instagram Ads',
+    'whatsapp / referral'        : 'WhatsApp (link compartilhado)',
+    'youtube.com / referral'     : 'YouTube (link compartilhado)',
+  };
+  if (exact[s]) return exact[s];
+  if (/^(facebook|l\.facebook\.com|m\.facebook\.com|facebook\.com)\s*\//.test(s)) {
+    if (/\/(cpc|paid[-\s]?social|paid)/.test(s)) return 'Facebook Ads';
+    if (/\/organic/.test(s))                      return 'Facebook (orgânico)';
+    if (/\/referral/.test(s))                     return 'Facebook (link)';
+    return 'Facebook';
+  }
+  if (/^(instagram|l\.instagram\.com|instagram\.com)\s*\//.test(s)) {
+    if (/\/(cpc|paid[-\s]?social|paid)/.test(s)) return 'Instagram Ads';
+    if (/\/organic/.test(s))                     return 'Instagram (orgânico)';
+    if (/\/referral/.test(s))                    return 'Instagram (link)';
+    return 'Instagram';
+  }
+  if (/^(whatsapp|api\.whatsapp\.com|wa\.me)\s*\//.test(s)) return 'WhatsApp';
+  if (/^(youtube\.com|youtu\.be)\s*\//.test(s)) return 'YouTube';
+  if (/^google\s*\//.test(s)) return 'Google';
+  if (/eventsmanager|business\.facebook/.test(s)) return 'Facebook';
+  return s
+    .replace(/\s*\/\s*referral/, ' (link)')
+    .replace(/\s*\/\s*organic/, ' (orgânico)')
+    .replace(/\s*\/\s*cpc/, ' (pago)')
+    .replace(/\s*\/\s*paid[-\s]?social/, ' (pago)')
+    .replace(/\s*\/\s*paid/, ' (pago)')
+    .replace(/\s*\/\s*\(none\)/, '');
+}
+
+function fmtSeconds_(sec) {
+  sec = Math.round(sec || 0);
+  const m = Math.floor(sec / 60), s2 = sec % 60;
+  return m > 0 ? (m + 'm ' + s2 + 's') : (s2 + 's');
+}
+function fmtPct1_(x) { return (Math.round((x || 0) * 1000) / 10) + '%'; }
+function fmtInt_(n) { return (n || 0).toLocaleString('pt-BR'); }
+
+// Função pura de cálculo — sem HTML, idêntica ao telão (dash/geral/telao/
+// index.html, computeGa4Data) char a char, porte verbatim.
+function computeGa4Data(raw) {
+  const s = raw.summary;
+  // A API do GA4 devolve `chart` em ordem cronológica ASCENDENTE (mais
+  // antigo primeiro). Quando o período é "Hoje" (startDate===endDate), a
+  // API troca a dimensão de "date" pra "hour" (só o número da hora, "0".."23",
+  // SEM ordem cronológica — vem em string-order da própria API) — reordena
+  // numericamente nesse caso.
+  const chartRowsRaw = ga4Rows_(raw.chart);
+  const isHourly = chartRowsRaw.length > 0 && (chartRowsRaw[0].dims[0] || '').length <= 2;
+  const chartRows = isHourly
+    ? chartRowsRaw.slice().sort((a, b) => Number(a.dims[0]) - Number(b.dims[0]))
+    : chartRowsRaw;
+  const chartPts = chartRows.map(r => r.vals[0]);
+  const chartDias = chartRows.map(r => {
+    const d = r.dims[0] || '';
+    return isHourly ? (d + 'h') : (d.length === 8 ? d.slice(6, 8) + '/' + d.slice(4, 6) : d);
+  });
+  // leadsByHour/leadsByDate vêm na MESMA dimensão bruta que raw.chart usa,
+  // lookup por dims[0] cru, igual chartRows.
+  const leadsChartMap = {};
+  ga4Rows_(isHourly ? raw.leadsByHour : raw.leadsByDate).forEach(r => { leadsChartMap[r.dims[0]] = r.vals[0]; });
+  const chartLeadsPts = chartRows.map(r => leadsChartMap[r.dims[0]] || 0);
+  // Páginas/Fontes/Cidades cruzam com Leads por linha, mesclam duplicata
+  // (ex: "/video2" e "/video2/" viram 1 só) e ordenam por leads primeiro.
+  const normPath = p => (p && !p.endsWith('/')) ? p + '/' : (p || '/');
+  const leadsByPath = {};
+  ga4Rows_(raw.leads).forEach(r => { const k = normPath(r.dims[0]); leadsByPath[k] = (leadsByPath[k] || 0) + r.vals[0]; });
+  const leadsBySourceMap = {};
+  ga4Rows_(raw.leadsBySource).forEach(r => { leadsBySourceMap[r.dims[0]] = (leadsBySourceMap[r.dims[0]] || 0) + r.vals[0]; });
+  const leadsByCityMap = {};
+  ga4Rows_(raw.leadsByCity).forEach(r => { const k = (r.dims[0] || '') + '||' + (r.dims[1] || ''); leadsByCityMap[k] = (leadsByCityMap[k] || 0) + r.vals[0]; });
+
+  // `/dash/` (o próprio Dashboard Geral) fora da lista — não é página de
+  // marketing.
+  const pagesMerged = new Map();
+  ga4Rows_(raw.pages).forEach(r => {
+    const rawPath = r.dims[0] || '';
+    if (/^\/dash(\/|$)/.test(rawPath)) return;
+    const path = normPath(rawPath);
+    const leadsN = leadsByPath[path] || 0;
+    if (pagesMerged.has(path)) {
+      const ex = pagesMerged.get(path);
+      ex.users += r.vals[0]; ex.sessions += r.vals[1]; ex.views += r.vals[2];
+    } else {
+      pagesMerged.set(path, { path, users: r.vals[0], sessions: r.vals[1], views: r.vals[2], leads: leadsN });
+    }
+  });
+  const pages = [...pagesMerged.values()].sort((a, b) => b.leads - a.leads || b.users - a.users);
+
+  // A ação 'cities' só devolve até 20 linhas (limite do GA4/proxy, ranqueado
+  // por VOLUME DE VISITANTE) — uma cidade com poucos visitantes mas que
+  // gerou lead pode ficar fora do top 20. Constrói o mapa a partir da UNIÃO
+  // de 'cities' + 'leadsByCity' (cidade que só aparece em leadsByCity entra
+  // com users=0, nunca o contrário) — nenhum lead real desaparece.
+  const citiesMap = new Map();
+  ga4Rows_(raw.cities).forEach(r => {
+    const regionRaw = r.dims[0] || '', cityRaw = r.dims[1] || '';
+    citiesMap.set(regionRaw + '||' + cityRaw, { regionRaw, cityRaw, users: r.vals[0] });
+  });
+  ga4Rows_(raw.leadsByCity).forEach(r => {
+    const regionRaw = r.dims[0] || '', cityRaw = r.dims[1] || '';
+    const key = regionRaw + '||' + cityRaw;
+    if (!citiesMap.has(key)) citiesMap.set(key, { regionRaw, cityRaw, users: 0 });
+  });
+  const cities = [...citiesMap.values()].map(({ regionRaw, cityRaw, users }) => {
+    const region = ufSigla_(traduzEstado_(regionRaw));
+    const city = (!cityRaw || cityRaw === '(not set)' || /^\d{5,}/.test(cityRaw)) ? 'Não identificada' : traduzCidade_(cityRaw);
+    return { region, city, users, leads: leadsByCityMap[regionRaw + '||' + cityRaw] || 0 };
+  }).sort((a, b) => b.leads - a.leads || b.users - a.users);
+
+  const sourcesMerged = new Map();
+  ga4Rows_(raw.sources).forEach(r => {
+    const raw0 = r.dims[0];
+    const name = traduzOrigem_(raw0);
+    const leadsN = leadsBySourceMap[raw0] || 0;
+    if (sourcesMerged.has(name)) {
+      const ex = sourcesMerged.get(name);
+      ex.users += r.vals[0]; ex.sessions += r.vals[1]; ex.leads += leadsN;
+    } else {
+      sourcesMerged.set(name, { name, users: r.vals[0], sessions: r.vals[1], leads: leadsN });
+    }
+  });
+  const sources = [...sourcesMerged.values()].sort((a, b) => b.leads - a.leads || b.users - a.users);
+
+  const eventsMap = {};
+  ga4Rows_(raw.events).forEach(r => { eventsMap[r.dims[0]] = r.vals[0]; });
+  return {
+    activeUsers: ga4Val_(s, 0), sessions: ga4Val_(s, 1), views: ga4Val_(s, 2), bounce: ga4Val_(s, 3), avgDur: ga4Val_(s, 4),
+    chartPts, chartDias, chartLeadsPts, pages, cities, sources, eventsMap
+  };
+}
+
+// Dicionário nome+descrição dos eventos de conversão — idêntico ao telão.
+const GA4_EVENTOS_META = {
+  'Lead_Formulario':      { icon: '🎯', nome: 'Lead gerado',           desc: 'Formulário enviado com nome + telefone' },
+  'Abrir_Formulario':     { icon: '📋', nome: 'Formulário aberto',     desc: 'Visitante abriu o formulário de contato' },
+  'Abandonou_Formulario': { icon: '❌', nome: 'Abandonou o formulário', desc: 'Fechou o formulário sem enviar' },
+  'Pular_Formulario':     { icon: '⏭️', nome: 'Pulou o formulário',    desc: 'Clicou em "Pular e ir direto para o WhatsApp"' },
+  'ScrollDepth_25':       { icon: '👀', nome: 'Rolou 25% da página',   desc: 'Passou do primeiro quarto do conteúdo' },
+  'ScrollDepth_50':       { icon: '📖', nome: 'Rolou 50% da página',   desc: 'Chegou na metade do conteúdo' },
+  'ScrollDepth_75':       { icon: '🔥', nome: 'Rolou 75% da página',   desc: 'Quase no final, alto engajamento' },
+  'ScrollDepth_100':      { icon: '✅', nome: 'Leu a página inteira',  desc: 'Chegou ao fim com engajamento máximo' }
+};
+// Linha do funil "Eventos de Conversão" — reaproveita .abar-row (mesmo
+// componente de Ads/Fontes) em vez do .funil-row de 7 colunas fixas do
+// resto do mobile (desenhado só pro funil de etapas com conector/chevron,
+// formato incompatível com ícone + descrição em 2 linhas).
+function ga4EventRow_(icon, nome, desc, count, maxCount) {
+  const pct = Math.max((count / Math.max(maxCount, 1)) * 100, 3);
+  return `
+    <div class="abar-row" style="cursor:default">
+      <div class="abar-top">
+        <span class="abar-name" title="${escHtml(nome)}">
+          <span style="font-size:14px;flex-shrink:0">${icon}</span>
+          <span class="abar-name-text" style="white-space:normal;overflow:visible;text-overflow:clip;display:flex;flex-direction:column;gap:1px">
+            <span>${escHtml(nome)}</span>
+            <span style="font-size:9px;font-weight:600;color:var(--faint);white-space:normal">${escHtml(desc)}</span>
+          </span>
+        </span>
+        <span class="abar-val" style="font-size:15px">${fmtInt_(count)}</span>
+      </div>
+      <div class="abar-track"><div class="abar-fill" style="width:${pct}%;background:linear-gradient(90deg,var(--purple),var(--purple-l))"></div></div>
+    </div>`;
+}
+
+// Gráfico "Visitantes" — Chart.js (2 datasets: barra/linha de visitantes +
+// pontos de leads sobrepostos), linha de média móvel tracejada com 8+
+// pontos, barra vira linha preenchida acima de 45 pontos (período longo
+// ilegível em barra). Porte verbatim do telão — só o tamanho do canvas muda
+// (controlado pelo container CSS `.feed-card` do mobile, ver #ga4-view),
+// a função em si não depende de layout.
+let _ga4VisitorsChart = null;
+function renderGa4VisitorsChart_(dias, vals, leadsVals) {
+  const canvas = el('ga4-visitors-chart');
+  const avisoEl = el('ga4-visitors-aviso');
+  if (_ga4VisitorsChart) { _ga4VisitorsChart.destroy(); _ga4VisitorsChart = null; }
+  if (!dias.length) { avisoEl.textContent = ''; return; }
+  const isHourly = /h$/.test(dias[0]);
+  const n = dias.length;
+  const lastIdx = n - 1;
+  const useLine = n > 45;
+  const bg = dias.map((_, i) => i === lastIdx ? 'rgba(233,32,133,.8)' : 'rgba(112,75,155,.22)');
+  const border = dias.map((_, i) => i === lastIdx ? '#E92085' : '#704B9B');
+  const leads = leadsVals || dias.map(() => 0);
+  const hasLeads = leads.some(v => v > 0);
+  const principalLabel = isHourly ? 'Visitantes' : 'Usuários Ativos';
+  const datasets = [
+    useLine
+      ? { type: 'line', label: principalLabel, data: vals, borderColor: '#704B9B', backgroundColor: 'rgba(112,75,155,.14)', borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, pointHoverBackgroundColor: '#704B9B', fill: true, tension: .3, order: 3 }
+      : { type: 'bar', label: principalLabel, data: vals, backgroundColor: bg, borderColor: border, borderWidth: 1.5, borderRadius: 5, borderSkipped: false, order: 3 },
+    ...(hasLeads ? [{
+      type: 'line', label: 'Leads', data: leads,
+      borderColor: 'transparent', backgroundColor: '#E92085',
+      pointBackgroundColor: leads.map(v => v > 0 ? '#E92085' : 'transparent'),
+      pointBorderColor: leads.map(v => v > 0 ? '#fff' : 'transparent'),
+      pointBorderWidth: 1.5,
+      pointRadius: leads.map(v => v > 0 ? 5 : 0),
+      pointHoverRadius: leads.map(v => v > 0 ? 7 : 0),
+      showLine: false, clip: false, order: 1
+    }] : [])
+  ];
+  if (n >= 8) {
+    const media = vals.map((_, i) => {
+      const janela = vals.slice(Math.max(0, i - 2), i + 3);
+      return janela.reduce((a, b) => a + b, 0) / janela.length;
+    });
+    datasets.push({ type: 'line', label: 'Tendência', data: media, borderColor: 'rgba(107,100,132,.55)', borderWidth: 2, borderDash: [5, 4], pointRadius: 0, fill: false, tension: .4, order: 2 });
+  }
+  _ga4VisitorsChart = new Chart(canvas.getContext('2d'), {
+    data: { labels: dias, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#221B32', padding: 12, filter: item => item.dataset.label !== 'Tendência',
+          callbacks: { label: c => c.dataset.label === 'Leads' ? ` 🎯 ${c.parsed.y} lead${c.parsed.y !== 1 ? 's' : ''}` : ` ${c.parsed.y} visitante${c.parsed.y !== 1 ? 's' : ''}` }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#6b6484', font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, border: { display: false } },
+        y: { grid: { color: 'rgba(0,0,0,.05)' }, ticks: { color: '#6b6484', font: { size: 11 }, precision: 0 }, border: { display: false }, beginAtZero: true }
+      }
+    }
+  });
+  const maxVal = Math.max(...vals, 0);
+  if (maxVal > 0) {
+    const peakIdx = vals.indexOf(maxVal);
+    avisoEl.textContent = `Pico: ${dias[peakIdx]} com ${maxVal} visitante${maxVal !== 1 ? 's' : ''}.`;
+  } else {
+    avisoEl.textContent = '';
+  }
+}
+
+function renderGa4Section(d) {
+  el('ga4-hero-val').textContent = fmtInt_(d.activeUsers);
+  if (d.chartPts.length > 1) el('ga4-hero-spark').innerHTML = sparklineSVG(d.chartPts, '#704B9B');
+
+  el('ga4-visitors-badge').textContent = fmtInt_(d.activeUsers) + ' no período';
+  renderGa4VisitorsChart_(d.chartDias, d.chartPts, d.chartLeadsPts);
+
+  el('ga4-k-sessions').textContent = fmtInt_(d.sessions);
+  const leadsGa4_ = d.eventsMap['Lead_Formulario'] || 0;
+  el('ga4-k-views').textContent = fmtInt_(d.views);
+  // "Leitura Completa" (% que chegou no ScrollDepth_100), não "Páginas/
+  // Sessão" — site feito de landing pages isoladas, sem navegação interna.
+  // Math.min(...,100) — mesmo achado da auditoria em andamento no telão:
+  // evento contado por sessão/disparo (não por usuário único), visitante
+  // recorrente em 2+ sessões no período podia passar de 100%. Mesmo teto
+  // que as pílulas Envio/Abandono/Pulo já usam logo abaixo.
+  el('ga4-k-ppv').textContent = d.activeUsers > 0 ? Math.min(((d.eventsMap['ScrollDepth_100'] || 0) / d.activeUsers * 100), 100).toFixed(1) + '%' : '—';
+  el('ga4-k-duration').textContent = fmtSeconds_(d.avgDur);
+  el('ga4-k-bounce').textContent = fmtPct1_(d.bounce);
+  el('ga4-k-leads').textContent = fmtInt_(leadsGa4_);
+  el('ga4-k-conv').textContent = d.activeUsers > 0 ? Math.min((leadsGa4_ / d.activeUsers * 100), 100).toFixed(1) + '%' : '—';
+
+  const ga4EmptyRow_ = (n) => `<tr><td colspan="${n}" style="text-align:center;color:var(--faint);padding:14px 6px">Sem dado no período</td></tr>`;
+  el('ga4-pages-badge').textContent = d.pages.length + ' páginas';
+  el('ga4-pages-rows').innerHTML = d.pages.length === 0 ? ga4EmptyRow_(3) : d.pages.slice(0, 12).map(p => {
+    const legenda = GA4_PAGE_NAMES[p.path];
+    const safeHref = escHtml(encodeURI('https://projetojlbv.com.br' + p.path));
+    return `<tr>
+      <td><a href="${safeHref}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">
+        <span class="ga4-pg-legenda">${escHtml(legenda || p.path)}</span>
+        ${legenda ? `<span class="ga4-pg-path">${escHtml(p.path)}</span>` : ''}
+      </a></td>
+      <td>${fmtInt_(p.users)}</td>
+      <td>${p.leads > 0 ? fmtInt_(p.leads) : '<span style="font-size:11px;color:var(--muted);font-weight:600">—</span>'}</td>
+    </tr>`;
+  }).join('');
+
+  el('ga4-sources-badge').textContent = d.sources.length + ' fontes';
+  el('ga4-sources-rows').innerHTML = d.sources.length === 0 ? ga4EmptyRow_(3) : d.sources.slice(0, 15).map(s => `<tr>
+      <td>${escHtml(s.name)}</td>
+      <td>${fmtInt_(s.users)}</td>
+      <td>${s.leads > 0 ? fmtInt_(s.leads) : '<span style="font-size:11px;color:var(--muted);font-weight:600">—</span>'}</td>
+    </tr>`).join('');
+
+  el('ga4-cities-badge').textContent = d.cities.length + ' cidades';
+  el('ga4-cities-rows').innerHTML = d.cities.length === 0 ? ga4EmptyRow_(4) : d.cities.slice(0, 60).map(c => `<tr>
+      <td>${escHtml(c.region)}</td>
+      <td class="ga4-td-left">${escHtml(c.city)}</td>
+      <td>${fmtInt_(c.users)}</td>
+      <td>${c.leads > 0 ? fmtInt_(c.leads) : '<span style="font-size:11px;color:var(--muted);font-weight:600">—</span>'}</td>
+    </tr>`).join('');
+
+  const abriu = d.eventsMap['Abrir_Formulario'] || 0,
+        lead = d.eventsMap['Lead_Formulario'] || 0, abandonou = d.eventsMap['Abandonou_Formulario'] || 0,
+        pulou = d.eventsMap['Pular_Formulario'] || 0;
+  el('ga4-funil-badge').textContent = fmtInt_(abriu) + ' aberturas';
+  const eventRows = Object.keys(d.eventsMap)
+    .filter(k => GA4_EVENTOS_META[k])
+    .map(k => Object.assign({ v: d.eventsMap[k] }, GA4_EVENTOS_META[k]));
+  const maxEvent = Math.max(...eventRows.map(r => r.v), 1);
+  el('ga4-funil-rows').innerHTML = eventRows.length === 0
+    ? '<div class="feed-empty">Sem eventos no período</div>'
+    : eventRows.map(r => ga4EventRow_(r.icon, r.nome, r.desc, r.v, maxEvent)).join('');
+
+  // Selos de taxa (Envio/Abandono/Pulo sobre quem abriu) — só aparece se o
+  // formulário teve abertura real no período.
+  if (abriu > 0) {
+    const pill = (label, val, cor) => `<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;background:${cor}22;border:1px solid ${cor}55;margin:2px 4px 2px 0">
+      <span style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">${label}</span>
+      <b style="font-size:13px;font-weight:800;color:${cor}">${Math.min(Math.round(val / abriu * 100), 100)}%</b>
+    </span>`;
+    el('ga4-funil-rates').style.display = 'block';
+    el('ga4-funil-rates').innerHTML = pill('Envio', lead, '#22C35D') + pill('Abandono', abandonou, '#dc2626') + (pulou > 0 ? pill('Pulo', pulou, '#f59e0b') : '');
+  } else {
+    el('ga4-funil-rates').style.display = 'none';
+  }
+}
+
+let _ga4ViewActive = false;
+let _ga4Raw = null;
+let _ga4Loading = false;
+async function loadGa4Fresh_(fromOverride, toOverride) {
+  const from = fromOverride || (_data && _data.period && _data.period.from);
+  const to = toOverride || (_data && _data.period && _data.period.to);
+  if (_ga4Loading || !from || !to) return;
+  _ga4Loading = true;
+  try {
+    _ga4Raw = await fetchGa4Raw(from, to);
+    if (_ga4ViewActive) renderGa4Section(computeGa4Data(_ga4Raw));
+    // Realtime é sempre "agora" · não depende do período, busca à parte e
+    // não bloqueia o resto do render se falhar/demorar.
+    fetchGa4Json_('realtime', '', '').then(rt => {
+      if (_ga4ViewActive) el('ga4-k-live').textContent = fmtInt_(ga4Val_(rt, 0));
+    }).catch(() => { if (_ga4ViewActive) el('ga4-k-live').textContent = '—'; });
+  } catch (e) {
+    console.warn('fetchGa4Raw falhou:', e.message);
+    if (_ga4ViewActive && !el('ga4-pages-rows').children.length) {
+      el('ga4-pages-rows').innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--faint);padding:14px 6px">Erro ao carregar GA4. Tenta de novo em instantes.</td></tr>';
+    }
+  } finally {
+    _ga4Loading = false;
+  }
+}
+// Chamado a cada loadData() (troca de período/origem) e pelo poll de fundo —
+// mesma cadeia que o resto do painel usa (refreshSdrIfActive_/
+// refreshAdsHierarchyIfActive_), nunca um timer próprio.
+function refreshGa4IfActive_() {
+  if (_ga4ViewActive) {
+    if (_ga4Raw) renderGa4Section(computeGa4Data(_ga4Raw));
+    loadGa4Fresh_();
+  }
 }
 
 // ── Checagem barata de mudança (01/08) — achado real: o poll de fundo
