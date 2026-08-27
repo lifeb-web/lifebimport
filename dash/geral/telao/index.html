@@ -1371,6 +1371,21 @@ footer strong{color:#fff}
     </div>
   </div>
 
+  <!-- 🔴 FIX 26/08 (Robert: "notei que em algumas abas não tá pegando o
+       ontem, audite todos os filtros profundamente") — achado real: a
+       fonte de dado da BIA (/custo do gs-agendor-worker, fora do meu
+       alcance de edição) só suporta período hoje/7 dias/30 dias/mês —
+       qualquer outro (Ontem, Mês ant., 60/90 dias, Total, Personalizado)
+       cai SILENCIOSAMENTE no fallback "Hoje" do lado de lá, sem erro
+       nenhum. Os rótulos dos KPIs já refletiam a realidade (periodoLabel
+       vem do backend, "Gasto Hoje" mesmo se pedido Ontem), mas o chip de
+       período no topo continuava mostrando "Ontem" selecionado — chip e
+       dado discordando, sem nenhum aviso explícito. Banner deixa claro
+       quando isso acontece, em vez de deixar a inconsistência silenciosa. -->
+  <div id="bia-periodo-aviso" style="display:none;background:#fff3cd;border:1px solid #e8c468;color:#8a6100;font-size:11px;font-weight:700;padding:7px 14px;border-radius:8px;margin-bottom:8px;flex-shrink:0">
+    ⚠ Este período não é suportado pela BIA (fonte só tem Hoje/7 dias/30 dias/Este mês) — mostrando dado de Hoje.
+  </div>
+
   <!-- BIA (25-26/08, redesenhado 26/08) — lê do worker isolado bia-dash-sync
        (GET /api/snapshot), nunca do gs-agendor-worker direto. 7 kchips do
        MESMO tamanho com borda de cor cheia (referência: dashboard-telao.html
@@ -2725,6 +2740,11 @@ function filterBiaMotorFeed_(key) {
 }
 
 function renderBiaSectionTelao(s) {
+  // 🔴 FIX 26/08 nº2 (Robert: "audite todos os filtros profundamente") —
+  // aviso explícito quando o período pedido não é suportado pela fonte
+  // (gs-agendor-worker só tem hoje/7d/30d/mes) em vez de deixar a
+  // discordância entre o chip selecionado e o dado mostrado silenciosa.
+  el('bia-periodo-aviso').style.display = (biaPeriodoFor_(_period) === null) ? 'block' : 'none';
   // 26/08 (fix do "não respeita filtro"): Gasto/Mensagens/Economia agora
   // vêm de verdade no período pedido (s.periodoLabel confirma qual o
   // worker aplicou) — rótulo do card muda junto, não fica preso em "Hoje".
