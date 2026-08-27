@@ -2338,10 +2338,11 @@ function renderGa4SectionTelao(d) {
   el('ga4-k-sessions').textContent = fmtInt_(d.sessions);
   const leadsGa4_ = d.eventsMap['Lead_Formulario'] || 0;
   el('ga4-k-views').textContent = fmtInt_(d.views);
-  // 🔴 FIX 26/08 nº3 — "Páginas / Sessão" no lugar de "Abriu Formulário"
-  // (que já é 1 linha do próprio funil de eventos, ao lado). Dado 100%
-  // real: views/sessions, sem depender de nenhum campo novo do proxy.
-  el('ga4-k-ppv').textContent = d.sessions > 0 ? (d.views / d.sessions).toFixed(1) : '—';
+  // 🔴 FIX 26/08 nº4 — "Leitura Completa" (% que chegou no
+  // ScrollDepth_100), não "Páginas/Sessão" (métrica errada pra um site
+  // de LPs isoladas, sem navegação entre páginas — ver comentário no
+  // HTML do kchip).
+  el('ga4-k-ppv').textContent = d.activeUsers > 0 ? ((d.eventsMap['ScrollDepth_100'] || 0) / d.activeUsers * 100).toFixed(1) + '%' : '—';
   el('ga4-k-duration').textContent = fmtSeconds_(d.avgDur);
   el('ga4-k-bounce').textContent = fmtPct1_(d.bounce);
   el('ga4-k-leads').textContent = fmtInt_(leadsGa4_);
