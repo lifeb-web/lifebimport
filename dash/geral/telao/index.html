@@ -2850,6 +2850,64 @@ let _data = null;
 let _period = 'month';
 let _customFrom = null, _customTo = null;
 let _originMode = 'both';
+
+// 🔴 FIX 26/08 (Robert: "tem algo que atualiza o dash de tempos em
+// tempos e volta os filtros pro padrão mesmo estando em outra aba...
+// não é por engano, deve ter algum sentido, mas tem que investigar e
+// adaptar") — causa raiz real: checkForUpdate() (mais abaixo) dá
+// location.reload() de propósito, funcionalidade pedida em 13/07 pra
+// nunca precisar de F5 manual depois de um deploy — só que um reload
+// sempre zera pro estado inicial do HTML (Vendas/Este mês/Ambos),
+// mesmo que o usuário estivesse em outra aba/período. Com o volume de
+// deploys desta sessão isso ficou bem mais visível que o normal, mas o
+// reload em si continua fazendo sentido — só precisa sobreviver a ele.
+// Salva a escolha (aba/período/origem) a cada mudança, restaura ANTES
+// do primeiro loadData() do boot.
+const UI_STATE_KEY = 'dash_geral_telao_ui_state_v1';
+function _currentViewName_() {
+  return _ltvViewActive ? 'ltv' : _sdrViewActive ? 'sdr' : _adsViewActive ? 'ads' : _ga4ViewActive ? 'ga4' : _biaViewActive ? 'bia' : 'vendas';
+}
+function saveUiState_() {
+  try {
+    localStorage.setItem(UI_STATE_KEY, JSON.stringify({
+      view: _currentViewName_(), period: _period, customFrom: _customFrom, customTo: _customTo, origin: _originMode
+    }));
+  } catch (e) { /* localStorage indisponível (modo privado, storage cheio) — não é crítico, segue sem persistir */ }
+}
+let _pendingViewRestore_ = null;
+function restoreUiStateBeforeLoad_() {
+  try {
+    const raw = localStorage.getItem(UI_STATE_KEY);
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    if (s.origin && ORIGIN_LABELS[s.origin]) {
+      const btn = document.querySelector('.oseg .ochip[data-o="' + s.origin + '"]');
+      if (btn) { document.querySelectorAll('.oseg .ochip[data-o]').forEach(b => b.classList.remove('active')); btn.classList.add('active'); _originMode = s.origin; }
+    }
+    // Período custom/mês escolhido restaurado nas variáveis, mesmo sem o
+    // chip existir pra "custom"/"month_pick" — getPeriodDatesClient já lê
+    // essas 2 variáveis direto quando _period for um desses valores.
+    if (s.customFrom) _customFrom = s.customFrom;
+    if (s.customTo) _customTo = s.customTo;
+    if (s.period) {
+      const btn = document.querySelector('.pchip[data-p="' + s.period + '"]');
+      if (btn) { document.querySelectorAll('.pchip').forEach(b => b.classList.remove('active')); btn.classList.add('active'); _period = s.period; }
+    }
+    // Aba (view) é restaurada só DEPOIS do primeiro loadData() terminar
+    // (setView() de várias abas depende de _data/_rawDeals já carregados)
+    // — guardada aqui, aplicada em applyPendingViewRestore_() no boot.
+    // GA4/BIA continuam forçando período pra "Hoje" quando restaurados
+    // (mesma regra já pedida 2x pro Robert pra essas 2 abas — setView()
+    // já faz isso sozinho, não precisa de tratamento especial aqui).
+    if (s.view && s.view !== 'vendas') {
+      const btn = document.querySelector('.oseg .ochip[data-v="' + s.view + '"]');
+      if (btn) _pendingViewRestore_ = btn;
+    }
+  } catch (e) { /* estado salvo corrompido/versão antiga — ignora, segue com o padrão inicial */ }
+}
+function applyPendingViewRestore_() {
+  if (_pendingViewRestore_) { setView(_pendingViewRestore_); _pendingViewRestore_ = null; }
+}
 let _reqSeq = 0;
 // achado 15/07 (auditoria — dead code, mesmo achado do mobile): _lastErrMsg
 // era escrito mas nunca lido — sobra do proxy antigo (backoff de cota, que
@@ -3008,6 +3066,7 @@ function setOrigin(btn) {
   // nenhuma chamada de rede (migração pro Supabase, 15/07). Só o botão ↻ manual
   // (ou o auto-refresh periódico) força uma busca de verdade.
   loadData(false);
+  saveUiState_();
 }
 
 function setPeriod(btn) {
@@ -3036,6 +3095,7 @@ function setPeriod(btn) {
   }
   cp.classList.remove('show'); mp.classList.remove('show');
   loadData(false);
+  saveUiState_();
 }
 
 const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -3085,6 +3145,7 @@ function mpSelectMonth(y, m) {
   // fechar o painel depois de escolher o mês — ficava aberto pra sempre.
   el('month-pick-panel').classList.remove('show');
   loadData(false);
+  saveUiState_();
 }
 
 // Filtro "Personalizado" · mesmo achado do seletor de mês (Robert: "pode
@@ -3143,6 +3204,7 @@ function cpSelectDay(iso) {
     hideErr();
     el('custom-panel').classList.remove('show');
     loadData(false);
+    saveUiState_();
   }
 }
 
@@ -3638,6 +3700,7 @@ function setView(btn) {
     if (_biaSnap) renderBiaSectionTelao(_biaSnap);
     loadBiaFresh_();
   }
+  saveUiState_();
 }
 
 // LTV reaproveita o MESMO _rawDeals já buscado pra Vendas — nunca busca nada
@@ -5543,7 +5606,11 @@ function escJsAttr_(s) {
 // as notas de 12/07 e 13/07 diziam ter eliminado. Nem carregamento inicial
 // nem retomar aba são "ação explícita do usuário" · mesmo espírito do
 // auto-refresh silencioso.
-document.addEventListener('DOMContentLoaded', () => loadData(false, true));
+document.addEventListener('DOMContentLoaded', async () => {
+  restoreUiStateBeforeLoad_();
+  await loadData(false, true);
+  applyPendingViewRestore_();
+});
 // achado 15/07 (auditoria adversarial): mesmo achado do mobile — force=false
 // nunca mais rebusca nada uma vez que _rawDeals já está em memória.
 // achado 28/07 (Robert: "quando tem um ganho precisa dar F5"): antes só forçava

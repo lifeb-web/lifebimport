@@ -1216,6 +1216,50 @@ let _period     = 'month';
 let _customFrom = null;
 let _customTo   = null;
 let _originMode = 'both';
+
+// 🔴 FIX 26/08 (Robert, mesmo achado do telão: "tem algo que atualiza e
+// volta os filtros pro padrão mesmo estando em outra aba... não é por
+// engano, deve ter algum sentido, mas tem que investigar e adaptar") —
+// checkForUpdate() (mais abaixo) dá location.reload() de propósito
+// (nunca precisar de F5 manual depois de um deploy), mas um reload
+// sempre zera pro estado inicial do HTML. Salva a escolha (aba/período/
+// origem) a cada mudança, restaura ANTES do primeiro loadData() do boot.
+const UI_STATE_KEY = 'dash_geral_mobile_ui_state_v1';
+function _currentViewName_() {
+  return _sdrViewActive ? 'sdr' : _adsViewActive ? 'ads' : 'vendas';
+}
+function saveUiState_() {
+  try {
+    localStorage.setItem(UI_STATE_KEY, JSON.stringify({
+      view: _currentViewName_(), period: _period, customFrom: _customFrom, customTo: _customTo, origin: _originMode
+    }));
+  } catch (e) { /* localStorage indisponível — não é crítico, segue sem persistir */ }
+}
+let _pendingViewRestore_ = null;
+function restoreUiStateBeforeLoad_() {
+  try {
+    const raw = localStorage.getItem(UI_STATE_KEY);
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    if (s.origin && ORIGIN_LABELS[s.origin]) {
+      const btn = document.querySelector('.oseg .ochip[data-o="' + s.origin + '"]');
+      if (btn) { document.querySelectorAll('.oseg .ochip[data-o]').forEach(b => b.classList.remove('active')); btn.classList.add('active'); _originMode = s.origin; }
+    }
+    if (s.customFrom) _customFrom = s.customFrom;
+    if (s.customTo) _customTo = s.customTo;
+    if (s.period) {
+      const btn = document.querySelector('.pchip[data-p="' + s.period + '"]');
+      if (btn) { document.querySelectorAll('.pchip').forEach(b => b.classList.remove('active')); btn.classList.add('active'); _period = s.period; }
+    }
+    if (s.view && s.view !== 'vendas') {
+      const btn = document.querySelector('.oseg .ochip[data-v="' + s.view + '"]');
+      if (btn) _pendingViewRestore_ = btn;
+    }
+  } catch (e) { /* estado salvo corrompido/versão antiga — ignora, segue com o padrão inicial */ }
+}
+function applyPendingViewRestore_() {
+  if (_pendingViewRestore_) { setView(_pendingViewRestore_); _pendingViewRestore_ = null; }
+}
 let _reqSeq = 0; // descarta respostas atrasadas fora de ordem (troca rápida de filtro)
 // achado 15/07 (auditoria — dead code): _lastErrMsg era escrito em 2 lugares
 // (catch de loadData) mas nunca LIDO em lugar nenhum — sobra do proxy antigo,
@@ -1368,6 +1412,7 @@ function setOrigin(btn) {
   // nenhuma chamada de rede (migração pro Supabase, 15/07). Só o botão ↻ manual
   // (ou o auto-refresh periódico) força uma busca de verdade.
   loadData(false);
+  saveUiState_();
 }
 
 function setPeriod(btn) {
@@ -1396,6 +1441,7 @@ function setPeriod(btn) {
   }
   cd.classList.remove('show'); mp.classList.remove('show');
   loadData(false);
+  saveUiState_();
 }
 
 const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -1448,6 +1494,7 @@ function mpSelectMonth(y, m) {
   // fechar o painel depois de escolher o mês — ficava aberto pra sempre.
   el('month-pick-panel').classList.remove('show');
   loadData(false);
+  saveUiState_();
 }
 
 // Filtro "Personalizado" · mesmo achado do seletor de mês (Robert: "pode
@@ -1508,6 +1555,7 @@ function cpSelectDay(iso) {
     hideErr();
     el('custom-dates').classList.remove('show'); // fecha sozinho ao completar a faixa
     loadData(false);
+    saveUiState_();
   }
 }
 
@@ -1793,6 +1841,7 @@ function setView(btn) {
     if (_adsHierarchyRaw && _data && _data.period) renderAdsHierarchySection(computeAdsHierarchyData(_adsHierarchyRaw, _data.period.from, _data.period.to, _data.period.label));
     loadAdsHierarchyFresh_();
   }
+  saveUiState_();
 }
 
 async function loadSdrFresh_() {
@@ -3357,7 +3406,11 @@ function friendlyErr(e) {
 // as notas de 12/07 e 13/07 diziam ter eliminado. Nem carregamento inicial
 // nem retomar aba são "ação explícita do usuário" · mesmo espírito do
 // auto-refresh silencioso.
-document.addEventListener('DOMContentLoaded', () => loadData(false, true));
+document.addEventListener('DOMContentLoaded', async () => {
+  restoreUiStateBeforeLoad_();
+  await loadData(false, true);
+  applyPendingViewRestore_();
+});
 // achado 15/07 (auditoria adversarial): antes da migração, voltar pra aba quase
 // sempre disparava uma busca de rede de verdade (cache de sessão de 90s quase
 // sempre vencido). Agora que _rawDeals fica em memória indefinidamente, force=
