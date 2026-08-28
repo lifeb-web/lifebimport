@@ -797,6 +797,13 @@ footer strong{color:#fff}
     </div>
 
     <div>
+      <div class="sec-hd">Por SDR <span id="sdr-porsdr-badge" style="color:var(--purple);font-weight:800;text-transform:none;letter-spacing:0"></span></div>
+      <div id="sdr-porsdr-card">
+        <div id="sdr-porsdr-rows"></div>
+      </div>
+    </div>
+
+    <div>
       <div class="sec-hd">Cadências</div>
       <div id="sdr-cadencias-card">
         <div class="funil-hd">
@@ -2448,6 +2455,28 @@ async function fetchSdrRaw() {
     fetchSdrTable_('dash_sdr_activities'),
     fetchSdrTable_('dash_sdr_calls')
   ]);
+  // 27/08 (mesmo achado do telão no mesmo dia, Robert: "separar tudo por
+  // sdr... ter acesso a todas as informações de fato") — 2 achados que
+  // travavam a quebra por SDR: (1) activities às vezes vem com
+  // responsible_id preenchido mas responsible_name null (GS Engage omite
+  // firstName/lastName pra algumas), enquanto prospections quase sempre tem
+  // os dois — usa prospections como fonte de verdade do nome por id e
+  // completa activities. (2) dash_sdr_calls não tem responsible_id/name
+  // nenhum, só task_execution_id — confirmado lendo o .gs de sync que esse
+  // campo é o gs_id da activity-mãe (tipo CALL), então dá pra juntar de
+  // verdade. Enriquece aqui, uma vez, pra computeSdrData nem saber que existe
+  // limitação — mesmo raw.responsible_name pronto pra prospections/activities/calls.
+  const nameById = {};
+  prospections.forEach(p => { if (p.responsible_id && p.responsible_name && !nameById[p.responsible_id]) nameById[p.responsible_id] = p.responsible_name; });
+  activities.forEach(a => { if (a.responsible_id && a.responsible_name && !nameById[a.responsible_id]) nameById[a.responsible_id] = a.responsible_name; });
+  activities.forEach(a => { if (!a.responsible_name && a.responsible_id && nameById[a.responsible_id]) a.responsible_name = nameById[a.responsible_id]; });
+  const activityByGsId = {};
+  activities.forEach(a => { if (a.gs_id) activityByGsId[a.gs_id] = a; });
+  calls.forEach(c => {
+    const parent = activityByGsId[c.task_execution_id];
+    c.responsible_id = parent ? parent.responsible_id : null;
+    c.responsible_name = parent ? parent.responsible_name : null;
+  });
   return { leads, prospections, activities, calls };
 }
 
@@ -2602,10 +2631,15 @@ function computeSdrData(raw, periodFrom, periodTo, periodLabel) {
 
   // 26/08 (Robert: "por sdr pq não é mais só o Felipe, temos Cleomar e
   // Felipe") — espelha telão (dash/geral/telao/index.html), mesma regra de
-  // negócio. UI mobile pra isso ainda não existe (só o compute, mantido em
-  // sincronia por convenção deste arquivo).
+  // negócio.
+  // 27/08: ligações entraram na quebra também — fetchSdrRaw() agora
+  // enriquece cada call com responsible_id/name via join com a activity-mãe
+  // (task_execution_id === activities.gs_id), então aqui é só mais um
+  // ensureSdr() igual aos outros, sem tratamento especial. UI de card "Por
+  // SDR" + modal de detalhe por pessoa (openSdrRepModal_) também chegaram no
+  // mobile no mesmo dia, com paridade do telão.
   const bySdr = {};
-  const ensureSdr = (key) => { if (!bySdr[key]) bySdr[key] = { name: key, ativas: 0, ganhos: 0, perdidos: 0, feitas: 0, whatsapp: 0 }; return bySdr[key]; };
+  const ensureSdr = (key) => { if (!bySdr[key]) bySdr[key] = { name: key, ativas: 0, ganhos: 0, perdidos: 0, feitas: 0, whatsapp: 0, ligacoes: 0 }; return bySdr[key]; };
   prospections.forEach(p => { if (p.status === 'IN_PROGRESS') ensureSdr(p.responsible_name || 'Sem responsável').ativas++; });
   wonInPeriod.forEach(p => { ensureSdr(p.responsible_name || 'Sem responsável').ganhos++; });
   lostInPeriod.forEach(p => { ensureSdr(p.responsible_name || 'Sem responsável').perdidos++; });
@@ -2615,6 +2649,10 @@ function computeSdrData(raw, periodFrom, periodTo, periodLabel) {
     const s = ensureSdr(a.responsible_name || 'Sem responsável');
     s.feitas++;
     if (a.type === 'WHATSAPP_MESSAGE') s.whatsapp++;
+  });
+  calls.forEach(c => {
+    if (!inPeriod(c.started_at)) return;
+    ensureSdr(c.responsible_name || 'Sem responsável').ligacoes++;
   });
   const porSdr = Object.values(bySdr).map(s => {
     const finished = s.ganhos + s.perdidos;
@@ -2684,11 +2722,11 @@ function computeSdrData(raw, periodFrom, periodTo, periodLabel) {
 // 🔴 FIX 26/08 (mesmo achado do telão, mesmo dia: count e o sub-valor
 // vinham colados sem separador, texto lido como um número só ao extrair).
 // count agora com separador de milhar + " · " explícito na frente do sub.
-function sdrFunilRow_(dotColor, name, count, maxCount, valText, dropText) {
+function sdrFunilRow_(dotColor, name, count, maxCount, valText, dropText, onclick) {
   const pct = Math.max((count / Math.max(maxCount, 1)) * 100, 3);
   const extra = [valText, dropText].filter(Boolean).join(' · ');
   return `
-    <div class="abar-row">
+    <div class="abar-row"${onclick ? ' style="cursor:pointer" onclick="' + onclick + '"' : ''}>
       <div class="abar-top">
         <span class="abar-name" title="${escHtml(name)}"><span class="abar-dot" style="background:${dotColor}"></span><span class="abar-name-text">${escHtml(name)}</span></span>
         <span class="abar-val">${(count || 0).toLocaleString('pt-BR')}${extra ? '<span class="abar-sub"> · ' + escHtml(extra) + '</span>' : ''}</span>
@@ -2744,6 +2782,12 @@ function renderSdrSection(d) {
   el('sdr-k-ligacoes').textContent = d.kpis.callsCount;
   el('sdr-k-ligacoes-sub').textContent = d.kpis.duracaoMediaMin !== null ? (d.kpis.duracaoMediaMin + ' min em média') : 'no período';
 
+  const maxPorSdr = Math.max(...d.porSdr.map(s => s.feitas), 1);
+  el('sdr-porsdr-badge').textContent = d.porSdr.length + ' SDR' + (d.porSdr.length !== 1 ? 's' : '');
+  el('sdr-porsdr-rows').innerHTML = d.porSdr.length === 0
+    ? '<div class="sdr-empty">Sem SDR com dado no período</div>'
+    : d.porSdr.map(s => sdrFunilRow_('var(--magenta)', s.name, s.feitas, maxPorSdr, s.ganhos + 'G / ' + s.perdidos + 'P' + (s.conversao !== null ? ' · ' + s.conversao + '%' : '') + ' · ' + s.ligacoes + ' lig.', null, `openSdrRepModal_('${escJsAttr_(s.name)}')`)).join('');
+
   const maxCad = Math.max(...d.cadencias.map(c => c.ativas), 1);
   el('sdr-cadencias-rows').innerHTML = d.cadencias.length === 0
     ? '<div class="sdr-empty">Nenhuma cadência com dado ainda</div>'
@@ -2793,6 +2837,49 @@ function openSdrModal(kind) {
           </div>
         </div>
       </div>`).join('');
+  el('modal-overlay').classList.add('show');
+}
+
+// 27/08 (Robert: "separar tudo por sdr... ter acesso a todas as informações
+// de fato") — paridade com o telão no mesmo dia: clicar num nome em "Por
+// SDR" abre a visão individual daquela pessoa, filtrando o RAW por
+// responsible_name (prospections/activities/calls, já enriquecido em
+// fetchSdrRaw) e rerodando o mesmo computeSdrData — zero duplicação de
+// lógica de negócio.
+function openSdrRepModal_(repName) {
+  if (!_sdrRaw || !_data || !_data.period) return;
+  const filtered = {
+    prospections: (_sdrRaw.prospections || []).filter(p => (p.responsible_name || 'Sem responsável') === repName),
+    activities: (_sdrRaw.activities || []).filter(a => (a.responsible_name || 'Sem responsável') === repName),
+    calls: (_sdrRaw.calls || []).filter(c => (c.responsible_name || 'Sem responsável') === repName)
+  };
+  const effPeriodType = _period === 'month_pick' ? 'custom' : _period;
+  const range = getPeriodDatesClient(effPeriodType, _customFrom, _customTo, todayLocalStr());
+  const d = computeSdrData(filtered, range.from, range.to, range.label);
+  el('modal-title').textContent = repName;
+  const maxCad = Math.max(...d.cadencias.map(c => c.ativas), 1);
+  const maxAtiv = Math.max(...d.atividadesPorTipo.map(t => t.feitas), 1);
+  const maxOut = Math.max(...d.ligacoesPorOutcome.map(o => o.count), 1);
+  const secTitle = (t) => `<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);margin:16px 0 8px;padding:0 16px">${t}</div>`;
+  el('modal-body').innerHTML = `
+    <div class="rv-kpis">
+      <div class="rv-kpi"><span class="rv-k-lbl">Ganhos</span><span class="rv-k-val" style="color:var(--green)">${d.kpis.ganhos}</span></div>
+      <div class="rv-kpi"><span class="rv-k-lbl">Perdidos</span><span class="rv-k-val red">${d.kpis.perdidos}</span></div>
+      <div class="rv-kpi"><span class="rv-k-lbl">Conversão</span><span class="rv-k-val">${d.kpis.conversao !== null ? d.kpis.conversao + '%' : '—'}</span></div>
+      <div class="rv-kpi"><span class="rv-k-lbl">Prospecções Ativas</span><span class="rv-k-val">${d.kpis.ativas}</span></div>
+      <div class="rv-kpi"><span class="rv-k-lbl">Atividades Feitas</span><span class="rv-k-val">${d.kpis.feitasCount}</span></div>
+      <div class="rv-kpi"><span class="rv-k-lbl">WhatsApp Enviados</span><span class="rv-k-val">${d.kpis.whatsappTotal}</span></div>
+      <div class="rv-kpi"><span class="rv-k-lbl">Ligações</span><span class="rv-k-val">${d.kpis.callsCount}</span></div>
+      <div class="rv-kpi"><span class="rv-k-lbl">Duração Média</span><span class="rv-k-val">${d.kpis.duracaoMediaMin !== null ? d.kpis.duracaoMediaMin + ' min' : '—'}</span></div>
+    </div>
+    ${secTitle('Cadências desta pessoa')}
+    <div style="padding:0 16px">${d.cadencias.length === 0 ? '<div class="modal-empty">Nenhuma cadência com dado no período</div>' : d.cadencias.map(c => sdrFunilRow_('var(--purple)', c.name, c.ativas, maxCad, c.ganhos + 'G / ' + c.perdidos + 'P')).join('')}</div>
+    ${secTitle('Atividades por tipo')}
+    <div style="padding:0 16px">${d.atividadesPorTipo.length === 0 ? '<div class="modal-empty">Nenhuma atividade no período</div>' : d.atividadesPorTipo.map(t => sdrFunilRow_('var(--purple)', t.label, t.feitas, maxAtiv, t.agendadas + ' agend.', t.ignoradas > 0 ? (t.ignoradas + ' ignor.') : null)).join('')}</div>
+    ${secTitle('Resultado das ligações')}
+    <div style="padding:0 16px">${d.ligacoesPorOutcome.length === 0 ? '<div class="modal-empty">Nenhuma ligação no período</div>' : d.ligacoesPorOutcome.map(o => sdrFunilRow_(o.outcome === 'MEANINGFUL' ? 'var(--green)' : (o.outcome === 'NO_CONTACT' || o.outcome === 'WRONG_NUMBER' ? 'var(--red)' : 'var(--amber)'), o.label, o.count, maxOut)).join('')}</div>
+    ${d.perdidosPorMotivo.length > 0 ? secTitle('Motivos de perda') + '<div style="padding:0 16px 8px">' + d.perdidosPorMotivo.map(r => `<div class="sdr-reason-row"><span class="sdr-reason-name">${escHtml(r.reason)}</span><span class="sdr-reason-count">${r.count}</span></div>`).join('') + '</div>' : ''}
+  `;
   el('modal-overlay').classList.add('show');
 }
 
