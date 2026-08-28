@@ -367,7 +367,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
    a largura dos 5 cards e adicionar esse de leads") — 6 colunas em vez de
    5, card próprio pra Leads (métrica importante o bastante pra ter
    destaque igual as outras, não só um sub-texto dentro do CPL). */
-#mkt-row{display:none;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;height:52px;flex-shrink:0}
+#mkt-row{display:none;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;height:62px;flex-shrink:0}
 #mkt-row.show{display:grid}
 .achip{background:var(--card);border-radius:10px;border:1px solid var(--border);padding:6px 12px;display:flex;flex-direction:column;justify-content:center;gap:1px;box-shadow:0 1px 2px rgba(26,22,38,.04),0 2px 6px -2px rgba(26,22,38,.06)}
 .ac-label{font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -679,7 +679,13 @@ footer strong{color:#fff}
   #sdr-hero-row{height:76px;gap:6px}
   #ads-hero-row{height:76px;gap:6px}
   #ads-hero-row2{height:60px;gap:6px}
-  #mkt-row{height:44px}
+  /* 28/08 (achado real ao investigar sobreposição que Robert viu ao vivo
+     na TV): #mkt-row{height:44px} aqui era MENOR que a base (52px), mas
+     o conteúdo do achip (label+valor+seta de variação, 3 linhas) sempre
+     precisou de ~59px, com ou sem tela curta — .ac-val nunca foi tocado
+     por este breakpoint. Encolher a fileira só piorava a sobreposição na
+     tela pequena; removido — herda os 62px da regra base, que já cobrem
+     o conteúdo real com folga. */
   .hero-val{font-size:21px}
   .kc-val{font-size:14px}
   .sc-num{font-size:20px}
@@ -720,6 +726,15 @@ body.tv-grande .lb-name{font-size:17px}
 body.tv-grande .lb-num{font-size:16px}
 body.tv-grande .lb-conv{font-size:14px}
 body.tv-grande .ac-val{font-size:18px}
+/* 28/08 (Robert, vendo AO VIVO na TV: "os cards de ads ficaram levemente
+   sobrepostos pelo funil/ranking... acho que é pq o header cresceu") —
+   não era o header, era isso aqui: #mkt-row tem altura FIXA (52px) que
+   nunca foi ajustada quando .ac-val ganhou fonte maior no tv-grande —
+   o achip passou a precisar de ~62px de conteúdo, sem overflow:hidden pra
+   conter, vazando ~3-10px pra baixo por cima do #main logo abaixo. Cresce
+   a fileira em vez de encolher o número (o pedido original era aumentar,
+   não diminuir de volta). */
+body.tv-grande #mkt-row{height:66px}
 body.tv-grande .abar-val{font-size:13.5px}
 body.tv-grande .abar-name{font-size:13px}
 body.tv-grande .ga4-table-card td{font-size:14px}
