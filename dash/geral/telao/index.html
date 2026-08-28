@@ -685,35 +685,38 @@ footer strong{color:#fff}
   footer{padding:3px}
 }
 
-/* 27/08 (Robert: "aumentar os numeros... pra ver de longe pq fica num
-   telao... sem quebrar nada nem no meu pc de 13 polegadas") — só entra em
-   telas altas de verdade (TV real em tela cheia é 1080px+; o MacBook 13"
-   dele já cai no breakpoint ≤860px acima, com folga de mais de 100px entre
-   os dois, zero chance de os dois disputarem a mesma tela). Aumenta só os
-   NÚMEROS grandes (o que se lê de longe) — labels/badges pequenos ficam do
-   tamanho de sempre, tanto pra não arriscar sobreposição quanto porque
-   esses já são lidos de perto (controle remoto/celular na mão). */
-@media(min-height:1000px){
-  .hero-val{font-size:34px}
-  .kc-val{font-size:21px}
-  #ga4-live-card .kc-val{font-size:34px}
-  .sc-num{font-size:30px}
-  .funil-n{font-size:22px}
-  .lb-name{font-size:17px}
-  .lb-num{font-size:16px}
-  .lb-conv{font-size:14px}
-  .ac-val{font-size:18px}
-  .abar-val{font-size:13.5px}
-  .abar-name{font-size:13px}
-  .ga4-table-card td{font-size:14px}
-  .ga4-table-card td:not(:first-child){font-size:16px}
-  .stat-row{font-size:14px}
-  .bia-sdr-card{font-size:.95rem}
-  .pipeline-val{font-size:13px}
-  .feed-val{font-size:14px}
-  .card-hd-title{font-size:11.5px}
-  .h-title{font-size:13px}
-}
+/* 27/08 (Robert: "aumentar os numeros... pra ver de longe... sem quebrar
+   nada nem no meu pc de 13 polegadas") — 1ª tentativa foi @media(min-height:
+   1000px), mas Robert testou na TV de casa e "ficou quase a mesma coisa":
+   achado real — se a TV recebe a tela via espelhamento/extensão do Mac (ou
+   AirPlay), o navegador reporta a RESOLUÇÃO DO MAC, não da TV física, então
+   a media query nunca disparava. Substituído por um interruptor manual
+   (classe no body) que não depende de adivinhar o tamanho físico da tela —
+   impossível de quebrar em qualquer outra tela porque é 100% opt-in: só liga
+   quando alguém aciona de propósito (botão no header ou ?tv=1 na URL),
+   nunca sozinho. Aumenta só os NÚMEROS grandes (o que se lê de longe) —
+   labels/badges pequenos ficam do tamanho de sempre. */
+body.tv-grande .hero-val{font-size:34px}
+body.tv-grande .kc-val{font-size:21px}
+body.tv-grande #ga4-live-card .kc-val{font-size:34px}
+body.tv-grande .sc-num{font-size:30px}
+body.tv-grande .funil-n{font-size:22px}
+body.tv-grande .lb-name{font-size:17px}
+body.tv-grande .lb-num{font-size:16px}
+body.tv-grande .lb-conv{font-size:14px}
+body.tv-grande .ac-val{font-size:18px}
+body.tv-grande .abar-val{font-size:13.5px}
+body.tv-grande .abar-name{font-size:13px}
+body.tv-grande .ga4-table-card td{font-size:14px}
+body.tv-grande .ga4-table-card td:not(:first-child){font-size:16px}
+body.tv-grande .stat-row{font-size:14px}
+body.tv-grande .bia-sdr-card{font-size:.95rem}
+body.tv-grande .pipeline-val{font-size:13px}
+body.tv-grande .feed-val{font-size:14px}
+body.tv-grande .card-hd-title{font-size:11.5px}
+body.tv-grande .h-title{font-size:13px}
+#tv-toggle{width:26px;height:26px;border-radius:7px;border:1.5px solid var(--border);background:#fff;color:var(--muted);font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+#tv-toggle.active{background:var(--purple);color:#fff;border-color:var(--purple)}
 </style>
 </head>
 <body>
@@ -776,6 +779,7 @@ footer strong{color:#fff}
 
   <div class="h-right">
     <span id="period-badge">90 dias</span>
+    <button id="tv-toggle" onclick="toggleTvGrande_()" title="Números grandes (TV)">TV</button>
     <span id="htime">--:--</span>
     <div id="rdot"></div>
   </div>
@@ -1612,6 +1616,37 @@ const AGENDOR_DEAL = 'https://web.agendor.com.br/sistema/negocios/historico.php?
 // registrar). Telão que perdesse o localStorage (TV reiniciada, cache limpo)
 // ficava morto pra sempre, sem erro visível. Movida pra cima de tudo que usa.
 const _SKEL_GREY = '#e8e4f0';
+
+// 27/08 (Robert: testou na TV de casa, "ficou quase a mesma coisa" com a
+// 1ª tentativa via @media min-height — achado: TV espelhando/estendendo o
+// Mac reporta a resolução do MAC, não da TV, então a media query nunca
+// disparava de verdade). Interruptor manual em vez de detecção automática:
+// liga a classe tv-grande (números maiores, ver arquivo de estilo) via
+// botão no header OU ?tv=1 na URL, persiste em localStorage pra sobreviver
+// ao auto-reload de deploy (senão a TV voltaria pro tamanho normal sozinha
+// a cada novo build). Aplicado o mais cedo possível (antes do
+// DOMContentLoaded) pra não ter flash de tamanho pequeno->grande.
+const TV_GRANDE_KEY = 'lifeb_dash_tv_grande';
+(function initTvGrande_() {
+  const params = new URLSearchParams(location.search);
+  if (params.has('tv')) {
+    const v = params.get('tv') === '1';
+    try { localStorage.setItem(TV_GRANDE_KEY, v ? '1' : '0'); } catch (e) {}
+  }
+  let on = false;
+  try { on = localStorage.getItem(TV_GRANDE_KEY) === '1'; } catch (e) {}
+  if (on) document.body.classList.add('tv-grande');
+})();
+function toggleTvGrande_() {
+  const on = document.body.classList.toggle('tv-grande');
+  try { localStorage.setItem(TV_GRANDE_KEY, on ? '1' : '0'); } catch (e) {}
+  const btn = document.getElementById('tv-toggle');
+  if (btn) btn.classList.toggle('active', on);
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('tv-toggle');
+  if (btn && document.body.classList.contains('tv-grande')) btn.classList.add('active');
+});
 const ORIGIN_LABELS = { outbound: 'Outbound', inbound: 'Inbound', both: 'Painel Geral' };
 const STAGE_ORD = { '3771722':'o1', '3771723':'o2', '3771724':'o2', '3771725':'o3' };
 const ORD_DOT   = { o1:'#b09bd6', o2:'#9260c8', o3:'#5a3a80' };
