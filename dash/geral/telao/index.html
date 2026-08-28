@@ -813,7 +813,7 @@ body.tv-grande .rv-k-val{font-size:19px}
       </div>
     </div>
     <div class="kchip" onclick="openPipelineModal()">
-      <span class="kc-label">Pipeline</span>
+      <span class="kc-label">Pipeline (agora)</span>
       <div class="kc-row"><span class="kc-val" id="k-pipeline"><span class="skel"></span></span></div>
       <span class="kc-sub" id="k-ativos">—</span>
     </div>
@@ -833,7 +833,7 @@ body.tv-grande .rv-k-val{font-size:19px}
       <span class="kc-sub" id="k-prazo-sub">até fechar</span>
     </div>
     <div class="kchip" onclick="openStaleModal()">
-      <span class="kc-label">Parados</span>
+      <span class="kc-label">Parados (agora)</span>
       <div class="kc-row"><span class="kc-val" id="k-stale"><span class="skel"></span></span></div>
       <span class="kc-sub warn" id="k-stale-sub">+7 dias</span>
     </div>
@@ -921,7 +921,7 @@ body.tv-grande .rv-k-val{font-size:19px}
        (hero+7 kchips, depois 3 colunas), display:none até setView() ligar. -->
   <div id="sdr-hero-row">
     <div id="sdr-hero" style="cursor:default">
-      <div class="hero-top"><span class="hero-label">Prospecções Ativas</span></div>
+      <div class="hero-top"><span class="hero-label">Prospecções Ativas (agora)</span></div>
       <div class="hero-val" id="sdr-hero-val"><span class="skel" style="width:80px;height:24px"></span></div>
       <div class="hero-row2"><span class="hero-sub" id="sdr-hero-sub">carregando…</span></div>
     </div>
@@ -1043,7 +1043,7 @@ body.tv-grande .rv-k-val{font-size:19px}
       <div class="hero-row2"><span class="hero-sub" id="ltv-hero-sub">carregando…</span></div>
     </div>
     <div class="kchip">
-      <span class="kc-label">Pipeline Reposição</span>
+      <span class="kc-label">Pipeline Reposição (agora)</span>
       <div class="kc-row"><span class="kc-val" id="ltv-k-pipeline"><span class="skel"></span></span></div>
       <span class="kc-sub" id="ltv-k-ativos">—</span>
     </div>
@@ -1063,7 +1063,7 @@ body.tv-grande .rv-k-val{font-size:19px}
       <span class="kc-sub" id="ltv-k-prazo-sub">até fechar</span>
     </div>
     <div class="kchip">
-      <span class="kc-label">Parados</span>
+      <span class="kc-label">Parados (agora)</span>
       <div class="kc-row"><span class="kc-val" id="ltv-k-stale"><span class="skel"></span></span></div>
       <span class="kc-sub warn" id="ltv-k-stale-sub">+7 dias</span>
     </div>
@@ -1281,29 +1281,39 @@ body.tv-grande .rv-k-val{font-size:19px}
       <div class="kc-row"><span class="kc-val" id="ga4-k-live"><span class="skel"></span></span></div>
       <span class="kc-sub">visitantes agora</span>
     </div>
-    <!-- 🔴 FIX 26/08 nº3 (Robert: "leads deve vir logo depois e antes de
-         conversão... abriu formulário não precisa de card individual, já
-         tá destacado no funil... posicione numa ordem coerente pensando
-         em marketing") — reordenado com lógica de funil de aquisição:
-         VOLUME (Usuários→Sessões→Visualizações) → QUALIDADE/ENGAJAMENTO
-         (Páginas/Sessão→Duração→Rejeição) → RESULTADO (Leads→Conversão),
-         do topo do funil pro fundo. "Abriu Formulário" removido (já é uma
-         linha do próprio funil de eventos, card duplicava a mesma info);
-         "Páginas / Sessão" entrou no lugar — métrica padrão de qualquer
-         relatório de analytics sério, mede profundidade de navegação,
-         dado 100% real (views/sessions, sem inventar nada novo no back). -->
+    <!-- 🔴 FIX 27/08 (Robert: "tem que ter leads, taxa de conversao logo
+         apos usuarios ativos... nao entendi o que é visualizacoes e
+         diferente pra sessoes") — reordenado de novo: a versão de 26/08
+         (VOLUME→QUALIDADE→RESULTADO) enterrava Leads/Conversão depois de 5
+         cards de engajamento. Agora é TOPO DE FUNIL (Visitantes) → RESULTADO
+         (Leads→Conversão) direto → só depois o detalhe de engajamento
+         (Sessões→Visualizações→Leitura→Duração→Rejeição). "Usuários Ativos"
+         virou "Visitantes" (mesmo dado do GA4 — activeUsers —, nome mais
+         claro pra quem não é analista). Sessões e Visualizações ganharam ⓘ
+         explicando a diferença (mesmo padrão que Rejeição já tinha),
+         porque isso gerava dúvida real. -->
     <div class="kchip kchip-b" style="--accent-color:var(--purple)">
-      <span class="kc-label">Usuários Ativos<span id="ga4-hero-spark" style="float:right"></span></span>
+      <span class="kc-label">Visitantes<span id="ga4-hero-spark" style="float:right"></span></span>
       <div class="kc-row"><span class="kc-val" id="ga4-hero-val"><span class="skel"></span></span></div>
       <span class="kc-sub" id="ga4-hero-sub">no período</span>
     </div>
+    <div class="kchip kchip-b" style="--accent-color:var(--green)">
+      <span class="kc-label">Leads (GA4)</span>
+      <div class="kc-row"><span class="kc-val" id="ga4-k-leads"><span class="skel"></span></span></div>
+      <span class="kc-sub">Lead_Formulario</span>
+    </div>
+    <div class="kchip kchip-b" style="--accent-color:var(--green)">
+      <span class="kc-label">Taxa de Conversão</span>
+      <div class="kc-row"><span class="kc-val" id="ga4-k-conv"><span class="skel"></span></span></div>
+      <span class="kc-sub">leads por visitante</span>
+    </div>
     <div class="kchip kchip-b" style="--accent-color:var(--magenta)">
-      <span class="kc-label">Sessões</span>
+      <span class="kc-label" title="Uma visita ao site. Se a mesma pessoa sair e voltar depois de ficar inativa, conta como outra sessão.">Sessões ⓘ</span>
       <div class="kc-row"><span class="kc-val" id="ga4-k-sessions"><span class="skel"></span></span></div>
       <span class="kc-sub">no período</span>
     </div>
     <div class="kchip kchip-b" style="--accent-color:var(--s5)">
-      <span class="kc-label">Visualizações</span>
+      <span class="kc-label" title="Cada página aberta conta 1 visualização. 1 sessão pode ter várias, se a pessoa navegar por mais de uma página.">Visualizações ⓘ</span>
       <div class="kc-row"><span class="kc-val" id="ga4-k-views"><span class="skel"></span></span></div>
       <span class="kc-sub">páginas vistas</span>
     </div>
@@ -1330,16 +1340,6 @@ body.tv-grande .rv-k-val{font-size:19px}
       <span class="kc-label" title="% de sessões de 1 página só, sem interação. Menor é melhor.">Rejeição ⓘ</span>
       <div class="kc-row"><span class="kc-val" id="ga4-k-bounce"><span class="skel"></span></span></div>
       <span class="kc-sub">menor é melhor</span>
-    </div>
-    <div class="kchip kchip-b" style="--accent-color:var(--green)">
-      <span class="kc-label">Leads (GA4)</span>
-      <div class="kc-row"><span class="kc-val" id="ga4-k-leads"><span class="skel"></span></span></div>
-      <span class="kc-sub">Lead_Formulario</span>
-    </div>
-    <div class="kchip kchip-b" style="--accent-color:var(--green)">
-      <span class="kc-label">Taxa de Conversão</span>
-      <div class="kc-row"><span class="kc-val" id="ga4-k-conv"><span class="skel"></span></span></div>
-      <span class="kc-sub">leads por visitante</span>
     </div>
   </div>
 
@@ -1481,7 +1481,7 @@ body.tv-grande .rv-k-val{font-size:19px}
     <div class="kchip kchip-b" style="--accent-color:var(--amber)">
       <span class="kc-label"><span id="bia-live-dot" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--amber);margin-right:4px"></span>Motor Proativo</span>
       <div class="kc-row"><span class="kc-val" id="bia-k-motor"><span class="skel"></span></span></div>
-      <span class="kc-sub">eventos hoje</span>
+      <span class="kc-sub" id="bia-k-motor-sub">eventos hoje</span>
     </div>
   </div>
 
@@ -1493,7 +1493,7 @@ body.tv-grande .rv-k-val{font-size:19px}
            rodando ao mesmo tempo, sem nenhuma separação visual — parecia 1
            lista só rolando de forma inconsistente. Virou 2 cards de
            verdade, cada um com seu card-hd/borda/badge próprios. -->
-      <div class="card has-expand" id="bia-motor-resumo-card" style="flex:0 0 auto;max-height:175px"><button class="expand-btn" data-target="bia-motor-breakdown" data-title="Resumo do Motor Proativo">⤢</button>
+      <div class="card has-expand" id="bia-motor-resumo-card" style="flex:0 0 auto;max-height:230px"><button class="expand-btn" data-target="bia-motor-breakdown" data-title="Resumo do Motor Proativo">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title"><span id="bia-motor-live-dot"></span>Motor Proativo ao Vivo</span>
           <span class="badge" id="bia-motor-badge">carregando…</span>
@@ -1541,14 +1541,36 @@ body.tv-grande .rv-k-val{font-size:19px}
           <div id="bia-gates-historico-aviso" style="display:none;font-size:10.5px;color:var(--amber);padding:6px 0 2px;line-height:1.4"></div>
         </div>
       </div>
-      <div class="card" id="bia-trend-card" style="flex:1;display:flex;flex-direction:column;min-height:0">
+      <!-- 🔴 FIX 27/08 (Robert: "pode ate reduzir o tamanho do grafico...
+           coisas mais importantes... nao ter ponto cego sobre a bia") —
+           era flex:1 (tomava toda sobra da coluna); virou altura fixa
+           menor pra abrir espaço pro card de Saúde do Sistema logo abaixo,
+           sem precisar cortar nada de Confiança&Saúde nem Estrutura SDR. -->
+      <div class="card" id="bia-trend-card" style="flex:0 0 auto;max-height:170px;display:flex;flex-direction:column;min-height:0">
         <div class="card-hd">
           <span class="card-hd-title">Tendência de Custo × Notificações (14 dias)</span>
           <span class="badge" id="bia-trend-badge"></span>
         </div>
         <div id="bia-trend-chart" style="flex:1;min-height:0"></div>
       </div>
-      <div class="card" id="bia-sdr-card">
+      <!-- 27/08 (Robert: "como worker se ta ok n8n e tudo que precisar pra
+           realmente nao ter ponto cego sobre a bia") — worker usa dado que
+           já existe (syncedAt do bia-dash-sync): se o último snapshot é
+           mais velho que ~20min (o dobro do cron de 10min, com folga), tem
+           alguma coisa parada. n8n NÃO entra aqui ainda — o worker nunca
+           fala com o n8n hoje, precisaria de secret novo + rota proxy
+           (mesmo porte da historização dos gates feita hoje); avisado ao
+           Robert como pendência separada, não fingido aqui com dado falso. -->
+      <div class="card" id="bia-worker-health-card" style="flex:0 0 auto">
+        <div class="card-hd">
+          <span class="card-hd-title">Saúde do Sistema</span>
+          <span class="badge" id="bia-worker-health-badge"></span>
+        </div>
+        <div style="padding:2px 14px">
+          <div class="stat-row"><span class="k">Worker (bia-dash-sync) — agora</span><span class="v" id="bia-worker-health-status">—</span></div>
+        </div>
+      </div>
+      <div class="card" id="bia-sdr-card" style="flex:1;min-height:0">
         <div class="card-hd">
           <span class="card-hd-title">Estrutura SDR</span>
           <span class="badge" id="bia-sdr-badge"></span>
@@ -1569,18 +1591,18 @@ body.tv-grande .rv-k-val{font-size:19px}
     <div id="bia-col-right">
       <div class="card" id="bia-deploy-stats-card">
         <div class="card-hd">
-          <span class="card-hd-title">Saúde do Deploy</span>
+          <span class="card-hd-title">Saúde das Atualizações</span>
           <span class="badge" id="bia-deploy-badge"></span>
         </div>
         <div style="padding:2px 14px">
-          <div class="stat-row"><span class="k">Suíte atual</span><span class="v good" id="bia-deploy-suite">—</span></div>
+          <div class="stat-row"><span class="k">Testes Automatizados</span><span class="v good" id="bia-deploy-suite">—</span></div>
           <div class="stat-row"><span class="k">Falhas</span><span class="v" id="bia-deploy-falhas">—</span></div>
           <div class="stat-row"><span class="k">Desde início do log</span><span class="v" id="bia-deploy-desde">—</span></div>
         </div>
       </div>
       <div class="card" id="bia-deploy-freq-card" style="flex:1;display:flex;flex-direction:column;min-height:0">
         <div class="card-hd">
-          <span class="card-hd-title">Deploys por Dia</span>
+          <span class="card-hd-title">Atualizações por Dia</span>
           <span class="badge" id="bia-deploy-freq-badge"></span>
         </div>
         <div style="flex:1;min-height:0;padding:8px 14px;display:flex;flex-direction:column" id="bia-deploy-freq-chart"></div>
@@ -2897,6 +2919,9 @@ function renderBiaSectionTelao(s) {
     motorProativo: s.motorProativoHoje, respostasBia: s.respostasBiaHoje
   });
   el('bia-k-motor').textContent = String(gatesC.motorProativo);
+  // 27/08 (mesmo achado do badge de Confiança&Saúde) — sub ficava travado em
+  // "eventos hoje" mesmo já somando o período real desde a historização.
+  el('bia-k-motor-sub').textContent = 'eventos ' + pLabel.toLowerCase();
 
   // Motor Proativo — o card "ao vivo" de verdade (achado 26/08: Robert
   // pediu explicitamente esse card, não existia antes, só um número solto).
@@ -2962,6 +2987,21 @@ function renderBiaSectionTelao(s) {
     `<div class="bia-sdr-card" style="opacity:.55">não cadastrado</div>`
   ).join('') || '<div class="feed-empty">Sem SDR cadastrado</div>';
 
+  // 27/08 (Robert: "worker se ta ok... nao ter ponto cego") — cron do
+  // bia-dash-sync roda a cada 10min; folga de 2x (20min) antes de marcar
+  // atrasado, pra não gerar falso alarme por um ciclo só de atraso.
+  if (s.syncedAt) {
+    const syncDate = new Date(s.syncedAt);
+    const minAtras = Math.round((Date.now() - syncDate.getTime()) / 60000);
+    const okWorker = minAtras <= 20;
+    el('bia-worker-health-status').textContent = (okWorker ? '✅ Ok' : '⚠ Atrasado') + ' · sinc. ' + syncDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    el('bia-worker-health-status').className = 'v ' + (okWorker ? 'good' : 'warn');
+    el('bia-worker-health-badge').textContent = okWorker ? 'tudo certo' : 'verificar';
+  } else {
+    el('bia-worker-health-status').textContent = '—';
+    el('bia-worker-health-badge').textContent = '';
+  }
+
   el('bia-deploy-badge').textContent = s.deploy.registrados + ' registrados';
   el('bia-deploy-suite').textContent = s.deploy.suiteAtual || '—';
   el('bia-deploy-falhas').textContent = s.deploy.falhas;
@@ -2991,12 +3031,12 @@ function renderBiaSectionTelao(s) {
   });
   const diasDeploy = Object.keys(byDay);
   const countsDeploy = diasDeploy.map(dia => byDay[dia]);
-  el('bia-deploy-freq-badge').textContent = log.length + ' deploy' + (log.length !== 1 ? 's' : '') + ' · ' + diasDeploy.length + ' dia' + (diasDeploy.length !== 1 ? 's' : '');
+  el('bia-deploy-freq-badge').textContent = log.length + ' atualizaç' + (log.length !== 1 ? 'ões' : 'ão') + ' · ' + diasDeploy.length + ' dia' + (diasDeploy.length !== 1 ? 's' : '');
   if (diasDeploy.length > 1) {
     const hojeCount = countsDeploy[countsDeploy.length - 1] || 0;
-    el('bia-deploy-freq-chart').innerHTML = biaTrendHeroHeader_('Deploys por dia', fmtInt_(hojeCount), '#704B9B') +
+    el('bia-deploy-freq-chart').innerHTML = biaTrendHeroHeader_('Atualizações por dia', fmtInt_(hojeCount), '#704B9B') +
       '<div style="flex:1;min-height:0"><canvas id="bia-chart-deploys"></canvas></div>';
-    renderBiaBarChart_('bia-chart-deploys', diasDeploy, countsDeploy, '#704B9B', v => fmtInt_(v) + ' deploy' + (v !== 1 ? 's' : ''));
+    renderBiaBarChart_('bia-chart-deploys', diasDeploy, countsDeploy, '#704B9B', v => fmtInt_(v) + ' atualizaç' + (v !== 1 ? 'ões' : 'ão'));
   } else {
     el('bia-deploy-freq-chart').innerHTML = '<div class="feed-empty">Pouco histórico ainda pra mostrar tendência</div>';
   }
