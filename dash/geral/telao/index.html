@@ -4729,6 +4729,19 @@ function normalizeAdName_(name) {
   } while (curr !== prev);
   return curr;
 }
+// 28/08 (Robert, vendo direto na aba Ads: "esses daqui são os mesmos
+// criativos, só mudou o nome") — confirmado no Supabase: "AD - VD -
+// DROGASTORE" e "AD - DROGASTORE - VD" têm creative_id DIFERENTE (Meta
+// gera objeto de criativo novo a cada duplicação, mesmo reaproveitando a
+// mesma imagem — por isso agrupar por creative_id seria PIOR, fragmentaria
+// até nomes idênticos: achei 7 creative_ids diferentes só pra "AD - VD -
+// DROGASTORE"). O problema real é só ordem dos segmentos trocada por quem
+// duplicou a campanha no Meta Ads Manager. Ordena os segmentos (separados
+// por hífen) só pra formar a CHAVE de agrupamento — testado contra os 24
+// nomes reais da conta inteira, junta exatamente esse par e nenhum outro.
+function adNameGroupKey_(cleanName) {
+  return cleanName.split(/\s*[-–—]\s*/).map(s => s.trim().toUpperCase()).sort().join('|');
+}
 // Cópia fiel de groupAdsByCreative_ (dash/geral/index.html) — ver comentário
 // lá pro raciocínio completo (group-by-NOME, não creative_id).
 function groupAdsByCreative_(ads) {
@@ -4736,7 +4749,7 @@ function groupAdsByCreative_(ads) {
   const order = [];
   ads.forEach(ad => {
     const cleanName = normalizeAdName_(ad.name) || ad.id;
-    const key = 'n:' + cleanName;
+    const key = 'n:' + adNameGroupKey_(cleanName);
     if (!groups[key]) {
       groups[key] = { key, name: cleanName, thumbUrl: ad.thumbUrl, campaignNames: new Set(), adsetNames: new Set(), spend: 0, impressions: 0, clicks: 0, count: 0, memberIds: [], anyActive: false, leadsReal: ad.leadsReal || 0 };
       order.push(key);
