@@ -471,7 +471,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
    desta definição) — sobra de uma versão anterior do conector do funil,
    antes do badge "X perdidos" ganhar pill própria (achado 12/07). Removidas. */
 .funil-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
-.funil-name{font-size:11px;font-weight:700;color:var(--text);min-width:110px;white-space:nowrap}
+.funil-name{font-size:11px;font-weight:700;color:var(--text);min-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .funil-bar-wrap{flex:1;height:6px;background:#f0ebf8;border-radius:3px;overflow:hidden;min-width:0;box-shadow:inset 0 1px 2px rgba(90,58,128,.08)}
 .funil-bar{height:100%;border-radius:3px;transition:width .6s cubic-bezier(.4,0,.2,1);min-width:4px}
 .bar-o1{background:linear-gradient(90deg,var(--o1),#c9b8e6)}
@@ -669,6 +669,8 @@ qualquer badge/contagem nunca mais entrar embaixo do botão. */
 footer{background:var(--text);color:rgba(255,255,255,.6);text-align:center;padding:6px;font-size:10px;flex-shrink:0}
 footer strong{color:#fff}
 
+#bia-trend-card{max-height:170px}
+
 @media(max-height:860px){
   header{min-height:44px}
   #htime{font-size:15px}
@@ -683,6 +685,19 @@ footer strong{color:#fff}
   .sc-num{font-size:20px}
   .lb-name{font-size:13px}
   footer{padding:3px}
+  /* 28/08 (auditoria pedida por Robert: "roda auditoria de novo... nada
+     pode ficar errado") — achado real: o redesenho da BIA de ontem (card
+     Saúde do Sistema novo + Motor Proativo maior) cabia numa TV mas
+     transbordava ~37-61px no MacBook 13" dele (mesma janela que já usa
+     este breakpoint). Encolhe só aqui, onde já é seguro fazer isso. */
+  #bia-trend-card{max-height:80px}
+  #bia-worker-health-card .stat-row{padding:3px 0}
+  /* tv-grande aumenta .stat-row (achado da auditoria: combinação real de
+     tela curta + modo TV ligado sobrava ~10-12px) — nessa tela curta
+     específica, mantém o stat-row no tamanho normal mesmo com tv-grande
+     ligado; não faz sentido de qualquer forma ligar "ver de longe" numa
+     tela de 13 polegadas vista de perto. */
+  body.tv-grande .stat-row{font-size:12px}
 }
 
 /* 27/08 (Robert: "aumentar os numeros... pra ver de longe... sem quebrar
@@ -1042,8 +1057,8 @@ body.tv-grande .rv-k-val{font-size:19px}
       <div class="hero-val" id="ltv-hero-val"><span class="skel" style="width:120px;height:24px"></span></div>
       <div class="hero-row2"><span class="hero-sub" id="ltv-hero-sub">carregando…</span></div>
     </div>
-    <div class="kchip">
-      <span class="kc-label">Pipeline Reposição (agora)</span>
+    <div class="kchip" title="Pipeline de Reposição">
+      <span class="kc-label">Pipeline (agora)</span>
       <div class="kc-row"><span class="kc-val" id="ltv-k-pipeline"><span class="skel"></span></span></div>
       <span class="kc-sub" id="ltv-k-ativos">—</span>
     </div>
@@ -1546,7 +1561,7 @@ body.tv-grande .rv-k-val{font-size:19px}
            era flex:1 (tomava toda sobra da coluna); virou altura fixa
            menor pra abrir espaço pro card de Saúde do Sistema logo abaixo,
            sem precisar cortar nada de Confiança&Saúde nem Estrutura SDR. -->
-      <div class="card" id="bia-trend-card" style="flex:0 0 auto;max-height:170px;display:flex;flex-direction:column;min-height:0">
+      <div class="card" id="bia-trend-card" style="flex:0 0 auto;display:flex;flex-direction:column;min-height:0">
         <div class="card-hd">
           <span class="card-hd-title">Tendência de Custo × Notificações (14 dias)</span>
           <span class="badge" id="bia-trend-badge"></span>
