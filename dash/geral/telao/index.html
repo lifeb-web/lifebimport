@@ -3885,15 +3885,14 @@ function loadAdsSection(periodFrom, periodTo, inboundData, silent, prevPeriodFro
     : null;
   const leadsPeriodo = leadsUnicosLocal(periodFrom, periodTo);
 
-  // achado 15/07 (auditoria, confirmado ao vivo via CDP a 1280px — largura
-  // mínima documentada do telão): ".ac-label" some com "Investimento Ads"+
-  // tag "IN"+este texto tudo na mesma linha (nowrap+ellipsis) — com a data
-  // completa (DD/MM/AAAA) o conjunto passava do espaço disponível (226px
-  // necessários vs 219px de clientWidth) e o "…" cortava NO MEIO do ano
-  // ("sincronizado 15/07/2…"). Só o dia/mês já deixa claro "foi sincronizado
-  // recentemente"; ano nunca foi essencial aqui. A 1920px nunca precisou
-  // cortar (346 vs 346), então o problema só aparecia no chão da faixa.
-  el('mkt-updated').textContent = ultimaData ? '· sincronizado ' + fmtDateDisplay(ultimaData) : '';
+  // achado 15/07 (encurtado de DD/MM/AAAA pra DD/MM) + achado 28/08
+  // (Robert: "os cards do ads parece próximos demais... podendo quebrar" —
+  // confirmado via CDP a 1280px que mesmo só com DD/MM ainda cortava,
+  // 204px necessários vs 177px de clientWidth: o fix de 15/07 parou de ser
+  // suficiente em algum momento — carga de dado real mudando o texto, ou
+  // layout mudando desde então. "sincronizado"→"sinc." mede exato 177/177,
+  // sem sobrar nem faltar 1px.
+  el('mkt-updated').textContent = ultimaData ? '· sinc. ' + fmtDateDisplay(ultimaData) : '';
   el('mkt-inv').textContent  = inv > 0 ? fmtMoney(inv) : '—';
   el('mkt-leads').textContent = leadsPeriodo > 0 ? fmtInt_(leadsPeriodo) : '—';
   el('mkt-cac').textContent  = (inv > 0 && fechadosPeriodo > 0) ? fmtMoney(Math.round(inv / fechadosPeriodo)) : '—';
