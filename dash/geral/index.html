@@ -866,6 +866,7 @@ footer strong{color:#fff}
       <div class="hero-val" id="ads-hero-val"><span class="skel" style="width:180px;height:32px"></span></div>
       <div class="hero-row">
         <span class="hero-sub">no período</span>
+        <span id="ads-hero-delta"></span>
       </div>
     </div>
 
@@ -920,27 +921,27 @@ footer strong{color:#fff}
     <div class="kpi-strip" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr);margin-bottom:14px">
       <div class="kchip">
         <span class="kc-label">Leads Recebidos</span>
-        <div class="kc-row"><span class="kc-val" id="ads-k-leads"><span class="skel"></span></span></div>
+        <div class="kc-row"><span class="kc-val" id="ads-k-leads"><span class="skel"></span></span><span class="kc-delta" id="ads-k-leads-delta"></span></div>
         <span class="kc-sub">no período</span>
       </div>
       <div class="kchip">
         <span class="kc-label">CPL</span>
-        <div class="kc-row"><span class="kc-val" id="ads-k-cpl"><span class="skel"></span></span></div>
+        <div class="kc-row"><span class="kc-val" id="ads-k-cpl"><span class="skel"></span></span><span class="kc-delta" id="ads-k-cpl-delta"></span></div>
         <span class="kc-sub">custo por lead recebido</span>
       </div>
       <div class="kchip">
         <span class="kc-label">CAC</span>
-        <div class="kc-row"><span class="kc-val" id="ads-k-cac"><span class="skel"></span></span></div>
+        <div class="kc-row"><span class="kc-val" id="ads-k-cac"><span class="skel"></span></span><span class="kc-delta" id="ads-k-cac-delta"></span></div>
         <span class="kc-sub">custo por cliente fechado</span>
       </div>
       <div class="kchip">
         <span class="kc-label">ROAS</span>
-        <div class="kc-row"><span class="kc-val" id="ads-k-roas"><span class="skel"></span></span></div>
+        <div class="kc-row"><span class="kc-val" id="ads-k-roas"><span class="skel"></span></span><span class="kc-delta" id="ads-k-roas-delta"></span></div>
         <span class="kc-sub">retorno por real investido</span>
       </div>
       <div class="kchip" style="grid-column:1/-1">
         <span class="kc-label">ACOS</span>
-        <div class="kc-row"><span class="kc-val" id="ads-k-acos"><span class="skel"></span></span></div>
+        <div class="kc-row"><span class="kc-val" id="ads-k-acos"><span class="skel"></span></span><span class="kc-delta" id="ads-k-acos-delta"></span></div>
         <span class="kc-sub">% do faturamento gasto em ads no período</span>
       </div>
     </div>
@@ -2571,7 +2572,10 @@ function setView(btn) {
     loadSdrFresh_();
   }
   if (_adsViewActive) {
-    if (_adsHierarchyRaw && _data && _data.period) renderAdsHierarchySection(computeAdsHierarchyData(_adsHierarchyRaw, _data.period.from, _data.period.to, _data.period.label));
+    if (_adsHierarchyRaw && _data && _data.period) {
+      const dAds = computeAdsHierarchyData(_adsHierarchyRaw, _data.period.from, _data.period.to, _data.period.label);
+      renderAdsHierarchySection(dAds, computeAdsPrevD_(_adsHierarchyRaw, _data.period, dAds));
+    }
     loadAdsHierarchyFresh_();
   }
   if (_ga4ViewActive) {
@@ -2953,12 +2957,27 @@ async function fetchAdsHierarchyRaw() {
   return { campaigns, adsets, ads, daily, creatives, leadsCampanha };
 }
 
+// 29/08 (Robert: "não tem nenhuma flag de comparações como temos na aba
+// vendas... implementa na aba ads") — cópia fiel da versão do telão (ver
+// comentário lá pro raciocínio completo): mesmos 6 números que o mkt-row de
+// Vendas já compara, pula quando o período é "Total" ou quando o período
+// anterior cairia antes do dado mais antigo sincronizado.
+function computeAdsPrevD_(rawData, currentPeriod, dCurrent) {
+  if (!currentPeriod || currentPeriod.type === 'total') return null;
+  const range = prevRangeOf(currentPeriod);
+  if (dCurrent.earliestDailyDate && range.from < dCurrent.earliestDailyDate) return null;
+  return computeAdsHierarchyData(rawData, range.from, range.to, '');
+}
+
 async function loadAdsHierarchyFresh_() {
   if (_adsHierarchyLoading) return;
   _adsHierarchyLoading = true;
   try {
     _adsHierarchyRaw = await fetchAdsHierarchyRaw();
-    if (_adsViewActive && _data && _data.period) renderAdsHierarchySection(computeAdsHierarchyData(_adsHierarchyRaw, _data.period.from, _data.period.to, _data.period.label));
+    if (_adsViewActive && _data && _data.period) {
+      const d = computeAdsHierarchyData(_adsHierarchyRaw, _data.period.from, _data.period.to, _data.period.label);
+      renderAdsHierarchySection(d, computeAdsPrevD_(_adsHierarchyRaw, _data.period, d));
+    }
   } catch (e) {
     console.warn('fetchAdsHierarchyRaw falhou:', e.message);
     if (!el('ads-campanhas-rows').children.length) {
@@ -2971,7 +2990,8 @@ async function loadAdsHierarchyFresh_() {
 
 function refreshAdsHierarchyIfActive_() {
   if (_adsViewActive && _adsHierarchyRaw && _data && _data.period) {
-    renderAdsHierarchySection(computeAdsHierarchyData(_adsHierarchyRaw, _data.period.from, _data.period.to, _data.period.label));
+    const d = computeAdsHierarchyData(_adsHierarchyRaw, _data.period.from, _data.period.to, _data.period.label);
+    renderAdsHierarchySection(d, computeAdsPrevD_(_adsHierarchyRaw, _data.period, d));
   }
 }
 
@@ -3374,11 +3394,29 @@ function bucketizeByIndex_(series, n) {
   return vals;
 }
 
-function renderAdsHierarchySection(d) {
+function renderAdsHierarchySection(d, prevD) {
   _adsHierarchyLastData = d;
   el('ads-period-label').textContent = d.periodLabel;
   setTextFlash('ads-hero-val', fmtMoney(d.kpis.spend));
   el('ads-hero-spark').innerHTML = d.trendSeries.length >= 2 ? sparklineSVG(bucketizeByIndex_(d.trendSeries, 8), '#704B9B') : '';
+  // 29/08 — mesmos 6 deltas do mkt-row de Vendas (ver comentário em
+  // computeAdsPrevD_ pro porquê só esses 6 e pro porquê de pular quando
+  // prevD vem null).
+  if (prevD) {
+    el('ads-hero-delta').innerHTML  = deltaHTML(pctDelta(d.kpis.spend, prevD.kpis.spend), false, true); // neutro
+    el('ads-k-leads-delta').innerHTML = kcDeltaHTML(pctDelta(d.kpis.leads, prevD.kpis.leads));           // mais é melhor
+    el('ads-k-cpl-delta').innerHTML   = kcDeltaHTML(pctDelta(d.kpis.cpl, prevD.kpis.cpl), true);         // menor é melhor
+    el('ads-k-cac-delta').innerHTML   = kcDeltaHTML(pctDelta(d.kpis.cac, prevD.kpis.cac), true);         // menor é melhor
+    el('ads-k-roas-delta').innerHTML  = kcDeltaHTML(pctDelta(d.kpis.roas, prevD.kpis.roas));              // maior é melhor
+    el('ads-k-acos-delta').innerHTML  = kcDeltaHTML(pctDelta(d.kpis.acos, prevD.kpis.acos), true);       // menor é melhor
+  } else {
+    el('ads-hero-delta').innerHTML = '';
+    el('ads-k-leads-delta').innerHTML = '';
+    el('ads-k-cpl-delta').innerHTML = '';
+    el('ads-k-cac-delta').innerHTML = '';
+    el('ads-k-roas-delta').innerHTML = '';
+    el('ads-k-acos-delta').innerHTML = '';
+  }
   el('ads-k-impr').textContent = d.kpis.impressions.toLocaleString('pt-BR');
   el('ads-k-clicks').textContent = d.kpis.clicks.toLocaleString('pt-BR');
   el('ads-k-ctr').textContent = d.kpis.ctr !== null ? d.kpis.ctr.toFixed(2) + '%' : '—';
@@ -4507,7 +4545,7 @@ function pctDelta(curr, prev) {
   return Math.round(((curr - prev) / prev) * 1000) / 10;
 }
 
-function deltaHTML(pct, invert) {
+function deltaHTML(pct, invert, neutral) {
   if (pct === null || pct === undefined) return '';
   // achado 15/07 (auditoria): 0% exato caía no ramo "good" (0 >= 0) e pintava
   // uma seta ▲ VERDE de "melhorou" pra uma métrica que não mudou nada — a
@@ -4515,9 +4553,13 @@ function deltaHTML(pct, invert) {
   // nenhum código de verdade produzia ela ainda (achado de dead code na mesma
   // auditoria). Fecha o loop: agora existe uma leitura neutra de verdade.
   if (pct === 0) return `<span class="delta flat">• 0%</span>`;
-  const good = invert ? pct <= 0 : pct >= 0;
-  const cls = pct === Infinity ? (invert ? 'down' : 'up') : (good ? 'up' : 'down');
-  const arrow = (pct === Infinity ? 1 : pct) >= 0 ? '▲' : '▼';
+  const raw = pct === Infinity ? 1 : pct;
+  // 29/08 (Robert: flag de comparação também no hero do Ads) — Investimento
+  // é neutro igual no mkt-row de Vendas; precisa do mesmo 3º parâmetro que
+  // kcDeltaHTML já tinha, senão só dava pra pintar verde/vermelho.
+  const good = invert ? raw <= 0 : raw >= 0;
+  const cls = neutral ? 'flat' : (good ? 'up' : 'down');
+  const arrow = raw >= 0 ? '▲' : '▼';
   const txt = pct === Infinity ? 'novo' : Math.abs(pct) + '%';
   return `<span class="delta ${cls}">${arrow} ${txt}</span>`;
 }
