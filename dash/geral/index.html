@@ -1572,7 +1572,19 @@ function computeLtvData(allRows, originFilter, periodType, customFrom, customTo,
   const periodFrom = new Date(period.from + 'T00:00:00');
   const periodTo = new Date(period.to + 'T23:59:59');
 
-  const ltvRows = allRows.filter(d => POSVENDA_STAGE_IDS.has(String(d.stage_id)));
+  // 🆕 30/08 (Robert: "quero que no dash geral já apareça as reposições nas
+  // datas corretas") — `closed_at` (vem de wonAt/endTime) SEMPRE reflete o
+  // momento em que o negócio foi registrado no Agendor, nunca a data REAL do
+  // ciclo quando o registro é retroativo (a API do Agendor não deixa gravar
+  // wonAt/endTime passado — achado ao vivo, ver POS-VENDA-BLINDAGEM-
+  // AUTOMACAO.md seção 5). `data_real_evento` (coluna nova, populada pelo
+  // sync a partir do texto gravado em `description`) é a fonte de verdade
+  // quando existe. Sobrescreve `closed_at` SÓ nesta cópia local — nunca muta
+  // `allRows` original nem afeta a aba Vendas (aggregateClient é
+  // compartilhada, mas só vê o dado já corrigido que passamos pra ela).
+  const ltvRows = allRows
+    .filter(d => POSVENDA_STAGE_IDS.has(String(d.stage_id)))
+    .map(d => d.data_real_evento ? Object.assign({}, d, { closed_at: d.data_real_evento + 'T12:00:00Z' }) : d);
   const byOrigin = originFilter === 'both' ? ltvRows : ltvRows.filter(d => d.origin === originFilter);
 
   const ongoingAll = byOrigin.filter(d => d.status === 'ongoing');
