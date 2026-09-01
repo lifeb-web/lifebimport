@@ -1634,6 +1634,38 @@ function computeLtvData(allRows, originFilter, periodType, customFrom, customTo,
 
 // Busca TODAS as linhas de dash_geral_deals (paginado — hoje ~150 linhas,
 // mas não assume teto: mesma técnica de Range usada na validação em Node).
+// 🆕 01/09 (achado real: Drogarias São Pedro/Pró Saúde, 31/08 — end_time gravado como
+// meia-noite UTC EXATA em boa parte dos ganhos, sem hora real, enquanto won_at tem o
+// instante certo NESSES casos). Investigação com amostra COMPLETA (75/75 ganhos do
+// histórico da conta, reconferidos ao vivo na API do Agendor, não só o Supabase) achou 2
+// grupos bem distintos dentro dos casos de meia-noite: (1) ~19 casos recentes onde
+// end_time e won_at divergem só 0-2 dias — end_time perdeu a hora, won_at é o dado certo;
+// (2) ~32 casos de 2 lotes de importação retroativa (Reposição/Pós-venda + backfill Arena
+// de 12/07) onde end_time e won_at divergem SEMANAS/MESES — aí end_time É o dado
+// histórico correto (a data real do fechamento antigo) e won_at é só "quando o script de
+// import rodou", errado. Prioridade geral continua end_time||won_at (protege contra
+// correção manual de data pela tela do Agendor, que deixa won_at desatualizado — achado
+// de 13/07, nunca invertida à toa) — só cai pro won_at quando end_time está em meia-noite
+// EXATA *e* a divergência com won_at é pequena (≤2 dias, sinal de "mesmo evento, só
+// perdeu a hora" — nunca confundido com os lotes de import, que divergem em dezenas/
+// centenas de dias). Aprovado pelo Robert 01/09 depois de medir o impacto real nos totais
+// do dashboard com dado real (não teoria), medido em 01/09/2026 contra o snapshot vivo
+// daquele momento (nunca tratar como constante fixa — dado muda a cada sync novo, uma
+// reconferência horas depois já deu números levemente diferentes, mesma lógica, dado
+// vivo): MÊS nunca mudou de balde nessa medição, SEMANA mudou em poucos casos (baixo R$),
+// DIA foi o que mais mudou (fração pequena dos ganhos, R$ na casa das dezenas de milhares
+// no snapshot medido) — ordem de grandeza pra referência, não número oficial. Roda só
+// na LEITURA — nunca reescreve nada no Supabase, só como o painel INTERPRETA o dado já
+// sincronizado na hora de calcular/mostrar (inclusive Prazo Médio de Fechamento, que usa
+// o mesmo closed_at). Se um dia o sync corrigir isso na escrita, vira no-op transparente.
+function _effectiveClosedAt(d) {
+  if (d.status !== 'won') return d.closed_at;
+  const endTimeSemHora = d.end_time && /T00:00:00(\.\d+)?(Z|\+00:00)$/.test(d.end_time);
+  if (!endTimeSemHora || !d.won_at) return d.end_time || d.won_at || d.closed_at || null;
+  const diffDias = Math.abs((new Date(d.won_at) - new Date(d.end_time)) / 86400000);
+  return diffDias <= 2 ? d.won_at : d.end_time;
+}
+
 async function fetchRawDeals() {
   const PAGE = 1000;
   let all = [];
@@ -1655,6 +1687,7 @@ async function fetchRawDeals() {
     if (all.length >= total || chunk.length < PAGE) break;
     from += PAGE;
   }
+  all.forEach(d => { d.closed_at = _effectiveClosedAt(d); });
   return all;
 }
 
