@@ -1684,28 +1684,53 @@ function _mergeById_(existing, incoming, keyField) {
   incoming.forEach(r => byKey.set(r[keyField], r));
   return Array.from(byKey.values());
 }
+// Ponte de emergência (08/09) — enquanto o Supabase seguir bloqueado por
+// egress (volta sozinho dia 15/09, ver [[project_dash_geral_egress_incidente_0709]]),
+// um snapshot estático (gerado à parte via credencial só-leitura, publicado
+// no próprio site) serve de fallback pras 3 tabelas núcleo. Nunca some sem
+// aviso: se a ponte também falhar, o erro sobe normal pro catch de loadData
+// (que já tem seu próprio fallback via localStorage).
+const STATIC_BRIDGE_FILES_ = { dash_geral_deals: 'deals.json', dash_ads_daily: 'ads_daily.json', dash_geral_leads_daily: 'leads_daily.json' };
+async function _fetchViaStaticBridge_(table) {
+  const file = STATIC_BRIDGE_FILES_[table];
+  if (!file) throw new Error('sem ponte estática pra ' + table);
+  const res = await fetch('/dash/geral/data/' + file + '?_=' + Date.now(), { cache: 'no-store' });
+  if (!res.ok) throw new Error('ponte estática HTTP ' + res.status);
+  const payload = await res.json();
+  const rows = payload.rows || [];
+  // dash_ads_daily vem do Postgres direto (não do PostgREST) nesse caminho —
+  // coluna `date` chega como timestamp completo em vez de só a data; corta
+  // pro mesmo formato YYYY-MM-DD que o resto do painel espera.
+  if (table === 'dash_ads_daily') rows.forEach(r => { if (r.date) r.date = String(r.date).slice(0, 10); });
+  return rows;
+}
 async function _fetchTablePage_(table, query) {
-  const PAGE = 1000;
-  let all = [];
-  let from = 0;
-  while (true) {
-    const res = await fetch(SUPABASE_URL + '/rest/v1/' + table + '?' + query, {
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
-        Range: from + '-' + (from + PAGE - 1),
-        Prefer: 'count=exact'
-      }
-    });
-    if (!res.ok) throw new Error('Supabase HTTP ' + res.status + ' (' + table + ')');
-    const chunk = await res.json();
-    all = all.concat(chunk);
-    const cr = res.headers.get('content-range');
-    const total = (cr && cr.indexOf('/') !== -1) ? parseInt(cr.split('/')[1], 10) : chunk.length;
-    if (all.length >= total || chunk.length < PAGE) break;
-    from += PAGE;
+  try {
+    const PAGE = 1000;
+    let all = [];
+    let from = 0;
+    while (true) {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/' + table + '?' + query, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
+          Range: from + '-' + (from + PAGE - 1),
+          Prefer: 'count=exact'
+        }
+      });
+      if (!res.ok) throw new Error('Supabase HTTP ' + res.status + ' (' + table + ')');
+      const chunk = await res.json();
+      all = all.concat(chunk);
+      const cr = res.headers.get('content-range');
+      const total = (cr && cr.indexOf('/') !== -1) ? parseInt(cr.split('/')[1], 10) : chunk.length;
+      if (all.length >= total || chunk.length < PAGE) break;
+      from += PAGE;
+    }
+    return all;
+  } catch (e) {
+    console.warn('Supabase REST falhou (' + table + '), tentando ponte estática de emergência:', e.message);
+    return await _fetchViaStaticBridge_(table);
   }
-  return all;
 }
 
 let _lastDealsSyncedAt_ = null;
