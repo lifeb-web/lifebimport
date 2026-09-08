@@ -3204,12 +3204,30 @@ function _effectiveClosedAt(d) {
 
 // Busca TODAS as linhas de dash_geral_deals (paginado — hoje ~150 linhas,
 // mas não assume teto: mesma técnica de Range usada na validação em Node).
-async function fetchRawDeals() {
+// ── Fetch incremental (07/09) — achado real: fetchRawDeals()/fetchAdsRawDaily()/
+// fetchLeadsRawDaily() sempre buscavam a tabela INTEIRA (select=*) toda vez que
+// o poll de fundo detectava qualquer mudança de synced_at. Funcionou enquanto
+// as tabelas eram pequenas (julho), mas o tamanho de cada fetch cresce pra
+// sempre junto com o histórico real do negócio, e o gatilho (qualquer negócio
+// tocado no Agendor, em qualquer lugar, várias vezes por dia) dispara MUITAS
+// vezes. Resultado real: o Supabase estourou os 5GB/mês de egress do plano
+// free (5,72/5GB, confirmado ao vivo — projeto bloqueado com
+// "exceed_egress_quota", serviço de leitura recusando tudo). Fix: só o cold
+// start de cada aba busca a tabela inteira; toda atualização seguinte busca
+// só o que MUDOU (synced_at=gt.<último visto>) e mescla no snapshot já em
+// memória — custo passa a ser proporcional à mudança real, não ao tamanho
+// total do histórico (que só cresce).
+function _mergeById_(existing, incoming, keyField) {
+  const byKey = new Map(existing.map(r => [r[keyField], r]));
+  incoming.forEach(r => byKey.set(r[keyField], r));
+  return Array.from(byKey.values());
+}
+async function _fetchTablePage_(table, query) {
   const PAGE = 1000;
   let all = [];
   let from = 0;
   while (true) {
-    const res = await fetch(SUPABASE_URL + '/rest/v1/dash_geral_deals?select=*', {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/' + table + '?' + query, {
       headers: {
         apikey: SUPABASE_ANON_KEY,
         Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
@@ -3217,7 +3235,7 @@ async function fetchRawDeals() {
         Prefer: 'count=exact'
       }
     });
-    if (!res.ok) throw new Error('Supabase HTTP ' + res.status);
+    if (!res.ok) throw new Error('Supabase HTTP ' + res.status + ' (' + table + ')');
     const chunk = await res.json();
     all = all.concat(chunk);
     const cr = res.headers.get('content-range');
@@ -3225,8 +3243,35 @@ async function fetchRawDeals() {
     if (all.length >= total || chunk.length < PAGE) break;
     from += PAGE;
   }
-  all.forEach(d => { d.closed_at = _effectiveClosedAt(d); });
   return all;
+}
+
+let _lastDealsSyncedAt_ = null;
+async function fetchRawDeals() {
+  const cold = !_rawDeals;
+  const query = (cold || !_lastDealsSyncedAt_)
+    ? 'select=*'
+    : 'select=*&synced_at=gt.' + encodeURIComponent(_lastDealsSyncedAt_);
+  const fresh = await _fetchTablePage_('dash_geral_deals', query);
+  fresh.forEach(d => {
+    d.closed_at = _effectiveClosedAt(d);
+    if (d.synced_at && (!_lastDealsSyncedAt_ || d.synced_at > _lastDealsSyncedAt_)) _lastDealsSyncedAt_ = d.synced_at;
+  });
+  const merged = cold ? fresh : _mergeById_(_rawDeals, fresh, 'id');
+  if (cold) return merged;
+  // synced_at incremental NUNCA vê exclusão (negócio removido do Agendor,
+  // pruneStaleRows_ no sync, ver [[project_dash_geral_lifeb]]) — checagem
+  // barata (só a coluna id, poucos KB mesmo com milhares de negócios) garante
+  // que negócio apagado some daqui também, sem custar o tamanho da tabela
+  // inteira de novo.
+  try {
+    const idRows = await _fetchTablePage_('dash_geral_deals', 'select=id');
+    const liveIds = new Set(idRows.map(r => r.id));
+    return merged.filter(d => liveIds.has(d.id));
+  } catch (e) {
+    console.warn('checagem de negócio excluído falhou, mantendo snapshot sem prune:', e.message);
+    return merged;
+  }
 }
 
 function todayLocalStr() {
@@ -3334,6 +3379,11 @@ let _rawDeals     = null;
 // também guarda linha por adset/ad); ADS_EXCLUDE_CAMPAIGN_IDS aplica a MESMA
 // exclusão (post de Instagram sem relação com vendas) que a aba Ads já usa.
 let _adsRawDaily     = null;
+// Map 'entity_id|date' -> spend — preserva o que já foi visto pra recalcular
+// a soma sem rebuscar a tabela inteira a cada atualização (mesmo achado de
+// egress documentado acima em fetchRawDeals()).
+let _adsRawDailyMap_ = null;
+let _lastAdsRawSyncedAt_ = null;
 async function fetchAdsRawDaily() {
   // 🔴 FIX 27/08 (auditoria — inconsistência real, hoje inofensiva): antes
   // somava TODO dash_ads_daily (só descontando ADS_EXCLUDE_CAMPAIGN_IDS),
@@ -3354,32 +3404,38 @@ async function fetchAdsRawDaily() {
     if (campRes.ok) validIds = (await campRes.json()).map(c => c.id);
   } catch (e) { /* segue sem o filtro extra */ }
 
-  const PAGE = 1000;
-  let all = [];
-  let from = 0;
+  const cold = !_adsRawDailyMap_;
+  if (cold) _adsRawDailyMap_ = new Map();
   const excludeFilter = 'entity_id=not.in.(' + ADS_EXCLUDE_CAMPAIGN_IDS.join(',') + ')'
     + ((validIds && validIds.length) ? '&entity_id=in.(' + validIds.join(',') + ')' : '');
-  while (true) {
-    const res = await fetch(SUPABASE_URL + '/rest/v1/dash_ads_daily?select=date,spend&entity_type=eq.campaign&' + excludeFilter, {
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
-        Range: from + '-' + (from + PAGE - 1),
-        Prefer: 'count=exact'
-      }
-    });
-    if (!res.ok) throw new Error('Supabase HTTP ' + res.status);
-    const chunk = await res.json();
-    all = all.concat(chunk);
-    const cr = res.headers.get('content-range');
-    const total = (cr && cr.indexOf('/') !== -1) ? parseInt(cr.split('/')[1], 10) : chunk.length;
-    if (all.length >= total || chunk.length < PAGE) break;
-    from += PAGE;
+  const base = 'select=entity_id,date,spend,synced_at&entity_type=eq.campaign&' + excludeFilter;
+  const query = (!cold && _lastAdsRawSyncedAt_) ? base + '&synced_at=gt.' + encodeURIComponent(_lastAdsRawSyncedAt_) : base;
+  const rows = await _fetchTablePage_('dash_ads_daily', query);
+  rows.forEach(r => {
+    _adsRawDailyMap_.set(r.entity_id + '|' + r.date, parseFloat(r.spend) || 0);
+    if (r.synced_at && (!_lastAdsRawSyncedAt_ || r.synced_at > _lastAdsRawSyncedAt_)) _lastAdsRawSyncedAt_ = r.synced_at;
+  });
+  // Campanha que deixou de ser "válida" (fantasma, removida na Meta) precisa
+  // sumir do Map mesmo que suas linhas já estivessem em cache de uma busca
+  // anterior — a busca incremental sozinha nunca revisitaria essas linhas de
+  // novo pra elas desaparecerem. validIds já é buscado de qualquer forma
+  // acima (tabela pequena), então essa poda não custa rede extra nenhuma.
+  if (validIds && validIds.length) {
+    const validSet = new Set(validIds.map(String));
+    for (const key of Array.from(_adsRawDailyMap_.keys())) {
+      const entityId = key.slice(0, key.indexOf('|'));
+      if (!validSet.has(entityId)) _adsRawDailyMap_.delete(key);
+    }
   }
   // dash_ads_daily tem 1 linha por campanha por dia — soma por data pra virar
-  // o mesmo formato {date, spend_net} que loadAdsSection() já espera.
+  // o mesmo formato {date, spend_net} que loadAdsSection() já espera. Soma
+  // sempre recalculada do Map INTEIRO (não só do lote buscado agora), senão
+  // uma atualização incremental perderia os dias já somados antes.
   const byDate = {};
-  all.forEach(r => { byDate[r.date] = (byDate[r.date] || 0) + (parseFloat(r.spend) || 0); });
+  _adsRawDailyMap_.forEach((spend, key) => {
+    const date = key.slice(key.indexOf('|') + 1);
+    byDate[date] = (byDate[date] || 0) + spend;
+  });
   return Object.keys(byDate).map(date => ({ date, spend_net: Math.round(byDate[date] * 100) / 100 }));
 }
 
@@ -3393,28 +3449,16 @@ async function fetchAdsRawDaily() {
 // getLeadsUnicos() já fazia no proxy (mesma regra: sem contato = conta
 // mesmo assim, contato repetido DENTRO do período escolhido conta 1x só).
 let _leadsRawDaily = null;
+let _lastLeadsRawSyncedAt_ = null;
 async function fetchLeadsRawDaily() {
-  const PAGE = 1000;
-  let all = [];
-  let from = 0;
-  while (true) {
-    const res = await fetch(SUPABASE_URL + '/rest/v1/dash_geral_leads_daily?select=*', {
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
-        Range: from + '-' + (from + PAGE - 1),
-        Prefer: 'count=exact'
-      }
-    });
-    if (!res.ok) throw new Error('Supabase HTTP ' + res.status);
-    const chunk = await res.json();
-    all = all.concat(chunk);
-    const cr = res.headers.get('content-range');
-    const total = (cr && cr.indexOf('/') !== -1) ? parseInt(cr.split('/')[1], 10) : chunk.length;
-    if (all.length >= total || chunk.length < PAGE) break;
-    from += PAGE;
-  }
-  return all;
+  const cold = !_leadsRawDaily;
+  const query = (!cold && _lastLeadsRawSyncedAt_) ? 'select=*&synced_at=gt.' + encodeURIComponent(_lastLeadsRawSyncedAt_) : 'select=*';
+  const fresh = await _fetchTablePage_('dash_geral_leads_daily', query);
+  fresh.forEach(r => { if (r.synced_at && (!_lastLeadsRawSyncedAt_ || r.synced_at > _lastLeadsRawSyncedAt_)) _lastLeadsRawSyncedAt_ = r.synced_at; });
+  // Append-only por natureza (1 linha por lead válido, gravada uma única vez,
+  // nunca reescrita) — sem necessidade de merge-by-id nem checagem de
+  // exclusão, diferente de dash_geral_deals.
+  return cold ? fresh : _leadsRawDaily.concat(fresh);
 }
 function leadsUnicosLocal(periodFrom, periodTo) {
   if (!_leadsRawDaily) return 0;
@@ -3746,17 +3790,29 @@ async function loadData(force, silent) {
     refreshGa4IfActive_();
     refreshBiaIfActive_();
     flashDot();
-    try { localStorage.setItem('geral_telao_snapshot', JSON.stringify({ data: curr, savedAt: Date.now() })); } catch(_) {}
+    // 07/09 (rede de segurança, mesmo incidente do estouro de egress): salva
+    // também os dados CRUS (não só o resultado já calculado) — se o Supabase
+    // estiver fora do ar quando a página carregar, o painel recupera de um
+    // snapshot velho e continua respondendo a troca de filtro/período/aba
+    // normalmente (antes, só reexibia o MESMO recorte congelado que estava
+    // ativo no momento em que o snapshot foi salvo).
+    try { localStorage.setItem('geral_telao_snapshot', JSON.stringify({ data: curr, rawDeals: _rawDeals, adsRawDaily: _adsRawDaily, leadsRawDaily: _leadsRawDaily, savedAt: Date.now() })); } catch(_) {}
   } catch(e) {
     console.error('Erro:', e.message);
-    // Telão sozinho na sala não pode ficar de tela vazia/erro a madrugada toda.
-    // Se ainda não carregou nada NESTA sessão (ex: recarregou a página durante
-    // o erro), mostra o último dado bom salvo — velho, mas muito melhor que nada.
+    // Telão sozinho na sala não pode ficar de tela vazia/erro a madrugada
+    // toda. Se ainda não carregou nada NESTA sessão (ex: recarregou a página
+    // durante o erro, ou durante um bloqueio de cota do Supabase), restaura o
+    // último snapshot bom — velho, mas muito melhor que nada — e com os
+    // dados CRUS de volta o resto do painel (troca de filtro/aba) continua
+    // funcionando em vez de ficar congelado no recorte salvo.
     if (!_data) {
       try {
         const snap = JSON.parse(localStorage.getItem('geral_telao_snapshot') || 'null');
         if (snap && snap.data) {
           _data = snap.data;
+          if (snap.rawDeals) _rawDeals = snap.rawDeals;
+          if (snap.adsRawDaily) _adsRawDaily = snap.adsRawDaily;
+          if (snap.leadsRawDaily) _leadsRawDaily = snap.leadsRawDaily;
           render(_data);
           const mins = Math.round((Date.now() - snap.savedAt) / 60000);
           showErr('Dados de ' + mins + 'min atrás (atualização falhando: ' + friendlyErr(e) + ')');
