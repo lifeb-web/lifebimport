@@ -3228,12 +3228,21 @@ function _mergeById_(existing, incoming, keyField) {
 // no próprio site) serve de fallback pras 3 tabelas núcleo. Nunca some sem
 // aviso: se a ponte também falhar, o erro sobe normal pro catch de loadData
 // (que já tem seu próprio fallback via localStorage).
-const STATIC_BRIDGE_FILES_ = { dash_geral_deals: 'deals.json', dash_ads_daily: 'ads_daily.json', dash_geral_leads_daily: 'leads_daily.json' };
-async function _fetchViaStaticBridge_(table) {
-  const file = STATIC_BRIDGE_FILES_[table];
-  if (!file) throw new Error('sem ponte estática pra ' + table);
-  const res = await fetch('/dash/geral/data/' + file + '?_=' + Date.now(), { cache: 'no-store' });
-  if (!res.ok) throw new Error('ponte estática HTTP ' + res.status);
+// Ponte de emergência (08-09/09) — worker isolado (dash-geral-bridge) só lê
+// de um KV Cloudflare, nunca fala com Postgres/Supabase direto. Quem
+// alimenta o KV é um script à parte (refresh-snapshot.mjs, roda fora do
+// site), lendo pelo login travado dash_bridge_reader (só leitura). Ver
+// [[project_dash_geral_egress_incidente_0709]].
+const BRIDGE_URL_ = 'https://dash-geral-bridge.robert131196.workers.dev/api/table';
+async function _fetchViaStaticBridge_(table, query) {
+  // dash_ads_daily serve 2 propósitos com filtros diferentes: card de
+  // Investimento em Vendas (só entity_type=campaign) e a aba ADS/hierarquia
+  // (tudo) — nunca misturar os dois (somar todos os níveis juntos
+  // dobra/triplica o gasto real), por isso vira uma 2ª chave no KV.
+  let key = table;
+  if (table === 'dash_ads_daily' && !(query || '').includes('entity_type=eq.campaign')) key = 'dash_ads_daily_all';
+  const res = await fetch(BRIDGE_URL_ + '?name=' + key + '&_=' + Date.now(), { cache: 'no-store' });
+  if (!res.ok) throw new Error('ponte HTTP ' + res.status);
   const payload = await res.json();
   const rows = payload.rows || [];
   // dash_ads_daily vem do Postgres direto (não do PostgREST) nesse caminho —
@@ -3267,7 +3276,7 @@ async function _fetchTablePage_(table, query) {
     return all;
   } catch (e) {
     console.warn('Supabase REST falhou (' + table + '), tentando ponte estática de emergência:', e.message);
-    return await _fetchViaStaticBridge_(table);
+    return await _fetchViaStaticBridge_(table, query);
   }
 }
 
@@ -4770,21 +4779,11 @@ let _adsViewActive = false;
 let _adsHierarchyLoading = false;
 let _adsHierarchyLastData = null;
 
+// 08/09 — delega pro helper compartilhado (_fetchTablePage_), que já tem a
+// ponte estática de emergência embutida (ver comentário lá em cima, perto de
+// fetchRawDeals). Antes tinha paginação própria duplicada sem fallback nenhum.
 async function fetchAdsHierarchyTable_(table) {
-  const PAGE = 1000;
-  let all = [];
-  let from = 0;
-  while (true) {
-    const res = await fetch(SUPABASE_URL + '/rest/v1/' + table + '?select=*', {
-      headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY, Range: from + '-' + (from + PAGE - 1) }
-    });
-    if (!res.ok) throw new Error('Supabase HTTP ' + res.status + ' (' + table + ')');
-    const rows = await res.json();
-    all = all.concat(rows);
-    if (rows.length < PAGE) break;
-    from += PAGE;
-  }
-  return all;
+  return _fetchTablePage_(table, 'select=*');
 }
 
 // 26/08 nº2 (Robert: "em campanhas ao invés do custo por clique, pode
