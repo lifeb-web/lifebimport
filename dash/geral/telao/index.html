@@ -3894,6 +3894,7 @@ async function fetchLatestStamp_(table, col) {
 }
 
 let _lastDealsStamp = null, _lastAdsStamp = null, _lastLeadsStamp = null;
+let _lastBridgeRefreshAt_ = 0;
 
 async function backgroundPollTick_() {
   try {
@@ -3912,12 +3913,24 @@ async function backgroundPollTick_() {
       fetchLatestStamp_('dash_ads_daily', 'synced_at').catch(() => undefined),
       fetchLatestStamp_('dash_geral_leads_daily', 'synced_at').catch(() => undefined)
     ]);
-    const changed =
+    let changed =
       (dealsStamp !== undefined && dealsStamp !== _lastDealsStamp) ||
       (adsStamp !== undefined && adsStamp !== _lastAdsStamp) ||
       (leadsStamp !== undefined && leadsStamp !== _lastLeadsStamp);
     if (dealsStamp !== undefined) _lastDealsStamp = dealsStamp;
     if (adsStamp !== undefined) _lastAdsStamp = adsStamp;
+    // Achado 08/09 (Robert: "deixando a aba aberta atualiza?"): com o
+    // Supabase bloqueado por egress (ver
+    // [[project_dash_geral_egress_incidente_0709]]), as 3 checagens acima
+    // SEMPRE falham — o watermark nunca detecta mudança nesse modo, então
+    // uma aba deixada aberta por muito tempo nunca se atualizava sozinha
+    // (só um F5 manual pegava o dado novo da ponte). Enquanto as 3
+    // falharem juntas, força atualização direto pela ponte a cada ~60s —
+    // custo baixo (Cloudflare, não Supabase), nunca mais fica preso.
+    if (dealsStamp === undefined && adsStamp === undefined && leadsStamp === undefined && Date.now() - _lastBridgeRefreshAt_ > 60000) {
+      changed = true;
+      _lastBridgeRefreshAt_ = Date.now();
+    }
     if (leadsStamp !== undefined) _lastLeadsStamp = leadsStamp;
     if (changed) await loadData(true, true);
   } catch (e) {
