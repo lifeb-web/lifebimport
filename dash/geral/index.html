@@ -1684,12 +1684,6 @@ function _mergeById_(existing, incoming, keyField) {
   incoming.forEach(r => byKey.set(r[keyField], r));
   return Array.from(byKey.values());
 }
-// Ponte de emergência (08/09) — enquanto o Supabase seguir bloqueado por
-// egress (volta sozinho dia 15/09, ver [[project_dash_geral_egress_incidente_0709]]),
-// um snapshot estático (gerado à parte via credencial só-leitura, publicado
-// no próprio site) serve de fallback pras 3 tabelas núcleo. Nunca some sem
-// aviso: se a ponte também falhar, o erro sobe normal pro catch de loadData
-// (que já tem seu próprio fallback via localStorage).
 // Ponte de emergência (08-09/09) — worker isolado (dash-geral-bridge) só lê
 // de um KV Cloudflare, nunca fala com Postgres/Supabase direto. Quem
 // alimenta o KV é um script à parte (refresh-snapshot.mjs, roda fora do
