@@ -923,10 +923,11 @@ body.tv-grande .rv-k-val{font-size:19px}
         </div>
         <div class="funil-body" id="funil-rows"></div>
       </div>
-      <div id="saude-band">
-        <div class="sc green" onclick="openStageModal('3771725','Negociação')"><span class="sc-num" id="sc-negociacao">—</span><span class="sc-label">Em<br>Negociação</span></div>
-        <div class="sc amber" onclick="openStaleModal()"><span class="sc-num" id="sc-parados">—</span><span class="sc-label">Negócios<br>Parados</span></div>
-        <div class="sc red"  id="sc-perdidos-cell" onclick="openLostModal()"><span class="sc-num" id="sc-perdidos">—</span><span class="sc-label">Perdidos<br>no Período</span></div>
+      <div class="card" id="motivos-perda-card">
+        <div class="card-hd">
+          <span class="card-hd-title">Motivos de Perda</span>
+        </div>
+        <div class="feed-scroll" id="motivos-perda-rows"></div>
       </div>
     </div>
 
@@ -5592,7 +5593,6 @@ function render(d) {
   renderHero(d.kpis, d.period, d.recentWon, d.truncated);
   renderKpis(d.kpis, d.deals);
   renderFunil(d.funnel, d.kpis, d.recentLost);
-  renderSaude(d.kpis, d.funnel);
   renderLeaderboard(d.reps, d.deals);
   renderFeed(d.recentWon, d.recentLost, d.kpis);
 }
@@ -5765,15 +5765,6 @@ function renderFunil(funnel, kpis, recentLost) {
     + outcomeRow('Perdidos', kpis.perdidoCont || 0, perdidoValor, 'red', 'openLostModal()');
 }
 
-function renderSaude(kpis, funnel) {
-  const neg = funnel.find(s => s.stageId === 3771725);
-  el('sc-negociacao').textContent = neg ? neg.count : 0;
-  el('sc-parados').textContent = kpis.staleTotal;
-  el('sc-perdidos').textContent = kpis.perdidoCont;
-  const perdCell = el('sc-perdidos-cell');
-  if (kpis.perdidoCont > 3) perdCell.classList.add('pulse'); else perdCell.classList.remove('pulse');
-}
-
 function renderLeaderboard(reps, deals) {
   const maxPipeline = Math.max(...reps.map(r => r.pipeline), 1);
   el('rep-badge').textContent = reps.length + ' reps';
@@ -5832,38 +5823,34 @@ function renderFeed(won, lost, kpis) {
         </div>
       </a>`).join('');
 
-  // Motivos de Perda (15/09, Robert pediu) — mesmo campo `lossReason` que o
-  // Agendor já grava (reps preenchem lá), sincronizado no MESMO ciclo de
-  // 5min/webhook de sempre, zero chamada nova ao Agendor. Prepend dentro do
-  // feed já scrollável de Perdidos (não cria card novo — telão tem layout de
-  // altura fixa em 3 colunas, adicionar card novo arriscaria overflow já
-  // documentado várias vezes no dossiê).
-  const motivoMapV = {};
-  lost.forEach(d => {
-    const key = d.lostReason || 'Sem motivo registrado';
-    motivoMapV[key] = (motivoMapV[key] || 0) + 1;
-  });
-  const motivosPerdaV = Object.keys(motivoMapV).map(k => ({ reason: k, count: motivoMapV[k] })).sort((a, b) => b.count - a.count);
-  const motivosPerdaHtml = motivosPerdaV.length > 0
-    ? `<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);margin:0 0 8px;padding:10px 12px 0">Motivos de Perda</div>`
-      + motivosPerdaV.map(m => `<div class="feed-row" style="cursor:default"><div class="feed-info"><div class="feed-co">${escHtml(m.reason)}</div></div><div class="feed-right"><div class="feed-date">${m.count}</div></div></div>`).join('')
-    : '';
-
   el('lost-total').textContent = kpis.perdidoCont + ' negócios';
-  el('lost-rows').innerHTML = motivosPerdaHtml + (lost.length === 0
+  el('lost-rows').innerHTML = lost.length === 0
     ? '<div class="feed-empty">Nenhum perdido no período</div>'
     : lost.slice(0, 60).map(d => `
       <a class="feed-row" href="${AGENDOR_DEAL}${d.id}" target="_blank">
         <div class="feed-dot fd-red"></div>
         <div class="feed-info">
           <div class="feed-co"><span class="og-title-text">${escHtml(d.title)}</span>${originBadge(d._origin)}</div>
-          <div class="feed-rep">${escHtml(d.rep||'—')}</div>
+          <div class="feed-rep">${escHtml(d.rep||'—')}${d.lostReason ? ' · ' + escHtml(d.lostReason) : ''}</div>
         </div>
         <div class="feed-right">
           <div class="feed-val lost">${d.value > 0 ? fmtMoney(d.value) : '—'}</div>
           <div class="feed-date">${fmtDateDisplay(d.closedAt)}</div>
         </div>
-      </a>`).join(''));
+      </a>`).join('');
+
+  // Motivos de Perda (15/09, Robert pediu) — card PRÓPRIO no lugar da antiga
+  // saude-band (Em Negociação/Parados/Perdidos, removida por ser redundante
+  // com o funil ao lado), não mais misturado dentro do feed de Perdidos.
+  const motivoMapV = {};
+  lost.forEach(d => {
+    const key = d.lostReason || 'Sem motivo registrado';
+    motivoMapV[key] = (motivoMapV[key] || 0) + 1;
+  });
+  const motivosPerdaV = Object.keys(motivoMapV).map(k => ({ reason: k, count: motivoMapV[k] })).sort((a, b) => b.count - a.count);
+  el('motivos-perda-rows').innerHTML = motivosPerdaV.length === 0
+    ? '<div class="feed-empty">Nenhum negócio perdido no período</div>'
+    : motivosPerdaV.map(m => `<div class="feed-row" style="cursor:pointer" onclick="openLostReasonModal('${escJsAttr_(m.reason)}')"><div class="feed-info"><div class="feed-co">${escHtml(m.reason)}</div></div><div class="feed-right"><div class="feed-date">${m.count}</div></div></div>`).join('');
 
   autoScrollIfNeeded('won-rows');
   autoScrollIfNeeded('lost-rows');
@@ -6197,21 +6184,37 @@ function openStaleModal() {
   el('modal-overlay').classList.add('show');
 }
 
+function lostMdealRow_(d) {
+  return `
+    <a class="mdeal-row" href="${AGENDOR_DEAL}${d.id}" target="_blank">
+      <div class="mdeal-dot" style="background:var(--red)"></div>
+      <span class="mdeal-title"><span class="og-title-text">${escHtml(d.title)}</span>${originBadge(d._origin)}</span>
+      <span class="mdeal-rep">${escHtml(d.rep||'—')}${d.lostReason ? ' · ' + escHtml(d.lostReason) : ''}</span>
+      <span class="mdeal-val" style="color:var(--red)">${d.value > 0 ? fmtMoney(d.value) : '—'}</span>
+      <span class="mdeal-open">${fmtDateDisplay(d.closedAt)}</span>
+      <span class="mdeal-open">↗</span>
+    </a>`;
+}
+
 function openLostModal() {
   if (!_data) return;
   const deals = _data.recentLost;
   el('modal-title').textContent = 'Perdidos no Período · ' + deals.length;
   el('modal-body').innerHTML = deals.length === 0
     ? '<div class="modal-empty">Nenhum perdido no período</div>'
-    : deals.map(d => `
-        <a class="mdeal-row" href="${AGENDOR_DEAL}${d.id}" target="_blank">
-          <div class="mdeal-dot" style="background:var(--red)"></div>
-          <span class="mdeal-title"><span class="og-title-text">${escHtml(d.title)}</span>${originBadge(d._origin)}</span>
-          <span class="mdeal-rep">${escHtml(d.rep||'—')}</span>
-          <span class="mdeal-val" style="color:var(--red)">${d.value > 0 ? fmtMoney(d.value) : '—'}</span>
-          <span class="mdeal-open">${fmtDateDisplay(d.closedAt)}</span>
-          <span class="mdeal-open">↗</span>
-        </a>`).join('');
+    : deals.map(d => lostMdealRow_(d)).join('');
+  el('modal-overlay').classList.add('show');
+}
+
+// Motivo de Perda clicável (15/09, Robert pediu) — mesmo modal de Perdidos,
+// filtrado por 1 motivo específico.
+function openLostReasonModal(reason) {
+  if (!_data) return;
+  const deals = _data.recentLost.filter(d => (d.lostReason || 'Sem motivo registrado') === reason);
+  el('modal-title').textContent = reason + ' · ' + deals.length;
+  el('modal-body').innerHTML = deals.length === 0
+    ? '<div class="modal-empty">Nenhum negócio perdido por esse motivo</div>'
+    : deals.map(d => lostMdealRow_(d)).join('');
   el('modal-overlay').classList.add('show');
 }
 

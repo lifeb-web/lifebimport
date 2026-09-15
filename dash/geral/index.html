@@ -5006,7 +5006,7 @@ function renderFunil(funnel, kpis, recentLost) {
   const motivosPerda = Object.keys(motivoMap).map(k => ({ reason: k, count: motivoMap[k] })).sort((a, b) => b.count - a.count);
   el('vendas-perdidos-rows').innerHTML = motivosPerda.length === 0
     ? '<div style="padding:16px;color:var(--muted);font-size:13px;text-align:center">Nenhum negócio perdido no período</div>'
-    : motivosPerda.map(r => `<div class="sdr-reason-row"><span class="sdr-reason-name">${escHtml(r.reason)}</span><span class="sdr-reason-count">${r.count}</span></div>`).join('');
+    : motivosPerda.map(r => `<div class="sdr-reason-row" style="cursor:pointer" onclick="openLostReasonModal('${escJsAttr_(r.reason)}')"><span class="sdr-reason-name">${escHtml(r.reason)}</span><span class="sdr-reason-count">${r.count}</span></div>`).join('');
 }
 
 // Linha padrão de negócio usada em todo modal de lista — título+badge de origem
@@ -5032,6 +5032,9 @@ function mdealRow(d, opts) {
   const sub = [
     opts.showRep !== false ? `<span class="mdeal-rep">${escHtml(d.rep||'—')}</span>` : '',
     opts.date ? `<span class="mdeal-date">${fmtDateDisplay(opts.date)}</span>` : '',
+    // Motivo de perda (15/09) — só aparece quando o chamador passa lostReason
+    // (feed/modal de Perdidos), nunca em Ganhos/Ativos onde não faz sentido.
+    opts.lostReason ? `<span class="mdeal-date" style="color:#b91c1c">${escHtml(opts.lostReason)}</span>` : '',
     showFrozen ? '<span class="mdeal-stale" title="Congelado (pausa deliberada)">🧊</span>' : (showStale ? '<span class="mdeal-stale" title="Sem toque há +7 dias">⚠️</span>' : '')
   ].filter(Boolean).join('');
   return `
@@ -5266,6 +5269,19 @@ function openLostModal() {
   el('modal-title').textContent = 'Perdidos no Período · ' + deals.length;
   el('modal-body').innerHTML = deals.length === 0
     ? '<div class="modal-empty">Nenhum negócio perdido no período</div>'
+    : deals.map(d => mdealRow(d, { dotColor: 'var(--red)', valColor: 'var(--red)', dashIfZero: true, date: d.closedAt, noStaleFrozen: true, lostReason: d.lostReason })).join('');
+  el('modal-overlay').classList.add('show');
+}
+
+// Motivo de Perda clicável (15/09, Robert pediu) — abre o mesmo modal de
+// Perdidos, só que filtrado por 1 motivo específico (reusa mdealRow, zero
+// lógica de renderização nova).
+function openLostReasonModal(reason) {
+  if (!_data) return;
+  const deals = _data.recentLost.filter(d => (d.lostReason || 'Sem motivo registrado') === reason);
+  el('modal-title').textContent = reason + ' · ' + deals.length;
+  el('modal-body').innerHTML = deals.length === 0
+    ? '<div class="modal-empty">Nenhum negócio perdido por esse motivo</div>'
     : deals.map(d => mdealRow(d, { dotColor: 'var(--red)', valColor: 'var(--red)', dashIfZero: true, date: d.closedAt, noStaleFrozen: true })).join('');
   el('modal-overlay').classList.add('show');
 }
@@ -5310,7 +5326,7 @@ function renderFeed(won, lost, kpis) {
         <div class="feed-dot fd-red"></div>
         <div class="feed-info">
           <div class="feed-co"><span class="og-title-text">${escHtml(d.title)}</span>${originBadge(d._origin)}</div>
-          <div class="feed-rep">${escHtml(d.rep||'—')}</div>
+          <div class="feed-rep">${escHtml(d.rep||'—')}${d.lostReason ? ' · ' + escHtml(d.lostReason) : ''}</div>
         </div>
         <div class="feed-right">
           <div class="feed-val lost">${d.value > 0 ? fmtMoney(d.value) : '—'}</div>
