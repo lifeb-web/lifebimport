@@ -481,7 +481,11 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 .funil-v{font-size:10px;font-weight:700;color:var(--muted);text-align:right;min-width:80px;white-space:nowrap;flex-shrink:0}
 .drop-pill{font-size:8px;font-weight:700;padding:2px 5px;background:#fff8e1;color:var(--amber);border-radius:8px;white-space:nowrap;flex-shrink:0}
 
-#saude-band{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
+/* 15/09 — substitui a antiga #saude-band (Em Negociação/Parados/Perdidos,
+   redundante com o funil ao lado). Altura FIXA (não cresce com a lista) +
+   scroll interno via .feed-scroll — mesmo raciocínio de #won-card/#lost-card,
+   pra nunca espremer o #funil-card (flex:1) se a lista de motivos crescer. */
+#motivos-perda-card{flex-shrink:0;height:210px;display:flex;flex-direction:column;overflow:hidden}
 .sc{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--muted);border-radius:10px;padding:8px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;overflow:hidden;cursor:pointer;box-shadow:0 1px 2px rgba(26,22,38,.04),0 2px 6px -2px rgba(26,22,38,.06)}
 .sc.green{border-left-color:var(--green);background:linear-gradient(90deg,#f0fbf4 0%,#fff 55%)}
 .sc.amber{border-left-color:#f59e0b;background:linear-gradient(90deg,#fffbf0 0%,#fff 55%)}
@@ -5850,8 +5854,9 @@ function renderFeed(won, lost, kpis) {
   const motivosPerdaV = Object.keys(motivoMapV).map(k => ({ reason: k, count: motivoMapV[k] })).sort((a, b) => b.count - a.count);
   el('motivos-perda-rows').innerHTML = motivosPerdaV.length === 0
     ? '<div class="feed-empty">Nenhum negócio perdido no período</div>'
-    : motivosPerdaV.map(m => `<div class="feed-row" style="cursor:pointer" onclick="openLostReasonModal('${escJsAttr_(m.reason)}')"><div class="feed-info"><div class="feed-co">${escHtml(m.reason)}</div></div><div class="feed-right"><div class="feed-date">${m.count}</div></div></div>`).join('');
+    : motivosPerdaV.map(m => `<div class="feed-row" style="cursor:pointer" onclick="openLostReasonModal('${escJsAttr_(m.reason)}')"><div class="feed-info"><div class="feed-co">${escHtml(m.reason)}</div></div><div class="feed-right"><div class="feed-val lost">${m.count}</div></div></div>`).join('');
 
+  autoScrollIfNeeded('motivos-perda-rows');
   autoScrollIfNeeded('won-rows');
   autoScrollIfNeeded('lost-rows');
 }
