@@ -644,6 +644,13 @@ footer strong{color:#fff}
     </div>
   </div>
 
+  <div id="vendas-perdidos-section">
+    <div class="sec-hd">Motivos de Perda</div>
+    <div class="feed-card">
+      <div id="vendas-perdidos-rows"></div>
+    </div>
+  </div>
+
   <div>
     <div class="sec-hd">Representantes</div>
     <div id="reps-list" style="display:flex;flex-direction:column;gap:10px"></div>
@@ -1456,6 +1463,7 @@ function aggregateClient(ongoingAtivo, won, lost, period, stagesConfig) {
       id: d.id, title: d.title || '(sem título)', value: parseFloat(d.value) || 0,
       repId: d.owner_id || null, rep: d.owner_name || null,
       closedAt: (d.closed_at || '').substring(0, 10),
+      lostReason: d.lost_reason_name || null,
       _origin: d.origin || null
     });
   });
@@ -4927,7 +4935,13 @@ function renderFunil(funnel, kpis, recentLost) {
       <div class="funil-conn" title="Conversão de ${escHtml(nf[i-1].name)} → ${escHtml(s.name)}">
         <span class="funil-conn-arrow">↓</span><span class="funil-conn-pct">${conv}%</span>
       </div>` : '';
-    const lostBadge = s.lost > 0 ? `<span class="funil-drop" style="background:#fee2e2;color:#b91c1c" title="Perdidos nesta etapa">${s.lost} perd</span>` : `<span></span>`;
+    // % perdido (15/09, Robert pediu de volta — removido em 14/07 porque a versão
+    // antiga comparava perdido NO PERÍODO contra quem ENTROU no período, cohorts
+    // diferentes ("39% viraram perda" sem ser isso). Esta versão usa a MESMA base
+    // já usada por "reached" (alcançou a etapa, já period-correct) — s.lost/reached
+    // é sempre do mesmo lote, nunca mistura recorte de tempo.
+    const lostPct = s.lost > 0 && reached > 0 ? ` (${Math.round((s.lost / reached) * 100)}%)` : '';
+    const lostBadge = s.lost > 0 ? `<span class="funil-drop" style="background:#fee2e2;color:#b91c1c" title="Perdidos nesta etapa, % sobre quem alcançou">${s.lost} perd${lostPct}</span>` : `<span></span>`;
     return `
       <div class="funil-row" onclick="openStageModal('${s.stageId}','${s.name}')">
         ${connector}
@@ -4978,6 +4992,21 @@ function renderFunil(funnel, kpis, recentLost) {
   el('funil-rows').innerHTML = stageRows
     + outcomeRow('Ganhos', kpis.ganhoCont || 0, kpis.ganhoValor || 0, 'green', 'openWonModal()', reachedLast)
     + outcomeRow('Perdidos', kpis.perdidoCont || 0, perdidoValor, 'red', 'openLostModal()');
+
+  // Motivos de Perda (15/09, Robert pediu) — mesmo padrão de agrupamento já
+  // usado em SDR (perdidosPorMotivo), aplicado aos negócios perdidos de Vendas.
+  // Vem do campo `lossReason` que o Agendor já grava (reps preenchem lá:
+  // "Sem retorno", "Desistência", "Fora do perfil ICP" etc.) — sincronizado
+  // junto no MESMO ciclo de 5min/webhook, zero chamada nova ao Agendor.
+  const motivoMap = {};
+  recentLost.forEach(d => {
+    const key = d.lostReason || 'Sem motivo registrado';
+    motivoMap[key] = (motivoMap[key] || 0) + 1;
+  });
+  const motivosPerda = Object.keys(motivoMap).map(k => ({ reason: k, count: motivoMap[k] })).sort((a, b) => b.count - a.count);
+  el('vendas-perdidos-rows').innerHTML = motivosPerda.length === 0
+    ? '<div style="padding:16px;color:var(--muted);font-size:13px;text-align:center">Nenhum negócio perdido no período</div>'
+    : motivosPerda.map(r => `<div class="sdr-reason-row"><span class="sdr-reason-name">${escHtml(r.reason)}</span><span class="sdr-reason-count">${r.count}</span></div>`).join('');
 }
 
 // Linha padrão de negócio usada em todo modal de lista — título+badge de origem
