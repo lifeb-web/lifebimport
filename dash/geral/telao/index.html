@@ -187,7 +187,13 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 #body.refreshing{opacity:.85;filter:saturate(.85)}
 
 /* HERO ROW: hero + 6 chips secundários, uma faixa só */
-#hero-row{display:grid;grid-template-columns:minmax(0,1.7fr) repeat(7,minmax(0,1fr));gap:8px;height:92px;flex-shrink:0}
+/* 16/09: 92px→104px — abriu espaço pro .hero-repo-row novo dentro do #hero
+   (achado ao vivo: SEM essa folga o flexbox estoura o conteúdo pra fora da
+   caixa e o #hero{overflow:hidden} corta a linha inteira, invisível mesmo
+   com o valor certo já no DOM). #main{flex:1} logo abaixo absorve os +12px
+   sozinho (scroll interno já existente nos cards, não empurra nada pra
+   fora da tela). */
+#hero-row{display:grid;grid-template-columns:minmax(0,1.7fr) repeat(7,minmax(0,1fr));gap:8px;height:104px;flex-shrink:0}
 /* SDR (02/08) — mesma forma/altura do hero-row de Vendas (hero + 7 kchips),
    só trocando de conteúdo. display:none por padrão (mesmo padrão de #mkt-row),
    JS liga/desliga em setView() junto com #sdr-main. */
