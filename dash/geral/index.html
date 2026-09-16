@@ -149,7 +149,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 
 /* HERO — o único número que responde "está tudo bem?" */
 #hero,#ads-hero,#ltv-hero,#ga4-hero{background:var(--card);border-radius:16px;border:1px solid var(--border);padding:18px 18px 16px;position:relative;overflow:hidden;box-shadow:0 1px 3px rgba(26,22,38,.05),0 8px 24px -8px rgba(112,75,155,.18)}
-#hero{cursor:pointer}
+#hero,#ltv-hero{cursor:pointer}
 #ads-hero{margin-bottom:12px}
 #hero::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(112,75,155,.05),transparent 60%);pointer-events:none}
 .hero-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
@@ -361,7 +361,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 #feed-section,#ltv-feed-section{display:flex;flex-direction:column;gap:10px}
 .feed-card{background:var(--card);border-radius:14px;border:1px solid var(--border);overflow:hidden;box-shadow:0 1px 3px rgba(26,22,38,.04),0 4px 14px -6px rgba(26,22,38,.08)}
 #feed-won-rows,#feed-lost-rows{max-height:280px;overflow-y:auto}
-#vendas-perdidos-rows{max-height:280px;overflow-y:auto}
+#vendas-perdidos-rows,#ltv-vendas-perdidos-rows{max-height:280px;overflow-y:auto}
 .feed-hd{padding:12px 16px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .feed-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--text)}
 .feed-total{font-size:11px;font-weight:700}
@@ -697,7 +697,7 @@ footer strong{color:#fff}
   <div id="ltv-view" style="display:none">
     <div class="sec-hd">LTV / Pós-venda</div>
 
-    <div id="ltv-hero" style="cursor:default">
+    <div id="ltv-hero" onclick="openLtvWonModal()">
       <div class="hero-top">
         <span class="hero-label">Ganho em Reposição</span>
         <span class="hero-spark" id="ltv-hero-spark"></span>
@@ -709,7 +709,7 @@ footer strong{color:#fff}
     </div>
 
     <div class="kpi-strip">
-      <div class="kchip" title="Pipeline de Reposição">
+      <div class="kchip" title="Pipeline de Reposição" onclick="openLtvPipelineModal()">
         <span class="kc-label">Pipeline (agora)</span>
         <div class="kc-row"><span class="kc-val" id="ltv-k-pipeline"><span class="skel"></span></span></div>
         <span class="kc-sub" id="ltv-k-ativos">—</span>
@@ -729,12 +729,12 @@ footer strong{color:#fff}
         <div class="kc-row"><span class="kc-val" id="ltv-k-prazo"><span class="skel"></span></span></div>
         <span class="kc-sub" id="ltv-k-prazo-sub">até fechar</span>
       </div>
-      <div class="kchip">
+      <div class="kchip" onclick="openLtvStaleModal()">
         <span class="kc-label">Parados (agora)</span>
         <div class="kc-row"><span class="kc-val" id="ltv-k-stale"><span class="skel"></span></span></div>
         <span class="kc-sub warn" id="ltv-k-stale-sub">+7 dias</span>
       </div>
-      <div class="kchip">
+      <div class="kchip" onclick="openLtvLostModal()">
         <span class="kc-label">Perdidos</span>
         <div class="kc-row"><span class="kc-val" id="ltv-k-perdido"><span class="skel"></span></span></div>
         <span class="kc-sub">no período</span>
@@ -754,6 +754,13 @@ footer strong{color:#fff}
           <span class="funil-hint">toque para filtrar</span>
         </div>
         <div id="ltv-funil-rows"></div>
+      </div>
+    </div>
+
+    <div id="ltv-vendas-perdidos-section">
+      <div class="sec-hd">Motivos de Perda</div>
+      <div class="feed-card">
+        <div id="ltv-vendas-perdidos-rows"></div>
       </div>
     </div>
 
@@ -2444,7 +2451,8 @@ function renderLtvFunil_(funnel, kpis, recentLost) {
       <div class="funil-conn" title="Conversão de ${escHtml(nf[i - 1].name)} → ${escHtml(s.name)}">
         <span class="funil-conn-arrow">↓</span><span class="funil-conn-pct">${conv}%</span>
       </div>` : '';
-    const lostBadge = s.lost > 0 ? `<span class="funil-drop" style="background:#fee2e2;color:#b91c1c" title="Perdidos nesta etapa">${s.lost} perd</span>` : `<span></span>`;
+    const lostPct = s.lost > 0 && reached > 0 ? ` (${Math.round((s.lost / reached) * 100)}%)` : '';
+    const lostBadge = s.lost > 0 ? `<span class="funil-drop" style="background:#fee2e2;color:#b91c1c" title="Perdidos nesta etapa, % sobre quem alcançou">${s.lost} perd${lostPct}</span>` : `<span></span>`;
     return `
       <div class="funil-row" onclick="openLtvStageModal('${s.stageId}','${escJsAttr_(s.name)}')">
         ${connector}
@@ -2481,6 +2489,19 @@ function renderLtvFunil_(funnel, kpis, recentLost) {
   el('ltv-funil-rows').innerHTML = stageRows
     + outcomeRow('Recompras', kpis.ganhoCont || 0, kpis.ganhoValor || 0, 'green', 'openLtvWonModal()', reachedLast)
     + outcomeRow('Perdidos', kpis.perdidoCont || 0, perdidoValor, 'red', 'openLtvLostModal()');
+
+  // Motivos de Perda (16/09, mesmo padrão de Vendas) — recentLost já vem com
+  // lostReason (aggregateClient é compartilhada entre Vendas/LTV), zero
+  // chamada nova ao Agendor.
+  const motivoMapLtv = {};
+  (recentLost || []).forEach(d => {
+    const key = d.lostReason || 'Sem motivo registrado';
+    motivoMapLtv[key] = (motivoMapLtv[key] || 0) + 1;
+  });
+  const motivosPerdaLtv = Object.keys(motivoMapLtv).map(k => ({ reason: k, count: motivoMapLtv[k] })).sort((a, b) => b.count - a.count);
+  el('ltv-vendas-perdidos-rows').innerHTML = motivosPerdaLtv.length === 0
+    ? '<div style="padding:16px;color:var(--muted);font-size:13px;text-align:center">Nenhum ciclo perdido no período</div>'
+    : motivosPerdaLtv.map(r => `<div class="sdr-reason-row" style="cursor:pointer" onclick="openLtvLostReasonModal('${escJsAttr_(r.reason)}')"><span class="sdr-reason-name">${escHtml(r.reason)}</span><span class="sdr-reason-count">${r.count}</span></div>`).join('');
 }
 
 // Mesma estrutura de renderReps() (Vendas), sem a mini-funil por rep — o
@@ -2498,7 +2519,7 @@ function renderLtvReps_(reps) {
     const staleBadge = r.stale > 0 ? `<span class="rep-badge rb-amber">⚠ ${r.stale} parado${r.stale > 1 ? 's' : ''}</span>` : '';
     return `
       <div class="rep-card${isTop ? ' top-rep' : ''}">
-        <div class="rep-header" style="cursor:default">
+        <div class="rep-header" onclick="openLtvRepModal(${r.id})">
           <span class="rep-rank">${rank}</span>
           <div class="rep-avatar ${isTop ? 'r0' : ''}">${initials}</div>
           <div class="rep-info">
@@ -2578,7 +2599,164 @@ function openLtvLostModal() {
   el('modal-title').textContent = 'Ciclos Perdidos · ' + deals.length;
   el('modal-body').innerHTML = deals.length === 0
     ? '<div class="modal-empty">Nenhum ciclo perdido no período</div>'
+    : deals.map(d => mdealRow(d, { dotColor: 'var(--red)', valColor: 'var(--red)', dashIfZero: true, date: d.closedAt, noStaleFrozen: true, lostReason: d.lostReason })).join('');
+  el('modal-overlay').classList.add('show');
+}
+
+// Motivo de Perda clicável (16/09, mesmo padrão de Vendas) — abre o mesmo
+// modal de Ciclos Perdidos, filtrado por 1 motivo específico.
+function openLtvLostReasonModal(reason) {
+  if (!_ltvData) return;
+  const deals = _ltvData.recentLost.filter(d => (d.lostReason || 'Sem motivo registrado') === reason);
+  el('modal-title').textContent = reason + ' · ' + deals.length;
+  el('modal-body').innerHTML = deals.length === 0
+    ? '<div class="modal-empty">Nenhum ciclo perdido por esse motivo</div>'
     : deals.map(d => mdealRow(d, { dotColor: 'var(--red)', valColor: 'var(--red)', dashIfZero: true, date: d.closedAt, noStaleFrozen: true })).join('');
+  el('modal-overlay').classList.add('show');
+}
+
+// Pipeline/Parados de Reposição (16/09) — mesmo padrão de openPipelineModal/
+// openStaleModal (Vendas), só que lendo de _ltvData.deals.
+function openLtvPipelineModal() {
+  if (!_ltvData) return;
+  const deals = _ltvData.deals.filter(d => (d.value || 0) > 0);
+  el('modal-title').textContent = 'Pipeline de Reposição · ' + deals.length + ' negócios';
+  el('modal-body').innerHTML = deals.length === 0
+    ? '<div class="modal-empty">Nenhum ciclo ativo com valor atribuído</div>'
+    : deals.map(d => mdealRow(d, { dashIfZero: true, dotColor: LTV_ORD_DOT[LTV_STAGE_ORD[String(d.stageId)] || 'o2'] })).join('');
+  el('modal-overlay').classList.add('show');
+}
+function openLtvStaleModal() {
+  if (!_ltvData) return;
+  const deals = _ltvData.deals.filter(d => d.stale);
+  el('modal-title').textContent = 'Ciclos Parados (+7 dias) · ' + deals.length;
+  el('modal-body').innerHTML = deals.length === 0
+    ? '<div class="modal-empty">Nenhum ciclo parado. Boa!</div>'
+    : deals.map(d => mdealRow(d, { dashIfZero: true, alwaysStale: true, dotColor: LTV_ORD_DOT[LTV_STAGE_ORD[String(d.stageId)] || 'o2'] })).join('');
+  el('modal-overlay').classList.add('show');
+}
+
+// Rep-scoped view de Reposição (16/09) — mesmo padrão de computeRepScoped/
+// repViewHTML (Vendas), mas usando computeLtvData e vocabulário/stage config
+// próprios de LTV. Cache e aba (_ltvRepViewTab) separados dos de Vendas de
+// propósito — nunca vazar estado de um modal pro outro.
+function computeLtvRepScoped(repId) {
+  const repRows = (_rawDeals || []).filter(d => String(d.owner_id) === String(repId));
+  const today = todayLocalStr();
+  const effPeriodType = _period === 'month_pick' ? 'custom' : _period;
+  const curr = computeLtvData(repRows, _originMode, effPeriodType, _customFrom, _customTo, today);
+  const isTotalPeriod = curr.period.type === 'total';
+  const prevRange = isTotalPeriod ? null : prevRangeOf(curr.period);
+  const prev = isTotalPeriod ? null : computeLtvData(repRows, _originMode, 'custom', prevRange.from, prevRange.to, today);
+  return { curr, prev };
+}
+
+function renderLtvRepFunilRows(funnel) {
+  const nf = funnel.slice().sort((a, b) => a.seq - b.seq);
+  const max = Math.max(...nf.map(s => s.reached ?? s.count), 1);
+  const convFrom = (count, prevCount) => prevCount > 0 ? Math.round((count / prevCount) * 100) : null;
+  return nf.map((s, i) => {
+    const reached = s.reached ?? s.count;
+    const pct = Math.max((reached / max) * 100, 2);
+    const ord = LTV_STAGE_ORD[String(s.stageId)] || 'o2';
+    const lostBadge = s.lost > 0 ? `<span class="funil-drop" style="background:#fee2e2;color:#b91c1c">${s.lost} perd</span>` : '<span></span>';
+    const tabKey = 'stage:' + s.stageId;
+    const isActive = _ltvRepViewTab === tabKey;
+    const conv = i === 0 ? null : convFrom(reached, nf[i - 1].reached ?? nf[i - 1].count);
+    const connector = conv !== null ? `
+      <div class="funil-conn" title="Conversão de ${escHtml(nf[i - 1].name)} → ${escHtml(s.name)}">
+        <span class="funil-conn-arrow">↓</span><span class="funil-conn-pct">${conv}%</span>
+      </div>` : '';
+    return `
+      <div class="funil-row${isActive ? ' rv-funil-active' : ''}" onclick="switchLtvRepViewTab('${tabKey}')">
+        ${connector}
+        <div class="funil-stage-dot" style="background:${LTV_ORD_DOT[ord]}"></div>
+        <span class="funil-stage-name">${escHtml(s.name)}</span>
+        <div class="funil-bar-wrap"><div class="funil-bar" style="width:${pct}%;background:${LTV_ORD_DOT[ord]}"></div></div>
+        <span class="funil-count">${reached}</span>
+        <span class="funil-val">${s.value > 0 ? fmtMoney(s.value) : '—'}</span>
+        ${lostBadge}
+        <span class="funil-chevron">›</span>
+      </div>`;
+  }).join('');
+}
+
+let _ltvRepViewCache = null;
+let _ltvRepViewTab = 'won';
+
+function ltvRepViewHTML() {
+  const { rName, curr, prev } = _ltvRepViewCache;
+  const k = curr.kpis;
+  const heroDelta = deltaHTML(pctDelta(k.ganhoValor, prev && prev.kpis.ganhoValor));
+  const convDelta = kcDeltaHTML(pctDelta(k.conversao, prev && prev.kpis.conversao));
+  const leadsDelta = kcDeltaHTML(pctDelta(k.leadsNoPeriodo, prev && prev.kpis.leadsNoPeriodo));
+  const buckets = sparkBuckets(curr.recentWon, curr.period.from, curr.period.to);
+
+  const tabs = [
+    { id: 'won', label: 'Recompras', n: curr.recentWon.length },
+    { id: 'lost', label: 'Perdidos', n: curr.recentLost.length },
+    { id: 'pipe', label: 'Ativos', n: curr.deals.length }
+  ];
+
+  return `
+    <div class="rv">
+      <div class="rv-hero">
+        <div class="rv-hero-top">
+          <span class="rv-hero-label">Reposição · ${escHtml(curr.period.label)}</span>
+        </div>
+        <div class="rv-hero-val">${fmtMoney(k.ganhoValor)}</div>
+        <div class="rv-hero-row2">
+          <span class="rv-hero-sub">${k.ganhoCont} recompra${k.ganhoCont !== 1 ? 's' : ''} fechada${k.ganhoCont !== 1 ? 's' : ''}</span>
+          ${heroDelta}
+        </div>
+        <div class="rv-spark">${sparklineSVG(buckets, '#E92085')}</div>
+      </div>
+      <div class="rv-kpis">
+        <div class="rv-kpi"><span class="rv-k-lbl">Pipeline</span><span class="rv-k-val">${fmtMoney(k.pipelineTotal)}</span></div>
+        <div class="rv-kpi"><span class="rv-k-lbl">Conversão</span><div class="rv-k-row"><span class="rv-k-val">${k.conversao !== null ? k.conversao + '%' : '—'}</span>${convDelta}</div></div>
+        <div class="rv-kpi"><span class="rv-k-lbl">Ticket médio</span><span class="rv-k-val">${k.ticketMedio > 0 ? fmtMoney(k.ticketMedio) : '—'}</span></div>
+        <div class="rv-kpi"><span class="rv-k-lbl">Prazo médio</span><span class="rv-k-val">${k.prazoMedio ? k.prazoMedio + (k.prazoMedio === 1 ? ' dia' : ' dias') : '—'}</span></div>
+        <div class="rv-kpi"><span class="rv-k-lbl">Parados</span><span class="rv-k-val ${k.staleTotal > 0 ? 'amber' : ''}">${k.staleTotal || 0}</span></div>
+        <div class="rv-kpi"><span class="rv-k-lbl">Perdidos</span><span class="rv-k-val red">${k.perdidoCont || 0}</span></div>
+        <div class="rv-kpi" style="grid-column:1/-1"><span class="rv-k-lbl">Ciclos recebidos</span><div class="rv-k-row"><span class="rv-k-val">${k.leadsNoPeriodo || 0}</span>${leadsDelta}</div></div>
+      </div>
+      <div class="rv-funil">${renderLtvRepFunilRows(curr.funnel)}</div>
+      <div class="rv-tabs">
+        ${tabs.map(t => `<button class="rv-tab ${_ltvRepViewTab === t.id ? 'active' : ''}" onclick="switchLtvRepViewTab('${t.id}')">${t.label} (${t.n})</button>`).join('')}
+      </div>
+      <div id="rv-feed">${ltvRepViewFeedHTML()}</div>
+    </div>`;
+}
+
+function ltvRepViewFeedHTML() {
+  const { curr } = _ltvRepViewCache;
+  if (_ltvRepViewTab.indexOf('stage:') === 0) {
+    const sid = _ltvRepViewTab.slice(6);
+    const list = curr.deals.filter(d => String(d.stageId) === sid);
+    return list.length
+      ? list.map(d => mdealRow(d, { showRep: false, dashIfZero: true })).join('')
+      : '<div class="modal-empty">Nada aqui neste período</div>';
+  }
+  const list = _ltvRepViewTab === 'won' ? curr.recentWon : (_ltvRepViewTab === 'lost' ? curr.recentLost : curr.deals);
+  if (!list.length) return '<div class="modal-empty">Nada aqui neste período</div>';
+  if (_ltvRepViewTab === 'won') return list.map(d => mdealRow(d, { showRep: false, dotColor: 'var(--green)', valColor: '#15803d', date: d.closedAt, noStaleFrozen: true })).join('');
+  if (_ltvRepViewTab === 'lost') return list.map(d => mdealRow(d, { showRep: false, dotColor: 'var(--red)', valColor: 'var(--red)', dashIfZero: true, date: d.closedAt, noStaleFrozen: true, lostReason: d.lostReason })).join('');
+  return list.map(d => mdealRow(d, { showRep: false, dashIfZero: true })).join('');
+}
+
+function switchLtvRepViewTab(tab) {
+  _ltvRepViewTab = tab;
+  el('modal-body').innerHTML = ltvRepViewHTML();
+}
+
+function openLtvRepModal(id) {
+  if (!_ltvData || !_rawDeals) return;
+  const rInfo = _ltvData.reps.find(x => String(x.id) === String(id));
+  const { curr, prev } = computeLtvRepScoped(id);
+  _ltvRepViewCache = { rName: rInfo ? rInfo.name : 'Rep', curr, prev };
+  _ltvRepViewTab = 'won';
+  el('modal-title').textContent = _ltvRepViewCache.rName + ' · Reposição';
+  el('modal-body').innerHTML = ltvRepViewHTML();
   el('modal-overlay').classList.add('show');
 }
 
