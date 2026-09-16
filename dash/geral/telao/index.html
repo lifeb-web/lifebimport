@@ -193,7 +193,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
    com o valor certo já no DOM). #main{flex:1} logo abaixo absorve os +12px
    sozinho (scroll interno já existente nos cards, não empurra nada pra
    fora da tela). */
-#hero-row{display:grid;grid-template-columns:minmax(0,1.7fr) repeat(7,minmax(0,1fr));gap:8px;height:114px;flex-shrink:0}
+#hero-row{display:grid;grid-template-columns:minmax(0,1.7fr) repeat(7,minmax(0,1fr));gap:8px;height:124px;flex-shrink:0}
 /* SDR (02/08) — mesma forma/altura do hero-row de Vendas (hero + 7 kchips),
    só trocando de conteúdo. display:none por padrão (mesmo padrão de #mkt-row),
    JS liga/desliga em setView() junto com #sdr-main. */
@@ -350,10 +350,13 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 .hero-sub{font-size:10px;font-weight:700;color:var(--muted)}
 /* 16/09 (Robert: "quero trazer o valor de reposição... e um valor total
    somando os dois") — #hero é flex-column com gap:2px e altura FIXA
-   (92px, ver #hero-row), zero folga pra linha nova grande — por isso
-   8px/sem padding extra (o gap do pai já separa), rótulos abreviados
-   (Repo/Tot) pra caber na largura estreita da coluna do hero no grid. */
-.hero-repo-row{display:flex;align-items:center;gap:8px;font-size:8px;font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden}
+   (ver #hero-row), zero folga pra linha nova grande. 1ª versão usou
+   rótulo abreviado (Repo/Tot) pra caber na largura estreita da coluna —
+   Robert achou ilegível num print tirado só do card ("não dá pra ver
+   nada"), pediu palavra inteira de volta. flex-wrap permite quebrar em
+   2 linhas quando não cabe tudo numa só (altura do #hero-row ganhou
+   folga extra pra isso). */
+.hero-repo-row{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;font-size:9px;font-weight:700;color:var(--muted);overflow:hidden}
 .hero-repo-item b{color:var(--text);font-weight:800;font-variant-numeric:tabular-nums}
 .hero-repo-total b{color:var(--purple)}
 .delta{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:800;padding:2px 6px;border-radius:6px}
@@ -881,8 +884,8 @@ body.tv-grande .rv-k-val{font-size:19px}
         <span id="hero-delta"></span>
       </div>
       <div class="hero-repo-row" id="hero-repo-row" style="display:none">
-        <span class="hero-repo-item">+Repo <b id="hero-repo-val">—</b></span>
-        <span class="hero-repo-item hero-repo-total">Tot <b id="hero-repo-total-val">—</b></span>
+        <span class="hero-repo-item">+ Reposições <b id="hero-repo-val">—</b></span>
+        <span class="hero-repo-item hero-repo-total">Total <b id="hero-repo-total-val">—</b></span>
       </div>
     </div>
     <div class="kchip" onclick="openPipelineModal()">
