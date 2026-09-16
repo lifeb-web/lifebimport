@@ -158,6 +158,15 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .hero-val{font-size:38px;font-weight:800;line-height:1.05;color:var(--text);margin-top:6px;font-variant-numeric:proportional-nums;letter-spacing:-.5px}
 .hero-row{display:flex;align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap}
 .hero-sub{font-size:12px;font-weight:700;color:var(--muted)}
+/* 16/09 (Robert: "quero trazer o valor de reposição... e um valor total
+   somando os dois") — linha extra dentro do MESMO hero de Vendas, separada
+   por um traço pontilhado pra deixar claro que é um complemento (não faz
+   parte do "Ganho no período" oficial, que é só venda nova). Só valor, sem
+   variação/análise — pedido explícito de manter simples aqui. */
+.hero-repo-row{display:flex;align-items:center;gap:10px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);flex-wrap:wrap}
+.hero-repo-item{font-size:11px;font-weight:700;color:var(--muted)}
+.hero-repo-item b{color:var(--text);font-weight:800;font-variant-numeric:tabular-nums}
+.hero-repo-total b{color:var(--purple)}
 .delta{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:800;padding:3px 8px;border-radius:7px}
 .delta.up{color:#15803d;background:#dcfce7}
 .delta.down{color:#b91c1c;background:#fee2e2}
@@ -550,6 +559,10 @@ footer strong{color:#fff}
     <div class="hero-row">
       <span class="hero-sub" id="hero-sub">carregando…</span>
       <span id="hero-delta"></span>
+    </div>
+    <div class="hero-repo-row" id="hero-repo-row" style="display:none">
+      <span class="hero-repo-item">+ Reposição <b id="hero-repo-val">—</b></span>
+      <span class="hero-repo-item hero-repo-total">Total <b id="hero-repo-total-val">—</b></span>
     </div>
   </div>
 
@@ -4854,6 +4867,23 @@ function renderHero(k, period, recentWon, truncated) {
     const buckets = sparkBuckets(recentWon, period.from, period.to);
     el('hero-spark').innerHTML = sparklineSVG(buckets, '#22C35D');
   }
+  renderHeroRepoBreakdown_(k.ganhoValor);
+}
+
+// 🆕 16/09 (Robert: "quero trazer o valor de reposição considerando o
+// período filtrado, somente o valor mesmo sem análise... e um total
+// somando os dois") — reusa computeLtvData sobre o MESMO _rawDeals já
+// carregado pra Vendas (zero fetch novo) com o MESMO filtro de
+// período/origem selecionado no momento. Só o valor bruto, sem funil/
+// comparação — a análise de verdade mora na aba LTV.
+function renderHeroRepoBreakdown_(vendasGanhoValor) {
+  if (!_rawDeals) return;
+  const effPeriodType = _period === 'month_pick' ? 'custom' : _period;
+  const ltv = computeLtvData(_rawDeals, _originMode, effPeriodType, _customFrom, _customTo, todayLocalStr());
+  const repoValor = ltv.kpis.ganhoValor || 0;
+  el('hero-repo-row').style.display = 'flex';
+  el('hero-repo-val').textContent = fmtMoney(repoValor);
+  el('hero-repo-total-val').textContent = fmtMoney(vendasGanhoValor + repoValor);
 }
 
 function renderKpiStrip(k, deals) {

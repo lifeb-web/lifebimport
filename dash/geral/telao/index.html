@@ -342,6 +342,14 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 .hero-val{font-size:27px;font-weight:800;line-height:1.05;color:var(--text);font-variant-numeric:proportional-nums;letter-spacing:-.3px}
 .hero-row2{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .hero-sub{font-size:10px;font-weight:700;color:var(--muted)}
+/* 16/09 (Robert: "quero trazer o valor de reposição... e um valor total
+   somando os dois") — #hero é flex-column com gap:2px e altura FIXA
+   (92px, ver #hero-row), zero folga pra linha nova grande — por isso
+   8px/sem padding extra (o gap do pai já separa), rótulos abreviados
+   (Repo/Tot) pra caber na largura estreita da coluna do hero no grid. */
+.hero-repo-row{display:flex;align-items:center;gap:8px;font-size:8px;font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden}
+.hero-repo-item b{color:var(--text);font-weight:800;font-variant-numeric:tabular-nums}
+.hero-repo-total b{color:var(--purple)}
 .delta{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:800;padding:2px 6px;border-radius:6px}
 .delta.up{color:#15803d;background:#dcfce7}
 .delta.down{color:#b91c1c;background:#fee2e2}
@@ -865,6 +873,10 @@ body.tv-grande .rv-k-val{font-size:19px}
       <div class="hero-row2">
         <span class="hero-sub" id="hero-sub">carregando…</span>
         <span id="hero-delta"></span>
+      </div>
+      <div class="hero-repo-row" id="hero-repo-row" style="display:none">
+        <span class="hero-repo-item">+Repo <b id="hero-repo-val">—</b></span>
+        <span class="hero-repo-item hero-repo-total">Tot <b id="hero-repo-total-val">—</b></span>
       </div>
     </div>
     <div class="kchip" onclick="openPipelineModal()">
@@ -5634,6 +5646,21 @@ function renderHero(k, period, recentWon, truncated) {
     const buckets = sparkBuckets(recentWon, period.from, period.to);
     el('hero-spark').innerHTML = sparklineSVG(buckets, '#22C35D');
   }
+  renderHeroRepoBreakdown_(k.ganhoValor);
+}
+
+// 🆕 16/09 (mesmo achado do mobile) — reusa computeLtvData sobre o MESMO
+// _rawDeals já carregado pra Vendas (zero fetch novo), mesmo filtro de
+// período/origem selecionado. Só o valor bruto, sem análise — a análise de
+// verdade mora na aba LTV.
+function renderHeroRepoBreakdown_(vendasGanhoValor) {
+  if (!_rawDeals) return;
+  const effPeriodType = _period === 'month_pick' ? 'custom' : _period;
+  const ltv = computeLtvData(_rawDeals, _originMode, effPeriodType, _customFrom, _customTo, todayLocalStr());
+  const repoValor = ltv.kpis.ganhoValor || 0;
+  el('hero-repo-row').style.display = 'flex';
+  el('hero-repo-val').textContent = fmtMoney(repoValor);
+  el('hero-repo-total-val').textContent = fmtMoney(vendasGanhoValor + repoValor);
 }
 
 function renderKpis(k, deals) {
