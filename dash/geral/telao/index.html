@@ -2131,7 +2131,19 @@ function computeLtvData(allRows, originFilter, periodType, customFrom, customTo,
   const periodFrom = new Date(period.from + 'T00:00:00');
   const periodTo = new Date(period.to + 'T23:59:59');
 
-  const ltvRows = allRows.filter(d => POSVENDA_STAGE_IDS.has(String(d.stage_id)));
+  // 17/09 (achado ao vivo comparando delta do LTV com o mobile — mesmo funil,
+  // mesma _rawDeals, número diferente): faltava aqui a correção de
+  // data_real_evento que o mobile já tinha desde 30/08. closed_at de reposição
+  // retroativa vem gravado como meia-noite UTC — em América/São_Paulo (UTC-3)
+  // isso cai às 21h do dia ANTERIOR, empurrando o negócio pro dia de calendário
+  // errado sempre que a data cair bem na borda de um período (ex: negócio real
+  // de 18/08 aparecia como 17/08 local, entrando errado num "1-17 de agosto").
+  // data_real_evento é a fonte de verdade quando existe; usa meio-dia UTC (não
+  // meia-noite) de propósito, pra nunca cruzar a borda do dia em nenhum fuso
+  // negativo razoável. Sobrescreve só nesta cópia local, mesmo padrão do mobile.
+  const ltvRows = allRows
+    .filter(d => POSVENDA_STAGE_IDS.has(String(d.stage_id)))
+    .map(d => d.data_real_evento ? Object.assign({}, d, { closed_at: d.data_real_evento + 'T12:00:00Z' }) : d);
   const byOrigin = originFilter === 'both' ? ltvRows : ltvRows.filter(d => d.origin === originFilter);
 
   const ongoingAll = byOrigin.filter(d => d.status === 'ongoing');
