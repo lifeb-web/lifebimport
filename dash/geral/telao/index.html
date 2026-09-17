@@ -1794,8 +1794,8 @@ const ORD_DOT   = { o1:'#b09bd6', o2:'#9260c8', o3:'#5a3a80' };
 const STAGE_LABEL = { o1:'Conexão', o2:'Diag./Solução', o3:'Negociação' };
 // 26/08: mesmo vocabulário de STAGE_ORD/ORD_DOT, versão LTV (3 etapas, tom
 // rosa da aba — mesmo hue do hero/spark #E92085, claro→escuro).
-const LTV_STAGE_ORD = { '3861835':'o1', '3861836':'o2', '3861837':'o3' };
-const LTV_ORD_DOT   = { o1:'#f2a6cc', o2:'#e94f9c', o3:'#a3145f' };
+const LTV_STAGE_ORD = { '3872291':'o0', '3861835':'o1', '3861836':'o2', '3861837':'o3' };
+const LTV_ORD_DOT   = { o0:'#d4a017', o1:'#f2a6cc', o2:'#e94f9c', o3:'#a3145f' };
 
 // ============================================================
 // FONTE DE DADOS — migrado 15/07 de "chamar o Agendor ao vivo via proxy
@@ -1844,8 +1844,17 @@ const STAGES = {
 // atual. Se um 3º funil aparecer ou o Agendor reusar um stage_id entre
 // funis, isso precisa virar filtro por funnel_id de verdade.
 const ACQ_STAGE_IDS = new Set(['3771722', '3771723', '3771724', '3771725']);
-const POSVENDA_STAGE_IDS = new Set(['3861835', '3861836', '3861837']);
+// 17/09 (Robert, auditoria: "por que Reativação +75 Dias não conta pra
+// reposições LTV?") — funil Agendor separado (id 909368, 1 etapa só hoje,
+// "Conexão"/3872291), criado depois da blindagem original do Pós-venda
+// (907387) — nunca foi somado em stage_id nenhum, achado real de venda
+// invisível (ex: negócio ganho R$719 no mesmo dia da auditoria, contando
+// zero em Vendas E em LTV). Robert confirmou que é reposição de verdade
+// (reativação de cliente inativo 75+ dias = mesma família de negócio do
+// Pós-venda), entra no LTV, nunca em Vendas (senão conta 2x).
+const POSVENDA_STAGE_IDS = new Set(['3861835', '3861836', '3861837', '3872291']);
 const LTV_STAGES = {
+  '3872291': { name: 'Reativação +75 Dias', color: 'amber', seq: 0 },
   '3861835': { name: 'Ciclo Ativo', color: 'blue', seq: 1 },
   '3861836': { name: 'Contato de Reposição', color: 'purple', seq: 2 },
   '3861837': { name: 'Negociação Reposição', color: 'green', seq: 3 }
