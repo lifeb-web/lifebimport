@@ -349,23 +349,17 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 .hero-row2{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .hero-sub{font-size:10px;font-weight:700;color:var(--muted)}
 /* 16/09 (Robert: "quero trazer o valor de reposição... e um valor total
-   somando os dois") — 3 versões até acertar. 1ª: rótulo abreviado numa
-   linha só, ilegível ("não dá pra ver nada"). 2ª: palavra inteira mas
-   ainda empilhado ABAIXO do resto do hero (mais uma linha na pilha
-   vertical) — quebrou em telas mais baixas (@media max-height:860px
-   reduz #hero-row pra 76px, que só cabe o conteúdo original de 3
-   linhas, nunca testei nada abaixo de 1080px de altura). 3ª/atual
-   (Robert: "deixar mais pra direita e mais pra cima, onde tem o espaço
-   vazio, não precisa nem crescer o card") — .hero-body vira row: o
-   texto principal (valor+sub) na esquerda, Reposições/Total na DIREITA,
-   ocupando o espaço que já sobrava embaixo do sparkline. Zero linha
-   nova na pilha vertical → funciona em QUALQUER altura de #hero-row,
-   inclusive 76px, sem precisar aumentar nada (por isso as alturas de
-   92px→124px de #hero-row viraram desnecessárias, mas deixadas como
-   estão — não atrapalham, só sobra folga extra). */
-.hero-body{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:0}
-.hero-main{display:flex;flex-direction:column;gap:2px;min-width:0}
-.hero-repo-row{display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-size:11px;font-weight:700;color:var(--muted);text-align:right;flex-shrink:0;overflow:hidden}
+   somando os dois") — várias voltas até acertar. Abreviado numa linha só
+   (ilegível) → palavra inteira empilhada abaixo (funcionou em 1920x1080,
+   quebrou em @media max-height:860px, que reduz #hero-row pra 76px) →
+   tentei lado a lado (ao lado do valor, no espaço vazio da direita) pra
+   não crescer o card, mas a COLUNA do hero no grid telão é estreita
+   demais (~165px de largura útil pro valor MESMO em 1920px de tela) —
+   dividir horizontalmente com o valor forçava os dois a quebrar linha
+   de um jeito pior ainda. Voltou pro empilhado (única disposição que
+   cabe de largura em qualquer tela) — a altura curta é resolvida
+   abaixo, dentro do próprio @media(max-height:860px). */
+.hero-repo-row{display:flex;flex-direction:column;gap:2px;font-size:11px;font-weight:700;color:var(--muted);overflow:hidden}
 .hero-repo-item b{color:var(--text);font-weight:800;font-variant-numeric:tabular-nums}
 .hero-repo-total b{color:var(--purple)}
 .delta{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:800;padding:2px 6px;border-radius:6px}
@@ -705,19 +699,17 @@ footer strong{color:#fff}
   header{min-height:44px}
   #htime{font-size:15px}
   #body{padding:6px 12px 6px;gap:5px}
-  #hero-row{height:80px;gap:6px}
+  #hero-row{height:110px;gap:6px}
   #sdr-hero-row{height:76px;gap:6px}
   #ads-hero-row{height:76px;gap:6px}
   #ads-hero-row2{height:60px;gap:6px}
-  /* 16/09 (achado ao vivo testando .hero-repo-row nesta tela curta): com
-     .hero-val em 21px (redução já existente logo abaixo) + as 2 linhas de
-     Reposições/Total ao lado, o conteúdo passou o "orçamento" de altura
-     por só ~2-3px — sobrepunha em vez de cortar (mesmo efeito visual
-     estranho já visto antes com #hero no telão: o flexbox "aceita" o
-     déficit pequeno espremendo o item mais novo até quase 0 de altura
-     lógica, mas ele continua pintando por cima do resto). +4px no
-     #hero-row acima + fonte 1px menor aqui cobrem a folga. */
-  .hero-repo-row{font-size:9px}
+  /* 16/09 (achado ao vivo testando .hero-repo-row nesta tela curta): os
+     76px originais cobriam só as 3 linhas de sempre (label/spark, valor,
+     sub+delta) — a 4ª linha nova (Reposições/Total, empilhada abaixo)
+     não tinha orçamento nenhum, sumia cortada pelo overflow:hidden do
+     #hero. +34px cobrem as 2 linhas extras com folga (testado ao vivo
+     em 1440x800 e 1366x768, telas de notebook comuns). */
+  .hero-repo-row{font-size:10px}
   /* 28/08 (achado real ao investigar sobreposição que Robert viu ao vivo
      na TV): #mkt-row{height:44px} aqui era MENOR que a base (52px), mas
      o conteúdo do achip (label+valor+seta de variação, 3 linhas) sempre
@@ -896,18 +888,14 @@ body.tv-grande .rv-k-val{font-size:19px}
         <span class="hero-label">Ganho no período</span>
         <span id="hero-spark"></span>
       </div>
-      <div class="hero-body">
-        <div class="hero-main">
-          <div class="hero-val" id="hero-val"><span class="skel" style="width:120px;height:24px"></span></div>
-          <div class="hero-row2">
-            <span class="hero-sub" id="hero-sub">carregando…</span>
-            <span id="hero-delta"></span>
-          </div>
-        </div>
-        <div class="hero-repo-row" id="hero-repo-row" style="display:none">
-          <span class="hero-repo-item">+ Reposições <b id="hero-repo-val">—</b></span>
-          <span class="hero-repo-item hero-repo-total">Total <b id="hero-repo-total-val">—</b></span>
-        </div>
+      <div class="hero-val" id="hero-val"><span class="skel" style="width:120px;height:24px"></span></div>
+      <div class="hero-row2">
+        <span class="hero-sub" id="hero-sub">carregando…</span>
+        <span id="hero-delta"></span>
+      </div>
+      <div class="hero-repo-row" id="hero-repo-row" style="display:none">
+        <span class="hero-repo-item">+ Reposições <b id="hero-repo-val">—</b></span>
+        <span class="hero-repo-item hero-repo-total">Total <b id="hero-repo-total-val">—</b></span>
       </div>
     </div>
     <div class="kchip" onclick="openPipelineModal()">
