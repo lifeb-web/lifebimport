@@ -705,6 +705,7 @@ footer strong{color:#fff}
       <div class="hero-val" id="ltv-hero-val"><span class="skel" style="width:180px;height:32px"></span></div>
       <div class="hero-row">
         <span class="hero-sub" id="ltv-hero-sub">carregando…</span>
+        <span id="ltv-hero-delta"></span>
       </div>
     </div>
 
@@ -716,7 +717,7 @@ footer strong{color:#fff}
       </div>
       <div class="kchip">
         <span class="kc-label" title="% dos ciclos de reposição que ENTRARAM neste período e já fecharam nova compra.">Conversão ⓘ</span>
-        <div class="kc-row"><span class="kc-val" id="ltv-k-conv"><span class="skel"></span></span></div>
+        <div class="kc-row"><span class="kc-val" id="ltv-k-conv"><span class="skel"></span></span><span class="kc-delta" id="ltv-k-conv-delta"></span></div>
         <span class="kc-sub" id="ltv-k-conv-base">—</span>
       </div>
       <div class="kchip">
@@ -741,7 +742,7 @@ footer strong{color:#fff}
       </div>
       <div class="kchip" style="grid-column:1/-1">
         <span class="kc-label">Ciclos Distribuídos</span>
-        <div class="kc-row"><span class="kc-val" id="ltv-k-leads"><span class="skel"></span></span></div>
+        <div class="kc-row"><span class="kc-val" id="ltv-k-leads"><span class="skel"></span></span><span class="kc-delta" id="ltv-k-leads-delta"></span></div>
         <span class="kc-sub">no CRM</span>
       </div>
     </div>
@@ -2405,10 +2406,34 @@ const LTV_ORD_DOT   = { o0:'#d4a017', o1:'#f2a6cc', o2:'#e94f9c', o3:'#a3145f' }
 
 function renderLtvIfPossible_() {
   if (!_ltvViewActive || !_rawDeals || !_data || !_data.period) return;
+  const today = todayLocalStr();
   const effPeriodType = _period === 'month_pick' ? 'custom' : _period;
-  const ltv = computeLtvData(_rawDeals, _originMode, effPeriodType, _customFrom, _customTo, todayLocalStr());
+  const ltv = computeLtvData(_rawDeals, _originMode, effPeriodType, _customFrom, _customTo, today);
   _ltvData = ltv;
   renderLtvSection(ltv);
+  // 17/09 (Robert: "deixou a aba LTV digna de uma aba de reposição?") — hero e
+  // KPIs de Vendas/Ads já tinham seta "vs período anterior" (renderDeltas());
+  // LTV nunca ganhou o mesmo tratamento no topo (só o modal por vendedor já
+  // calculava isso, via computeLtvRepScoped). Mesmo padrão de prevRangeOf()
+  // usado no pipeline de Vendas (loadData()) — "Total" não tem "anterior" que
+  // faça sentido, pula o cálculo.
+  const isTotalPeriod = ltv.period.type === 'total';
+  const prevRange = isTotalPeriod ? null : prevRangeOf(ltv.period);
+  const prevLtv = isTotalPeriod ? null : computeLtvData(_rawDeals, _originMode, 'custom', prevRange.from, prevRange.to, today);
+  renderLtvDeltas(ltv.kpis, prevLtv && prevLtv.kpis);
+}
+
+// Espelho de renderDeltas() (Vendas), mesmos ids com prefixo ltv-.
+function renderLtvDeltas(k, prev) {
+  if (!prev) {
+    el('ltv-hero-delta').innerHTML = '';
+    el('ltv-k-conv-delta').innerHTML = '';
+    el('ltv-k-leads-delta').innerHTML = '';
+    return;
+  }
+  el('ltv-hero-delta').innerHTML = deltaHTML(pctDelta(k.ganhoValor, prev.ganhoValor));
+  el('ltv-k-conv-delta').innerHTML = kcDeltaHTML(pctDelta(k.conversao, prev.conversao));
+  el('ltv-k-leads-delta').innerHTML = kcDeltaHTML(pctDelta(k.leadsNoPeriodo, prev.leadsNoPeriodo));
 }
 
 function renderLtvSection(d) {

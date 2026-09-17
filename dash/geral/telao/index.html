@@ -1140,7 +1140,7 @@ body.tv-grande .rv-k-val{font-size:19px}
     <div id="ltv-hero" onclick="openLtvWonModal()">
       <div class="hero-top"><span class="hero-label">Ganho em Reposição</span><span id="ltv-hero-spark"></span></div>
       <div class="hero-val" id="ltv-hero-val"><span class="skel" style="width:120px;height:24px"></span></div>
-      <div class="hero-row2"><span class="hero-sub" id="ltv-hero-sub">carregando…</span></div>
+      <div class="hero-row2"><span class="hero-sub" id="ltv-hero-sub">carregando…</span><span id="ltv-hero-delta"></span></div>
     </div>
     <div class="kchip" title="Pipeline de Reposição" onclick="openLtvPipelineModal()">
       <span class="kc-label">Pipeline (agora)</span>
@@ -1149,7 +1149,7 @@ body.tv-grande .rv-k-val{font-size:19px}
     </div>
     <div class="kchip">
       <span class="kc-label" title="% dos ciclos de reposição que ENTRARAM neste período e já fecharam nova compra.">Conversão ⓘ</span>
-      <div class="kc-row"><span class="kc-val" id="ltv-k-conv"><span class="skel"></span></span></div>
+      <div class="kc-row"><span class="kc-val" id="ltv-k-conv"><span class="skel"></span></span><span class="kc-delta" id="ltv-k-conv-delta"></span></div>
       <span class="kc-sub" id="ltv-k-conv-base">—</span>
     </div>
     <div class="kchip">
@@ -1174,7 +1174,7 @@ body.tv-grande .rv-k-val{font-size:19px}
     </div>
     <div class="kchip">
       <span class="kc-label">Ciclos Distrib.</span>
-      <div class="kc-row"><span class="kc-val" id="ltv-k-leads"><span class="skel"></span></span></div>
+      <div class="kc-row"><span class="kc-val" id="ltv-k-leads"><span class="skel"></span></span><span class="kc-delta" id="ltv-k-leads-delta"></span></div>
       <span class="kc-sub">no CRM</span>
     </div>
   </div>
@@ -4357,10 +4357,30 @@ function setView(btn) {
 // ciclo novo de loadData termina, espelhando refreshSdrIfActive_().
 function renderLtvIfPossible_() {
   if (!_ltvViewActive || !_rawDeals || !_data || !_data.period) return;
+  const today = todayLocalStr();
   const effPeriodType = _period === 'month_pick' ? 'custom' : _period;
-  const ltv = computeLtvData(_rawDeals, _originMode, effPeriodType, _customFrom, _customTo, todayLocalStr());
+  const ltv = computeLtvData(_rawDeals, _originMode, effPeriodType, _customFrom, _customTo, today);
   _ltvData = ltv;
   renderLtvSectionTelao(ltv);
+  // 17/09 (mesmo achado do mobile) — hero/KPIs de Vendas/Ads já tinham seta
+  // "vs período anterior" (renderDeltas()); LTV nunca ganhou o mesmo no topo.
+  const isTotalPeriod = ltv.period.type === 'total';
+  const prevRange = isTotalPeriod ? null : prevRangeOf(ltv.period);
+  const prevLtv = isTotalPeriod ? null : computeLtvData(_rawDeals, _originMode, 'custom', prevRange.from, prevRange.to, today);
+  renderLtvDeltas(ltv.kpis, prevLtv && prevLtv.kpis);
+}
+
+// Espelho de renderDeltas() (Vendas), mesmos ids com prefixo ltv-.
+function renderLtvDeltas(k, prev) {
+  if (!prev) {
+    el('ltv-hero-delta').innerHTML = '';
+    el('ltv-k-conv-delta').innerHTML = '';
+    el('ltv-k-leads-delta').innerHTML = '';
+    return;
+  }
+  el('ltv-hero-delta').innerHTML = deltaHTML(pctDelta(k.ganhoValor, prev.ganhoValor));
+  el('ltv-k-conv-delta').innerHTML = kcDeltaHTML(pctDelta(k.conversao, prev.conversao));
+  el('ltv-k-leads-delta').innerHTML = kcDeltaHTML(pctDelta(k.leadsNoPeriodo, prev.leadsNoPeriodo));
 }
 
 // Render da aba LTV — mesmo vocabulário visual de Vendas/SDR (hero+kchips+
