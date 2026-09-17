@@ -2451,11 +2451,26 @@ function renderLtvFunil_(funnel, kpis, recentLost) {
   const convFrom = (count, prevCount) => prevCount > 0 ? Math.round((count / prevCount) * 100) : null;
   const reachedLast = nf.length ? (nf[nf.length - 1].reached ?? nf[nf.length - 1].count) : 0;
 
+  // 17/09 (achado ao vivo testando a etapa nova "Reativação +75 Dias"): o
+  // "reached" backward-cumulativo assume UM funil sequencial só — funciona
+  // certo pras 3 etapas de sempre (Ciclo Ativo→Contato→Negociação, ganho
+  // real passa por todas em ordem), mas "Reativação +75 Dias" é um funil
+  // PARALELO da Agendor (outro dealFunnel.id, só criado depois), deals de
+  // lá nunca passam pelas outras 3 etapas — a soma acumulada emprestava o
+  // volume inteiro do funil de baixo pra etapa de cima (mostrou "51" com
+  // só 7 negócios reais no funil). Pra essa etapa específica usa o count
+  // bruto (quantos estão nela agora), não o reached contaminado — as
+  // outras 3 continuam com reached normal, sem mudança nenhuma nelas.
+  const REATIVACAO_75_STAGE_ID = '3872291';
   const stageRows = nf.map((s, i) => {
-    const reached = s.reached ?? s.count;
+    const isReativacao = String(s.stageId) === REATIVACAO_75_STAGE_ID;
+    const prevIsReativacao = i > 0 && String(nf[i - 1].stageId) === REATIVACAO_75_STAGE_ID;
+    const reached = isReativacao ? s.count : (s.reached ?? s.count);
     const pct = Math.max((reached / max) * 100, 2);
     const ord = LTV_STAGE_ORD[String(s.stageId)] || 'o2';
-    const conv = i === 0 ? null : convFrom(reached, nf[i - 1].reached ?? nf[i - 1].count);
+    // nunca mostra seta de conversão nem ENTRE nem SAINDO da Reativação —
+    // é outro funil, não existe "% que avançou" de verdade entre os dois.
+    const conv = (i === 0 || isReativacao || prevIsReativacao) ? null : convFrom(reached, nf[i - 1].reached ?? nf[i - 1].count);
     const connector = conv !== null ? `
       <div class="funil-conn" title="Conversão de ${escHtml(nf[i - 1].name)} → ${escHtml(s.name)}">
         <span class="funil-conn-arrow">↓</span><span class="funil-conn-pct">${conv}%</span>

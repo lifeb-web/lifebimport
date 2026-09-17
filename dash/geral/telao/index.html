@@ -4404,11 +4404,19 @@ function renderLtvSectionTelao(d) {
   const convFromLtv = (count, prevCount) => prevCount > 0 ? Math.round((count / prevCount) * 100) : null;
   const reachedLastLtv = nfLtv.length ? (nfLtv[nfLtv.length-1].reached ?? nfLtv[nfLtv.length-1].count) : 0;
 
+  // 17/09 (mesmo achado do mobile): "reached" cumulativo assume 1 funil
+  // sequencial só — "Reativação +75 Dias" é dealFunnel separado na Agendor,
+  // nunca passa pelas outras 3 etapas, então herdava o volume inteiro delas
+  // (mostrava "51" com só 7 negócios reais). Usa count bruto só nessa etapa,
+  // sem seta de conversão nem entrando nem saindo dela.
+  const REATIVACAO_75_STAGE_ID = '3872291';
   const stageRowsLtv = nfLtv.map((s, i) => {
-    const reached = s.reached ?? s.count;
+    const isReativacao = String(s.stageId) === REATIVACAO_75_STAGE_ID;
+    const prevIsReativacao = i > 0 && String(nfLtv[i-1].stageId) === REATIVACAO_75_STAGE_ID;
+    const reached = isReativacao ? s.count : (s.reached ?? s.count);
     const pct = Math.max((reached / maxF) * 100, 3);
     const ord = LTV_STAGE_ORD[String(s.stageId)] || 'o2';
-    const conv = i === 0 ? null : convFromLtv(reached, nfLtv[i-1].reached ?? nfLtv[i-1].count);
+    const conv = (i === 0 || isReativacao || prevIsReativacao) ? null : convFromLtv(reached, nfLtv[i-1].reached ?? nfLtv[i-1].count);
     const connector = conv !== null ? `
       <div class="funil-conn" title="Conversão de ${escHtml(nfLtv[i-1].name)} → ${escHtml(s.name)}">
         <span class="funil-conn-arrow">↓</span><span class="funil-conn-pct">${conv}% avançaram</span>
