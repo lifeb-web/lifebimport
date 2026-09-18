@@ -2402,8 +2402,10 @@ async function loadMetrics(periodo) {
   if (elValor) elValor.classList.add('loading');
   if (elGanhos) elGanhos.classList.add('loading');
   try {
-    const url = `${METRICS_URL}?rep=${encodeURIComponent(REP_NAME)}&token=${encodeURIComponent(REP_TOKEN)}&periodo=${periodo}`;
-    const res = await fetch(url);
+    // Token no header Authorization, nunca na URL (fix 18/09 — achado de revisão de segurança:
+    // token na query string vaza em log de acesso/histórico do navegador/header Referer).
+    const url = `${METRICS_URL}?rep=${encodeURIComponent(REP_NAME)}&periodo=${periodo}`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${REP_TOKEN}` } });
     const data = await res.json();
     if (seq !== _metricLoadSeq) return; // resposta obsoleta (usuário já trocou de período de novo)
     if (!data || !data.ok) throw new Error(data && data.erro || 'resposta invalida');
