@@ -50,6 +50,19 @@
     /* MAIN */
     main { padding:14px 14px 56px; max-width:680px; margin:0 auto; }
 
+    /* MÉTRICAS (valor vendido / ganhos) — 18/09/2026 */
+    .metric-strip { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:10px 10px 11px; margin-bottom:12px; box-shadow:0 1px 6px rgba(0,0,0,.05); }
+    .metric-toggle { display:flex; gap:5px; margin-bottom:9px; }
+    .metric-toggle button { flex:1; font-family:var(--font); font-size:10px; font-weight:700; padding:5px 4px; border-radius:8px; border:none; background:rgba(112,75,155,.08); color:var(--muted); cursor:pointer; transition:background .12s,color .12s; }
+    .metric-toggle button.on { background:var(--purple); color:#fff; }
+    .metric-toggle button:active { transform:scale(.96); }
+    .metric-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .m-card { text-align:center; padding:2px 4px; }
+    .m-label { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.2px; color:var(--muted); margin-bottom:2px; }
+    .m-val { font-size:20px; font-weight:800; color:var(--emerald); line-height:1.15; transition:opacity .15s; }
+    .m-val.loading { opacity:.35; }
+    .m-sub { font-size:9.5px; font-weight:600; color:var(--muted); margin-top:1px; }
+
     /* SUMMARY / FILTROS */
     .summary-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:12px; }
     .sum-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:10px 6px; text-align:center; cursor:pointer; user-select:none; transition:transform .12s, box-shadow .12s; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; }
@@ -429,6 +442,25 @@
 <main>
   <div id="error-banner"></div>
 
+  <div class="metric-strip">
+    <div class="metric-toggle">
+      <button class="on" data-periodo="mes" onclick="setMetricPeriodo('mes')">Mês</button>
+      <button data-periodo="mes_passado" onclick="setMetricPeriodo('mes_passado')">Mês passado</button>
+      <button data-periodo="total" onclick="setMetricPeriodo('total')">Total</button>
+    </div>
+    <div class="metric-row">
+      <div class="m-card">
+        <div class="m-label">Vendido</div>
+        <div class="m-val" id="m-valor">—</div>
+      </div>
+      <div class="m-card">
+        <div class="m-label">Ganhos</div>
+        <div class="m-val" id="m-ganhos">—</div>
+        <div class="m-sub" id="m-ticket"></div>
+      </div>
+    </div>
+  </div>
+
   <div class="summary-strip">
     <div class="sum-card s-ag"   data-filter="Aguardando contato" onclick="toggleFilter(this)">
       <div class="sum-label">Aguardando</div>
@@ -487,6 +519,8 @@
 const PROXY_URL = 'https://script.google.com/macros/s/AKfycbyq9KJgWTRoALEEVf8Pu_I82GT0-tTK5yXNg-RsYHj4ywK6Grg9z_jG1-IcTW3LMXfNBg/exec';
 const REP_NAME  = 'IRAMAR';  // substituído pelo Python no momento da geração
 const REP_TOKEN = 'd0e817db520c063b14be0b04a7e0'; // token individual do rep — autenticação no proxy
+const METRICS_URL   = 'https://lifeb-rep-painel.robert131196.workers.dev/metrics'; // API isolada (D1), 18/09/2026
+const METRICS_MS    = 300_000;     // métricas mudam devagar (valor fechado) — poll bem mais espaçado que os leads
 const POLL_MS   = 60_000;          // intervalo de polling em ms
 const LIMIT     = 8;               // leads visíveis por vez (paginação)
 
@@ -2352,14 +2386,57 @@ async function loadData() {
   } finally { _isLoading=false; loadEnd(); }
 }
 
+// ── MÉTRICAS (valor vendido / ganhos) — 18/09/2026 ──────────────────────────
+// API isolada (lifeb-rep-painel), lê o mesmo D1 que o Dashboard Geral já mantém sincronizado.
+// Nunca escreve nada — só leitura. Falha de rede aqui NUNCA derruba o resto do painel (leads
+// continuam funcionando normal mesmo se essa API cair) — mesmo princípio de "fail silent, dado
+// antigo na tela" já usado em loadData().
+let _metricPeriodo = 'mes';
+let _metricLoadSeq = 0; // evita corrida: resposta antiga de um período não sobrescreve um período mais novo
+
+async function loadMetrics(periodo) {
+  const seq = ++_metricLoadSeq;
+  const elValor = document.getElementById('m-valor');
+  const elGanhos = document.getElementById('m-ganhos');
+  const elTicket = document.getElementById('m-ticket');
+  if (elValor) elValor.classList.add('loading');
+  if (elGanhos) elGanhos.classList.add('loading');
+  try {
+    const url = `${METRICS_URL}?rep=${encodeURIComponent(REP_NAME)}&token=${encodeURIComponent(REP_TOKEN)}&periodo=${periodo}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (seq !== _metricLoadSeq) return; // resposta obsoleta (usuário já trocou de período de novo)
+    if (!data || !data.ok) throw new Error(data && data.erro || 'resposta invalida');
+    if (elValor)  elValor.textContent  = data.valorVendido > 0 ? cur(data.valorVendido) : 'R$ 0';
+    if (elGanhos) elGanhos.textContent = String(data.ganhos || 0);
+    if (elTicket) elTicket.textContent = data.ganhos > 0 ? `ticket médio ${cur(data.ticketMedio)}` : '';
+  } catch (_) {
+    // fail silent — mantém o último valor bom na tela (ou '—' se é a 1ª carga)
+  } finally {
+    if (seq === _metricLoadSeq) {
+      if (elValor) elValor.classList.remove('loading');
+      if (elGanhos) elGanhos.classList.remove('loading');
+    }
+  }
+}
+
+function setMetricPeriodo(periodo) {
+  if (periodo === _metricPeriodo) return;
+  _metricPeriodo = periodo;
+  document.querySelectorAll('.metric-toggle button').forEach(b => b.classList.toggle('on', b.dataset.periodo === periodo));
+  loadMetrics(periodo);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   // Hint visual único na lupa pra rep perceber o campo de busca
   const lupaBt = document.getElementById('search-btn');
   if (lupaBt) { lupaBt.classList.add('hint'); lupaBt.addEventListener('animationend', () => lupaBt.classList.remove('hint'), { once:true }); }
   loadData();
   setInterval(loadData, POLL_MS);
+  loadMetrics(_metricPeriodo);
+  setInterval(() => loadMetrics(_metricPeriodo), METRICS_MS);
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') { _retryCount = 0; loadData(); }
+    if (document.visibilityState === 'visible') { _retryCount = 0; loadData(); loadMetrics(_metricPeriodo); }
   });
   // Fechar histórico ao interagir com a área de leads (filtros, cards, etc.)
   // Guard: se o target foi removido do DOM pelo próprio onclick (ex: setHistTab re-renderiza body),
