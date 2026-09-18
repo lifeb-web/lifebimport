@@ -220,6 +220,7 @@
     .lc-task-form.visible { display:block; }
     .lc-task-form textarea { width:100%; padding:9px 12px; border-radius:8px; border:1.5px solid var(--border); font-family:var(--font); font-size:13px; color:var(--text); background:#fff; outline:none; resize:vertical; min-height:56px; margin-bottom:6px; }
     .lc-task-form input[type=date] { width:100%; padding:9px 12px; border-radius:8px; border:1.5px solid var(--border); font-family:var(--font); font-size:13px; color:var(--text); background:#fff; outline:none; margin-bottom:8px; }
+    .lc-task-form select.lc-task-tipo { width:100%; padding:9px 12px; border-radius:8px; border:1.5px solid var(--border); font-family:var(--font); font-size:13px; color:var(--text); background:#fff; outline:none; margin-bottom:8px; }
     .lc-task-form-footer { display:flex; gap:6px; justify-content:flex-end; }
 
     /* CONFIRMAÇÕES (status, link, histórico) */
@@ -1277,9 +1278,12 @@ function _tarefaBlockHtml(l) {
   const hojeYMD = new Date().toISOString().slice(0,10);
   const late    = !!(dueRaw && dueRaw < hojeYMD);
   const dueLbl  = dueRaw ? ('Vence ' + fmtData(dueRaw)) : 'Sem data de vencimento';
+  const TIPO_ICON = { LIGACAO: '📞', WHATSAPP: '💬', VISITA: '🏠', REUNIAO: '🤝', EMAIL: '✉️', PROPOSTA: '📄' };
+  const tipoUp = String(t.tipo||'').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  const tipoIcon = TIPO_ICON[tipoUp] || (late ? '🔴' : '📌');
   const finishBtn = t.id ? `<button class="lc-task-btn finish" onclick="finishTask(${l.row}, ${Number(t.id)})">✓ Concluir</button>` : '';
   return `<div class="lc-task-row ${late ? 'late' : 'ok'}">
-    <span class="lc-task-icon">${late ? '🔴' : '📌'}</span>
+    <span class="lc-task-icon">${tipoIcon}</span>
     <div class="lc-task-info"><div class="lc-task-text">${esc(t.texto||'Tarefa aberta')}</div><div class="lc-task-due">${esc(dueLbl)}</div></div>
     ${finishBtn}
   </div>`;
@@ -1300,21 +1304,30 @@ function showTaskForm(row) {
 function hideTaskForm(row) {
   const form = document.getElementById('task-form-' + row);
   if (form) form.classList.remove('visible');
+  const tipoIn = document.getElementById('task-tipo-' + row);
+  if (tipoIn) tipoIn.value = '';
 }
 async function saveTask(row) {
   const btn = document.getElementById('task-save-' + row);
   if (btn && btn.classList.contains('saving')) return;
-  const ta     = document.getElementById('task-texto-' + row);
-  const dateIn = document.getElementById('task-due-' + row);
-  const texto  = ta ? ta.value.trim() : '';
+  const ta      = document.getElementById('task-texto-' + row);
+  const dateIn  = document.getElementById('task-due-' + row);
+  const tipoIn  = document.getElementById('task-tipo-' + row);
+  const texto   = ta ? ta.value.trim() : '';
   const dueDate = dateIn ? dateIn.value : '';
+  const tipo    = tipoIn ? tipoIn.value : '';
+  // 🔴 FIX 18/09 (Robert: "e se o rep precisar criar uma tarefa... mas na verdade ele vai mandar um
+  // zap?"): o tipo real do contato (Ligação/WhatsApp/Visita/...) é obrigatório — o Agendor guarda isso
+  // por tarefa, e outras automações da Life B usam esse mesmo campo pra decisões reais (ex: só Visita/
+  // Reunião avançam a etapa do negócio). O painel nunca assume um tipo por padrão.
+  if (!tipo)    { showToast('Escolha como vai ser o contato (ligação, WhatsApp, visita...)'); if (tipoIn) tipoIn.focus(); return; }
   if (!texto)   { showToast('Escreva o que precisa ser feito'); if (ta) ta.focus(); return; }
   if (!dueDate) { showToast('Escolha a data de vencimento'); if (dateIn) dateIn.focus(); return; }
   if (btn) btn.classList.add('saving');
   try {
-    const data = await apiPost('/task/create', { dealId: row, texto, dueDate });
+    const data = await apiPost('/task/create', { dealId: row, texto, dueDate, tipo });
     const lead = _rawLeads.find(l => l.row === row);
-    if (lead) lead.tarefaAberta = { id: (data && (data.taskId || data.id)) || null, texto, dueDate };
+    if (lead) lead.tarefaAberta = { id: (data && (data.taskId || data.id)) || null, texto, dueDate, tipo: (data && data.tipo) || tipo };
     hideTaskForm(row);
     if (ta) ta.value = '';
     showToast('Tarefa criada ✓');
@@ -1655,6 +1668,15 @@ function renderLeads(leads, highlightRow) {
         <div id="task-wrap-${l.row}">${tarefaHtml}</div>
         <div class="lc-task-form" id="task-form-${l.row}">
           <div class="lc-sp-label">📌 Nova tarefa</div>
+          <select id="task-tipo-${l.row}" class="lc-task-tipo">
+            <option value="">Como vai ser o contato?</option>
+            <option value="LIGACAO">📞 Ligação</option>
+            <option value="WHATSAPP">💬 WhatsApp</option>
+            <option value="VISITA">🏠 Visita</option>
+            <option value="REUNIAO">🤝 Reunião</option>
+            <option value="EMAIL">✉️ E-mail</option>
+            <option value="PROPOSTA">📄 Proposta</option>
+          </select>
           <textarea id="task-texto-${l.row}" maxlength="300" placeholder="O que precisa ser feito? Ex: Ligar confirmando pedido"></textarea>
           <input type="date" id="task-due-${l.row}">
           <div class="lc-task-form-footer">
@@ -1869,13 +1891,17 @@ async function loadHistorico(periodo) {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     if (!data.ok) throw new Error(data.erro || 'resposta invalida');
+    // 🔴 FIX 18/09 (Robert, achado real: "você tirou o zap dos leads perdidos e ganhos do histórico...
+    // e tirou também a cidade e estado"): cidade/estado/whatsapp vinham hardcoded vazios porque o
+    // backend ainda não devolvia esses campos quando esta função foi escrita (as 2 frentes trabalharam
+    // em paralelo). Agora o backend enriquece isso ao vivo do Agendor — só mapear.
     _history = (data.historico || []).map(function(h) {
       return {
         row: Number(h.dealId),
         empresa: h.titulo || '',
         nome: '',
-        cidade: '', estado: '',
-        whatsapp: '',
+        cidade: h.cidade || '', estado: h.estado || '',
+        whatsapp: h.telefone || '',
         status: h.statusPainel === 'Fechado' ? 'Fechado' : 'Perdido',
         valor_fech: Number(h.valor) || 0,
         data_f: h.data ? String(h.data).slice(0,10) : '',
