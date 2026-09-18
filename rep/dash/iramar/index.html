@@ -530,6 +530,29 @@ const REP_NAME  = 'IRAMAR';  // substituído pelo Python no momento da geração
 const REP_TOKEN = 'd0e817db520c063b14be0b04a7e0'; // token individual do rep — autenticação no proxy
 const METRICS_URL   = 'https://lifeb-rep-painel.robert131196.workers.dev/metrics'; // API isolada (D1), 18/09/2026
 const METRICS_MS    = 300_000;     // métricas mudam devagar (valor fechado) — poll bem mais espaçado que os leads
+// 🧪 18/09 (Robert, teste ao vivo — SÓ o Iramar por enquanto, "se ficar bosta a gente volta"): lista de
+// leads ativos passa a vir do lifeb-rep-painel (Agendor real) em vez do proxy do Google Sheets (morto).
+// SÓ a LEITURA muda aqui — nenhum botão de ação (mudar status, criar/finalizar tarefa, editar potencial)
+// foi religado, continuam apontando pro PROXY_URL antigo e não vão funcionar de verdade ainda até esse
+// backend ser construído (ver Bia/artefato — combinado explicitamente com o Robert, não é omissão).
+const LEADS_URL = 'https://lifeb-rep-painel.robert131196.workers.dev/leads';
+const BUCKET_TO_STATUS = { aguardando: 'Aguardando contato', contato: 'Em contato', negociacao: 'Em negociação' };
+function _transformarLeadAgendor(l) {
+  return {
+    row: String(l.dealId),
+    empresa: l.titulo || '',
+    nome: l.nome || '',
+    cidade: l.cidade || '',
+    estado: l.estado || '',
+    endereco: l.endereco || '',
+    whatsapp: l.telefone || '',
+    status: BUCKET_TO_STATUS[l.bucket] || 'Em contato',
+    pot: Number(l.valorPotencial) || 0,
+    obs_sdr: l.obsSdr || '',
+    data: l.atualizadoEm ? String(l.atualizadoEm).slice(0, 10) : '',
+    ts_vend: l.atualizadoEm ? new Date(l.atualizadoEm).getTime() : 0,
+  };
+}
 const POLL_MS   = 60_000;          // intervalo de polling em ms
 const LIMIT     = 8;               // leads visíveis por vez (paginação)
 
@@ -2340,11 +2363,14 @@ async function loadData() {
 
     const _ctrl = new AbortController();
     const _tid  = setTimeout(() => _ctrl.abort(), 25000);
-    const res   = await fetch(PROXY_URL + '?action=active&rep=' + REP_NAME + '&token=' + REP_TOKEN, { signal: _ctrl.signal });
+    // 🧪 18/09: leitura vem do Agendor real (lifeb-rep-painel), não mais do Sheets — ver comentário
+    // completo perto de LEADS_URL/_transformarLeadAgendor, acima na declaração das constantes.
+    const res   = await fetch(LEADS_URL + '?rep=' + REP_NAME, { headers: { Authorization: 'Bearer ' + REP_TOKEN }, signal: _ctrl.signal });
     clearTimeout(_tid);
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
+    const _leadsResp = await res.json();
+    if (!_leadsResp.ok) throw new Error(_leadsResp.erro || 'resposta invalida');
+    const data = { leads: (_leadsResp.leads || []).map(_transformarLeadAgendor) };
     const newLeads = data.leads || [];
 
     // Merge server timestamps into _tsMap (prefer whichever is more recent)
