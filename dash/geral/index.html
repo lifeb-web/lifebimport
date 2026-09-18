@@ -2553,6 +2553,23 @@ function renderLtvFunil_(funnel, kpis, recentLost) {
     : motivosPerdaLtv.map(r => `<div class="sdr-reason-row" style="cursor:pointer" onclick="openLtvLostReasonModal('${escJsAttr_(r.reason)}')"><span class="sdr-reason-name">${escHtml(r.reason)}</span><span class="sdr-reason-count">${r.count}</span></div>`).join('');
 }
 
+// 17/09 (Robert, auditoria: "veja se temos incoerências por rep" — pesquisa de
+// mercado mostrou que comparar % de conversão só é confiável a partir de uma
+// amostra mínima, senão 1 lead perdido em 30 dias pinta de vermelho igual um
+// vendedor com volume real e baixo desempenho de verdade) — abaixo do piso,
+// nem tenta julgar com cor, mesmo tratamento visual que "sem dado" (0 leads)
+// já tinha, só que agora cobre "poucos leads" também.
+const MIN_LEADS_CONV_SAMPLE = 5;
+function convBadgeHTML_(conversao, leadsNoPeriodo) {
+  if (conversao === null) return `<span class="rep-badge rb-muted">sem dado</span>`;
+  if ((leadsNoPeriodo || 0) < MIN_LEADS_CONV_SAMPLE) return `<span class="rep-badge rb-muted">poucos dados</span>`;
+  return `<span class="rep-badge ${conversao >= 20 ? 'rb-green' : 'rb-red'}">${conversao}% conv</span>`;
+}
+function convValClass_(conversao, leadsNoPeriodo) {
+  if (conversao === null || (leadsNoPeriodo || 0) < MIN_LEADS_CONV_SAMPLE) return '';
+  return conversao >= 20 ? 'green' : 'red';
+}
+
 // Mesma estrutura de renderReps() (Vendas), sem a mini-funil por rep — o
 // telão também não mostra isso pra LTV (só existe pro funil de Vendas,
 // que tem 4 stage_ids fixos pra segmentar; LTV usa outros 3 stage_ids
@@ -2562,9 +2579,7 @@ function renderLtvReps_(reps) {
     const rank = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'][i] || (i + 1) + '°';
     const initials = r.name.substring(0, 1).toUpperCase();
     const isTop = i === 0;
-    const convBadge = r.conversao !== null
-      ? `<span class="rep-badge ${r.conversao >= 20 ? 'rb-green' : 'rb-red'}">${r.conversao}% conv</span>`
-      : `<span class="rep-badge rb-muted">sem dado</span>`;
+    const convBadge = convBadgeHTML_(r.conversao, r.leadsNoPeriodo);
     const staleBadge = r.stale > 0 ? `<span class="rep-badge rb-amber">⚠ ${r.stale} parado${r.stale > 1 ? 's' : ''}</span>` : '';
     return `
       <div class="rep-card${isTop ? ' top-rep' : ''}">
@@ -2581,7 +2596,7 @@ function renderLtvReps_(reps) {
           <div class="rstat"><span class="rstat-label">Pipeline</span><span class="rstat-val">${r.pipeline > 0 ? fmtMoney(r.pipeline) : '—'}</span></div>
           <div class="rstat"><span class="rstat-label">Ganhos</span><span class="rstat-val green">${fmtMoney(r.ganhoValor)}</span></div>
           <div class="rstat"><span class="rstat-label">Ticket Médio</span><span class="rstat-val">${r.ticketMedio > 0 ? fmtMoney(r.ticketMedio) : '—'}</span></div>
-          <div class="rstat"><span class="rstat-label">Conversão</span><span class="rstat-val ${r.conversao !== null ? (r.conversao >= 20 ? 'green' : 'red') : ''}">${r.conversao !== null ? r.conversao + '%' : '—'}</span></div>
+          <div class="rstat"><span class="rstat-label">Conversão</span><span class="rstat-val ${convValClass_(r.conversao, r.leadsNoPeriodo)}">${r.conversao !== null ? r.conversao + '%' : '—'}</span></div>
           <div class="rstat"><span class="rstat-label">Perdidos</span><span class="rstat-val red">${r.perdidoCont}</span></div>
           <div class="rstat"><span class="rstat-label">Ciclos</span><span class="rstat-val">${r.leadsNoPeriodo || 0}</span></div>
         </div>
@@ -5344,9 +5359,7 @@ function renderReps(reps, deals) {
         ${totalSegs === 0 ? '<div class="mf-empty"></div>' : ''}
       </div>` : '<div class="rep-minifunil"><div class="mf-empty"></div></div>';
 
-    const convBadge = r.conversao !== null
-      ? `<span class="rep-badge ${r.conversao >= 20 ? 'rb-green' : 'rb-red'}">${r.conversao}% conv</span>`
-      : `<span class="rep-badge rb-muted">sem dado</span>`;
+    const convBadge = convBadgeHTML_(r.conversao, r.leadsNoPeriodo);
     const staleBadge = r.stale > 0 ? `<span class="rep-badge rb-amber">⚠ ${r.stale} parado${r.stale>1?'s':''}</span>` : '';
 
     return `
@@ -5365,7 +5378,7 @@ function renderReps(reps, deals) {
           <div class="rstat"><span class="rstat-label">Pipeline</span><span class="rstat-val">${r.pipeline > 0 ? fmtMoney(r.pipeline) : '—'}</span></div>
           <div class="rstat"><span class="rstat-label">Ganhos</span><span class="rstat-val green">${fmtMoney(r.ganhoValor)}</span></div>
           <div class="rstat"><span class="rstat-label">Ticket Médio</span><span class="rstat-val">${r.ticketMedio > 0 ? fmtMoney(r.ticketMedio) : '—'}</span></div>
-          <div class="rstat"><span class="rstat-label">Conversão</span><span class="rstat-val ${r.conversao !== null ? (r.conversao >= 20 ? 'green' : 'red') : ''}">${r.conversao !== null ? r.conversao + '%' : '—'}</span></div>
+          <div class="rstat"><span class="rstat-label">Conversão</span><span class="rstat-val ${convValClass_(r.conversao, r.leadsNoPeriodo)}">${r.conversao !== null ? r.conversao + '%' : '—'}</span></div>
           <div class="rstat"><span class="rstat-label">Perdidos</span><span class="rstat-val red">${r.perdidoCont}</span></div>
           <div class="rstat"><span class="rstat-label">Leads</span><span class="rstat-val">${r.leadsNoPeriodo || 0}</span></div>
         </div>

@@ -4509,7 +4509,7 @@ function renderLtvSectionTelao(d) {
   el('ltv-lb-rows').innerHTML = d.reps.map((r, i) => {
     const rank = ['🥇','🥈','🥉','4️⃣','5️⃣'][i] || (i+1)+'°';
     const pipelinePct = Math.max((r.pipeline / maxPipeline) * 100, 3);
-    const convClass = r.conversao === null ? 'nil' : (r.conversao < 20 ? 'low' : '');
+    const convClass = convClass_(r.conversao, r.leadsNoPeriodo);
     const convText  = r.conversao !== null ? r.conversao + '%' : '—';
     const staleText = r.stale > 0 ? `<span class="lb-stale">⚠${r.stale}</span>` : '';
     return `
@@ -5907,6 +5907,19 @@ function renderFunil(funnel, kpis, recentLost) {
     + outcomeRow('Perdidos', kpis.perdidoCont || 0, perdidoValor, 'red', 'openLostModal()');
 }
 
+// 17/09 (Robert, auditoria: "veja se temos incoerências por rep" — pesquisa de
+// mercado mostrou que comparar % de conversão só é confiável a partir de uma
+// amostra mínima, senão 1 lead perdido em 30 dias pinta de vermelho igual um
+// vendedor com volume real e baixo desempenho de verdade) — abaixo do piso,
+// nem tenta julgar com cor, mesmo tratamento visual que "sem dado" (null) já
+// tinha ('nil', cor apagada), só que agora cobre "poucos leads" também.
+const MIN_LEADS_CONV_SAMPLE = 5;
+function convClass_(conversao, leadsNoPeriodo) {
+  if (conversao === null) return 'nil';
+  if ((leadsNoPeriodo || 0) < MIN_LEADS_CONV_SAMPLE) return 'nil';
+  return conversao < 20 ? 'low' : '';
+}
+
 function renderLeaderboard(reps, deals) {
   const maxPipeline = Math.max(...reps.map(r => r.pipeline), 1);
   el('rep-badge').textContent = reps.length + ' reps';
@@ -5916,7 +5929,7 @@ function renderLeaderboard(reps, deals) {
     const rank = ['🥇','🥈','🥉','4️⃣','5️⃣'][i] || (i+1)+'°';
     const pipelinePct = Math.max((r.pipeline / maxPipeline) * 100, 3);
 
-    const convClass = r.conversao === null ? 'nil' : (r.conversao < 20 ? 'low' : '');
+    const convClass = convClass_(r.conversao, r.leadsNoPeriodo);
     const convText  = r.conversao !== null ? r.conversao + '%' : '—';
     const staleText = r.stale > 0 ? `<span class="lb-stale">⚠${r.stale}</span>` : '';
 
