@@ -569,12 +569,14 @@
 //     existe endpoint isolado pra isso no contrato novo (só dá pra registrar valor final dentro do
 //     fluxo de Marcar Ganho). Ver comentário no CSS (.lc-pot) e decisão documentada no relatório.
 //
-// ⚠️ ESTADO EM 18/09/2026: a LEITURA (/leads, /metrics) já está ligada e funcionando ao vivo. Os
-// endpoints de ESCRITA (/task/create, /task/finish, /obs, /status) e /historico ainda não existem
-// no backend (lifeb-rep-painel) — outra frente de trabalho está construindo em paralelo, contra o
-// mesmo contrato que este arquivo usa. Até esses endpoints subirem, os botões abaixo vão falhar com
-// um erro de rede/404 (e mostram um toast de erro claro — nunca fingem sucesso). Isso é esperado,
-// não é bug deste arquivo.
+// ✅ ESTADO EM 18/09/2026 (atualizado após integração): LEITURA (/leads, /metrics, /historico) E
+// ESCRITA (/task/create, /task/finish, /obs, /status) já estão publicadas em produção no backend
+// (lifeb-rep-painel). Achado real na auditoria cruzada entre as 2 frentes: `apiPost` não mandava
+// `?rep=REP_NAME` na URL (o backend sempre lê o rep de lá, igual LEADS_URL/HISTORICO_URL/
+// METRICS_URL já faziam) — os 4 endpoints de escrita sempre devolveriam 404 antes desse fix. Não
+// testado ainda com uma escrita real contra um deal de produção (evita poluir a timeline de um
+// cliente de verdade só pra testar) — validado via os testes automatizados dos 2 lados + conferência
+// manual de que o formato bate exatamente (payload, nomes de campo, query string).
 //
 // ESTADO GLOBAL (principais variáveis)
 //   Dados:     _rawLeads, _allLeads, _tsMap, _firstLoad
@@ -877,8 +879,12 @@ function loadEnd() {
 // Todos os 4 endpoints de escrita (task/create, task/finish, obs, status) usam o mesmo formato:
 // POST, Authorization: Bearer <token> (nunca token na URL), corpo JSON. Erro de rede ou resposta
 // {ok:false} vira uma Exception com mensagem legível — quem chama decide o que fazer na tela (nunca
-// finge sucesso). Ver nota no topo do arquivo: estes endpoints ainda não existem em produção nesta
-// data — toda chamada aqui vai falhar até a Frente A (backend) publicar.
+// finge sucesso).
+// 🔴 FIX 18/09 (achado de auditoria cruzada entre as 2 frentes, antes de qualquer clique real em
+// produção): faltava `?rep=REP_NAME` na URL — o backend (`autenticar()`) lê o rep SEMPRE da query
+// string, igual `LEADS_URL`/`HISTORICO_URL`/`METRICS_URL` já fazem neste mesmo arquivo. Sem isso,
+// os 4 endpoints de escrita sempre devolveriam 404 "rep desconhecido", mesmo com o token certo no
+// header — confirmado batendo o comportamento real contra o backend já publicado.
 async function apiPost(path, body, timeoutMs) {
   loadStart();
   const _ctrl = new AbortController();
@@ -886,7 +892,7 @@ async function apiPost(path, body, timeoutMs) {
   try {
     let res;
     try {
-      res = await fetch(API_URL + path, {
+      res = await fetch(API_URL + path + '?rep=' + REP_NAME, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + REP_TOKEN },
         body: JSON.stringify(body),
