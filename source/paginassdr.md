@@ -2006,6 +2006,75 @@ git push origin gh-pages
 | `d5c6ff99` | Título/subtítulo empresa+contato nos cards (fix incorreto — contato tinha telefone) |
 | `d2542bc0` | Fix: subtítulo usa nome do lead (`l.nome`), não `l.contato` |
 
+### Métricas de Valor Vendido / Ganhos — 18/09/2026
+
+**Contexto**: Robert pediu (overnight, autonomia total) pra trazer "valor vendido" e "ganhos" pro
+painel do rep, como o painel já tinha implicitamente no fluxo de Fechado (que já pede valor em 2
+passos), só que sem nenhum jeito de ver o TOTAL de relance — precisava abrir o histórico e somar
+na mão. Pedido explícito: reaproveitar a MESMA linguagem visual, não poluir a tela ("menos é
+mais"), e não misturar trabalho com a sessão paralela que mexia no Dashboard Geral no mesmo
+período (`dash-geral-bridge`, mesmo worktree gh-pages).
+
+**Decisão de arquitetura — por que um worker novo e isolado**:
+- Fonte do dado: `dash_geral_deals` no D1 (`dash-geral-db`, id `3a0f316c-c22b-4eb9-92c4-cf0b5baade89`)
+  que o Dashboard Geral já mantém sincronizado com o Agendor — zero fetch novo ao Agendor, zero
+  risco de rate-limit.
+- Em vez de adicionar essa leitura DENTRO de `dash-geral-bridge` (que a outra sessão estava
+  editando ao vivo) ou dentro de `gs-agendor-worker` (Bia, zero-downtime), criado worker NOVO e
+  isolado: **`lifeb-rep-painel`** (`/Users/robertmarques/Desktop/lifeb-rep-painel`), com seu
+  próprio binding D1 pra MESMA base (D1 aceita múltiplos workers bindando o mesmo banco sem
+  conflito nenhum). Zero arquivo em comum com os outros dois projetos — zero risco de colisão de
+  merge/deploy.
+- Deploy: `https://lifeb-rep-painel.robert131196.workers.dev`. Código com README próprio
+  explicando o isolamento e como adicionar um rep novo.
+
+**Endpoint**: `GET /metrics?rep=<NOME>&token=<token>&periodo=mes|mes_passado|total` → `{ ok, rep,
+periodo, ganhos, valorVendido, ticketMedio, geradoEm }`. Token reaproveitado — o MESMO que o rep
+já usa no proxy GAS antigo (`REP_TOKEN` já existe no template, zero placeholder novo pro
+Python de geração).
+
+**Achado importante durante a auditoria de dados**: `owner_name` no D1 NÃO é sempre igual ao
+"primeiro nome" cadastrado no TEAM da Bia — pra alguns reps é o nome completo do Agendor (ex:
+"Anderson Silva"), pra outros só o primeiro nome (ex: "Iramar"). Confirmado via `wrangler d1
+execute ... "SELECT DISTINCT owner_name..."` antes de escrever qualquer query — nunca assumir.
+
+**Verificação (não só testes unitários)**: 23 testes automatizados (mock de D1) cobrindo auth,
+períodos, divisão por zero, CORS, erro do D1 — todos passando. Depois, cross-check EXTERNO contra
+uma consulta direta no Agendor (snapshot separado, buscado ~5h antes pra outro propósito nessa
+mesma madrugada): Iramar bateu EXATO em 3 cortes diferentes (total: 28/R$91.382,80; setembro:
+1/R$2.530,22) e Natanael também (total: 33/R$90.685,05; setembro: 9/R$11.388,09). Sincronia do D1
+confirmada fresca (`synced_at` de poucos minutos atrás no momento do teste).
+
+**Frontend**: só aditivo — `.metric-strip` inserido entre o header e o `.summary-strip` já
+existente, reaproveitando as MESMAS variáveis CSS (`--purple`, `--emerald`, `--card`, `--border`,
+`--muted`) e o helper `cur()` que já existia pra formatar moeda. Fail-silent: se a API nova cair,
+o resto do painel (leads, histórico, tudo que já funcionava) continua 100% intacto — nunca mostra
+banner de erro por causa disso. Poll bem mais espaçado que os leads (5min vs 60s) porque valor
+fechado não muda tão rápido.
+
+**Diff verificado linha a linha** contra o arquivo em produção antes do deploy (`diff` contra uma
+cópia buscada ao vivo de `projetojlbv.com.br/rep/dash/iramar/`) — confirmado que a única mudança é
+exatamente o bloco novo (CSS + HTML + JS da métrica), nada mais foi tocado sem querer. Sintaxe do
+JS extraído e validada com `node --check`. Balanceamento de tags `<div>`/`</div>` conferido
+(133/133, delta exato de +10/+10 esperado pro bloco novo).
+
+**Rollout**: só Iramar e Natanael por enquanto (únicos com dashboard real gerado hoje). Pra
+estender pros outros reps do time, seguir o processo de "Adicionar um rep novo" no README do
+`lifeb-rep-painel`, e gerar o `index.html` deles com o mesmo processo Python já documentado acima
+nesta seção.
+
+**Pendência real, não escondida**: a UI nova não foi visualmente testada num navegador de verdade
+(sem ferramenta de browser nesta sessão) — só verificado via curl (HTML chegando certo, JSON
+correto) e revisão estática de código. Recomendo o Robert dar uma olhada rápida no celular assim
+que acordar pra confirmar que o visual bate com o esperado antes de considerar 100% fechado.
+
+**Coordenação entre sessões**: antes de mexer em qualquer coisa neste worktree (compartilhado com
+a sessão do Dashboard Geral), fiz `git pull` e mandei mensagem pra sessão "Projeto SDR Comercial"
+avisando o escopo exato (só leitura do D1, zero edição em `dash-geral-bridge`). Só toquei em 3
+arquivos: `source/dashboard-rep-template.html`, `rep/dash/iramar/index.html`,
+`rep/dash/natanael/index.html` — confirmado via `git status` antes do commit, zero arquivo do
+Dashboard Geral tocado.
+
 ### Bugs corrigidos em 25/04/2026
 
 **1. Status prematuro ao selecionar Fechado/Perdido**
