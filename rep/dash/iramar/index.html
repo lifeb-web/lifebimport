@@ -122,26 +122,20 @@
     /* empresa + pot */
     .lc-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:0; }
     .lc-empresa { font-size:13px; font-weight:800; color:var(--text); line-height:1.2; flex:1; min-width:0; word-break:break-word; }
+    /* 🆕 18/09: badge de Reposição/Reativação — Robert pediu destaque claro pra esses 2 casos */
+    .lc-funil-badge { display:inline-block; font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.02em; padding:2px 7px; border-radius:999px; margin-left:6px; vertical-align:middle; white-space:nowrap; }
+    .lc-funil-badge.reposicao { background:rgba(112,75,155,.12); color:var(--purple); }
+    .lc-funil-badge.reativacao75 { background:rgba(217,119,6,.14); color:#97600a; }
     .lc-nome { font-size:11px; font-weight:600; color:var(--muted); margin-bottom:8px; line-height:1.3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
-    /* valor potencial inline edit */
+    /* valor potencial — somente leitura no v2 (18/09). O backend novo não tem endpoint pra editar
+       só esse campo isolado (Frente A só construiu: criar/finalizar tarefa, observação, marcar
+       ganho/perdido) — editar aqui sem um endpoint de verdade seria fingir uma ação que não
+       escreve em lugar nenhum (regra permanente do projeto). O valor final de fechamento continua
+       editável normalmente dentro do fluxo "Marcar Ganho". */
     .lc-pot-wrap { flex-shrink:0; }
-    .lc-pot { font-size:13px; font-weight:700; color:var(--purple); white-space:nowrap; cursor:pointer; border-radius:6px; padding:2px 5px; transition:background .12s; display:inline-flex; align-items:center; gap:4px; }
-    .lc-pot:hover { background:rgba(112,75,155,.1); }
+    .lc-pot { font-size:13px; font-weight:700; color:var(--purple); white-space:nowrap; border-radius:6px; padding:2px 5px; display:inline-flex; align-items:center; gap:4px; }
     .lc-pot-no-val { font-size:12px; font-weight:600; color:var(--muted); }
-    .lc-pot-edit-icon { opacity:.5; }
-    .lc-pot-input-wrap { display:none; }
-    .lc-pot-input { width:110px; padding:4px 8px; border-radius:8px; border:2px solid var(--purple); font-family:var(--font); font-size:13px; font-weight:700; color:var(--purple); background:#fff; outline:none; }
-    .lc-pot-actions { display:flex; gap:4px; margin-top:4px; justify-content:flex-end; }
-    .lc-pot-save, .lc-pot-cancel { padding:3px 10px; border-radius:6px; border:none; font-family:var(--font); font-size:11px; font-weight:700; cursor:pointer; transition:transform .1s; }
-    .lc-pot-save   { background:var(--purple); color:#fff; }
-    .lc-pot-cancel { background:var(--border);  color:var(--muted); }
-    .lc-pot-save:active, .lc-pot-cancel:active { transform:scale(.93); }
-    .lc-pot-save.saving { opacity:.6; pointer-events:none; }
-    .lc-pot-pfx-wrap { position:relative; }
-    .lc-pot-pfx-wrap::before { content:'R$'; position:absolute; left:8px; top:50%; transform:translateY(-50%); font-size:12px; font-weight:700; color:var(--purple); pointer-events:none; }
-    .lc-pot-pfx-wrap .lc-pot-input { padding-left:26px; }
-    .lc-pot-preview { font-size:11px; font-weight:700; color:var(--purple); text-align:right; min-height:14px; padding:2px 0 1px; }
 
     /* meta tags + icon buttons */
     .lc-meta { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
@@ -184,21 +178,49 @@
     .lcp-wac-open   { padding:6px 14px; border-radius:8px; border:none; background:#16a34a; color:#fff; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; }
     .lc-last-updated { font-size:10px; color:var(--text); font-weight:600; padding:5px 2px 0; min-height:14px; }
 
-    /* STATUS SELECT */
+    /* STATUS — v2 (18/09): não é mais um <select> livre. O bucket (Aguardando/Em contato/Em
+       negociação) agora é CALCULADO no servidor a partir de tarefa aberta + etapa do funil (ver
+       bucketFor no backend) — o rep não escolhe isso manualmente, só vê como um badge. A única
+       mudança de status que o painel realmente executa é marcar Ganho ou Perdido (irreversível
+       pelo painel — por isso os botões abaixo, não mais um dropdown com 5 opções soltas). */
     .lc-status-wrap { }
-    .lc-sel-wrap { position:relative; }
-    .lc-select { width:100%; appearance:none; -webkit-appearance:none; padding:10px 36px 10px 14px; border-radius:10px; border:2px solid var(--border); font-family:var(--font); font-size:13px; font-weight:700; cursor:pointer; transition:border-color .15s, background .15s, color .15s; background-color:var(--bg); color:var(--text); outline:none; }
-    .lc-select:focus { border-color:var(--purple); }
-    .lc-select.s-ag   { background:rgba(220,38,38,.07);  border-color:rgba(220,38,38,.4);  color:#b91c1c; }
-    .lc-select.s-cont { background:rgba(217,119,6,.07);  border-color:rgba(217,119,6,.4);  color:#92400e; }
-    .lc-select.s-neg  { background:rgba(22,163,74,.07);  border-color:rgba(22,163,74,.4);  color:#15803d; }
-    .lc-select.s-fech { background:rgba(22,163,74,.12);  border-color:rgba(22,163,74,.5);  color:#15803d; }
-    .lc-select.s-perd { background:rgba(220,38,38,.07);  border-color:rgba(220,38,38,.3);  color:#991b1b; }
-    .lc-select.saving { opacity:.6; pointer-events:none; }
-    .lc-sel-wrap::after { content:'▾'; position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:13px; color:var(--muted); pointer-events:none; }
+    .lc-status-row { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+    .lc-status-badge { display:inline-flex; align-items:center; padding:7px 13px; border-radius:10px; font-family:var(--font); font-size:12px; font-weight:700; border:2px solid var(--border); background-color:var(--bg); color:var(--text); }
+    .lc-status-badge.s-ag   { background:rgba(220,38,38,.07);  border-color:rgba(220,38,38,.4);  color:#b91c1c; }
+    .lc-status-badge.s-cont { background:rgba(217,119,6,.07);  border-color:rgba(217,119,6,.4);  color:#92400e; }
+    .lc-status-badge.s-neg  { background:rgba(22,163,74,.07);  border-color:rgba(22,163,74,.4);  color:#15803d; }
+    .lc-status-actions { display:flex; gap:8px; margin-top:8px; }
+    .lc-status-btn { flex:1; padding:9px 10px; border-radius:10px; border:1.5px solid var(--border); background:#fff; font-family:var(--font); font-size:12px; font-weight:700; cursor:pointer; transition:background .12s,border-color .12s,transform .1s; touch-action:manipulation; }
+    .lc-status-btn:active { transform:scale(.96); }
+    .lc-status-btn.ganho   { color:#15803d; border-color:rgba(22,163,74,.35); }
+    .lc-status-btn.ganho:hover   { background:rgba(22,163,74,.08); }
+    .lc-status-btn.perdido { color:#b91c1c; border-color:rgba(220,38,38,.3); }
+    .lc-status-btn.perdido:hover { background:rgba(220,38,38,.08); }
+    .lc-status-warn { font-size:10px; font-weight:600; color:var(--muted); text-align:center; margin-top:6px; }
     .lc-feedback { font-size:11px; font-weight:600; min-height:16px; padding:2px 2px 0; }
     .lc-feedback.ok  { color:#16a34a; }
     .lc-feedback.err { color:var(--red); }
+
+    /* TAREFA ABERTA — v2 (18/09): antes só a Bia via isso (vigiaSemTarefa); Robert pediu que o
+       próprio rep visse direto no card, sem esconder atrás de "mais". */
+    .lc-task-row { display:flex; align-items:center; gap:8px; border-radius:10px; padding:8px 10px; margin-bottom:10px; }
+    .lc-task-row.ok   { background:rgba(112,75,155,.06); border:1px solid rgba(112,75,155,.18); }
+    .lc-task-row.late { background:rgba(220,38,38,.06);  border:1px solid rgba(220,38,38,.25); }
+    .lc-task-row.warn { background:rgba(217,119,6,.08);  border:1px solid rgba(217,119,6,.3); }
+    .lc-task-icon { font-size:15px; flex-shrink:0; }
+    .lc-task-info { flex:1; min-width:0; }
+    .lc-task-text { font-size:12px; font-weight:700; color:var(--text); line-height:1.35; word-break:break-word; }
+    .lc-task-due  { font-size:10.5px; font-weight:600; color:var(--muted); margin-top:1px; }
+    .lc-task-row.late .lc-task-due { color:#b91c1c; }
+    .lc-task-btn { flex-shrink:0; padding:6px 10px; border-radius:8px; border:1.5px solid rgba(112,75,155,.3); background:#fff; font-family:var(--font); font-size:11px; font-weight:700; color:var(--purple); cursor:pointer; touch-action:manipulation; }
+    .lc-task-btn:hover { background:rgba(112,75,155,.08); }
+    .lc-task-btn.finish { border-color:rgba(22,163,74,.35); color:#15803d; }
+    .lc-task-btn.finish:hover { background:rgba(22,163,74,.08); }
+    .lc-task-form { display:none; background:#f9f6ff; border:1px solid rgba(112,75,155,.25); border-radius:10px; padding:10px 12px; margin-bottom:10px; animation:panel-in .2s ease; }
+    .lc-task-form.visible { display:block; }
+    .lc-task-form textarea { width:100%; padding:9px 12px; border-radius:8px; border:1.5px solid var(--border); font-family:var(--font); font-size:13px; color:var(--text); background:#fff; outline:none; resize:vertical; min-height:56px; margin-bottom:6px; }
+    .lc-task-form input[type=date] { width:100%; padding:9px 12px; border-radius:8px; border:1.5px solid var(--border); font-family:var(--font); font-size:13px; color:var(--text); background:#fff; outline:none; margin-bottom:8px; }
+    .lc-task-form-footer { display:flex; gap:6px; justify-content:flex-end; }
 
     /* CONFIRMAÇÕES (status, link, histórico) */
     .lc-confirm { display:none; flex-direction:column; align-items:center; gap:7px; text-align:center; background:rgba(112,75,155,.07); border:1.5px solid rgba(112,75,155,.28); border-radius:12px; padding:16px 14px 12px; animation:panel-in .18s ease; }
@@ -308,8 +330,9 @@
     .hist-counts  { font-size:11px; font-weight:700; color:var(--purple); opacity:.7; flex:1; }
     .hist-chevron { font-size:14px; color:var(--purple); transition:transform .2s; display:inline-block; }
     .historico-section.open .hist-chevron { transform:rotate(180deg); }
-    .hist-body { padding-top:10px; display:none; }
-    .historico-section.open .hist-body { display:block; }
+    .hist-body-wrap { display:none; }
+    .historico-section.open .hist-body-wrap { display:block; }
+    .hist-body { padding-top:10px; }
     .hist-pagination { display:flex; justify-content:center; gap:8px; padding:8px 0 4px; }
     .hist-pg-btn { padding:8px 20px; border-radius:20px; border:1.5px solid var(--border); background:var(--card); font-family:var(--font); font-size:12px; font-weight:700; color:var(--purple); cursor:pointer; transition:background .12s; touch-action:manipulation; }
     .hist-pg-btn:hover { background:#f3eeff; border-color:rgba(112,75,155,.3); }
@@ -383,7 +406,7 @@
       .summary-strip { gap:10px; }
       .sum-val { font-size:26px; }
       .lc-empresa { font-size:16px; }
-      .lc-select { font-size:14px; padding:11px 36px 11px 14px; }
+      .lc-status-badge { font-size:13px; }
       .lcp-val, .lcp-tel { font-size:13px; }
       /* busca inline no header (desktop) — centralizada absolutamente */
       .search-hd-wrap { position:absolute; left:50%; transform:translateX(-50%); display:flex; align-items:center; }
@@ -504,7 +527,14 @@
       <span class="hist-counts" id="hist-counts">fechados e perdidos</span>
       <span class="hist-chevron">▾</span>
     </button>
-    <div class="hist-body" id="hist-body"></div>
+    <div class="hist-body-wrap" id="hist-body-wrap">
+      <div class="metric-toggle" id="hist-periodo-toggle" style="margin-top:10px;">
+        <button data-periodo="mes" onclick="setHistPeriodo('mes')">Mês</button>
+        <button data-periodo="mes_passado" onclick="setHistPeriodo('mes_passado')">Mês passado</button>
+        <button class="on" data-periodo="total" onclick="setHistPeriodo('total')">Total</button>
+      </div>
+      <div class="hist-body" id="hist-body"></div>
+    </div>
   </div>
 </main>
 
@@ -512,51 +542,102 @@
 
 <script>
 // ============================================================
-// Painel Rep — Life B Import
-// Arquivo gerado pelo Python a partir de dashboard-rep-template.html.
+// Painel Rep — Life B Import (v2, 18/09/2026)
+// Arquivo gerado a partir de dashboard-rep-template.html.
 // NÃO edite os arquivos gerados (iramar/, natanael/ etc.) diretamente —
-// edite o template e rode o gerador.
+// edite o template e regenere (substituição de IRAMAR/d0e817db520c063b14be0b04a7e0/Iramar).
+//
+// ARQUITETURA v2 — troca de backend (Google Sheets/Apps Script morto → lifeb-rep-painel, direto no
+// Agendor + D1 do Dashboard Geral). Mudanças de fundo em relação ao v1:
+//   - Identidade do lead: "row" agora é o dealId do Agendor (número), não mais uma linha de planilha.
+//   - Fila: o SERVIDOR devolve os leads já na ordem certa (aguardando > contato > negociação, ver
+//     ordenarFila no backend) — o painel NUNCA reordena no cliente (fonte única de verdade).
+//   - Status "Em contato"/"Aguardando"/"Em negociação" deixou de ser um campo que o rep escolhe: é
+//     CALCULADO pelo servidor a partir de tarefa aberta + etapa do funil. Por isso não existe mais
+//     um <select> de status — só um badge (leitura) + os botões reais: Marcar Ganho / Marcar Perdido.
+//   - Observação do SDR e observação do rep foram UNIFICADAS pelo backend novo (as duas viram uma
+//     tarefa finalizada "Obs. do SDR: <texto>" no Agendor — é o mesmo texto que _extrairObsSdr lê).
+//     Por isso o painel também unificou as duas seções visuais em uma só ("Observações").
+//   - Tarefa aberta (criar/concluir) é uma ação nova que não existia no v1 — Robert pediu pra ver e
+//     mexer nisso direto no card, sem precisar abrir o Agendor.
+//   - Undo genérico (o botão "↩ Desfazer" que existia pra qualquer campo) foi REMOVIDO: o backend
+//     novo não tem endpoint pra reverter status/tarefa (só Bia/gs-agendor-worker tem "the pattern"
+//     interno pra ganho, sem endpoint de "desfazer ganho" exposto aqui) — manter uma UI de undo que
+//     não desfaz nada de verdade seria mentir pro rep. Ações de Ganho/Perdido pedem confirmação
+//     explícita (botão com nome claro + aviso "não pode ser desfeita pelo painel") em vez de undo.
+//   - Editar "valor potencial" direto no card foi DESATIVADO (virou texto, não mais clicável): não
+//     existe endpoint isolado pra isso no contrato novo (só dá pra registrar valor final dentro do
+//     fluxo de Marcar Ganho). Ver comentário no CSS (.lc-pot) e decisão documentada no relatório.
+//
+// ⚠️ ESTADO EM 18/09/2026: a LEITURA (/leads, /metrics) já está ligada e funcionando ao vivo. Os
+// endpoints de ESCRITA (/task/create, /task/finish, /obs, /status) e /historico ainda não existem
+// no backend (lifeb-rep-painel) — outra frente de trabalho está construindo em paralelo, contra o
+// mesmo contrato que este arquivo usa. Até esses endpoints subirem, os botões abaixo vão falhar com
+// um erro de rede/404 (e mostram um toast de erro claro — nunca fingem sucesso). Isso é esperado,
+// não é bug deste arquivo.
 //
 // ESTADO GLOBAL (principais variáveis)
 //   Dados:     _rawLeads, _allLeads, _tsMap, _firstLoad
 //   UI:        _activeFilter, _searchQuery, _visibleCount
-//   Undo:      _undoPending (undo simples), _pendingUndoByRow (undo deferido)
-//   Histórico: _history, _histLoaded, _histTab, _histPage
+//   Histórico: _history, _histLoaded, _histTab, _histPage, _histPeriodo
 //   Inflight:  _inFlight (contador de requests em andamento → loading bar)
 // ============================================================
 
-const PROXY_URL = 'https://script.google.com/macros/s/AKfycbyq9KJgWTRoALEEVf8Pu_I82GT0-tTK5yXNg-RsYHj4ywK6Grg9z_jG1-IcTW3LMXfNBg/exec';
-const REP_NAME  = 'IRAMAR';  // substituído pelo Python no momento da geração
-const REP_TOKEN = 'd0e817db520c063b14be0b04a7e0'; // token individual do rep — autenticação no proxy
-const METRICS_URL   = 'https://lifeb-rep-painel.robert131196.workers.dev/metrics'; // API isolada (D1), 18/09/2026
-const METRICS_MS    = 300_000;     // métricas mudam devagar (valor fechado) — poll bem mais espaçado que os leads
-// 🧪 18/09 (Robert, teste ao vivo — SÓ o Iramar por enquanto, "se ficar bosta a gente volta"): lista de
-// leads ativos passa a vir do lifeb-rep-painel (Agendor real) em vez do proxy do Google Sheets (morto).
-// SÓ a LEITURA muda aqui — nenhum botão de ação (mudar status, criar/finalizar tarefa, editar potencial)
-// foi religado, continuam apontando pro PROXY_URL antigo e não vão funcionar de verdade ainda até esse
-// backend ser construído (ver Bia/artefato — combinado explicitamente com o Robert, não é omissão).
-const LEADS_URL = 'https://lifeb-rep-painel.robert131196.workers.dev/leads';
+const API_URL       = 'https://lifeb-rep-painel.robert131196.workers.dev'; // backend novo (Agendor + D1)
+const LEADS_URL     = API_URL + '/leads';
+const METRICS_URL   = API_URL + '/metrics';
+const HISTORICO_URL = API_URL + '/historico';
+const REP_NAME  = 'IRAMAR';  // substituído no momento da geração
+const REP_TOKEN = 'd0e817db520c063b14be0b04a7e0'; // token individual do rep — autenticação no backend (header Authorization, nunca na URL)
+const METRICS_MS = 300_000;  // métricas mudam devagar (valor fechado) — poll bem mais espaçado que os leads
+const POLL_MS    = 60_000;   // intervalo de polling em ms
+const LIMIT      = 8;        // leads visíveis por vez (paginação)
+
+// Mesma lista canônica usada pelo gs-agendor-worker (MOTIVOS_PERDA, src/index.js) — usar exatamente
+// este texto garante que o backend novo reconheça o motivo sem precisar de fuzzy-match.
+const MOTIVOS_PERDA = ["Desistência", "Fora do perfil ICP", "Prazo", "Preço", "Restrição de pagamento", "Sem interesse", "Sem retorno"];
+
 const BUCKET_TO_STATUS = { aguardando: 'Aguardando contato', contato: 'Em contato', negociacao: 'Em negociação' };
+const FUNIL_BADGE_LABEL = { reposicao: 'Reposição', reativacao75: 'Reativação 75+' };
+
+// Tarefa aberta — a Frente A (backend) pode ainda não ter subido o objeto completo {id,texto,dueDate}
+// no payload de /leads (item A1 do contrato). Enquanto isso, cai pro sinal antigo (semTarefa, só um
+// booleano) — mostra "tem tarefa" sem detalhe, nunca finge ter id/texto que não tem (o botão
+// "Concluir" some sozinho quando falta o id — ver _tarefaBlockHtml).
+function _mapTarefaAberta(l) {
+  if (l.tarefaAberta !== undefined) return l.tarefaAberta; // contrato novo (A1) já ativo
+  if (l.semTarefa === true) return null;
+  if (l.semTarefa === false) return { id: null, texto: null, dueDate: null };
+  return null;
+}
+
+// 🔴 FIX v2 (achado ao vivo, Robert: "cadê CNPJ, endereço, nome da empresa?"): a versão anterior
+// mapeava `empresa` a partir de `titulo` (título do negócio) — o backend já busca a empresa/CNPJ/
+// endereço reais (enriquecerContato, via /people e /organizations do Agendor) mas o mapeamento aqui
+// nunca lia esses campos. Corrigido: usa os campos reais, com `titulo` só como fallback pra negócios
+// sem organização vinculada (deal só com pessoa física).
 function _transformarLeadAgendor(l) {
   return {
-    row: String(l.dealId),
-    empresa: l.titulo || '',
+    row: Number(l.dealId), // dealId do Agendor — SEMPRE número, mesmo tipo em toda comparação (=== estrito)
+    empresa: l.empresa || l.titulo || '',
     nome: l.nome || '',
     cidade: l.cidade || '',
     estado: l.estado || '',
     endereco: l.endereco || '',
+    cep: l.cep || '',
+    cnpj: l.cnpj || '',
     whatsapp: l.telefone || '',
     status: BUCKET_TO_STATUS[l.bucket] || 'Em contato',
+    funil_tag: l.funilTag || '',
     pot: Number(l.valorPotencial) || 0,
     obs_sdr: l.obsSdr || '',
     data: l.atualizadoEm ? String(l.atualizadoEm).slice(0, 10) : '',
     ts_vend: l.atualizadoEm ? new Date(l.atualizadoEm).getTime() : 0,
+    tarefaAberta: _mapTarefaAberta(l),
   };
 }
-const POLL_MS   = 60_000;          // intervalo de polling em ms
-const LIMIT     = 8;               // leads visíveis por vez (paginação)
 
-const STATUS_LIST = ['Aguardando contato','Em contato','Em negociação','Fechado','Perdido'];
+const STATUS_LIST_UNUSED = null; // (v1 tinha um <select> com 5 status livres — removido, ver comentário no topo)
 
 // ── UTILS ─────────────────────────────────────────────────────
 const esc = s => String(s == null ? '' : s)
@@ -601,7 +682,7 @@ function jaContem(texto, termo) {
 
 function fmtData(d) {
   if (!d) return '';
-  const p = d.split('-');
+  const p = String(d).slice(0,10).split('-');
   return p.length === 3 ? `${p[2]}/${p[1]}/${p[0].slice(2)}` : d;
 }
 
@@ -641,12 +722,6 @@ function spPreview(input, row) {
   const n = parseMoney(input.value);
   el.textContent = !isNaN(n) && n > 0 ? cur(n) : '';
 }
-function potPreview(input, row) {
-  const el = document.getElementById('pot-preview-' + row);
-  if (!el) return;
-  const n = parseMoney(input.value);
-  el.textContent = !isNaN(n) && n > 0 ? cur(n) : '';
-}
 
 function fmtWA(num) {
   const d = String(num || '').replace(/\D/g, '');
@@ -654,7 +729,8 @@ function fmtWA(num) {
   return d.startsWith('55') ? d : '55' + d;
 }
 
-// ── TIMESTAMP DA ÚLTIMA ATUALIZAÇÃO ───────────────────────────
+// ── TIMESTAMP DA ÚLTIMA ATUALIZAÇÃO (só visual — não alimenta mais a ordem da fila, isso agora é
+// 100% responsabilidade do servidor) ────────────────────────────────────────────────────────────
 const TS_KEY = 'lifeb_ts_' + 'IRAMAR';
 let _tsMap = {};
 try { _tsMap = JSON.parse(localStorage.getItem(TS_KEY) || '{}'); } catch(_) {}
@@ -749,10 +825,12 @@ function doContactWa(row) {
   }
 }
 
+// v1 mandava isso pro proxy do Sheets pra marcar TIMESTAMP_VEND (usado só pra ordenar a fila). O
+// backend novo não tem — e não precisa: a fila agora é 100% responsabilidade do servidor (ver
+// ordenarFila). Mantém só o carimbo local de "atualizado agora" pro rep ter feedback visual
+// imediato ao abrir o WhatsApp — não escreve em lugar nenhum no servidor.
 function trackPrimeiroContato(row) {
-  fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
-    body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, action:'set_primeiro_contato' }) })
-    .catch(err => console.error('trackPrimeiroContato failed:', err));
+  setLeadTs(row);
 }
 
 function buildMapsUrl(empresa, cidade, estado) {
@@ -795,113 +873,56 @@ function loadEnd() {
   if (b) { b.classList.remove('running'); b.style.opacity='0'; }
 }
 
-// ── TOAST + UNDO ───────────────────────────────────────────────
-// Dois mecanismos de undo coexistem:
-//
-// 1. _undoPending (undo simples)
-//    Usado para obs-only e pot-only (ações que NÃO entram em concluding mode).
-//    O toast aparece imediatamente após a ação e _undoPending guarda o que reverter.
-//
-// 2. _pendingUndoByRow (undo deferido — concluding mode)
-//    Usado para mudanças de status. O toast só aparece DEPOIS que o rep termina
-//    o passo de obs (concludeCard). Enquanto isso, as ações ficam acumuladas em
-//    _pendingUndoByRow[row] e podem receber mais campos (ex: obs + status juntos).
-//    Quando concludeCard dispara, move o pendente para _undoPending via showUndoToast.
+// ── CHAMADAS DE ESCRITA (backend novo) ──────────────────────────────────────────────────────────
+// Todos os 4 endpoints de escrita (task/create, task/finish, obs, status) usam o mesmo formato:
+// POST, Authorization: Bearer <token> (nunca token na URL), corpo JSON. Erro de rede ou resposta
+// {ok:false} vira uma Exception com mensagem legível — quem chama decide o que fazer na tela (nunca
+// finge sucesso). Ver nota no topo do arquivo: estes endpoints ainda não existem em produção nesta
+// data — toda chamada aqui vai falhar até a Frente A (backend) publicar.
+async function apiPost(path, body, timeoutMs) {
+  loadStart();
+  const _ctrl = new AbortController();
+  const _tid  = setTimeout(() => _ctrl.abort(), timeoutMs || 25000);
+  try {
+    let res;
+    try {
+      res = await fetch(API_URL + path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + REP_TOKEN },
+        body: JSON.stringify(body),
+        signal: _ctrl.signal,
+      });
+    } catch (netErr) {
+      if (netErr && netErr.name === 'AbortError') throw new Error('Tempo esgotado. Verifique sua conexão e tente de novo.');
+      throw new Error('Sem conexão com o servidor. Tente novamente.');
+    }
+    let data = {};
+    try { data = await res.json(); } catch (_) {}
+    if (!res.ok || data.ok === false) {
+      throw new Error(data.erro || data.error || data.aviso || ('Erro ' + res.status));
+    }
+    return data;
+  } finally {
+    clearTimeout(_tid);
+    loadEnd();
+  }
+}
+
+// Reconfirma com o servidor, alguns segundos depois de uma escrita, que o dado realmente gravou —
+// nunca confiamos só no otimismo local (regra permanente do projeto: nunca confiar em 200 OK).
+function scheduleReload(delayMs) {
+  setTimeout(function () { loadData(); }, delayMs || 3000);
+}
+
+// ── TOAST (simples — sem "desfazer": ver nota no topo sobre por que o undo genérico foi removido) ──
 let _toastTimer;
-let _undoPending = null;
-const _pendingUndoByRow = {};
-
-function showToast(msg, ms=2600) {
+function showToast(msg, ms) {
   const el = document.getElementById('toast');
   if (!el) return;
-  _undoPending = null;
-  el.textContent = msg;
+  el.innerHTML = `<span>${esc(msg)}</span>`;
   el.classList.add('show');
   clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => el.classList.remove('show'), ms);
-}
-
-function showUndoToast(msg, undoData, ms=8000) {
-  const el = document.getElementById('toast');
-  if (!el) return;
-  _undoPending = undoData;
-  el.innerHTML = `<span>${esc(msg)}</span><button class="toast-undo-btn" onclick="undoLast()">↩ Desfazer</button>`;
-  el.classList.add('show');
-  clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => { el.classList.remove('show'); _undoPending = null; }, ms);
-}
-
-function undoLast() {
-  if (!_undoPending) return;
-  const pending = _undoPending;
-  _undoPending = null;
-  const el = document.getElementById('toast');
-  if (el) el.classList.remove('show');
-
-  function applyField(lead, campo, valor) {
-    if      (campo === 'STATUS_VENDEDOR')  lead.status      = valor;
-    else if (campo === 'OBS_VENDEDOR')     lead.obs         = valor;
-    else if (campo === 'VALOR_POTENCIAL')  lead.pot         = parseFloat(valor) || 0;
-    else if (campo === 'VALOR_FECHADO')    lead.valor_fech  = parseFloat(valor) || 0;
-    else if (campo === 'MOTIVO_PERDA')     lead.motivo_perd = valor;
-    else if (campo === 'DATA_FECH')        lead.data_f      = valor;
-    else if (campo === 'TIMESTAMP') {
-      const ts = valor ? parseInt(valor) : 0;
-      lead.ts_vend = ts;
-      if (ts) _tsMap[lead.row] = ts;
-      else delete _tsMap[lead.row];
-      try { localStorage.setItem(TS_KEY, JSON.stringify(_tsMap)); } catch(_) {}
-    }
-  }
-
-  const actions = pending.isMulti ? pending.actions : [{ row: pending.row, campo: pending.campo, valor: pending.valor }];
-
-  // Optimistic: apply all reverts to _rawLeads immediately
-  if (pending.isMulti && pending.leadSnapshot) {
-    // Lead was removed from active list — restore it with reverted fields
-    const snap = { ...pending.leadSnapshot };
-    for (const { campo, valor } of actions) applyField(snap, campo, valor);
-    if (!_rawLeads.find(l => l.row === snap.row)) _rawLeads.push(snap);
-  } else {
-    for (const { row, campo, valor } of actions) {
-      const lead = _rawLeads.find(l => l.row === row);
-      if (lead) applyField(lead, campo, valor);
-    }
-  }
-
-  const undoRow = actions.length > 0 ? actions[0].row : null;
-  // Sync in-memory history: lead was added optimistically by saveStatusExtra — remove it on undo
-  // so it doesn't appear in both active list and historico simultaneously.
-  if (pending.isMulti && pending.leadSnapshot && _history !== null && undoRow) {
-    const hi = _history.findIndex(l => l.row === undoRow);
-    if (hi >= 0) _history.splice(hi, 1);
-  }
-  renderLeads(_rawLeads, undoRow);
-  if (undoRow) setTimeout(function() {
-    const c = document.querySelector('.lead-card[data-row="' + undoRow + '"]');
-    if (c) c.scrollIntoView({ behavior:'smooth', block:'center' });
-  }, 60);
-  // Re-render historico if open so the count and list update immediately
-  if (pending.isMulti && pending.leadSnapshot) {
-    const histSec = document.getElementById('historico-section');
-    if (histSec && histSec.classList.contains('open')) renderHistorico();
-  }
-  showToast('Desfeito ✓');
-
-  // POST all reverts in background
-  for (const { row, campo, valor } of actions) {
-    if (campo === 'TIMESTAMP') {
-      // Reverte TIMESTAMP_VEND no servidor pro valor antigo — mantém posição correta na fila após poll.
-      // Só envia se havia timestamp real (leads nunca tocados têm valor vazio — sort ignora ts_vend neles).
-      if (valor) fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
-        body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'TIMESTAMP_VEND', valor: String(valor) }) })
-        .catch(() => {});
-      continue;
-    }
-    fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo, valor: String(valor) }) })
-      .catch(() => {});
-  }
+  _toastTimer = setTimeout(() => el.classList.remove('show'), ms || 3200);
 }
 
 // ── REFRESH DOT ────────────────────────────────────────────────
@@ -947,8 +968,6 @@ function clearFilter() {
   if (bar) bar.classList.remove('visible');
   if (_rawLeads.length) renderLeads(_rawLeads);
 }
-// no-op: filtering is now handled in renderLeads (JS slice of filtered set)
-function applyFilter() {}
 
 // ── BUSCA ──────────────────────────────────────────────────────
 let _searchQuery = '';
@@ -978,7 +997,6 @@ function _matchesPhrase(l) {
 }
 // Fase 2: cada palavra tem que bater em algum campo (AND tokens)
 function _matchesSearch(l) {
-  // normaliza acentos mas preserva espaços para o split — _norm remove espaços, não usar aqui
   const rawNorm = _searchQuery.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   const tokens = rawNorm.split(/\s+/).filter(Boolean);
   if (!tokens.length) return true;
@@ -995,8 +1013,6 @@ function _matchesSearch(l) {
     return false;
   });
 }
-// Decisão global: se a frase bate em algum lugar do sistema (ativos ou histórico),
-// usa frase em todo lugar. Senão usa token AND. Um ponto de decisão, comportamento consistente.
 function _applySearch(leads) {
   const universe = _rawLeads.concat(Array.isArray(_history) ? _history : []);
   const phraseWins = universe.some(_matchesPhrase);
@@ -1063,34 +1079,25 @@ function showLess() {
   if (list) list.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// ── CONCLUDING MODE (obs step after status change) ─────────────
-// ── CONCLUDING MODE ────────────────────────────────────────────
-// Fluxo de 3 etapas acionado após qualquer mudança de status:
-//   1. enterConcludingMode(row) — expande o card, abre textarea de obs,
-//      muda botão salvar para "Salvar e concluir". Rep pode escrever anotações.
-//   2. saveObs(row) com isConcluding=true, OU clique em "Pular →"
-//      → ambos chamam concludeCard(row).
-//   3. concludeCard(row) — exibe o toast de undo acumulado,
-//      adiciona animação going-down e chama renderLeads para reordenar a fila.
-// IMPORTANTE: o card só sai da posição atual no passo 3. Antes disso ele
-// permanece visível para o rep terminar as anotações sem perder o contexto.
+// ── CONCLUDING MODE (nota final opcional após Marcar Ganho) ────────────────────────────────────
+// Fluxo: 1) submitStatusPrompt confirma o Ganho no servidor, então chama enterConcludingMode —
+// expande o card e abre a caixa de observação. 2) rep escreve (ou não) e clica Salvar/"Pular →" —
+// ambos chamam concludeCard. 3) concludeCard anima o card saindo e o remove da lista ativa (o lead
+// já não está mais "Em andamento" no Agendor, então some do /leads na próxima carga de qualquer
+// forma — isso só faz a transição ficar visualmente suave em vez de sumir sem aviso no meio do poll).
 function enterConcludingMode(row) {
   const card = document.querySelector(`.lead-card[data-row="${row}"]`);
   if (!card) return;
   card.classList.add('concluding');
-  // Auto-expand
   if (!card.classList.contains('expanded')) {
     card.classList.add('expanded');
     const btn = card.querySelector('.lc-toggle');
     if (btn) { const tt=btn.querySelector('.tt'); if(tt) tt.textContent='menos'; btn.setAttribute('aria-expanded','true'); }
   }
-  // Enter obs edit mode
   const rep = document.getElementById('obsr-' + row);
   if (rep && !rep.classList.contains('editing')) rep.classList.add('editing');
-  // Change save button label
   const saveBtn = document.getElementById('obs-save-' + row);
   if (saveBtn) saveBtn.textContent = 'Salvar e concluir';
-  // Focus textarea and scroll to make it visible above the mobile keyboard
   const ta = document.getElementById('obs-' + row);
   if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
   const scrollObs = () => {
@@ -1099,7 +1106,7 @@ function enterConcludingMode(row) {
     editWrap.scrollIntoView({ behavior:'smooth', block:'center' });
   };
   setTimeout(scrollObs, 80);
-  setTimeout(scrollObs, 380); // re-scroll after mobile keyboard has finished opening
+  setTimeout(scrollObs, 380);
 }
 function clearObs(row) {
   const ta = document.getElementById('obs-' + row);
@@ -1109,27 +1116,32 @@ function maybeConclude(row) {
   const ta  = document.getElementById('obs-' + row);
   const rep = document.getElementById('obsr-' + row);
   const saved = rep ? (rep.dataset.saved || '') : '';
-  if (ta && ta.value.trim() !== saved.trim()) {
+  if (ta && ta.value.trim() !== saved.trim() && ta.value.trim() !== '') {
     if (!confirm('Tem texto não salvo nas observações. Descartar e pular?')) return;
   }
   concludeCard(row);
 }
-function concludeCard(row) {
+// Remove o lead da lista ativa com animação e o acrescenta (localmente) ao topo do Histórico já
+// carregado, se houver — depois reconfirma com o servidor (scheduleReload) que gravou de verdade.
+function _removeLeadToHistory(row) {
   const card = document.querySelector(`.lead-card[data-row="${row}"]`);
-  if (!card) return;
-  // Show deferred undo toast now that the rep finished the obs step
-  if (_pendingUndoByRow[row]) {
-    const { msg, data } = _pendingUndoByRow[row];
-    delete _pendingUndoByRow[row];
-    showUndoToast(msg, data);
-  }
-  card.classList.add('going-down');
-  setTimeout(() => {
-    // Guard: poll may have re-added this row to _rawLeads while in concluding mode
-    const _ci = _rawLeads.findIndex(l => l.row === row);
-    if (_ci >= 0) _rawLeads.splice(_ci, 1);
-    renderLeads(_rawLeads, row);
-  }, 700);
+  const doRemove = () => {
+    const idx = _rawLeads.findIndex(l => l.row === row);
+    let snap = null;
+    if (idx >= 0) { snap = _rawLeads[idx]; _rawLeads.splice(idx, 1); }
+    if (snap && _history !== null) _history.unshift(snap);
+    renderLeads(_rawLeads);
+    if (_history !== null) {
+      const sec = document.getElementById('historico-section');
+      if (sec && sec.classList.contains('open')) renderHistorico();
+    }
+    scheduleReload(2500);
+  };
+  if (card) { card.classList.add('going-down'); setTimeout(doRemove, 700); }
+  else doRemove();
+}
+function concludeCard(row) {
+  _removeLeadToHistory(row);
 }
 
 // ── EXPAND TOGGLE ─────────────────────────────────────────────
@@ -1146,7 +1158,6 @@ function toggleExpand(btn) {
 // ── FECHAR UI DE OUTROS CARDS ────────────────────────────────────
 function closeOtherCardUi(exceptRow) {
   const er = String(exceptRow);
-  // Painéis de contato
   document.querySelectorAll('.lc-contact-panel').forEach(panel => {
     const row = panel.id.replace('cp-', '');
     if (row === er || panel.style.display !== 'block') return;
@@ -1155,21 +1166,16 @@ function closeOtherCardUi(exceptRow) {
     const btn = document.querySelector(`.lead-card[data-row="${row}"] .lc-icon-btn.contact`);
     if (btn) { btn.classList.remove('active'); btn.setAttribute('aria-expanded','false'); }
   });
-  // Confirmações abertas
   document.querySelectorAll('.lc-confirm.visible').forEach(el => {
     const m = el.id.match(/(\d+)$/);
     if (!m || m[1] === er) return;
     el.classList.remove('visible');
-    if (el.id.startsWith('conf-')) {
-      const sw = document.getElementById('selwrap-' + m[1]);
-      const ts = document.getElementById('ts-' + m[1]);
-      if (sw) sw.style.display = '';
-      if (ts) ts.style.display = '';
-    }
   });
-  // Prompts de fechado/perdido/negociação
   document.querySelectorAll('.lc-status-prompt.visible').forEach(el => {
     if (el.id.replace('sp-','') !== er) el.classList.remove('visible');
+  });
+  document.querySelectorAll('.lc-task-form.visible').forEach(el => {
+    if (el.id.replace('task-form-','') !== er) el.classList.remove('visible');
   });
 }
 
@@ -1184,9 +1190,7 @@ function openLinkConfirm(btn) {
   const confId = row ? (prefix + '-' + row) : null;
   const conf   = confId ? document.getElementById(confId) : null;
   if (!conf) { window.open(url, '_blank', 'noopener,noreferrer'); return; }
-  // Fechar UI de outros cards (só em leads ativos, não histórico)
   if (row && !isHist) closeOtherCardUi(row);
-  // Fechar painel de contato e status do mesmo card
   if (row && !isHist) {
     const cp = document.getElementById('cp-' + row);
     if (cp && cp.style.display === 'block') {
@@ -1196,16 +1200,9 @@ function openLinkConfirm(btn) {
     }
     const sp = document.getElementById('sp-' + row);
     if (sp) sp.classList.remove('visible');
-    const statusConf = document.getElementById('conf-' + row);
-    if (statusConf) {
-      statusConf.classList.remove('visible');
-      const sw = document.getElementById('selwrap-' + row);
-      const ts = document.getElementById('ts-' + row);
-      if (sw) sw.style.display = '';
-      if (ts) ts.style.display = '';
-    }
+    const tf = document.getElementById('task-form-' + row);
+    if (tf) tf.classList.remove('visible');
   }
-  // Definir ícone e rótulo
   const isWa = btn.classList.contains('wa');
   const icon = conf.querySelector('.lc-confirm-icon');
   if (icon) icon.textContent = isWa ? '💬' : '📍';
@@ -1243,92 +1240,104 @@ function toggleContact(btn, row) {
   btn.classList.toggle('active', !isOpen);
   btn.setAttribute('aria-expanded', !isOpen);
   if (!isOpen) {
-    // Abrindo: fechar UI de outros cards primeiro
     closeOtherCardUi(row);
-    // Fechar confirms e prompts do mesmo card
     const lc = document.getElementById('lc-' + row);
     if (lc) lc.classList.remove('visible');
     const sp = document.getElementById('sp-' + row);
     if (sp) sp.classList.remove('visible');
-    const sc = document.getElementById('conf-' + row);
-    if (sc) {
-      sc.classList.remove('visible');
-      const sw = document.getElementById('selwrap-' + row);
-      const ts = document.getElementById('ts-' + row);
-      if (sw) sw.style.display = '';
-      if (ts) ts.style.display = '';
-    }
+    const tf = document.getElementById('task-form-' + row);
+    if (tf) tf.classList.remove('visible');
   }
 }
 
-// ── VALOR POTENCIAL INLINE EDIT ────────────────────────────────
-function startPotEdit(row) {
-  const disp  = document.getElementById('pot-disp-' + row);
-  const iWrap = document.getElementById('pot-input-wrap-' + row);
-  const input = document.getElementById('pot-input-' + row);
-  const prev  = document.getElementById('pot-preview-' + row);
-  if (disp)  disp.style.display  = 'none';
-  if (iWrap) iWrap.style.display = 'block';
-  if (prev) { const lead = _rawLeads.find(l => l.row === row); prev.textContent = lead && lead.pot > 0 ? cur(lead.pot) : ''; }
-  if (input) { input.focus(); input.select(); }
+// ── TAREFA ABERTA (criar / concluir) ────────────────────────────────────────────────────────────
+function _tarefaBlockHtml(l) {
+  const t = l.tarefaAberta;
+  if (!t) {
+    return `<div class="lc-task-row warn">
+      <span class="lc-task-icon">⚠️</span>
+      <div class="lc-task-info"><div class="lc-task-text">Sem tarefa aberta</div></div>
+      <button class="lc-task-btn" onclick="showTaskForm(${l.row})">+ Criar</button>
+    </div>`;
+  }
+  if (!t.texto && !t.id) {
+    // fallback pré-A1: backend ainda não expõe id/texto da tarefa, só sabemos que existe uma aberta
+    return `<div class="lc-task-row ok">
+      <span class="lc-task-icon">📌</span>
+      <div class="lc-task-info"><div class="lc-task-text">Tem tarefa aberta (detalhes chegam quando o backend novo subir essa parte)</div></div>
+    </div>`;
+  }
+  const dueRaw  = t.dueDate ? String(t.dueDate).slice(0,10) : '';
+  const hojeYMD = new Date().toISOString().slice(0,10);
+  const late    = !!(dueRaw && dueRaw < hojeYMD);
+  const dueLbl  = dueRaw ? ('Vence ' + fmtData(dueRaw)) : 'Sem data de vencimento';
+  const finishBtn = t.id ? `<button class="lc-task-btn finish" onclick="finishTask(${l.row}, ${Number(t.id)})">✓ Concluir</button>` : '';
+  return `<div class="lc-task-row ${late ? 'late' : 'ok'}">
+    <span class="lc-task-icon">${late ? '🔴' : '📌'}</span>
+    <div class="lc-task-info"><div class="lc-task-text">${esc(t.texto||'Tarefa aberta')}</div><div class="lc-task-due">${esc(dueLbl)}</div></div>
+    ${finishBtn}
+  </div>`;
 }
-function cancelPotEdit(row) {
-  const disp  = document.getElementById('pot-disp-' + row);
-  const iWrap = document.getElementById('pot-input-wrap-' + row);
-  const prev  = document.getElementById('pot-preview-' + row);
-  if (disp)  disp.style.display  = '';
-  if (iWrap) iWrap.style.display = 'none';
-  if (prev)  prev.textContent    = '';
+function showTaskForm(row) {
+  closeOtherCardUi(row);
+  const form = document.getElementById('task-form-' + row);
+  if (!form) return;
+  form.classList.add('visible');
+  const dateIn = document.getElementById('task-due-' + row);
+  if (dateIn && !dateIn.value) {
+    const d = new Date(); d.setDate(d.getDate() + 1);
+    dateIn.value = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  const ta = document.getElementById('task-texto-' + row);
+  if (ta) ta.focus();
 }
-async function savePot(row) {
-  const btn = document.querySelector('.lead-card[data-row="' + row + '"] .lc-pot-save');
+function hideTaskForm(row) {
+  const form = document.getElementById('task-form-' + row);
+  if (form) form.classList.remove('visible');
+}
+async function saveTask(row) {
+  const btn = document.getElementById('task-save-' + row);
   if (btn && btn.classList.contains('saving')) return;
+  const ta     = document.getElementById('task-texto-' + row);
+  const dateIn = document.getElementById('task-due-' + row);
+  const texto  = ta ? ta.value.trim() : '';
+  const dueDate = dateIn ? dateIn.value : '';
+  if (!texto)   { showToast('Escreva o que precisa ser feito'); if (ta) ta.focus(); return; }
+  if (!dueDate) { showToast('Escolha a data de vencimento'); if (dateIn) dateIn.focus(); return; }
   if (btn) btn.classList.add('saving');
-  const input = document.getElementById('pot-input-' + row);
-  if (!input) { if (btn) btn.classList.remove('saving'); return; }
-  const n = parseMoney(input.value);
-  if (isNaN(n) || n < 0) { if (btn) btn.classList.remove('saving'); showToast('Valor inválido'); return; }
-  const lead   = _rawLeads.find(l => l.row === row);
-  const oldPot = lead ? String(lead.pot || 0) : '0';
-
-  // optimistic: update UI immediately
-  if (lead) lead.pot = n;
-  const disp  = document.getElementById('pot-disp-' + row);
-  const iWrap = document.getElementById('pot-input-wrap-' + row);
-  const potEl = disp ? disp.querySelector('.lc-pot') : null;
-  if (potEl) potEl.innerHTML = (n > 0 ? esc(cur(n)) : '<span class="lc-pot-no-val">–</span>') + ` <span class="lc-pot-edit-icon">${SVG_EDIT}</span>`;
-  if (disp)  disp.style.display  = '';
-  if (iWrap) iWrap.style.display = 'none';
-  setLeadTs(row);
-  showUndoToast('Valor potencial atualizado ✓', { row, campo:'VALOR_POTENCIAL', valor:oldPot });
-
-  // background POST
   try {
-    const _ctrl = new AbortController();
-    const _tid  = setTimeout(() => _ctrl.abort(), 25000);
-    const res  = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'VALOR_POTENCIAL', valor:String(n) }),
-      signal: _ctrl.signal });
-    clearTimeout(_tid);
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error);
-  } catch(err) {
-    console.error('savePot failed:', err);
-    // revert
-    if (lead) lead.pot = parseFloat(oldPot) || 0;
-    const oldN = parseFloat(oldPot) || 0;
-    if (potEl) potEl.innerHTML = (oldN > 0 ? esc(cur(oldN)) : '<span class="lc-pot-no-val">–</span>') + ` <span class="lc-pot-edit-icon">${SVG_EDIT}</span>`;
-    showToast('Erro ao salvar. Alteração revertida.');
+    const data = await apiPost('/task/create', { dealId: row, texto, dueDate });
+    const lead = _rawLeads.find(l => l.row === row);
+    if (lead) lead.tarefaAberta = { id: (data && (data.taskId || data.id)) || null, texto, dueDate };
+    hideTaskForm(row);
+    if (ta) ta.value = '';
+    showToast('Tarefa criada ✓');
+    renderLeads(_rawLeads, row);
+    scheduleReload();
+  } catch (err) {
+    console.error('saveTask failed:', err);
+    showToast('Erro ao criar tarefa: ' + err.message);
   } finally {
     if (btn) btn.classList.remove('saving');
   }
 }
-function potKeyDown(e, row) {
-  if (e.key === 'Enter')  { e.preventDefault(); savePot(row); }
-  if (e.key === 'Escape') cancelPotEdit(row);
+async function finishTask(row, taskId) {
+  if (!taskId) { showToast('Não deu pra identificar a tarefa — recarregue a página e tente de novo'); return; }
+  if (!confirm('Marcar esta tarefa como concluída?')) return;
+  try {
+    await apiPost('/task/finish', { dealId: row, taskId });
+    const lead = _rawLeads.find(l => l.row === row);
+    if (lead) lead.tarefaAberta = null;
+    showToast('Tarefa concluída ✓');
+    renderLeads(_rawLeads, row);
+    scheduleReload();
+  } catch (err) {
+    console.error('finishTask failed:', err);
+    showToast('Erro ao concluir tarefa: ' + err.message);
+  }
 }
 
-// ── OBS REP VIEW/EDIT ──────────────────────────────────────────
+// ── OBS (unificada com "Obs. do SDR" — ver nota no topo do arquivo) ─────────────────────────────
 function buildObsViewHtml(row, obs) {
   if (obs && obs.trim())
     return `<div class="obsr-text" id="obsr-text-${row}">${esc(obs)}</div>
@@ -1350,477 +1359,157 @@ function cancelObsEdit(row) {
   rep.classList.remove('editing');
 }
 async function saveObs(row) {
-  const btn  = document.getElementById('obs-save-' + row);
+  const btn = document.getElementById('obs-save-' + row);
   if (btn && btn.classList.contains('saving')) return;
+  const ta  = document.getElementById('obs-' + row);
+  const rep = document.getElementById('obsr-' + row);
+  if (!ta) return;
+  const texto = ta.value.trim();
+  if (!texto) { showToast('Escreva algo antes de salvar'); ta.focus(); return; }
   if (btn) btn.classList.add('saving');
-  const ta   = document.getElementById('obs-' + row);
-  const fbEl = document.getElementById('obs-fb-' + row);
-  const rep  = document.getElementById('obsr-' + row);
-  if (!ta) { if (btn) btn.classList.remove('saving'); return; }
-  const valor  = ta.value.trim();
-  const oldObs = rep ? (rep.dataset.saved || '') : '';
-
-  // optimistic: show new text immediately
-  const lead = _rawLeads.find(l => l.row === row);
-  if (lead) lead.obs = valor;
-  if (rep) {
-    rep.dataset.saved = valor;
-    rep.classList.remove('editing');
-    const viewDiv = rep.querySelector('.obsr-view');
-    if (viewDiv) viewDiv.innerHTML = buildObsViewHtml(row, valor);
-  }
-  if (fbEl) fbEl.textContent = '';
-
-  setLeadTs(row);
-
-  // In concluding mode, merge obs into the pending undo and conclude
-  const card = document.querySelector(`.lead-card[data-row="${row}"]`);
-  const isConcluding = card && card.classList.contains('concluding');
-  if (!isConcluding) {
-    showUndoToast('Observação salva ✓', { isMulti:true, leadSnapshot:null, actions:[{ row, campo:'OBS_VENDEDOR', valor:oldObs }] });
-  } else {
-    // Append obs undo to whatever is already pending for this card
-    if (_pendingUndoByRow[row]) {
-      _pendingUndoByRow[row].data.actions.push({ row, campo:'OBS_VENDEDOR', valor:oldObs });
-    } else {
-      _pendingUndoByRow[row] = { msg:'Observação salva ✓', data:{ isMulti:true, leadSnapshot:null, actions:[{ row, campo:'OBS_VENDEDOR', valor:oldObs }] } };
-    }
-    concludeCard(row);
-  }
-
-  // background POST
   try {
-    const _ctrl = new AbortController();
-    const _tid  = setTimeout(() => _ctrl.abort(), 25000);
-    const res  = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'OBS_VENDEDOR', valor }),
-      signal: _ctrl.signal });
-    clearTimeout(_tid);
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error);
-  } catch(err) {
-    console.error('saveObs failed:', err);
-    if (lead) lead.obs = oldObs;
+    await apiPost('/obs', { dealId: row, texto });
+    const lead = _rawLeads.find(l => l.row === row);
+    if (lead) lead.obs_sdr = texto;
     if (rep) {
-      rep.dataset.saved = oldObs;
+      rep.dataset.saved = texto;
+      rep.classList.remove('editing');
       const viewDiv = rep.querySelector('.obsr-view');
-      if (viewDiv) viewDiv.innerHTML = buildObsViewHtml(row, oldObs);
+      if (viewDiv) viewDiv.innerHTML = buildObsViewHtml(row, texto);
     }
-    showToast('Erro ao salvar. Alteração revertida.');
+    setLeadTs(row);
+    showToast('Observação salva ✓');
+    const card = document.querySelector(`.lead-card[data-row="${row}"]`);
+    if (card && card.classList.contains('concluding')) concludeCard(row);
+    else scheduleReload(2500);
+  } catch (err) {
+    console.error('saveObs failed:', err);
+    showToast('Erro ao salvar observação: ' + err.message);
   } finally {
     if (btn) btn.classList.remove('saving');
   }
 }
 
-// ── PROMPT FECHADO / PERDIDO ───────────────────────────────────
-function showStatusPrompt(row, status) {
-  const prompt   = document.getElementById('sp-' + row);
+// ── MARCAR GANHO / PERDIDO ───────────────────────────────────────────────────────────────────────
+// Sem otimismo de UI aqui: só mexe em _rawLeads/DOM DEPOIS de confirmar sucesso no servidor. Não
+// existe endpoint de "desfazer" pra isso (Agendor não tem um "reabrir negócio" nesta API) — por
+// isso o aviso explícito na tela em vez de um toast de undo que não desfaria nada de verdade.
+function openGanhoPrompt(row) {
+  closeOtherCardUi(row);
+  const prompt = document.getElementById('sp-' + row);
   if (!prompt) return;
-  const lbl      = prompt.querySelector('.lc-sp-label');
-  const input    = document.getElementById('sp-input-' + row);
-  const pfxWrap  = document.getElementById('sp-pfx-wrap-' + row);
-  const sel      = document.getElementById('sp-sel-' + row);
-  const dateWrap = document.getElementById('sp-date-wrap-' + row);
-  const dateIn   = document.getElementById('sp-date-' + row);
-  const skipBtn  = document.getElementById('sp-skip-' + row);
-  const preview  = document.getElementById('sp-preview-' + row);
-  if (status === 'Fechado') {
-    if (lbl)      lbl.textContent = '💰 Qual foi o valor do fechamento?';
-    if (pfxWrap)  pfxWrap.style.display = '';
-    if (input)    { input.value = ''; input.style.display = ''; }
-    if (preview)  preview.textContent = '';
-    if (sel)      sel.style.display = 'none';
-    if (dateWrap) dateWrap.style.display = 'none';
-    if (dateIn)   dateIn.value = '';
-    if (skipBtn)  skipBtn.style.display = 'none';
-    prompt.dataset.tipo = 'fechado';
-    prompt.dataset.step = 'valor';
-    prompt.dataset.valorFech = '';
-    const saveBtn = prompt.querySelector('.lc-sp-save');
-    if (saveBtn) saveBtn.textContent = 'Avançar →';
-    if (input) input.focus();
-  } else if (status === 'Perdido') {
-    if (lbl)      lbl.textContent = '❌ Qual o motivo da perda?';
-    if (pfxWrap)  pfxWrap.style.display = 'none';
-    if (preview)  preview.textContent = '';
-    if (sel)      { sel.value = ''; sel.style.display = ''; }
-    if (dateWrap) dateWrap.style.display = 'none';
-    if (skipBtn)  skipBtn.style.display = 'none';
-    prompt.dataset.tipo = 'perdido';
-    if (sel) sel.focus();
-  } else if (status === 'negociacao') {
-    if (lbl)      lbl.textContent = '💰 Valor potencial (opcional)';
-    if (pfxWrap)  pfxWrap.style.display = '';
-    if (input)    { input.value = ''; input.style.display = ''; }
-    if (preview)  preview.textContent = '';
-    if (sel)      sel.style.display = 'none';
-    if (dateWrap) dateWrap.style.display = 'none';
-    if (skipBtn)  skipBtn.style.display = '';
-    prompt.dataset.tipo = 'negociacao';
-    if (input) input.focus();
-  }
+  prompt.dataset.tipo = 'ganho';
+  prompt.dataset.step = 'valor';
+  const lbl = document.getElementById('sp-label-' + row);
+  if (lbl) lbl.textContent = '💰 Qual foi o valor do fechamento?';
+  const rowValor = document.getElementById('sp-row-valor-' + row);
+  if (rowValor) rowValor.style.display = '';
+  const motivoSel = document.getElementById('sp-motivo-' + row);
+  if (motivoSel) motivoSel.style.display = 'none';
+  const obsTa = document.getElementById('sp-obs-' + row);
+  if (obsTa) obsTa.style.display = 'none';
+  const warn = document.getElementById('sp-warn-' + row);
+  if (warn) warn.style.display = '';
+  const valorIn = document.getElementById('sp-valor-' + row);
+  if (valorIn) valorIn.value = '';
+  const preview = document.getElementById('sp-preview-' + row);
+  if (preview) preview.textContent = '';
+  const saveBtn = document.getElementById('sp-save-' + row);
+  if (saveBtn) saveBtn.textContent = 'Confirmar Ganho';
   prompt.classList.add('visible');
+  if (valorIn) valorIn.focus();
+}
+function openPerdidoPrompt(row) {
+  closeOtherCardUi(row);
+  const prompt = document.getElementById('sp-' + row);
+  if (!prompt) return;
+  prompt.dataset.tipo = 'perdido';
+  prompt.dataset.step = 'motivo';
+  const lbl = document.getElementById('sp-label-' + row);
+  if (lbl) lbl.textContent = '❌ Qual o motivo da perda?';
+  const rowValor = document.getElementById('sp-row-valor-' + row);
+  if (rowValor) rowValor.style.display = 'none';
+  const motivoSel = document.getElementById('sp-motivo-' + row);
+  if (motivoSel) { motivoSel.value = ''; motivoSel.style.display = ''; }
+  const obsTa = document.getElementById('sp-obs-' + row);
+  if (obsTa) { obsTa.value = ''; obsTa.style.display = 'none'; }
+  const warn = document.getElementById('sp-warn-' + row);
+  if (warn) warn.style.display = 'none';
+  const saveBtn = document.getElementById('sp-save-' + row);
+  if (saveBtn) saveBtn.textContent = 'Avançar →';
+  prompt.classList.add('visible');
+  if (motivoSel) motivoSel.focus();
 }
 function cancelStatusPrompt(row) {
   const prompt = document.getElementById('sp-' + row);
-  if (!prompt) return;
-  const tipo      = prompt.dataset.tipo      || '';
-  const oldStatus = prompt.dataset.oldStatus || '';
-  prompt.classList.remove('visible');
-
-  if (tipo === 'negociacao') {
-    // Status foi aplicado otimisticamente — reverter tudo (status, ts_vend, select, servidor)
-    const pending  = _pendingUndoByRow[row];
-    const oldTsAct = pending && pending.data ? (pending.data.actions || []).find(a => a.campo === 'TIMESTAMP') : null;
-    const oldTs    = oldTsAct ? oldTsAct.valor : '';
-    const ts       = oldTs ? parseInt(oldTs) : 0;
-    const raw      = _rawLeads.find(l => l.row === row);
-    if (raw) { raw.status = oldStatus; raw.ts_vend = ts; }
-    if (ts) _tsMap[row] = ts; else delete _tsMap[row];
-    try { localStorage.setItem(TS_KEY, JSON.stringify(_tsMap)); } catch(_) {}
-    const sel = document.querySelector(`.lc-select[data-row="${row}"]`);
-    if (sel) { sel.value = oldStatus; sel.className = 'lc-select ' + statusClass(oldStatus); sel.dataset.original = oldStatus; }
-    const card = document.querySelector(`.lead-card[data-row="${row}"]`);
-    if (card) { card.classList.remove('ag','cont','neg'); const bc = borderClass(oldStatus); if (bc) card.classList.add(bc); }
-    const tsEl = document.getElementById('ts-' + row);
-    if (tsEl) tsEl.textContent = getLeadTs(row, null, ts);
-    delete _pendingUndoByRow[row];
-    fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'STATUS_VENDEDOR', valor:oldStatus }) }).catch(() => {});
-    if (oldTs) fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'TIMESTAMP_VEND', valor:oldTs }) }).catch(() => {});
-    renderLeads(_rawLeads);
-  } else {
-    // Fechado / Perdido — form cancelado: reverte select e borda do card
-    const sel = document.querySelector(`.lc-select[data-row="${row}"]`);
-    if (sel) { sel.value = oldStatus; sel.className = 'lc-select ' + statusClass(oldStatus); sel.dataset.original = oldStatus; }
-    const card2 = sel ? sel.closest('.lead-card') : document.querySelector(`.lead-card[data-row="${row}"]`);
-    if (card2) { card2.classList.remove('ag','cont','neg'); const bc = borderClass(oldStatus); if (bc) card2.classList.add(bc); }
-    delete _pendingUndoByRow[row];
-  }
+  if (prompt) { prompt.classList.remove('visible'); prompt.dataset.tipo = ''; prompt.dataset.step = ''; }
 }
-
-function skipPotPrompt(row) {
+function spKeyDown(e, row) {
+  if (e.key === 'Enter') { e.preventDefault(); submitStatusPrompt(row); }
+}
+async function submitStatusPrompt(row) {
   const prompt = document.getElementById('sp-' + row);
-  if (prompt) prompt.classList.remove('visible');
-  enterConcludingMode(row);
-}
-function _revertOptimisticClose(row) {
-  const undoData = _pendingUndoByRow[row];
-  if (undoData && undoData.data) {
-    const snap    = undoData.data.leadSnapshot;
-    const actions = undoData.data.actions || [];
-    const tsAct   = actions.find(a => a.campo === 'TIMESTAMP');
-    if (tsAct) {
-      if (tsAct.valor) _tsMap[row] = parseInt(tsAct.valor); else delete _tsMap[row];
-      try { localStorage.setItem(TS_KEY, JSON.stringify(_tsMap)); } catch(_) {}
-    }
-    if (snap && !_rawLeads.find(l => l.row === row)) {
-      const restored = { ...snap };
-      actions.forEach(function({ campo, valor }) {
-        if      (campo === 'STATUS_VENDEDOR') restored.status      = valor;
-        else if (campo === 'VALOR_FECHADO')   restored.valor_fech  = parseFloat(valor) || 0;
-        else if (campo === 'VALOR_POTENCIAL') restored.pot         = parseFloat(valor) || 0;
-        else if (campo === 'MOTIVO_PERDA')    restored.motivo_perd = valor;
-        else if (campo === 'DATA_FECH')       restored.data_f      = valor;
-      });
-      _rawLeads.push(restored);
-    }
-    if (_history) { const _hi = _history.findIndex(l => l.row === row); if (_hi >= 0) _history.splice(_hi, 1); }
-  }
-  delete _pendingUndoByRow[row];
-  renderLeads(_rawLeads);
-}
-
-async function saveStatusExtra(row) {
-  const prompt   = document.getElementById('sp-' + row);
   if (!prompt) return;
-  const tipo     = prompt.dataset.tipo;
-  const input    = document.getElementById('sp-input-' + row);
-  const sel      = document.getElementById('sp-sel-' + row);
-  const dateIn   = document.getElementById('sp-date-' + row);
-  const saveBtn  = prompt.querySelector('.lc-sp-save');
+  const tipo    = prompt.dataset.tipo;
+  const saveBtn = document.getElementById('sp-save-' + row);
 
-  // Em negociação — optional valor potencial, then concluding mode
-  if (tipo === 'negociacao') {
-    const raw = input ? input.value.trim() : '';
-    prompt.classList.remove('visible');
-    if (raw) {
-      const n = parseMoney(raw);
-      if (!isNaN(n) && n > 0) {
-        const lead2 = _rawLeads.find(l => l.row === row);
-        const oldPot = lead2 ? String(lead2.pot || 0) : '0';
-        if (lead2) lead2.pot = n;
-        if (_pendingUndoByRow[row]) _pendingUndoByRow[row].data.actions.push({ row, campo:'VALOR_POTENCIAL', valor:oldPot });
-        fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
-          body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'VALOR_POTENCIAL', valor:String(n) }) })
-          .catch(err => console.error('savePot negociacao failed:', err));
-      }
-    }
-    setLeadTs(row);
-    enterConcludingMode(row);
-    return;
-  }
-
-  // Fechado — dois passos separados: primeiro valor, depois data
-  if (tipo === 'fechado') {
-    const step       = prompt.dataset.step || 'valor';
-    const pfxWrapEl  = document.getElementById('sp-pfx-wrap-' + row);
-    const dateWrapEl = document.getElementById('sp-date-wrap-' + row);
-    const previewEl  = document.getElementById('sp-preview-' + row);
-
-    if (step === 'valor') {
-      const raw = input ? input.value.trim() : '';
-      const n   = parseMoney(raw);
-      if (!raw || isNaN(n) || n <= 0) { showToast('Informe o valor do fechamento'); if (input) input.focus(); return; }
-      // Guarda valor e avança para passo da data
-      prompt.dataset.valorFech = String(n);
-      prompt.dataset.step      = 'data';
-      if (pfxWrapEl) pfxWrapEl.style.display = 'none';
-      if (previewEl) previewEl.textContent    = '';
-      if (dateWrapEl) dateWrapEl.style.display = '';
-      const lbl     = prompt.querySelector('.lc-sp-label');
-      const saveBtn = prompt.querySelector('.lc-sp-save');
-      if (lbl)     lbl.textContent    = '📅 Data do fechamento?';
-      if (saveBtn) saveBtn.textContent = 'Salvar';
-      // Pré-preenche com hoje para o rep não precisar navegar o calendário
-      if (dateIn) {
-        const today = new Date();
-        dateIn.value = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
-        dateIn.focus();
-      }
-      return;
-    }
-
-    // step === 'data': valida data e salva tudo
-    const storedN  = parseFloat(prompt.dataset.valorFech || '0');
-    const dataFech = dateIn ? dateIn.value.trim() : '';
-    if (!dataFech) { showToast('Informe a data do fechamento'); if (dateIn) dateIn.focus(); return; }
+  if (tipo === 'ganho') {
+    const valorIn = document.getElementById('sp-valor-' + row);
+    const n = parseMoney(valorIn ? valorIn.value : '');
+    if (isNaN(n) || n <= 0) { showToast('Informe o valor do fechamento'); if (valorIn) valorIn.focus(); return; }
     if (saveBtn && saveBtn.classList.contains('saving')) return;
     if (saveBtn) saveBtn.classList.add('saving');
-
-    const lead2      = _rawLeads.find(l => l.row === row);
-    if (lead2) lead2.status = 'Fechado'; // update otimista do status, só agora que o form foi completado
-    const oldExtra   = String(lead2 ? lead2.valor_fech || 0 : 0);
-    const oldDataF   = lead2 ? (lead2.data_f || '') : '';
-    const oldStatus  = prompt.dataset.oldStatus || '';
-    const oldPot     = lead2 ? String(lead2.pot || 0) : '0';
-    const prevPend   = _pendingUndoByRow[row];
-    const oldTs      = prevPend && prevPend.data && prevPend.data.actions
-      ? ((prevPend.data.actions.find(a => a.campo === 'TIMESTAMP') || {}).valor || '') : '';
-    setLeadTs(row);
-    if (lead2) { lead2.valor_fech = storedN; lead2.data_f = dataFech; lead2.pot = 0; }
-    const leadSnapshot = lead2 ? { ...lead2 } : null;
-    const removeIdx    = _rawLeads.findIndex(l => l.row === row);
-    if (removeIdx >= 0) _rawLeads.splice(removeIdx, 1);
-    if (_history !== null && leadSnapshot) {
-      _history.unshift(leadSnapshot);
-      const histSec = document.getElementById('historico-section');
-      if (histSec && histSec.classList.contains('open')) renderHistorico();
-    }
-    prompt.classList.remove('visible');
-    _pendingUndoByRow[row] = { msg: 'Fechamento registrado ✓', data: { isMulti: true, leadSnapshot, actions: [
-      { row, campo: 'STATUS_VENDEDOR', valor: oldStatus },
-      { row, campo: 'VALOR_FECHADO',   valor: oldExtra  },
-      { row, campo: 'VALOR_POTENCIAL', valor: oldPot    },
-      { row, campo: 'TIMESTAMP',       valor: oldTs     },
-      { row, campo: 'DATA_FECH',       valor: oldDataF  }
-    ]}};
-    enterConcludingMode(row);
     try {
-      const updates = { STATUS_VENDEDOR:'Fechado', VALOR_FECHADO:storedN, DATA_FECH:dataFech };
-      if (parseFloat(oldPot) > 0) updates.VALOR_POTENCIAL = 0;
-      const r = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
-        body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, action:'update_lead', updates }) });
-      const d = await r.json();
-      if (!d.ok) throw new Error(d.error);
-      if (d.ts) { _tsMap[row] = d.ts; try{localStorage.setItem(TS_KEY,JSON.stringify(_tsMap));}catch(_){} }
-    } catch(err) {
-      console.error('saveStatusExtra Fechado failed:', err);
-      _revertOptimisticClose(row);
-      showToast('Erro ao registrar. Verifique a conexão.');
+      await apiPost('/status', { dealId: row, acao: 'ganho', valor: n });
+      const lead = _rawLeads.find(l => l.row === row);
+      if (lead) { lead.status = 'Fechado'; lead.valor_fech = n; lead.data_f = new Date().toISOString().slice(0,10); }
+      setLeadTs(row);
+      prompt.classList.remove('visible');
+      showToast('🎉 Negócio marcado como Ganho');
+      enterConcludingMode(row);
+    } catch (err) {
+      console.error('submitStatusPrompt ganho failed:', err);
+      showToast('Erro ao marcar ganho: ' + err.message);
     } finally {
       if (saveBtn) saveBtn.classList.remove('saving');
     }
     return;
   }
 
-  // Perdido — lê motivo do select
-  const raw = sel ? sel.value.trim() : '';
-  if (!raw) { showToast('Selecione o motivo da perda'); if (sel) sel.focus(); return; }
-  if (saveBtn && saveBtn.classList.contains('saving')) return;
-  if (saveBtn) saveBtn.classList.add('saving');
-  const lead2     = _rawLeads.find(l => l.row === row);
-  if (lead2) lead2.status = 'Perdido'; // update otimista do status, só agora que o form foi completado
-  const oldExtra  = lead2 ? lead2.motivo_perd || '' : '';
-  const oldDataF  = lead2 ? (lead2.data_f || '') : '';
-  const oldStatus = prompt.dataset.oldStatus || '';
-  const oldPot    = lead2 ? String(lead2.pot || 0) : '0';
-  const prevPending = _pendingUndoByRow[row];
-  const oldTs = prevPending && prevPending.data && prevPending.data.actions
-    ? ((prevPending.data.actions.find(a => a.campo === 'TIMESTAMP') || {}).valor || '') : '';
-  setLeadTs(row);
-  if (lead2) { lead2.motivo_perd = raw; lead2.pot = 0; }
-  const leadSnapshot = lead2 ? { ...lead2 } : null;
-  const removeIdx    = _rawLeads.findIndex(l => l.row === row);
-  if (removeIdx >= 0) _rawLeads.splice(removeIdx, 1);
-  if (_history !== null && leadSnapshot) {
-    _history.unshift(leadSnapshot);
-    const histSec = document.getElementById('historico-section');
-    if (histSec && histSec.classList.contains('open')) renderHistorico();
-  }
-  prompt.classList.remove('visible');
-  _pendingUndoByRow[row] = { msg: 'Motivo registrado ✓', data: { isMulti: true, leadSnapshot, actions: [
-    { row, campo: 'STATUS_VENDEDOR', valor: oldStatus },
-    { row, campo: 'MOTIVO_PERDA',    valor: oldExtra  },
-    { row, campo: 'VALOR_POTENCIAL', valor: oldPot    },
-    { row, campo: 'TIMESTAMP',       valor: oldTs     }
-  ]}};
-  enterConcludingMode(row);
-  try {
-    const updates = { STATUS_VENDEDOR:'Perdido', MOTIVO_PERDA:raw };
-    if (parseFloat(oldPot) > 0) updates.VALOR_POTENCIAL = 0;
-    const r = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, action:'update_lead', updates }) });
-    const d = await r.json();
-    if (!d.ok) throw new Error(d.error);
-    if (d.ts) { _tsMap[row] = d.ts; try{localStorage.setItem(TS_KEY,JSON.stringify(_tsMap));}catch(_){} }
-  } catch(err) {
-    console.error('saveStatusExtra Perdido failed:', err);
-    _revertOptimisticClose(row);
-    showToast('Erro ao registrar. Verifique a conexão.');
-  } finally {
-    if (saveBtn) saveBtn.classList.remove('saving');
-  }
-}
-function spKeyDown(e, row) {
-  if (e.key === 'Enter') { e.preventDefault(); saveStatusExtra(row); }
-}
-
-// ── UPDATE STATUS ─────────────────────────────────────────────
-function onStatusChange(e) {
-  const sel   = e.target;
-  const row   = parseInt(sel.dataset.row, 10);
-  const valor = sel.value;
-
-  // Fechar UI de outros cards
-  closeOtherCardUi(row);
-
-  // Reverter select visualmente até confirmar
-  sel.value     = sel.dataset.original;
-  sel.className = 'lc-select ' + statusClass(sel.dataset.original);
-
-  // Fechar prompt e link confirm do mesmo card
-  const sp = document.getElementById('sp-' + row);
-  if (sp) sp.classList.remove('visible');
-  const lc = document.getElementById('lc-' + row);
-  if (lc) lc.classList.remove('visible');
-
-  // Esconder select e timestamp — confirmação ocupa o lugar
-  const selWrap = document.getElementById('selwrap-' + row);
-  const tsEl    = document.getElementById('ts-' + row);
-  if (selWrap) selWrap.style.display = 'none';
-  if (tsEl)    tsEl.style.display    = 'none';
-
-  // Montar confirmação
-  const conf = document.getElementById('conf-' + row);
-  if (!conf) return;
-  const lbl  = document.getElementById('conf-status-' + row);
-  if (lbl) lbl.textContent = valor;
-  const sub  = document.getElementById('conf-sub-' + row);
-  if (sub) sub.textContent = (valor === 'Fechado' || valor === 'Perdido')
-    ? 'Sai da fila, vai ao histórico.'
-    : 'Lead vai ao final da fila.';
-  const icon = document.getElementById('conf-icon-' + row);
-  if (icon) {
-    if      (valor === 'Fechado')          icon.textContent = '✅';
-    else if (valor === 'Perdido')          icon.textContent = '❌';
-    else if (valor === 'Em negociação')    icon.textContent = '🤝';
-    else if (valor === 'Em contato')       icon.textContent = '📞';
-    else                                   icon.textContent = '⏳';
-  }
-  conf.dataset.pending = valor;
-  conf.classList.add('visible');
-}
-
-function cancelStatusChange(row) {
-  const conf    = document.getElementById('conf-' + row);
-  const selWrap = document.getElementById('selwrap-' + row);
-  const tsEl    = document.getElementById('ts-' + row);
-  if (conf)    conf.classList.remove('visible');
-  if (selWrap) selWrap.style.display = '';
-  if (tsEl)    tsEl.style.display    = '';
-}
-
-async function confirmStatusChange(row) {
-  const conf    = document.getElementById('conf-' + row);
-  if (!conf) return;
-  const valor   = conf.dataset.pending;
-  if (!valor) return;
-  conf.classList.remove('visible');
-  // Restaurar select e timestamp
-  const selWrap = document.getElementById('selwrap-' + row);
-  const tsEl    = document.getElementById('ts-' + row);
-  if (selWrap) selWrap.style.display = '';
-  if (tsEl)    tsEl.style.display    = '';
-
-  const sel       = document.querySelector(`.lc-select[data-row="${row}"]`);
-  const oldStatus = sel ? sel.dataset.original : '';
-
-  if (valor === 'Fechado' || valor === 'Perdido') {
-    // Mostra o status visualmente enquanto o rep preenche o form — evita double-trigger.
-    // dataset.original permanece oldStatus para o cancelamento poder reverter.
-    // O update otimista de _rawLeads acontece em saveStatusExtra após o form completo.
-    if (sel) { sel.value = valor; sel.className = 'lc-select ' + statusClass(valor); }
-    const card2 = sel ? sel.closest('.lead-card') : document.querySelector(`.lead-card[data-row="${row}"]`);
-    if (card2) { card2.classList.remove('ag','cont','neg'); }
-    const prompt = document.getElementById('sp-' + row);
-    if (prompt) prompt.dataset.oldStatus = oldStatus;
-    showStatusPrompt(row, valor);
+  // Perdido — 2 passos: motivo, depois observação (ambos obrigatórios no contrato novo)
+  const step = prompt.dataset.step;
+  if (step === 'motivo') {
+    const motivoSel = document.getElementById('sp-motivo-' + row);
+    const motivo = motivoSel ? motivoSel.value : '';
+    if (!motivo) { showToast('Selecione o motivo da perda'); if (motivoSel) motivoSel.focus(); return; }
+    prompt.dataset.step = 'obs';
+    const obsTa = document.getElementById('sp-obs-' + row);
+    if (obsTa) obsTa.style.display = '';
+    const warn = document.getElementById('sp-warn-' + row);
+    if (warn) warn.style.display = '';
+    if (saveBtn) saveBtn.textContent = 'Confirmar Perda';
+    if (obsTa) obsTa.focus();
     return;
   }
-
-  // Para outros status: update otimista imediato
-  if (sel) { sel.value = valor; sel.className = 'lc-select ' + statusClass(valor); sel.dataset.original = valor; }
-  const card = sel ? sel.closest('.lead-card') : document.querySelector(`.lead-card[data-row="${row}"]`);
-  if (card) { card.classList.remove('ag','cont','neg'); const bc = borderClass(valor); if (bc) card.classList.add(bc); }
-  const raw = _rawLeads.find(l => l.row === row);
-  if (raw) { raw.status = valor; raw.ts_vend = Date.now(); }
-
-  // Capture old timestamp before updating it
-  const oldTs = _tsMap[row] ? String(_tsMap[row]) : '';
-  setLeadTs(row);
-
-  // Defer undo toast — always multi-action so more fields can be appended later
-  _pendingUndoByRow[row] = { msg:'Status atualizado ✓', data:{ isMulti:true, leadSnapshot:null, actions:[
-    { row, campo:'STATUS_VENDEDOR', valor:oldStatus },
-    { row, campo:'TIMESTAMP', valor:oldTs }
-  ]}};
-
-  if (valor === 'Em negociação') {
-    // Show optional valor potencial prompt before concluding mode
-    const prompt = document.getElementById('sp-' + row);
-    if (prompt) prompt.dataset.oldStatus = oldStatus;
-    showStatusPrompt(row, 'negociacao');
-  } else {
-    enterConcludingMode(row);
-  }
-
+  const motivoSel = document.getElementById('sp-motivo-' + row);
+  const motivo    = motivoSel ? motivoSel.value : '';
+  const obsTa     = document.getElementById('sp-obs-' + row);
+  const observacao = obsTa ? obsTa.value.trim() : '';
+  if (!observacao) { showToast('Escreva uma observação sobre a perda'); if (obsTa) obsTa.focus(); return; }
+  if (saveBtn && saveBtn.classList.contains('saving')) return;
+  if (saveBtn) saveBtn.classList.add('saving');
   try {
-    const _ctrl = new AbortController();
-    const _tid  = setTimeout(() => _ctrl.abort(), 25000);
-    const res  = await fetch(PROXY_URL, { method:'POST', headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify({ token:REP_TOKEN, row, rep:REP_NAME, campo:'STATUS_VENDEDOR', valor }),
-      signal: _ctrl.signal });
-    clearTimeout(_tid);
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error);
-  } catch(err) {
-    console.error('confirmStatusChange failed:', err);
-    if (raw) raw.status = oldStatus;
-    if (sel) { sel.value = oldStatus; sel.className = 'lc-select ' + statusClass(oldStatus); sel.dataset.original = oldStatus; }
-    renderLeads(_rawLeads);
-    showToast('Erro ao salvar. Alteração revertida.');
+    await apiPost('/status', { dealId: row, acao: 'perdido', motivo, observacao });
+    const lead = _rawLeads.find(l => l.row === row);
+    if (lead) { lead.status = 'Perdido'; lead.motivo_perd = motivo; lead.data_f = new Date().toISOString().slice(0,10); }
+    prompt.classList.remove('visible');
+    showToast('Negócio marcado como Perdido');
+    _removeLeadToHistory(row);
+  } catch (err) {
+    console.error('submitStatusPrompt perdido failed:', err);
+    showToast('Erro ao registrar perda: ' + err.message);
+  } finally {
+    if (saveBtn) saveBtn.classList.remove('saving');
   }
 }
 
@@ -1830,7 +1519,6 @@ function renderLeads(leads, highlightRow) {
   const wrap = document.getElementById('show-more-wrap');
   if (!list) return;
 
-  // preserve UI state
   const expandedRows   = new Set();
   const concludingRows = new Set();
   const obsDrafts      = {};
@@ -1847,26 +1535,17 @@ function renderLeads(leads, highlightRow) {
     if (cp && cp.style.display === 'block') contactOpen.add(row);
   });
 
-  // Aguardando contato sempre primeiro, FIFO puro por data (ts_vend irrelevante — nunca contatado)
-  // Demais: menos recentemente tratado primeiro (fila de trabalho)
-  _allLeads = leads
-    .sort((a, b) => {
-      const pa = a.status === 'Aguardando contato' ? 0 : 1;
-      const pb = b.status === 'Aguardando contato' ? 0 : 1;
-      if (pa !== pb) return pa - pb;
-      if (pa === 0) return (a.data || '').localeCompare(b.data || '');
-      const ta = _tsMap[a.row] || a.ts_vend || 0;
-      const tb = _tsMap[b.row] || b.ts_vend || 0;
-      if (ta !== tb) return ta - tb;
-      return (a.data || '').localeCompare(b.data || '');
-    });
+  // B3: a ordem já vem pronta do servidor (Frente A2 — ordenarFila) — o painel só renderiza como
+  // recebeu. Zero sort no cliente de propósito (fonte única de verdade, sem risco de cliente e
+  // servidor divergirem). Enquanto A2 não sobe no backend, a ordem reflete a listagem crua do
+  // Agendor — não é bug deste arquivo, é o contrato ainda incompleto do outro lado.
+  _allLeads = leads.slice();
 
   document.getElementById('sum-ag').textContent   = _allLeads.filter(l=>l.status==='Aguardando contato').length;
   document.getElementById('sum-cont').textContent = _allLeads.filter(l=>l.status==='Em contato').length;
   document.getElementById('sum-neg').textContent  = _allLeads.filter(l=>l.status==='Em negociação').length;
   document.getElementById('sum-tot').textContent  = _allLeads.length;
 
-  // sync filter bar (status filter + busca por telefone)
   (function() {
     const bar = document.getElementById('filter-bar');
     const lbl = document.getElementById('filter-label');
@@ -1891,7 +1570,6 @@ function renderLeads(leads, highlightRow) {
   }
 
   const searchActive = _searchQuery.trim().length > 0;
-  // busca ativa: ignora filtro de status e pesquisa em toda a base
   let toShow = searchActive ? _applySearch(_allLeads)
              : (_activeFilter ? _allLeads.filter(l => l.status === _activeFilter) : _allLeads);
   if (searchActive && !toShow.length) {
@@ -1916,15 +1594,12 @@ function renderLeads(leads, highlightRow) {
     const wa       = fmtWA(l.whatsapp);
     const mapLink  = buildMapsUrl(l.empresa||l.nome, l.cidade, l.estado);
     const phone    = fmtPhone(l.whatsapp);
-    const options  = STATUS_LIST.map(s =>
-      `<option value="${esc(s)}"${s===l.status?' selected':''}>${esc(s)}</option>`
-    ).join('');
     const contato   = toTitleCase(l.contato||'');
     const subtitulo = nomeEmp && nomeRaw && nomeRaw.toLowerCase() !== nomeEmp.toLowerCase() ? nomeRaw : '';
-    const cnpj     = l.cnpj||'';
-    const endereco = toTitleCase(l.endereco||'');
+    const cnpj      = l.cnpj||'';
+    const endereco  = toTitleCase(l.endereco||'');
+    const funilBadge = l.funil_tag ? `<span class="lc-funil-badge ${l.funil_tag}">${FUNIL_BADGE_LABEL[l.funil_tag] || l.funil_tag}</span>` : '';
 
-    // contact panel rows
     const cpRows = [];
     const waNum       = fmtWA(l.whatsapp);
     const contatoWa   = fmtWA(l.contato);
@@ -1959,34 +1634,29 @@ function renderLeads(leads, highlightRow) {
       cpRows.push(`<div class="lcp-row lcp-copyable" data-copy="${esc(fmtCNPJ(cnpj))}" onclick="copyLcp(this)"><span class="lcp-icon">📋</span><div class="lcp-info"><div class="lcp-label">CNPJ · toque para copiar</div><div class="lcp-val">${esc(fmtCNPJ(cnpj))}</div></div></div>`);
     const hasContact = cpRows.length > 0;
 
-    const obsViewHtml = buildObsViewHtml(l.row, l.obs||'');
+    const obsViewHtml = buildObsViewHtml(l.row, l.obs_sdr||'');
+    const tarefaHtml  = _tarefaBlockHtml(l);
 
     return `
     <div class="lead-card ${bClass}" data-row="${l.row}">
       <div class="lc-body">
         <div class="lc-top">
-          <div class="lc-empresa">${titulo}</div>
-          <div class="lc-pot-wrap" id="pot-wrap-${l.row}">
-            <div id="pot-disp-${l.row}">
-              <div class="lc-pot" onclick="startPotEdit(${l.row})" title="Clique para editar o valor potencial">
-                ${pot ? esc(pot) : '<span class="lc-pot-no-val">–</span>'}
-                <span class="lc-pot-edit-icon">${SVG_EDIT}</span>
-              </div>
-            </div>
-            <div class="lc-pot-input-wrap" id="pot-input-wrap-${l.row}">
-              <div class="lc-pot-pfx-wrap">
-                <input class="lc-pot-input" id="pot-input-${l.row}" type="text" inputmode="decimal"
-                  value="${l.pot > 0 ? l.pot : ''}" placeholder="0,00" onkeydown="potKeyDown(event,${l.row})" oninput="potPreview(this,${l.row})">
-              </div>
-              <div class="lc-pot-preview" id="pot-preview-${l.row}"></div>
-              <div class="lc-pot-actions">
-                <button class="lc-pot-cancel" onclick="cancelPotEdit(${l.row})">Cancelar</button>
-                <button class="lc-pot-save"   onclick="savePot(${l.row})">OK</button>
-              </div>
-            </div>
-          </div>
+          <div class="lc-empresa">${titulo}${funilBadge}</div>
+          <div class="lc-pot" title="Valor potencial estimado">${pot ? esc(pot) : '<span class="lc-pot-no-val">–</span>'}</div>
         </div>
         ${subtitulo ? `<div class="lc-nome">${esc(subtitulo)}</div>` : ''}
+
+        <div id="task-wrap-${l.row}">${tarefaHtml}</div>
+        <div class="lc-task-form" id="task-form-${l.row}">
+          <div class="lc-sp-label">📌 Nova tarefa</div>
+          <textarea id="task-texto-${l.row}" maxlength="300" placeholder="O que precisa ser feito? Ex: Ligar confirmando pedido"></textarea>
+          <input type="date" id="task-due-${l.row}">
+          <div class="lc-task-form-footer">
+            <button class="lc-sp-cancel" onclick="hideTaskForm(${l.row})">Cancelar</button>
+            <button class="lc-sp-save" id="task-save-${l.row}" onclick="saveTask(${l.row})">Salvar</button>
+          </div>
+        </div>
+
         <div class="lc-meta">
           ${cidadeUF ? `<span class="lc-tag">📍 ${esc(cidadeUF)}</span>` : ''}
           ${l.data   ? `<span class="lc-tag">📅 ${esc(fmtData(l.data))}</span>` : ''}
@@ -2009,46 +1679,32 @@ function renderLeads(leads, highlightRow) {
           </div>` : ''}
         </div>
         <div class="lc-status-wrap">
-          <div class="lc-sel-wrap" id="selwrap-${l.row}">
-            <select class="lc-select ${sClass}" data-row="${l.row}" data-original="${esc(l.status)}" aria-label="Status do lead">
-              ${options}
+          <div class="lc-status-row">
+            <span class="lc-status-badge ${sClass}">${esc(l.status)}</span>
+            <div class="lc-last-updated" id="ts-${l.row}">${getLeadTs(l.row, l.data, l.ts_vend, l.ts_entrada)}</div>
+          </div>
+          <div class="lc-status-actions">
+            <button class="lc-status-btn ganho"   onclick="openGanhoPrompt(${l.row})">✅ Marcar Ganho</button>
+            <button class="lc-status-btn perdido" onclick="openPerdidoPrompt(${l.row})">❌ Marcar Perdido</button>
+          </div>
+          <div class="lc-status-prompt" id="sp-${l.row}">
+            <div class="lc-sp-label" id="sp-label-${l.row}"></div>
+            <div class="lc-sp-row" id="sp-row-valor-${l.row}" style="display:none">
+              <div class="lc-sp-pfx-wrap">
+                <input class="lc-sp-input" id="sp-valor-${l.row}" type="text" inputmode="decimal" placeholder="0,00" onkeydown="spKeyDown(event,${l.row})" oninput="spPreview(this,${l.row})">
+              </div>
+              <div class="lc-sp-val-preview" id="sp-preview-${l.row}"></div>
+            </div>
+            <select class="lc-sp-input lc-sp-sel" id="sp-motivo-${l.row}" style="display:none">
+              <option value="">Selecione o motivo…</option>
+              ${MOTIVOS_PERDA.map(m => `<option>${esc(m)}</option>`).join('')}
             </select>
-          </div>
-          <div class="lc-last-updated" id="ts-${l.row}">${getLeadTs(l.row, l.data, l.ts_vend, l.ts_entrada)}</div>
-          <div class="lc-confirm" id="conf-${l.row}">
-            <div class="lc-confirm-icon" id="conf-icon-${l.row}">📋</div>
-            <div class="lc-confirm-msg">Mudar para <strong id="conf-status-${l.row}"></strong>?</div>
-            <div class="lc-confirm-sub" id="conf-sub-${l.row}">Lead vai ao final da fila.</div>
-            <div class="lc-confirm-actions">
-              <button class="lc-confirm-cancel" onclick="cancelStatusChange(${l.row})">Cancelar</button>
-              <button class="lc-confirm-ok"     onclick="confirmStatusChange(${l.row})">Confirmar</button>
+            <textarea class="lc-sp-input" id="sp-obs-${l.row}" style="display:none" rows="3" placeholder="O que aconteceu? (obrigatório)"></textarea>
+            <div class="lc-status-warn" id="sp-warn-${l.row}" style="display:none">Essa ação não pode ser desfeita pelo painel.</div>
+            <div class="lc-sp-footer">
+              <button class="lc-sp-cancel" onclick="cancelStatusPrompt(${l.row})">Cancelar</button>
+              <button class="lc-sp-save" id="sp-save-${l.row}" onclick="submitStatusPrompt(${l.row})">Salvar</button>
             </div>
-          </div>
-        </div>
-        <div class="lc-status-prompt" id="sp-${l.row}">
-          <div class="lc-sp-label"></div>
-          <div class="lc-sp-row">
-            <div class="lc-sp-pfx-wrap" id="sp-pfx-wrap-${l.row}">
-              <input class="lc-sp-input" id="sp-input-${l.row}" type="text" inputmode="decimal" placeholder="0,00" onkeydown="spKeyDown(event,${l.row})" oninput="spPreview(this,${l.row})">
-            </div>
-            <div class="lc-sp-date-wrap" id="sp-date-wrap-${l.row}" style="display:none">
-              <input class="lc-sp-input" id="sp-date-${l.row}" type="date" onkeydown="spKeyDown(event,${l.row})">
-            </div>
-          </div>
-          <div class="lc-sp-val-preview" id="sp-preview-${l.row}"></div>
-          <select class="lc-sp-input lc-sp-sel" id="sp-sel-${l.row}" style="display:none">
-            <option value="">Selecione o motivo…</option>
-            <option>Sem interesse</option>
-            <option>Sem retorno</option>
-            <option>Restrição de pagamento</option>
-            <option>Já possui fornecedor</option>
-            <option>Fora do perfil</option>
-            <option>Outro</option>
-          </select>
-          <div class="lc-sp-footer">
-            <button class="lc-sp-cancel" onclick="cancelStatusPrompt(${l.row})">Cancelar</button>
-            <button class="lc-sp-skip" id="sp-skip-${l.row}" style="display:none" onclick="skipPotPrompt(${l.row})">Pular →</button>
-            <button class="lc-sp-save" onclick="saveStatusExtra(${l.row})">Salvar</button>
           </div>
         </div>
         <div class="lc-confirm" id="lc-${l.row}" style="margin-top:6px;">
@@ -2065,15 +1721,13 @@ function renderLeads(leads, highlightRow) {
         ${l.obs_sdr ? `<span class="sdr-hint">&nbsp;&nbsp;"${esc(l.obs_sdr.slice(0,40))}${l.obs_sdr.length>40?'…':''}"</span>` : ''}
       </button>
       <div class="lc-expand">
-        ${l.obs_sdr ? `<div class="lc-obs-sdr"><div class="lc-obs-sdr-label">Observação do SDR</div><div class="lc-obs-sdr-text">${esc(l.obs_sdr)}</div></div>` : ''}
-        <hr class="lc-divider">
-        <div class="lc-obs-label">Minha observação</div>
-        <div class="lc-obs-rep" id="obsr-${l.row}" data-saved="${esc(l.obs||'')}">
+        <div class="lc-obs-label">Observações</div>
+        <div class="lc-obs-rep" id="obsr-${l.row}" data-saved="${esc(l.obs_sdr||'')}">
           <div class="obsr-view">${obsViewHtml}</div>
           <div class="obsr-edit-wrap" id="obsr-edit-${l.row}">
             <div class="obs-conclude-banner">📝 Registre uma observação antes de concluir</div>
             <textarea class="lc-obs-textarea" id="obs-${l.row}" maxlength="1000"
-              placeholder="O que aconteceu? Ex: ligou, não atendeu, vai tentar amanhã">${esc(l.obs||'')}</textarea>
+              placeholder="O que aconteceu? Ex: ligou, não atendeu, vai tentar amanhã">${esc(l.obs_sdr||'')}</textarea>
             <div class="lc-obs-footer">
               <span class="lc-obs-fb" id="obs-fb-${l.row}"></span>
               <button class="obsr-cancel-btn"  id="obs-cancel-${l.row}"   onclick="cancelObsEdit(${l.row})">Cancelar</button>
@@ -2087,7 +1741,6 @@ function renderLeads(leads, highlightRow) {
     </div>`;
   }).join('');
 
-  // botões ver mais / ver menos
   if (wrap) {
     const filtered2 = _activeFilter
       ? _allLeads.filter(l => l.status === _activeFilter && _matchesSearch(l))
@@ -2100,10 +1753,6 @@ function renderLeads(leads, highlightRow) {
     </div>` : '';
   }
 
-  // bind events
-  list.querySelectorAll('.lc-select').forEach(sel => sel.addEventListener('change', onStatusChange));
-
-  // restore states
   expandedRows.forEach(row => {
     const card = list.querySelector(`.lead-card[data-row="${row}"]`);
     if (!card) return;
@@ -2129,7 +1778,6 @@ function renderLeads(leads, highlightRow) {
     if (saveBtn) saveBtn.textContent = 'Salvar e concluir';
   });
 
-  // highlight recently moved card
   if (highlightRow) {
     const moved = list.querySelector(`.lead-card[data-row="${highlightRow}"]`);
     if (moved) {
@@ -2137,15 +1785,14 @@ function renderLeads(leads, highlightRow) {
       moved.addEventListener('animationend', () => moved.classList.remove('just-placed'), { once:true });
     }
   }
-
-  applyFilter();
 }
 
 // ── HISTÓRICO ─────────────────────────────────────────────────
-let _history    = null;
-let _histLoaded = false;
-let _histPage   = 1;
-let _histTab    = null; // null | 'fechados' | 'perdidos'
+let _history     = null;
+let _histLoaded  = false;
+let _histPage    = 1;
+let _histTab     = null; // null | 'fechados' | 'perdidos'
+let _histPeriodo = 'total'; // 'mes' | 'mes_passado' | 'total' — default 'total' pra nunca esconder ganhos antigos
 const HIST_PAGE_SIZE = 5;
 
 function collapseHistorico() {
@@ -2198,23 +1845,49 @@ function _setupHistAutoCollapse() {
   window._histObserver.observe(leadsList);
 }
 
-async function loadHistorico() {
+// B5 — troca definitiva do proxy GAS morto (PROXY_URL + '?action=rep_history', que devolvia 404 e
+// por isso "faltavam vários leads ganhos") pela API nova, que lê direto o D1 do Dashboard Geral
+// (rápido, sem depender do Agendor ao vivo). Período default 'total' pra nunca esconder ganho
+// antigo — o rep pode filtrar por mês se quiser algo mais recente.
+async function loadHistorico(periodo) {
+  if (periodo) _histPeriodo = periodo;
   const body = document.getElementById('hist-body');
   if (!body) return;
   body.innerHTML = `<div style="padding:16px;text-align:center;color:var(--muted);font-size:12px;font-weight:600">Carregando…</div>`;
   try {
     const _ctrl = new AbortController();
     const _tid  = setTimeout(() => _ctrl.abort(), 25000);
-    const res   = await fetch(PROXY_URL + '?action=rep_history&rep=' + REP_NAME + '&token=' + REP_TOKEN, { signal: _ctrl.signal });
+    const url   = HISTORICO_URL + '?rep=' + REP_NAME + '&periodo=' + _histPeriodo;
+    const res   = await fetch(url, { headers: { Authorization: 'Bearer ' + REP_TOKEN }, signal: _ctrl.signal });
     clearTimeout(_tid);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
-    _history    = data.history || [];
+    if (!data.ok) throw new Error(data.erro || 'resposta invalida');
+    _history = (data.historico || []).map(function(h) {
+      return {
+        row: Number(h.dealId),
+        empresa: h.titulo || '',
+        nome: '',
+        cidade: '', estado: '',
+        whatsapp: '',
+        status: h.statusPainel === 'Fechado' ? 'Fechado' : 'Perdido',
+        valor_fech: Number(h.valor) || 0,
+        data_f: h.data ? String(h.data).slice(0,10) : '',
+        motivo_perd: h.motivoPerdido || '',
+      };
+    });
     _histLoaded = true;
     renderHistorico();
   } catch(err) {
     if (body) body.innerHTML = `<div style="padding:16px;color:#b0134a;font-size:12px">Não foi possível carregar o histórico.</div>`;
   }
+}
+function setHistPeriodo(periodo) {
+  if (periodo === _histPeriodo) { loadHistorico(periodo); return; }
+  _histPeriodo = periodo;
+  _histLoaded = false; _histTab = null; _histPage = 1;
+  document.querySelectorAll('#hist-periodo-toggle button').forEach(b => b.classList.toggle('on', b.dataset.periodo === periodo));
+  loadHistorico(periodo);
 }
 
 function _histCardHtml(l) {
@@ -2269,7 +1942,6 @@ function renderHistorico() {
   const nFech = h.filter(l=>l.status==='Fechado').length;
   const nPerd = h.filter(l=>l.status==='Perdido').length;
 
-  // modo busca: mostra todos os matches (fechados e perdidos juntos), abre seção
   if (_searchQuery.trim()) {
     const matches = _applySearch(h);
     if (counts) counts.textContent = matches.length
@@ -2285,14 +1957,9 @@ function renderHistorico() {
   }
 
   if (counts) counts.textContent = nFech+' fechado'+(nFech!==1?'s':'')+(nPerd?' · '+nPerd+' perdido'+(nPerd!==1?'s':''):'');
-  if (!h.length) { body.innerHTML=`<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px">Nenhum histórico ainda.</div>`; return; }
-  const semWA = h.filter(l => !fmtWA(l.whatsapp)).length;
-  const diagHtml = semWA === h.length
-    ? `<div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:8px 12px;font-size:11px;font-weight:600;color:#b45309;margin-bottom:8px;">⚠️ WhatsApp não está chegando nesta lista (${h.length}/${h.length} sem WA). Verifique se o proxy foi reimplantado no Apps Script.</div>`
-    : '';
-  // No tab selected: show two category cards
+  if (!h.length) { body.innerHTML=`<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px">Nenhum histórico neste período.</div>`; return; }
   if (!_histTab) {
-    body.innerHTML = diagHtml + `<div class="hist-tab-cards">
+    body.innerHTML = `<div class="hist-tab-cards">
       <button class="hist-tab-card fech" onclick="setHistTab('fechados')">
         <span class="hist-tab-icon">✅</span>
         <span class="hist-tab-label">Fechados</span>
@@ -2306,7 +1973,6 @@ function renderHistorico() {
     </div>`;
     return;
   }
-  // Tab selected: filter and paginate
   const filtered = h.filter(l => _histTab === 'fechados' ? l.status==='Fechado' : l.status==='Perdido')
     .sort((a, b) => {
       const da = a.data_f || '';
@@ -2324,7 +1990,7 @@ function renderHistorico() {
     ${_histPage > 1 ? `<button class="hist-pg-btn" onclick="histVerMenos()">▲ Ver menos</button>` : ''}
     ${hasMore       ? `<button class="hist-pg-btn" onclick="histVerMais()">Ver mais ▾</button>` : ''}
   </div>` : '';
-  body.innerHTML = diagHtml + backBtn + cards + pagination;
+  body.innerHTML = backBtn + cards + pagination;
 }
 function histVerMais() { _histPage++; renderHistorico(); }
 function histVerMenos() {
@@ -2346,10 +2012,10 @@ async function loadData() {
   loadStart();
   try {
     if (_firstLoad) {
-      // Show cached leads instantly before the API responds
+      // B6: mostra o cache local instantaneamente ao abrir, nunca tela em branco/spinner longo —
+      // só troca pelo dado novo quando a resposta da rede chegar.
       try {
         const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
-        // Validate rep matches — prevents showing another rep's leads from a stale/shared cache
         if (cached && cached.rep === REP_NAME && cached.leads && cached.leads.length) {
           _rawLeads  = cached.leads;
           _firstLoad = false;
@@ -2363,36 +2029,32 @@ async function loadData() {
 
     const _ctrl = new AbortController();
     const _tid  = setTimeout(() => _ctrl.abort(), 25000);
-    // 🧪 18/09: leitura vem do Agendor real (lifeb-rep-painel), não mais do Sheets — ver comentário
-    // completo perto de LEADS_URL/_transformarLeadAgendor, acima na declaração das constantes.
     const res   = await fetch(LEADS_URL + '?rep=' + REP_NAME, { headers: { Authorization: 'Bearer ' + REP_TOKEN }, signal: _ctrl.signal });
     clearTimeout(_tid);
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    const _leadsResp = await res.json();
-    if (!_leadsResp.ok) throw new Error(_leadsResp.erro || 'resposta invalida');
-    const data = { leads: (_leadsResp.leads || []).map(_transformarLeadAgendor) };
-    const newLeads = data.leads || [];
+    const respJson = await res.json();
+    if (!respJson.ok) throw new Error(respJson.erro || 'resposta invalida');
+    const newLeads = (respJson.leads || []).map(_transformarLeadAgendor);
 
-    // Merge server timestamps into _tsMap (prefer whichever is more recent)
     newLeads.forEach(function(l) {
       if (l.ts_vend && l.ts_vend > (_tsMap[l.row] || 0)) _tsMap[l.row] = l.ts_vend;
     });
     try { localStorage.setItem(TS_KEY, JSON.stringify(_tsMap)); } catch(_) {}
-
-    // Persist fresh data with rep tag to prevent cross-rep cache reads
     try { localStorage.setItem(CACHE_KEY, JSON.stringify({ rep: REP_NAME, leads: newLeads, ts: Date.now() })); } catch(_) {}
 
-    // If a status prompt is visible, preserve that lead so it doesn't vanish mid-fill
+    // Se um formulário de ganho/perdido ou de tarefa está aberto pra um lead, preserva ele mesmo
+    // que o servidor já não o devolva mais (evita sumir de baixo do rep enquanto ele preenche).
     _rawLeads.forEach(existing => {
       if (!newLeads.find(nl => nl.row === existing.row)) {
         const prompt = document.getElementById('sp-' + existing.row);
-        if (prompt && prompt.classList.contains('visible')) newLeads.push(existing);
+        const tform  = document.getElementById('task-form-' + existing.row);
+        if ((prompt && prompt.classList.contains('visible')) || (tform && tform.classList.contains('visible'))) newLeads.push(existing);
       }
     });
     const hasEditingObs = Array.from(document.querySelectorAll('.lc-obs-textarea')).some(
       ta => ta.value !== (ta.closest('[data-saved]')?.dataset.saved || '')
     );
-    const hasPending = !!document.querySelector('.lc-status-prompt.visible, .lead-card.concluding, .lc-confirm.visible') || hasEditingObs;
+    const hasPending = !!document.querySelector('.lc-status-prompt.visible, .lead-card.concluding, .lc-task-form.visible') || hasEditingObs;
     const changed    = _firstLoad || JSON.stringify(newLeads) !== JSON.stringify(_rawLeads);
     _rawLeads = newLeads;
     if (changed && !hasPending) renderLeads(_rawLeads);
@@ -2402,7 +2064,6 @@ async function loadData() {
     const err = document.getElementById('error-banner');
     if (err) err.style.display = 'none';
   } catch(e) {
-    // Retry silently before surfacing any error
     if (_retryCount < MAX_RETRIES) {
       _retryCount++;
       _isLoading = false;
@@ -2411,13 +2072,11 @@ async function loadData() {
       return;
     }
     _retryCount = 0;
-    // Only show error banner when there is no data to display
     if (!_rawLeads.length) {
       const err = document.getElementById('error-banner');
       if (err) { err.textContent='Não foi possível carregar os dados. Verifique sua conexão.'; err.style.display='block'; }
       if (_firstLoad) { const l=document.getElementById('leads-list'); if(l) l.innerHTML=''; }
     }
-    // When cached data is already on screen, fail silently — data stays visible
   } finally { _isLoading=false; loadEnd(); }
 }
 
@@ -2486,6 +2145,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!e.target.closest('#historico-section')) collapseHistorico();
   });
 });
+
 </script>
 </body>
 </html>
