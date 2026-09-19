@@ -140,6 +140,7 @@
     /* meta tags + icon buttons */
     .lc-meta { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
     .lc-tag  { font-size:10px; font-weight:600; color:var(--muted); background:var(--bg); border-radius:6px; padding:3px 8px; white-space:nowrap; }
+    .lc-tag-sdr { color:var(--purple); background:rgba(112,75,155,.1); }
     .lc-meta-btns { display:flex; gap:10px; align-items:center; flex-shrink:0; margin-left:auto; }
 
     .lc-icon-btn { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:50%; border:none; cursor:pointer; flex-shrink:0; transition:transform .12s, box-shadow .12s, background .15s; text-decoration:none; outline:none; }
@@ -218,14 +219,30 @@
     .lc-task-btn.finish:hover { background:rgba(22,163,74,.08); }
     .lc-task-form { display:none; background:#f9f6ff; border:1px solid rgba(112,75,155,.25); border-radius:10px; padding:10px 12px; margin-bottom:10px; animation:panel-in .2s ease; }
     .lc-task-form.visible { display:block; }
-    .lc-task-form textarea { width:100%; padding:9px 12px; border-radius:8px; border:1.5px solid var(--border); font-family:var(--font); font-size:13px; color:var(--text); background:#fff; outline:none; resize:vertical; min-height:56px; margin-bottom:6px; }
-    .lc-task-form input[type=date] { width:100%; padding:9px 12px; border-radius:8px; border:1.5px solid var(--border); font-family:var(--font); font-size:13px; color:var(--text); background:#fff; outline:none; margin-bottom:8px; }
-    .lc-task-form select.lc-task-tipo { width:100%; padding:9px 12px; border-radius:8px; border:1.5px solid var(--border); font-family:var(--font); font-size:13px; color:var(--text); background:#fff; outline:none; margin-bottom:8px; }
+    /* 🔴 FIX 19/09 (Robert: "o campo de escolher data... meio quebrado, até o calendário que abre
+       muito grande"): não era o seletor de data em si — é o Safari do iPhone dando ZOOM na página
+       inteira ao focar qualquer campo com font-size menor que 16px (comportamento de acessibilidade
+       do próprio iOS, o meta viewport user-scalable=no não bloqueia isso). TODOS os campos deste
+       formulário estavam em 13px — subir pra 16px em todos (não só na data) resolve o zoom indevido
+       de verdade, na causa raiz, não só no campo que o Robert percebeu primeiro. */
+    .lc-task-form textarea { width:100%; padding:9px 12px; border-radius:8px; border:1.5px solid var(--border); font-family:var(--font); font-size:16px; color:var(--text); background:#fff; outline:none; resize:vertical; min-height:56px; margin-bottom:6px; }
+    .lc-task-form input[type=date] { width:100%; padding:9px 12px; border-radius:8px; border:1.5px solid var(--border); font-family:var(--font); font-size:16px; color:var(--text); background:#fff; outline:none; margin-bottom:8px; }
+    .lc-task-form select.lc-task-tipo { width:100%; padding:9px 12px; border-radius:8px; border:1.5px solid var(--border); font-family:var(--font); font-size:16px; color:var(--text); background:#fff; outline:none; margin-bottom:8px; }
     .lc-task-form-footer { display:flex; gap:6px; justify-content:flex-end; }
 
     /* CONFIRMAÇÕES (status, link, histórico) */
-    .lc-confirm { display:none; flex-direction:column; align-items:center; gap:7px; text-align:center; background:rgba(112,75,155,.07); border:1.5px solid rgba(112,75,155,.28); border-radius:12px; padding:16px 14px 12px; animation:panel-in .18s ease; }
-    .lc-confirm.visible { display:flex; }
+    .lc-confirm { display:none; flex-direction:column; align-items:center; gap:7px; text-align:center; background:rgba(112,75,155,.07); border:1.5px solid rgba(112,75,155,.28); border-radius:12px; padding:16px 14px 12px; }
+    /* 🔴 FIX 19/09 (Robert: "quando clica no ícone whatsapp ou maps é meio imperceptível... parece
+       que não muda nada na tela... diferente de quando clica no número mesmo"): comparando os 2
+       fluxos, o do número (`openContactWa`) troca o CONTEÚDO INTEIRO do painel já aberto por um
+       overlay — mudança grande, impossível de não notar. O dos ícones só cochichava uma div pequena
+       com fade de 4px — fácil de passar batido se o botão não estiver perto do topo visível. Em vez
+       de reduplicar o padrão de troca de conteúdo (mudaria a estrutura toda), reforça o MESMO
+       confirm com: (1) `scrollIntoView` (ver openLinkConfirm) garante que a tela role até ele
+       aparecer, sempre; (2) um pulso de destaque na entrada, mais chamativo que o fade sutil de
+       antes — a mesma ideia do brilho "just-placed" que este projeto já usa em outros lugares. */
+    .lc-confirm.visible { display:flex; animation:confirm-pop .35s ease; }
+    @keyframes confirm-pop { 0%{opacity:0;transform:scale(.92);background:rgba(112,75,155,.22);} 60%{opacity:1;transform:scale(1.01);} 100%{opacity:1;transform:scale(1);background:rgba(112,75,155,.07);} }
     .lc-confirm-icon { font-size:28px; line-height:1; }
     .lc-confirm-msg { font-size:13px; font-weight:700; color:var(--text); line-height:1.45; }
     .lc-confirm-msg strong { color:var(--purple); }
@@ -253,7 +270,7 @@
     .lc-sp-pfx-wrap::before { content:'R$'; position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:13px; font-weight:700; color:var(--muted); pointer-events:none; z-index:1; }
     .lc-sp-pfx-wrap .lc-sp-input { padding-left:30px; }
     .lc-sp-val-preview { font-size:12px; font-weight:700; color:var(--purple); min-height:14px; padding:3px 0 2px; }
-    .lc-sp-input { width:100%; padding:9px 12px; border-radius:8px; border:1.5px solid var(--border); font-family:var(--font); font-size:13px; color:var(--text); background:#fff; outline:none; transition:border-color .15s; }
+    .lc-sp-input { width:100%; padding:9px 12px; border-radius:8px; border:1.5px solid var(--border); font-family:var(--font); font-size:16px; color:var(--text); background:#fff; outline:none; transition:border-color .15s; }
     .lc-sp-input:focus { border-color:var(--purple); }
     .lc-sp-footer { display:flex; gap:6px; margin-top:7px; justify-content:flex-end; }
 
@@ -293,7 +310,7 @@
     .obsr-edit-wrap { display:none; }
     .lc-obs-rep.editing .obsr-view      { display:none; }
     .lc-obs-rep.editing .obsr-edit-wrap { display:block; }
-    .lc-obs-textarea { width:100%; padding:10px 12px; border-radius:10px; border:1.5px solid var(--border); font-family:var(--font); font-size:13px; color:var(--text); resize:vertical; min-height:72px; background:var(--bg); outline:none; line-height:1.5; transition:border-color .15s, background .15s; }
+    .lc-obs-textarea { width:100%; padding:10px 12px; border-radius:10px; border:1.5px solid var(--border); font-family:var(--font); font-size:16px; color:var(--text); resize:vertical; min-height:72px; background:var(--bg); outline:none; line-height:1.5; transition:border-color .15s, background .15s; }
     .lc-obs-textarea:focus { border-color:var(--purple); background:#fff; }
     .lc-obs-footer { display:flex; align-items:center; justify-content:flex-end; gap:6px; margin-top:8px; }
     .lc-obs-fb { font-size:11px; font-weight:600; flex:1; }
@@ -634,6 +651,7 @@ function _transformarLeadAgendor(l) {
     funil_tag: l.funilTag || '',
     pot: Number(l.valorPotencial) || 0,
     obs_sdr: l.obsSdr || '',
+    sdr_responsavel: l.sdrResponsavel || '',
     data: l.atualizadoEm ? String(l.atualizadoEm).slice(0, 10) : '',
     ts_vend: l.atualizadoEm ? new Date(l.atualizadoEm).getTime() : 0,
     tarefaAberta: _mapTarefaAberta(l),
@@ -1219,6 +1237,9 @@ function openLinkConfirm(btn) {
   conf.classList.add(isWa ? 'link-wa' : 'link-maps');
   conf.dataset.pending = url;
   conf.classList.add('visible');
+  // Garante que o painel de confirmação sempre fica visível na tela, mesmo se o botão tocado
+  // estiver perto do topo do card e o painel abrir mais abaixo (ver comentário no CSS acima).
+  conf.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 function closeLinkConfirm(id) {
   const conf = document.getElementById(id);
@@ -1688,6 +1709,7 @@ function renderLeads(leads, highlightRow) {
         <div class="lc-meta">
           ${cidadeUF ? `<span class="lc-tag">📍 ${esc(cidadeUF)}</span>` : ''}
           ${l.data   ? `<span class="lc-tag">📅 ${esc(fmtData(l.data))}</span>` : ''}
+          ${l.sdr_responsavel ? `<span class="lc-tag lc-tag-sdr">👤 SDR: ${esc(l.sdr_responsavel)}</span>` : ''}
           <div class="lc-meta-btns">
             ${hasContact ? `<button class="lc-icon-btn contact" onclick="toggleContact(this,${l.row})" title="Dados do contato" aria-expanded="false">${SVG_PERSON}</button>` : ''}
             ${wa         ? `<button class="lc-icon-btn wa"   data-url="https://wa.me/${wa}" onclick="openLinkConfirm(this)" title="WhatsApp">${SVG_WA}</button>` : ''}
