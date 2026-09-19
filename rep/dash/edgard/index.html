@@ -208,6 +208,11 @@
     .lc-task-row.ok   { background:rgba(112,75,155,.06); border:1px solid rgba(112,75,155,.18); }
     .lc-task-row.late { background:rgba(220,38,38,.06);  border:1px solid rgba(220,38,38,.25); }
     .lc-task-row.warn { background:rgba(217,119,6,.08);  border:1px solid rgba(217,119,6,.3); }
+    /* 🔴 FIX 19/09 (Robert: "leads parados em destaque") — lead parado há 7+ dias (sem tarefa
+       nenhuma, ou tarefa vencida há 7+ dias) ganha um destaque mais forte que o "late" comum —
+       borda mais grossa + leve pulso, chama atenção de verdade sem precisar abrir o card. */
+    .lc-task-row.stalled { border-width:2px; border-color:#b91c1c; animation:stalled-pulse 2.5s ease-in-out infinite; }
+    @keyframes stalled-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.25);} 50%{box-shadow:0 0 0 4px rgba(220,38,38,0);} }
     .lc-task-icon { font-size:15px; flex-shrink:0; }
     .lc-task-info { flex:1; min-width:0; }
     .lc-task-text { font-size:12px; font-weight:700; color:var(--text); line-height:1.35; word-break:break-word; }
@@ -1308,12 +1313,24 @@ function toggleContact(btn, row) {
 }
 
 // ── TAREFA ABERTA (criar / concluir) ────────────────────────────────────────────────────────────
+// 🔴 FIX 19/09 (Robert: "hierarquia correta de prioridades... leads parados em destaque"): a fila já
+// vinha ordenada certo pelo servidor, mas o card não DIZIA há quanto tempo o lead tá parado — só um
+// ícone genérico. Agora mostra o número real de dias (sem tarefa nenhuma, ou tarefa vencida há X
+// dias) — informação acionável, não só uma cor.
+function _diasParado(dataISO) {
+  if (!dataISO) return null;
+  const ms = Date.now() - new Date(dataISO).getTime();
+  return Math.max(0, Math.floor(ms / 86400000));
+}
 function _tarefaBlockHtml(l) {
   const t = l.tarefaAberta;
   if (!t) {
-    return `<div class="lc-task-row warn">
-      <span class="lc-task-icon">⚠️</span>
-      <div class="lc-task-info"><div class="lc-task-text">Sem tarefa aberta</div></div>
+    const dias = _diasParado(l.data);
+    const diasTxt = dias != null ? ` há ${dias} dia${dias===1?'':'s'}` : '';
+    const critico = dias != null && dias >= 7;
+    return `<div class="lc-task-row warn${critico ? ' stalled' : ''}">
+      <span class="lc-task-icon">${critico ? '🆘' : '⚠️'}</span>
+      <div class="lc-task-info"><div class="lc-task-text">Sem tarefa aberta${diasTxt}</div></div>
       <button class="lc-task-btn" onclick="showTaskForm(${l.row})">+ Criar</button>
     </div>`;
   }
@@ -1324,15 +1341,19 @@ function _tarefaBlockHtml(l) {
       <div class="lc-task-info"><div class="lc-task-text">Tem tarefa aberta (detalhes chegam quando o backend novo subir essa parte)</div></div>
     </div>`;
   }
-  const dueRaw  = t.dueDate ? String(t.dueDate).slice(0,10) : '';
-  const hojeYMD = new Date().toISOString().slice(0,10);
-  const late    = !!(dueRaw && dueRaw < hojeYMD);
-  const dueLbl  = dueRaw ? ('Vence ' + fmtData(dueRaw)) : 'Sem data de vencimento';
+  const dueRaw    = t.dueDate ? String(t.dueDate).slice(0,10) : '';
+  const hojeYMD   = new Date().toISOString().slice(0,10);
+  const late      = !!(dueRaw && dueRaw < hojeYMD);
+  const diasAtraso = late ? _diasParado(t.dueDate) : null;
+  const stalled   = diasAtraso != null && diasAtraso >= 7;
+  const dueLbl    = dueRaw
+    ? (late ? `Venceu há ${diasAtraso} dia${diasAtraso===1?'':'s'}` : 'Vence ' + fmtData(dueRaw))
+    : 'Sem data de vencimento';
   const TIPO_ICON = { LIGACAO: '📞', WHATSAPP: '💬', VISITA: '🏠', REUNIAO: '🤝', EMAIL: '✉️', PROPOSTA: '📄' };
   const tipoUp = String(t.tipo||'').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
-  const tipoIcon = TIPO_ICON[tipoUp] || (late ? '🔴' : '📌');
+  const tipoIcon = stalled ? '🆘' : (TIPO_ICON[tipoUp] || (late ? '🔴' : '📌'));
   const finishBtn = t.id ? `<button class="lc-task-btn finish" onclick="finishTask(${l.row}, ${Number(t.id)})">✓ Concluir</button>` : '';
-  return `<div class="lc-task-row ${late ? 'late' : 'ok'}">
+  return `<div class="lc-task-row ${late ? 'late' : 'ok'}${stalled ? ' stalled' : ''}">
     <span class="lc-task-icon">${tipoIcon}</span>
     <div class="lc-task-info"><div class="lc-task-text">${esc(t.texto||'Tarefa aberta')}</div><div class="lc-task-due">${esc(dueLbl)}</div></div>
     ${finishBtn}
