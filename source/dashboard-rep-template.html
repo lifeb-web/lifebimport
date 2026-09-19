@@ -228,6 +228,11 @@
     .lc-task-form textarea { width:100%; padding:9px 12px; border-radius:8px; border:1.5px solid var(--border); font-family:var(--font); font-size:16px; color:var(--text); background:#fff; outline:none; resize:vertical; min-height:56px; margin-bottom:6px; }
     .lc-task-form input[type=date] { width:100%; padding:9px 12px; border-radius:8px; border:1.5px solid var(--border); font-family:var(--font); font-size:16px; color:var(--text); background:#fff; outline:none; margin-bottom:8px; }
     .lc-task-form select.lc-task-tipo { width:100%; padding:9px 12px; border-radius:8px; border:1.5px solid var(--border); font-family:var(--font); font-size:16px; color:var(--text); background:#fff; outline:none; margin-bottom:8px; }
+    /* 🔴 FIX 19/09 (Robert: "deve primeiro abrir perguntando o tipo e depois o texto"): a tarefa
+       agora é um fluxo de 2 passos — só o tipo aparece primeiro; texto/data só surgem depois de
+       escolhido, com o mesmo destaque de entrada usado no resto do app (ver .lc-confirm.visible). */
+    .lc-task-step2 { display:none; }
+    .lc-task-step2.visible { display:block; }
     .lc-task-form-footer { display:flex; gap:6px; justify-content:flex-end; }
 
     /* CONFIRMAÇÕES (status, link, histórico) */
@@ -241,8 +246,16 @@
        confirm com: (1) `scrollIntoView` (ver openLinkConfirm) garante que a tela role até ele
        aparecer, sempre; (2) um pulso de destaque na entrada, mais chamativo que o fade sutil de
        antes — a mesma ideia do brilho "just-placed" que este projeto já usa em outros lugares. */
-    .lc-confirm.visible { display:flex; animation:confirm-pop .35s ease; }
-    @keyframes confirm-pop { 0%{opacity:0;transform:scale(.92);background:rgba(112,75,155,.22);} 60%{opacity:1;transform:scale(1.01);} 100%{opacity:1;transform:scale(1);background:rgba(112,75,155,.07);} }
+    .lc-confirm.visible { display:flex; }
+    /* pulso de destaque UNIVERSAL (via box-shadow, nunca mexe no background do elemento — funciona
+       em cima de qualquer cor de fundo, ao contrário de animar o background em si) — ver
+       _revealComDestaque() no JS, reusado em toda abertura de painel/formulário do app. */
+    .lc-pop { animation: pop-highlight .5s ease; }
+    @keyframes pop-highlight {
+      0%   { transform:scale(.96); box-shadow:0 0 0 3px rgba(112,75,155,.45); }
+      60%  { transform:scale(1.01); box-shadow:0 0 0 3px rgba(112,75,155,.25); }
+      100% { transform:scale(1); box-shadow:0 0 0 0 rgba(112,75,155,0); }
+    }
     .lc-confirm-icon { font-size:28px; line-height:1; }
     .lc-confirm-msg { font-size:13px; font-weight:700; color:var(--text); line-height:1.45; }
     .lc-confirm-msg strong { color:var(--purple); }
@@ -1204,6 +1217,19 @@ function closeOtherCardUi(exceptRow) {
   });
 }
 
+// 🔴 FIX 19/09 (Robert: "melhore todas as transições/efeitos... tem que ser ridículo de fácil pra
+// um senhor de 60 anos" ): 1 único jeito de "isto apareceu, olha aqui" em TODO o app — rola a tela
+// até o elemento ficar visível e dá um pulso de destaque (mesma animação `confirm-pop` já usada no
+// WhatsApp/Maps). Antes cada painel (contato, tarefa, ganho/perdido, obs) tinha um comportamento de
+// abertura levemente diferente — nenhum chamava a atenção de verdade, exceto o fluxo que troca o
+// conteúdo inteiro (`openContactWa`). Reusado em TODA abertura de painel/formulário do app agora.
+function _revealComDestaque(el) {
+  if (!el) return;
+  el.classList.remove('lc-pop'); void el.offsetWidth; // reinicia a animação mesmo se já tinha rodado
+  el.classList.add('lc-pop');
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
 // ── LINK CONFIRM (WA / Maps) ─────────────────────────────────────
 function openLinkConfirm(btn) {
   const url  = btn.dataset.url;
@@ -1237,9 +1263,7 @@ function openLinkConfirm(btn) {
   conf.classList.add(isWa ? 'link-wa' : 'link-maps');
   conf.dataset.pending = url;
   conf.classList.add('visible');
-  // Garante que o painel de confirmação sempre fica visível na tela, mesmo se o botão tocado
-  // estiver perto do topo do card e o painel abrir mais abaixo (ver comentário no CSS acima).
-  conf.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  _revealComDestaque(conf);
 }
 function closeLinkConfirm(id) {
   const conf = document.getElementById(id);
@@ -1275,6 +1299,7 @@ function toggleContact(btn, row) {
     if (sp) sp.classList.remove('visible');
     const tf = document.getElementById('task-form-' + row);
     if (tf) tf.classList.remove('visible');
+    _revealComDestaque(panel);
   }
 }
 
@@ -1309,11 +1334,25 @@ function _tarefaBlockHtml(l) {
     ${finishBtn}
   </div>`;
 }
+// 🔴 FIX 19/09 (Robert: "quando clica em criar tarefa deve primeiro abrir perguntando o tipo e
+// depois o texto"): fluxo de 2 passos — abre só perguntando o tipo; texto/data (passo 2) só
+// aparecem depois de escolhido, em onTaskTipoChosen. Foca o seletor de tipo, não mais o texto.
 function showTaskForm(row) {
   closeOtherCardUi(row);
   const form = document.getElementById('task-form-' + row);
   if (!form) return;
   form.classList.add('visible');
+  _revealComDestaque(form);
+  const tipoIn = document.getElementById('task-tipo-' + row);
+  if (tipoIn) tipoIn.focus();
+}
+function onTaskTipoChosen(row) {
+  const tipoIn = document.getElementById('task-tipo-' + row);
+  const step2  = document.getElementById('task-step2-' + row);
+  if (!tipoIn || !step2) return;
+  if (!tipoIn.value) { step2.classList.remove('visible'); return; }
+  step2.classList.add('visible');
+  _revealComDestaque(step2);
   const dateIn = document.getElementById('task-due-' + row);
   if (dateIn && !dateIn.value) {
     const d = new Date(); d.setDate(d.getDate() + 1);
@@ -1327,6 +1366,8 @@ function hideTaskForm(row) {
   if (form) form.classList.remove('visible');
   const tipoIn = document.getElementById('task-tipo-' + row);
   if (tipoIn) tipoIn.value = '';
+  const step2 = document.getElementById('task-step2-' + row);
+  if (step2) step2.classList.remove('visible'); // reseta pro passo 1 na próxima abertura
 }
 async function saveTask(row) {
   const btn = document.getElementById('task-save-' + row);
@@ -1388,6 +1429,7 @@ function toggleObsEdit(row) {
   const rep = document.getElementById('obsr-' + row);
   if (!rep) return;
   rep.classList.add('editing');
+  _revealComDestaque(rep);
   const ta = document.getElementById('obs-' + row);
   if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
 }
@@ -1457,6 +1499,7 @@ function openGanhoPrompt(row) {
   const saveBtn = document.getElementById('sp-save-' + row);
   if (saveBtn) saveBtn.textContent = 'Confirmar Ganho';
   prompt.classList.add('visible');
+  _revealComDestaque(prompt);
   if (valorIn) valorIn.focus();
 }
 function openPerdidoPrompt(row) {
@@ -1478,6 +1521,7 @@ function openPerdidoPrompt(row) {
   const saveBtn = document.getElementById('sp-save-' + row);
   if (saveBtn) saveBtn.textContent = 'Avançar →';
   prompt.classList.add('visible');
+  _revealComDestaque(prompt);
   if (motivoSel) motivoSel.focus();
 }
 function cancelStatusPrompt(row) {
@@ -1688,9 +1732,9 @@ function renderLeads(leads, highlightRow) {
 
         <div id="task-wrap-${l.row}">${tarefaHtml}</div>
         <div class="lc-task-form" id="task-form-${l.row}">
-          <div class="lc-sp-label">📌 Nova tarefa</div>
-          <select id="task-tipo-${l.row}" class="lc-task-tipo">
-            <option value="">Como vai ser o contato?</option>
+          <div class="lc-sp-label">📌 Nova tarefa — 1) como vai ser o contato?</div>
+          <select id="task-tipo-${l.row}" class="lc-task-tipo" onchange="onTaskTipoChosen(${l.row})">
+            <option value="">Toque para escolher…</option>
             <option value="LIGACAO">📞 Ligação</option>
             <option value="WHATSAPP">💬 WhatsApp</option>
             <option value="VISITA">🏠 Visita</option>
@@ -1698,11 +1742,14 @@ function renderLeads(leads, highlightRow) {
             <option value="EMAIL">✉️ E-mail</option>
             <option value="PROPOSTA">📄 Proposta</option>
           </select>
-          <textarea id="task-texto-${l.row}" maxlength="300" placeholder="O que precisa ser feito? Ex: Ligar confirmando pedido"></textarea>
-          <input type="date" id="task-due-${l.row}">
-          <div class="lc-task-form-footer">
-            <button class="lc-sp-cancel" onclick="hideTaskForm(${l.row})">Cancelar</button>
-            <button class="lc-sp-save" id="task-save-${l.row}" onclick="saveTask(${l.row})">Salvar</button>
+          <div class="lc-task-step2" id="task-step2-${l.row}">
+            <div class="lc-sp-label">2) o que precisa ser feito e até quando</div>
+            <textarea id="task-texto-${l.row}" maxlength="300" placeholder="Ex: Ligar confirmando pedido"></textarea>
+            <input type="date" id="task-due-${l.row}">
+            <div class="lc-task-form-footer">
+              <button class="lc-sp-cancel" onclick="hideTaskForm(${l.row})">Cancelar</button>
+              <button class="lc-sp-save" id="task-save-${l.row}" onclick="saveTask(${l.row})">Salvar</button>
+            </div>
           </div>
         </div>
 
