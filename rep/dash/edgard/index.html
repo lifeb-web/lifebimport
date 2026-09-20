@@ -1102,6 +1102,13 @@ async function apiPost(path, body, timeoutMs) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + REP_TOKEN },
         body: JSON.stringify(body),
+        // 🔴 FIX 20/09 (auditoria adversarial, achado real: a "rede de segurança" de disparar a
+        // ação pendente no pagehide/visibilitychange usa fetch() normal — o navegador pode MATAR
+        // uma requisição em andamento assim que a aba é escondida/fechada, sem garantia nenhuma de
+        // completar. `keepalive:true` é o jeito certo do Fetch API pra isso: deixa o navegador
+        // terminar a requisição em segundo plano mesmo depois da página sumir. Sem custo nenhum
+        // pras chamadas normais (dentro da página aberta), só reforça a garantia no caso de saída.
+        keepalive: true,
         signal: _ctrl.signal,
       });
     } catch (netErr) {
@@ -1158,7 +1165,11 @@ function _confirmarComJanela(key, { mensagem, ms, executar, aoDesfazer }) {
   _pendingActions[key] = { timer, aoDesfazer, executar };
   const el = document.getElementById('toast');
   if (el) {
-    el.innerHTML = `<span>${esc(mensagem)}</span><button class="toast-undo-btn" onclick="_desfazerJanela('${key}')">Desfazer</button>`;
+    // 🔴 FIX 20/09 (auditoria adversarial, consistência): `key` aqui é sempre "algo-"+dealId
+    // (numérico), nunca texto livre — mas usar JSON.stringify+esc de qualquer forma, igual todo
+    // outro valor dinâmico dentro de onclick no app, evita esse ser o único lugar que ainda confia
+    // em interpolação crua dentro de aspas simples.
+    el.innerHTML = `<span>${esc(mensagem)}</span><button class="toast-undo-btn" onclick="_desfazerJanela(${esc(JSON.stringify(key))})">Desfazer</button>`;
     el.classList.add('show');
     clearTimeout(_toastTimer);
     _toastTimer = setTimeout(() => el.classList.remove('show'), wait + 400);
