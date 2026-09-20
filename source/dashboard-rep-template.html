@@ -1108,7 +1108,7 @@ function _confirmarComJanela(key, { mensagem, ms, executar, aoDesfazer }) {
     delete _pendingActions[key];
     await executar();
   }, wait);
-  _pendingActions[key] = { timer, aoDesfazer };
+  _pendingActions[key] = { timer, aoDesfazer, executar };
   const el = document.getElementById('toast');
   if (el) {
     el.innerHTML = `<span>${esc(mensagem)}</span><button class="toast-undo-btn" onclick="_desfazerJanela('${key}')">Desfazer</button>`;
@@ -1117,6 +1117,21 @@ function _confirmarComJanela(key, { mensagem, ms, executar, aoDesfazer }) {
     _toastTimer = setTimeout(() => el.classList.remove('show'), wait + 400);
   }
 }
+// 🔴 FIX 19/09 (auditoria de robustez, achado próprio: se o rep trocar de app ou fechar a aba
+// DURANTE a janela de "Desfazer", o timer nunca dispararia — a ação ficaria pendurada pra sempre
+// achando que foi feita, mas nunca chegando no Agendor. "Rede de segurança" pra isso: se a tela
+// for escondida/fechada com alguma ação pendente, dispara ela NA HORA em vez de esperar o timer —
+// nenhuma escrita pode sumir silenciosamente só porque o rep saiu do app rápido demais.
+function _flushJanelasPendentes() {
+  Object.keys(_pendingActions).forEach(function(key) {
+    const p = _pendingActions[key];
+    clearTimeout(p.timer);
+    delete _pendingActions[key];
+    if (typeof p.executar === 'function') { try { p.executar(); } catch (_) {} }
+  });
+}
+document.addEventListener('visibilitychange', function() { if (document.visibilityState === 'hidden') _flushJanelasPendentes(); });
+addEventListener('pagehide', _flushJanelasPendentes);
 function _desfazerJanela(key) {
   const p = _pendingActions[key];
   if (!p) return;
