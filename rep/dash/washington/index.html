@@ -35,8 +35,13 @@
       --font:    'Montserrat', sans-serif;
     }
     *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
-    html { overflow-x:hidden; touch-action:pan-x pan-y; zoom:1.08; }
-    body { font-family:var(--font); background:var(--bg); color:var(--text); min-height:100vh; -webkit-tap-highlight-color:transparent; touch-action:pan-x pan-y; }
+    /* 🔴 FIX 19/09 (Robert: "tô conseguindo arrastar a tela, isso não pode acontecer, tem que ser
+       um app firme"): `pan-x` deixava o dedo arrastar a página de lado (não tem nada pra rolar
+       horizontalmente de propósito — isso só dava uma sensação de "página frouxa", não de app).
+       `overscroll-behavior` trava o efeito de "elástico" do navegador quando puxa além do topo/fim
+       da tela — junto, a tela para de parecer que "arrasta"/balança, fica firme como um app nativo. */
+    html { overflow-x:hidden; touch-action:pan-y; overscroll-behavior:none; zoom:1.08; }
+    body { font-family:var(--font); background:var(--bg); color:var(--text); min-height:100vh; -webkit-tap-highlight-color:transparent; touch-action:pan-y; overscroll-behavior:none; }
     button, a, select, input, textarea { touch-action:manipulation; }
 
     /* LOADING BAR */
@@ -98,6 +103,12 @@
     #filter-clear { background:rgba(112,75,155,.1); border:1.5px solid rgba(112,75,155,.35); border-radius:20px; padding:4px 12px; font-family:var(--font); font-size:11px; font-weight:700; color:var(--purple); cursor:pointer; transition:background .12s,border-color .12s; }
     #filter-clear:hover { background:rgba(112,75,155,.18); border-color:var(--purple); }
 
+    /* 🔴 FIX 19/09: reforço positivo discreto quando a carteira tá em dia (ver renderLeads) —
+       gradiente suave em vez de cor sólida chapada, sem emoji piscando nem confete: "sofisticado",
+       não "comemoração". */
+    #fila-em-dia { display:none; align-items:center; gap:8px; margin-bottom:10px; padding:9px 13px; border-radius:10px; background:linear-gradient(90deg, rgba(34,163,94,.08), rgba(112,75,155,.06)); border:1px solid rgba(34,163,94,.22); color:#15803d; font-size:12px; font-weight:700; animation:panel-in .25s ease; }
+    #fila-em-dia.visible { display:flex; }
+
     /* ERROR BANNER */
     #error-banner { display:none; background:#fff0f5; border:1px solid #ffc0d8; border-radius:10px; padding:12px 16px; color:#b0134a; font-size:13px; margin-bottom:12px; }
 
@@ -144,12 +155,24 @@
     /* 🔴 FIX 19/09 (Robert, revisão de design: "deixou espaço vazio embaixo... não deixar espaços em
        branco atoa"): com `margin-left:auto` nos botões, quando cidade+data não deixavam espaço pros
        3 ícones na mesma linha, o flex-wrap jogava os ícones pra uma linha NOVA sozinha, mas ainda
-       "grudados" na direita — sobrava um vão vazio enorme à esquerda deles. Sem o auto-margin, os
-       ícones ficam coladinhos logo depois da data quando cabe, ou alinhados à ESQUERDA (sem vão) na
-       linha de baixo quando não cabe — nunca mais espaço morto. */
-    .lc-meta { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:6px; }
+       "grudados" na direita — sobrava um vão vazio enorme à esquerda deles.
+       🔴 FIX 19/09 (2ª rodada — Robert: "tinha ficado bom SDR na mesma linha dos 3 botões e os 3
+       botões mais pra frente, agora ficou espaço vazio"): tirar o `margin-left:auto` resolveu o vão
+       na linha de baixo, mas criou um vão NOVO na linha de cima — sem nada empurrando os ícones,
+       eles ficavam colados logo depois da tag de data, deixando um vazio grande até a borda direita
+       do card. Resposta certa pras 2 situações ao mesmo tempo: as tags (cidade/data) agora moram
+       dentro do PRÓPRIO wrapper (`.lc-meta-tags`), e `.lc-meta` vira `justify-content:space-between`
+       com só 2 filhos (tags-wrapper + botões) — nunca mais N itens soltos brigando por espaço junto.
+       Cabendo tudo numa linha: empurra os botões pra ponta direita (efeito bom de antes). Quebrando
+       os botões pra linha de baixo sozinhos: 1 item só nessa linha com `space-between` fica colado
+       à ESQUERDA (sem vão). As tags continuam grudadinhas entre si (gap próprio do wrapper),
+       nunca mais espalhadas pelo space-between do pai. */
+    .lc-meta { display:flex; align-items:center; gap:6px; flex-wrap:wrap; justify-content:space-between; margin-bottom:6px; }
+    .lc-meta-tags { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
     .lc-tag  { font-size:10px; font-weight:600; color:var(--muted); background:var(--bg); border-radius:6px; padding:3px 8px; white-space:nowrap; }
     .lc-tag-sdr { color:var(--purple); background:rgba(112,75,155,.1); }
+    button.lc-tag { border:none; font-family:var(--font); cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    button.lc-tag:active { transform:scale(.96); }
     .lc-meta-sdr { margin:0 0 10px; }
     .lc-meta-btns { display:flex; gap:10px; align-items:center; flex-shrink:0; }
 
@@ -560,12 +583,10 @@
   </div>
 
   <div class="summary-strip">
-    <!-- 🔴 FIX 19/09 (achado de auditoria própria: a grade tinha 5 cards mas o CSS só reservava
-         espaço pra 4 colunas — o 5º card ("Total") caía sozinho numa linha nova, com 3 colunas de
-         espaço vazio do lado, o mesmo tipo de "espaço vazio à toa" que o Robert já tinha achado em
-         outro lugar hoje. Grid corrigida pra 5 colunas + rótulos encurtados pra caber sem cortar
-         (o rótulo de Reposição/Reativação, em especial, não cabia de jeito nenhum numa coluna
-         estreita com nowrap e ia vazar da caixa). -->
+    <!-- 🔴 FIX 19/09: 5 cards → 5 colunas de verdade + rótulos encurtados pra caber sem cortar
+         (Robert foi e voltou algumas vezes sobre manter o card de Pós-venda — decisão final:
+         "não tira o card não, entendi que pode ser só um filtro" — fica como filtro ADICIONAL,
+         Reposição/Reativação sempre continuam na mesma fila única por padrão, nunca escondidas). -->
     <div class="sum-card s-ag"   data-filter="Aguardando contato" onclick="toggleFilter(this)">
       <div class="sum-label">Aguard.</div>
       <div class="sum-val" id="sum-ag">—</div>
@@ -578,9 +599,6 @@
       <div class="sum-label">Negoc.</div>
       <div class="sum-val" id="sum-neg">—</div>
     </div>
-    <!-- Robert pediu opinião sobre Reposição/Reativação virarem aba separada — decisão registrada:
-         NÃO vira aba/tela nova, reusa o MESMO mecanismo de filtro tocável que já existe aqui, só
-         que filtrando por funil_tag em vez de status. -->
     <div class="sum-card s-pv"   data-filter="__pos_venda__" onclick="toggleFilter(this)">
       <div class="sum-label">Pós-venda</div>
       <div class="sum-val" id="sum-pv">—</div>
@@ -595,6 +613,12 @@
     <span id="filter-label"></span>
     <button id="filter-clear" onclick="clearFilter()">✕ limpar</button>
   </div>
+
+  <!-- 🔴 FIX 19/09 (Robert: "quando ele terminar de atualizar todos e não tiver nenhum atrasado
+       ou sem tarefa, aparecer algo sinalizando pra ele sutilmente, sofisticado"): aparece só quando
+       "Aguardando" zera com a carteira não-vazia — reforço positivo discreto, some sozinho assim
+       que qualquer lead voltar a precisar de atenção. -->
+  <div id="fila-em-dia">✨ Carteira em dia — nada esperando contato agora.</div>
 
   <div id="leads-list"></div>
   <div id="show-more-wrap"></div>
@@ -707,6 +731,10 @@ function _ordenarFilaLocal(leads) {
   });
 }
 const FUNIL_BADGE_LABEL = { reposicao: 'Reposição', reativacao75: 'Reativação 75+' };
+// 🔴 FIX 19/09 (Robert: "clicou no SDR, abre perguntando se quer chamar no WhatsApp"): números
+// dos 2 SDRs conhecidos (mesmos usados pela Bia em gs-agendor-worker/NAME_TO_PHONE) — só os que o
+// painel já reconhece como SDR (ver SDR_AGENDOR_IDS no backend) ganham o badge clicável.
+const SDR_WHATSAPP = { 'Felipe': '556293568997', 'Cleomar': '556284955920' };
 
 // Tarefa aberta — a Frente A (backend) pode ainda não ter subido o objeto completo {id,texto,dueDate}
 // no payload de /leads (item A1 do contrato). Enquanto isso, cai pro sinal antigo (semTarefa, só um
@@ -1199,17 +1227,18 @@ function showSkeletons(n) {
 
 // ── FILTRO ─────────────────────────────────────────────────────
 let _activeFilter = null;
-// 🔴 FIX 19/09: filtro de status (Aguardando/Em contato/Em negociação) e o card "Reposição/
-// Reativ." usam CAMPOS diferentes do lead (status vs funil_tag) — 1 função só decide "esse lead
-// aparece com esse filtro?" pras 3 telas que filtram (lista ativa, busca, contador), nunca mais
-// bate certo num lugar e errado no outro.
+// Filtro de status (Aguardando/Em contato/Em negociação) e o card "Pós-venda" usam CAMPOS
+// diferentes do lead (status vs funil_tag) — 1 função só decide "esse lead aparece com esse
+// filtro?" pras telas que filtram (lista ativa, busca, contador), nunca bate certo num lugar e
+// errado no outro. Reposição/Reativação continuam SEMPRE na fila única por padrão — este filtro é
+// só uma lupa opcional, nunca esconde nada da visão normal (decisão final do Robert, 19/09).
 function _leadMatchesFilter(l, filter) {
   if (!filter) return true;
   if (filter === '__pos_venda__') return l.funil_tag === 'reposicao' || l.funil_tag === 'reativacao75';
   return l.status === filter;
 }
 function _filterLabel(filter) {
-  return filter === '__pos_venda__' ? 'Reposição/Reativação' : filter;
+  return filter === '__pos_venda__' ? 'Pós-venda (Reposição/Reativação)' : filter;
 }
 function toggleFilter(card) {
   const filter = card.dataset.filter;
@@ -1587,7 +1616,7 @@ function _tarefaBlockHtml(l) {
   const TIPO_ICON = { LIGACAO: '📞', WHATSAPP: '💬', VISITA: '🏠', REUNIAO: '🤝', EMAIL: '✉️', PROPOSTA: '📄' };
   const tipoUp = String(t.tipo||'').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
   const tipoIcon = stalled ? '🆘' : (TIPO_ICON[tipoUp] || (late ? '🔴' : '📌'));
-  const finishBtn = t.id ? `<button class="lc-task-btn finish" onclick="finishTask(${l.row}, ${Number(t.id)})">✓ Concluir</button>` : '';
+  const finishBtn = t.id ? `<button class="lc-task-btn finish" onclick="openFinishPrompt(${l.row}, ${Number(t.id)}, '${esc(t.tipo||'')}')">✓ Concluir</button>` : '';
   const textoBruto = t.texto || 'Tarefa aberta';
   const textoId = `task-text-${l.row}`;
   const textoHtml = textoBruto.length > 100
@@ -1711,10 +1740,51 @@ async function saveTask(row) {
     },
   });
 }
-async function finishTask(row, taskId) {
+// 🔴 FIX 19/09 (Robert, forte: "voltou o desfazer mas as confirmações de escrita devem
+// permanecer... reunião, ligação e visita precisam pedir anotação, senão o CRM perde a vida"):
+// concluir tarefa passa por 1 caixa de confirmação SEMPRE (nunca mais o modal nativo feio do
+// navegador) — e pra Ligação/Visita/Reunião (interação real com o cliente) o relato do que
+// aconteceu é OBRIGATÓRIO, mesma lógica do /annotate da Bia (a nota É o registro da atividade).
+const TIPOS_EXIGEM_RELATO = new Set(['LIGACAO', 'VISITA', 'REUNIAO']); // mesma regra do backend
+function openFinishPrompt(row, taskId, tipo) {
+  closeOtherCardUi(row);
+  const spSameRow = document.getElementById('sp-' + row); // Ganho/Perdido do MESMO card — nunca 2 prompts abertos juntos
+  if (spSameRow) spSameRow.classList.remove('visible');
+  const prompt = document.getElementById('tfp-' + row);
+  if (!prompt) return;
+  prompt.dataset.taskId = taskId;
+  prompt.dataset.tipo = tipo || '';
+  const precisaRelato = TIPOS_EXIGEM_RELATO.has(String(tipo || '').toUpperCase());
+  const lbl = document.getElementById('tfp-label-' + row);
+  const obsTa = document.getElementById('tfp-obs-' + row);
+  const warn = document.getElementById('tfp-warn-' + row);
+  if (lbl) lbl.textContent = precisaRelato ? 'O que aconteceu? (obrigatório pra concluir)' : 'Concluir esta tarefa?';
+  if (obsTa) { obsTa.value = ''; obsTa.style.display = ''; obsTa.placeholder = precisaRelato ? 'Ex: cliente confirmou o pedido, vai fechar semana que vem' : 'Observação (opcional)'; }
+  if (warn) warn.style.display = precisaRelato ? '' : 'none';
+  prompt.classList.add('visible');
+  _revealComDestaque(prompt);
+  if (obsTa) setTimeout(() => obsTa.focus(), 350); // mesmo cuidado do teclado cobrindo o campo (ver Ganho)
+}
+function cancelFinishPrompt(row) {
+  const prompt = document.getElementById('tfp-' + row);
+  if (prompt) prompt.classList.remove('visible');
+}
+function submitFinishPrompt(row) {
+  const prompt = document.getElementById('tfp-' + row);
+  if (!prompt) return;
+  const taskId = Number(prompt.dataset.taskId);
+  const tipo = prompt.dataset.tipo || '';
+  const obsTa = document.getElementById('tfp-obs-' + row);
+  const observacao = obsTa ? obsTa.value.trim() : '';
+  const precisaRelato = TIPOS_EXIGEM_RELATO.has(String(tipo).toUpperCase());
+  if (precisaRelato && !observacao) { showToast('Registre o que aconteceu antes de concluir'); if (obsTa) obsTa.focus(); return; }
+  prompt.classList.remove('visible');
+  finishTask(row, taskId, observacao);
+}
+async function finishTask(row, taskId, observacao) {
   if (!taskId) { showToast('Não deu pra identificar a tarefa — recarregue a página e tente de novo'); return; }
-  // 🔴 FIX 19/09: modal nativo de confirm() removido — vira janela de "Desfazer" de alguns segundos
-  // (ver _confirmarComJanela), igual toda outra escrita sensível do painel agora.
+  // Confirmação já aconteceu em submitFinishPrompt — daqui pra frente é a MESMA janela de
+  // "Desfazer" de todas as outras escritas sensíveis (ver _confirmarComJanela).
   const _card = document.querySelector(`.lead-card[data-row="${row}"]`);
   if (_card) _card.classList.add('lc-salvando');
   _confirmarComJanela('finish-' + row, {
@@ -1723,7 +1793,7 @@ async function finishTask(row, taskId) {
     aoDesfazer: () => { if (_card) _card.classList.remove('lc-salvando'); },
     executar: async () => {
       try {
-        const data = await apiPost('/task/finish', { dealId: row, taskId });
+        const data = await apiPost('/task/finish', { dealId: row, taskId, observacao: observacao || '' });
         const idx = _rawLeads.findIndex(l => l.row === row);
         if (idx !== -1 && data && data.lead) {
           _rawLeads[idx] = _transformarLeadAgendor(data.lead);
@@ -1828,6 +1898,8 @@ async function saveObs(row) {
 // só acontece depois da janela de "Desfazer" (ver _confirmarComJanela e nota no topo do arquivo).
 function openGanhoPrompt(row) {
   closeOtherCardUi(row);
+  const tfpSameRow = document.getElementById('tfp-' + row); // concluir tarefa do MESMO card — nunca 2 prompts abertos juntos
+  if (tfpSameRow) tfpSameRow.classList.remove('visible');
   const prompt = document.getElementById('sp-' + row);
   if (!prompt) return;
   prompt.dataset.tipo = 'ganho';
@@ -1858,6 +1930,8 @@ function openGanhoPrompt(row) {
 }
 function openPerdidoPrompt(row) {
   closeOtherCardUi(row);
+  const tfpSameRow = document.getElementById('tfp-' + row); // concluir tarefa do MESMO card — nunca 2 prompts abertos juntos
+  if (tfpSameRow) tfpSameRow.classList.remove('visible');
   const prompt = document.getElementById('sp-' + row);
   if (!prompt) return;
   prompt.dataset.tipo = 'perdido';
@@ -2021,11 +2095,22 @@ function renderLeads(leads, highlightRow) {
   // Agendor — não é bug deste arquivo, é o contrato ainda incompleto do outro lado.
   _allLeads = leads.slice();
 
-  document.getElementById('sum-ag').textContent   = _allLeads.filter(l=>l.status==='Aguardando contato').length;
+  const _totAguardando = _allLeads.filter(l=>l.status==='Aguardando contato').length;
+  document.getElementById('sum-ag').textContent   = _totAguardando;
   document.getElementById('sum-cont').textContent = _allLeads.filter(l=>l.status==='Em contato').length;
   document.getElementById('sum-neg').textContent  = _allLeads.filter(l=>l.status==='Em negociação').length;
   document.getElementById('sum-pv').textContent   = _allLeads.filter(l=>_leadMatchesFilter(l,'__pos_venda__')).length;
   document.getElementById('sum-tot').textContent  = _allLeads.length;
+
+  // 🔴 FIX 19/09 (Robert: "quando ele terminar de atualizar todos e não tiver nenhum atrasado ou
+  // sem tarefa, aparecer algo sinalizando pra ele sutilmente, sofisticado"): "Aguardando" é
+  // exatamente "precisa de atenção agora" (sem tarefa ou tarefa vencida) — zerado com leads na
+  // carteira é o sinal certo de "carteira em dia", sem inventar um critério novo.
+  (function() {
+    const banner = document.getElementById('fila-em-dia');
+    if (!banner) return;
+    banner.classList.toggle('visible', _totAguardando === 0 && _allLeads.length > 0 && !_activeFilter && !_searchQuery.trim());
+  })();
 
   (function() {
     const bar = document.getElementById('filter-bar');
@@ -2127,10 +2212,27 @@ function renderLeads(leads, highlightRow) {
             </div>
           </div>
         </div>
+        <!-- 🔴 FIX 19/09 (Robert, forte: "voltou o desfazer mas as confirmações de escrita devem
+             permanecer... reunião/ligação/visita precisam pedir anotação, senão o CRM perde a
+             vida"): confirmar SEMPRE antes de concluir (não é mais um modal nativo feio, é essa
+             caixinha — "melhorar e deixar coerente" como pedido) + pra Ligação/Visita/Reunião o
+             relato do que aconteceu é OBRIGATÓRIO (mesma lógica do /annotate da Bia — a nota É o
+             registro da atividade, nunca um "feito" vazio). -->
+        <div class="lc-status-prompt" id="tfp-${l.row}">
+          <div class="lc-sp-label" id="tfp-label-${l.row}">Concluir esta tarefa?</div>
+          <textarea class="lc-sp-input" id="tfp-obs-${l.row}" style="display:none" rows="3" placeholder="O que aconteceu? Ex: cliente confirmou o pedido, vai fechar semana que vem"></textarea>
+          <div class="lc-status-warn" id="tfp-warn-${l.row}" style="display:none">Obrigatório registrar antes de concluir — sem isso o histórico do negócio fica sem esse registro.</div>
+          <div class="lc-sp-footer">
+            <button class="lc-sp-cancel" onclick="cancelFinishPrompt(${l.row})">Cancelar</button>
+            <button class="lc-sp-save" id="tfp-save-${l.row}" onclick="submitFinishPrompt(${l.row})">Concluir</button>
+          </div>
+        </div>
 
         <div class="lc-meta">
-          ${cidadeUF ? `<span class="lc-tag">📍 ${esc(cidadeUF)}</span>` : ''}
-          ${l.data   ? `<span class="lc-tag">📅 ${esc(fmtData(l.data))}</span>` : ''}
+          <div class="lc-meta-tags">
+            ${cidadeUF ? `<span class="lc-tag">📍 ${esc(cidadeUF)}</span>` : ''}
+            ${l.data   ? `<span class="lc-tag">📅 ${esc(fmtData(l.data))}</span>` : ''}
+          </div>
           <div class="lc-meta-btns">
             ${hasContact ? `<button class="lc-icon-btn contact" onclick="toggleContact(this,${l.row})" title="Dados do contato" aria-expanded="false">${SVG_PERSON}</button>` : ''}
             ${wa         ? `<button class="lc-icon-btn wa"   data-url="https://wa.me/${wa}" onclick="openLinkConfirm(this)" title="WhatsApp">${SVG_WA}</button>` : ''}
@@ -2140,7 +2242,12 @@ function renderLeads(leads, highlightRow) {
         <!-- 🔴 FIX 19/09 (Robert: "o SDR deve ficar embaixo de cidade e estado... tem alguns que
              estão na mesma linha e não fica bom"): linha própria, nunca mais dividindo espaço com
              cidade/data no mesmo flex-wrap (quebrava feio quando a cidade era longa). -->
-        ${l.sdr_responsavel ? `<div class="lc-meta-sdr"><span class="lc-tag lc-tag-sdr">👤 SDR: ${esc(l.sdr_responsavel)}</span></div>` : ''}
+        <!-- 🔴 FIX 19/09 (Robert: "clicou no SDR abre perguntando se quer chamar ele no WhatsApp,
+             você já tem o contato pra linkar"): badge do SDR vira botão quando o número é conhecido
+             — mesmo fluxo de confirmação já usado no resto do app (openLinkConfirm). -->
+        ${l.sdr_responsavel ? (SDR_WHATSAPP[l.sdr_responsavel]
+          ? `<div class="lc-meta-sdr"><button class="lc-tag lc-tag-sdr wa" data-url="https://wa.me/${SDR_WHATSAPP[l.sdr_responsavel]}" onclick="openLinkConfirm(this)">👤 SDR: ${esc(l.sdr_responsavel)}</button></div>`
+          : `<div class="lc-meta-sdr"><span class="lc-tag lc-tag-sdr">👤 SDR: ${esc(l.sdr_responsavel)}</span></div>`) : ''}
         <div class="lc-contact-panel" id="cp-${l.row}">
           <div id="lcp-rows-${l.row}">${cpRows.join('')}</div>
           ${hasContact ? `<div class="lcp-wa-overlay" id="lcp-wac-${l.row}">
