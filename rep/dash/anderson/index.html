@@ -1764,6 +1764,12 @@ async function saveTask(row) {
 // navegador) — e pra Ligação/Visita/Reunião (interação real com o cliente) o relato do que
 // aconteceu é OBRIGATÓRIO, mesma lógica do /annotate da Bia (a nota É o registro da atividade).
 const TIPOS_EXIGEM_RELATO = new Set(['LIGACAO', 'VISITA', 'REUNIAO']); // mesma regra do backend
+// 🔴 FIX 20/09 (achado real testando o BACKEND ao vivo — mesmo bug, dessa vez no front): o Agendor
+// devolve o tipo acentuado/title-case ("Ligação"), nunca "LIGACAO" maiúsculo puro — `.toUpperCase()`
+// sozinho não tira acento, então a checagem nunca batia e o rep via o prompt "opcional" mesmo numa
+// Ligação/Visita/Reunião de verdade (o backend bloquearia depois, mas de um jeito confuso, sem
+// avisar antes). Mesma normalização que `tipoUp` já usa certo em _tarefaBlockHtml, só faltava aqui.
+function _normalizarTipo(s) { return String(s || '').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
 function openFinishPrompt(row, taskId, tipo) {
   closeOtherCardUi(row);
   const spSameRow = document.getElementById('sp-' + row); // Ganho/Perdido do MESMO card — nunca 2 prompts abertos juntos
@@ -1772,7 +1778,7 @@ function openFinishPrompt(row, taskId, tipo) {
   if (!prompt) return;
   prompt.dataset.taskId = taskId;
   prompt.dataset.tipo = tipo || '';
-  const precisaRelato = TIPOS_EXIGEM_RELATO.has(String(tipo || '').toUpperCase());
+  const precisaRelato = TIPOS_EXIGEM_RELATO.has(_normalizarTipo(tipo));
   const lbl = document.getElementById('tfp-label-' + row);
   const obsTa = document.getElementById('tfp-obs-' + row);
   const warn = document.getElementById('tfp-warn-' + row);
@@ -1794,7 +1800,7 @@ function submitFinishPrompt(row) {
   const tipo = prompt.dataset.tipo || '';
   const obsTa = document.getElementById('tfp-obs-' + row);
   const observacao = obsTa ? obsTa.value.trim() : '';
-  const precisaRelato = TIPOS_EXIGEM_RELATO.has(String(tipo).toUpperCase());
+  const precisaRelato = TIPOS_EXIGEM_RELATO.has(_normalizarTipo(tipo));
   if (precisaRelato && !observacao) { showToast('Registre o que aconteceu antes de concluir'); if (obsTa) obsTa.focus(); return; }
   prompt.classList.remove('visible');
   finishTask(row, taskId, observacao);
