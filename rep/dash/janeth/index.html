@@ -180,7 +180,14 @@
     .lcp-wac-btns  { display:flex; gap:8px; }
     .lcp-wac-cancel { padding:6px 14px; border-radius:8px; border:1px solid var(--border); background:#fff; color:var(--muted); font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; }
     .lcp-wac-open   { padding:6px 14px; border-radius:8px; border:none; background:#16a34a; color:#fff; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; }
-    .lc-last-updated { font-size:10px; color:var(--text); font-weight:600; padding:5px 2px 0; min-height:14px; }
+    /* 🔴 FIX 19/09 (Robert: "às vezes fica na mesma linha do status, às vezes pula linha — tem que
+       padronizar, prevendo os maiores nomes possíveis"): antes só truncava com "..." (max-width +
+       ellipsis) sem `flex-shrink`/`min-width:0` explícitos — o navegador podia decidir empurrar pra
+       2ª linha dependendo do texto, inconsistente. Agora É SEMPRE 1 linha só, garantido: o badge
+       (informação principal) nunca encolhe, o timestamp (secundário) sempre cede espaço primeiro e
+       trunca com "..." se precisar — nunca mais quebra linha, testado mentalmente com o pior caso
+       ("Em negociação" + "Atualizado 19/09 às 22:15" = 40+ caracteres). */
+    .lc-last-updated { font-size:10px; color:var(--text); font-weight:600; padding:5px 2px 0; min-height:14px; flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:right; }
 
     /* STATUS — v2 (18/09): não é mais um <select> livre. O bucket (Aguardando/Em contato/Em
        negociação) agora é CALCULADO no servidor a partir de tarefa aberta + etapa do funil (ver
@@ -188,8 +195,8 @@
        mudança de status que o painel realmente executa é marcar Ganho ou Perdido (irreversível
        pelo painel — por isso os botões abaixo, não mais um dropdown com 5 opções soltas). */
     .lc-status-wrap { }
-    .lc-status-row { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
-    .lc-status-badge { display:inline-flex; align-items:center; padding:7px 13px; border-radius:10px; font-family:var(--font); font-size:12px; font-weight:700; border:2px solid var(--border); background-color:var(--bg); color:var(--text); }
+    .lc-status-row { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:nowrap; }
+    .lc-status-badge { display:inline-flex; align-items:center; padding:7px 13px; border-radius:10px; font-family:var(--font); font-size:12px; font-weight:700; border:2px solid var(--border); background-color:var(--bg); color:var(--text); flex-shrink:0; white-space:nowrap; }
     .lc-status-badge.s-ag   { background:rgba(220,38,38,.07);  border-color:rgba(220,38,38,.4);  color:#b91c1c; }
     .lc-status-badge.s-cont { background:rgba(217,119,6,.07);  border-color:rgba(217,119,6,.4);  color:#92400e; }
     .lc-status-badge.s-neg  { background:rgba(22,163,74,.07);  border-color:rgba(22,163,74,.4);  color:#15803d; }
