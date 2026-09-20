@@ -1409,6 +1409,14 @@ function showLess() {
 function enterConcludingMode(row) {
   const card = document.querySelector(`.lead-card[data-row="${row}"]`);
   if (!card) return;
+  // 🔴 FIX 20/09 (auditoria adversarial, achado CRÍTICO ao vivo): quem chama isto (submitStatusPrompt,
+  // ganho) tinha marcado o card como 'lc-salvando' (opacity .6 + pointer-events:none) durante a janela
+  // de Desfazer — e NUNCA tirava essa classe no caminho de SUCESSO antes de entrar em modo de concluir.
+  // Resultado real: depois de confirmar Ganho, o card ficava esmaecido e travado pra sempre (o poll
+  // automático nem re-renderiza enquanto 'concluding' está ativo — ver hasPending em loadData), o rep
+  // conseguia digitar na observação (foco já setado por JS) mas NUNCA conseguia clicar em "Salvar e
+  // concluir"/"Pular →" — a ação mais importante do app (fechar uma venda) ficava com a tela travada.
+  card.classList.remove('lc-salvando');
   card.classList.add('concluding');
   if (!card.classList.contains('expanded')) {
     card.classList.add('expanded');
@@ -2252,7 +2260,7 @@ function renderLeads(leads, highlightRow) {
              registro da atividade, nunca um "feito" vazio). -->
         <div class="lc-status-prompt" id="tfp-${l.row}">
           <div class="lc-sp-label" id="tfp-label-${l.row}">Concluir esta tarefa?</div>
-          <textarea class="lc-sp-input" id="tfp-obs-${l.row}" style="display:none" rows="3" placeholder="O que aconteceu? Ex: cliente confirmou o pedido, vai fechar semana que vem"></textarea>
+          <textarea class="lc-sp-input" id="tfp-obs-${l.row}" style="display:none" rows="3" maxlength="1000" placeholder="O que aconteceu? Ex: cliente confirmou o pedido, vai fechar semana que vem"></textarea>
           <div class="lc-status-warn" id="tfp-warn-${l.row}" style="display:none">Obrigatório registrar antes de concluir — sem isso o histórico do negócio fica sem esse registro.</div>
           <div class="lc-sp-footer">
             <button class="lc-sp-cancel" onclick="cancelFinishPrompt(${l.row})">Cancelar</button>
@@ -2316,7 +2324,7 @@ function renderLeads(leads, highlightRow) {
               <option value="">Selecione o motivo…</option>
               ${MOTIVOS_PERDA.map(m => `<option>${esc(m)}</option>`).join('')}
             </select>
-            <textarea class="lc-sp-input" id="sp-obs-${l.row}" style="display:none" rows="3" placeholder="O que aconteceu? (obrigatório)"></textarea>
+            <textarea class="lc-sp-input" id="sp-obs-${l.row}" style="display:none" rows="3" maxlength="1000" placeholder="O que aconteceu? (obrigatório)"></textarea>
             <div class="lc-status-warn" id="sp-warn-${l.row}" style="display:none">Você vai ter alguns segundos pra desfazer depois de confirmar.</div>
             <div class="lc-sp-footer">
               <button class="lc-sp-cancel" onclick="cancelStatusPrompt(${l.row})">Cancelar</button>
