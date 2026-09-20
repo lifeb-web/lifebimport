@@ -81,6 +81,7 @@
     .sum-card.s-ag   { border-top:3px solid var(--red); }
     .sum-card.s-cont { border-top:3px solid var(--amber); }
     .sum-card.s-neg  { border-top:3px solid var(--emerald); }
+    .sum-card.s-pv   { border-top:3px solid #0891b2; }
     .sum-card.s-tot  { border-top:3px solid var(--purple); }
     .sum-card.s-ag   .sum-val { color:var(--red); }
     .sum-card.s-cont .sum-val { color:var(--amber); }
@@ -140,11 +141,17 @@
     .lc-pot-no-val { font-size:12px; font-weight:600; color:var(--muted); }
 
     /* meta tags + icon buttons */
-    .lc-meta { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+    /* 🔴 FIX 19/09 (Robert, revisão de design: "deixou espaço vazio embaixo... não deixar espaços em
+       branco atoa"): com `margin-left:auto` nos botões, quando cidade+data não deixavam espaço pros
+       3 ícones na mesma linha, o flex-wrap jogava os ícones pra uma linha NOVA sozinha, mas ainda
+       "grudados" na direita — sobrava um vão vazio enorme à esquerda deles. Sem o auto-margin, os
+       ícones ficam coladinhos logo depois da data quando cabe, ou alinhados à ESQUERDA (sem vão) na
+       linha de baixo quando não cabe — nunca mais espaço morto. */
+    .lc-meta { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:6px; }
     .lc-tag  { font-size:10px; font-weight:600; color:var(--muted); background:var(--bg); border-radius:6px; padding:3px 8px; white-space:nowrap; }
     .lc-tag-sdr { color:var(--purple); background:rgba(112,75,155,.1); }
-    .lc-meta-sdr { margin:-4px 0 10px; }
-    .lc-meta-btns { display:flex; gap:10px; align-items:center; flex-shrink:0; margin-left:auto; }
+    .lc-meta-sdr { margin:0 0 10px; }
+    .lc-meta-btns { display:flex; gap:10px; align-items:center; flex-shrink:0; }
 
     .lc-icon-btn { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:50%; border:none; cursor:pointer; flex-shrink:0; transition:transform .12s, box-shadow .12s, background .15s; text-decoration:none; outline:none; }
     .lc-icon-btn:active { transform:scale(.88); }
@@ -187,7 +194,7 @@
        (informação principal) nunca encolhe, o timestamp (secundário) sempre cede espaço primeiro e
        trunca com "..." se precisar — nunca mais quebra linha, testado mentalmente com o pior caso
        ("Em negociação" + "Atualizado 19/09 às 22:15" = 40+ caracteres). */
-    .lc-last-updated { font-size:10px; color:var(--text); font-weight:600; padding:5px 2px 0; min-height:14px; flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:right; }
+    .lc-last-updated { font-size:10px; color:var(--text); font-weight:600; padding:5px 2px 0; min-height:14px; white-space:nowrap; text-align:right; margin-left:auto; }
 
     /* STATUS — v2 (18/09): não é mais um <select> livre. O bucket (Aguardando/Em contato/Em
        negociação) agora é CALCULADO no servidor a partir de tarefa aberta + etapa do funil (ver
@@ -195,7 +202,7 @@
        mudança de status que o painel realmente executa é marcar Ganho ou Perdido (irreversível
        pelo painel — por isso os botões abaixo, não mais um dropdown com 5 opções soltas). */
     .lc-status-wrap { }
-    .lc-status-row { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:nowrap; }
+    .lc-status-row { display:flex; align-items:center; justify-content:space-between; gap:2px 8px; flex-wrap:wrap; }
     .lc-status-badge { display:inline-flex; align-items:center; padding:7px 13px; border-radius:10px; font-family:var(--font); font-size:12px; font-weight:700; border:2px solid var(--border); background-color:var(--bg); color:var(--text); flex-shrink:0; white-space:nowrap; }
     .lc-status-badge.s-ag   { background:rgba(220,38,38,.07);  border-color:rgba(220,38,38,.4);  color:#b91c1c; }
     .lc-status-badge.s-cont { background:rgba(217,119,6,.07);  border-color:rgba(217,119,6,.4);  color:#92400e; }
@@ -226,6 +233,12 @@
     .lc-task-icon { font-size:15px; flex-shrink:0; }
     .lc-task-info { flex:1; min-width:0; }
     .lc-task-text { font-size:12px; font-weight:700; color:var(--text); line-height:1.35; word-break:break-word; }
+    /* 🔴 FIX 19/09 (Robert, achado real: tarefa com texto gigante criada direto no Agendor "rouba a
+       tela inteira" no card): acima de 100 caracteres o texto entra clampado em 2 linhas com um
+       "ver mais" — nunca corta informação de vez (diferente do achado do "Atualizado", que é dado
+       curto e sempre visível; aqui é texto longo, onde truncar+expandir é o padrão certo). */
+    .lc-task-text.clamped { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .lc-task-more { display:block; margin-top:3px; font-size:11px; font-weight:700; color:var(--purple); background:none; border:none; padding:0; cursor:pointer; font-family:var(--font); }
     .lc-task-due  { font-size:10.5px; font-weight:600; color:var(--muted); margin-top:1px; }
     .lc-task-row.late .lc-task-due { color:#b91c1c; }
     .lc-task-btn { flex-shrink:0; padding:6px 10px; border-radius:8px; border:1.5px solid rgba(112,75,155,.3); background:#fff; font-family:var(--font); font-size:11px; font-weight:700; color:var(--purple); cursor:pointer; touch-action:manipulation; }
@@ -242,6 +255,9 @@
        de verdade, na causa raiz, não só no campo que o Robert percebeu primeiro. */
     .lc-task-form textarea { width:100%; padding:9px 12px; border-radius:8px; border:1.5px solid var(--border); font-family:var(--font); font-size:16px; color:var(--text); background:#fff; outline:none; resize:vertical; min-height:56px; margin-bottom:6px; }
     .lc-task-form input[type=date] { width:100%; padding:9px 12px; border-radius:8px; border:1.5px solid var(--border); font-family:var(--font); font-size:16px; color:var(--text); background:#fff; outline:none; margin-bottom:8px; }
+    .lc-task-time-wrap { margin-bottom:8px; }
+    .lc-task-time-wrap .lc-sp-label { margin:0 0 4px; font-size:11.5px; color:var(--purple); font-weight:700; }
+    .lc-task-form input[type=time] { width:100%; padding:9px 12px; border-radius:8px; border:1.5px solid var(--border); font-family:var(--font); font-size:16px; color:var(--text); background:#fff; outline:none; }
     .lc-task-form select.lc-task-tipo { width:100%; padding:9px 12px; border-radius:8px; border:1.5px solid var(--border); font-family:var(--font); font-size:16px; color:var(--text); background:#fff; outline:none; margin-bottom:8px; }
     /* 🔴 FIX 19/09 (Robert: "deve primeiro abrir perguntando o tipo e depois o texto"): a tarefa
        agora é um fluxo de 2 passos — só o tipo aparece primeiro; texto/data só surgem depois de
@@ -556,6 +572,13 @@
       <div class="sum-label">Negociando</div>
       <div class="sum-val" id="sum-neg">—</div>
     </div>
+    <!-- 🔴 FIX 19/09 (Robert pediu opinião sobre Reposição/Reativação virarem aba separada — decisão
+         registrada: NÃO vira aba/tela nova, reusa o MESMO mecanismo de filtro tocável que já existe
+         aqui, só que filtrando por funil_tag em vez de status). -->
+    <div class="sum-card s-pv"   data-filter="__pos_venda__" onclick="toggleFilter(this)">
+      <div class="sum-label">Reposição/Reativ.</div>
+      <div class="sum-val" id="sum-pv">—</div>
+    </div>
     <div class="sum-card s-tot"  data-filter="" onclick="toggleFilter(this)">
       <div class="sum-label">Total Ativo</div>
       <div class="sum-val" id="sum-tot">—</div>
@@ -610,11 +633,13 @@
 //     Por isso o painel também unificou as duas seções visuais em uma só ("Observações").
 //   - Tarefa aberta (criar/concluir) é uma ação nova que não existia no v1 — Robert pediu pra ver e
 //     mexer nisso direto no card, sem precisar abrir o Agendor.
-//   - Undo genérico (o botão "↩ Desfazer" que existia pra qualquer campo) foi REMOVIDO: o backend
-//     novo não tem endpoint pra reverter status/tarefa (só Bia/gs-agendor-worker tem "the pattern"
-//     interno pra ganho, sem endpoint de "desfazer ganho" exposto aqui) — manter uma UI de undo que
-//     não desfaz nada de verdade seria mentir pro rep. Ações de Ganho/Perdido pedem confirmação
-//     explícita (botão com nome claro + aviso "não pode ser desfeita pelo painel") em vez de undo.
+//   - Undo: 19/09 REINTRODUZIDO num formato diferente do v1, a pedido do Robert ("é um trunfo
+//     nosso, os apps enterprise fazem isso, até o zap tem"). Não é mais um botão que tentaria
+//     reverter algo já gravado (o Agendor não tem endpoint de "reabrir negócio"/"desfazer tarefa") —
+//     é o padrão "Desfazer envio" do Gmail: a escrita real só é MANDADA pro Agendor alguns segundos
+//     depois de confirmada na tela (ver _confirmarComJanela). "Desfazer" só cancela esse timer, sem
+//     precisar desfazer nada porque nunca chegou a gravar. Cobre toda escrita sensível: criar/
+//     concluir tarefa, observação, Ganho e Perdido.
 //   - Editar "valor potencial" direto no card foi DESATIVADO (virou texto, não mais clicável): não
 //     existe endpoint isolado pra isso no contrato novo (só dá pra registrar valor final dentro do
 //     fluxo de Marcar Ganho). Ver comentário no CSS (.lc-pot) e decisão documentada no relatório.
@@ -826,30 +851,39 @@ function setLeadTs(row) {
   const el = document.getElementById('ts-' + row);
   if (el) el.textContent = getLeadTs(row);
 }
+// 🔴 FIX 19/09 (Robert: "o atualizado tá cortando em alguns cards, tem que ser mais inteligente,
+// abreviar quando necessário, não deixar nada quebrar"): texto mais curto ("Hoje"/"Ontem", igual o
+// próprio WhatsApp faz nas mensagens) pra caber do lado do badge de status na imensa maioria dos
+// casos — e pra quando mesmo assim não couber (nome de status grande + tela bem estreita), a linha
+// agora tem permissão de quebrar (.lc-status-row com flex-wrap) em vez de cortar com "...": o dado
+// nunca fica escondido, só desce pra uma 2ª linha, alinhado à direita.
+function _diaCurto(d, hoje) {
+  const ontem = new Date(hoje); ontem.setDate(hoje.getDate() - 1);
+  const mesmoDia = (a, b) => a.toDateString() === b.toDateString();
+  if (mesmoDia(d, hoje))  return 'Hoje';
+  if (mesmoDia(d, ontem)) return 'Ontem';
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+}
 function getLeadTs(row, dataEntrada, tsServidor, tsEntrada) {
   const tsLocal  = _tsMap[row] || 0;
   const tsRemoto = tsServidor  || 0;
   const ts       = Math.max(tsLocal, tsRemoto);
+  const agora = new Date();
   if (ts) {
     const d = new Date(ts);
-    const day = String(d.getDate()).padStart(2,'0');
-    const mon = String(d.getMonth()+1).padStart(2,'0');
-    const h   = String(d.getHours()).padStart(2,'0');
-    const m   = String(d.getMinutes()).padStart(2,'0');
-    return `Atualizado ${day}/${mon} às ${h}:${m}`;
+    const h = String(d.getHours()).padStart(2,'0');
+    const m = String(d.getMinutes()).padStart(2,'0');
+    return `🕐 ${_diaCurto(d, agora)}, ${h}:${m}`;
   }
   if (tsEntrada) {
     const d = new Date(tsEntrada);
-    const day = String(d.getDate()).padStart(2,'0');
-    const mon = String(d.getMonth()+1).padStart(2,'0');
-    const h   = d.getHours();
-    const m   = d.getMinutes();
+    const h = d.getHours(), m = d.getMinutes();
     const temHora = h !== 0 || m !== 0;
     return temHora
-      ? `Entrada ${day}/${mon} às ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`
-      : `Entrada: ${day}/${mon}`;
+      ? `🕐 Entrada ${_diaCurto(d, agora)}, ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`
+      : `🕐 Entrada ${_diaCurto(d, agora)}`;
   }
-  if (dataEntrada) return `Entrada: ${fmtData(dataEntrada)}`;
+  if (dataEntrada) return `🕐 Entrada: ${fmtData(dataEntrada)}`;
   return '';
 }
 
@@ -925,6 +959,44 @@ function trackPrimeiroContato(row) {
 function buildMapsUrl(empresa, cidade, estado) {
   const parts = [empresa, cidade, estado].map(v => String(v||'').trim()).filter(Boolean);
   return parts.length ? 'https://maps.google.com/?q=' + encodeURIComponent(parts.join(', ')) : '';
+}
+
+// 🔄 FIX 19/09: extraído do card ativo pra ser reaproveitado pelo card de Histórico também
+// (Robert pediu os mesmos 3 botões — dados/zap/maps — nos cards de Ganhos e Perdidos).
+function _buildCpRows(l, { nomeRaw, nomeEmp, cnpj, endereco, phone, contato }) {
+  const cpRows = [];
+  const waNum       = fmtWA(l.whatsapp);
+  const contatoWa   = fmtWA(l.contato);
+  const contatoDisp = fmtPhone(l.contato).display;
+  if (nomeRaw) {
+    const nameEl = waNum
+      ? `<button class="lcp-name-btn" data-wa="${esc(waNum)}" data-display="${esc(phone.display)}" data-name="${esc(nomeRaw)}" onclick="openContactWa(this,${l.row})">${esc(nomeRaw)}</button>`
+      : `<div class="lcp-val">${esc(nomeRaw)}</div>`;
+    cpRows.push(`<div class="lcp-row"><span class="lcp-icon">👤</span><div class="lcp-info"><div class="lcp-label">Contato principal</div>${nameEl}</div></div>`);
+  }
+  if (contato && contato.toLowerCase() !== nomeRaw.toLowerCase()) {
+    const contatoEl = contatoWa
+      ? `<button class="lcp-name-btn" data-wa="${esc(contatoWa)}" data-display="${esc(contatoDisp)}" data-name="${esc(nomeEmp||nomeRaw)}" onclick="openContactWa(this,${l.row})">${esc(contatoDisp||contato)}</button>`
+      : `<div class="lcp-val">${esc(contatoDisp||contato)}</div>`;
+    cpRows.push(`<div class="lcp-row"><span class="lcp-icon">👥</span><div class="lcp-info"><div class="lcp-label">Contato empresa</div>${contatoEl}</div></div>`);
+  }
+  if (phone.display) {
+    cpRows.push(`<div class="lcp-row"><span class="lcp-icon">📱</span><div class="lcp-info"><div class="lcp-label">Telefone / WhatsApp</div><button class="lcp-tel lcp-wa-btn" data-wa="${esc(waNum)}" data-display="${esc(phone.display)}" data-name="${esc(nomeRaw||contato||'')}" onclick="openContactWa(this,${l.row})">💬 ${esc(phone.display)}</button></div></div>`);
+  }
+  if (endereco) {
+    const endPartes = [endereco];
+    if (l.cidade && !jaContem(endereco, l.cidade)) endPartes.push(toTitleCase(l.cidade));
+    if (l.estado && !jaContem(endereco, l.estado)) endPartes.push((l.estado||'').toUpperCase());
+    if (l.cep) {
+      const cepD = l.cep.replace(/\D/g,'');
+      if (cepD.length === 8 && !endereco.replace(/\D/g,'').includes(cepD)) endPartes.push(fmtCEP(l.cep));
+    }
+    const endFull = endPartes.join(', ');
+    cpRows.push(`<div class="lcp-row lcp-copyable" data-copy="${esc(endFull)}" onclick="copyLcp(this)"><span class="lcp-icon">🏠</span><div class="lcp-info"><div class="lcp-label">Endereço · toque para copiar</div><div class="lcp-val">${esc(endFull)}</div></div></div>`);
+  }
+  if (cnpj)
+    cpRows.push(`<div class="lcp-row lcp-copyable" data-copy="${esc(fmtCNPJ(cnpj))}" onclick="copyLcp(this)"><span class="lcp-icon">📋</span><div class="lcp-info"><div class="lcp-label">CNPJ · toque para copiar</div><div class="lcp-val">${esc(fmtCNPJ(cnpj))}</div></div></div>`);
+  return cpRows;
 }
 
 function statusClass(s) {
@@ -1007,7 +1079,7 @@ function scheduleReload(delayMs) {
   setTimeout(function () { loadData(); }, delayMs || 3000);
 }
 
-// ── TOAST (simples — sem "desfazer": ver nota no topo sobre por que o undo genérico foi removido) ──
+// ── TOAST ─────────────────────────────────────────────────────
 let _toastTimer;
 function showToast(msg, ms) {
   const el = document.getElementById('toast');
@@ -1016,6 +1088,72 @@ function showToast(msg, ms) {
   el.classList.add('show');
   clearTimeout(_toastTimer);
   _toastTimer = setTimeout(() => el.classList.remove('show'), ms || 3200);
+}
+
+// ── JANELA DE DESFAZER (undo) EM TODA ESCRITA SENSÍVEL ───────────────────────────────────────────
+// 🔴 FIX 19/09 (Robert: "voce tirou o desfazer, era um trunfo nosso, os apps enterprise fazem isso,
+// até o zap tem" — e, no mesmo dia, pediu separadamente "confirmação em toda escrita sensível"):
+// as duas coisas viram UMA só, do jeito que Gmail faz no "Desfazer envio": a ação só é REALMENTE
+// enviada pro Agendor alguns segundos depois de confirmada na tela. Enquanto a janela corre, nada
+// foi gravado ainda — "Desfazer" só cancela o timer, sem precisar desfazer nada de verdade (por
+// isso funciona até pra Ganho/Perdido, que o Agendor não tem endpoint de "reabrir negócio" pra
+// desfazer depois de gravado). É mais rápido que um modal de confirmação (não trava o fluxo) e mais
+// seguro que gravar na hora sem chance de voltar atrás.
+const _pendingActions = {};
+function _confirmarComJanela(key, { mensagem, ms, executar, aoDesfazer }) {
+  const anterior = _pendingActions[key];
+  if (anterior) { clearTimeout(anterior.timer); if (typeof anterior.aoDesfazer === 'function') { /* substitui, não desfaz visualmente de novo */ } }
+  const wait = ms || 5000;
+  const timer = setTimeout(async () => {
+    delete _pendingActions[key];
+    await executar();
+  }, wait);
+  _pendingActions[key] = { timer, aoDesfazer };
+  const el = document.getElementById('toast');
+  if (el) {
+    el.innerHTML = `<span>${esc(mensagem)}</span><button class="toast-undo-btn" onclick="_desfazerJanela('${key}')">Desfazer</button>`;
+    el.classList.add('show');
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => el.classList.remove('show'), wait + 400);
+  }
+}
+function _desfazerJanela(key) {
+  const p = _pendingActions[key];
+  if (!p) return;
+  clearTimeout(p.timer);
+  delete _pendingActions[key];
+  const el = document.getElementById('toast');
+  if (el) el.classList.remove('show');
+  if (typeof p.aoDesfazer === 'function') p.aoDesfazer();
+}
+
+// ── REPORTAR ERRO PELO ZAP ────────────────────────────────────────────────────────────────────────
+// 🔴 FIX 19/09 (Robert, achado real: "deu erro de PUT, faz o que? tem que pensar demais nisso...
+// abrir uma mensagem pronta pro meu zap?"): toda escrita que falha (mesmo depois dos 3 retries
+// automáticos do backend — ver agFetch) agora mostra, além do erro, um botão "Reportar" que abre o
+// WhatsApp do Robert com uma mensagem PRONTA (rep, ação, negócio, erro) — nunca deixa o rep sozinho
+// travado sem saber o que fazer, e o Robert fica sabendo na hora mesmo quando a escrita falhou de
+// verdade (as notificações automáticas do backend só disparam em caso de SUCESSO).
+const ROBERT_WA_NUMERO = '556291560985';
+let _lastErrorReportUrl = '';
+function showErrorToast(msg, contexto) {
+  const el = document.getElementById('toast');
+  if (!el) return;
+  const linhas = [
+    'Problema no Painel do Rep',
+    'Rep: ' + (typeof REP_DISPLAY !== 'undefined' ? REP_DISPLAY : ''),
+    contexto && contexto.acao ? 'Ação: ' + contexto.acao : '',
+    contexto && contexto.dealId ? 'Negócio: ' + contexto.dealId : '',
+    'Erro: ' + msg,
+  ].filter(Boolean).join('\n');
+  _lastErrorReportUrl = 'https://wa.me/' + ROBERT_WA_NUMERO + '?text=' + encodeURIComponent(linhas);
+  el.innerHTML = `<span>⚠️ ${esc(msg)}</span><button class="toast-undo-btn" onclick="reportarErro()">Reportar</button>`;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 8000); // erro fica mais tempo visível que um toast comum
+}
+function reportarErro() {
+  if (_lastErrorReportUrl) window.open(_lastErrorReportUrl, '_blank', 'noopener,noreferrer');
 }
 
 // ── REFRESH DOT ────────────────────────────────────────────────
@@ -1040,6 +1178,18 @@ function showSkeletons(n) {
 
 // ── FILTRO ─────────────────────────────────────────────────────
 let _activeFilter = null;
+// 🔴 FIX 19/09: filtro de status (Aguardando/Em contato/Em negociação) e o card "Reposição/
+// Reativ." usam CAMPOS diferentes do lead (status vs funil_tag) — 1 função só decide "esse lead
+// aparece com esse filtro?" pras 3 telas que filtram (lista ativa, busca, contador), nunca mais
+// bate certo num lugar e errado no outro.
+function _leadMatchesFilter(l, filter) {
+  if (!filter) return true;
+  if (filter === '__pos_venda__') return l.funil_tag === 'reposicao' || l.funil_tag === 'reativacao75';
+  return l.status === filter;
+}
+function _filterLabel(filter) {
+  return filter === '__pos_venda__' ? 'Reposição/Reativação' : filter;
+}
 function toggleFilter(card) {
   const filter = card.dataset.filter;
   if (!filter || _activeFilter === filter) { clearFilter(); return; }
@@ -1050,7 +1200,7 @@ function toggleFilter(card) {
   const bar = document.getElementById('filter-bar');
   const lbl = document.getElementById('filter-label');
   if (bar) bar.classList.add('visible');
-  if (lbl) lbl.textContent = 'Mostrando: ' + filter;
+  if (lbl) lbl.textContent = 'Mostrando: ' + _filterLabel(filter);
   if (_rawLeads.length) renderLeads(_rawLeads);
 }
 function clearFilter() {
@@ -1372,6 +1522,13 @@ function _diasParado(dataISO) {
   const ms = Date.now() - new Date(dataISO).getTime();
   return Math.max(0, Math.floor(ms / 86400000));
 }
+function toggleTaskText(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const btn = document.getElementById(id + '-btn');
+  const aindaClampeado = el.classList.toggle('clamped');
+  if (btn) btn.textContent = aindaClampeado ? 'ver mais ▾' : 'ver menos ▴';
+}
 function _tarefaBlockHtml(l) {
   const t = l.tarefaAberta;
   if (!t) {
@@ -1403,9 +1560,14 @@ function _tarefaBlockHtml(l) {
   const tipoUp = String(t.tipo||'').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
   const tipoIcon = stalled ? '🆘' : (TIPO_ICON[tipoUp] || (late ? '🔴' : '📌'));
   const finishBtn = t.id ? `<button class="lc-task-btn finish" onclick="finishTask(${l.row}, ${Number(t.id)})">✓ Concluir</button>` : '';
+  const textoBruto = t.texto || 'Tarefa aberta';
+  const textoId = `task-text-${l.row}`;
+  const textoHtml = textoBruto.length > 100
+    ? `<div class="lc-task-text clamped" id="${textoId}">${esc(textoBruto)}</div><button class="lc-task-more" id="${textoId}-btn" onclick="toggleTaskText('${textoId}')">ver mais ▾</button>`
+    : `<div class="lc-task-text">${esc(textoBruto)}</div>`;
   return `<div class="lc-task-row ${late ? 'late' : 'ok'}${stalled ? ' stalled' : ''}">
     <span class="lc-task-icon">${tipoIcon}</span>
-    <div class="lc-task-info"><div class="lc-task-text">${esc(t.texto||'Tarefa aberta')}</div><div class="lc-task-due">${esc(dueLbl)}</div></div>
+    <div class="lc-task-info">${textoHtml}<div class="lc-task-due">${esc(dueLbl)}</div></div>
     ${finishBtn}
   </div>`;
 }
@@ -1421,6 +1583,7 @@ function showTaskForm(row) {
   const tipoIn = document.getElementById('task-tipo-' + row);
   if (tipoIn) tipoIn.focus();
 }
+const TIPOS_COM_HORARIO = new Set(['VISITA', 'REUNIAO']); // mesma regra do backend, ver comentário lá
 function onTaskTipoChosen(row) {
   const tipoIn = document.getElementById('task-tipo-' + row);
   const step2  = document.getElementById('task-step2-' + row);
@@ -1433,6 +1596,13 @@ function onTaskTipoChosen(row) {
     const d = new Date(); d.setDate(d.getDate() + 1);
     dateIn.value = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
   }
+  // 🔴 FIX 19/09 (Robert: "quando for visita que precisa de data e hora definidos?"): Visita/
+  // Reunião são compromisso real — só pra esses 2 tipos aparece o campo de horário (obrigatório).
+  const precisaHorario = TIPOS_COM_HORARIO.has(tipoIn.value);
+  const timeWrap = document.getElementById('task-time-wrap-' + row);
+  if (timeWrap) timeWrap.style.display = precisaHorario ? '' : 'none';
+  const lbl = document.getElementById('task-step2-label-' + row);
+  if (lbl) lbl.textContent = precisaHorario ? '2) o que precisa ser feito, dia e horário' : '2) o que precisa ser feito e até quando';
   const ta = document.getElementById('task-texto-' + row);
   if (ta) ta.focus();
 }
@@ -1443,16 +1613,19 @@ function hideTaskForm(row) {
   if (tipoIn) tipoIn.value = '';
   const step2 = document.getElementById('task-step2-' + row);
   if (step2) step2.classList.remove('visible'); // reseta pro passo 1 na próxima abertura
+  const timeWrap = document.getElementById('task-time-wrap-' + row);
+  if (timeWrap) timeWrap.style.display = 'none';
 }
 async function saveTask(row) {
-  const btn = document.getElementById('task-save-' + row);
-  if (btn && btn.classList.contains('saving')) return;
   const ta      = document.getElementById('task-texto-' + row);
   const dateIn  = document.getElementById('task-due-' + row);
   const tipoIn  = document.getElementById('task-tipo-' + row);
+  const timeIn  = document.getElementById('task-time-' + row);
   const texto   = ta ? ta.value.trim() : '';
   const dueDate = dateIn ? dateIn.value : '';
   const tipo    = tipoIn ? tipoIn.value : '';
+  const precisaHorario = TIPOS_COM_HORARIO.has(tipo);
+  const dueTime = precisaHorario && timeIn ? timeIn.value : '';
   // 🔴 FIX 18/09 (Robert: "e se o rep precisar criar uma tarefa... mas na verdade ele vai mandar um
   // zap?"): o tipo real do contato (Ligação/WhatsApp/Visita/...) é obrigatório — o Agendor guarda isso
   // por tarefa, e outras automações da Life B usam esse mesmo campo pra decisões reais (ex: só Visita/
@@ -1460,60 +1633,85 @@ async function saveTask(row) {
   if (!tipo)    { showToast('Escolha como vai ser o contato (ligação, WhatsApp, visita...)'); if (tipoIn) tipoIn.focus(); return; }
   if (!texto)   { showToast('Escreva o que precisa ser feito'); if (ta) ta.focus(); return; }
   if (!dueDate) { showToast('Escolha a data de vencimento'); if (dateIn) dateIn.focus(); return; }
-  if (btn) btn.classList.add('saving');
+  // 🔴 FIX 19/09 (Robert, achado real: Visita sem horário fixo era incoerente): Visita/Reunião são
+  // compromisso real, horário é obrigatório — mesma regra validada de novo no backend.
+  if (precisaHorario && !dueTime) { showToast('Escolha o horário do compromisso'); if (timeIn) timeIn.focus(); return; }
   // 🔴 FIX 19/09 (Robert: "parece que ainda tá resolvendo tudo no front e não tem backend" +
-  // "demorando muito, sem efeito nenhum mostrando que o card foi lá pro final"): nunca mais o
-  // FRONTEND decide sozinho qual o novo status/bucket do lead (isso é regra de negócio, só o
-  // backend decide) — mas ainda dá feedback imediato: fecha o formulário e marca o card como
-  // "salvando" na hora (visual, sem mexer em dado nenhum), pra nunca parecer travado. Quando a
-  // resposta chegar, o backend já manda o `lead` INTEIRO recém-calculado (`_buscarLeadAtualizado`) —
-  // o front só troca pelo que veio e reordena usando os mesmos campos que o servidor já decidiu.
+  // "demorando muito, sem efeito nenhum mostrando que o card foi lá pro final" + depois "coloca
+  // confirmação em toda escrita sensível" + "voltou o desfazer? era um trunfo nosso"): as 3 coisas
+  // viram uma só — fecha o formulário e marca o card como "salvando" NA HORA (feedback imediato,
+  // visual, sem mexer em dado nenhum), mas só manda pro Agendor de verdade alguns segundos depois,
+  // dando a janela de "Desfazer" (ver _confirmarComJanela). O backend continua sendo a única fonte
+  // de verdade: quando a escrita real acontece, ele manda o `lead` INTEIRO recém-calculado — o
+  // front só troca pelo que veio, nunca inventa status/bucket sozinho.
   hideTaskForm(row);
-  if (ta) ta.value = '';
-  const _cardSalvando = document.querySelector(`.lead-card[data-row="${row}"]`);
-  if (_cardSalvando) _cardSalvando.classList.add('lc-salvando');
-  try {
-    const data = await apiPost('/task/create', { dealId: row, texto, dueDate, tipo });
-    const idx = _rawLeads.findIndex(l => l.row === row);
-    if (idx !== -1 && data && data.lead) {
-      _rawLeads[idx] = _transformarLeadAgendor(data.lead);
-      _rawLeads = _ordenarFilaLocal(_rawLeads);
-    }
-    showToast('Tarefa criada ✓');
-    renderLeads(_rawLeads, row);
-    const _cardNovo = document.querySelector(`.lead-card[data-row="${row}"]`);
-    if (_cardNovo) _revealComDestaque(_cardNovo);
-  } catch (err) {
-    console.error('saveTask failed:', err);
-    if (_cardSalvando) _cardSalvando.classList.remove('lc-salvando');
-    showToast('Erro ao criar tarefa: ' + err.message);
-  } finally {
-    if (btn) btn.classList.remove('saving');
-  }
+  const _card = document.querySelector(`.lead-card[data-row="${row}"]`);
+  if (_card) _card.classList.add('lc-salvando');
+  _confirmarComJanela('task-' + row, {
+    mensagem: 'Tarefa agendada — Desfazer?',
+    ms: 5000,
+    aoDesfazer: () => {
+      if (_card) _card.classList.remove('lc-salvando');
+      showTaskForm(row);
+      const tipoIn2 = document.getElementById('task-tipo-' + row);
+      if (tipoIn2) tipoIn2.value = tipo;
+      onTaskTipoChosen(row);
+      const ta2 = document.getElementById('task-texto-' + row);
+      if (ta2) ta2.value = texto;
+      const dateIn2 = document.getElementById('task-due-' + row);
+      if (dateIn2) dateIn2.value = dueDate;
+      const timeIn2 = document.getElementById('task-time-' + row);
+      if (timeIn2 && dueTime) timeIn2.value = dueTime;
+    },
+    executar: async () => {
+      try {
+        const data = await apiPost('/task/create', { dealId: row, texto, dueDate, tipo, dueTime });
+        const idx = _rawLeads.findIndex(l => l.row === row);
+        if (idx !== -1 && data && data.lead) {
+          _rawLeads[idx] = _transformarLeadAgendor(data.lead);
+          _rawLeads = _ordenarFilaLocal(_rawLeads);
+        }
+        showToast('Tarefa criada ✓');
+        renderLeads(_rawLeads, row);
+        const _cardNovo = document.querySelector(`.lead-card[data-row="${row}"]`);
+        if (_cardNovo) _revealComDestaque(_cardNovo);
+      } catch (err) {
+        console.error('saveTask failed:', err);
+        if (_card) _card.classList.remove('lc-salvando');
+        showErrorToast('Erro ao criar tarefa: ' + err.message, { acao: 'criar tarefa', dealId: row });
+      }
+    },
+  });
 }
 async function finishTask(row, taskId) {
   if (!taskId) { showToast('Não deu pra identificar a tarefa — recarregue a página e tente de novo'); return; }
-  if (!confirm('Marcar esta tarefa como concluída?')) return;
-  // Backend decide o novo status/bucket, front só exibe (ver comentário em saveTask) — feedback
-  // imediato via classe visual, dado real só depois que o `lead` recém-calculado voltar.
-  const _cardSalvando = document.querySelector(`.lead-card[data-row="${row}"]`);
-  if (_cardSalvando) _cardSalvando.classList.add('lc-salvando');
-  try {
-    const data = await apiPost('/task/finish', { dealId: row, taskId });
-    const idx = _rawLeads.findIndex(l => l.row === row);
-    if (idx !== -1 && data && data.lead) {
-      _rawLeads[idx] = _transformarLeadAgendor(data.lead);
-      _rawLeads = _ordenarFilaLocal(_rawLeads);
-    }
-    showToast('Tarefa concluída ✓');
-    renderLeads(_rawLeads, row);
-    const _cardNovo = document.querySelector(`.lead-card[data-row="${row}"]`);
-    if (_cardNovo) _revealComDestaque(_cardNovo);
-  } catch (err) {
-    console.error('finishTask failed:', err);
-    if (_cardSalvando) _cardSalvando.classList.remove('lc-salvando');
-    showToast('Erro ao concluir tarefa: ' + err.message);
-  }
+  // 🔴 FIX 19/09: modal nativo de confirm() removido — vira janela de "Desfazer" de alguns segundos
+  // (ver _confirmarComJanela), igual toda outra escrita sensível do painel agora.
+  const _card = document.querySelector(`.lead-card[data-row="${row}"]`);
+  if (_card) _card.classList.add('lc-salvando');
+  _confirmarComJanela('finish-' + row, {
+    mensagem: 'Tarefa concluída — Desfazer?',
+    ms: 5000,
+    aoDesfazer: () => { if (_card) _card.classList.remove('lc-salvando'); },
+    executar: async () => {
+      try {
+        const data = await apiPost('/task/finish', { dealId: row, taskId });
+        const idx = _rawLeads.findIndex(l => l.row === row);
+        if (idx !== -1 && data && data.lead) {
+          _rawLeads[idx] = _transformarLeadAgendor(data.lead);
+          _rawLeads = _ordenarFilaLocal(_rawLeads);
+        }
+        showToast('Tarefa concluída ✓');
+        renderLeads(_rawLeads, row);
+        const _cardNovo = document.querySelector(`.lead-card[data-row="${row}"]`);
+        if (_cardNovo) _revealComDestaque(_cardNovo);
+      } catch (err) {
+        console.error('finishTask failed:', err);
+        if (_card) _card.classList.remove('lc-salvando');
+        showErrorToast('Erro ao concluir tarefa: ' + err.message, { acao: 'concluir tarefa', dealId: row });
+      }
+    },
+  });
 }
 
 // ── OBS (unificada com "Obs. do SDR" — ver nota no topo do arquivo) ─────────────────────────────
@@ -1539,46 +1737,67 @@ function cancelObsEdit(row) {
   rep.classList.remove('editing');
 }
 async function saveObs(row) {
-  const btn = document.getElementById('obs-save-' + row);
-  if (btn && btn.classList.contains('saving')) return;
   const ta  = document.getElementById('obs-' + row);
   const rep = document.getElementById('obsr-' + row);
   if (!ta) return;
   const texto = ta.value.trim();
   if (!texto) { showToast('Escreva algo antes de salvar'); ta.focus(); return; }
-  if (btn) btn.classList.add('saving');
-  try {
-    // 🔴 FIX 19/09: grava SEMPRE como "Obs. do Rep" (nunca "Obs. do SDR" — ver comentário no
-    // backend) e usa o `lead` autoritativo devolvido, nunca assume que o texto local bate 100%
-    // com o que o servidor gravou de verdade.
-    const data = await apiPost('/obs', { dealId: row, texto });
-    const idx = _rawLeads.findIndex(l => l.row === row);
-    if (idx !== -1 && data && data.lead) _rawLeads[idx] = _transformarLeadAgendor(data.lead);
-    const leadAtualizado = _rawLeads[idx];
-    const textoReal = leadAtualizado ? leadAtualizado.obs_rep : texto;
-    if (rep) {
-      rep.dataset.saved = textoReal;
-      rep.classList.remove('editing');
-      const viewDiv = rep.querySelector('.obsr-view');
-      if (viewDiv) viewDiv.innerHTML = buildObsViewHtml(row, textoReal);
-    }
-    setLeadTs(row);
-    showToast('Observação salva ✓');
-    const card = document.querySelector(`.lead-card[data-row="${row}"]`);
-    if (card && card.classList.contains('concluding')) concludeCard(row);
-    else scheduleReload(2500);
-  } catch (err) {
-    console.error('saveObs failed:', err);
-    showToast('Erro ao salvar observação: ' + err.message);
-  } finally {
-    if (btn) btn.classList.remove('saving');
+  const textoAnterior = rep ? (rep.dataset.saved || '') : '';
+  const _cardObs = document.querySelector(`.lead-card[data-row="${row}"]`);
+  const estavaConcluindo = !!(_cardObs && _cardObs.classList.contains('concluding'));
+  // Feedback imediato: fecha a edição e já mostra o texto novo na tela (visual, ver nota em
+  // saveTask) — a gravação de verdade só acontece depois da janela de "Desfazer".
+  if (rep) {
+    rep.classList.remove('editing');
+    const viewDiv = rep.querySelector('.obsr-view');
+    if (viewDiv) viewDiv.innerHTML = buildObsViewHtml(row, texto);
   }
+  _confirmarComJanela('obs-' + row, {
+    mensagem: 'Observação salva — Desfazer?',
+    ms: 5000,
+    aoDesfazer: () => {
+      if (rep) {
+        rep.classList.add('editing');
+        const viewDiv = rep.querySelector('.obsr-view');
+        if (viewDiv) viewDiv.innerHTML = buildObsViewHtml(row, textoAnterior);
+      }
+      const ta2 = document.getElementById('obs-' + row);
+      if (ta2) { ta2.value = texto; ta2.focus(); }
+      if (estavaConcluindo) {
+        const saveBtn = document.getElementById('obs-save-' + row);
+        if (saveBtn) saveBtn.textContent = 'Salvar e concluir';
+      }
+    },
+    executar: async () => {
+      try {
+        // 🔴 FIX 19/09: grava SEMPRE como "Obs. do Rep" (nunca "Obs. do SDR" — ver comentário no
+        // backend) e usa o `lead` autoritativo devolvido, nunca assume que o texto local bate 100%
+        // com o que o servidor gravou de verdade.
+        const data = await apiPost('/obs', { dealId: row, texto });
+        const idx = _rawLeads.findIndex(l => l.row === row);
+        if (idx !== -1 && data && data.lead) _rawLeads[idx] = _transformarLeadAgendor(data.lead);
+        const leadAtualizado = _rawLeads[idx];
+        const textoReal = leadAtualizado ? leadAtualizado.obs_rep : texto;
+        if (rep) {
+          rep.dataset.saved = textoReal;
+          const viewDiv = rep.querySelector('.obsr-view');
+          if (viewDiv) viewDiv.innerHTML = buildObsViewHtml(row, textoReal);
+        }
+        setLeadTs(row);
+        showToast('Observação salva ✓');
+        if (estavaConcluindo) concludeCard(row);
+        else scheduleReload(2500);
+      } catch (err) {
+        console.error('saveObs failed:', err);
+        showErrorToast('Erro ao salvar observação: ' + err.message, { acao: 'salvar observação', dealId: row });
+      }
+    },
+  });
 }
 
 // ── MARCAR GANHO / PERDIDO ───────────────────────────────────────────────────────────────────────
-// Sem otimismo de UI aqui: só mexe em _rawLeads/DOM DEPOIS de confirmar sucesso no servidor. Não
-// existe endpoint de "desfazer" pra isso (Agendor não tem um "reabrir negócio" nesta API) — por
-// isso o aviso explícito na tela em vez de um toast de undo que não desfaria nada de verdade.
+// Só mexe em _rawLeads/DOM DEPOIS de confirmar sucesso no servidor — e o próprio envio pro servidor
+// só acontece depois da janela de "Desfazer" (ver _confirmarComJanela e nota no topo do arquivo).
 function openGanhoPrompt(row) {
   closeOtherCardUi(row);
   const prompt = document.getElementById('sp-' + row);
@@ -1603,7 +1822,11 @@ function openGanhoPrompt(row) {
   if (saveBtn) saveBtn.textContent = 'Confirmar Ganho';
   prompt.classList.add('visible');
   _revealComDestaque(prompt);
-  if (valorIn) valorIn.focus();
+  // 🔴 FIX 19/09 (Robert: "quando clica em marcar ganho já abre o teclado e fica na frente, nem
+  // mostrando o campo de valor"): focar na hora dispara o teclado do celular ANTES do scroll do
+  // _revealComDestaque terminar — o teclado sobe e cobre exatamente o campo que acabou de aparecer.
+  // Espera o scroll assentar antes de focar, aí o campo já está visível acima do teclado.
+  if (valorIn) setTimeout(() => valorIn.focus(), 350);
 }
 function openPerdidoPrompt(row) {
   closeOtherCardUi(row);
@@ -1625,7 +1848,7 @@ function openPerdidoPrompt(row) {
   if (saveBtn) saveBtn.textContent = 'Avançar →';
   prompt.classList.add('visible');
   _revealComDestaque(prompt);
-  if (motivoSel) motivoSel.focus();
+  if (motivoSel) setTimeout(() => motivoSel.focus(), 350); // mesmo cuidado do Ganho, ver comentário lá
 }
 function cancelStatusPrompt(row) {
   const prompt = document.getElementById('sp-' + row);
@@ -1642,28 +1865,48 @@ async function submitStatusPrompt(row) {
 
   if (tipo === 'ganho') {
     const valorIn = document.getElementById('sp-valor-' + row);
-    const n = parseMoney(valorIn ? valorIn.value : '');
+    const valorTexto = valorIn ? valorIn.value : '';
+    const n = parseMoney(valorTexto);
     if (isNaN(n) || n <= 0) { showToast('Informe o valor do fechamento'); if (valorIn) valorIn.focus(); return; }
-    if (saveBtn && saveBtn.classList.contains('saving')) return;
-    if (saveBtn) saveBtn.classList.add('saving');
-    try {
-      await apiPost('/status', { dealId: row, acao: 'ganho', valor: n });
-      const lead = _rawLeads.find(l => l.row === row);
-      if (lead) { lead.status = 'Fechado'; lead.valor_fech = n; lead.data_f = new Date().toISOString().slice(0,10); }
-      setLeadTs(row);
-      prompt.classList.remove('visible');
-      showToast('🎉 Negócio marcado como Ganho');
-      enterConcludingMode(row);
-    } catch (err) {
-      console.error('submitStatusPrompt ganho failed:', err);
-      showToast('Erro ao marcar ganho: ' + err.message);
-    } finally {
-      if (saveBtn) saveBtn.classList.remove('saving');
-    }
+    // 🔴 FIX 19/09 (Robert: "coloca confirmação em toda escrita sensível" + "volta o desfazer"):
+    // Ganho é a escrita mais sensível do painel — mesma janela de "Desfazer" de todas as outras
+    // (ver _confirmarComJanela), só que um pouco maior (6s) dado o peso da ação.
+    prompt.classList.remove('visible');
+    const _card = document.querySelector(`.lead-card[data-row="${row}"]`);
+    if (_card) _card.classList.add('lc-salvando');
+    _confirmarComJanela('status-' + row, {
+      mensagem: '🎉 Ganho de ' + cur(n) + ' — Desfazer?',
+      ms: 6000,
+      aoDesfazer: () => {
+        if (_card) _card.classList.remove('lc-salvando');
+        openGanhoPrompt(row);
+        // 400ms: depois do foco automático (350ms) do openGanhoPrompt — senão o foco "rouba" de
+        // volta pro campo vazio depois da gente já ter restaurado o valor digitado.
+        setTimeout(() => {
+          const valorIn2 = document.getElementById('sp-valor-' + row);
+          if (valorIn2) { valorIn2.value = valorTexto; valorIn2.focus(); spPreview(valorIn2, row); }
+        }, 400);
+      },
+      executar: async () => {
+        try {
+          const data = await apiPost('/status', { dealId: row, acao: 'ganho', valor: n });
+          const idx = _rawLeads.findIndex(l => l.row === row);
+          if (idx !== -1 && data && data.lead) _rawLeads[idx] = _transformarLeadAgendor(data.lead);
+          setLeadTs(row);
+          showToast('🎉 Negócio marcado como Ganho');
+          enterConcludingMode(row);
+        } catch (err) {
+          console.error('submitStatusPrompt ganho failed:', err);
+          if (_card) _card.classList.remove('lc-salvando');
+          showErrorToast('Erro ao marcar ganho: ' + err.message, { acao: 'marcar Ganho', dealId: row });
+        }
+      },
+    });
     return;
   }
 
-  // Perdido — 2 passos: motivo, depois observação (ambos obrigatórios no contrato novo)
+  // Perdido — 2 passos: motivo, depois observação (ambos obrigatórios no contrato novo). Só o passo
+  // final (depois da observação) realmente grava — os passos de navegação nunca precisam de undo.
   const step = prompt.dataset.step;
   if (step === 'motivo') {
     const motivoSel = document.getElementById('sp-motivo-' + row);
@@ -1683,21 +1926,43 @@ async function submitStatusPrompt(row) {
   const obsTa     = document.getElementById('sp-obs-' + row);
   const observacao = obsTa ? obsTa.value.trim() : '';
   if (!observacao) { showToast('Escreva uma observação sobre a perda'); if (obsTa) obsTa.focus(); return; }
-  if (saveBtn && saveBtn.classList.contains('saving')) return;
-  if (saveBtn) saveBtn.classList.add('saving');
-  try {
-    await apiPost('/status', { dealId: row, acao: 'perdido', motivo, observacao });
-    const lead = _rawLeads.find(l => l.row === row);
-    if (lead) { lead.status = 'Perdido'; lead.motivo_perd = motivo; lead.data_f = new Date().toISOString().slice(0,10); }
-    prompt.classList.remove('visible');
-    showToast('Negócio marcado como Perdido');
-    _removeLeadToHistory(row);
-  } catch (err) {
-    console.error('submitStatusPrompt perdido failed:', err);
-    showToast('Erro ao registrar perda: ' + err.message);
-  } finally {
-    if (saveBtn) saveBtn.classList.remove('saving');
-  }
+  prompt.classList.remove('visible');
+  const _card = document.querySelector(`.lead-card[data-row="${row}"]`);
+  if (_card) _card.classList.add('lc-salvando');
+  _confirmarComJanela('status-' + row, {
+    mensagem: '❌ Perda registrada — Desfazer?',
+    ms: 6000,
+    aoDesfazer: () => {
+      if (_card) _card.classList.remove('lc-salvando');
+      openPerdidoPrompt(row);
+      // 400ms: depois do foco automático (350ms) do openPerdidoPrompt — vai direto pro passo da
+      // observação (não faz sentido o rep refazer o passo do motivo que ele já tinha escolhido).
+      setTimeout(() => {
+        prompt.dataset.step = 'obs';
+        const motivoSel2 = document.getElementById('sp-motivo-' + row);
+        if (motivoSel2) motivoSel2.value = motivo;
+        const obsTa2 = document.getElementById('sp-obs-' + row);
+        if (obsTa2) { obsTa2.style.display = ''; obsTa2.value = observacao; obsTa2.focus(); }
+        const lbl2 = document.getElementById('sp-label-' + row);
+        if (lbl2) lbl2.textContent = '❌ Qual o motivo da perda?';
+        const saveBtn2 = document.getElementById('sp-save-' + row);
+        if (saveBtn2) saveBtn2.textContent = 'Confirmar Perda';
+      }, 400);
+    },
+    executar: async () => {
+      try {
+        const data = await apiPost('/status', { dealId: row, acao: 'perdido', motivo, observacao });
+        const idx = _rawLeads.findIndex(l => l.row === row);
+        if (idx !== -1 && data && data.lead) _rawLeads[idx] = _transformarLeadAgendor(data.lead);
+        showToast('Negócio marcado como Perdido');
+        _removeLeadToHistory(row);
+      } catch (err) {
+        console.error('submitStatusPrompt perdido failed:', err);
+        if (_card) _card.classList.remove('lc-salvando');
+        showErrorToast('Erro ao registrar perda: ' + err.message, { acao: 'marcar Perdido', dealId: row });
+      }
+    },
+  });
 }
 
 // ── RENDER LEADS ──────────────────────────────────────────────
@@ -1731,6 +1996,7 @@ function renderLeads(leads, highlightRow) {
   document.getElementById('sum-ag').textContent   = _allLeads.filter(l=>l.status==='Aguardando contato').length;
   document.getElementById('sum-cont').textContent = _allLeads.filter(l=>l.status==='Em contato').length;
   document.getElementById('sum-neg').textContent  = _allLeads.filter(l=>l.status==='Em negociação').length;
+  document.getElementById('sum-pv').textContent   = _allLeads.filter(l=>_leadMatchesFilter(l,'__pos_venda__')).length;
   document.getElementById('sum-tot').textContent  = _allLeads.length;
 
   (function() {
@@ -1739,7 +2005,7 @@ function renderLeads(leads, highlightRow) {
     const clr = document.getElementById('filter-clear');
     if (!bar || !lbl || !clr) return;
     const parts = [];
-    if (_activeFilter) parts.push('Mostrando: ' + _activeFilter);
+    if (_activeFilter) parts.push('Mostrando: ' + _filterLabel(_activeFilter));
     if (_searchQuery.trim()) parts.push('🔍 "' + _searchQuery.trim() + '"');
     if (parts.length) {
       bar.classList.add('visible');
@@ -1758,7 +2024,7 @@ function renderLeads(leads, highlightRow) {
 
   const searchActive = _searchQuery.trim().length > 0;
   let toShow = searchActive ? _applySearch(_allLeads)
-             : (_activeFilter ? _allLeads.filter(l => l.status === _activeFilter) : _allLeads);
+             : (_activeFilter ? _allLeads.filter(l => _leadMatchesFilter(l, _activeFilter)) : _allLeads);
   if (searchActive && !toShow.length) {
     const hasInHistory = Array.isArray(_history) && _applySearch(_history).length > 0;
     const msg = hasInHistory
@@ -1787,38 +2053,7 @@ function renderLeads(leads, highlightRow) {
     const endereco  = toTitleCase(l.endereco||'');
     const funilBadge = l.funil_tag ? `<span class="lc-funil-badge ${l.funil_tag}">${FUNIL_BADGE_LABEL[l.funil_tag] || l.funil_tag}</span>` : '';
 
-    const cpRows = [];
-    const waNum       = fmtWA(l.whatsapp);
-    const contatoWa   = fmtWA(l.contato);
-    const contatoDisp = fmtPhone(l.contato).display;
-    if (nomeRaw) {
-      const nameEl = waNum
-        ? `<button class="lcp-name-btn" data-wa="${esc(waNum)}" data-display="${esc(phone.display)}" data-name="${esc(nomeRaw)}" onclick="openContactWa(this,${l.row})">${esc(nomeRaw)}</button>`
-        : `<div class="lcp-val">${esc(nomeRaw)}</div>`;
-      cpRows.push(`<div class="lcp-row"><span class="lcp-icon">👤</span><div class="lcp-info"><div class="lcp-label">Contato principal</div>${nameEl}</div></div>`);
-    }
-    if (contato && contato.toLowerCase() !== nomeRaw.toLowerCase()) {
-      const contatoEl = contatoWa
-        ? `<button class="lcp-name-btn" data-wa="${esc(contatoWa)}" data-display="${esc(contatoDisp)}" data-name="${esc(nomeEmp||nomeRaw)}" onclick="openContactWa(this,${l.row})">${esc(contatoDisp||contato)}</button>`
-        : `<div class="lcp-val">${esc(contatoDisp||contato)}</div>`;
-      cpRows.push(`<div class="lcp-row"><span class="lcp-icon">👥</span><div class="lcp-info"><div class="lcp-label">Contato empresa</div>${contatoEl}</div></div>`);
-    }
-    if (phone.display) {
-      cpRows.push(`<div class="lcp-row"><span class="lcp-icon">📱</span><div class="lcp-info"><div class="lcp-label">Telefone / WhatsApp</div><button class="lcp-tel lcp-wa-btn" data-wa="${esc(waNum)}" data-display="${esc(phone.display)}" data-name="${esc(nomeRaw||contato||'')}" onclick="openContactWa(this,${l.row})">💬 ${esc(phone.display)}</button></div></div>`);
-    }
-    if (endereco) {
-      const endPartes = [endereco];
-      if (l.cidade && !jaContem(endereco, l.cidade)) endPartes.push(toTitleCase(l.cidade));
-      if (l.estado && !jaContem(endereco, l.estado)) endPartes.push((l.estado||'').toUpperCase());
-      if (l.cep) {
-        const cepD = l.cep.replace(/\D/g,'');
-        if (cepD.length === 8 && !endereco.replace(/\D/g,'').includes(cepD)) endPartes.push(fmtCEP(l.cep));
-      }
-      const endFull = endPartes.join(', ');
-      cpRows.push(`<div class="lcp-row lcp-copyable" data-copy="${esc(endFull)}" onclick="copyLcp(this)"><span class="lcp-icon">🏠</span><div class="lcp-info"><div class="lcp-label">Endereço · toque para copiar</div><div class="lcp-val">${esc(endFull)}</div></div></div>`);
-    }
-    if (cnpj)
-      cpRows.push(`<div class="lcp-row lcp-copyable" data-copy="${esc(fmtCNPJ(cnpj))}" onclick="copyLcp(this)"><span class="lcp-icon">📋</span><div class="lcp-info"><div class="lcp-label">CNPJ · toque para copiar</div><div class="lcp-val">${esc(fmtCNPJ(cnpj))}</div></div></div>`);
+    const cpRows = _buildCpRows(l, { nomeRaw, nomeEmp, cnpj, endereco, phone, contato });
     const hasContact = cpRows.length > 0;
 
     const obsViewHtml = buildObsViewHtml(l.row, l.obs_rep||''); // 🔴 FIX 19/09: era obs_sdr por engano — a caixa editável é sempre a do REP
@@ -1846,9 +2081,18 @@ function renderLeads(leads, highlightRow) {
             <option value="PROPOSTA">📄 Proposta</option>
           </select>
           <div class="lc-task-step2" id="task-step2-${l.row}">
-            <div class="lc-sp-label">2) o que precisa ser feito e até quando</div>
+            <div class="lc-sp-label" id="task-step2-label-${l.row}">2) o que precisa ser feito e até quando</div>
             <textarea id="task-texto-${l.row}" maxlength="300" placeholder="Ex: Ligar confirmando pedido"></textarea>
             <input type="date" id="task-due-${l.row}">
+            <!-- 🔴 FIX 19/09 (Robert, achado real: "criei uma tarefa de visita e não dava pra
+                 escolher o horário... não podemos liberar com essa incoerência"): Visita/Reunião são
+                 compromisso real (o rep vai até o cliente ou entra numa call marcada) — pede
+                 horário exato, só aparece pra esses 2 tipos. Ligação/WhatsApp/E-mail/Proposta
+                 continuam só com data (9h é só carimbo de expediente, nunca um horário marcado). -->
+            <div class="lc-task-time-wrap" id="task-time-wrap-${l.row}" style="display:none">
+              <div class="lc-sp-label">Horário do compromisso (obrigatório)</div>
+              <input type="time" id="task-time-${l.row}" min="08:00" max="17:59" value="09:00">
+            </div>
             <div class="lc-task-form-footer">
               <button class="lc-sp-cancel" onclick="hideTaskForm(${l.row})">Cancelar</button>
               <button class="lc-sp-save" id="task-save-${l.row}" onclick="saveTask(${l.row})">Salvar</button>
@@ -1903,7 +2147,7 @@ function renderLeads(leads, highlightRow) {
               ${MOTIVOS_PERDA.map(m => `<option>${esc(m)}</option>`).join('')}
             </select>
             <textarea class="lc-sp-input" id="sp-obs-${l.row}" style="display:none" rows="3" placeholder="O que aconteceu? (obrigatório)"></textarea>
-            <div class="lc-status-warn" id="sp-warn-${l.row}" style="display:none">Essa ação não pode ser desfeita pelo painel.</div>
+            <div class="lc-status-warn" id="sp-warn-${l.row}" style="display:none">Você vai ter alguns segundos pra desfazer depois de confirmar.</div>
             <div class="lc-sp-footer">
               <button class="lc-sp-cancel" onclick="cancelStatusPrompt(${l.row})">Cancelar</button>
               <button class="lc-sp-save" id="sp-save-${l.row}" onclick="submitStatusPrompt(${l.row})">Salvar</button>
@@ -1953,7 +2197,7 @@ function renderLeads(leads, highlightRow) {
 
   if (wrap) {
     const filtered2 = _activeFilter
-      ? _allLeads.filter(l => l.status === _activeFilter && _matchesSearch(l))
+      ? _allLeads.filter(l => _leadMatchesFilter(l, _activeFilter) && _matchesSearch(l))
       : _allLeads.filter(l => _matchesSearch(l));
     const hasMore2 = !searchActive && _visibleCount < filtered2.length;
     const hasLess2 = !searchActive && _visibleCount > LIMIT;
@@ -2077,13 +2321,19 @@ async function loadHistorico(periodo) {
     // e tirou também a cidade e estado"): cidade/estado/whatsapp vinham hardcoded vazios porque o
     // backend ainda não devolvia esses campos quando esta função foi escrita (as 2 frentes trabalharam
     // em paralelo). Agora o backend enriquece isso ao vivo do Agendor — só mapear.
+    // 🔴 FIX 19/09 (Robert: "os cards de histórico também deveriam ter os 3 botões — dados, zap,
+    // maps — igual o card comum"): backend agora devolve empresa/nome/cnpj/endereço/CEP também
+    // (não só telefone/cidade/estado) — mapeia tudo pra alimentar o mesmo _buildCpRows do card ativo.
     _history = (data.historico || []).map(function(h) {
       return {
         row: Number(h.dealId),
-        empresa: h.titulo || '',
-        nome: '',
+        empresa: h.empresa || h.titulo || '',
+        nome: h.nome || '',
         cidade: h.cidade || '', estado: h.estado || '',
         whatsapp: h.telefone || '',
+        cnpj: h.cnpj || '',
+        endereco: h.endereco || '',
+        cep: h.cep || '',
         status: h.statusPainel === 'Fechado' ? 'Fechado' : 'Perdido',
         valor_fech: Number(h.valor) || 0,
         data_f: h.data ? String(h.data).slice(0,10) : '',
@@ -2116,6 +2366,17 @@ function _histCardHtml(l) {
   const valorMeta  = l.status==='Fechado' && (l.valor_fech>0||l.valor>0) ? cur(l.valor_fech||l.valor) : '';
   const motivoMeta = l.status==='Perdido' && (l.motivo_perd||l.motivo) ? (l.motivo_perd||l.motivo) : '';
   const wa         = fmtWA(l.whatsapp);
+  // 🔴 FIX 19/09 (Robert: "os cards de histórico também deveriam ter os 3 botões — dados, zap,
+  // maps — igual o card comum, tanto pra ganhos quanto perdidos"): reaproveita o MESMO
+  // _buildCpRows do card ativo (nunca uma 2ª lógica pro mesmo painel de contato) — o backend agora
+  // devolve empresa/CNPJ/endereço/CEP no histórico também (ver enriquecerContato).
+  const phone      = fmtPhone(l.whatsapp);
+  const contato    = toTitleCase(l.contato||'');
+  const cnpj       = l.cnpj||'';
+  const endereco   = toTitleCase(l.endereco||'');
+  const mapLink    = buildMapsUrl(l.empresa||l.nome, l.cidade, l.estado);
+  const cpRows     = _buildCpRows(l, { nomeRaw, nomeEmp, cnpj, endereco, phone, contato });
+  const hasContact = cpRows.length > 0;
   return `<div class="hist-card ${bClass}" data-row="${l.row}">
     <div class="hist-top">
       <div class="hist-top-left">
@@ -2123,7 +2384,9 @@ function _histCardHtml(l) {
         ${subtitulo ? `<div class="hist-nome">${esc(subtitulo)}</div>` : ''}
       </div>
       <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+        ${hasContact ? `<button class="lc-icon-btn contact" onclick="toggleContact(this,${l.row})" title="Dados do contato" aria-expanded="false" style="width:26px;height:26px;border:none;">${SVG_PERSON}</button>` : ''}
         ${wa ? `<button class="lc-icon-btn wa" data-url="https://wa.me/${wa}" onclick="openLinkConfirm(this)" title="WhatsApp" style="width:26px;height:26px;border:none;">${SVG_WA}</button>` : ''}
+        ${mapLink ? `<button class="lc-icon-btn maps" data-url="${esc(mapLink)}" onclick="openLinkConfirm(this)" title="Ver no Google Maps" style="width:26px;height:26px;border:none;">${SVG_PIN}</button>` : ''}
         <span class="hist-badge ${badge}">${esc(l.status)}</span>
       </div>
     </div>
@@ -2133,7 +2396,19 @@ function _histCardHtml(l) {
       ${valorMeta  ? `<span class="lc-tag">💰 ${esc(valorMeta)}</span>` : ''}
       ${motivoMeta ? `<span class="lc-tag">❌ ${esc(motivoMeta)}</span>` : ''}
     </div>
-    ${wa ? `<div class="lc-confirm" id="hlc-${l.row}" style="margin-top:8px;">
+    <div class="lc-contact-panel" id="cp-${l.row}">
+      <div id="lcp-rows-${l.row}">${cpRows.join('')}</div>
+      ${hasContact ? `<div class="lcp-wa-overlay" id="lcp-wac-${l.row}">
+        <div class="lcp-wac-icon">💬</div>
+        <div class="lcp-wac-msg" id="lcp-wac-msg-${l.row}"></div>
+        <div class="lcp-wac-num" id="lcp-wac-num-${l.row}"></div>
+        <div class="lcp-wac-btns">
+          <button class="lcp-wac-cancel" onclick="closeContactWa(${l.row})">Cancelar</button>
+          <button class="lcp-wac-open"   onclick="doContactWa(${l.row})">Abrir WhatsApp</button>
+        </div>
+      </div>` : ''}
+    </div>
+    ${(wa || mapLink) ? `<div class="lc-confirm" id="hlc-${l.row}" style="margin-top:8px;">
       <div class="lc-confirm-icon">💬</div>
       <div class="lc-confirm-msg">Abrir <strong>WhatsApp</strong>?</div>
       <div class="lc-confirm-actions">
