@@ -73,7 +73,7 @@
     .m-sub { font-size:9.5px; font-weight:600; color:var(--muted); margin-top:1px; }
 
     /* SUMMARY / FILTROS */
-    .summary-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:12px; }
+    .summary-strip { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-bottom:12px; }
     .sum-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:10px 6px; text-align:center; cursor:pointer; user-select:none; transition:transform .12s, box-shadow .12s; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; }
     .sum-card:active { transform:scale(.95); }
     .sum-label { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0; color:var(--muted); margin-bottom:3px; white-space:nowrap; }
@@ -560,27 +560,33 @@
   </div>
 
   <div class="summary-strip">
+    <!-- 🔴 FIX 19/09 (achado de auditoria própria: a grade tinha 5 cards mas o CSS só reservava
+         espaço pra 4 colunas — o 5º card ("Total") caía sozinho numa linha nova, com 3 colunas de
+         espaço vazio do lado, o mesmo tipo de "espaço vazio à toa" que o Robert já tinha achado em
+         outro lugar hoje. Grid corrigida pra 5 colunas + rótulos encurtados pra caber sem cortar
+         (o rótulo de Reposição/Reativação, em especial, não cabia de jeito nenhum numa coluna
+         estreita com nowrap e ia vazar da caixa). -->
     <div class="sum-card s-ag"   data-filter="Aguardando contato" onclick="toggleFilter(this)">
-      <div class="sum-label">Aguardando</div>
+      <div class="sum-label">Aguard.</div>
       <div class="sum-val" id="sum-ag">—</div>
     </div>
     <div class="sum-card s-cont" data-filter="Em contato" onclick="toggleFilter(this)">
-      <div class="sum-label">Em Contato</div>
+      <div class="sum-label">Contato</div>
       <div class="sum-val" id="sum-cont">—</div>
     </div>
     <div class="sum-card s-neg"  data-filter="Em negociação" onclick="toggleFilter(this)">
-      <div class="sum-label">Negociando</div>
+      <div class="sum-label">Negoc.</div>
       <div class="sum-val" id="sum-neg">—</div>
     </div>
-    <!-- 🔴 FIX 19/09 (Robert pediu opinião sobre Reposição/Reativação virarem aba separada — decisão
-         registrada: NÃO vira aba/tela nova, reusa o MESMO mecanismo de filtro tocável que já existe
-         aqui, só que filtrando por funil_tag em vez de status). -->
+    <!-- Robert pediu opinião sobre Reposição/Reativação virarem aba separada — decisão registrada:
+         NÃO vira aba/tela nova, reusa o MESMO mecanismo de filtro tocável que já existe aqui, só
+         que filtrando por funil_tag em vez de status. -->
     <div class="sum-card s-pv"   data-filter="__pos_venda__" onclick="toggleFilter(this)">
-      <div class="sum-label">Reposição/Reativ.</div>
+      <div class="sum-label">Pós-venda</div>
       <div class="sum-val" id="sum-pv">—</div>
     </div>
     <div class="sum-card s-tot"  data-filter="" onclick="toggleFilter(this)">
-      <div class="sum-label">Total Ativo</div>
+      <div class="sum-label">Total</div>
       <div class="sum-val" id="sum-tot">—</div>
     </div>
   </div>
