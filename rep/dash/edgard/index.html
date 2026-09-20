@@ -300,7 +300,20 @@
        confirm com: (1) `scrollIntoView` (ver openLinkConfirm) garante que a tela role até ele
        aparecer, sempre; (2) um pulso de destaque na entrada, mais chamativo que o fade sutil de
        antes — a mesma ideia do brilho "just-placed" que este projeto já usa em outros lugares. */
-    .lc-confirm.visible { display:flex; }
+    .lc-confirm.visible { display:flex; box-shadow:0 6px 20px -6px rgba(112,75,155,.35); }
+    /* 🔴 FIX 19/09 (2ª rodada — Robert: "melhor colocar uma animação melhor, aparecer e sobrepor as
+       outras informações, do jeito que tá só muda lá embaixo e a pessoa pode não perceber"): além
+       do pulso, o resto do conteúdo do card apaga um pouco enquanto a confirmação tá aberta — cria
+       uma sensação de "isso aqui é o que importa agora", parecido com o overlay do WhatsApp dentro
+       do painel de contato, sem precisar reestruturar o card inteiro pra virar overlay de verdade. */
+    .lead-card:has(.lc-confirm.visible) > .lc-body > .lc-top,
+    .lead-card:has(.lc-confirm.visible) > .lc-body > .lc-nome,
+    .lead-card:has(.lc-confirm.visible) > .lc-body > div[id^="task-wrap-"],
+    .lead-card:has(.lc-confirm.visible) > .lc-body > .lc-meta,
+    .lead-card:has(.lc-confirm.visible) > .lc-body > .lc-meta-sdr,
+    .lead-card:has(.lc-confirm.visible) > .lc-body > .lc-status-wrap {
+      opacity:.35; filter:saturate(.7); transition:opacity .2s ease, filter .2s ease; pointer-events:none;
+    }
     /* pulso de destaque UNIVERSAL (via box-shadow, nunca mexe no background do elemento — funciona
        em cima de qualquer cor de fundo, ao contrário de animar o background em si) — ver
        _revealComDestaque() no JS, reusado em toda abertura de painel/formulário do app. */
