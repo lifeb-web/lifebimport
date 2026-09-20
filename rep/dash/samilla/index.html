@@ -1629,7 +1629,12 @@ function _tarefaBlockHtml(l) {
   const TIPO_ICON = { LIGACAO: '📞', WHATSAPP: '💬', VISITA: '🏠', REUNIAO: '🤝', EMAIL: '✉️', PROPOSTA: '📄' };
   const tipoUp = String(t.tipo||'').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
   const tipoIcon = stalled ? '🆘' : (TIPO_ICON[tipoUp] || (late ? '🔴' : '📌'));
-  const finishBtn = t.id ? `<button class="lc-task-btn finish" onclick="openFinishPrompt(${l.row}, ${Number(t.id)}, '${esc(t.tipo||'')}')">✓ Concluir</button>` : '';
+  // 🔒 achado de revisão de segurança automática (commit): esc() só escapa pra contexto de texto
+  // HTML, nunca aspa simples — usar esc(valor) direto DENTRO de aspas simples num onclick quebra
+  // se o valor algum dia tiver aspa (injeção de JS). JSON.stringify gera um literal JS seguro
+  // (aspas duplas, escapa tudo que precisa); esc() por cima disso escapa as aspas duplas pro
+  // contexto do atributo HTML — as 2 camadas certas, nunca uma só.
+  const finishBtn = t.id ? `<button class="lc-task-btn finish" onclick="openFinishPrompt(${l.row}, ${Number(t.id)}, ${esc(JSON.stringify(t.tipo||''))})">✓ Concluir</button>` : '';
   const textoBruto = t.texto || 'Tarefa aberta';
   const textoId = `task-text-${l.row}`;
   const textoHtml = textoBruto.length > 100
