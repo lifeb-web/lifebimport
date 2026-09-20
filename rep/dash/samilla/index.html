@@ -776,6 +776,11 @@ function _transformarLeadAgendor(l) {
     sdr_responsavel: l.sdrResponsavel || '',
     data: l.atualizadoEm ? String(l.atualizadoEm).slice(0, 10) : '',
     ts_vend: l.atualizadoEm ? new Date(l.atualizadoEm).getTime() : 0,
+    // 🔴 FIX 20/09 (Robert: "data de entrada na carteira" = quando o lead entrou no Agendor): o
+    // backend agora manda `entradaEm` (createdAt real do deal) — alimenta o fallback que
+    // `getLeadTs` já tinha pronto (mostra "Entrada DD/MM" pra quem ainda não teve nenhuma ação
+    // registrada no painel, em vez de inventar uma data ou deixar em branco).
+    ts_entrada: l.entradaEm || null,
     tarefaAberta: _mapTarefaAberta(l),
   };
 }
@@ -2265,7 +2270,11 @@ function renderLeads(leads, highlightRow) {
         <div class="lc-meta">
           <div class="lc-meta-tags">
             ${cidadeUF ? `<span class="lc-tag">📍 ${esc(cidadeUF)}</span>` : ''}
-            ${l.data   ? `<span class="lc-tag">📅 ${esc(fmtData(l.data))}</span>` : ''}
+            <!-- 🔴 FIX 20/09 (Robert: "data de entrada na carteira" = quando o lead entrou no
+                 Agendor — antes essa tag mostrava a última ATUALIZAÇÃO, informação que já aparece
+                 embaixo na linha de status): agora mostra a entrada de verdade, distinta do
+                 "Atualizado" — as 2 informações convivem, sem uma esconder a outra. -->
+            ${l.ts_entrada ? `<span class="lc-tag">📅 Entrada ${esc(fmtData(l.ts_entrada))}</span>` : ''}
             ${l.sdr_responsavel ? `<span class="lc-tag lc-tag-sdr">👤 SDR: ${esc(l.sdr_responsavel)}</span>` : ''}
           </div>
           <div class="lc-meta-btns">
