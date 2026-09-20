@@ -1220,6 +1220,9 @@ function _norm(s) {
     .normalize('NFD').replace(/[̀-ͯ]/g, '')
     .replace(/\s+/g, '');
 }
+// 🔴 FIX 19/09 (Robert: "revisa a barra de pesquisa... deve funcionar de forma avançada"): agora
+// também busca por CNPJ (com ou sem pontuação, digitando só os números) e endereço/bairro — antes
+// só achava por nome/empresa/cidade/estado/segmento/telefone.
 function _leadFields(l) {
   return {
     nomeN:     _norm(l.nome),
@@ -1227,8 +1230,10 @@ function _leadFields(l) {
     cidadeN:   _norm(l.cidade),
     estadoN:   _norm(l.estado),
     segmentoN: _norm(l.segmento),
+    enderecoN: _norm(l.endereco),
     waD:       _digitsOnly(l.whatsapp),
     contD:     _digitsOnly(l.contato),
+    cnpjD:     _digitsOnly(l.cnpj),
   };
 }
 // Fase 1: query inteira como frase — só nome e empresa
@@ -1251,8 +1256,10 @@ function _matchesSearch(l) {
     if (f.cidadeN.includes(q))              return true;
     if (f.estadoN.includes(q))              return true;
     if (f.segmentoN.includes(q))            return true;
+    if (f.enderecoN.includes(q))            return true;
     if (qd && f.waD.includes(qd))           return true;
     if (qd && f.contD.includes(qd))         return true;
+    if (qd.length >= 4 && f.cnpjD.includes(qd)) return true;
     return false;
   });
 }
