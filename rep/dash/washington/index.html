@@ -171,9 +171,6 @@
     .lc-meta-tags { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
     .lc-tag  { font-size:10px; font-weight:600; color:var(--muted); background:var(--bg); border-radius:6px; padding:3px 8px; white-space:nowrap; }
     .lc-tag-sdr { color:var(--purple); background:rgba(112,75,155,.1); }
-    button.lc-tag { border:none; font-family:var(--font); cursor:pointer; -webkit-tap-highlight-color:transparent; }
-    button.lc-tag:active { transform:scale(.96); }
-    .lc-meta-sdr { margin:0 0 10px; }
     .lc-meta-btns { display:flex; gap:10px; align-items:center; flex-shrink:0; }
 
     .lc-icon-btn { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:50%; border:none; cursor:pointer; flex-shrink:0; transition:transform .12s, box-shadow .12s, background .15s; text-decoration:none; outline:none; }
@@ -310,7 +307,6 @@
     .lead-card:has(.lc-confirm.visible) > .lc-body > .lc-nome,
     .lead-card:has(.lc-confirm.visible) > .lc-body > div[id^="task-wrap-"],
     .lead-card:has(.lc-confirm.visible) > .lc-body > .lc-meta,
-    .lead-card:has(.lc-confirm.visible) > .lc-body > .lc-meta-sdr,
     .lead-card:has(.lc-confirm.visible) > .lc-body > .lc-status-wrap {
       opacity:.35; filter:saturate(.7); transition:opacity .2s ease, filter .2s ease; pointer-events:none;
     }
@@ -744,10 +740,6 @@ function _ordenarFilaLocal(leads) {
   });
 }
 const FUNIL_BADGE_LABEL = { reposicao: 'Reposição', reativacao75: 'Reativação 75+' };
-// 🔴 FIX 19/09 (Robert: "clicou no SDR, abre perguntando se quer chamar no WhatsApp"): números
-// dos 2 SDRs conhecidos (mesmos usados pela Bia em gs-agendor-worker/NAME_TO_PHONE) — só os que o
-// painel já reconhece como SDR (ver SDR_AGENDOR_IDS no backend) ganham o badge clicável.
-const SDR_WHATSAPP = { 'Felipe': '556293568997', 'Cleomar': '556284955920' };
 
 // Tarefa aberta — a Frente A (backend) pode ainda não ter subido o objeto completo {id,texto,dueDate}
 // no payload de /leads (item A1 do contrato). Enquanto isso, cai pro sinal antigo (semTarefa, só um
@@ -2263,10 +2255,18 @@ function renderLeads(leads, highlightRow) {
           </div>
         </div>
 
+        <!-- 🔴 FIX 20/09 (Robert: "aproveitar melhor o card, o SDR ficar na mesma linha dos 3
+             botões de consulta, não deixar espaço vazio na direita, tudo alinhado"): SDR volta a
+             morar no MESMO wrapper das tags de cidade/data (não mais numa linha própria) — como
+             esse wrapper já quebra linha sozinho quando não cabe tudo, nunca mais colide feio com
+             cidade longa como no achado original de 19/09 que motivou separar.
+             🔴 REVERTIDO 20/09 (Robert: "ficou confuso, fácil de confundir com chamar o CLIENTE"):
+             o SDR NÃO abre mais confirmação de WhatsApp — volta a ser só texto informativo. -->
         <div class="lc-meta">
           <div class="lc-meta-tags">
             ${cidadeUF ? `<span class="lc-tag">📍 ${esc(cidadeUF)}</span>` : ''}
             ${l.data   ? `<span class="lc-tag">📅 ${esc(fmtData(l.data))}</span>` : ''}
+            ${l.sdr_responsavel ? `<span class="lc-tag lc-tag-sdr">👤 SDR: ${esc(l.sdr_responsavel)}</span>` : ''}
           </div>
           <div class="lc-meta-btns">
             ${hasContact ? `<button class="lc-icon-btn contact" onclick="toggleContact(this,${l.row})" title="Dados do contato" aria-expanded="false">${SVG_PERSON}</button>` : ''}
@@ -2274,15 +2274,6 @@ function renderLeads(leads, highlightRow) {
             ${mapLink    ? `<button class="lc-icon-btn maps" data-url="${esc(mapLink)}" onclick="openLinkConfirm(this)" title="Ver no Google Maps">${SVG_PIN}</button>` : ''}
           </div>
         </div>
-        <!-- 🔴 FIX 19/09 (Robert: "o SDR deve ficar embaixo de cidade e estado... tem alguns que
-             estão na mesma linha e não fica bom"): linha própria, nunca mais dividindo espaço com
-             cidade/data no mesmo flex-wrap (quebrava feio quando a cidade era longa). -->
-        <!-- 🔴 FIX 19/09 (Robert: "clicou no SDR abre perguntando se quer chamar ele no WhatsApp,
-             você já tem o contato pra linkar"): badge do SDR vira botão quando o número é conhecido
-             — mesmo fluxo de confirmação já usado no resto do app (openLinkConfirm). -->
-        ${l.sdr_responsavel ? (SDR_WHATSAPP[l.sdr_responsavel]
-          ? `<div class="lc-meta-sdr"><button class="lc-tag lc-tag-sdr wa" data-url="https://wa.me/${SDR_WHATSAPP[l.sdr_responsavel]}" onclick="openLinkConfirm(this)">👤 SDR: ${esc(l.sdr_responsavel)}</button></div>`
-          : `<div class="lc-meta-sdr"><span class="lc-tag lc-tag-sdr">👤 SDR: ${esc(l.sdr_responsavel)}</span></div>`) : ''}
         <div class="lc-contact-panel" id="cp-${l.row}">
           <div id="lcp-rows-${l.row}">${cpRows.join('')}</div>
           ${hasContact ? `<div class="lcp-wa-overlay" id="lcp-wac-${l.row}">
