@@ -1662,7 +1662,11 @@ function _tarefaBlockHtml(l) {
     </div>`;
   }
   const dueRaw    = t.dueDate ? String(t.dueDate).slice(0,10) : '';
-  const hojeYMD   = new Date().toISOString().slice(0,10);
+  // 🔴 FIX 21/09 (auditoria ponta a ponta, ângulo de fuso horário): `new Date().toISOString()` cru é
+  // sempre UTC — entre 21h e 23h59 BRT o dia em UTC JÁ virou amanhã, então uma tarefa vencendo
+  // EXATAMENTE hoje aparecia "vencida" 3h mais cedo do que deveria, todo santo dia. Mesmo ajuste
+  // (-3h) já usado no resto do app pra "hoje" em horário de Brasília.
+  const hojeYMD   = new Date(Date.now() - 3 * 3600000).toISOString().slice(0,10);
   const late      = !!(dueRaw && dueRaw < hojeYMD);
   const diasAtraso = late ? _diasParado(t.dueDate) : null;
   const stalled   = diasAtraso != null && diasAtraso >= 7;
