@@ -148,9 +148,14 @@
        escreve em lugar nenhum (regra permanente do projeto). O valor final de fechamento continua
        editável normalmente dentro do fluxo "Marcar Ganho". */
     .lc-pot-wrap { flex-shrink:0; }
-    /* 🆕 21/09: virou <button> (antes era <div>) pra dar pipeline clicável — reset dos estilos padrão de botão do navegador, mesmo visual de antes + toque sinalizado. */
-    .lc-pot { font-family:inherit; font-size:13px; font-weight:700; color:var(--purple); white-space:nowrap; border-radius:6px; padding:2px 5px; display:inline-flex; align-items:center; gap:4px; background:var(--bg); border:1px solid transparent; cursor:pointer; }
-    .lc-pot:active { border-color:var(--purple); }
+    /* 🆕 21/09: virou <button> (antes era <div>) pra dar pipeline clicável.
+       🔴 FIX 21/09 (2ª rodada — Robert: "ficou muito parecendo um botão [de menos], deixe mais
+       convidativo ao clique"): borda tracejada sempre visível (sinal universal de "toque pra editar",
+       mesma linguagem visual usada em formulários) + leve encolhida no toque, em vez de só mudar de
+       cor no :active (fácil de nunca notar). */
+    .lc-pot { font-family:inherit; font-size:13px; font-weight:700; color:var(--purple); white-space:nowrap; border-radius:8px; padding:3px 7px; display:inline-flex; align-items:center; gap:4px; background:var(--bg); border:1.5px dashed rgba(112,75,155,.4); cursor:pointer; transition:transform .1s, border-color .15s, background .15s; touch-action:manipulation; }
+    .lc-pot:active { transform:scale(.94); border-color:var(--purple); background:rgba(112,75,155,.1); }
+    .lc-pot::after { content:'✎'; font-size:10px; opacity:.55; }
     .lc-pot-no-val { font-size:12px; font-weight:600; color:var(--muted); }
 
     /* meta tags + icon buttons */
@@ -309,7 +314,16 @@
     .lead-card:has(.lc-confirm.visible) > .lc-body > .lc-nome,
     .lead-card:has(.lc-confirm.visible) > .lc-body > div[id^="task-wrap-"],
     .lead-card:has(.lc-confirm.visible) > .lc-body > .lc-meta,
-    .lead-card:has(.lc-confirm.visible) > .lc-body > .lc-status-wrap {
+    .lead-card:has(.lc-confirm.visible) > .lc-body > .lc-status-wrap,
+    /* 🔴 FIX 21/09 (Robert: "ficou muito parecendo um botão... a animação não é boa... não sobrepõe
+       as coisas" — testando o Pipeline novo): a caixinha de Ganho/Perdido/Pipeline (.lc-status-prompt)
+       nunca tinha ganho esse MESMO tratamento de "escurece o resto" que WhatsApp/Maps já tinham desde
+       19/09 — por isso parecia só mais um elemento solto aparecendo embaixo, não uma ação em destaque.
+       Agora as duas caixinhas de confirmação do app (link e status) escurecem o card do MESMO jeito. */
+    .lead-card:has(.lc-status-prompt.visible) > .lc-body > .lc-top,
+    .lead-card:has(.lc-status-prompt.visible) > .lc-body > .lc-nome,
+    .lead-card:has(.lc-status-prompt.visible) > .lc-body > div[id^="task-wrap-"],
+    .lead-card:has(.lc-status-prompt.visible) > .lc-body > .lc-meta {
       opacity:.35; filter:saturate(.7); transition:opacity .2s ease, filter .2s ease; pointer-events:none;
     }
     /* pulso de destaque UNIVERSAL (via box-shadow, nunca mexe no background do elemento — funciona
@@ -338,7 +352,7 @@
 
     /* PROMPT FECHADO / PERDIDO */
     .lc-status-prompt { display:none; background:#f9f6ff; border:1px solid rgba(112,75,155,.25); border-radius:10px; padding:10px 12px; margin-top:8px; animation:panel-in .2s ease; }
-    .lc-status-prompt.visible { display:block; }
+    .lc-status-prompt.visible { display:block; box-shadow:0 6px 20px -6px rgba(112,75,155,.35); }
     .lc-sp-label { font-size:10px; font-weight:700; color:var(--purple); text-transform:uppercase; letter-spacing:.3px; margin-bottom:6px; }
     .lc-sp-sublabel { font-size:10px; font-weight:700; color:var(--purple); text-transform:uppercase; letter-spacing:.3px; margin:8px 0 5px; }
     .lc-sp-date-wrap { width:100%; }
