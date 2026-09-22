@@ -2804,3 +2804,13 @@ Robert testou a página ao vivo e mandou 4 correções em sequência (via prints
 
 ### Deploy
 Commit `8f02c5ef` (worktree `lifebimport-jlbv-pages`, branch `gh-pages`), mesmo fluxo padrão (build fora do iCloud + rsync + redirects restaurados + `git add` excluindo `.wrangler/`).
+
+### 2026-09-22 (continuação) — 3 correções urgentes pós-feedback
+
+1. **Capa do vídeo pixelada** — a otimização anterior (poster com `img.youtube.com/.../hqdefault.jpg`) usava a thumbnail padrão do YouTube, que é landscape 4:3 — esticada/cropada numa moldura vertical 9:16 ficava horrível. Removida, o hero de `/superagos/` voltou a usar o embed nativo do YouTube sem poster (idêntico ao `/apresentacao-super/`, que o Robert confirmou como referência boa). Perdeu um pouco do ganho de performance (o iframe volta a carregar de cara), mas a prioridade é qualidade visual.
+2. **`/superagos2/` estava com foto no hero** — errado, o pedido era **nenhuma mídia** no topo (nem foto nem vídeo), só texto. Corrigido: hero da superagos2 não renderiza nada no lugar da mídia, e o grid de 2 colunas vira coluna única centralizada (`max-w-2xl mx-auto`) só nessa variante.
+3. **Logo da SuperAgos pequena demais em todo lugar** — aumentada na faixa do topo (virou só a logo, maior, sem texto competindo — o "em frente à Coca-Cola" saiu de lá) e no badge do hero (logo maior, texto do endereço virou legenda própria embaixo do badge).
+
+Commits: `83019d07` (fix da faixa não quebrando linha em 360px — achado durante auditoria com Chrome headless), `2e0365a2` (as 3 correções acima). Confirmado com screenshot real em `projetojlbv.com.br/superagos/` e `/superagos2/` antes de avisar o Robert.
+
+**Lição desta rodada**: poster/capa customizada só deve ser usada com um asset estático de verdade (upload manual, como `/thumb-ultra-popular.jpg` da apresentacao-farma) — nunca com a thumbnail automática do YouTube quando o vídeo é vertical/Shorts e o container é 9:16.
