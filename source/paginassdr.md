@@ -24,9 +24,13 @@ Landing page B2B para o Projeto JLBV da Life B Import, focada em lojistas de far
 | `projetojlbv.com.br/` | ✅ ativa | Principal — imagens + formulário |
 | `projetojlbv.com.br/video1/` | ✅ ativa | Vídeo supermercado (Vimeo) no hero + formulário |
 | `projetojlbv.com.br/video2/` | ✅ ativa | Vídeo farmácia (YouTube) no hero + formulário |
+| `projetojlbv.com.br/redefarma/` | ✅ ativa (desde 2026-08-15) | Clone de `/video2/` focado em REDES de farmácia/drogaria — badge "Exclusivo para redes com 20+ lojas" |
+| `projetojlbv.com.br/redesuper/` | ✅ ativa (desde 2026-08-15) | Clone de `/video1/` focado em REDES de supermercado — badge "Exclusivo para redes com 10+ lojas" |
+| `projetojlbv.com.br/superagos/` | ✅ ativa (desde 2026-09-22) | Clone de `/video1/` exclusivo pro estande da Life B na feira SuperAgos 2026 — badge com a logo da feira, headline/subtítulo do evento, WhatsApp com mensagem própria. Ver seção dedicada mais abaixo |
 | `projetojlbv.com.br/rmk/` | ✅ ativa | Remarketing — curta, sem vídeo, formulário, foco em objeção |
 | `projetojlbv.com.br/apresentacao-super/` | ✅ ativa | Rep usa com cliente — sem botões, OG por segmento |
 | `projetojlbv.com.br/apresentacao-farma/` | ✅ ativa | Rep usa com cliente — sem botões, OG por segmento |
+| `projetojlbv.com.br/lifeb/` | ✅ ativa | Site institucional da Life B (não é LP de anúncio) — HTML/CSS/JS puro, fora do build React. Ver seção "LP institucional /lifeb/" mais abaixo |
 | `projetojlbv.com.br/contato/` | 🚫 removida | **Removida em 2026-06-09** — rota, build e toda lógica `noWhatsapp` deletados do código |
 | `projetojlbv.com.br/direto/` | 🚫 desativada | Redirecionada para `/` — era CTA direto ao WhatsApp sem formulário |
 | `projetojlbv.com.br/video1-direto/` | 🚫 desativada | Redirecionada para `/video1/` — era vídeo + CTA direto ao WhatsApp |
@@ -40,6 +44,8 @@ Todas as páginas são variantes do componente `Home` em `client/src/pages/Home.
 - `<Home variant="video1" />` → vídeo supermercado (Vimeo) no hero; seção depoimentos mostra só farmácia (YouTube)
 - `<Home variant="video1" directMode />` → vídeo no hero + sem formulário
 - `<Home variant="video2" />` → vídeo farmácia (YouTube) no hero; seção depoimentos mostra só supermercado (Vimeo)
+- `<Home variant="redefarma" />` → clone de video2 focado em REDES de farmácia/drogaria (ver seção dedicada "Sessão 15/08/2026")
+- `<Home variant="redesuper" />` → clone de video1 focado em REDES de supermercado (ver seção dedicada "Sessão 15/08/2026")
 - `<Home variant="rmk" />` → página de remarketing
 - `<Home variant="contato" />` → igual à principal, mas sem WhatsApp — botão vira "Enviar", sem link para WhatsApp, consultor faz follow-up por ligação. Flag interna: `noWhatsapp = true`
 
@@ -2006,75 +2012,6 @@ git push origin gh-pages
 | `d5c6ff99` | Título/subtítulo empresa+contato nos cards (fix incorreto — contato tinha telefone) |
 | `d2542bc0` | Fix: subtítulo usa nome do lead (`l.nome`), não `l.contato` |
 
-### Métricas de Valor Vendido / Ganhos — 18/09/2026
-
-**Contexto**: Robert pediu (overnight, autonomia total) pra trazer "valor vendido" e "ganhos" pro
-painel do rep, como o painel já tinha implicitamente no fluxo de Fechado (que já pede valor em 2
-passos), só que sem nenhum jeito de ver o TOTAL de relance — precisava abrir o histórico e somar
-na mão. Pedido explícito: reaproveitar a MESMA linguagem visual, não poluir a tela ("menos é
-mais"), e não misturar trabalho com a sessão paralela que mexia no Dashboard Geral no mesmo
-período (`dash-geral-bridge`, mesmo worktree gh-pages).
-
-**Decisão de arquitetura — por que um worker novo e isolado**:
-- Fonte do dado: `dash_geral_deals` no D1 (`dash-geral-db`, id `3a0f316c-c22b-4eb9-92c4-cf0b5baade89`)
-  que o Dashboard Geral já mantém sincronizado com o Agendor — zero fetch novo ao Agendor, zero
-  risco de rate-limit.
-- Em vez de adicionar essa leitura DENTRO de `dash-geral-bridge` (que a outra sessão estava
-  editando ao vivo) ou dentro de `gs-agendor-worker` (Bia, zero-downtime), criado worker NOVO e
-  isolado: **`lifeb-rep-painel`** (`/Users/robertmarques/Desktop/lifeb-rep-painel`), com seu
-  próprio binding D1 pra MESMA base (D1 aceita múltiplos workers bindando o mesmo banco sem
-  conflito nenhum). Zero arquivo em comum com os outros dois projetos — zero risco de colisão de
-  merge/deploy.
-- Deploy: `https://lifeb-rep-painel.robert131196.workers.dev`. Código com README próprio
-  explicando o isolamento e como adicionar um rep novo.
-
-**Endpoint**: `GET /metrics?rep=<NOME>&token=<token>&periodo=mes|mes_passado|total` → `{ ok, rep,
-periodo, ganhos, valorVendido, ticketMedio, geradoEm }`. Token reaproveitado — o MESMO que o rep
-já usa no proxy GAS antigo (`REP_TOKEN` já existe no template, zero placeholder novo pro
-Python de geração).
-
-**Achado importante durante a auditoria de dados**: `owner_name` no D1 NÃO é sempre igual ao
-"primeiro nome" cadastrado no TEAM da Bia — pra alguns reps é o nome completo do Agendor (ex:
-"Anderson Silva"), pra outros só o primeiro nome (ex: "Iramar"). Confirmado via `wrangler d1
-execute ... "SELECT DISTINCT owner_name..."` antes de escrever qualquer query — nunca assumir.
-
-**Verificação (não só testes unitários)**: 23 testes automatizados (mock de D1) cobrindo auth,
-períodos, divisão por zero, CORS, erro do D1 — todos passando. Depois, cross-check EXTERNO contra
-uma consulta direta no Agendor (snapshot separado, buscado ~5h antes pra outro propósito nessa
-mesma madrugada): Iramar bateu EXATO em 3 cortes diferentes (total: 28/R$91.382,80; setembro:
-1/R$2.530,22) e Natanael também (total: 33/R$90.685,05; setembro: 9/R$11.388,09). Sincronia do D1
-confirmada fresca (`synced_at` de poucos minutos atrás no momento do teste).
-
-**Frontend**: só aditivo — `.metric-strip` inserido entre o header e o `.summary-strip` já
-existente, reaproveitando as MESMAS variáveis CSS (`--purple`, `--emerald`, `--card`, `--border`,
-`--muted`) e o helper `cur()` que já existia pra formatar moeda. Fail-silent: se a API nova cair,
-o resto do painel (leads, histórico, tudo que já funcionava) continua 100% intacto — nunca mostra
-banner de erro por causa disso. Poll bem mais espaçado que os leads (5min vs 60s) porque valor
-fechado não muda tão rápido.
-
-**Diff verificado linha a linha** contra o arquivo em produção antes do deploy (`diff` contra uma
-cópia buscada ao vivo de `projetojlbv.com.br/rep/dash/iramar/`) — confirmado que a única mudança é
-exatamente o bloco novo (CSS + HTML + JS da métrica), nada mais foi tocado sem querer. Sintaxe do
-JS extraído e validada com `node --check`. Balanceamento de tags `<div>`/`</div>` conferido
-(133/133, delta exato de +10/+10 esperado pro bloco novo).
-
-**Rollout**: só Iramar e Natanael por enquanto (únicos com dashboard real gerado hoje). Pra
-estender pros outros reps do time, seguir o processo de "Adicionar um rep novo" no README do
-`lifeb-rep-painel`, e gerar o `index.html` deles com o mesmo processo Python já documentado acima
-nesta seção.
-
-**Pendência real, não escondida**: a UI nova não foi visualmente testada num navegador de verdade
-(sem ferramenta de browser nesta sessão) — só verificado via curl (HTML chegando certo, JSON
-correto) e revisão estática de código. Recomendo o Robert dar uma olhada rápida no celular assim
-que acordar pra confirmar que o visual bate com o esperado antes de considerar 100% fechado.
-
-**Coordenação entre sessões**: antes de mexer em qualquer coisa neste worktree (compartilhado com
-a sessão do Dashboard Geral), fiz `git pull` e mandei mensagem pra sessão "Projeto SDR Comercial"
-avisando o escopo exato (só leitura do D1, zero edição em `dash-geral-bridge`). Só toquei em 3
-arquivos: `source/dashboard-rep-template.html`, `rep/dash/iramar/index.html`,
-`rep/dash/natanael/index.html` — confirmado via `git status` antes do commit, zero arquivo do
-Dashboard Geral tocado.
-
 ### Bugs corrigidos em 25/04/2026
 
 **1. Status prematuro ao selecionar Fechado/Perdido**
@@ -2227,7 +2164,96 @@ Enviada em 3 mensagens separadas (cada link isolado p/ não confundir):
 
 ---
 
-## Estado atual do código — 2026-06-12
+## Estado atual do código — 2026-06-15
+
+### Alterações feitas em 2026-06-15 (commits `a3004caa`, `dba8886a`, `eac8ce29`)
+
+**Vídeo Case de Sucesso — apresentacao-super:**
+- Antes: `https://www.youtube.com/embed/CcwM50GkJUU`
+- Depois: `https://www.youtube.com/embed/-GbxfQbUTrY` (YouTube Shorts)
+
+**Carrossel apresentacao-super — array separado das landings:**
+- Novo array `superApresentacaoImages` em `client/src/pages/Home.tsx`
+- 16 fotos em `client/public/fotos-apresentacao-super/apres-super-01.jpg` a `apres-super-16.jpg`
+- Origem: `/Users/robertmarques/Downloads/supermercados/`
+- Landings (`/`, `/video1/`, `/video2/`) continuam usando `superImages` (fotos-super/) — intactas
+
+**Carrossel apresentacao-farma — array separado das landings:**
+- Novo array `farmaApresentacaoImages` em `client/src/pages/Home.tsx`
+- 25 fotos em `client/public/fotos-apresentacao-farma/apres-farma-01.jpg` a `apres-farma-25.jpg`
+- Origem: `/Users/robertmarques/Downloads/farmacias/`
+- Landings continuam usando `farmImages` (fotos-farma/) — intactas
+
+**Lógica do carrossel (carouselImages) após 2026-06-15:**
+```tsx
+const carouselImages = variant === "apresentacao-farma"
+  ? farmaApresentacaoImages.map(src => ({ src, label: "Farmácia" }))
+  : variant === "apresentacao-super"
+  ? superApresentacaoImages.map(src => ({ src, label: "Supermercado" }))
+  : allCarouselImages;
+```
+
+---
+
+## Estado atual do código — 2026-06-21 (sessão noite)
+
+### Ajuste pontual de headline nas landings
+
+**Rotas afetadas:**
+- `/`
+- `/video1/`
+- `/video2/`
+
+**Headline hero nas 3 LPs de anúncio:**
+- Restaurada para: "Transforme Acessórios em **Lucro** para Sua Loja!"
+- Destaque verde voltou a ficar só em "**Lucro**"
+
+**Páginas de apresentação:**
+- `/apresentacao-super/` e `/apresentacao-farma/` **não** foram alteradas
+- Mantêm: "Transforme sua loja em uma máquina de gerar **Lucro e Encantamento**!"
+
+**Motivo da reversão:**
+- Robert avaliou que a versão antiga era mais direta e provavelmente converte melhor no tráfego frio
+- "Acessórios" + "Lucro" deixa a oferta mais clara já na primeira dobra
+- Evitado mexer em CTA, subtítulo, bullets ou layout nesta rodada
+
+**Observação operacional:**
+- O `pnpm exec vite build` estava lento/inconclusivo na sessão
+- Para não arriscar deploy amplo, a correção foi feita de forma cirúrgica no worktree do `gh-pages`
+- Commit publicado no `gh-pages`: `bcac8cc3` (`fix: restaura headline das landing pages`)
+- O `curl` logo após o push ainda mostrou o asset antigo por cache, mas Robert confirmou depois que "deu bom"
+
+---
+
+## Estado atual do código — 2026-06-12 (sessão tarde)
+
+### Alterações feitas nesta sessão (commits `fdad3942` e `83c682e4`)
+
+**H1 hero — todas as 5 páginas (`/`, `/video1/`, `/video2/`, `/apresentacao-super/`, `/apresentacao-farma/`):**
+- Antes (landing): "Transforme Acessórios em **Lucro** para Sua Loja!"
+- Antes (apresentação): "Transforme sua loja em uma máquina de gerar lucro e encantamento!"
+- Depois (todas): "Transforme sua loja em uma máquina de gerar **Lucro e Encantamento**!"
+- Decisão de posicionamento: "Acessórios" no H1 commoditiza — posiciona como mais um fornecedor. O produto vendido é o método JLBV, não o acessório.
+
+**Fechamento — landing pages (`/`, `/video1/`, `/video2/`):**
+- Antes: "Quer implantar o Projeto JLBV na sua loja?"
+- Depois: "Quer transformar sua loja em uma máquina de gerar **Lucro e Encantamento**?"
+- Mantém linguagem do hero, vira pergunta de fechamento/decisão
+
+**Fechamento — apresentações:**
+- Apenas maiúsculas corrigidas: "lucro e encantamento" → "**Lucro e Encantamento**"
+
+**CTAs — botões que mencionavam "catálogo":**
+- Hero: "Receber catálogo no WhatsApp" → "Quero esse resultado!"
+- Quem Somos: "Quero receber o catálogo" → "Quero esse resultado!"
+- Motivo: SDR não envia catálogo — promessa falsa e linguagem de fornecedor comum
+- FAQ (resposta sobre como contato funciona): removida menção a "catálogo completo"
+
+**Backup:** `Home.tsx.backup-20260612-HHMMSS` salvo no Dropbox/Contexto Paginas SDR/
+
+---
+
+## Estado atual do código — 2026-06-12 (sessão manhã)
 
 ### Alterações feitas em 2026-06-12 (commit `d640b645`)
 
@@ -2266,3 +2292,494 @@ Robert quer redesenhar as páginas de forma significativa. Detalhes a definir na
 - Limitação: associar à cadência via API não funciona ainda — resolver via automação dentro do GS Engage
 - 4 cadências planejadas: Inbound Quente / Recuperação Inbound SDR / Recuperação Inbound Pós-closer / Recuperação Outbound Pós-closer
 - Pendente: Robert criar cadências no GS e confirmar se há regra de automação por fonte de lead
+
+---
+
+## Estado atual do código — 2026-06-22/23
+
+### Alterações feitas nesta sessão (commits `a97f6086`, `6597c968`, `8fe5c3c8`, `7e81704b`, `7613ebce`)
+
+**Vídeo "Case de Sucesso" — /video1/ e /apresentacao-super/:**
+- Antes (apresentacao-super): `https://www.youtube.com/embed/-GbxfQbUTrY`
+- Antes (video1): mostrava o vídeo farmácia `aOR4aUSp-zE` (super já estava no hero)
+- Depois (ambas): `https://www.youtube.com/embed/4NsS7DIlM20` (YouTube Shorts supermercado)
+- Lógica: bloco unificado `(variant === "apresentacao-super" || variant === "video1")` mostra o novo vídeo; bloco farmácia excluído de video1 com `variant !== "video1"`
+
+**Carrossel apresentacao-super — 2026-06-22:**
+- Removidas: apres-super-01 a 07, 13, 16 (9 fotos)
+- Adicionadas: apres-super-17 a apres-super-28 (12 fotos novas do OneDrive: `ARQUIVOS MAC/LVL IMPORTADORA/LIFE B/Imagens Supermercado/`)
+- Mantidas: apres-super-08 a 12, 14, 15 (7 fotos)
+- Total atual: 19 fotos (08–12, 14–15, 17–28)
+
+**OG image apresentacao-super — 2026-06-22:**
+- Antes: `https://d2xsxph8kpxj0f.cloudfront.net/.../super_1_0a938658.jpg`
+- Depois: `https://projetojlbv.com.br/fotos-apresentacao-super/apres-super-27.jpg`
+- Para forçar atualização do preview no WhatsApp: `https://developers.facebook.com/tools/debug/?q=https://projetojlbv.com.br/apresentacao-super/` → Scrape Again
+
+**Carrossel apresentacao-farma — 2026-06-23:**
+- Removidas: apres-farma-14 a 25 (12 fotos)
+- Reorganização: apres-farma-03 movida para posição 1 (capa)
+- Adicionadas: apres-farma-26 a apres-farma-30 (5 fotos novas do `/Users/robertmarques/Downloads/farmacias/NOVAS/`)
+- Ordem final: 03, 26, 27, 28, 29, 30, 01, 02, 04–13
+- Total atual: 18 fotos
+
+---
+
+## Estado atual do código — 2026-07-05/06
+
+### Alterações feitas em 2026-07-05 (deploy `8f016816`)
+
+**Vídeo "Case de Sucesso" — apresentacao-super:**
+- Antes: YouTube Shorts `4NsS7DIlM20` (desde 22/06)
+- Depois: Vimeo `1178399214`
+- O vídeo YouTube Short que estava no Case subiu para o Hero — swap completo entre as duas seções.
+
+### Alterações feitas em 2026-07-06, sessão da tarde (commit `fccc1f7a`)
+
+**Hero (topo) — apresentacao-super:**
+- Antes: YouTube Short `Sg2U60QIlOU` (vindo do swap de 07-05)
+- Depois: Vimeo `1207541000`
+- Motivo: o YouTube Short foi **bloqueado no YouTube**.
+- Aparece 2x no `Home.tsx` (bloco mobile e bloco desktop do hero) — as duas ocorrências mudam juntas.
+- Publicado via patch direto no bundle já publicado (`assets/index-*.js`), pulando o `vite build`: o Mac estava com RAM/swap no limite e o build travou minutos em "transforming...".
+
+### Alterações feitas em 2026-07-06, sessão da noite (commit `a6803942`)
+
+**Remoção do overlay de título/autor do vídeo Vimeo do hero:**
+- Robert reportou que o título do vídeo (overlay que o player do Vimeo mostra por padrão sobre o vídeo) estava incomodando.
+- Adicionado `&title=0&byline=0&portrait=0` na URL do embed do Vimeo do hero (`1207541000`), nas duas ocorrências (mobile + desktop) em `Home.tsx` e no bundle publicado.
+- Publicado direto via **GitHub Contents API** (`gh api`), sem passar pelo git local nem por rebuild: o `git commit` local também travou pela mesma causa de RAM (Mac com ~154MB livres, swap 17,3/18,4GB usado), e o processo cancelado deixou um `index.lock` órfão no worktree (`lifebimport-jlbv-pages/.git`) que bloqueava qualquer operação git seguinte até ser removido manualmente.
+- Repo local sincronizado depois com `git fetch origin gh-pages` + `git reset --hard origin/gh-pages`.
+- Confirmado ao vivo em produção (`projetojlbv.com.br/assets/index-*.js`) sem overlay de título/autor.
+
+---
+
+## LP `/lifeb/` — criada e integrada em 2026-07-14
+
+**⚠️ Correção (15/07): essa página NÃO é institucional.** O projeto JLBV não tem nenhuma página institucional — é uma LP de anúncio igual a `/`, `/video1/`, `/video2/`, `/rmk/`. O rótulo "institucional" usado abaixo (14/07) foi suposição errada da extração inicial, nunca confirmada com o Robert. As únicas páginas de propósito diferente no projeto são as 2 de apresentação (`/apresentacao-super/`, `/apresentacao-farma/` — uso do rep com cliente morno, sem captura de lead). Tratar `/lifeb/` com as mesmas táticas de copy/conversão/compliance das outras LPs de anúncio — ver seção "Sessão 15/07" mais abaixo pro levantamento completo.
+
+### O que é
+Site institucional da Life B (não é LP de anúncio, não faz parte do fluxo de tráfego pago dos SDRs) — mas publicado dentro do mesmo repositório/domínio do projeto JLBV porque é o mesmo negócio, mesma equipe de tráfego, e reaproveita a mesma infra de tracking e captura de lead.
+
+**URL pública:** `https://projetojlbv.com.br/lifeb/`
+
+### Origem
+Feito por um web designer terceirizado, repositório GitHub privado `fykos/lifeb` (dono: Elis Nunes Ficos). É HTML/CSS/JS puro (sem PHP/MySQL) — o freelancer tinha construído um admin completo (login + banco MySQL, upload de banners/depoimentos/vídeos) mas **removeu tudo no último commit** porque a hospedagem contratada só aceita HTML estático. Resultado: **não existe mais painel admin** — qualquer troca de foto/texto exige editar `lifeb/index.html` direto (sem CMS).
+
+### Onde vive
+- Clonado do `fykos/lifeb` e colocado como subpasta `/lifeb/` dentro do worktree `~/Desktop/lifebimport-jlbv-pages` (repo `lifeb-web/lifebimport`, branch `gh-pages` — o MESMO repo de todas as outras LPs desta página de contexto).
+- **Fora do build React/Vite** — igual aos dashboards (`dashboard-leads.html` etc.), é editado e deployado direto no worktree via `git add/commit/push origin gh-pages`, sem passar por `deploy.sh`/`vite build`.
+- `.htaccess`, `manifest.json`, `sitemap.xml`, `robots.txt` próprios da subpasta.
+
+### Integração feita (14/07/2026) — para ficar igual às outras LPs do projeto
+- **Meta Pixel** `1659173615439958` + **GA4** `G-DX8FW7ZTJ3` (mesmos IDs das outras páginas). Antes: placeholders falsos (`xxx` / `G-xxx`), zero rastreio real.
+- **Modal de captura de lead** (nome + telefone) nos 5 botões de WhatsApp da página — antes só linkava direto pro WhatsApp, sem formulário, sem cair em planilha nenhuma.
+- Lead vai pro **mesmo webhook** (`SHEETS_WEBHOOK_URL`) e cai na **mesma planilha** de leads dos vendedores — `pagina` grava como `https://projetojlbv.com.br/lifeb/`, então dá pra filtrar/segmentar por origem na planilha.
+- Eventos GA4 + Pixel: `Abrir_Formulario`, `Lead_Formulario`/`Lead`, `Abandonou_Formulario`, `Contato_WhatsApp`, `ScrollDepth_25/50/75/100` — mesmos nomes usados nas outras LPs.
+- `localStorage` usa a MESMA chave `jlbv_lead` — lead que já preencheu formulário em qualquer outra página do projeto (`/`, `/video1/` etc.) pula o formulário aqui também, e vice-versa.
+
+### Bugs reais corrigidos nessa sessão
+- Comentário CSS quebrado (`/* ... * /` com espaço em vez de `*/`) desativava um bloco inteiro de regras responsivas.
+- `.pillars-grid` sem `display:grid` (a config de colunas não fazia nada) + `.pillar-card` com largura fixa de 363px que estourava em qualquer tela <411px de largura.
+- `.hero` sem padding horizontal (só top/bottom) enquanto todas as outras seções tinham 24px.
+- Bug de validação de telefone: DDD **55** (Santa Maria/RS) era sempre rejeitado no formulário — a lógica de remover código de país (`+55`) cortava o DDD por engano, já que a máscara do campo sempre entrega exatamente 11 dígitos (nunca inclui código de país). Achado pela auditoria de código antes do deploy, corrigido e testado (casos DDD 55, DDD 62, número colado com +55, número incompleto).
+- `<meta charset="UTF-8">` passou de 1024 bytes depois que os scripts de Pixel/GA4 foram inseridos antes dele → Chrome não detectava o encoding a tempo → acentos quebravam (mojibake, ex: "acessórios" virava "acessÃ³rios"). Corrigido movendo o charset pro topo do `<head>`, antes de qualquer script.
+- SEO: `og:url`, `og:image` e `sitemap.xml` estavam com caminho relativo (preview de link quebrava no WhatsApp/Facebook) → trocados para absolutos.
+- 37 imagens sem `alt` ganharam texto alternativo; duas tags `<h4>...</p>` mal fechadas corrigidas para `<h4>...</h4>`.
+
+### Pendências conhecidas (não bloqueantes)
+- ~1,2MB de imagens órfãs em `uploads/` (sobras do período em que existia admin/CMS, não usadas no HTML atual) — não removidas, baixo risco/baixo ganho.
+- `fb:app_id content="xxx"` ainda placeholder (Pixel não usa esse campo, inofensivo).
+- Sem CMS: qualquer atualização futura de conteúdo (trocar banner, depoimento, texto) exige editar `lifeb/index.html`/`lifeb/uploads/` direto e fazer novo commit — não tem mais painel.
+- Durante o teste do webhook (14/07), algumas linhas **"TESTE Claude Code..."** caíram na planilha real de leads — seguem a convenção já estabelecida no projeto (nome com "TESTE", seguras pra apagar).
+- Auditoria de código (code-reviewer) rodada antes do deploy — achou só o bug do DDD 55, resto sem ressalvas (sem XSS, sem duplicação de eventos, CTAs coerentes).
+
+### Commits (worktree `lifebimport-jlbv-pages`, branch `gh-pages`)
+- `2f0be22d` — publicação inicial da pasta `/lifeb/` (cópia crua do repo do freelancer)
+- `f5d89609` — integração Pixel/GA4/formulário + fix dos bugs de CSS/SEO/DDD55/charset
+
+---
+
+## Sessão 15/07/2026 — modal refeito, bug crítico de visibilidade, QA geral
+
+Continuação direta da sessão de 14/07. Resumo completo em `handoff.md` nesta mesma pasta — ler esse arquivo primeiro, ele tem a versão mais enxuta e atualizada. Aqui vai o registro histórico detalhado.
+
+### 1. Modal de lead refeito (v1 estava "merdinha")
+Robert reclamou que o modal publicado em 14/07 não estava igual ao das outras LPs — visual genérico, não o componente React de verdade. Reescrito comparando linha a linha com `LeadModal` em `client/src/pages/Home.tsx`:
+- Sheet mobile (sobe de baixo, cantos arredondados só em cima, swipe fecha) / centralizado no desktop
+- Logo Life B, ícone SVG do WhatsApp no botão, campo CNPJ opcional (`XX.XXX.XXX/XXXX-XX`), máscara de telefone ao vivo enquanto digita (porta 1:1 da função `formatPhone` do React)
+- Cores de marca corrigidas: v1 usava `#6a1b9a`/`#25d366` (roxo/verde do CSS do freelancer, nunca foram as cores certas do projeto) → trocado pro roxo/verde reais (`#704B9B`/`#22C35D`)
+- Testado isolado em Node (headless Chrome não confiável nessa sessão, ver seção de gotcha técnico) — máscara de telefone e CNPJ batem byte a byte com a função canônica, incluindo o caso do DDD 55
+
+**Bug real achado nessa reescrita**: CSS global do freelancer `div img { width:100%; height:100% }` conflitava com `.lead-modal-logo` (que só definia `height`, não `width`) → logo ficava esticada numa faixa larga e achatada em vez de pequena/proporcional. Reproduzido isolado (arquivo de teste com só a regra conflitante) antes e depois do fix — confirmado. Fix: `width: auto` adicionado na regra do modal.
+
+### 2. GS Engage — falso alarme meu, não bug real
+Testei o endpoint errado (`gs-agendor-worker.../gs-inbound`, Cloudflare Worker) e achei que leads não estavam chegando no GS Engage. Essa rota **sempre foi bloqueada por WAF do GS Engage desde 16/06/2026** (doc antiga, ver [[project_lp_gs_agendor_integracao]] na memória) — não é o caminho real de entrega. O caminho que funciona de verdade é `planilha-leads-script.gs` (Google Apps Script, roda no IP do Google, que o WAF não bloqueia). `/lifeb/` sempre usou esse webhook corretamente desde a publicação — nunca teve gap de entrega ao GS Engage. Lição: sempre checar documentação/memória por gotcha já conhecido antes de testar integração externa ao vivo (perdi tempo real repetindo uma descoberta de 16/06).
+
+### 2b. Incidente de cota compartilhada (achado do Robert, não meu)
+`agendor-outbound-proxy.gs` (proxy do Dashboard Geral) rodava na MESMA conta Google (`robert131196@gmail.com`) que o webhook de leads. Cota diária de `UrlFetchApp` é por conta, não por script — meus testes pesados no Dashboard Geral (~19h de 14/07) estouraram a cota, e isso travou a entrega de lead pro GS Engage por algumas horas (lead caía na planilha normal via SpreadsheetApp, que não usa a cota, mas não repassava pro CRM). **Resolvido na madrugada de 15/07**: `agendor-outbound-proxy.gs` migrado pra conta separada (`cel.lvlimportadora@gmail.com`). Confirmado estável desde então (inclusive um respingo residual de 2 minutos exatamente na janela em que a migração estava terminando de se assentar, 08:42-08:44 de 15/07 — testado e fechado).
+
+### 3. Otimização geral de mídia
+Pedido do Robert: "traz tudo de bom das outras LPs, mantendo a identidade visual dessa, melhora mídias, tudo."
+- 7 backgrounds de seção (`bg-01` a `bg-08`, PNG fotográfico pesado) convertidos pra WebP — primeira tentativa em qualidade 82 (ficou ~90%+ menor, mas arriscado demais), **recomprimido pra qualidade 95** depois do relato de "qualidade péssima" do Robert (ainda ~40-45% menor que o PNG original, margem de segurança grande contra artefato)
+- Botão flutuante de WhatsApp adicionado (faltava — todas as outras LPs têm)
+- `loading="lazy"` + `decoding="async"` em 42 das 44 imagens (só logo do header e 1ª imagem do hero ficaram eager, pra não prejudicar LCP)
+- SweetAlert removido (CSS+JS carregados via CDN mas nunca chamados no código — peso morto)
+- 152KB de thumbnails órfãos do CMS removido (`_thumb_*`, confirmado zero referências) movidos pra fora do deploy
+- **Revertido**: tentei converter as fotos de `uploads/banners/` e `uploads/napratica/` pra WebP também. Eram JPEGs já bem comprimidos pelo processo original — em qualidade segura (88-95) ficavam do MESMO tamanho ou MAIORES que o JPEG original em vários casos (double-compression penalty). Sem ganho real, com risco de qualidade à toa — revertido pro `.jpeg` original.
+- Achados extras de órfãos do CMS removido durante a limpeza: pasta `uploads/videos/` inteira (2 imagens, nunca referenciadas — o vídeo real usa thumbnail do próprio Vimeo/YouTube via CDN) + 2 banners extras + 2 napratica extras. **Não removidos** — o guard de destructive-action do Claude Code bloqueou mover/apagar por não terem sido nomeados explicitamente pelo Robert. Inofensivos (não carregados por ninguém), só peso morto no repo.
+
+### 4. 🔴 BUG CRÍTICO — conteúdo inteiro invisível pra qualquer visitante
+QA geral pré-tráfego (pedido do Robert: "revisada geral mobile e desktop... vamos deixar ela pronta pra receber tráfego") revelou que **Resultados** (3 cards de stats de clientes), **Conheça Projeto JLBV** (6 pilares), **Garantia** (4 diferenciais) e os **2 vídeos de depoimento reais** ficavam permanentemente invisíveis — travados em `opacity:0` desde sempre.
+
+**Causa**: o freelancer usa um `IntersectionObserver` (linha ~776 do `index.html`) pra revelar esse conteúdo com fade-in ao rolar a página. Container observado dispara animação em cascata nos filhos. Só que esse observer **nunca disparava** pra `.results-grid`, `.video-grid` (testimonials), `.features-grid` e `.pillars-grid` — ficavam eternamente com `opacity:0`. O único motivo do hero (`.banners`) parecer funcionar é que ele TEM uma regra CSS redundante (`animation: fadeUp .8s ease both` direto no CSS, linha ~991 do `site.css`) que dispara sozinha independente do JS — mascarou o problema ali por acidente, mas os outros containers não tinham esse fallback.
+
+Confirmado com teste real: rolei a página inteira via CDP (scroll incremental com pausa, disparando qualquer lazy-load/intersection possível) e o conteúdo continuava em `opacity:0` — não era timing, era o observer genuinamente nunca disparando pra esses containers específicos. Provavelmente bug PRÉ-EXISTENTE do freelancer desde a criação original, não algo introduzido nessa sessão — testei remover `loading="lazy"` como hipótese de causa (pensei que pudesse estar afetando o cálculo de largura do carrossel `reorganizaq()` antes do observer rodar), não resolveu sozinho, então não é essa a causa raiz — a causa raiz específica do porquê o observer não dispara pra esses containers não foi 100% identificada, só contornada.
+
+**Fix aplicado**: rede de segurança via `setTimeout` de 1.5s logo após o setup do observer — busca qualquer elemento ainda com `opacity: 0` inline no style e força pra `opacity: 1` sem animação, independente do observer ter disparado ou não. Sacrifica o efeito de fade-in pra conteúdo abaixo da dobra em troca de garantir que nada fica invisível pra sempre — mesmo padrão de segurança que já existe informalmente no `.napratica-card` (nunca foi wireado nesse sistema de animação, sempre visível, sempre funcionou).
+
+Testado localmente (`python3 -m http.server`, sem depender de rede/CDN) em mobile (~500px, limite técnico da sessão) e desktop (1440px), com e sem scroll, antes de publicar. Reconfirmado ao vivo em produção depois do deploy: `opacity:1` em todos os elementos antes travados, zero erro de console.
+
+### 5. QA geral completo — o que passou
+- Zero erro de console em toda a sessão de testes (mobile ~500px + desktop 1440px), incluindo interação com menu, modal, validação de formulário vazio, lightbox de vídeo (Fancybox), FAQ accordion, botão flutuante
+- Zero scroll horizontal / overflow em nenhuma largura testada
+- Zero recurso local quebrado (40 arquivos checados via HEAD request)
+- Meta tags, favicon, OG — todos presentes e corretos
+- Peso total ~1,97MB (HTML+CSS+imagens referenciadas), maior parte só carrega quando o visitante rola até lá (lazy loading)
+
+### 6. ⚠️ PENDENTE — bug relatado no iPhone (Safari), não localizado
+Robert testou no iPhone real (Safari) e reportou: "não tá carregando direito no mobile, tudo quebrado ou cortado ou algo impedindo o carregamento." Investigação extensa não conseguiu reproduzir nem confirmar a causa raiz — ver `handoff.md` seção específica pra lista completa do que já foi descartado (`position:sticky`, `100vh`, padding do header) e o que já foi corrigido mas ainda não é certeza de ser a causa (`backdrop-filter` sem prefixo `-webkit-` no `.banner` do hero — corrigido no arquivo local, não deployado ainda).
+
+**Causa raiz real ainda não identificada.** Próximo passo obrigatório: ver o problema com os próprios olhos — print real do iPhone (cai sozinho no Desktop do Robert) ou teste em dispositivo real antes de tentar qualquer fix novo. Chutar mais correção sem ver o problema é desperdício.
+
+### 7. Gotcha técnico da sessão — CDP trava sob pressão de memória
+A máquina do Robert ficou com <100MB de RAM livre boa parte dessa sessão (ele mantém 50-70 processos Chrome próprios abertos normalmente). Nesse estado, `Emulation.setDeviceMetricsOverride` do Chrome DevTools Protocol trava `Runtime.evaluate` por dezenas de segundos (às vezes >90s), mesmo numa página já carregada — não é bug da página sendo testada, é o comando de resize em si ficando caro sob swap pesado, piora bastante especificamente com essa página (jQuery+Fancybox+GA+Pixel+44 imagens).
+- **Workaround que funciona pra desktop/larguras médias**: iniciar Chrome headless já no tamanho certo via flag `--window-size=W,H` (não redimensionar em runtime), conectar direto na aba já existente sem chamar `Emulation.setDeviceMetricsOverride`. Só emula um mínimo de ~500px de largura nessa técnica (piso do próprio SO/Chrome headless nessa máquina) — não serve pra reproduzir largura real de iPhone.
+- **Pra mobile real (390px/320px)**: `Emulation.setDeviceMetricsOverride` funciona quando a máquina tem um momento de folga (funcionou instantâneo numa tentativa isolada), mas trava na maioria das tentativas quando há concorrência de recursos. Não dá pra depender disso de forma confiável nessa máquina específica.
+- Sem Xcode/`simctl` instalado — sem Simulador iOS disponível como alternativa.
+
+### 8. Pendente — melhorias de copy/conversão (levantamento aprovado, aguardando aplicar)
+Comparação com padrões já validados nas outras LPs de anúncio do projeto (agora que ficou confirmado que `/lifeb/` é LP de anúncio, não institucional):
+
+1. **🔴 Prioridade alta — risco de reprovação de anúncio**: seção Garantia diz *"o projeto JLBV **garante** um crescimento mínimo na categoria de 300%"* — Meta reprova promessa de resultado garantido. Trocar por factual: *"cases reais de +300% a +500% na categoria"*.
+2. **Erro de gramática real no subtítulo do hero**: *"...deixa seus concorrentes por impulso a diferença entre os seus concorrentes."* — frase sem sentido, precisa reescrever.
+3. **CTAs inconsistentes** — 5 textos de botão diferentes ("Fale com um consultor" / "Quero esse resultado na minha loja" / "Quero saber mais informações" / "Quero implantar na minha loja" / "Falar com consultor agora"). Padrão validado: **"Quero esse resultado na minha loja"** (topo/meio) + **"Quero implantar na minha loja"** (fechamento). Só 2 dos 5 já batem.
+4. **Headline genérico**: "Transforme acessórios em lucro pra sua loja" — falta a urgência FOMO que a `/rmk` comprovou converter melhor.
+5. **Sem trust bar de urgência**: outras LPs têm "✓ Vagas limitadas por região · resposta em minutos" no hero, `/lifeb/` não tem.
+6. **Hero com carrossel de imagem, não vídeo** — `/video1/`/`/video2/` usam vídeo autoplay mudo (métrica comprovada). Mudança estrutural maior, confirmar com Robert antes de aplicar.
+
+### Commits desta sessão (worktree `lifebimport-jlbv-pages`, branch `gh-pages`)
+- `596574e7` — perf: otimização geral de mídia + botão flutuante WhatsApp
+- `3e76a01f` — fix: logo do formulário esticada + reverte webp de uploads (risco de qualidade)
+- `1f62b00f` — fix: conteúdo inteiro invisível pra visitantes reais (bug crítico da opacity)
+
+---
+
+## Sessão 16/07/2026 — copy de conversão aplicada, bug do modal corrigido, iPhone ainda pendente
+
+Continuação direta da sessão de 15/07. Handoff atualizado em `handoff.md` — ler esse primeiro.
+
+### 0. Tangente — investigação de "nenhum lead real desde ontem" (fora do escopo, não mexido)
+
+Robert reportou no meio da sessão que nenhum lead real parecia estar entrando desde a noite de 14/07, mas pediu explicitamente pra não mexer na integração de leads/GS Engage porque outra sessão estava trabalhando nisso em paralelo ("pega leve aí"). Investigação leve, só leitura, antes dele pedir pra parar:
+- Meta Ads confirmou tráfego/gasto normal nas campanhas ativas (LP+, LP+ DF, LP VD, LP IMG) — nada de campanha pausada por engano.
+- Exportei a planilha real de leads via CSV público (`docs.google.com/.../export?format=csv`) e cruzei com gaps históricos: o buraco de ~17h sem lead real (14/07 21:31 → teste do Robert em 15/07) é MENOR que 4 outros gaps dos últimos 45 dias (29h, 25h, 24.7h, 24.4h) sem que nenhum deles tenha sido um bug real. Não é anomalia.
+- Testei o webhook (`planilha-leads-script.gs`) direto via curl com a técnica correta (POST→302→GET no echo do Google, sem preservar o método) — confirmado funcionando (grava na planilha E chega no GS Engage, validado via API do GS Engage direto, técnica da última página).
+- **Gotcha real reencontrado**: `curl -L` sem `--postXXX` às vezes ainda dá 405 "Não foi possível abrir o arquivo" nessa configuração específica — não confiar cegamente nisso, sempre conferir o header `Location` do 302 e seguir manualmente como GET se o `-L` automático falhar.
+- Conclusão repassada ao Robert: mecanismo tá são, o "buraco" parece variância normal — se persistir por muito mais tempo com anúncio continuando a gastar, aí sim escalar.
+
+### 1. Erro de processo — pkill/porta batendo na sessão paralela
+
+Durante teste de screenshot, `pkill -f "chrome-profile-"` (com hífen no final) foi usado, e por sorte NÃO bateu num processo Chrome de outra sessão ativa (`.../audit/chrome-profile`, sem hífen) rodando em paralelo (porta CDP 9333) — mas quase. Puro acaso de padrão de string. **Lição**: com sessões concorrentes confirmadas, `pkill -f` por substring é arriscado mesmo tentando ser específico; melhor matar por PID exato sempre que houver qualquer chance de sessão paralela ativa.
+
+Também aconteceu: subi `python3 -m http.server` numa porta que JÁ estava ocupada por um servidor da outra sessão (dashboard "Painel Geral") — o `http.server` falhou em background (`Address already in use`), mas o `curl` de verificação bateu no servidor ERRADO e voltou 200, mascarando o erro. Só percebi porque um screenshot mostrou o dashboard errado em vez do `/lifeb/`. **Lição**: sempre `lsof -i :PORTA` antes de confiar que um servidor subiu, principalmente com outra sessão ativa em paralelo.
+
+### 2. Copy de conversão — aplicada, com correção de rumo no meio
+
+Apliquei os 6 itens do levantamento de 15/07 (ver seção anterior). No item 4 (headline FOMO), copiei a frase EXATA do `/rmk` ("Enquanto você avalia, outra loja da sua região pode estar implantando primeiro"). Robert pediu pra reverter: `/rmk` não é mais usado (campanhas pausadas, custo ficou alto — confirmado também via Meta Ads: campanhas `[RMK]`/`[OFF EDIT] [RMK]` todas `PAUSED`). Ele queria o `/lifeb/` parecido com as páginas **realmente ativas**.
+
+Fui direto no `Home.tsx` (`~/Desktop/lifebimport-jlbv/client/src/pages/Home.tsx`) conferir o hero DEFAULT (fora do bloco `if (variant === "rmk")`, usado por `/`, `/video1/`, `/video2/`, linha ~1292): headline real é "Transforme Acessórios em Lucro para Sua Loja!", subtítulo "Com o Projeto Exclusivo JLBV, você aumenta o ticket médio, encanta o público feminino, estimula compras por impulso e se diferencia dos seus concorrentes.", prova social "+2.000 lojas já implantaram o projeto" (não "vagas limitadas", que só existe no CTA final específico do `/rmk`). Apliquei isso no lugar — e de quebra resolveu o item 2 (erro de gramática) de vez, porque o subtítulo quebrado do `/lifeb/` era claramente uma corrupção desse texto certo (dá pra ver a palavra "impulso" e "concorrentes" sobrevivendo no meio da bagunça).
+
+**Erro meu que o Robert pegou**: antes de checar o `Home.tsx`, eu tinha assumido (só pela doc/handoff) que era certo usar o framing do rmk. Não conferi contra o código real antes de aplicar. Aconteceu de novo mais tarde no mesmo dia (ver item 4).
+
+### 3. Achados extras de QA, corrigidos sem estarem na lista aprovada original
+
+- Subtítulo da seção "Veja o projeto JLBV funcionando na prática" tinha texto corrompido: *"...atribui soluções, empíra asfaltam rendas de vendas, maxima a rentabilidade..."* — reescrito pra "...aplica soluções comprovadas que impulsionam as vendas, maximiza a rentabilidade...". Mesma classe de corrupção do subtítulo do hero (achado 2).
+- `.pillars-grid` (seção "Conheça Projeto JLBV", 6 itens) usava `grid-template-columns: repeat(auto-fit, minmax(200px,1fr))` — com o container de 1100px isso força 5 colunas de ~200px, títulos quebrando letra por letra ("Exposiçã/o"). Trocado o floor pra `260px` → 4 colunas confortáveis. Confirmado visualmente antes/depois via screenshot.
+- CTA do header estourava em telas estreitas (~390px) depois que o texto padronizado ficou mais comprido ("Quero esse resultado na minha loja" vs "Fale com um consultor" antigo). Fix: escondido o texto abaixo de 420px, só ícone do WhatsApp fica visível — mesmo padrão já usado nas LPs React (`<span className="hidden sm:inline">`).
+
+### 4. Hero: carrossel de imagem → vídeo autoplay mudo
+
+Reaproveitado o MESMO vídeo Vimeo (`1178399214`, "Projeto JLBV — Supermercado") já usado no hero do `/video1/`, com os mesmos parâmetros de embed (`autoplay=1&muted=1&loop=1`). Container novo (`.hero-video`, `aspect-ratio:9/16`) com o mesmo estilo glass (`border`+`backdrop-filter`+`box-shadow`) do `.banner` antigo, pra manter identidade visual. JS do carrossel antigo (`reorganizaq`/`paginaProxima`/etc., compartilhado com outras 3 seções da página) foi deixado intacto — todas as funções fazem no-op seguro em jQuery quando o elemento `.banners` não existe mais no DOM (confirmado lendo o código, `$('.banners')` vazio não lança exceção em nenhum ponto).
+
+**Limitação de teste**: Vimeo bloqueia o embed em teste local/headless (erro "couldn't verify security of your connection", provavelmente restrição de domínio + detecção de bot). Não deu pra confirmar reprodução real localmente — só validado que o HTML/CSS do embed é idêntico ao que já roda ao vivo no `/video1/`. Se o vídeo não tocar em produção, é a primeira coisa a checar (config de domínio permitido no player Vimeo).
+
+### 5. 🔴 Bug real corrigido — modal pulava direto pro WhatsApp (achado do Robert)
+
+Robert: "o formulário só funciona quando abro em guia anônima". Causa encontrada lendo o próprio JS (linhas ~978-993 do `index.html`): o handler de clique dos `.js-lead-cta` checava `localStorage.getItem('jlbv_lead')` e, se já existisse nome+telefone salvos de visita anterior, **pulava `preventDefault()`/`openModal()` inteiramente** e deixava o `<a href="wa.me/...">` nativo navegar direto — só disparava o evento `Contato_WhatsApp` antes. Isso tinha sido escrito (provavelmente) na reescrita do modal em 15/07, mas **não corresponde ao componente React canônico**: no `Home.tsx`/`LeadModal`, o `localStorage` só é lido dentro do `openModal()` pra PRÉ-PREENCHER os campos — o modal SEMPRE abre. O único "pula direto pro zap" que existe lá é `directMode`, uma prop estática por variant de página (ex.: uma página configurada como "sem formulário"), não uma checagem de visitante retornante.
+
+Como o próprio Robert testou o formulário várias vezes nos últimos dias (incluindo os 2 testes desta sessão, nomes "teste 14:42"/"teste 15hrs"), o `jlbv_lead` já estava salvo no navegador normal dele — daí toda aba comum pular reto pro Zap, e só a guia anônima (localStorage sempre vazio) mostrar o modal.
+
+**Erro meu**: quando ele reportou o sintoma, eu expliquei o mecanismo real (achei certo) mas errei ao dizer "é assim em todas as LPs, comportamento esperado, compartilhado" — não tinha conferido o `Home.tsx` antes de afirmar isso. Ele questionou ("nenhuma pula o formulário, ta louco?"), fui conferir e ele tinha razão. **Fix**: removida a ramificação de early-return; agora sempre `preventDefault()`+`openModal()`, que já pré-preenche sozinho via `getLocalLead()`. Testado sintaxe (`vm.Script`), deployado, confirmado ao vivo (grep no HTML de produção confirma a ramificação sumiu).
+
+**Padrão que se repetiu 2x na mesma sessão**: tanto no headline do rmk quanto nesse bug do modal, eu respondi baseado em doc/memória/suposição em vez de ler o código-fonte real primeiro. Nas duas vezes o Robert pegou o erro. Lição pra manter: **sempre conferir `Home.tsx` (ou o arquivo fonte relevante) antes de declarar "é assim nas outras páginas"**, nunca confiar só na documentação anterior.
+
+### 6. Bug do iPhone Safari — sem progresso
+
+Nenhum print novo chegou no `~/Desktop` durante a sessão (um PNG apareceu mas era 1x1px vazio, arquivo de 1KB — provavelmente captura falha/cancelada). A pedido do Robert ("vamos sem print mesmo"), a investigação ficou pausada — retomar só com print real ou descrição específica do sintoma (tela branca? layout quebrado? botão não funciona? scroll horizontal?).
+
+### Commits desta sessão (worktree `lifebimport-jlbv-pages`, branch `gh-pages`)
+- `0fd866d1` — feat(lifeb): copy de conversão aprovada (headline FOMO do rmk, na 1ª tentativa) + hero em vídeo + fixes de layout
+- `acabd59c` — fix(lifeb): modal de lead nunca deve pular pra WhatsApp direto
+- `1c4420d2` — fix(lifeb): volta headline/subtítulo/trust-bar pro padrão das páginas ativas (reverte o framing do rmk)
+- (fix do `-webkit-backdrop-filter` no `.banner` do hero: aplicado no arquivo local, ainda não commitado/deployado — fica pra próxima rodada junto com os pendentes de copy)
+
+---
+
+## Sessão 15/08/2026 — Novas páginas `/redefarma/` e `/redesuper/` (foco em REDES)
+
+Pedido do Robert: clonar `/video1/` e `/video2/` focando especificamente em REDES de lojas (não lojista único), com um filtro de qualificação visível no anúncio ("só interessa se a rede tiver X+ lojas") e uma mensagem de WhatsApp que o Felipe (SDR) consiga identificar de cara qual segmento/porte o lead representa, sem precisar abrir a planilha.
+
+### Mapeamento
+- `/redesuper/` = clone de `/video1/` (hero Vimeo Supermercado `1178399214`) — badge **"Exclusivo para redes com 10+ lojas"**
+- `/redefarma/` = clone de `/video2/` (hero YouTube Farmácia `aOR4aUSp-zE`) — badge **"Exclusivo para redes com 20+ lojas"**
+- Vídeo da seção "Case de Sucesso" herdado 1:1 do respectivo original (redesuper mostra o YouTube Short `4NsS7DIlM20`, igual video1; redefarma mostra o Vimeo supermercado `1178399214`, igual video2) — testado que não duplica nem falta vídeo em nenhuma das duas.
+
+### Copy alterada (só nas 2 variantes novas, via flag `isRedes` em `Home.tsx`)
+- **Badge topo do hero**: troca "Projeto Exclusivo JLBV" por "Exclusivo para redes com {20|10}+ lojas" — e passa a ficar sempre visível (mobile+desktop), diferente do comportamento padrão de video1/video2 que escondia esse badge no mobile.
+- **H1**: "Transforme sua rede em uma máquina de gerar Lucro e Encantamento!" — reaproveita o texto já usado em `/apresentacao-super/` e `/apresentacao-farma/` (trocando "loja"→"rede"). Confirmado no `script de vendas Life b.pdf` (Dropbox `LVL IMPORTADORA/LIFE B/`) que essa frase é literalmente o título oficial do discurso comercial da empresa.
+- **Subtítulo hero**: "Com o Projeto Exclusivo JLBV, sua rede padroniza a exposição em todas as lojas, aumenta o ticket médio, encanta o público feminino e ganha um mix que já provou resultado em escala."
+- **Bullet extra** (6º item, some para as demais variantes): "Garantia de troca dos produtos sem giro após 150 dias da implantação" — achado no `script de vendas Life b.pdf`, argumento de baixo risco que ainda não estava em nenhuma landing page do projeto.
+- **Subtítulo da seção "Método Exclusivo"**: "...aumentar o faturamento e o lucro da **sua rede**, padronizar a exposição em todas as lojas e encantar..."
+- **CTAs**: todos os botões que diziam "...minha loja" viram "...minha rede" (Cases, Resultados, Galeria); CTA final do H2 vira "Quer transformar sua rede em uma máquina de gerar Lucro e Encantamento?"
+- Cases (Droga Center / Super Couto / Drogarias Distrital) **não precisaram mudar** — já falam de "Rede de Drogarias..." / "Rede de Supermercado..." no texto original, coerente por acaso com o novo público.
+
+### Mensagem de WhatsApp diferenciada (pedido explícito — Felipe precisa identificar de cara)
+Antes, `WHATSAPP_LINK` era uma constante única e genérica ("Olá! Vi o Projeto JLBV da Life B e quero saber mais.") usada em TODAS as variantes. Agora:
+- `WHATSAPP_LINK_REDEFARMA`: *"Olá! Sou de uma rede de farmácias/drogarias (20+ lojas) e vi o Projeto JLBV. Quero saber mais."*
+- `WHATSAPP_LINK_REDESUPER`: *"Olá! Sou de uma rede de supermercados (10+ lojas) e vi o Projeto JLBV. Quero saber mais."*
+
+Implementação: `LeadModal` passou a receber `whatsappLink` como prop (calculada em `Home` a partir da `variant`) em vez de importar a constante fixa direto — `/`, `/video1/`, `/video2/`, `/rmk/` continuam usando a mensagem genérica de sempre, comportamento 100% preservado.
+
+### O que ficou de fora (decisão consciente, não aplicado sem confirmar)
+- **FAQ**, o card "Alta Rentabilidade da **loja**" (seção 6 cards "Conheça o Projeto JLBV") e os `stats` (Projetos Implantados etc.) são arrays **compartilhados** com `/`, `/video1/`, `/video2/` e as apresentações — mudar isso afetaria todas as páginas do projeto, não só as de redes. Não alterado.
+- Bullet "Crescimento mínimo garantido na categoria: 300%" mantido igual às demais landings — é risco de compliance do Meta (promessa de resultado garantido) já existente desde antes, não introduzido nesta sessão.
+- Sem OG customizado (title/description/og:image por segmento) — seguiu o padrão simples de video1/video2/rmk (cópia direta do `index.html` base), diferente do que existe pras páginas `/apresentacao-*/`.
+
+### Pesquisa de apoio (Dropbox `LVL IMPORTADORA/LIFE B/`)
+- `script de vendas Life b.pdf` — confirma H1 oficial + garantia de 150 dias + dado "mulheres decidem 96% das compras do lar" (Nielsen/Amis, Katar) — não usado ainda, pode virar bullet numa próxima rodada.
+- `lifeb-apresentacao-drogarias.pdf` / `lifeb-apresentacao-supermercados.pdf` — decks genéricos, sem diferenciação real por segmento, sem dado novo de redes.
+- Não existe documentação prévia do threshold 20+/10+ lojas nem cases de redes maiores que as 3 já usadas no site — o corte foi definido nesta sessão pelo Robert.
+
+### Arquivos alterados
+- `client/src/pages/Home.tsx` — variantes `redefarma`/`redesuper`, flag `isRedes`, `redesMinLojas`, `whatsappLink` prop no `LeadModal`
+- `client/src/App.tsx` — rotas `/redefarma` e `/redesuper`
+- `vite.config.ts` — geração das pastas estáticas `dist/public/redefarma/` e `dist/public/redesuper/` (padrão simples, igual video1/video2)
+
+### Validação antes do deploy
+- `pnpm exec tsc --noEmit` — limpo
+- `pnpm exec vite build` — limpo, gerou `redefarma/index.html` e `redesuper/index.html`
+- Screenshots via Chrome headless (mobile 430px + desktop 1440px) das duas páginas novas, comparadas lado a lado com `/video1/`/`/video2/` — confirmado zero regressão nas páginas originais e zero duplicação de vídeo nas novas
+
+### Deploy (1ª rodada)
+Publicado via `bash deploy.sh` em 2026-08-15 01:04. Commit `e9da5fd0` no branch `gh-pages` do repo `lifeb-web/lifebimport`. Confirmado `HTTP 200` em produção para `projetojlbv.com.br/redefarma/` e `projetojlbv.com.br/redesuper/` após propagação do GitHub Pages.
+
+Nota: esse mesmo deploy também subiu para o `gh-pages` alguns arquivos `.webp` de `lifeb/uploads/` (banners/napratica/videos) que já estavam presentes no worktree local mas ainda não tinham sido commitados — resíduo de uma sessão anterior de otimização de mídia da `/lifeb/`, não é algo introduzido por esta sessão.
+
+### Correções da 2ª rodada (mesma sessão, 2026-08-15)
+Depois do primeiro deploy, o Robert pediu mais 4 ajustes — todos aplicados, testados (mobile 390px real via Chrome headless, comparado lado a lado com `/apresentacao-super/`/`/apresentacao-farma/`/`/video1/`/`/video2/`) e publicados no commit `ebb7c95a`:
+
+1. **Vídeos de `/redesuper/` viraram idênticos aos de `/apresentacao-super/`** (antes clonava `/video1/`): hero passou a usar Vimeo `1207541000` (com `&title=0&byline=0&portrait=0`, sem overlay) em vez de `1178399214`; seção "Case de Sucesso" passou a mostrar o Vimeo `1178399214` em vez do YouTube Short `4NsS7DIlM20`. `/video1/` não foi tocado — continua com seus vídeos originais.
+2. **Vídeo próprio no "Case de Sucesso" de `/redefarma/`**: novo bloco dedicado (`variant === "redefarma"`) mostrando `https://www.youtube.com/embed/qs_-yVCcfWg` (era `https://youtube.com/shorts/qs_-yVCcfWg`). Antes `/redefarma/` caía no catchall que mostrava o Vimeo de supermercado (igual `/video2/`) — agora tem vídeo próprio de farmácia. Bloco catchall de supermercado foi ajustado pra excluir `redefarma` (evita duplicar vídeo).
+3. **Carrossel "Na Prática"**: `/redefarma/` passou a usar `farmaApresentacaoImages` (as 18 fotos de `/apresentacao-farma/`) em vez de `farmImages`/`allCarouselImages` genérico; `/redesuper/` passou a usar `superApresentacaoImages` (as 19 fotos de `/apresentacao-super/`). `/`, `/video1/`, `/video2/` continuam com `allCarouselImages` — intactos.
+4. **Reforço visual do filtro de qualificação** (pedido do Robert, para afunilar melhor o público nos anúncios): badge do topo do hero passou de pill translúcido pra fundo verde sólido (`#22C35D`) com ícone 🏢 quando `isRedes` — mais contraste contra o gradiente roxo/magenta. Adicionado também um 1º bullet reforçando a mesma condição: "Feito para redes com {20|10}+ lojas", antes dos demais bullets. Sugestão dada ao Robert (ainda não aplicada, fora do escopo do código): replicar a condição "redes com X+ lojas" no próprio texto/criativo do anúncio no Meta Ads — filtra antes do clique, economiza CPC com clique desqualificado, o que o badge na LP sozinho não resolve.
+
+### Pendência identificada e corrigida nesta sessão: dashboards não reconheciam as rotas novas
+Auditoria (a pedido do Robert: "espero que tenha colocado todo o trackeamento... revisado tudo") encontrou que `PAGINAS_LEGENDAS` em `dashboard-ga4.html` e `dashboard-telao.html` (Dropbox + worktree `lifebimport-jlbv-pages`) não tinha entradas para `/redefarma/` nem `/redesuper/` — apareceriam como path bruto na tabela "Por Página" em vez de rótulo legível. Corrigido nos dois arquivos:
+```js
+'/redefarma/':     'Página Redes - Farmácia (20+ lojas)',
+'/redesuper/':     'Página Redes - Supermercado (10+ lojas)',
+```
+Validado com `node --check` (sintaxe ok) antes de publicar. Publicado automaticamente junto com o deploy das landing pages (o `deploy.sh` faz `git add -A` no worktree, então pegou os dashboards que já estavam copiados lá). Confirmado em produção via `curl` no HTML publicado dos dois dashboards.
+
+**Confirmado que o resto do tracking (Meta Pixel `1659173615439958`, GA4 `G-DX8FW7ZTJ3`, eventos PageView/Abrir_Formulario/Lead_Formulario/Abandonou_Formulario/ScrollDepth, UTMs, webhook da planilha) funciona automaticamente em `/redefarma/` e `/redesuper/` sem nenhuma alteração de código** — são carregados no `client/index.html` base (compartilhado por todas as rotas do SPA) e os handlers em `Home.tsx`/`LeadModal` não dependem de `variant` para disparar. `pagina` grava `window.location.href`, então a planilha e os dashboards já diferenciam a origem automaticamente pela URL.
+
+### Deploy final (2ª rodada)
+Commit `ebb7c95a` no branch `gh-pages`, publicado em 2026-08-15 01:41. Validado em produção via `curl` no bundle JS publicado: as 3 mensagens de WhatsApp (genérica + redefarma + redesuper) presentes corretamente, vídeo `qs_-yVCcfWg` presente, `fotos-apresentacao-farma` presente, vídeo `1207541000` presente, textos "Exclusivo para redes com" e "Feito para redes" presentes.
+
+### Fix 15/08/2026 (manhã) — badge verde confundia com botão de CTA
+Robert reportou que o selo "Exclusivo para redes com X+ lojas" (fundo verde `#22C35D` sólido) ficava parecendo clicável, porque é **exatamente a mesma cor** dos botões de WhatsApp CTA do site. Trocado para **fundo branco sólido + texto roxo `#704B9B` bold** (mesma cor de marca, mas visualmente inconfundível com um botão de ação) — mantido o ícone 🏢 e o formato pill. Testado mobile 390px antes de publicar. Deploy: commit `ac21d5fd`, `gh-pages`, 2026-08-15 11:24. Confirmado em produção via `curl` no bundle publicado.
+
+## Sessão 25-26/08/2026 — Logo quebrada (bug crítico), reorganização de vídeos/fotos por página, otimização de performance
+
+Sessão longa, começou com um pedido urgente (Robert ia apresentar as páginas) e evoluiu pra uma rodada grande de ajustes de conteúdo pedidos aos poucos, ao vivo, conforme ele revisava cada página. Fechou com auditoria de performance antes de dormir.
+
+### 🔴 Bug crítico corrigido — logo quebrada em TODAS as páginas
+Causa raiz: `LOGO_URL` em `Home.tsx` apontava pra uma URL externa de CloudFront/S3 (`d2xsxph8kpxj0f.cloudfront.net/.../LifeB_78863297.png`) que passou a devolver **403** (link de terceiro expirado, não era arquivo do próprio projeto). Como é uma constante única usada em 6 lugares diferentes do componente (header, footer, modal etc.), quebrou a logo em TODAS as variantes de uma vez só — inclusive nas 2 páginas de apresentação.
+
+Fix: baixada a logo oficial do Dropbox (`LOGOS LVL/lifeb_logos_transparentes/lifeb_logo_principal_transparente.png`), salva como `client/public/logo-lifeb.png`, `LOGO_URL` trocado pra path local `/logo-lifeb.png`. `og:image` (preview de compartilhamento) tinha o mesmo problema em 9 HTMLs estáticos publicados — corrigido também no `client/index.html` fonte (pra não voltar no próximo build) e direto nos HTMLs já publicados.
+
+Publicado inicialmente via **patch direto no bundle JS já publicado** (achar a string da URL quebrada e substituir, sem rodar build) pra resolver em minutos antes da apresentação — só depois, com calma, foi feito um build limpo de verdade que consolidou tudo.
+
+### 🔧 Descoberta técnica importante — iCloud Drive no Desktop trava operações git
+Toda a sessão começou MUITO lenta: `git status`/`git commit` no repo fonte (`~/Desktop/lifebimport-jlbv`) travavam minutos ou ficavam pendurados indefinidamente (0% CPU, sem progresso). Causa raiz encontrada via `brctl status`: **a pasta Desktop está sincronizada com iCloud Drive**, e o `.git/objects/` tem milhares de arquivos pequenos — o iCloud tenta sincronizar/materializar cada um sob demanda, e qualquer operação git que percorre o objeto do repo (status, commit, `vite build` lendo `node_modules`) fica refém desse processo, que pode levar minutos por operação. Isso é DIFERENTE do problema de RAM/swap já documentado antes (`feedback_build_lento_patch_bundle` — memória do Claude Code) — aqui é especificamente contenção de I/O do provedor de arquivos do iCloud, não memória.
+
+**Solução que funcionou**: qualquer trabalho de build/commit pesado deve rodar **fora da pasta Desktop** (que é iCloud), num diretório local puro (ex: `/tmp` ou scratchpad da sessão). Fluxo usado no resto da sessão:
+1. `rsync` do código-fonte (`client/`, config, SEM `node_modules`/`.git`/`dist`) pro diretório local
+2. `pnpm install` + `pnpm exec vite build` ali (fora do iCloud → build em <1s a poucos segundos, sem travar)
+3. `rsync` do `dist/public/` gerado de volta pro worktree publicado (`lifebimport-jlbv-pages`, também no Desktop, mas só recebendo poucos arquivos por vez — operação leve)
+4. `git add/commit/push` no worktree publicado — ainda passa pelo iCloud, mas como só mexe em poucos arquivos (não o repo inteiro), funciona rodando em background com paciência (pode levar de alguns segundos a ~1-2min, não trava de vez)
+
+Locks órfãos (`index.lock`) de sessões anteriores travadas também apareceram e precisaram ser removidos manualmente antes de qualquer operação git funcionar de novo — sinal de que travamentos assim já aconteceram antes nesse Mac.
+
+### Vídeos — mudanças por página (resumo final, estado atual)
+
+| Página | Topo (hero) | Case(s) de Sucesso |
+|---|---|---|
+| `/` (principal) | Vídeo/foto original, intocado | **Cases** (2): Supermercado = vídeo do topo da apresentacao-super (`1207541000`); Farmácia = Farmagyn (`a1XS8c7_VcA`) |
+| `/video1/` | Vimeo `1207541000` (padrão apresentacao-super, já trocado em rodada anterior) | **Case** (1, singular): agora o MESMO vídeo Vimeo `1178399214` que a apresentacao-super usa no dela (antes era um YouTube Short `4NsS7DIlM20` diferente) |
+| `/video2/` | Farmagyn `a1XS8c7_VcA` (subiu do Case pro topo) | **Cases** (3): "Ultra Popular" (`aOR4aUSp-zE`, era rotulado genérico "Farmácia", renomeado); Drogastore (`qs_-yVCcfWg`); Mais Econômica (`lx1Jm1WO6M4`, trazido de dentro de apresentacao-farma) |
+| `/apresentacao-farma/` | Farmagyn `a1XS8c7_VcA` (trocado, era o genérico `aOR4aUSp-zE`) | **Cases** (2): Drogaria/Mais Econômica original (`lx1Jm1WO6M4`, label intocado) + Farmácia genérica (`aOR4aUSp-zE`, que estava no topo antes) |
+| `/apresentacao-super/`, `/redefarma/`, `/redesuper/` | Intocados | Intocados (continuam 1 vídeo cada) |
+
+Título da seção virou **"Cases de Sucesso"** (plural) automaticamente em qualquer página com 2+ vídeos ali (`video2`, `apresentacao-farma`, principal); continua **"Case de Sucesso"** (singular) nas páginas com só 1 vídeo (`video1`, `apresentacao-super`, `redesuper`, `redefarma`).
+
+Layout do container de vídeos do Case (`flex flex-row`) ganhou `flex-wrap` pra páginas com 3 vídeos (video2) não espremerem tudo numa linha só no mobile — quebra pra 2+1 em telas estreitas.
+
+### Fotos — carrosséis "Na Prática" reorganizados
+- `/` (principal): antes usava fotos genéricas antigas (`farmImages`/`superImages`, arrays só com 13+7 fotos, desatualizadas). Agora usa as fotos das páginas de apresentação (`farmaApresentacaoImages` + `superApresentacaoImages`, 18+19 fotos, mais recentes) — motivo dado pelo Robert: as fotos atualizadas de verdade estão nas páginas de apresentação, a principal estava desatualizada.
+- `/video1/`: carrossel restrito só às fotos de `apresentacao-super` (antes usava o mix genérico) — página é de supermercado, não faz sentido mostrar foto de farmácia.
+- `/video2/`: carrossel restrito só às fotos de `apresentacao-farma` (mesmo raciocínio, página é de farmácia).
+- Foto do topo (hero) da principal, card "Supermercado": substituída por uma foto nova entregue pelo Robert em `~/Downloads/fotos/apres-super-10.jpg`, salva como `client/public/fotos-super/super-novo-hero.jpg`. Card "Farmácia" do topo da principal foi mantido intocado (Robert confirmou que já estava boa).
+- Os arrays antigos `farmImages`/`superImages` **não foram apagados** — ainda alimentam essas 2 fotos do topo da principal (índice `[0]` de cada array), só pararam de alimentar o carrossel de baixo.
+
+### Performance — otimização pedida antes de dormir (mobile-first, sem quebrar nada)
+1. **Lazy loading em todos os vídeos**: `<iframe>` do `VideoEmbed` (componente compartilhado por todas as páginas) não tinha nenhum atributo de carregamento tardio — TODO vídeo da página carregava de cara ao renderizar, mesmo os que ficam mais embaixo (Case de Sucesso). Adicionado `loading="lazy"` no iframe — nativo do navegador, zero mudança de comportamento visual/funcional, só adia o carregamento de rede até o vídeo estar perto da tela. Maior ganho nas páginas com mais vídeos na tela (video2 agora tem 4 iframes na página: 1 hero + 3 case).
+2. **Preconnect pro YouTube**: o `client/index.html` já tinha `preconnect`/`dns-prefetch` pro Vimeo, mas nenhum pro YouTube — apesar do YouTube ter virado o serviço mais usado hoje (Farmagyn, Drogastore, Ultra Popular, Mais Econômica são todos YouTube). Adicionado `preconnect` pra `www.youtube.com` e `i.ytimg.com` + `dns-prefetch` pra `www.youtube-nocookie.com`, logo depois do bloco do Vimeo no `<head>`.
+3. Imagens já estavam OK: carrossel já usava `loading="lazy"`, fotos do hero já usavam `loading="eager"` corretamente (acima da dobra) — não precisou mexer.
+
+### Validação feita antes de cada publicação
+Todo build passou por `node --check` no bundle JS gerado (sintaxe válida) antes do deploy. Depois de cada push, conferido via `raw.githubusercontent.com` (sem cache de CDN) que: todas as páginas retornam 200, todas apontam pro mesmo bundle mais recente (nenhuma página ficou desatualizada em relação às outras), e as strings-chave de cada vídeo/texto novo estavam presentes no bundle publicado.
+
+### Commits desta sessão (worktree `lifebimport-jlbv-pages`, branch `gh-pages`, repo `lifeb-web/lifebimport`)
+Em ordem cronológica:
+1. `b5f79c2d` — fix: logo quebrada (patch direto no bundle, resolvido em minutos)
+2. `bd134f3c` — fix: og:image nos 9 HTMLs estáticos
+3. `2c215676` — fix: hero video1 + Case de Sucesso video2=Farmagyn (patch direto no bundle)
+4. `9e95dc66` — primeiro build limpo de verdade (consolida tudo acima via `vite build` real, fora do iCloud)
+5. `23ea3acc` — adiciona vídeo Drogastore no Case de Sucesso do video2
+6. `f25430aa` — bullet de garantia 150 dias em video1/video2/principal
+7. `07aa4ff4` — apresentacao-farma hero=Farmagyn + Case com 2 vídeos; video2 Case ganha Mais Econômica; layout mobile-first
+8. `13845ee1` — principal: Case de Sucesso usa vídeo da apresentacao-super (Supermercado) + Farmagyn (Farmácia)
+9. `05308daf` — principal: carrossel usa fotos das páginas de apresentação; foto do hero Supermercado atualizada
+10. `463ac15a` — título "Cases" plural; label "Ultra Popular"; carrossel do video2 restrito a farmácia
+11. `88e6086b` — carrossel do video1 restrito a supermercado
+12. `9e0b3f4f` — Case de Sucesso do video1 = mesmo vídeo da apresentacao-super; lazy-load + preconnect YouTube
+
+Repo fonte (`~/Desktop/lifebimport-jlbv`, branch `main`) ficou **atrasado** em relação ao que está publicado — as edições foram feitas nos arquivos locais (`Home.tsx`, `index.html`) mas o `git commit`/`push` desse repo especificamente travou repetidamente por causa do problema de iCloud descrito acima e não foi retentado até o fim da sessão (não bloqueia nada, é só histórico de commit; os arquivos em si estão corretos no disco, idênticos ao que foi buildado e publicado). **Pendência pra próxima sessão**: rodar `git add -A && git commit && git push origin main` nesse repo (de preferência via o mesmo truque do rsync-pro-scratchpad se travar de novo).
+
+---
+
+## 2026-09-11 — Troca de vídeos: apresentacao-farma e apresentacao-super + causa raiz do travamento reconfirmada
+
+Pedido do Robert: trocar vídeos de posição nas duas páginas de apresentação (material que o rep usa com cliente morno, sem CTA), mantendo as capas existentes.
+
+### apresentacao-farma
+- **Hero (topo)**: era o vídeo genérico "Farmácia" (`a1XS8c7_VcA`), sem capa → agora é **Ultra Popular** (`aOR4aUSp-zE`), com a capa `/thumb-ultra-popular.jpg` que ela já usava nos Cases.
+- **Cases**: "Ultra Popular" saiu de lá e subiu pro topo; entrou **FarmaGyn** (`a1XS8c7_VcA`, sem capa, mesmo tratamento que "Drogastore" já tinha). "Drogastore" (`qs_-yVCcfWg`) continua intocado.
+
+### apresentacao-super
+- **Hero (topo)**: era Vimeo `1207541000` ("Supermercado" genérico) → agora é vídeo novo do YouTube `v9zuWJEnCss` (link enviado pelo Robert, convertido de `/shorts/` pra `/embed/`).
+- **Cases**: antes só tinha 1 vídeo ("Supermercado", Vimeo `1178399214`); agora tem **2**: o vídeo que saiu do topo ganhou legenda **"Super Sul"**, e o que já estava lá (o mesmo Vimeo `1178399214`) ganhou legenda **"Rede Economia"** (antes "Supermercado" genérico).
+- Título da seção mudou de "Case de Sucesso" (singular) pra "**Cases** de Sucesso" (plural), já que agora tem 2 vídeos — mesma regra que `apresentacao-farma`/`video2`/principal já seguiam.
+
+### Cuidado técnico: páginas compartilhavam o mesmo bloco de código compilado
+- `apresentacao-farma` compartilhava literalmente o mesmo bloco de Hero no JS minificado com `/video2/`, porque o conteúdo era idêntico texto-a-texto antes da mudança — o bundler tinha fundido as duas condições num só `t===\`video2\`||t===\`apresentacao-farma\`?`. Resolvido separando a condição no código-fonte (`Home.tsx`), cada variante agora tem seu próprio bloco. `/video2/` conferida intocada (ainda mostra o vídeo genérico "Farmácia" que sempre mostrou, nada mudou).
+- Mesma situação entre `apresentacao-super` e `/redesuper/` (página de rede). Separado do mesmo jeito; `/redesuper/` conferida intocada (1 vídeo só, Vimeo `1207541000`, "Supermercado").
+- `/video1/`, `/redefarma/`, `/rmk/` e a página principal (`/`) não foram tocadas — conferido que só o hash do bundle mudou (normal em todo build), nenhuma string de vídeo/legenda mudou.
+
+### 🔧 Causa raiz do travamento (reconfirmada — mesma de 26/08, 3 semanas atrás) — iCloud Drive no Desktop
+Sessão de hoje começou com `git status` / `vite build` / até `ls` travando minutos a fio (0% CPU, zero progresso) dentro de `~/Desktop/lifebimport-jlbv`. Mesma causa já documentada aqui em 26/08: a pasta Desktop está sincronizada com iCloud Drive, e qualquer operação que toque muitos arquivos pequenos (`.git/objects`, `node_modules`) fica refém do daemon do iCloud (`bird`/`cloudd`).
+
+**Reforço descoberto hoje**: reiniciar o daemon (`killall bird cloudd`) ajuda, mas **não é garantido** — travou de novo mais de uma vez mesmo recém-reiniciado, inclusive pra operações simples. A solução que funcionou de forma CONSISTENTE: copiar o código-fonte (sem `.git`, sem `node_modules`, sem `dist`) pra uma pasta fora do iCloud (ex: `/private/tmp/.../scratchpad`), rodar `pnpm install` + `pnpm exec vite build` ali — local, puro, build em 3-40s, nunca travou — e só trazer o resultado (`dist/public/`) de volta pro worktree publicado via `rsync`. `git add/commit/push` no worktree PUBLICADO (`lifebimport-jlbv-pages`) funcionou bem hoje depois disso.
+
+**O repo FONTE (`lifebimport-jlbv`, branch `main`) continua travando até pra um `git commit` simples** — mesma pendência já registrada em 26/08, ainda não resolvida. Ver status exato no final desta entrada.
+
+**Recomendação pra resolver de vez (não feita hoje, precisa decisão do Robert)**: tirar `~/Desktop/lifebimport-jlbv` do alcance do iCloud Drive — mover a pasta pra fora do Desktop, ou desativar a sincronização de "Desktop e Documentos" nas Preferências do Sistema/iCloud. Enquanto continuar sincronizado, esse travamento deve voltar em toda sessão que fizer build ou muitos commits de uma vez.
+
+### ⚠️ Discrepância encontrada na documentação de 26/08 (registrada aqui pra não repetir confusão)
+A tabela "estado final" de 26/08, registrada nesse mesmo arquivo, dizia que `apresentacao-farma` devia estar com Hero=FarmaGyn e Cases="Mais Econômica"+"Farmácia genérica". O estado REAL do código no início da sessão de hoje (antes de eu tocar em qualquer coisa) era: Hero=vídeo genérico("Farmácia", `a1XS8c7_VcA`) e Cases="Ultra Popular"(`aOR4aUSp-zE`)+"Drogastore"(`qs_-yVCcfWg`) — bem diferente do que a tabela de 26/08 registrava. Ou seja, algo mudou nessa página entre 26/08 e hoje sem atualizar este documento (ou aquele commit específico nunca foi consolidado de fato). **Lição pra próxima sessão**: não confiar cegamente nessa tabela pra uma página específica sem conferir o `Home.tsx` atual primeiro.
+
+### Commits (worktree `lifebimport-jlbv-pages`, branch `gh-pages`, repo `lifeb-web/lifebimport`)
+1. `602c842c` — fix: troca vídeo hero/case na apresentacao-farma (patch direto no bundle JS já publicado, pra resolver rápido enquanto o build travava)
+2. `feb77972` — deploy: apresentacao-super (hero novo + 2 vídeos em cases) e apresentacao-farma — build limpo de verdade (consolida o patch acima), feito fora do iCloud
+
+### Verificação feita antes de publicar
+- Sintaxe do `Home.tsx` validada via `esbuild` antes do build.
+- Bundle comparado campo a campo: confirmado que `video1`, `video2`, `redefarma`, `redesuper` e os fallbacks da principal/`rmk` não mudaram nenhuma string de vídeo/legenda — só o hash do arquivo.
+- As 7 páginas testadas ao vivo (`curl`): todas HTTP 200, todas servindo o bundle novo.
+- Renderização real (Chrome headless, JS executado) confirmada nas 2 páginas que mudaram: vídeos certos aparecem no DOM renderizado, sem erro de JS no console.
+
+### Pendência real em aberto
+- Repo fonte `~/Desktop/lifebimport-jlbv` (branch `main`) **não está commitado** com as mudanças de hoje — `Home.tsx` no disco já está correto (idêntico ao que foi buildado e publicado), só o histórico de commit local que ficou atrasado, por causa do travamento do iCloud descrito acima. Não bloqueia o site (que já está no ar correto), é só bookkeeping local pendente. Tentar de novo na próxima sessão, de preferência já direto com o truque do rsync-pro-scratchpad se travar.
+
+### Complemento 2026-09-11 (mesma sessão, achado depois de publicar) — vídeo "Rede Economia" mostrando título/autor do Vimeo
+
+Robert reportou que na `apresentacao-super`, Cases, o vídeo "Rede Economia" (Vimeo `1178399214`) estava com o overlay de título/autor do Vimeo aparecendo — o "Super Sul" (mesmo Vimeo `1207541000` do hero antigo) já tinha esse overlay removido (`&title=0&byline=0&portrait=0`, herdado de quando era vídeo do hero), mas "Rede Economia" nunca tinha recebido esse tratamento porque sempre foi só o vídeo original do Cases (nunca precisou antes).
+
+**Fix**: adicionado `&title=0&byline=0&portrait=0` na URL do Vimeo `1178399214` especificamente no bloco `apresentacao-super` (linha do `Home.tsx` com legenda "Rede Economia") — **não** no bloco equivalente do `/video1/` nem `/redesuper/`, que usam o mesmo vídeo mas não foram tocados (mantém overlay padrão do Vimeo lá, como sempre foi).
+
+Build feito de novo pelo mesmo método (fora do iCloud, `/tmp` scratch), verificado campo a campo que só essa string mudou, publicado e confirmado na origem (`raw.githubusercontent.com`, sem cache de CDN) antes de avisar o Robert.
+
+**Commit**: `67846e59` (worktree `lifebimport-jlbv-pages`, branch `gh-pages`).
+
+
+### Complemento 2026-09-15 — Copy "Cases de Sucesso" ajustada (não implica que são todos os clientes) + fluxo de deploy virou padrão
+
+Robert: seção "Depoimentos em Vídeo" mostrava só 2-3 vídeos sob o título "Cases de Sucesso"/"Case de Sucesso", dando a entender que era a lista completa de clientes. Ajustado pra deixar claro que é amostra:
+- Título plural (`video2`, `apresentacao-farma`, `apresentacao-super`, default `/`): "Cases de Sucesso" → **"Alguns Cases de Sucesso"**.
+- Título singular (`video1`, `redesuper`, `redefarma`, `rmk`): "Case de Sucesso" → **"Um dos Cases de Sucesso"**.
+- Mudança feita em UM lugar só do `Home.tsx` (a condição já existia, só trocou o texto) — cobre as 8 variantes React automaticamente.
+- `/lifeb/` (página HTML solta, fora do React): subtítulo da seção "Resultados Reais" trocado de "Quem implantou o JLBV comprova" pra **"Alguns clientes que já implantaram o Projeto JLBV"**.
+
+Commit `92fcd793`, publicado e conferido na origem (raw.githubusercontent.com, sem cache de CDN) antes de avisar o Robert.
+
+**Por que essa publicação saiu rápida** (Robert notou e pediu "sempre seja assim"): usado o MESMO fluxo já documentado acima (seção "Descoberta técnica — iCloud Drive no Desktop") — build rodado inteiro na pasta scratch fora do iCloud (`/private/tmp/.../scratchpad/jlbv-build`, com `node_modules` já instalado de uma sessão anterior no mesmo dia), só sincronizando o arquivo que mudou (`rsync` de um arquivo só) antes de buildar. Build terminou em <1s. **Esse agora é o fluxo padrão pra qualquer edição nas páginas do projeto JLBV — não é mais só um workaround pra quando o iCloud trava, é a forma de sempre fazer.** Ver [[feedback_build_lento_patch_bundle]] (memória do Claude Code) — atualizada pra registrar isso como procedimento padrão, não só emergência.
+
+
+---
+
+## 2026-09-22 — Nova LP `/superagos/` exclusiva pro estande na feira SuperAgos 2026
+
+Pedido do Robert em cima da hora (ele estava indo pro estande, precisava da página pronta rápido): a Life B tem estande na SuperAgos 2026 (22-24/09, Centro de Convenções de Goiânia — maior feira de varejo alimentar do Centro-Oeste, promovida pela AGOS, 200+ marcas, R$343mi de negócios projetados). Pedido: clonar `/video1/` (vídeos de supermercado preservados), criar página que "sinta exclusiva pro evento", manter formulário/tracking padrão, só trocar a mensagem do WhatsApp, usar a logo da SuperAgos (entregue em `~/Downloads/SuperAgos Logo/Logo SuperAgos.png`) pra reforçar exclusividade. Mobile-first.
+
+### O que foi feito
+- **Nova variante `superagos`** em `Home.tsx`/`App.tsx` — comportamento idêntico a `/video1/` (mesmos vídeos: hero Vimeo `1207541000`, case Vimeo `1178399214` "Supermercado"; mesmo carrossel `superApresentacaoImages`; mesmo formulário/modal de lead; mesmos eventos GA4/Pixel padrão).
+- **Faixa do evento** no topo da página (acima do header, fundo escuro `#1a1625`): logo da SuperAgos + "Life B no estande · 22 a 24/09 · Centro de Convenções Goiânia".
+- **Badge do hero**: em vez do pill genérico "Projeto Exclusivo JLBV", mostra a logo da SuperAgos + "Exclusivo para visitantes da feira" (pill branco, sempre visível, mobile e desktop — diferente do `/video1/` que esconde o badge no mobile).
+- **Headline**: "Transforme Sua Visita na SuperAgos em Lucro para Sua Loja!" (variação do padrão já usado no resto do site).
+- **Subtítulo**: menciona estar na maior feira de supermercados do Centro-Oeste.
+- **Bullet extra** (1º da lista, mesmo padrão do bullet de redes): "Condição especial para quem visita nosso estande na SuperAgos 2026" — texto genérico proposital, **sem inventar desconto/valor específico** (não foi passada nenhuma condição concreta pelo Robert; se ele quiser oferecer algo específico no estande, ajustar esse texto depois).
+- **Bullet "garantia 150 dias"**: incluída também pra essa variante (mesma condição de video1/video2/redes).
+- **Chip abaixo do vídeo**: "Ao vivo na SuperAgos 2026" em vez do genérico "Supermercados" (fundo amarelo `#FCE83A`, cor da SuperAgos).
+- **WhatsApp**: nova constante `WHATSAPP_LINK_SUPERAGOS` — "Olá! Estou na SuperAgos 2026 e vi o Projeto JLBV no estande da Life B. Quero saber como aumentar o faturamento da minha loja!" — passada via prop `whatsappLink` pro `LeadModal`, igual ao padrão já usado em redefarma/redesuper. Confirmado no bundle publicado (`encodeURIComponent` foi constant-folded no build, string aparece 100% correta e urlencoded).
+- **Evento de remarketing novo**: `Visitou_SuperAgos` (GA4 + Pixel, dispara no load, sem parâmetro) — pra montar público de remarketing de quem visitou a página do estande. Segue o mesmo padrão do `Viu_Apresentacao` já existente.
+- **OG próprio** (`vite.config.ts`, bloco dedicado fora do array `apresentacoes`): título "Projeto JLBV na SuperAgos 2026 | Life B Import", descrição mencionando a feira, imagem = mesma foto usada no OG de `/apresentacao-super/` (`apres-super-27.jpg`). Rota estática `dist/public/superagos/index.html` gerada no build igual às outras (`rmk`, `redefarma` etc.).
+- **Logo da SuperAgos**: copiada pra `client/public/superagos-logo.png` (arquivo original em `~/Downloads/SuperAgos Logo/`, fundo transparente, branco+amarelo — combina com o gradiente roxo/magenta do hero).
+
+### Pesquisa sobre a feira (WebSearch, 22/09)
+SuperAgos 2026: 22-24/09/2026, Centro de Convenções de Goiânia. Maior evento de negócios do varejo supermercadista do Centro-Oeste, promovido pela AGOS (Associação Goiana de Supermercados). +200 marcas confirmadas, projeção de R$343 milhões em negócios (+10% vs 2025), atrai público de DF/TO/MT/MS/MG. Tema: "Experiência que transforma: inspirar, conectar, evoluir".
+
+### Validação antes de publicar
+- `npx vite build` limpo (0 erros TS/JSX) — rodado no fluxo padrão fora do iCloud (`scratchpad/jlbv-build`, `pnpm install` 27s + build <1s).
+- Bundle publicado conferido via `raw.githubusercontent.com` (sem cache): título/OG corretos, headline "Transforme Sua Visita na SuperAgos" presente, faixa "Ao vivo na SuperAgos 2026" presente, bullet do estande presente, mensagem de WhatsApp presente e corretamente urlencoded.
+- Todas as outras 8 páginas (`/`, `/video1/`, `/video2/`, `/redesuper/`, `/redefarma/`, `/rmk/`, `/apresentacao-super/`, `/apresentacao-farma/`) reconferidas em produção — zero regressão, todas HTTP 200 servindo o bundle novo.
+- Logo da SuperAgos e imagem do OG confirmadas HTTP 200 em produção.
+
+### Deploy
+Fluxo padrão (scratch fora do iCloud → `pnpm install` + `vite build` → `rsync` no worktree `lifebimport-jlbv-pages` → redirects de `/direto/` e `/video1-direto/` restaurados manualmente → `git add` só dos arquivos do deploy, excluindo `.wrangler/` (pasta não relacionada, presente no worktree de outra sessão) → commit `dfaaa85a` → `git push origin gh-pages`). Confirmado HTTP 200 em produção para `projetojlbv.com.br/superagos/`.
+
+### Pendente
+- **Repo fonte** (`~/Desktop/lifebimport-jlbv`, branch `main`) ainda não commitado com essa mudança — mesma pendência crônica de iCloud já registrada em 26/08 e 11/09. Os arquivos no disco já estão corretos (idênticos ao que foi buildado e publicado). Tentar `git add -A && git commit` numa próxima sessão, de preferência já com o truque do rsync-pro-scratchpad se travar.
+- **Sem condição/oferta específica pro estande** — o bullet "Condição especial" ficou genérico de propósito. Se o Robert quiser anunciar algo concreto (desconto, brinde, prioridade), é só pedir pra ajustar esse texto.
+- **Número do estande/local exato dentro do pavilhão** não foi incluído em lugar nenhum (não foi informado) — se o Robert quiser, dá pra adicionar na faixa do topo ou no header.
