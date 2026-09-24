@@ -1887,8 +1887,26 @@ async function finishTask(row, taskId, observacao) {
       try {
         const data = await apiPost('/task/finish', { dealId: row, taskId, observacao: observacao || '' });
         const idx = _rawLeads.findIndex(l => l.row === row);
-        if (idx !== -1 && data && data.lead) {
-          _rawLeads[idx] = _transformarLeadAgendor(data.lead);
+        if (idx !== -1) {
+          if (data && data.lead) {
+            // Resposta completa (caminho síncrono antigo, ou servidor já mandou o card pronto).
+            _rawLeads[idx] = _transformarLeadAgendor(data.lead);
+          } else if (data && data.pending) {
+            // 🆕 24/09 (Robert: "atualizacao otimista... atualiza rapido o card, a magica acontece em
+            // segundo plano"): o backend só confirma que ACEITOU o pedido — a escrita real (+ retry se
+            // precisar) roda depois, sem o rep esperar. Atualiza o card JÁ, do mesmo jeito que o
+            // backend chegaria: tarefa concluída some da lista de "aberta"; status recalcula pro mesmo
+            // bucket que `bucketFor` (backend) calcularia — sem tarefa aberta nenhuma vira "Aguardando
+            // contato", A MENOS que já esteja em negociação (dimensão de FUNIL, nunca muda por causa de
+            // tarefa). Se por algum motivo raro a escrita de fundo falhar de verdade, o retry automático
+            // do backend resolve sozinho (ou escala pro Robert) — o rep nunca vê erro aqui.
+            const leadAtual = _rawLeads[idx];
+            _rawLeads[idx] = {
+              ...leadAtual,
+              tarefaAberta: null,
+              status: leadAtual.status === 'Em negociação' ? 'Em negociação' : 'Aguardando contato',
+            };
+          }
           _rawLeads = _ordenarFilaLocal(_rawLeads);
         }
         showToast('Tarefa concluída ✓');
