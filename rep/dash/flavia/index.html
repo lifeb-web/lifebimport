@@ -1332,13 +1332,33 @@ function _norm(s) {
     .normalize('NFD').replace(/[̀-ͯ]/g, '')
     .replace(/\s+/g, '');
 }
+// 🔴 FIX 29/09 (Robert, achado real: Flávia marcou Ganho num ciclo de Reposição achando que era o
+// negócio original — a única pista visual era o badge pequeno `lc-funil-badge`, fácil de não notar
+// numa varredura rápida). Extrai o sufixo "— Reposição #N"/"— Reativação 75+..." do TÍTULO REAL do
+// negócio (`l.titulo`, o mesmo nome que aparece no Agendor — sempre `${empresa} — Reposição #N`,
+// ver `_criarCicloPosVenda` no gs-agendor-worker) pra mostrar junto do nome da empresa no card,
+// igual já aparece no Agendor — nunca inventa texto novo, só repete o que já existe no negócio real.
+// Regex tolerante a acento/maiúscula (Reposição/Reposicao/REPOSIÇÃO) casando só o sufixo no FINAL do
+// título — nunca mexe no card normal do Arena (nenhum negócio comum tem esse texto no título), zero
+// mudança visual pro caso comum. Não depende de `funil_tag` de propósito: o histórico (`/historico`)
+// não devolve esse campo, só `titulo` — o regex sozinho já é específico o bastante (bate só no sufixo
+// exato que `_criarCicloPosVenda` sempre gera, nunca um nome de empresa de verdade).
+function _cicloSufixo(l) {
+  const m = String(l.titulo || '').match(/(—\s*Reposi[cç][aã]o[^—]*|—\s*Reativa[cç][aã]o[^—]*)$/i);
+  return m ? m[1].trim() : '';
+}
 // 🔴 FIX 19/09 (Robert: "revisa a barra de pesquisa... deve funcionar de forma avançada"): agora
 // também busca por CNPJ (com ou sem pontuação, digitando só os números) e endereço/bairro — antes
 // só achava por nome/empresa/cidade/estado/segmento/telefone.
+// 🔴 FIX 29/09 (Robert, achado real: buscar "reposição"/"reposicao" não achava nada — o card só
+// mostra o nome da empresa, o "— Reposição #N"/"— Reativação 75+" nunca entrava na busca mesmo
+// existindo no título real do negócio, `l.titulo`, já mandado pelo backend). `_norm` já normaliza
+// acento/maiúscula — a falta era só não incluir este campo na lista de campos pesquisáveis.
 function _leadFields(l) {
   return {
     nomeN:     _norm(l.nome),
     empresaN:  _norm(l.empresa),
+    tituloN:   _norm(l.titulo),
     cidadeN:   _norm(l.cidade),
     estadoN:   _norm(l.estado),
     segmentoN: _norm(l.segmento),
@@ -1365,6 +1385,7 @@ function _matchesSearch(l) {
     const qd = _digitsOnly(q);
     if (f.nomeN.includes(q))                return true;
     if (f.empresaN.includes(q))             return true;
+    if (f.tituloN.includes(q))               return true;
     if (f.cidadeN.includes(q))              return true;
     if (f.estadoN.includes(q))              return true;
     if (f.segmentoN.includes(q))            return true;
@@ -2416,7 +2437,8 @@ function renderLeads(leads, highlightRow) {
   list.innerHTML = visible.map(l => {
     const nomeRaw  = toTitleCase(l.nome||'');
     const nomeEmp  = toTitleCase(l.empresa||'');
-    const titulo   = esc(nomeEmp || nomeRaw || '—');
+    const cicloSuf = _cicloSufixo(l);
+    const titulo   = esc((nomeEmp || nomeRaw || '—') + (cicloSuf ? ' ' + cicloSuf : ''));
     const cidadeUF = [abreviarCidade(toTitleCase(l.cidade)),(l.estado||'').toUpperCase()].filter(v=>v&&v.trim()).join(' · ');
     const sClass   = statusClass(l.status);
     const bClass   = borderClass(l.status);
@@ -2776,7 +2798,8 @@ function setHistPeriodo(periodo) {
 function _histCardHtml(l) {
   const nomeRaw    = toTitleCase(l.nome||'');
   const nomeEmp    = toTitleCase(l.empresa||'');
-  const titulo     = esc(nomeEmp || nomeRaw || '—');
+  const cicloSuf   = _cicloSufixo(l);
+  const titulo     = esc((nomeEmp || nomeRaw || '—') + (cicloSuf ? ' ' + cicloSuf : ''));
   const subtitulo  = nomeEmp && nomeRaw && nomeRaw.toLowerCase() !== nomeEmp.toLowerCase() ? nomeRaw : '';
   const cidadeUF   = [abreviarCidade(toTitleCase(l.cidade)),(l.estado||'').toUpperCase()].filter(v=>v&&v.trim()).join(' · ');
   const bClass     = l.status==='Fechado' ? 'fech' : 'perd';
