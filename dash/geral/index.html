@@ -369,13 +369,18 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .orig-tog-btn{border:none;background:transparent;font-family:inherit;font-size:11px;font-weight:800;color:var(--muted);padding:5px 11px;border-radius:7px;cursor:pointer;white-space:nowrap}
 .orig-tog-btn.on{background:#fff;color:var(--text);box-shadow:0 1px 3px rgba(26,22,38,.15)}
 .orig-body{padding:14px 16px 8px;display:flex;flex-direction:column;align-items:center;gap:14px}
-.orig-ring{width:min(100%,300px);aspect-ratio:1/1}
-.orig-svg{width:100%;height:100%;display:block}
+.orig-ring{width:min(100%,340px)}
+.orig-svg{width:100%;height:auto;display:block}
 .orig-seg{cursor:pointer;transition:opacity .15s}
 .orig-t1{font-size:9.5px;font-weight:800;fill:var(--faint);text-transform:uppercase;letter-spacing:.5px;font-family:inherit}
 .orig-t2{font-size:21px;font-weight:800;fill:var(--text);font-family:inherit}
 .orig-t3{font-size:10px;font-weight:700;fill:var(--muted);font-family:inherit}
 .orig-skel-ring{width:100%;height:100%;border-radius:50%;border:24px solid #ede9f5;box-sizing:border-box}
+.orig-lb{cursor:pointer;transition:opacity .15s}
+.orig-lbl{fill:none;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:round}
+.orig-lbt{font-family:inherit}
+.orig-lbn{font-size:10.5px;font-weight:800;fill:var(--text)}
+.orig-lbp{font-size:11px;font-weight:800}
 .orig-legend{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .orig-item{border-left:4px solid var(--c);background:#faf8fc;background:linear-gradient(90deg,color-mix(in srgb,var(--c) 8%,#fff),#fff 75%);border-radius:10px;padding:9px 10px;cursor:pointer;min-width:0}
 .orig-item.zero{opacity:.55}
@@ -1837,6 +1842,7 @@ function origemDonutSVG_(bd, mode, hoverKey, animate) {
   const sel = origemSel_();
   const foco = hoverKey || sel; // hover manda; sem hover, o filtro ativo fica em destaque
   let segs = '', off = 0;
+  const labs = [];
   if (tot > 0) {
     const vivos = bd.canais.filter(c => (mode === 'n' ? c.cont : c.valor) > 0);
     bd.canais.forEach(c => {
@@ -1851,17 +1857,42 @@ function origemDonutSVG_(bd, mode, hoverKey, animate) {
         ? (sel === c.key ? 'Limpar filtro ' + c.label : 'Filtrar painel por ' + c.label)
         : 'Abrir aba LTV (' + c.label + ')';
       segs += `<circle class="orig-seg" data-k="${c.key}" tabindex="0" role="button" aria-label="${escHtml(acao)}" cx="100" cy="100" r="${R}" fill="none" stroke="${c.color}" stroke-width="${ativo ? W + 6 : W}" stroke-dasharray="${vis.toFixed(2)} ${(C - vis).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}"${dim}><title>${escHtml(acao)}</title></circle>`;
+      labs.push({ th: -Math.PI / 2 + ((off + len / 2) / C) * 2 * Math.PI, c, frac: val / tot });
       off += len;
     });
   } else {
     segs = `<circle cx="100" cy="100" r="${R}" fill="none" stroke="#efeaf6" stroke-width="${W}"></circle>`;
   }
   const [l1, l2, l3] = origemCenter_(bd, mode, hoverKey);
-  return `<svg viewBox="0 0 200 200" class="orig-svg" role="group" aria-label="Origem das vendas por canal">
+  // Rótulos com seta direto na rosca (nome + %). Só onde há espaço: telas altas do
+  // telão e celular; fatias < 4% ficam sem rótulo (colariam na vizinha) — seguem na
+  // legenda e no hover. No celular só o % (nome não cabe em 320px).
+  const soPct = window.innerWidth < 520;
+  const conLb = tot > 0 && (window.innerHeight >= 761 || soPct);
+  const VB = conLb ? (soPct ? [-40, -10, 280, 220] : [-74, -10, 348, 220]) : [0, 0, 200, 200];
+  let lbHTML = '';
+  if (conLb) {
+    const side = { r: [], l: [] };
+    labs.filter(l => l.frac >= 0.04).forEach(l => {
+      const cs = Math.cos(l.th), sn = Math.sin(l.th), dir = cs >= 0 ? 1 : -1;
+      side[dir > 0 ? 'r' : 'l'].push({ l, dir, p0: [100 + 91 * cs, 100 + 91 * sn], p1: [100 + 101 * cs, 100 + 101 * sn], y: 100 + 101 * sn });
+    });
+    ['r', 'l'].forEach(sd => {
+      const arr = side[sd].sort((a, b) => a.y - b.y);
+      for (let i = 1; i < arr.length; i++) if (arr[i].y < arr[i - 1].y + (soPct ? 12 : 22)) arr[i].y = arr[i - 1].y + (soPct ? 12 : 22); // anti-colisão vertical
+      arr.forEach(it => {
+        const c = it.l.c, ex = it.p1[0] + it.dir * 7, ty = Math.min(Math.max(it.y, soPct ? 2 : 3), soPct ? 200 : 194), tx = ex + it.dir * 2.5;
+        const dim = foco && foco !== c.key ? ' opacity=".3"' : '';
+        lbHTML += `<g class="orig-lb" data-k="${c.key}"${dim}><polyline class="orig-lbl" points="${it.p0[0].toFixed(1)},${it.p0[1].toFixed(1)} ${it.p1[0].toFixed(1)},${it.p1[1].toFixed(1)} ${ex.toFixed(1)},${ty.toFixed(1)}" stroke="${c.color}"></polyline><text x="${tx.toFixed(1)}" y="${(ty + (soPct ? 3 : -1)).toFixed(1)}" text-anchor="${it.dir > 0 ? 'start' : 'end'}" class="orig-lbt">${soPct ? '' : '<tspan class="orig-lbn">' + escHtml(c.label) + '</tspan><tspan x="' + tx.toFixed(1) + '" dy="11.5" '}${soPct ? '<tspan ' : ''}class="orig-lbp" fill="${c.tx}">${Math.round(it.l.frac * 100)}%</tspan></text></g>`;
+      });
+    });
+  }
+  return `<svg viewBox="${VB.join(' ')}" class="orig-svg" style="aspect-ratio:${VB[2]}/${VB[3]}" role="group" aria-label="Origem das vendas por canal">
     <g class="${animate ? 'orig-anim' : ''}"><g transform="rotate(-90 100 100)">${segs}</g></g>
     <text x="100" y="86" text-anchor="middle" class="orig-t1">${escHtml(l1)}</text>
     <text x="100" y="108" text-anchor="middle" class="orig-t2" style="font-size:${l2.length > 9 ? 18 : 21}px">${escHtml(l2)}</text>
     <text x="100" y="126" text-anchor="middle" class="orig-t3">${escHtml(l3)}</text>
+    ${lbHTML}
   </svg>`;
 }
 
@@ -1907,6 +1938,8 @@ function origemFootHTML_(bd) {
 // (nunca recalcula o filtro por conta própria). Falha aqui nunca derruba o resto
 // do painel: só marca o card como indisponível.
 let _origemSig = null;
+let _origemRz = null;
+window.addEventListener('resize', () => { clearTimeout(_origemRz); _origemRz = setTimeout(() => { if (_origemData) paintOrigem_(); }, 200); });
 function renderOrigem_(d) {
   try {
     if (!_rawDeals || !d || !d.period) return;
@@ -1944,6 +1977,7 @@ function origemHover_(key) {
     c.setAttribute('stroke-width', ativo ? 32 : 26);
     if (foco && !ativo) c.setAttribute('opacity', '.3'); else c.removeAttribute('opacity');
   });
+  svg.querySelectorAll('.orig-lb').forEach(g => { if (foco && foco !== g.dataset.k) g.setAttribute('opacity', '.3'); else g.removeAttribute('opacity'); });
   const [l1, l2, l3] = origemCenter_(_origemData.bd, _origemMode, _origemHover);
   const t = svg.querySelectorAll('text');
   if (t.length >= 3) { t[0].textContent = l1; t[1].textContent = l2; t[1].style.fontSize = (l2.length > 9 ? 18 : 21) + 'px'; t[2].textContent = l3; }
@@ -1951,6 +1985,11 @@ function origemHover_(key) {
 }
 
 function origemBindSegs_() {
+  document.querySelectorAll('#origem-donut .orig-lb').forEach(g => {
+    g.addEventListener('mouseenter', () => origemHover_(g.dataset.k));
+    g.addEventListener('mouseleave', () => origemHover_(null));
+    g.addEventListener('click', () => origemFiltrar_(g.dataset.k));
+  });
   document.querySelectorAll('#origem-donut .orig-seg').forEach(s => {
     s.addEventListener('mouseenter', () => origemHover_(s.dataset.k));
     s.addEventListener('mouseleave', () => origemHover_(null));
