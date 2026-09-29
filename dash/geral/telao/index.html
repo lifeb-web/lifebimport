@@ -604,6 +604,9 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 .orig-item:focus-visible{outline:2px solid var(--c);outline-offset:1px}
 .orig-i-name{flex:1}
 .orig-i-l2 b{color:var(--text);font-weight:800}
+.orig-i-pc{color:var(--t,var(--c))}
+.orig-item .delta{white-space:nowrap;flex-shrink:0}
+.orig-i-l2{flex:1 1 auto}
 .orig-i-go{font-size:8px;font-weight:800;color:var(--faint);margin-left:4px;letter-spacing:.2px}
 .orig-i-open{border:none;background:transparent;color:var(--faint);font-size:12px;font-weight:800;cursor:pointer;padding:0 0 0 6px;line-height:1;flex-shrink:0;font-family:inherit}
 .orig-i-open:hover{color:var(--c)}
@@ -2312,10 +2315,10 @@ function computeLtvData(allRows, originFilter, periodType, customFrom, customTo,
 // seria pior que não mostrar.
 const ORIGEM_REATIV_STAGE_ = '3872291';
 const ORIGEM_CANAIS_ = [
-  { key: 'outbound',   label: 'Outbound',        color: '#704B9B', sub: 'prospecção ativa' },
-  { key: 'inbound',    label: 'Inbound',         color: '#E92085', sub: 'anúncios · Meta' },
-  { key: 'reposicao',  label: 'Reposição',       color: '#1baf7a', sub: 'funil Pós-venda' },
-  { key: 'reativacao', label: 'Reativação', color: '#eda100', sub: 'funil Reativação +75 dias' }
+  { key: 'outbound',   label: 'Outbound',        color: '#704B9B', tx: '#5a3a80', sub: 'prospecção ativa' },
+  { key: 'inbound',    label: 'Inbound',         color: '#E92085', tx: '#c2185b', sub: 'anúncios · Meta' },
+  { key: 'reposicao',  label: 'Reposição',       color: '#1baf7a', tx: '#0f8a5e', sub: 'funil Pós-venda' },
+  { key: 'reativacao', label: 'Reativação', color: '#eda100', tx: '#a86f00', sub: 'funil Reativação +75 dias' }
 ];
 let _origemMode = 'v'; // 'v' = valor (R$) · 'n' = nº de vendas
 let _origemData = null; // último cálculo (usado pelo modal e pelo toggle)
@@ -2409,6 +2412,26 @@ function origemMoneyShort_(v) {
 // filtro de origem; Reposição/Reativação são funis próprios, vistos na aba LTV).
 function origemSel_() { return (_originMode === 'outbound' || _originMode === 'inbound') ? _originMode : null; }
 
+// textos do centro da rosca: [rótulo, valor, detalhe]
+function origemCenter_(bd, mode, hoverKey) {
+  const tot = mode === 'n' ? bd.totalCont : bd.totalValor;
+  const sel = origemSel_();
+  const foco = hoverKey || sel;
+  const foc = foco ? bd.canais.find(c => c.key === foco) : null;
+  if (foc) {
+    const v = mode === 'n' ? foc.cont : foc.valor;
+    return [(!hoverKey && sel ? 'Filtro · ' : '') + foc.label,
+      mode === 'n' ? (foc.cont + (foc.cont === 1 ? ' venda' : ' vendas')) : origemMoneyShort_(foc.valor),
+      tot > 0 ? (Math.round((v / tot) * 1000) / 10).toString().replace('.', ',') + '% do total' : ''];
+  }
+  if (tot > 0) {
+    return [mode === 'n' ? 'Vendas fechadas' : 'Total ganho',
+      mode === 'n' ? String(bd.totalCont) : origemMoneyShort_(bd.totalValor),
+      mode === 'n' ? origemMoneyShort_(bd.totalValor) : (bd.totalCont + (bd.totalCont === 1 ? ' venda' : ' vendas'))];
+  }
+  return ['Sem vendas', '—', 'no período'];
+}
+
 // Rosca em SVG (viewBox fixo 200x200 — tudo, inclusive o texto central, escala
 // junto com o tamanho real do contêiner: nunca corta nem sobrepõe em telas
 // diferentes). Fatias por stroke-dasharray: funciona igual com 1 fatia (100%),
@@ -2438,24 +2461,11 @@ function origemDonutSVG_(bd, mode, hoverKey, animate) {
   } else {
     segs = `<circle cx="100" cy="100" r="${R}" fill="none" stroke="#efeaf6" stroke-width="${W}"></circle>`;
   }
-  const foc = foco ? bd.canais.find(c => c.key === foco) : null;
-  let l1, l2, l3;
-  if (foc) {
-    const v = mode === 'n' ? foc.cont : foc.valor;
-    l1 = (!hoverKey && sel ? 'Filtro · ' : '') + foc.label;
-    l2 = mode === 'n' ? (foc.cont + (foc.cont === 1 ? ' venda' : ' vendas')) : origemMoneyShort_(foc.valor);
-    l3 = tot > 0 ? (Math.round((v / tot) * 1000) / 10).toString().replace('.', ',') + '% do total' : '';
-  } else if (tot > 0) {
-    l1 = mode === 'n' ? 'Vendas fechadas' : 'Total ganho';
-    l2 = mode === 'n' ? String(bd.totalCont) : origemMoneyShort_(bd.totalValor);
-    l3 = mode === 'n' ? origemMoneyShort_(bd.totalValor) : (bd.totalCont + (bd.totalCont === 1 ? ' venda' : ' vendas'));
-  } else {
-    l1 = 'Sem vendas'; l2 = '—'; l3 = 'no período';
-  }
+  const [l1, l2, l3] = origemCenter_(bd, mode, hoverKey);
   return `<svg viewBox="0 0 200 200" class="orig-svg" role="group" aria-label="Origem das vendas por canal">
     <g class="${animate ? 'orig-anim' : ''}"><g transform="rotate(-90 100 100)">${segs}</g></g>
     <text x="100" y="86" text-anchor="middle" class="orig-t1">${escHtml(l1)}</text>
-    <text x="100" y="108" text-anchor="middle" class="orig-t2">${escHtml(l2)}</text>
+    <text x="100" y="108" text-anchor="middle" class="orig-t2" style="font-size:${l2.length > 9 ? 18 : 21}px">${escHtml(l2)}</text>
     <text x="100" y="126" text-anchor="middle" class="orig-t3">${escHtml(l3)}</text>
   </svg>`;
 }
@@ -2469,7 +2479,9 @@ function origemLegendHTML_(bd, prev, mode) {
     let delta = '';
     if (prev) {
       const pv = prev.canais[i];
-      delta = deltaHTML(pctDelta(mode === 'n' ? c.cont : c.valor, mode === 'n' ? pv.cont : pv.valor));
+      let pd = pctDelta(mode === 'n' ? c.cont : c.valor, mode === 'n' ? pv.cont : pv.valor);
+      if (pd !== null && isFinite(pd) && Math.abs(pd) >= 100) pd = Math.round(pd); // "▲307%" em vez de "▲306.6%"
+      delta = deltaHTML(pd);
     }
     const ticket = c.cont > 0 ? origemMoneyShort_(c.valor / c.cont) : '—';
     const nv = c.cont + (c.cont === 1 ? ' venda' : ' vendas');
@@ -2480,7 +2492,7 @@ function origemLegendHTML_(bd, prev, mode) {
     const isFiltro = c.key === 'outbound' || c.key === 'inbound';
     const tip0 = isFiltro ? (sel === c.key ? 'Clique para limpar o filtro' : 'Clique para filtrar o painel por ' + c.label) : 'Clique para abrir a aba LTV (Pós-venda)';
     const tip = tip0 + ' · ticket médio ' + ticket;
-    return `<div class="orig-item${val <= 0 ? ' zero' : ''}${sel === c.key ? ' sel' : ''}${sel && sel !== c.key && isFiltro ? ' off' : ''}" style="--c:${c.color}" data-k="${c.key}" tabindex="0" role="button" aria-pressed="${sel === c.key}" title="${escHtml(tip)}">
+    return `<div class="orig-item${val <= 0 ? ' zero' : ''}${sel === c.key ? ' sel' : ''}${sel && sel !== c.key && isFiltro ? ' off' : ''}" style="--c:${c.color};--t:${c.tx}" data-k="${c.key}" tabindex="0" aria-label="${escHtml(c.label + ': ' + tip)}" title="${escHtml(tip)}">
       <div class="orig-i-top"><span class="orig-i-name">${escHtml(c.label)}${isFiltro ? '' : '<span class="orig-i-go">LTV ›</span>'}</span><span class="orig-i-pc">${pc}%</span><button class="orig-i-open" type="button" data-open="${c.key}" title="Ver as vendas deste canal" aria-label="Ver as vendas de ${escHtml(c.label)}">↗</button></div>
       <div class="orig-i-sub"><span class="orig-i-l2">${l2}</span>${delta}</div>
       <div class="orig-i-bar"><i style="width:${pc}%"></i></div>
@@ -2494,7 +2506,8 @@ function origemBarsHTML_(bk, mode) {
   const tot = x => ORIGEM_CANAIS_.reduce((s, c) => s + ((mode === 'n' ? x.n : x.v)[c.key] || 0), 0);
   const max = Math.max(...b.map(tot), 0);
   if (max <= 0) return '<div class="feed-empty">Sem vendas no período</div>';
-  const every = b.length > 20 ? Math.ceil(b.length / 10) : (b.length > 12 ? 2 : 1);
+  const maxLab = document.documentElement.clientWidth < 400 ? 6 : 10;
+  const every = b.length > maxLab ? Math.ceil(b.length / maxLab) : 1;
   return `<div class="orig-bars">` + b.map((x, i) => {
     const t = tot(x);
     const segs = ORIGEM_CANAIS_.map(c => {
@@ -2547,9 +2560,17 @@ function origemHover_(key) {
   _origemHover = key || null;
   if (!_origemData) return;
   const donut = document.getElementById('origem-donut');
-  if (!donut) return;
-  donut.innerHTML = origemDonutSVG_(_origemData.bd, _origemMode, _origemHover, false);
-  origemBindSegs_();
+  const svg = donut && donut.querySelector('svg');
+  if (!svg) return;
+  const foco = _origemHover || origemSel_();
+  svg.querySelectorAll('.orig-seg').forEach(c => {
+    const ativo = foco === c.dataset.k;
+    c.setAttribute('stroke-width', ativo ? 32 : 26);
+    if (foco && !ativo) c.setAttribute('opacity', '.3'); else c.removeAttribute('opacity');
+  });
+  const [l1, l2, l3] = origemCenter_(_origemData.bd, _origemMode, _origemHover);
+  const t = svg.querySelectorAll('text');
+  if (t.length >= 3) { t[0].textContent = l1; t[1].textContent = l2; t[1].style.fontSize = (l2.length > 9 ? 18 : 21) + 'px'; t[2].textContent = l3; }
   document.querySelectorAll('#origem-legend .orig-item').forEach(it => it.classList.toggle('hl', !!_origemHover && it.dataset.k === _origemHover));
 }
 
@@ -2570,6 +2591,8 @@ function paintOrigem_(hoverKey, animate) {
   const donut = document.getElementById('origem-donut');
   if (!donut) return;
   _origemHover = hoverKey || null;
+  const ae = document.activeElement;
+  const focoK = ae && ae.dataset && ae.dataset.k && (ae.classList.contains('orig-seg') ? 'seg' : (ae.classList.contains('orig-item') ? 'item' : null)) ? { t: ae.classList.contains('orig-seg') ? 'seg' : 'item', k: ae.dataset.k } : null;
   donut.innerHTML = origemDonutSVG_(bd, _origemMode, _origemHover, !!animate);
   origemBindSegs_();
   const leg = document.getElementById('origem-legend');
@@ -2580,7 +2603,8 @@ function paintOrigem_(hoverKey, animate) {
     it.addEventListener('click', () => origemFiltrar_(it.dataset.k));
     it.addEventListener('keydown', e => { if (e.target === it && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); origemFiltrar_(it.dataset.k); } });
   });
-  leg.querySelectorAll('.orig-i-open').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); openOrigemModal(b.dataset.open); }));
+  leg.querySelectorAll('.orig-i-open').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); origemHover_(null); openOrigemModal(b.dataset.open); }));
+  if (focoK) { const el2 = document.querySelector(focoK.t === 'seg' ? '#origem-donut .orig-seg[data-k="' + focoK.k + '"]' : '#origem-legend .orig-item[data-k="' + focoK.k + '"]'); if (el2) el2.focus({ preventScroll: true }); }
   document.getElementById('origem-foot').innerHTML = origemFootHTML_(bd);
   const bars = document.getElementById('origem-bars');
   bars.innerHTML = origemBarsHTML_(buckets, _origemMode);
@@ -2596,7 +2620,7 @@ function paintOrigem_(hoverKey, animate) {
     if (sel) {
       const c = ORIGEM_CANAIS_.find(x => x.key === sel);
       pill.textContent = 'Filtrando: ' + c.label + ' ✕';
-      pill.style.background = c.color;
+      pill.style.background = c.tx;
     }
   }
 }
