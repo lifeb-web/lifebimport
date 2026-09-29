@@ -421,6 +421,8 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
    não comportam nome+%+botão na mesma linha — truncava "Outbo…"). */
 .orig-i-top{display:grid;grid-template-columns:minmax(0,1fr) auto;row-gap:1px;align-items:center}
 .orig-i-name{grid-column:1;grid-row:1}
+.orig-i-name{overflow:visible;text-overflow:clip;white-space:normal;line-height:1.15}
+.orig-i-go{display:block;margin:1px 0 0}
 .orig-i-open{grid-column:2;grid-row:1}
 .orig-i-pc{grid-column:1/-1;grid-row:2;font-size:22px;line-height:1.1}
 @media(max-width:360px){
@@ -1880,8 +1882,8 @@ function origemLegendHTML_(bd, prev, mode) {
     const nv = c.cont + (c.cont === 1 ? ' venda' : ' vendas');
     // valor em R$ é a informação principal do canal — sempre visível (ticket médio vai no tooltip)
     const l2 = mode === 'n'
-      ? '<b>' + nv + '</b> · ' + origemMoneyShort_(c.valor)
-      : '<b>' + origemMoneyShort_(c.valor) + '</b> · ' + nv;
+      ? '<b>' + nv + '</b><span class="orig-i-cnt"><span class="orig-i-dot"> · </span>' + origemMoneyShort_(c.valor) + '</span>'
+      : '<b>' + origemMoneyShort_(c.valor) + '</b><span class="orig-i-cnt"><span class="orig-i-dot"> · </span>' + nv + '</span>';
     const isFiltro = c.key === 'outbound' || c.key === 'inbound';
     const tip0 = isFiltro ? (sel === c.key ? 'Clique para limpar o filtro' : 'Clique para filtrar o painel por ' + c.label) : 'Clique para abrir a aba LTV (Pós-venda)';
     const tip = tip0 + ' · ticket médio ' + ticket;

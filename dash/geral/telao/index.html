@@ -612,7 +612,21 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
   .orig-body{flex-direction:column;align-items:stretch;gap:8px;padding:8px 14px}
   .orig-ring{flex:1 1 0;min-height:0;height:auto;width:100%;max-width:none;aspect-ratio:auto;display:flex;justify-content:center}
   .orig-svg{width:auto;height:100%;max-width:100%;aspect-ratio:1/1}
-  .orig-legend{flex:0 0 auto;height:auto;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .orig-legend{flex:0 0 auto;height:auto;display:grid;grid-template-columns:1fr 1fr;gap:clamp(6px,.9vh,10px)}
+  /* legenda maior e proporcional à altura da tela (rosca cede um pouco de espaço) */
+  .orig-item,body.tv-grande .orig-item{padding:clamp(6px,1vh,12px) clamp(9px,1.1vh,14px)}
+  .orig-i-name,body.tv-grande .orig-i-name{font-size:clamp(12px,1.6vh,17px)}
+  .orig-i-pc,body.tv-grande .orig-i-pc{font-size:clamp(16px,2.2vh,26px)}
+  .orig-i-l2,body.tv-grande .orig-i-l2{font-size:clamp(10px,1.3vh,14px)}
+  .orig-item .delta,body.tv-grande .orig-item .delta{font-size:clamp(9px,1.15vh,12px);padding:2px 6px}
+  .orig-i-bar,body.tv-grande .orig-i-bar{display:block;height:clamp(3px,.45vh,5px);margin-top:clamp(4px,.7vh,8px)}
+  .orig-i-open{font-size:clamp(12px,1.5vh,16px)}
+  .orig-i-go{display:none}
+  .orig-i-l2{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.25}
+  .orig-i-cnt{display:block;font-weight:600}
+  .orig-i-dot{display:none}
+  .orig-i-sub{align-items:flex-end}
+  .orig-foot,body.tv-grande .orig-foot{font-size:clamp(10px,1.3vh,13px)}
 }
 @media(max-height:860px){ .orig-i-bar{display:none} }
 @media(max-height:940px){
@@ -2417,8 +2431,8 @@ function origemLegendHTML_(bd, prev, mode) {
     const nv = c.cont + (c.cont === 1 ? ' venda' : ' vendas');
     // valor em R$ é a informação principal do canal — sempre visível (ticket médio vai no tooltip)
     const l2 = mode === 'n'
-      ? '<b>' + nv + '</b> · ' + origemMoneyShort_(c.valor)
-      : '<b>' + origemMoneyShort_(c.valor) + '</b> · ' + nv;
+      ? '<b>' + nv + '</b><span class="orig-i-cnt"><span class="orig-i-dot"> · </span>' + origemMoneyShort_(c.valor) + '</span>'
+      : '<b>' + origemMoneyShort_(c.valor) + '</b><span class="orig-i-cnt"><span class="orig-i-dot"> · </span>' + nv + '</span>';
     const isFiltro = c.key === 'outbound' || c.key === 'inbound';
     const tip0 = isFiltro ? (sel === c.key ? 'Clique para limpar o filtro' : 'Clique para filtrar o painel por ' + c.label) : 'Clique para abrir a aba LTV (Pós-venda)';
     const tip = tip0 + ' · ticket médio ' + ticket;
