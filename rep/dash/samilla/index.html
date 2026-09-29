@@ -113,7 +113,15 @@
     #error-banner { display:none; background:#fff0f5; border:1px solid #ffc0d8; border-radius:10px; padding:12px 16px; color:#b0134a; font-size:13px; margin-bottom:12px; }
 
     /* LEAD CARD */
-    .lead-card { background:var(--card); border:1px solid var(--border); border-radius:14px; margin-bottom:10px; box-shadow:0 1px 6px rgba(0,0,0,.05); overflow:hidden; transition:box-shadow .15s; }
+    .lead-card { position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; margin-bottom:10px; box-shadow:0 1px 6px rgba(0,0,0,.05); overflow:hidden; transition:box-shadow .15s; }
+    /* 🆕 29/09 (Robert: "tarefas vencidas ou sem tarefa... algo piscando ou o emoji ou a borda do
+       card, mas claro tudo funcionando do mesmo jeito e o app leve"): puramente CSS (sem timer/JS,
+       sem chamada nova), aditivo — nunca substitui a cor de status (border-left ag/cont/neg), só
+       soma um sinal extra pro card que precisa de atenção mesmo estando "Em negociação" (verde). */
+    .lead-card.lc-atencao { box-shadow:0 0 0 1px rgba(220,38,38,.45), 0 1px 6px rgba(0,0,0,.05); }
+    .lc-atencao-dot { position:absolute; top:10px; right:10px; width:9px; height:9px; border-radius:50%; background:var(--red); box-shadow:0 0 0 3px rgba(220,38,38,.18); animation:lc-pulse 1.7s ease-in-out infinite; z-index:2; }
+    @keyframes lc-pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.45; transform:scale(.82); } }
+    @media (prefers-reduced-motion: reduce) { .lc-atencao-dot { animation:none; } }
     /* feedback imediato de "processando" sem afirmar nenhum dado novo — ver saveTask/finishTask/saveObs */
     .lead-card.lc-salvando { opacity:.6; pointer-events:none; }
     .lead-card:hover { box-shadow:0 3px 14px rgba(0,0,0,.09); }
@@ -1677,6 +1685,21 @@ function toggleTaskText(id) {
   const aindaClampeado = el.classList.toggle('clamped');
   if (btn) btn.textContent = aindaClampeado ? 'ver mais ▾' : 'ver menos ▴';
 }
+// 🆕 29/09 (Robert, achado real: "os leads que precisam de atencao tarefas vencidas ou sem tarefa
+// voce pode colocar tipo algo piscando ou o emoji ou a borda do card" — sem tarefa aberta ou tarefa
+// vencida já é o critério de "Aguardando contato" no resumo, mas um lead "Em negociação" pode
+// TAMBÉM estar com tarefa vencida/sem tarefa e o card ficava só verde, escondendo isso). Mesma regra
+// usada em `_tarefaBlockHtml` abaixo, extraída pra também decidir o destaque visual do CARD inteiro —
+// fonte única, nunca diverge entre os dois lugares.
+function _precisaAtencao(l) {
+  const t = l.tarefaAberta;
+  if (!t) return true;
+  if (!t.texto && !t.id) return false; // fallback pré-A1: sem dado suficiente pra saber se venceu
+  const dueRaw = t.dueDate ? String(t.dueDate).slice(0, 10) : '';
+  if (!dueRaw) return false;
+  const hojeYMD = new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
+  return dueRaw < hojeYMD;
+}
 function _tarefaBlockHtml(l) {
   const t = l.tarefaAberta;
   if (!t) {
@@ -1702,7 +1725,7 @@ function _tarefaBlockHtml(l) {
   // EXATAMENTE hoje aparecia "vencida" 3h mais cedo do que deveria, todo santo dia. Mesmo ajuste
   // (-3h) já usado no resto do app pra "hoje" em horário de Brasília.
   const hojeYMD   = new Date(Date.now() - 3 * 3600000).toISOString().slice(0,10);
-  const late      = !!(dueRaw && dueRaw < hojeYMD);
+  const late      = _precisaAtencao(l);
   const diasAtraso = late ? _diasParado(t.dueDate) : null;
   const stalled   = diasAtraso != null && diasAtraso >= 7;
   const dueLbl    = dueRaw
@@ -2442,6 +2465,7 @@ function renderLeads(leads, highlightRow) {
     const cidadeUF = [abreviarCidade(toTitleCase(l.cidade)),(l.estado||'').toUpperCase()].filter(v=>v&&v.trim()).join(' · ');
     const sClass   = statusClass(l.status);
     const bClass   = borderClass(l.status);
+    const atencao  = _precisaAtencao(l);
     const pot      = l.pot > 0 ? cur(l.pot) : '';
     const wa       = fmtWA(l.whatsapp);
     const mapLink  = buildMapsUrl(l.empresa||l.nome, l.cidade, l.estado);
@@ -2459,7 +2483,8 @@ function renderLeads(leads, highlightRow) {
     const tarefaHtml  = _tarefaBlockHtml(l);
 
     return `
-    <div class="lead-card ${bClass}" data-row="${l.row}">
+    <div class="lead-card ${bClass}${atencao ? ' lc-atencao' : ''}" data-row="${l.row}">
+      ${atencao ? `<span class="lc-atencao-dot" title="Precisa de atenção: tarefa vencida ou sem tarefa"></span>` : ''}
       <div class="lc-body">
         <div class="lc-top">
           <div class="lc-empresa">${titulo}${funilBadge}</div>
