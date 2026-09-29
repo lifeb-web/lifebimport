@@ -560,8 +560,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 #col-right{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
 /* 29/09 — Origem das Vendas (rosca) + Ritmo por canal: ocupam a coluna direita
    no lugar dos antigos cards de lista Ganhos/Perdidos da aba Vendas. */
-#origem-card{flex:1.5;display:flex;flex-direction:column;overflow:hidden;min-height:0}
-#ritmo-card{flex:.8;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+#origem-card{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
 .orig-tog{display:flex;background:var(--bg);border-radius:8px;padding:2px;gap:2px}
 .orig-tog-btn{border:none;background:transparent;font-family:var(--font);font-size:10px;font-weight:800;color:var(--muted);padding:3px 9px;border-radius:6px;cursor:pointer}
 .orig-tog-btn.on{background:#fff;color:var(--text);box-shadow:0 1px 3px rgba(26,22,38,.15)}
@@ -584,13 +583,6 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 .orig-i-l2{font-size:9px;font-weight:600;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .orig-foot{display:flex;justify-content:space-between;gap:8px;padding:6px 14px 8px;border-top:1px dashed var(--border);font-size:10px;font-weight:600;color:var(--muted);flex-shrink:0;white-space:nowrap}
 .orig-foot b{color:var(--text);font-weight:800}
-.orig-bars-wrap{flex:1;min-height:0;padding:8px 12px 6px;display:flex}
-.orig-bars{flex:1;display:flex;align-items:stretch;gap:3px;min-width:0}
-.orig-bcol{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center}
-.orig-bwrap{flex:1;width:100%;display:flex;align-items:flex-end;min-height:0}
-.orig-bar{width:100%;display:flex;flex-direction:column-reverse;border-radius:4px 4px 1px 1px;overflow:hidden;min-height:2px}
-.orig-bar span{display:block;width:100%}
-.orig-blab{font-size:8px;font-weight:700;color:var(--faint);height:11px;line-height:11px;white-space:nowrap;overflow:visible}
 .orig-hd-right{display:flex;align-items:center;gap:6px;min-width:0}
 .orig-filtro{display:none;align-items:center;font-family:inherit;font-size:9px;font-weight:800;padding:3px 8px;border-radius:12px;border:none;cursor:pointer;color:#fff;background:var(--purple);white-space:nowrap}
 .orig-filtro.show{display:inline-flex}
@@ -614,9 +606,14 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 .orig-i-bar i{display:block;height:100%;background:var(--c);border-radius:3px;transition:width .6s cubic-bezier(.4,0,.2,1)}
 @keyframes origIn{from{opacity:0;transform:rotate(-110deg) scale(.88)}to{opacity:1;transform:rotate(0) scale(1)}}
 .orig-anim{animation:origIn .8s cubic-bezier(.2,.8,.2,1);transform-origin:100px 100px}
-@keyframes origGrow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
-.orig-anim-bars .orig-bar{animation:origGrow .6s cubic-bezier(.2,.8,.2,1);transform-origin:bottom}
-@media(prefers-reduced-motion:reduce){.orig-anim,.orig-anim-bars .orig-bar{animation:none}}
+@media(prefers-reduced-motion:reduce){.orig-anim{animation:none}}
+/* telas com altura de sobra: rosca GRANDE em cima, legenda em 2 colunas embaixo */
+@media(min-height:761px){
+  .orig-body{flex-direction:column;align-items:stretch;gap:8px;padding:8px 14px}
+  .orig-ring{flex:1 1 0;min-height:0;height:auto;width:100%;max-width:none;aspect-ratio:auto;display:flex;justify-content:center}
+  .orig-svg{width:auto;height:100%;max-width:100%;aspect-ratio:1/1}
+  .orig-legend{flex:0 0 auto;height:auto;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+}
 @media(max-height:860px){ .orig-i-bar{display:none} }
 @media(max-height:940px){
   body.tv-grande .orig-i-bar{display:none}
@@ -631,8 +628,6 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
   body.tv-grande .orig-i-pc{font-size:13px}
   body.tv-grande .orig-i-l2{font-size:8px}
   body.tv-grande .orig-item .delta{font-size:8px;padding:0 3px}
-  body.tv-grande #origem-card{flex:2}
-  body.tv-grande #ritmo-card{flex:.75}
 }
 @media(max-height:700px){
   body.tv-grande .orig-item .delta{display:none}
@@ -640,8 +635,6 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 }
 /* telas baixas (notebook 13"/1280x650): legenda compacta pra 4 canais caberem sem cortar */
 @media(max-height:760px){
-  #origem-card{flex:2}
-  #ritmo-card{flex:.75}
   .orig-body{padding:4px 10px;gap:8px}
   .orig-item{padding:2px 8px}
   .orig-i-name{font-size:11px}
@@ -650,7 +643,6 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
   .orig-item .delta{font-size:8.5px;padding:0 4px}
   .orig-i-bar{margin-top:2px;height:2px}
   .orig-foot{padding:3px 12px 4px;font-size:9px}
-  .orig-bars-wrap{padding:5px 12px 3px}
 }
 /* Achado 26/08 (auditoria visual): a aba LTV nunca ganhou o flex:1 que
    Vendas/SDR/Ads/BIA já têm nos cards — colunas ficavam com até 81% de
@@ -1112,13 +1104,6 @@ body.tv-grande .rv-k-val{font-size:19px}
           <div class="orig-legend" id="origem-legend"></div>
         </div>
         <div class="orig-foot" id="origem-foot"></div>
-      </div>
-      <div class="card" id="ritmo-card">
-        <div class="card-hd">
-          <span class="card-hd-title">Ritmo de Ganhos por Canal</span>
-          <span class="badge" id="origem-gran">—</span>
-        </div>
-        <div class="orig-bars-wrap" id="origem-bars"></div>
       </div>
     </div>
   </div>
@@ -2349,61 +2334,6 @@ function computeOrigemBreakdown(allRows, from, to, todayStr) {
   };
 }
 
-// dia local (YYYY-MM-DD) de uma venda — mesma referência de fuso que o filtro de
-// período usa (new Date(closed_at) comparado com limites locais).
-function origemWinDay_(w) {
-  const d = w.closedAtRaw ? new Date(w.closedAtRaw) : (w.closedAt ? new Date(w.closedAt + 'T12:00:00') : null);
-  if (!d || isNaN(d.getTime())) return null;
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-}
-
-// Baldes de tempo pro gráfico de ritmo: ≤31 dias = diário · ≤100 dias = semanal
-// (segunda a domingo) · acima = mensal. "Total" começa na 1ª venda real (não em
-// 2020, marcador arbitrário do filtro).
-function origemBuckets_(bd, isTotal) {
-  const allDays = [];
-  bd.canais.forEach(c => c.wins.forEach(w => { const dk = origemWinDay_(w); if (dk) allDays.push(dk); }));
-  if (allDays.length === 0) return { gran: 'day', buckets: [] };
-  let from = bd.from;
-  if (isTotal) from = allDays.reduce((a, b) => (a < b ? a : b));
-  const p = s => { const a = s.split('-').map(Number); return new Date(a[0], a[1] - 1, a[2]); };
-  const fmt = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-  const dFrom = p(from), dTo = p(bd.to);
-  const span = Math.round((dTo - dFrom) / 86400000) + 1;
-  const gran = span <= 31 ? 'day' : (span <= 100 ? 'week' : 'month');
-  const keyOf = dk => {
-    if (gran === 'day') return dk;
-    const d = p(dk);
-    if (gran === 'week') { const dow = d.getDay() || 7; d.setDate(d.getDate() - dow + 1); return fmt(d); }
-    return dk.substring(0, 7);
-  };
-  const buckets = [], idx = {};
-  const cur = new Date(dFrom);
-  if (gran === 'week') { const dow = cur.getDay() || 7; cur.setDate(cur.getDate() - dow + 1); }
-  if (gran === 'month') cur.setDate(1);
-  let guard = 0;
-  while (cur <= dTo && guard++ < 400) {
-    const k = gran === 'month' ? fmt(cur).substring(0, 7) : fmt(cur);
-    let label;
-    if (gran === 'day') label = String(cur.getDate()).padStart(2, '0');
-    else if (gran === 'week') label = String(cur.getDate()).padStart(2, '0') + '/' + String(cur.getMonth() + 1).padStart(2, '0');
-    else label = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][cur.getMonth()] + '/' + String(cur.getFullYear()).slice(2);
-    idx[k] = buckets.length;
-    buckets.push({ key: k, label, v: { outbound: 0, inbound: 0, reposicao: 0, reativacao: 0 }, n: { outbound: 0, inbound: 0, reposicao: 0, reativacao: 0 } });
-    if (gran === 'day') cur.setDate(cur.getDate() + 1);
-    else if (gran === 'week') cur.setDate(cur.getDate() + 7);
-    else cur.setMonth(cur.getMonth() + 1);
-  }
-  bd.canais.forEach(c => c.wins.forEach(w => {
-    const dk = origemWinDay_(w); if (!dk) return;
-    const i = idx[keyOf(dk)];
-    if (i === undefined) return;
-    buckets[i].v[c.key] += (w.value || 0);
-    buckets[i].n[c.key] += 1;
-  }));
-  return { gran, buckets };
-}
-
 function origemMoneyShort_(v) {
   return 'R$ ' + Math.round(v || 0).toLocaleString('pt-BR');
 }
@@ -2500,25 +2430,6 @@ function origemLegendHTML_(bd, prev, mode) {
   }).join('');
 }
 
-function origemBarsHTML_(bk, mode) {
-  const b = bk.buckets;
-  if (!b.length) return '<div class="feed-empty">Sem vendas no período</div>';
-  const tot = x => ORIGEM_CANAIS_.reduce((s, c) => s + ((mode === 'n' ? x.n : x.v)[c.key] || 0), 0);
-  const max = Math.max(...b.map(tot), 0);
-  if (max <= 0) return '<div class="feed-empty">Sem vendas no período</div>';
-  const maxLab = document.documentElement.clientWidth < 400 ? 6 : 10;
-  const every = b.length > maxLab ? Math.ceil(b.length / maxLab) : 1;
-  return `<div class="orig-bars">` + b.map((x, i) => {
-    const t = tot(x);
-    const segs = ORIGEM_CANAIS_.map(c => {
-      const v = (mode === 'n' ? x.n : x.v)[c.key] || 0;
-      return v > 0 ? `<span style="height:${(v / t) * 100}%;background:${c.color}"></span>` : '';
-    }).join('');
-    const tip = x.label + ' · ' + (mode === 'n' ? t + (t === 1 ? ' venda' : ' vendas') : origemMoneyShort_(t));
-    return `<div class="orig-bcol" title="${escHtml(tip)}"><div class="orig-bwrap"><div class="orig-bar" style="height:${t > 0 ? Math.max((t / max) * 100, 4) : 0}%">${segs}</div></div><span class="orig-blab">${i % every === 0 ? escHtml(x.label) : ''}</span></div>`;
-  }).join('') + `</div>`;
-}
-
 function origemFootHTML_(bd) {
   const novos = bd.canais[0].valor + bd.canais[1].valor;
   const recor = bd.canais[2].valor + bd.canais[3].valor;
@@ -2539,7 +2450,7 @@ function renderOrigem_(d) {
     const isTotal = d.period.type === 'total';
     let prev = null;
     if (!isTotal) { const pr = prevRangeOf(d.period); prev = computeOrigemBreakdown(_rawDeals, pr.from, pr.to, today); }
-    _origemData = { bd, prev, isTotal, buckets: origemBuckets_(bd, isTotal) };
+    _origemData = { bd, prev, isTotal };
     // anima a entrada só quando o dado mudou de verdade (troca de período, venda
     // nova...) — o poll de 20s repinta sem animar, senão o telão ficaria piscando.
     const sig = d.period.from + '|' + d.period.to + '|' + bd.canais.map(c => c.valor + ':' + c.cont).join(',');
@@ -2587,7 +2498,7 @@ function origemBindSegs_() {
 
 function paintOrigem_(hoverKey, animate) {
   if (!_origemData) return;
-  const { bd, prev, buckets } = _origemData;
+  const { bd, prev } = _origemData;
   const donut = document.getElementById('origem-donut');
   if (!donut) return;
   _origemHover = hoverKey || null;
@@ -2606,11 +2517,6 @@ function paintOrigem_(hoverKey, animate) {
   leg.querySelectorAll('.orig-i-open').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); origemHover_(null); openOrigemModal(b.dataset.open); }));
   if (focoK) { const el2 = document.querySelector(focoK.t === 'seg' ? '#origem-donut .orig-seg[data-k="' + focoK.k + '"]' : '#origem-legend .orig-item[data-k="' + focoK.k + '"]'); if (el2) el2.focus({ preventScroll: true }); }
   document.getElementById('origem-foot').innerHTML = origemFootHTML_(bd);
-  const bars = document.getElementById('origem-bars');
-  bars.innerHTML = origemBarsHTML_(buckets, _origemMode);
-  bars.classList.toggle('orig-anim-bars', !!animate);
-  const g = document.getElementById('origem-gran');
-  if (g) g.textContent = buckets.gran === 'day' ? 'por dia' : (buckets.gran === 'week' ? 'por semana' : 'por mês');
   document.querySelectorAll('.orig-tog-btn').forEach(b => b.classList.toggle('on', b.dataset.m === _origemMode));
   // pílula "Filtrando: X ✕" — mesma origem do toggle Outbound/Inbound/Ambos
   const sel = origemSel_();
