@@ -3938,8 +3938,12 @@ async function fetchAdsRawDaily() {
 
   const cold = !_adsRawDailyMap_;
   if (cold) _adsRawDailyMap_ = new Map();
+  // 29/09: desde este dia o bridge D1 APLICA in.()/not.in.() de verdade (antes ignorava em
+  // silêncio) — e recusa (HTTP 400) filtro com mais de 90 valores (limite de 100 parâmetros
+  // do D1). Com muitas campanhas a lista estouraria; acima de 60 não manda o in.() e confia
+  // na poda por validIds feita logo abaixo, no cliente (mesmo resultado).
   const excludeFilter = 'entity_id=not.in.(' + ADS_EXCLUDE_CAMPAIGN_IDS.join(',') + ')'
-    + ((validIds && validIds.length) ? '&entity_id=in.(' + validIds.join(',') + ')' : '');
+    + ((validIds && validIds.length && validIds.length <= 60) ? '&entity_id=in.(' + validIds.join(',') + ')' : '');
   const base = 'select=entity_id,date,spend,synced_at&entity_type=eq.campaign&' + excludeFilter;
   const query = (!cold && _lastAdsRawSyncedAt_) ? base + '&synced_at=gt.' + encodeURIComponent(_lastAdsRawSyncedAt_) : base;
   const rows = await _fetchTablePage_('dash_ads_daily', query);
