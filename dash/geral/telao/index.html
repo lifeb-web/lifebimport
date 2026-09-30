@@ -1904,7 +1904,11 @@ const ORD_DOT   = { o1:'#b09bd6', o2:'#9260c8', o3:'#5a3a80' };
 const STAGE_LABEL = { o1:'Conexão', o2:'Diag./Solução', o3:'Negociação' };
 // 26/08: mesmo vocabulário de STAGE_ORD/ORD_DOT, versão LTV (3 etapas, tom
 // rosa da aba — mesmo hue do hero/spark #E92085, claro→escuro).
-const LTV_STAGE_ORD = { '3872291':'o0', '3861835':'o1', '3861836':'o2', '3861837':'o3' };
+// 🔴 FIX 30/09: as 2 etapas novas do funil Reativação (Diagnóstico/Solução, Negociação) ficam no MESMO
+// slot visual 'o0' da Reativação (Conexão) — são o mesmo funil paralelo, não etapas do Pós-venda normal.
+// IDs literais aqui de propósito (não reusa REATIVACAO75_STAGE_IDS, declarada mais abaixo neste arquivo —
+// referenciar antes da declaração de um `const` quebra por temporal dead zone).
+const LTV_STAGE_ORD = { '3872291':'o0', '3872292':'o0', '3872293':'o0', '3861835':'o1', '3861836':'o2', '3861837':'o3' };
 const LTV_ORD_DOT   = { o0:'#d4a017', o1:'#f2a6cc', o2:'#e94f9c', o3:'#a3145f' };
 
 // ============================================================
@@ -1955,16 +1959,27 @@ const STAGES = {
 // funis, isso precisa virar filtro por funnel_id de verdade.
 const ACQ_STAGE_IDS = new Set(['3771722', '3771723', '3771724', '3771725']);
 // 17/09 (Robert, auditoria: "por que Reativação +75 Dias não conta pra
-// reposições LTV?") — funil Agendor separado (id 909368, 1 etapa só hoje,
+// reposições LTV?") — funil Agendor separado (id 909368, 1 etapa só na época,
 // "Conexão"/3872291), criado depois da blindagem original do Pós-venda
 // (907387) — nunca foi somado em stage_id nenhum, achado real de venda
 // invisível (ex: negócio ganho R$719 no mesmo dia da auditoria, contando
 // zero em Vendas E em LTV). Robert confirmou que é reposição de verdade
 // (reativação de cliente inativo 75+ dias = mesma família de negócio do
 // Pós-venda), entra no LTV, nunca em Vendas (senão conta 2x).
-const POSVENDA_STAGE_IDS = new Set(['3861835', '3861836', '3861837', '3872291']);
+// 🔴 FIX 30/09 (Robert, achado real ao vivo em fechamento — deal 45322723
+// "Ocidental Cosméticos", R$3.373,55, Ganho hoje, etapa "Negociação"/3872293
+// do funil 909368): o funil Reativação +75 Dias cresceu de 1 pra 3 etapas
+// desde o fix de 17/09 (Conexão→Diagnóstico/Solução→Negociação, mesma
+// estrutura do Arena) — só a 1ª etapa (3872291) tinha sido somada; já era gap
+// CONHECIDO e documentado (STATUS-DASH-GERAL.md linha 40: "3872292 NÃO está
+// em nenhum conjunto → não conta em lugar nenhum"), mas nenhum negócio real
+// tinha chegado até essas etapas até hoje. Adiciona as 2 etapas que faltavam.
+const REATIVACAO75_STAGE_IDS = new Set(['3872291', '3872292', '3872293']);
+const POSVENDA_STAGE_IDS = new Set(['3861835', '3861836', '3861837', ...REATIVACAO75_STAGE_IDS]);
 const LTV_STAGES = {
   '3872291': { name: 'Reativação +75 Dias', color: 'amber', seq: 0 },
+  '3872292': { name: 'Reativação — Diagnóstico/Solução', color: 'amber', seq: 0 },
+  '3872293': { name: 'Reativação — Negociação', color: 'amber', seq: 0 },
   '3861835': { name: 'Ciclo Ativo', color: 'blue', seq: 1 },
   '3861836': { name: 'Contato de Reposição', color: 'purple', seq: 2 },
   '3861837': { name: 'Negociação Reposição', color: 'green', seq: 3 }
@@ -2317,7 +2332,11 @@ function computeLtvData(allRows, originFilter, periodType, customFrom, customTo,
 // Não divide Inbound por campanha do Meta: campanha_ads só existe em parte dos
 // negócios (a maioria histórica não tem) — uma fatia "sem campanha" gigante
 // seria pior que não mostrar.
-const ORIGEM_REATIV_STAGE_ = '3872291';
+// 🔴 FIX 30/09: era só '3872291' (a única etapa que existia quando este bloco foi escrito, 29/09) — o
+// funil Reativação +75 Dias ganhou mais 2 etapas desde então (ver comentário completo em
+// REATIVACAO75_STAGE_IDS, acima). Sem isso, negócio na etapa Negociação/Diagnóstico ficaria classificado
+// como "Reposição" na rosca em vez de "Reativação" — reusa o MESMO conjunto, nunca 2 fontes divergentes.
+const ORIGEM_REATIV_STAGE_ = REATIVACAO75_STAGE_IDS;
 const ORIGEM_CANAIS_ = [
   { key: 'outbound',   label: 'Outbound',        color: '#704B9B', tx: '#5a3a80', sub: 'prospecção ativa' },
   { key: 'inbound',    label: 'Inbound',         color: '#E92085', tx: '#c2185b', sub: 'anúncios · Meta' },
@@ -2335,8 +2354,8 @@ function computeOrigemBreakdown(allRows, from, to, todayStr) {
   const rowsOut = allRows.map(d => (d.origin !== 'inbound' && d.origin !== 'outbound') ? Object.assign({}, d, { origin: 'outbound' }) : d);
   const out = computeDashboardData(rowsOut, 'outbound', 'custom', from, to, todayStr);
   const inn = computeDashboardData(allRows, 'inbound',  'custom', from, to, todayStr);
-  const rep = computeLtvData(allRows.filter(d => String(d.stage_id) !== ORIGEM_REATIV_STAGE_), 'both', 'custom', from, to, todayStr);
-  const rea = computeLtvData(allRows.filter(d => String(d.stage_id) === ORIGEM_REATIV_STAGE_), 'both', 'custom', from, to, todayStr);
+  const rep = computeLtvData(allRows.filter(d => !ORIGEM_REATIV_STAGE_.has(String(d.stage_id))), 'both', 'custom', from, to, todayStr);
+  const rea = computeLtvData(allRows.filter(d => ORIGEM_REATIV_STAGE_.has(String(d.stage_id))), 'both', 'custom', from, to, todayStr);
   const src = { outbound: out, inbound: inn, reposicao: rep, reativacao: rea };
   const canais = ORIGEM_CANAIS_.map(c => {
     const k = src[c.key].kpis;
@@ -4872,10 +4891,11 @@ function renderLtvSectionTelao(d) {
   // nunca passa pelas outras 3 etapas, então herdava o volume inteiro delas
   // (mostrava "51" com só 7 negócios reais). Usa count bruto só nessa etapa,
   // sem seta de conversão nem entrando nem saindo dela.
-  const REATIVACAO_75_STAGE_ID = '3872291';
+  // 🔴 FIX 30/09 (mesmo achado do mobile): agora são 3 etapas (REATIVACAO75_STAGE_IDS, topo do arquivo),
+  // não só Conexão — tratamento uniforme nas 3, mesma blindagem contra "reached" acumulado.
   const stageRowsLtv = nfLtv.map((s, i) => {
-    const isReativacao = String(s.stageId) === REATIVACAO_75_STAGE_ID;
-    const prevIsReativacao = i > 0 && String(nfLtv[i-1].stageId) === REATIVACAO_75_STAGE_ID;
+    const isReativacao = REATIVACAO75_STAGE_IDS.has(String(s.stageId));
+    const prevIsReativacao = i > 0 && REATIVACAO75_STAGE_IDS.has(String(nfLtv[i-1].stageId));
     const reached = isReativacao ? s.count : (s.reached ?? s.count);
     const pct = Math.max((reached / maxF) * 100, 3);
     const ord = LTV_STAGE_ORD[String(s.stageId)] || 'o2';
