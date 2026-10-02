@@ -1137,41 +1137,253 @@ function loadEnd() {
 // string, igual `LEADS_URL`/`HISTORICO_URL`/`METRICS_URL` já fazem neste mesmo arquivo. Sem isso,
 // os 4 endpoints de escrita sempre devolveriam 404 "rep desconhecido", mesmo com o token certo no
 // header — confirmado batendo o comportamento real contra o backend já publicado.
-async function apiPost(path, body, timeoutMs) {
-  loadStart();
-  const _ctrl = new AbortController();
-  const _tid  = setTimeout(() => _ctrl.abort(), timeoutMs || 25000);
-  try {
-    let res;
-    try {
-      res = await fetch(API_URL + path + '?rep=' + REP_NAME, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + REP_TOKEN },
-        body: JSON.stringify(body),
-        // 🔴 FIX 20/09 (auditoria adversarial, achado real: a "rede de segurança" de disparar a
-        // ação pendente no pagehide/visibilitychange usa fetch() normal — o navegador pode MATAR
-        // uma requisição em andamento assim que a aba é escondida/fechada, sem garantia nenhuma de
-        // completar. `keepalive:true` é o jeito certo do Fetch API pra isso: deixa o navegador
-        // terminar a requisição em segundo plano mesmo depois da página sumir. Sem custo nenhum
-        // pras chamadas normais (dentro da página aberta), só reforça a garantia no caso de saída.
-        keepalive: true,
-        signal: _ctrl.signal,
-      });
-    } catch (netErr) {
-      if (netErr && netErr.name === 'AbortError') throw new Error('Tempo esgotado. Verifique sua conexão e tente de novo.');
-      throw new Error('Sem conexão com o servidor. Tente novamente.');
+// 🆕 02/10 (Robert: "nunca perca nenhum registro do representante, nunca nunca nunca"): FILA DURÁVEL.
+// Antes: apiPost fazia UMA tentativa de 25s; se o sinal falhasse/abortasse, o rep via erro (ou a tela
+// ficava carregando) e a alteração sumia — era o caso do Natanael em 01/10. Agora TODA escrita é
+// gravada no aparelho (localStorage, UMA chave por operação — abas diferentes nunca sobrescrevem a
+// fila uma da outra) ANTES de qualquer envio, com id único (X-Op-Id), e o painel reenvia o MESMO id,
+// com espera crescente, até o servidor confirmar — sobrevive a fechar o app, recarregar, perder o
+// sinal, 429 do Agendor ou lentidão. O servidor roda a escrita completa e guarda o resultado por id
+// (7 dias), então reenviar NUNCA grava em dobro. Só um "não" definitivo (4xx) ou 40 tentativas/24h
+// sem confirmar tira da fila — e mesmo assim fica guardado e visível no aviso até reportar/dispensar.
+// Só UMA aba por vez envia (lease em localStorage). Nada é descartado em silêncio.
+const OB_PREFIX = 'lifeb_op_v2_' + REP_NAME + '_';
+const OB_LEASE_KEY = 'lifeb_oblease_v2_' + REP_NAME;
+const OB_GRACE_MS = 20000;        // quanto o rep espera na tela antes de seguir com "salvo no aparelho"
+const OB_TENTATIVA_MS = 40000;    // teto de cada tentativa de rede (> grace: tentativa lenta não vira "queued" à toa)
+const OB_BACKOFF = [3000, 6000, 12000, 24000, 48000, 60000]; // depois disso, a cada 60s
+const OB_MAX_TENT = 40, OB_MAX_IDADE_MS = 72 * 3600 * 1000; // teto de tentativas conta só RESPOSTAS do servidor; falta de sinal só vence por idade (72h)
+const OB_AVISO_APOS_MS = 5000;    // aviso amarelo só aparece pra escrita que passou de 5s sem confirmar
+const OB_TAB_ID = 'tab-' + Math.random().toString(36).slice(2, 10);
+let _outbox = [];
+let _obRodando = false;
+let _obTimer = null;
+let _obWaiters = {};
+let _obStorageOk = true;
+let _lastQueuedAt = 0;
+let _obDispensarArmado = false;
+let _obSemLease = false;
+function _obNovoId() {
+  try { if (window.crypto && crypto.randomUUID) return 'op-' + crypto.randomUUID(); } catch (_) {}
+  return 'op-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+}
+function _obGravar(op) {
+  try { localStorage.setItem(OB_PREFIX + op.id, JSON.stringify(op)); return true; } catch (_) { _obStorageOk = false; return false; }
+}
+function _obGravarSeExiste(op) {   // não ressuscita op que outra aba já confirmou/apagou
+  if (_obStorageOk) { try { if (localStorage.getItem(OB_PREFIX + op.id) === null) { _outbox = _outbox.filter(o => o.id !== op.id); return false; } } catch (_) {} }
+  return _obGravar(op);
+}
+function _obApagar(op) { try { localStorage.removeItem(OB_PREFIX + op.id); } catch (_) {} }
+// Relê o aparelho: junta operações de OUTRAS abas, esquece as já concluídas por outra aba.
+function _obSincronizar() {
+  let ids = [];
+  try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.indexOf(OB_PREFIX) === 0) ids.push(k); } } catch (_) { return; }
+  const vistos = new Set();
+  ids.forEach(k => {
+    let o = null; try { o = JSON.parse(localStorage.getItem(k)); } catch (_) {}
+    if (!o || !o.id) return;
+    vistos.add(o.id);
+    const meu = _outbox.find(x => x.id === o.id);
+    if (!meu) _outbox.push(o);
+    else if (o.st === 'falhou' && meu.st !== 'falhou') {
+      const w = _obWaiters[o.id];
+      if (w) { delete _obWaiters[o.id]; _outbox = _outbox.filter(x => x.id !== o.id); vistos.delete(o.id); _obApagar(o); w.reject(new Error(o.erro || 'não aceito')); }   // outra aba recebeu a recusa: quem esperava aqui vê o erro, não "salvo"
+      else { meu.st = 'falhou'; meu.erro = o.erro; }
     }
-    let data = {};
-    try { data = await res.json(); } catch (_) {}
-    if (!res.ok || data.ok === false) {
-      throw new Error(data.erro || data.error || data.aviso || ('Erro ' + res.status));
-    }
-    return data;
-  } finally {
-    clearTimeout(_tid);
-    loadEnd();
+  });
+  _outbox = _outbox.filter(o => {
+    if (vistos.has(o.id) || !_obStorageOk) return true;   // sem storage: a memória é a única cópia
+    // sumiu do aparelho = outra aba confirmou. Libera quem esperava aqui.
+    const w = _obWaiters[o.id]; if (w) { delete _obWaiters[o.id]; w.resolve({ ok: true, queued: true }); }
+    return false;
+  });
+  _outbox.sort((a, b) => a.ts - b.ts);
+}
+function _obPendentesVisiveis() { const agora = Date.now(); return _outbox.filter(o => o.st !== 'falhou' && agora - o.ts > OB_AVISO_APOS_MS); }
+function _obBanner() {
+  let el = document.getElementById('outbox-banner');
+  const pend = _obPendentesVisiveis();
+  const fal = _outbox.filter(o => o.st === 'falhou');
+  if (!pend.length && !fal.length) { if (el) el.style.display = 'none'; document.body.classList.remove('ob-on'); return; }
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'outbox-banner';
+    el.style.cssText = 'position:fixed;left:8px;right:8px;bottom:8px;z-index:9990;padding:10px 12px;border-radius:10px;font:600 13px/1.35 system-ui,sans-serif;display:flex;gap:10px;align-items:center;justify-content:space-between;box-shadow:0 4px 18px rgba(0,0,0,.35)';
+    document.body.appendChild(el);
+    const st = document.createElement('style');
+    st.textContent = 'body.ob-on #toast{bottom:96px !important}';   // toast (Desfazer/Reportar) nunca fica embaixo do aviso
+    document.head.appendChild(st);
+  }
+  document.body.classList.add('ob-on');
+  el.style.display = 'flex';
+  if (fal.length) {
+    el.style.background = '#7a1f1f'; el.style.color = '#fff';
+    el.innerHTML = '<span>⚠️ ' + fal.length + ' alteração(ões) NÃO confirmada(s) pelo sistema (ficou guardada). Toque em Reportar.</span><span style="display:flex;gap:6px"><button onclick="_obReportar()" style="padding:6px 10px;border-radius:8px;border:0;font-weight:700">Reportar</button><button onclick="_obDispensar()" style="padding:6px 10px;border-radius:8px;border:0;background:#ffffff33;color:#fff">' + (_obDispensarArmado ? 'Tem certeza?' : 'Dispensar') + '</button></span>';
+  } else {
+    el.style.background = '#8a5a00'; el.style.color = '#fff';
+    el.innerHTML = '<span>⏳ ' + pend.length + ' alteração(ões) ' + (_obStorageOk ? 'salva(s) no aparelho, enviando… (se fechar, abra o painel de novo quando tiver sinal)' : 'enviando… NÃO feche o app até acabar') + '</span>';
   }
 }
+function _obReportar() {
+  const fal = _outbox.filter(o => o.st === 'falhou');
+  const linhas = ['Alteração(ões) não confirmada(s) no Painel do Rep', 'Rep: ' + REP_DISPLAY].concat(fal.map(o => '• ' + o.path + ' negócio ' + (o.body && o.body.dealId) + ' — ' + (o.erro || '') + ' — ' + JSON.stringify(o.body).slice(0, 400)));
+  window.open('https://wa.me/' + ROBERT_WA_NUMERO + '?text=' + encodeURIComponent(linhas.join('\n')), '_blank', 'noopener,noreferrer');
+  _obDispensarArmado = false;
+}
+function _obDispensar() {
+  if (!_obDispensarArmado) { _obDispensarArmado = true; _obBanner(); setTimeout(function () { _obDispensarArmado = false; _obBanner(); }, 5000); return; }
+  _obDispensarArmado = false;
+  _outbox.filter(o => o.st === 'falhou').forEach(_obApagar);
+  _outbox = _outbox.filter(o => o.st !== 'falhou');
+  _obBanner();
+}
+// 1 tentativa de rede. 'ok' | 'definitivo' (servidor disse NÃO de forma final) | 'retry' (rede/429/5xx)
+async function _obTentar(op) {
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), OB_TENTATIVA_MS);
+  try {
+    let res, data = null;
+    try {
+      const corpo = JSON.stringify(op.body);
+      res = await fetch(API_URL + op.path + '?rep=' + REP_NAME, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + REP_TOKEN, 'X-Op-Id': op.id },
+        body: corpo,
+        keepalive: corpo.length < 60000,
+        signal: ctrl.signal,
+      });
+      try { data = await res.json(); } catch (_) {}
+    } catch (e) {
+      return { r: 'retry', rede: true, erro: e && e.name === 'AbortError' ? 'Tempo esgotado' : 'Sem conexão' };
+    }
+    if (res.ok && data && data.ok === true) return { r: 'ok', data };
+    const msg = (data && (data.erro || data.error || data.aviso)) || ('Erro ' + res.status);
+    if (res.ok) return { r: 'retry', erro: 'Resposta inválida do servidor' };      // 200 sem {ok:true} nunca conta como gravado
+    if (res.status === 429 || res.status === 408 || res.status >= 500) return { r: 'retry', erro: msg };
+    return { r: 'definitivo', erro: msg };
+  } finally { clearTimeout(tid); }
+}
+function _obConcluir(op, resultado) {
+  const w = _obWaiters[op.id];
+  delete _obWaiters[op.id];
+  if (resultado.r === 'ok') {
+    _outbox = _outbox.filter(o => o.id !== op.id);
+    _obApagar(op); _obBanner();
+    if (w) w.resolve(resultado.data);
+    else { try { showToast('✓ Alteração pendente enviada'); scheduleReload(1500); } catch (_) {} }
+  } else if (w) {
+    // O rep está com a tela aberta: ele já recebe o erro na hora (toast + Reportar) e pode corrigir e
+    // refazer — não prende no aviso permanente.
+    _outbox = _outbox.filter(o => o.id !== op.id);
+    _obApagar(op); _obBanner();
+    w.reject(new Error(resultado.erro));
+  } else {
+    // Já tinha seguido em frente (ou veio de outra aba/sessão): guarda e avisa até reportar.
+    op.st = 'falhou'; op.erro = resultado.erro;
+    _obGravarSeExiste(op); _obBanner();
+    try { showErrorToast('Uma alteração salva no aparelho não foi confirmada: ' + resultado.erro, { acao: op.path, dealId: op.body && op.body.dealId }); } catch (_) {}
+  }
+}
+// Só uma aba envia por vez: lease no localStorage, renovada a cada passo (expira em 45s).
+function _obLease() {
+  try {
+    const agora = Date.now();
+    const atual = JSON.parse(localStorage.getItem(OB_LEASE_KEY) || 'null');
+    if (atual && atual.tab !== OB_TAB_ID && agora - atual.ts < 45000) return false;
+    localStorage.setItem(OB_LEASE_KEY, JSON.stringify({ tab: OB_TAB_ID, ts: agora }));
+    return true;
+  } catch (_) { return true; }
+}
+function _obSoltarLease() { try { const a = JSON.parse(localStorage.getItem(OB_LEASE_KEY) || 'null'); if (a && a.tab === OB_TAB_ID) localStorage.removeItem(OB_LEASE_KEY); } catch (_) {} }
+async function _obDrenar() {
+  if (_obRodando) return;
+  _obRodando = true;
+  let teveLease = false;
+  try {
+    for (;;) {
+      if (!_obLease()) { _obSemLease = true; break; }
+      _obSemLease = false;
+      teveLease = true;
+      _obSincronizar();
+      const agora = Date.now();
+      const bloqueados = new Set();
+      let proximo = null;
+      for (const o of _outbox) {
+        if (o.st === 'falhou') continue;
+        const deal = o.body && o.body.dealId;
+        if (bloqueados.has(deal)) continue;      // ordem por negócio: nunca pula a escrita anterior do mesmo lead
+        if ((o.nextAt || 0) <= agora) { proximo = o; break; }
+        bloqueados.add(deal);
+      }
+      if (!proximo) break;
+      const r = await _obTentar(proximo);
+      if (r.r === 'retry') {
+        proximo.tent = (proximo.tent || 0) + 1;
+        if (!r.rede && r.erro !== 'operacao_em_andamento') proximo.tentSrv = (proximo.tentSrv || 0) + 1;
+        proximo.erro = r.erro;
+        if ((proximo.tentSrv || 0) >= OB_MAX_TENT || Date.now() - proximo.ts > OB_MAX_IDADE_MS) {
+          _obConcluir(proximo, { r: 'definitivo', erro: 'Não foi possível confirmar depois de muitas tentativas (' + (r.erro || '') + ')' });
+        } else {
+          proximo.nextAt = Date.now() + OB_BACKOFF[Math.min(proximo.tent - 1, OB_BACKOFF.length - 1)] + Math.floor(Math.random() * 1500);
+          _obGravarSeExiste(proximo); _obBanner();
+        }
+      } else {
+        _obConcluir(proximo, r);
+      }
+    }
+  } finally {
+    _obRodando = false;
+    if (teveLease) _obSoltarLease();
+    // Reagenda a próxima tentativa exatamente no vencimento do backoff (sem esperar o ciclo de 15s).
+    const pend = _outbox.filter(o => o.st !== 'falhou');
+    if (pend.length) {
+      const quando = _obSemLease ? 5000 : Math.max(100, Math.min.apply(null, pend.map(o => o.nextAt || 0)) - Date.now() + 50);
+      clearTimeout(_obTimer);
+      _obTimer = setTimeout(_obDrenar, quando);
+    }
+  }
+}
+function apiPost(path, body) {
+  // Parte síncrona: grava no aparelho ANTES de qualquer await (vale também quando chamada no pagehide).
+  const op = { id: _obNovoId(), path, body, ts: Date.now(), tent: 0, nextAt: 0, st: 'pendente' };
+  _outbox.push(op);
+  _obGravar(op);
+  loadStart();
+  return new Promise((resolve, reject) => {
+    let feito = false;
+    const fim = () => { if (!feito) { feito = true; loadEnd(); } };
+    _obWaiters[op.id] = {
+      resolve: (d) => { fim(); resolve(d); },
+      reject: (e) => { fim(); reject(e); },
+    };
+    // Depois de OB_GRACE_MS sem confirmação, o rep segue (nunca "carregando infinito"): a alteração
+    // continua garantida na fila e vira aviso no topo; o servidor confirma/recusa depois.
+    setTimeout(() => {
+      if (_obWaiters[op.id]) {
+        delete _obWaiters[op.id];
+        _lastQueuedAt = Date.now();
+        fim();
+        resolve({ ok: true, queued: true });
+      }
+    }, OB_GRACE_MS);
+    setTimeout(_obBanner, OB_AVISO_APOS_MS + 200);
+    _obDrenar();
+  });
+}
+// Deals com escrita ainda na fila (pra tela não "desfazer" visualmente o que o rep acabou de fazer).
+function _obDealsPendentes(path) { const s = new Set(); _outbox.forEach(o => { if (o.st !== 'falhou' && (!path || o.path === path) && o.body) s.add(o.body.dealId); }); return s; }
+_obSincronizar();
+// Retomada: ao abrir/recarregar, ao voltar o sinal, ao voltar pra aba, quando OUTRA aba mexe na fila e a cada 15s.
+(function () {
+  _outbox.forEach(o => { if (o.st !== 'falhou') o.nextAt = 0; });
+  document.addEventListener('DOMContentLoaded', function () { _obBanner(); _obDrenar(); });
+  addEventListener('online', function () { _outbox.forEach(o => { if (o.st !== 'falhou') o.nextAt = 0; }); setTimeout(_obDrenar, Math.floor(Math.random() * 1500)); });
+  addEventListener('pagehide', _obSoltarLease);
+  addEventListener('storage', function (e) { if (e.key && e.key.indexOf(OB_PREFIX) === 0) { _obSincronizar(); _obBanner(); } });
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { _outbox.forEach(o => { if (o.st !== 'falhou') o.nextAt = 0; }); _obDrenar(); } });
+  setInterval(_obDrenar, 15000);
+})();
 
 // Reconfirma com o servidor, alguns segundos depois de uma escrita, que o dado realmente gravou —
 // nunca confiamos só no otimismo local (regra permanente do projeto: nunca confiar em 200 OK).
@@ -1184,6 +1396,7 @@ let _toastTimer;
 function showToast(msg, ms) {
   const el = document.getElementById('toast');
   if (!el) return;
+  if (Date.now() - _lastQueuedAt < 1500) msg = '⏳ Salvo no aparelho — enviando em segundo plano (não perde nada)';
   el.innerHTML = `<span>${esc(msg)}</span>`;
   el.classList.add('show');
   clearTimeout(_toastTimer);
@@ -1935,7 +2148,7 @@ async function finishTask(row, taskId, observacao) {
           if (data && data.lead) {
             // Resposta completa (caminho síncrono antigo, ou servidor já mandou o card pronto).
             _rawLeads[idx] = _transformarLeadAgendor(data.lead);
-          } else if (data && data.pending) {
+          } else if (data && (data.pending || data.queued)) {
             // 🆕 24/09 (Robert: "atualizacao otimista... atualiza rapido o card, a magica acontece em
             // segundo plano"): o backend só confirma que ACEITOU o pedido — a escrita real (+ retry se
             // precisar) roda depois, sem o rep esperar. Atualiza o card JÁ, do mesmo jeito que o
@@ -2106,6 +2319,9 @@ async function saveObs(row) {
         const data = await apiPost('/obs', { dealId: row, texto });
         const idx = _rawLeads.findIndex(l => l.row === row);
         if (idx !== -1 && data && data.lead) _rawLeads[idx] = _transformarLeadAgendor(data.lead);
+        // 🔴 02/10 (auditoria): sem `lead` na resposta (salvo no aparelho / fila) o texto REAL é o que o
+        // rep digitou — nunca o antigo (senão a tela "desfazia" a observação e ele digitava de novo).
+        else if (idx !== -1) _rawLeads[idx] = { ..._rawLeads[idx], obs_rep: texto };
         const leadAtualizado = _rawLeads[idx];
         const textoReal = leadAtualizado ? leadAtualizado.obs_rep : texto;
         if (rep) {
@@ -2985,12 +3201,17 @@ async function loadData() {
 
     const _ctrl = new AbortController();
     const _tid  = setTimeout(() => _ctrl.abort(), 25000);
-    const res   = await fetch(LEADS_URL + '?rep=' + REP_NAME, { headers: { Authorization: 'Bearer ' + REP_TOKEN }, signal: _ctrl.signal });
-    clearTimeout(_tid);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const respJson = await res.json();
+    let res, respJson;
+    try {
+      res = await fetch(LEADS_URL + '?rep=' + REP_NAME, { headers: { Authorization: 'Bearer ' + REP_TOKEN }, signal: _ctrl.signal });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      respJson = await res.json(); // 🔴 02/10: o timeout agora cobre também o CORPO (antes clearTimeout vinha antes — corpo travado = _isLoading preso pra sempre = "carregando infinito")
+    } finally { clearTimeout(_tid); }
     if (!respJson.ok) throw new Error(respJson.erro || 'resposta invalida');
-    const newLeads = (respJson.leads || []).map(_transformarLeadAgendor);
+    const _dealsStatusFila = _obDealsPendentes('/status');   // ganho/perdido ainda na fila: não reaparece como aberto
+    const newLeads = (respJson.leads || []).map(_transformarLeadAgendor).filter(l => !_dealsStatusFila.has(l.row));
+    // Observação digitada e ainda na fila: a tela mantém o texto do rep (o servidor ainda mostra o antigo).
+    _outbox.forEach(o => { if (o.st !== 'falhou' && o.path === '/obs' && o.body) { const l = newLeads.find(x => x.row === o.body.dealId); if (l) l.obs_rep = o.body.texto; } });
 
     newLeads.forEach(function(l) {
       if (l.ts_vend && l.ts_vend > (_tsMap[l.row] || 0)) _tsMap[l.row] = l.ts_vend;
