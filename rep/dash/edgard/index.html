@@ -1221,10 +1221,11 @@ function _obBanner() {
   el.style.display = 'flex';
   if (fal.length) {
     el.style.background = '#7a1f1f'; el.style.color = '#fff';
-    el.innerHTML = '<span>⚠️ ' + fal.length + ' alteração(ões) NÃO confirmada(s) pelo sistema (ficou guardada). Toque em Reportar.</span><span style="display:flex;gap:6px"><button onclick="_obReportar()" style="padding:6px 10px;border-radius:8px;border:0;font-weight:700">Reportar</button><button onclick="_obDispensar()" style="padding:6px 10px;border-radius:8px;border:0;background:#ffffff33;color:#fff">' + (_obDispensarArmado ? 'Tem certeza?' : 'Dispensar') + '</button></span>';
+    el.innerHTML = '<span>⚠️ ' + fal.length + ' alteração(ões) ainda NÃO confirmada(s). O sistema continua tentando sozinho — NÃO refaça a mesma alteração. Toque em Reportar se quiser avisar o gestor.</span><span style="display:flex;gap:6px"><button onclick="_obReportar()" style="padding:6px 10px;border-radius:8px;border:0;font-weight:700">Reportar</button><button onclick="_obDispensar()" style="padding:6px 10px;border-radius:8px;border:0;background:#ffffff33;color:#fff">' + (_obDispensarArmado ? 'Tem certeza?' : 'Dispensar') + '</button></span>';
   } else {
     el.style.background = '#8a5a00'; el.style.color = '#fff';
-    el.innerHTML = '<span>⏳ ' + pend.length + ' alteração(ões) ' + (_obStorageOk ? 'salva(s) no aparelho, enviando… (se fechar, abra o painel de novo quando tiver sinal)' : 'enviando… NÃO feche o app até acabar') + '</span>';
+    const _off = (typeof navigator !== 'undefined' && navigator.onLine === false);
+    el.innerHTML = '<span>' + (_off ? '📵 Sem internet — ' : '⏳ ') + pend.length + ' alteração(ões) ' + (_obStorageOk ? (_off ? 'salva(s) neste aparelho; enviam sozinhas quando a conexão voltar. NÃO limpe os dados do navegador.' : 'salva(s) no aparelho, enviando… (se fechar, abra o painel de novo quando tiver sinal)') : 'enviando… NÃO feche o app até acabar') + '</span>';
   }
 }
 function _obReportar() {
@@ -1236,6 +1237,9 @@ function _obReportar() {
 function _obDispensar() {
   if (!_obDispensarArmado) { _obDispensarArmado = true; _obBanner(); setTimeout(function () { _obDispensarArmado = false; _obBanner(); }, 5000); return; }
   _obDispensarArmado = false;
+  // Dispensar = cancelar DE VERDADE: apaga também a cópia que o servidor ainda tenta (senão executaria horas depois e duplicaria/sobrescreveria).
+  const _ids = _outbox.filter(o => o.st === 'falhou').map(o => o.id);
+  if (_ids.length) { try { fetch(API_URL + '/outbox/cancel?rep=' + REP_NAME, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + REP_TOKEN }, body: JSON.stringify({ ids: _ids }), keepalive: true }).catch(function () {}); } catch (_) {} }
   _outbox.filter(o => o.st === 'falhou').forEach(_obApagar);
   _outbox = _outbox.filter(o => o.st !== 'falhou');
   _obBanner();
@@ -1416,7 +1420,50 @@ _obSincronizar();
   addEventListener('storage', function (e) { if (e.key && e.key.indexOf(OB_PREFIX) === 0) { _obSincronizar(); _obBanner(); } });
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { _outbox.forEach(o => { if (o.st !== 'falhou') o.nextAt = 0; }); _obDrenar(); } });
   setInterval(_obDrenar, 15000);
+  setInterval(_obVigiaPresas, 5 * 60000);
+  addEventListener('online', function () { _obBanner(); setTimeout(_obVigiaPresas, 20000); });
+  addEventListener('offline', function () { _obBanner(); });
+  document.addEventListener('DOMContentLoaded', function () { _obPedirArmazenamentoPersistente(); _obBannerInstalar(); setTimeout(_obVigiaPresas, 30000); });
 })();
+// 🆕 02/10 ("nunca perder dados, nunca"): 3 camadas EXTRAS além da fila + do inbox write-ahead do servidor:
+// (1) pede ao navegador armazenamento PERSISTENTE (não despejável por falta de espaço); (2) no iPhone/Android fora do app instalado,
+// o Safari apaga TUDO que o site guardou após 7 dias sem abrir — app instalado na tela de início NÃO sofre isso, então convida a instalar;
+// (3) VIGIA: alteração pendente no aparelho há >30 min avisa o Robert (via servidor, 1x/hora) — sem sinal ou servidor recusando.
+function _obPedirArmazenamentoPersistente() {
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () {}); } catch (_) {}
+}
+let _obAlertEmVoo = false;
+function _obVigiaPresas() {
+  try {
+    if (_obAlertEmVoo) return;
+    const agora = Date.now();
+    const velhas = _outbox.filter(o => o.st !== 'falhou' && agora - o.ts > 30 * 60000);
+    if (!velhas.length || (navigator.onLine === false)) return;
+    let ult = 0; try { ult = Number(localStorage.getItem('lifeb_obalert_' + REP_NAME) || 0); } catch (_) {}
+    if (agora - ult < 3600000) return;
+    _obAlertEmVoo = true;
+    const maisAntiga = Math.round((agora - Math.min.apply(null, velhas.map(o => o.ts))) / 60000);
+    fetch(API_URL + '/outbox/alert?rep=' + REP_NAME, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + REP_TOKEN }, body: JSON.stringify({ n: velhas.length, maisAntigaMin: maisAntiga, paths: velhas.map(o => o.path) })}).then(function (r) { if (r && r.ok) { try { localStorage.setItem('lifeb_obalert_' + REP_NAME, String(agora)); } catch (_) {} } _obAlertEmVoo = false; }).catch(function () { _obAlertEmVoo = false; });
+  } catch (_) {}
+}
+function _obBannerInstalar() {
+  try {
+    const ua = navigator.userAgent || '';
+    if (!/iPhone|iPad|iPod/.test(ua)) return;                       // a instrução (Compartilhar ▸ Tela de Início) é do iOS; Android usa o menu do Chrome
+    const instalado = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+    if (instalado) return;
+    // iOS: o app instalado tem armazenamento SEPARADO do Safari — só convida com a fila VAZIA (senão alterações presas no Safari ficariam pra trás)
+    if (_outbox.some(o => o.st !== 'falhou')) return;
+    const ate = Number(localStorage.getItem('lifeb_instalar_dispensado') || 0);
+    if (Date.now() < ate) return;
+    const el = document.createElement('div');
+    el.id = 'instalar-banner';
+    el.style.cssText = 'margin:8px;padding:9px 12px;border-radius:10px;background:#704B9B;color:#fff;font:600 12.5px/1.35 system-ui,sans-serif;display:flex;gap:10px;align-items:center;justify-content:space-between';
+    el.innerHTML = '<span>📲 Instale o painel na tela de início (Compartilhar ▸ Adicionar à Tela de Início). Protege seus registros e abre mais rápido. <b>Espere o aviso amarelo sumir antes de instalar.</b></span><button style="padding:5px 9px;border-radius:8px;border:0;background:#ffffff33;color:#fff;font-weight:700" id="instalar-ok">Entendi</button>';
+    document.body.insertBefore(el, document.body.firstChild);       // no fluxo da página, acima do cabeçalho — nunca cobre botões
+    document.getElementById('instalar-ok').onclick = function () { try { localStorage.setItem('lifeb_instalar_dispensado', String(Date.now() + 30 * 86400000)); } catch (_) {} el.remove(); };
+  } catch (_) {}
+}
 
 // Reconfirma com o servidor, alguns segundos depois de uma escrita, que o dado realmente gravou —
 // nunca confiamos só no otimismo local (regra permanente do projeto: nunca confiar em 200 OK).
