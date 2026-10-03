@@ -578,6 +578,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 .orig-lbn{font-size:10.5px;font-weight:800;fill:var(--text)}
 .orig-lbp{font-size:11px;font-weight:800}
 .orig-legend{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:space-evenly;gap:4px}
+.orig-legend .orig-item:last-child:nth-child(odd){grid-column:1/-1}
 .orig-item{border-left:4px solid var(--c);background:#faf8fc;background:linear-gradient(90deg,color-mix(in srgb,var(--c) 8%,#fff),#fff 75%);border-radius:8px;padding:5px 9px;cursor:pointer;min-width:0}
 .orig-item:hover{box-shadow:0 2px 8px -3px rgba(26,22,38,.25)}
 .orig-item.zero{opacity:.55}
@@ -2339,6 +2340,7 @@ function computeLtvData(allRows, originFilter, periodType, customFrom, customTo,
 const ORIGEM_REATIV_STAGE_ = REATIVACAO75_STAGE_IDS;
 const ORIGEM_CANAIS_ = [
   { key: 'outbound',   label: 'Outbound',        color: '#704B9B', tx: '#5a3a80', sub: 'prospecção ativa' },
+  { key: 'superagos',  label: 'SuperAgos',       color: '#2f7de1', tx: '#1f5fb8', sub: 'outbound · feira Super Agos' },
   { key: 'inbound',    label: 'Inbound',         color: '#E92085', tx: '#c2185b', sub: 'anúncios · Meta' },
   { key: 'reposicao',  label: 'Reposição',       color: '#1baf7a', tx: '#0f8a5e', sub: 'funil Pós-venda' },
   { key: 'reativacao', label: 'Reativação', color: '#eda100', tx: '#a86f00', sub: 'funil Reativação +75 dias' }
@@ -2351,12 +2353,17 @@ function computeOrigemBreakdown(allRows, from, to, todayStr) {
   // Origem ausente/inesperada (null, "", "Outbound"...) conta como Outbound — mesma regra
   // padrão do resolvedor de origem (default outbound) — pra nunca sumir da rosca
   // enquanto o hero em "Ambos" ainda conta a venda (invariante rosca == Ganho+Reposição).
-  const rowsOut = allRows.map(d => (d.origin !== 'inbound' && d.origin !== 'outbound') ? Object.assign({}, d, { origin: 'outbound' }) : d);
-  const out = computeDashboardData(rowsOut, 'outbound', 'custom', from, to, todayStr);
-  const inn = computeDashboardData(allRows, 'inbound',  'custom', from, to, todayStr);
+  // 🆕 03/10 (Robert: "SuperAgos conta como Outbound, só quero destaque na rosca da aba Vendas"): negócio da cadência
+  // SUPERAGOS 2026 (origem_especial='superagos') é OUTBOUND em tudo (filtros, hero, abas); aqui ele só é SEPARADO da fatia
+  // Outbound pra ganhar cor própria — Outbound + SuperAgos == o Outbound de antes, o total da rosca não muda.
+  const isSA_ = d => String(d.origem_especial || '').toLowerCase() === 'superagos';
+  const rowsOut = allRows.map(d => (isSA_(d) || (d.origin !== 'inbound' && d.origin !== 'outbound')) ? Object.assign({}, d, { origin: 'outbound' }) : d);
+  const out = computeDashboardData(rowsOut.filter(d => !isSA_(d)), 'outbound', 'custom', from, to, todayStr);
+  const sa  = computeDashboardData(rowsOut.filter(isSA_), 'outbound', 'custom', from, to, todayStr);
+  const inn = computeDashboardData(rowsOut, 'inbound',  'custom', from, to, todayStr);
   const rep = computeLtvData(allRows.filter(d => !ORIGEM_REATIV_STAGE_.has(String(d.stage_id))), 'both', 'custom', from, to, todayStr);
   const rea = computeLtvData(allRows.filter(d => ORIGEM_REATIV_STAGE_.has(String(d.stage_id))), 'both', 'custom', from, to, todayStr);
-  const src = { outbound: out, inbound: inn, reposicao: rep, reativacao: rea };
+  const src = { outbound: out, superagos: sa, inbound: inn, reposicao: rep, reativacao: rea };
   const canais = ORIGEM_CANAIS_.map(c => {
     const k = src[c.key].kpis;
     return {
@@ -2380,12 +2387,17 @@ function origemMoneyShort_(v) {
 // filtro de origem; Reposição/Reativação são funis próprios, vistos na aba LTV).
 function origemSel_() { return (_originMode === 'outbound' || _originMode === 'inbound') ? _originMode : null; }
 
+// SuperAgos é Outbound: com o filtro Outbound ligado as 2 fatias ficam em destaque juntas.
+function origemSelCasa_(sel, key) { return sel === key || (sel === 'outbound' && key === 'superagos'); }
+function origemAtivo_(foco, key, hoverKey) { return foco === key || (!hoverKey && foco === 'outbound' && key === 'superagos'); }
+
 // textos do centro da rosca: [rótulo, valor, detalhe]
 function origemCenter_(bd, mode, hoverKey) {
   const tot = mode === 'n' ? bd.totalCont : bd.totalValor;
   const sel = origemSel_();
   const foco = hoverKey || sel;
-  const foc = foco ? bd.canais.find(c => c.key === foco) : null;
+  let foc = foco ? bd.canais.find(c => c.key === foco) : null;
+  if (foc && !hoverKey && sel === 'outbound') { const sa = bd.canais.find(c => c.key === 'superagos'); if (sa) foc = Object.assign({}, foc, { valor: foc.valor + sa.valor, cont: foc.cont + sa.cont }); } // filtro Outbound = Outbound + SuperAgos
   if (foc) {
     const v = mode === 'n' ? foc.cont : foc.valor;
     return [(!hoverKey && sel ? 'Filtro · ' : '') + foc.label,
@@ -2419,10 +2431,10 @@ function origemDonutSVG_(bd, mode, hoverKey, animate) {
       const len = (val / tot) * C;
       const gap = vivos.length > 1 ? Math.min(2.5, len * 0.4) : 0;
       const vis = Math.max(len - gap, 0.01);
-      const ativo = foco === c.key;
+      const ativo = origemAtivo_(foco, c.key, hoverKey);
       const dim = foco && !ativo ? ' opacity=".3"' : '';
-      const acao = (c.key === 'outbound' || c.key === 'inbound')
-        ? (sel === c.key ? 'Limpar filtro ' + c.label : 'Filtrar painel por ' + c.label)
+      const acao = (c.key === 'outbound' || c.key === 'inbound' || c.key === 'superagos')
+        ? (origemSelCasa_(sel, c.key) ? 'Limpar filtro ' + c.label : 'Filtrar painel por ' + (c.key === 'superagos' ? 'Outbound (SuperAgos é outbound)' : c.label))
         : 'Abrir aba LTV (' + c.label + ')';
       segs += `<circle class="orig-seg" data-k="${c.key}" tabindex="0" role="button" aria-label="${escHtml(acao)}" cx="100" cy="100" r="${R}" fill="none" stroke="${c.color}" stroke-width="${ativo ? W + 6 : W}" stroke-dasharray="${vis.toFixed(2)} ${(C - vis).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}"${dim}><title>${escHtml(acao)}</title></circle>`;
       labs.push({ th: -Math.PI / 2 + ((off + len / 2) / C) * 2 * Math.PI, c, frac: val / tot });
@@ -2450,7 +2462,7 @@ function origemDonutSVG_(bd, mode, hoverKey, animate) {
       for (let i = 1; i < arr.length; i++) if (arr[i].y < arr[i - 1].y + (soPct ? 12 : 22)) arr[i].y = arr[i - 1].y + (soPct ? 12 : 22); // anti-colisão vertical
       arr.forEach(it => {
         const c = it.l.c, ex = it.p1[0] + it.dir * 7, ty = Math.min(Math.max(it.y, soPct ? 2 : 3), soPct ? 200 : 194), tx = ex + it.dir * 2.5;
-        const dim = foco && foco !== c.key ? ' opacity=".3"' : '';
+        const dim = foco && !origemAtivo_(foco, c.key, hoverKey) ? ' opacity=".3"' : '';
         lbHTML += `<g class="orig-lb" data-k="${c.key}"${dim}><polyline class="orig-lbl" points="${it.p0[0].toFixed(1)},${it.p0[1].toFixed(1)} ${it.p1[0].toFixed(1)},${it.p1[1].toFixed(1)} ${ex.toFixed(1)},${ty.toFixed(1)}" stroke="${c.color}"></polyline><text x="${tx.toFixed(1)}" y="${(ty + (soPct ? 3 : -1)).toFixed(1)}" text-anchor="${it.dir > 0 ? 'start' : 'end'}" class="orig-lbt">${soPct ? '' : '<tspan class="orig-lbn">' + escHtml(c.label) + '</tspan><tspan x="' + tx.toFixed(1) + '" dy="11.5" '}${soPct ? '<tspan ' : ''}class="orig-lbp" fill="${c.tx}">${Math.round(it.l.frac * 100)}%</tspan></text></g>`;
       });
     });
@@ -2483,10 +2495,10 @@ function origemLegendHTML_(bd, prev, mode) {
     const l2 = mode === 'n'
       ? '<b>' + nv + '</b><span class="orig-i-cnt"><span class="orig-i-dot"> · </span>' + origemMoneyShort_(c.valor) + '</span>'
       : '<b>' + origemMoneyShort_(c.valor) + '</b><span class="orig-i-cnt"><span class="orig-i-dot"> · </span>' + nv + '</span>';
-    const isFiltro = c.key === 'outbound' || c.key === 'inbound';
-    const tip0 = isFiltro ? (sel === c.key ? 'Clique para limpar o filtro' : 'Clique para filtrar o painel por ' + c.label) : 'Clique para abrir a aba LTV (Pós-venda)';
+    const isFiltro = c.key === 'outbound' || c.key === 'inbound' || c.key === 'superagos';
+    const tip0 = isFiltro ? (origemSelCasa_(sel, c.key) ? 'Clique para limpar o filtro' : 'Clique para filtrar o painel por ' + (c.key === 'superagos' ? 'Outbound (SuperAgos é outbound)' : c.label)) : 'Clique para abrir a aba LTV (Pós-venda)';
     const tip = tip0 + ' · ticket médio ' + ticket;
-    return `<div class="orig-item${val <= 0 ? ' zero' : ''}${sel === c.key ? ' sel' : ''}${sel && sel !== c.key && isFiltro ? ' off' : ''}" style="--c:${c.color};--t:${c.tx}" data-k="${c.key}" tabindex="0" aria-label="${escHtml(c.label + ': ' + tip)}" title="${escHtml(tip)}">
+    return `<div class="orig-item${val <= 0 ? ' zero' : ''}${origemSelCasa_(sel, c.key) ? ' sel' : ''}${sel && !origemSelCasa_(sel, c.key) && isFiltro ? ' off' : ''}" style="--c:${c.color};--t:${c.tx}" data-k="${c.key}" tabindex="0" aria-label="${escHtml(c.label + ': ' + tip)}" title="${escHtml(tip)}">
       <div class="orig-i-top"><span class="orig-i-name">${escHtml(c.label)}${isFiltro ? '' : '<span class="orig-i-go">LTV ›</span>'}</span><span class="orig-i-pc">${pc}%</span><button class="orig-i-open" type="button" data-open="${c.key}" title="Ver as vendas deste canal" aria-label="Ver as vendas de ${escHtml(c.label)}">↗</button></div>
       <div class="orig-i-sub"><span class="orig-i-l2">${l2}</span>${delta}</div>
       <div class="orig-i-bar"><i style="width:${pc}%"></i></div>
@@ -2495,8 +2507,9 @@ function origemLegendHTML_(bd, prev, mode) {
 }
 
 function origemFootHTML_(bd) {
-  const novos = bd.canais[0].valor + bd.canais[1].valor;
-  const recor = bd.canais[2].valor + bd.canais[3].valor;
+  const cv_ = k => (bd.canais.find(c => c.key === k) || { valor: 0 }).valor; // por chave (a ordem das fatias mudou com SuperAgos)
+  const novos = cv_('outbound') + cv_('superagos') + cv_('inbound');
+  const recor = cv_('reposicao') + cv_('reativacao');
   const t = bd.totalValor;
   const pn = t > 0 ? Math.round((novos / t) * 100) : 0;
   return `<span>Novos clientes <b>${origemMoneyShort_(novos)}</b>${t > 0 ? ' (' + pn + '%)' : ''}</span><span>Recorrência <b>${origemMoneyShort_(recor)}</b>${t > 0 ? ' (' + (100 - pn) + '%)' : ''}</span>`;
@@ -2541,11 +2554,11 @@ function origemHover_(key) {
   if (!svg) return;
   const foco = _origemHover || origemSel_();
   svg.querySelectorAll('.orig-seg').forEach(c => {
-    const ativo = foco === c.dataset.k;
+    const ativo = origemAtivo_(foco, c.dataset.k, _origemHover);
     c.setAttribute('stroke-width', ativo ? 32 : 26);
     if (foco && !ativo) c.setAttribute('opacity', '.3'); else c.removeAttribute('opacity');
   });
-  svg.querySelectorAll('.orig-lb').forEach(g => { if (foco && foco !== g.dataset.k) g.setAttribute('opacity', '.3'); else g.removeAttribute('opacity'); });
+  svg.querySelectorAll('.orig-lb').forEach(g => { if (foco && !origemAtivo_(foco, g.dataset.k, _origemHover)) g.setAttribute('opacity', '.3'); else g.removeAttribute('opacity'); });
   const [l1, l2, l3] = origemCenter_(_origemData.bd, _origemMode, _origemHover);
   const t = svg.querySelectorAll('text');
   if (t.length >= 3) { t[0].textContent = l1; t[1].textContent = l2; t[1].style.fontSize = (l2.length > 9 ? 18 : 21) + 'px'; t[2].textContent = l3; }
@@ -2614,8 +2627,9 @@ function setOrigemMode(m) {
 // funis próprios do Pós-venda, então abrem a aba LTV (onde vivem funil, ranking
 // e motivos de perda deles).
 function origemFiltrar_(key) {
-  if (key === 'outbound' || key === 'inbound') {
-    const alvo = (_originMode === key) ? 'both' : key;
+  if (key === 'outbound' || key === 'inbound' || key === 'superagos') {
+    const k2 = key === 'superagos' ? 'outbound' : key; // SuperAgos é outbound: filtra Outbound (as 2 fatias acendem juntas)
+    const alvo = (_originMode === k2) ? 'both' : k2;
     const chip = document.querySelector('.ochip[data-o="' + alvo + '"]');
     if (chip) setOrigin(chip);
   } else {
@@ -3796,6 +3810,7 @@ async function fetchRawDeals() {
     : 'select=*&synced_at=gt.' + encodeURIComponent(_lastDealsSyncedAt_);
   const fresh = await _fetchTablePage_('dash_geral_deals', query);
   fresh.forEach(d => {
+    if (String(d.origem_especial || '').toLowerCase() === 'superagos') d.origin = 'outbound'; // 🆕 03/10: SuperAgos conta como OUTBOUND em tudo (destaque só na rosca de Vendas)
     d.closed_at = _effectiveClosedAt(d);
     if (d.synced_at && (!_lastDealsSyncedAt_ || d.synced_at > _lastDealsSyncedAt_)) _lastDealsSyncedAt_ = d.synced_at;
   });
@@ -6148,7 +6163,7 @@ function renderSkeletonSections() {
   el('lb-rows').innerHTML = Array(5).fill(0).map(skeletonLbRow).join('');
   // Origem das Vendas (29/09): anel cinza + 4 linhas de legenda até o 1º cálculo.
   el('origem-donut').innerHTML = '<div class="orig-skel-ring"></div>';
-  el('origem-legend').innerHTML = Array(4).fill('<div class="orig-item zero" style="--c:#d9d2e8"><div class="orig-i-top"><span class="skel" style="width:55%;min-width:0"></span></div><div class="orig-i-sub"><span class="skel" style="width:75%;min-width:0;height:.7em"></span></div></div>').join('');
+  el('origem-legend').innerHTML = Array(5).fill('<div class="orig-item zero" style="--c:#d9d2e8"><div class="orig-i-top"><span class="skel" style="width:55%;min-width:0"></span></div><div class="orig-i-sub"><span class="skel" style="width:75%;min-width:0;height:.7em"></span></div></div>').join('');
 }
 
 // ── RENDER ───────────────────────────────────────────────────
