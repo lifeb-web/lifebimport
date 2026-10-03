@@ -146,6 +146,7 @@
     .lc-empresa { font-size:13px; font-weight:800; color:var(--text); line-height:1.2; flex:1; min-width:0; word-break:break-word; }
     /* 🆕 18/09: badge de Reposição/Reativação — Robert pediu destaque claro pra esses 2 casos */
     .lc-funil-badge { display:inline-block; font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.02em; padding:2px 7px; border-radius:999px; margin-left:6px; vertical-align:middle; white-space:nowrap; }
+    .lc-seg-badge { display:inline-block; font-size:9px; font-weight:700; letter-spacing:.02em; padding:2px 7px; border-radius:999px; margin-left:6px; vertical-align:middle; background:rgba(20,120,110,.12); color:#0f6b62; }
     .lc-funil-badge.reposicao { background:rgba(112,75,155,.12); color:var(--purple); }
     .lc-funil-badge.reativacao75 { background:rgba(217,119,6,.14); color:#97600a; }
     .lc-nome { font-size:11px; font-weight:600; color:var(--muted); margin-bottom:8px; line-height:1.3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -812,6 +813,7 @@ function _transformarLeadAgendor(l) {
     whatsapp: l.telefone || '',
     status: BUCKET_TO_STATUS[l.bucket] || 'Em contato',
     funil_tag: l.funilTag || '',
+    segmento: l.segmento || '',
     pot: Number(l.valorPotencial) || 0,
     obs_sdr: l.obsSdr || '', // 🔴 FIX 19/09: SÓ-LEITURA — nunca editado pelo painel, ver seção OBS abaixo
     obs_rep: l.obsRep || '', // é este campo (não obs_sdr) que o painel de fato edita/salva
@@ -1373,6 +1375,37 @@ function apiPost(path, body) {
 }
 // Deals com escrita ainda na fila (pra tela não "desfazer" visualmente o que o rep acabou de fazer).
 function _obDealsPendentes(path) { const s = new Set(); _outbox.forEach(o => { if (o.st !== 'falhou' && (!path || o.path === path) && o.body) s.add(o.body.dealId); }); return s; }
+// Aplica POR CIMA dos dados do servidor tudo que o rep já fez e ainda está na fila (não confirmado): a tela nunca "desfaz"
+// o que ele acabou de registrar (auditoria 02/10, M5/N3 — era o que levava o rep a refazer e duplicar). Mesmos efeitos do
+// servidor: obs → texto digitado; pipeline → valor; concluir → sem tarefa aberta; reagendar → nova data/hora; criar → tarefa
+// "⏳ enviando". Ganho/Perdido na fila escondem o card (ver loadData). Idempotente: aplicar de novo sobre dado já confirmado
+// dá o mesmo resultado.
+function _obAplicarOp(l, o) {
+  const b = o.body || {};
+  if (o.path === '/obs') return { ...l, obs_rep: String(b.texto || '') };
+  if (o.path === '/pipeline') return { ...l, pot: Number(b.valor) || l.pot };
+  if (o.path === '/task/finish') return (l.tarefaAberta && l.tarefaAberta.id && b.taskId && Number(l.tarefaAberta.id) !== Number(b.taskId)) ? l : { ...l, tarefaAberta: null, status: l.status === 'Em negociação' ? 'Em negociação' : 'Aguardando contato' };
+  if (o.path === '/task/reschedule') {
+    const t = l.tarefaAberta;
+    if (!t || !t.id || (b.taskId && Number(t.id) !== Number(b.taskId))) return l;   // só reaplica sobre A MESMA tarefa (sem tarefa/outra tarefa: mantém o do servidor)
+    const hh = /^\d{2}:\d{2}$/.test(b.dueTime || '') ? b.dueTime : '09:00';
+    return { ...l, tarefaAberta: { ...t, dueDate: String(b.dueDate || '').slice(0, 10) + 'T' + hh + ':00', _pendente: true } };
+  }
+  if (o.path === '/task/create') {
+    const hh = /^\d{2}:\d{2}$/.test(b.dueTime || '') ? b.dueTime : '09:00';
+    return { ...l, tarefaAberta: { id: null, texto: String(b.texto || ''), tipo: b.tipo || '', dueDate: String(b.dueDate || '').slice(0, 10) + 'T' + hh + ':00', _pendente: true } };
+  }
+  return l;
+}
+function _obAplicarPendencias(leads) {
+  const ops = _outbox.filter(o => o.st !== 'falhou' && o.body).sort((a, b) => a.ts - b.ts);
+  if (!ops.length) return leads;
+  return leads.map(l => ops.reduce((x, o) => (o.body.dealId === l.row ? _obAplicarOp(x, o) : x), l));
+}
+function _aplicarFilaNaTela(row) {
+  _rawLeads = _ordenarFilaLocal(_obAplicarPendencias(_rawLeads));
+  renderLeads(_rawLeads, row);
+}
 _obSincronizar();
 // Retomada: ao abrir/recarregar, ao voltar o sinal, ao voltar pra aba, quando OUTRA aba mexe na fila e a cada 15s.
 (function () {
@@ -1413,8 +1446,11 @@ function showToast(msg, ms) {
 // desfazer depois de gravado). É mais rápido que um modal de confirmação (não trava o fluxo) e mais
 // seguro que gravar na hora sem chance de voltar atrás.
 const _pendingActions = {};
-function _confirmarComJanela(key, { mensagem, ms, executar, aoDesfazer }) {
+function _confirmarComJanela(key, { mensagem, ms, executar, aoDesfazer, enviarAnteriorAoSubstituir }) {
   const anterior = _pendingActions[key];
+  // 🔴 02/10 (auditoria M2): 2 criações de tarefa no mesmo negócio dentro da janela de Desfazer — a 1ª era DESCARTADA sem aviso.
+  // Com `enviarAnteriorAoSubstituir` a anterior é ENVIADA na hora (vai pra fila durável) em vez de sumir.
+  if (anterior && enviarAnteriorAoSubstituir && typeof anterior.executar === 'function') { try { anterior.executar(); } catch (_) {} }
   if (anterior) { clearTimeout(anterior.timer); if (typeof anterior.aoDesfazer === 'function') { /* substitui, não desfaz visualmente de novo */ } }
   const wait = ms || 5000;
   const timer = setTimeout(async () => {
@@ -1941,9 +1977,9 @@ function _tarefaBlockHtml(l) {
   const late      = _precisaAtencao(l);
   const diasAtraso = late ? _diasParado(t.dueDate) : null;
   const stalled   = diasAtraso != null && diasAtraso >= 7;
-  const dueLbl    = dueRaw
+  const dueLbl    = (dueRaw
     ? (late ? `Venceu há ${diasAtraso} dia${diasAtraso===1?'':'s'}` : 'Vence ' + fmtData(dueRaw))
-    : 'Sem data de vencimento';
+    : 'Sem data de vencimento') + (t._pendente ? ' · ⏳ enviando' : '');
   const TIPO_ICON = { LIGACAO: '📞', WHATSAPP: '💬', VISITA: '🏠', REUNIAO: '🤝', EMAIL: '✉️', PROPOSTA: '📄' };
   const tipoUp = String(t.tipo||'').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
   const tipoIcon = stalled ? '🆘' : (TIPO_ICON[tipoUp] || (late ? '🔴' : '📌'));
@@ -2046,6 +2082,7 @@ async function saveTask(row) {
   const _card = document.querySelector(`.lead-card[data-row="${row}"]`);
   if (_card) _card.classList.add('lc-salvando');
   _confirmarComJanela('task-' + row, {
+    enviarAnteriorAoSubstituir: true,
     mensagem: 'Tarefa agendada — Desfazer?',
     ms: 5000,
     aoDesfazer: () => {
@@ -2066,9 +2103,9 @@ async function saveTask(row) {
         const data = await apiPost('/task/create', { dealId: row, texto, dueDate, tipo, dueTime });
         const idx = _rawLeads.findIndex(l => l.row === row);
         if (idx !== -1 && data && data.lead) {
-          _rawLeads[idx] = _transformarLeadAgendor(data.lead);
+          _rawLeads[idx] = _obAplicarPendencias([_transformarLeadAgendor(data.lead)])[0];
           _rawLeads = _ordenarFilaLocal(_rawLeads);
-        }
+        } else if (data && data.queued) _rawLeads = _ordenarFilaLocal(_obAplicarPendencias(_rawLeads));   // salvo no aparelho: mostra "⏳ enviando" no card
         showToast('Tarefa criada ✓');
         renderLeads(_rawLeads, row);
         const _cardNovo = document.querySelector(`.lead-card[data-row="${row}"]`);
@@ -2147,7 +2184,7 @@ async function finishTask(row, taskId, observacao) {
         if (idx !== -1) {
           if (data && data.lead) {
             // Resposta completa (caminho síncrono antigo, ou servidor já mandou o card pronto).
-            _rawLeads[idx] = _transformarLeadAgendor(data.lead);
+            _rawLeads[idx] = _obAplicarPendencias([_transformarLeadAgendor(data.lead)])[0];
           } else if (data && (data.pending || data.queued)) {
             // 🆕 24/09 (Robert: "atualizacao otimista... atualiza rapido o card, a magica acontece em
             // segundo plano"): o backend só confirma que ACEITOU o pedido — a escrita real (+ retry se
@@ -2241,9 +2278,9 @@ async function rescheduleTask(row, taskId, dueDate, dueTime) {
         const data = await apiPost('/task/reschedule', { dealId: row, taskId, dueDate, dueTime });
         const idx = _rawLeads.findIndex(l => l.row === row);
         if (idx !== -1 && data && data.lead) {
-          _rawLeads[idx] = _transformarLeadAgendor(data.lead);
+          _rawLeads[idx] = _obAplicarPendencias([_transformarLeadAgendor(data.lead)])[0];
           _rawLeads = _ordenarFilaLocal(_rawLeads);
-        }
+        } else if (data && data.queued) _rawLeads = _ordenarFilaLocal(_obAplicarPendencias(_rawLeads));   // salvo no aparelho: nova data já na tela
         showToast('Tarefa reagendada ✓');
         renderLeads(_rawLeads, row);
         const _cardNovo = document.querySelector(`.lead-card[data-row="${row}"]`);
@@ -2318,7 +2355,7 @@ async function saveObs(row) {
         // com o que o servidor gravou de verdade.
         const data = await apiPost('/obs', { dealId: row, texto });
         const idx = _rawLeads.findIndex(l => l.row === row);
-        if (idx !== -1 && data && data.lead) _rawLeads[idx] = _transformarLeadAgendor(data.lead);
+        if (idx !== -1 && data && data.lead) _rawLeads[idx] = _obAplicarPendencias([_transformarLeadAgendor(data.lead)])[0];
         // 🔴 02/10 (auditoria): sem `lead` na resposta (salvo no aparelho / fila) o texto REAL é o que o
         // rep digitou — nunca o antigo (senão a tela "desfazia" a observação e ele digitava de novo).
         else if (idx !== -1) _rawLeads[idx] = { ..._rawLeads[idx], obs_rep: texto };
@@ -2472,7 +2509,8 @@ async function submitStatusPrompt(row) {
         try {
           const data = await apiPost('/pipeline', { dealId: row, valor: n });
           const idx = _rawLeads.findIndex(l => l.row === row);
-          if (idx !== -1 && data && data.lead) _rawLeads[idx] = _transformarLeadAgendor(data.lead);
+          if (idx !== -1 && data && data.lead) _rawLeads[idx] = _obAplicarPendencias([_transformarLeadAgendor(data.lead)])[0];
+          else if (data && data.queued) _rawLeads = _obAplicarPendencias(_rawLeads);
           if (_card) _card.classList.remove('lc-salvando');
           const potEl = document.getElementById('pot-' + row); // feedback instantâneo, ver mesmo padrão em saveObs
           if (potEl) potEl.textContent = cur(n);
@@ -2517,7 +2555,7 @@ async function submitStatusPrompt(row) {
         try {
           const data = await apiPost('/status', { dealId: row, acao: 'ganho', valor: n });
           const idx = _rawLeads.findIndex(l => l.row === row);
-          if (idx !== -1 && data && data.lead) _rawLeads[idx] = _transformarLeadAgendor(data.lead);
+          if (idx !== -1 && data && data.lead) _rawLeads[idx] = _obAplicarPendencias([_transformarLeadAgendor(data.lead)])[0];
           setLeadTs(row);
           showToast('🎉 Negócio marcado como Ganho');
           enterConcludingMode(row);
@@ -2579,7 +2617,7 @@ async function submitStatusPrompt(row) {
       try {
         const data = await apiPost('/status', { dealId: row, acao: 'perdido', motivo, observacao });
         const idx = _rawLeads.findIndex(l => l.row === row);
-        if (idx !== -1 && data && data.lead) _rawLeads[idx] = _transformarLeadAgendor(data.lead);
+        if (idx !== -1 && data && data.lead) _rawLeads[idx] = _obAplicarPendencias([_transformarLeadAgendor(data.lead)])[0];
         showToast('Negócio marcado como Perdido');
         _removeLeadToHistory(row);
       } catch (err) {
@@ -2690,7 +2728,7 @@ function renderLeads(leads, highlightRow) {
     const subtitulo = nomeEmp && nomeRaw && nomeRaw.toLowerCase() !== nomeEmp.toLowerCase() ? nomeRaw : '';
     const cnpj      = l.cnpj||'';
     const endereco  = toTitleCase(l.endereco||'');
-    const funilBadge = l.funil_tag ? `<span class="lc-funil-badge ${l.funil_tag}">${FUNIL_BADGE_LABEL[l.funil_tag] || l.funil_tag}</span>` : '';
+    const funilBadge = (l.funil_tag ? `<span class="lc-funil-badge ${l.funil_tag}">${FUNIL_BADGE_LABEL[l.funil_tag] || l.funil_tag}</span>` : '') + (l.segmento ? `<span class="lc-seg-badge">${esc(l.segmento)}</span>` : '');
 
     const cpRows = _buildCpRows(l, { nomeRaw, nomeEmp, cnpj, endereco, phone, contato });
     const hasContact = cpRows.length > 0;
@@ -3209,9 +3247,9 @@ async function loadData() {
     } finally { clearTimeout(_tid); }
     if (!respJson.ok) throw new Error(respJson.erro || 'resposta invalida');
     const _dealsStatusFila = _obDealsPendentes('/status');   // ganho/perdido ainda na fila: não reaparece como aberto
-    const newLeads = (respJson.leads || []).map(_transformarLeadAgendor).filter(l => !_dealsStatusFila.has(l.row));
-    // Observação digitada e ainda na fila: a tela mantém o texto do rep (o servidor ainda mostra o antigo).
-    _outbox.forEach(o => { if (o.st !== 'falhou' && o.path === '/obs' && o.body) { const l = newLeads.find(x => x.row === o.body.dealId); if (l) l.obs_rep = o.body.texto; } });
+    let newLeads = (respJson.leads || []).map(_transformarLeadAgendor).filter(l => !_dealsStatusFila.has(l.row));
+    // Tudo que o rep já fez e ainda está na fila (obs, pipeline, concluir, reagendar, criar) é aplicado por cima do dado do servidor.
+    newLeads = _obAplicarPendencias(newLeads);
 
     newLeads.forEach(function(l) {
       if (l.ts_vend && l.ts_vend > (_tsMap[l.row] || 0)) _tsMap[l.row] = l.ts_vend;
