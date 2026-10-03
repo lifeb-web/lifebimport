@@ -146,6 +146,13 @@
     .lc-empresa { font-size:13px; font-weight:800; color:var(--text); line-height:1.2; flex:1; min-width:0; word-break:break-word; }
     /* 🆕 18/09: badge de Reposição/Reativação — Robert pediu destaque claro pra esses 2 casos */
     .lc-funil-badge { display:inline-block; font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.02em; padding:2px 7px; border-radius:999px; margin-left:6px; vertical-align:middle; white-space:nowrap; }
+    /* 🆕 03/10: lead SuperAgos = prioridade máxima — selo azul + contorno azul no card + faixa com contador no topo da lista */
+    .lc-sa-badge { display:inline-block; font-size:10px; font-weight:800; letter-spacing:.03em; padding:3px 8px; border-radius:999px; margin-left:6px; vertical-align:middle; background:#2f7de1; color:#fff; }
+    .lead-card.lc-sa { box-shadow:0 0 0 2px rgba(47,125,225,.7), 0 2px 10px rgba(47,125,225,.18); background:linear-gradient(90deg, rgba(47,125,225,.08), var(--card) 45%); }
+    .lead-card.lc-sa.lc-atencao { box-shadow:0 0 0 2px rgba(47,125,225,.7), 0 0 0 4px rgba(220,38,38,.45), 0 2px 10px rgba(47,125,225,.18); } /* SuperAgos atrasado: mantém o aviso vermelho por fora do azul */
+    .sa-banner { display:flex; align-items:center; gap:8px; margin:0 0 10px; padding:10px 14px; border-radius:12px; background:#2f7de1; color:#fff; font-size:13px; font-weight:700; cursor:pointer; }
+    .sa-banner.on { box-shadow:0 0 0 3px rgba(47,125,225,.35); }
+    .sa-banner small { font-weight:600; opacity:.9; margin-left:auto; }
     .lc-seg-badge { display:inline-block; font-size:9px; font-weight:700; letter-spacing:.02em; padding:2px 7px; border-radius:999px; margin-left:6px; vertical-align:middle; background:rgba(20,120,110,.12); color:#0f6b62; }
     .lc-funil-badge.reposicao { background:rgba(112,75,155,.12); color:var(--purple); }
     .lc-funil-badge.reativacao75 { background:rgba(217,119,6,.14); color:#97600a; }
@@ -770,6 +777,7 @@ const BUCKET_TO_STATUS = { aguardando: 'Aguardando contato', contato: 'Em contat
 const _STATUS_ORDEM_LOCAL = { 'Aguardando contato': 0, 'Em contato': 1, 'Em negociação': 2 };
 function _ordenarFilaLocal(leads) {
   return leads.slice().sort((a, b) => {
+    if (!!a.superagos !== !!b.superagos) return a.superagos ? -1 : 1; // 03/10: SuperAgos SEMPRE no topo (igual ao servidor)
     const oa = _STATUS_ORDEM_LOCAL[a.status] ?? 99, ob = _STATUS_ORDEM_LOCAL[b.status] ?? 99;
     if (oa !== ob) return oa - ob;
     if (a.status === 'Aguardando contato' || a.status === 'Em contato') {
@@ -813,6 +821,7 @@ function _transformarLeadAgendor(l) {
     whatsapp: l.telefone || '',
     status: BUCKET_TO_STATUS[l.bucket] || 'Em contato',
     funil_tag: l.funilTag || '',
+    superagos: !!l.superagos, // 03/10: lead da cadência SUPERAGOS 2026 = prioridade máxima (decisão do backend)
     segmento: l.segmento || '',
     pot: Number(l.valorPotencial) || 0,
     obs_sdr: l.obsSdr || '', // 🔴 FIX 19/09: SÓ-LEITURA — nunca editado pelo painel, ver seção OBS abaixo
@@ -1601,10 +1610,11 @@ let _activeFilter = null;
 function _leadMatchesFilter(l, filter) {
   if (!filter) return true;
   if (filter === '__pos_venda__') return l.funil_tag === 'reposicao' || l.funil_tag === 'reativacao75';
+  if (filter === '__superagos__') return !!l.superagos;
   return l.status === filter;
 }
 function _filterLabel(filter) {
-  return filter === '__pos_venda__' ? 'Pós-venda (Reposição/Reativação)' : filter;
+  return filter === '__pos_venda__' ? 'Pós-venda (Reposição/Reativação)' : (filter === '__superagos__' ? 'SuperAgos' : filter);
 }
 function toggleFilter(card) {
   const filter = card.dataset.filter;
@@ -2758,7 +2768,9 @@ function renderLeads(leads, highlightRow) {
   }
   const visible = searchActive ? toShow : toShow.slice(0, _visibleCount);
 
-  list.innerHTML = visible.map(l => {
+  const _nSA = _allLeads.filter(l => l.superagos).length;
+  const _saBanner = (_nSA && !searchActive) ? `<div class="sa-banner${_activeFilter === '__superagos__' ? ' on' : ''}" data-filter="__superagos__" onclick="toggleFilter(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleFilter(this);}" role="button" tabindex="0">🎯 ${_nSA} lead${_nSA === 1 ? '' : 's'} SuperAgos — prioridade máxima<small>${_activeFilter === '__superagos__' ? 'toque pra ver todos' : 'toque pra filtrar'}</small></div>` : '';
+  list.innerHTML = _saBanner + visible.map(l => {
     const nomeRaw  = toTitleCase(l.nome||'');
     const nomeEmp  = toTitleCase(l.empresa||'');
     const cicloSuf = _cicloSufixo(l);
@@ -2775,7 +2787,7 @@ function renderLeads(leads, highlightRow) {
     const subtitulo = nomeEmp && nomeRaw && nomeRaw.toLowerCase() !== nomeEmp.toLowerCase() ? nomeRaw : '';
     const cnpj      = l.cnpj||'';
     const endereco  = toTitleCase(l.endereco||'');
-    const funilBadge = (l.funil_tag ? `<span class="lc-funil-badge ${l.funil_tag}">${FUNIL_BADGE_LABEL[l.funil_tag] || l.funil_tag}</span>` : '') + (l.segmento ? `<span class="lc-seg-badge">${esc(l.segmento)}</span>` : '');
+    const funilBadge = (l.superagos ? `<span class="lc-sa-badge">🎯 SUPERAGOS</span>` : '') + (l.funil_tag ? `<span class="lc-funil-badge ${l.funil_tag}">${FUNIL_BADGE_LABEL[l.funil_tag] || l.funil_tag}</span>` : '') + (l.segmento ? `<span class="lc-seg-badge">${esc(l.segmento)}</span>` : '');
 
     const cpRows = _buildCpRows(l, { nomeRaw, nomeEmp, cnpj, endereco, phone, contato });
     const hasContact = cpRows.length > 0;
@@ -2784,7 +2796,7 @@ function renderLeads(leads, highlightRow) {
     const tarefaHtml  = _tarefaBlockHtml(l);
 
     return `
-    <div class="lead-card ${bClass}${atencao ? ' lc-atencao' : ''}" data-row="${l.row}">
+    <div class="lead-card ${bClass}${atencao ? ' lc-atencao' : ''}${l.superagos ? ' lc-sa' : ''}" data-row="${l.row}">
       ${atencao ? `<span class="lc-atencao-dot" title="Precisa de atenção: tarefa vencida ou sem tarefa"></span>` : ''}
       <div class="lc-body">
         <div class="lc-top">
