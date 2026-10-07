@@ -1649,6 +1649,7 @@ function ticketCorte_(vals) {
 }
 function ticketRobusto_(vals, corte) {
   const ok = (vals || []).filter(v => v <= corte);
+  if (!ok.length && (vals || []).length) return { ticket: Math.round(vals.reduce((a, b) => a + b, 0) / vals.length), fora: 0 }; // só atípicas: mostra a média real em vez de "—"
   return { ticket: ok.length ? Math.round(ok.reduce((a, b) => a + b, 0) / ok.length) : 0, fora: (vals || []).length - ok.length };
 }
 function ticketMediana_(vals) {
@@ -1952,6 +1953,14 @@ function origemDonutSVG_(bd, mode, hoverKey, animate) {
   </svg>`;
 }
 
+// 07/10: ticket do canal sem vendas atípicas, com o corte do conjunto das vendas de aquisição do período (mesma regra do KPI). Reposição/Reativação: média simples.
+function ticketCanal_(bd, c) {
+  const vals = x => (x.wins || []).map(w => w.value);
+  if (c.key === 'reposicao' || c.key === 'reativacao') return c.valor / c.cont;
+  if (bd._tkCorte === undefined) bd._tkCorte = ticketCorte_(bd.canais.filter(x => x.key !== 'reposicao' && x.key !== 'reativacao').flatMap(vals));
+  const r = ticketRobusto_(vals(c), bd._tkCorte);
+  return r.ticket > 0 ? r.ticket : c.valor / c.cont;
+}
 function origemLegendHTML_(bd, prev, mode) {
   const tot = mode === 'n' ? bd.totalCont : bd.totalValor;
   const sel = origemSel_();
@@ -1965,7 +1974,7 @@ function origemLegendHTML_(bd, prev, mode) {
       if (pd !== null && isFinite(pd) && Math.abs(pd) >= 100) pd = Math.round(pd); // "▲307%" em vez de "▲306.6%"
       delta = deltaHTML(pd);
     }
-    const ticket = c.cont > 0 ? origemMoneyShort_(c.valor / c.cont) : '—';
+    const ticket = c.cont > 0 ? origemMoneyShort_(ticketCanal_(bd, c)) : '—'; // 07/10: mesmo ticket sem atípicas do KPI
     const nv = c.cont + (c.cont === 1 ? ' venda' : ' vendas');
     // valor em R$ é a informação principal do canal — sempre visível (ticket médio vai no tooltip)
     const l2 = mode === 'n'
