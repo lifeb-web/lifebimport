@@ -2497,7 +2497,8 @@ function origemDonutSVG_(bd, mode, hoverKey, animate) {
       arr.forEach(it => {
         const c = it.l.c, ex = it.p1[0] + it.dir * 7, ty = Math.min(Math.max(it.y, soPct ? 2 : 3), soPct ? 200 : 194), tx = ex + it.dir * 2.5;
         const dim = foco && !origemAtivo_(foco, c.key, hoverKey) ? ' opacity=".3"' : '';
-        lbHTML += `<g class="orig-lb" data-k="${c.key}"${dim}><polyline class="orig-lbl" points="${it.p0[0].toFixed(1)},${it.p0[1].toFixed(1)} ${it.p1[0].toFixed(1)},${it.p1[1].toFixed(1)} ${ex.toFixed(1)},${ty.toFixed(1)}" stroke="${c.color}"></polyline><text x="${tx.toFixed(1)}" y="${(ty + (soPct ? 3 : -1)).toFixed(1)}" text-anchor="${it.dir > 0 ? 'start' : 'end'}" class="orig-lbt">${soPct ? '' : '<tspan class="orig-lbn">' + escHtml(c.label) + '</tspan><tspan x="' + tx.toFixed(1) + '" dy="11.5" '}${soPct ? '<tspan ' : ''}class="orig-lbp" fill="${c.tx}">${Math.round(it.l.frac * 100)}%</tspan></text></g>`;
+        // 07/10: rótulo empurrado pela anti-colisão (|ty - y natural| > 3) liga direto da rosca ao rótulo, sem o cotovelo radial que subia e cruzava o texto do vizinho de cima
+        lbHTML += `<g class="orig-lb" data-k="${c.key}"${dim}><polyline class="orig-lbl" points="${it.p0[0].toFixed(1)},${it.p0[1].toFixed(1)} ${Math.abs(ty - it.p1[1]) > 3 ? '' : it.p1[0].toFixed(1) + ',' + it.p1[1].toFixed(1) + ' '}${ex.toFixed(1)},${ty.toFixed(1)}" stroke="${c.color}"></polyline><text x="${tx.toFixed(1)}" y="${(ty + (soPct ? 3 : -1)).toFixed(1)}" text-anchor="${it.dir > 0 ? 'start' : 'end'}" class="orig-lbt">${soPct ? '' : '<tspan class="orig-lbn">' + escHtml(c.label) + '</tspan><tspan x="' + tx.toFixed(1) + '" dy="11.5" '}${soPct ? '<tspan ' : ''}class="orig-lbp" fill="${c.tx}">${Math.round(it.l.frac * 100)}%</tspan></text></g>`;
       });
     });
   }
