@@ -1930,13 +1930,14 @@ function origemDonutSVG_(bd, mode, hoverKey, animate) {
   let lbHTML = '';
   if (conLb) {
     const side = { r: [], l: [] };
-    labs.filter(l => l.frac >= 0.04).forEach(l => {
+    labs.filter(l => l.frac >= 0.015).forEach(l => { // 07/10: era 4%; fatia pequena (ex.: Recuperação 3,5%) também ganha número e seta
       const cs = Math.cos(l.th), sn = Math.sin(l.th), dir = cs >= 0 ? 1 : -1;
       side[dir > 0 ? 'r' : 'l'].push({ l, dir, p0: [100 + 91 * cs, 100 + 91 * sn], p1: [100 + 101 * cs, 100 + 101 * sn], y: 100 + 101 * sn });
     });
     ['r', 'l'].forEach(sd => {
       const arr = side[sd].sort((a, b) => a.y - b.y);
       for (let i = 1; i < arr.length; i++) if (arr[i].y < arr[i - 1].y + (soPct ? 12 : 22)) arr[i].y = arr[i - 1].y + (soPct ? 12 : 22); // anti-colisão vertical
+      { const gp = soPct ? 12 : 22, maxY = soPct ? 198 : 192; for (let i = arr.length - 1; i >= 0; i--) { if (arr[i].y > maxY) arr[i].y = maxY; if (i > 0 && arr[i - 1].y > arr[i].y - gp) arr[i - 1].y = arr[i].y - gp; } } // 07/10: sem estourar a borda de baixo, sobe o grupo em vez de sobrepor
       arr.forEach(it => {
         const c = it.l.c, ex = it.p1[0] + it.dir * 7, ty = Math.min(Math.max(it.y, soPct ? 2 : 3), soPct ? 200 : 194), tx = ex + it.dir * 2.5;
         const dim = foco && !origemAtivo_(foco, c.key, hoverKey) ? ' opacity=".3"' : '';
@@ -1964,7 +1965,8 @@ function ticketCanal_(bd, c) {
 function origemLegendHTML_(bd, prev, mode) {
   const tot = mode === 'n' ? bd.totalCont : bd.totalValor;
   const sel = origemSel_();
-  return bd.canais.map((c, i) => {
+  // 07/10 (Robert): legenda do maior pro menor faturamento (R$), em qualquer modo R$/Nº; `i` segue sendo o índice ORIGINAL (a variação usa prev.canais[i])
+  return bd.canais.map((c, i) => ({ c, i })).sort((x, y) => (y.c.valor - x.c.valor) || (x.i - y.i)).map(({ c, i }) => {
     const val = mode === 'n' ? c.cont : c.valor;
     const pc = tot > 0 ? Math.round((val / tot) * 100) : 0;
     let delta = '';
