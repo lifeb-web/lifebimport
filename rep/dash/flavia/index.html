@@ -147,7 +147,9 @@
     /* 🆕 18/09: badge de Reposição/Reativação — Robert pediu destaque claro pra esses 2 casos */
     .lc-funil-badge { display:inline-block; font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.02em; padding:2px 7px; border-radius:999px; margin-left:6px; vertical-align:middle; white-space:nowrap; }
     /* 🆕 03/10: lead SuperAgos = prioridade máxima — selo azul + contorno azul no card + faixa com contador no topo da lista */
-    .lc-sa-badge { display:inline-block; font-size:10px; font-weight:800; letter-spacing:.03em; padding:3px 8px; border-radius:999px; margin-left:6px; vertical-align:middle; background:#2f7de1; color:#fff; }
+    .lc-badges { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:6px 0 6px; }
+    .lc-badges > span { margin-left:0 !important; }
+    .lc-sa-badge { display:inline-block; font-size:10px; font-weight:800; letter-spacing:.03em; padding:3px 8px; border-radius:999px; margin-left:6px; vertical-align:middle; background:#2f7de1; color:#fff; white-space:nowrap; }
     .lead-card.lc-sa { box-shadow:0 0 0 2px rgba(47,125,225,.7), 0 2px 10px rgba(47,125,225,.18); background:linear-gradient(90deg, rgba(47,125,225,.08), var(--card) 45%); }
     .lead-card.lc-sa.lc-atencao { box-shadow:0 0 0 2px rgba(47,125,225,.7), 0 0 0 4px rgba(220,38,38,.45), 0 2px 10px rgba(47,125,225,.18); } /* SuperAgos atrasado: mantém o aviso vermelho por fora do azul */
     .sa-banner { display:flex; align-items:center; gap:8px; margin:0 0 10px; padding:10px 14px; border-radius:12px; background:#2f7de1; color:#fff; font-size:13px; font-weight:700; cursor:pointer; }
@@ -194,6 +196,7 @@
     .lc-meta-tags { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
     .lc-tag  { font-size:10px; font-weight:600; color:var(--muted); background:var(--bg); border-radius:6px; padding:3px 8px; white-space:nowrap; }
     .lc-tag-sdr { color:var(--purple); background:rgba(112,75,155,.1); }
+    .lc-tag-seg { color:#0f6b62; background:rgba(20,120,110,.12); }
     .lc-meta-btns { display:flex; gap:10px; align-items:center; flex-shrink:0; }
 
     .lc-icon-btn { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:50%; border:none; cursor:pointer; flex-shrink:0; transition:transform .12s, box-shadow .12s, background .15s; text-decoration:none; outline:none; }
@@ -2787,7 +2790,10 @@ function renderLeads(leads, highlightRow) {
     const subtitulo = nomeEmp && nomeRaw && nomeRaw.toLowerCase() !== nomeEmp.toLowerCase() ? nomeRaw : '';
     const cnpj      = l.cnpj||'';
     const endereco  = toTitleCase(l.endereco||'');
-    const funilBadge = (l.superagos ? `<span class="lc-sa-badge">🎯 SUPERAGOS</span>` : '') + (l.funil_tag ? `<span class="lc-funil-badge ${l.funil_tag}">${FUNIL_BADGE_LABEL[l.funil_tag] || l.funil_tag}</span>` : '') + (l.segmento ? `<span class="lc-seg-badge">${esc(l.segmento)}</span>` : '');
+    // 08/10 (Robert: "essas tags tudo encavaladas... SuperAgos, Supermercado e ainda mais se for Reposição"): as etiquetas de STATUS (SuperAgos, Reposição, Reativação)
+    // ganham uma linha própria logo abaixo do nome, em fila que quebra sozinha; o SEGMENTO (Supermercado, Drogaria) virou uma tag cinza na linha de detalhes (cidade, entrada, SDR).
+    const funilBadge = (l.superagos ? `<span class="lc-sa-badge">🎯 SUPERAGOS</span>` : '') + (l.funil_tag ? `<span class="lc-funil-badge ${l.funil_tag}">${FUNIL_BADGE_LABEL[l.funil_tag] || l.funil_tag}</span>` : '');
+    const badgesRow = funilBadge ? `<div class="lc-badges">${funilBadge}</div>` : '';
 
     const cpRows = _buildCpRows(l, { nomeRaw, nomeEmp, cnpj, endereco, phone, contato });
     const hasContact = cpRows.length > 0;
@@ -2800,9 +2806,10 @@ function renderLeads(leads, highlightRow) {
       ${atencao ? `<span class="lc-atencao-dot" title="Precisa de atenção: tarefa vencida ou sem tarefa"></span>` : ''}
       <div class="lc-body">
         <div class="lc-top">
-          <div class="lc-empresa">${titulo}${funilBadge}</div>
+          <div class="lc-empresa">${titulo}</div>
           <button class="lc-pot" id="pot-${l.row}" title="Toque pra atualizar o valor estimado (pipeline)" onclick="openPipelinePrompt(${l.row})">${pot ? esc(pot) : '<span class="lc-pot-no-val">Definir valor</span>'}</button>
         </div>
+        ${badgesRow}
         ${subtitulo ? `<div class="lc-nome">${esc(subtitulo)}</div>` : ''}
 
         <div id="task-wrap-${l.row}">${tarefaHtml}</div>
@@ -2880,6 +2887,7 @@ function renderLeads(leads, highlightRow) {
         <div class="lc-meta">
           <div class="lc-meta-tags">
             ${cidadeUF ? `<span class="lc-tag">📍 ${esc(cidadeUF)}</span>` : ''}
+            ${l.segmento ? `<span class="lc-tag lc-tag-seg">🏷️ ${esc(l.segmento)}</span>` : ''}
             <!-- 🔴 FIX 20/09 (Robert: "data de entrada na carteira" = quando o lead entrou no
                  Agendor — antes essa tag mostrava a última ATUALIZAÇÃO, informação que já aparece
                  embaixo na linha de status): agora mostra a entrada de verdade, distinta do
