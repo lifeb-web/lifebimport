@@ -147,8 +147,9 @@
     /* 🆕 18/09: badge de Reposição/Reativação — Robert pediu destaque claro pra esses 2 casos */
     .lc-funil-badge { display:inline-block; font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.02em; padding:2px 7px; border-radius:999px; margin-left:6px; vertical-align:middle; white-space:nowrap; }
     /* 🆕 03/10: lead SuperAgos = prioridade máxima — selo azul + contorno azul no card + faixa com contador no topo da lista */
-    .lc-badges { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:6px 0 6px; }
-    .lc-badges > span { margin-left:0 !important; }
+    .lc-subrow { display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px; margin:3px 0 8px; }
+    .lc-subrow > span { margin-left:0 !important; }
+    .lc-subrow .lc-nome { margin:0; min-width:0; max-width:100%; }
     .lc-sa-badge { display:inline-block; font-size:10px; font-weight:800; letter-spacing:.03em; padding:3px 8px; border-radius:999px; margin-left:6px; vertical-align:middle; background:#2f7de1; color:#fff; white-space:nowrap; }
     .lead-card.lc-sa { box-shadow:0 0 0 2px rgba(47,125,225,.7), 0 2px 10px rgba(47,125,225,.18); background:linear-gradient(90deg, rgba(47,125,225,.08), var(--card) 45%); }
     .lead-card.lc-sa.lc-atencao { box-shadow:0 0 0 2px rgba(47,125,225,.7), 0 0 0 4px rgba(220,38,38,.45), 0 2px 10px rgba(47,125,225,.18); } /* SuperAgos atrasado: mantém o aviso vermelho por fora do azul */
@@ -2793,7 +2794,7 @@ function renderLeads(leads, highlightRow) {
     // 08/10 (Robert: "essas tags tudo encavaladas... SuperAgos, Supermercado e ainda mais se for Reposição"): as etiquetas de STATUS (SuperAgos, Reposição, Reativação)
     // ganham uma linha própria logo abaixo do nome, em fila que quebra sozinha; o SEGMENTO (Supermercado, Drogaria) virou uma tag cinza na linha de detalhes (cidade, entrada, SDR).
     const funilBadge = (l.superagos ? `<span class="lc-sa-badge">🎯 SUPERAGOS</span>` : '') + (l.funil_tag ? `<span class="lc-funil-badge ${l.funil_tag}">${FUNIL_BADGE_LABEL[l.funil_tag] || l.funil_tag}</span>` : '');
-    const badgesRow = funilBadge ? `<div class="lc-badges">${funilBadge}</div>` : '';
+    const badgesRow = funilBadge; // 08/10 (2ª rodada): contato + etiquetas na MESMA linha (.lc-subrow) — tira uma linha inteira e a folga entre elas
 
     const cpRows = _buildCpRows(l, { nomeRaw, nomeEmp, cnpj, endereco, phone, contato });
     const hasContact = cpRows.length > 0;
@@ -2809,8 +2810,7 @@ function renderLeads(leads, highlightRow) {
           <div class="lc-empresa">${titulo}</div>
           <button class="lc-pot" id="pot-${l.row}" title="Toque pra atualizar o valor estimado (pipeline)" onclick="openPipelinePrompt(${l.row})">${pot ? esc(pot) : '<span class="lc-pot-no-val">Definir valor</span>'}</button>
         </div>
-        ${badgesRow}
-        ${subtitulo ? `<div class="lc-nome">${esc(subtitulo)}</div>` : ''}
+        ${(badgesRow || subtitulo) ? `<div class="lc-subrow">${subtitulo ? `<div class="lc-nome">${esc(subtitulo)}</div>` : ''}${funilBadge}</div>` : ''}
 
         <div id="task-wrap-${l.row}">${tarefaHtml}</div>
         <div class="lc-task-form" id="task-form-${l.row}">
