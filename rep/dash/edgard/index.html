@@ -1486,10 +1486,22 @@ function scheduleReload(delayMs) {
 
 // ── TOAST ─────────────────────────────────────────────────────
 let _toastTimer;
+function showToastAcao(msg, rotulo, fn) {
+  const el = document.getElementById('toast');
+  if (!el) return;
+  el.innerHTML = '<span>' + esc(msg) + '</span> <button type="button" style="margin-left:8px;padding:6px 12px;border-radius:8px;border:0;font-weight:700;cursor:pointer" id="toast-acao">' + esc(rotulo) + '</button>';
+  el.style.whiteSpace = 'normal';
+  el.classList.add('show');
+  const b = document.getElementById('toast-acao');
+  if (b) b.onclick = () => { el.classList.remove('show'); try { fn(); } catch (e) { console.error(e); } };
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 9000);
+}
 function showToast(msg, ms) {
   const el = document.getElementById('toast');
   if (!el) return;
   if (Date.now() - _lastQueuedAt < 1500) msg = '⏳ Salvo no aparelho — enviando em segundo plano (não perde nada)';
+  el.style.whiteSpace = '';
   el.innerHTML = `<span>${esc(msg)}</span>`;
   el.classList.add('show');
   clearTimeout(_toastTimer);
@@ -2360,7 +2372,7 @@ function buildObsViewHtml(row, obs) {
   if (obs && obs.trim())
     return `<div class="obsr-text" id="obsr-text-${row}">${esc(obs)}</div>
             <button class="obsr-edit-btn" onclick="toggleObsEdit(${row})">${SVG_EDIT} Editar</button>`;
-  return `<button class="obsr-add-btn" onclick="toggleObsEdit(${row})">＋ Adicionar observação</button>`;
+  return `<button class="obsr-add-btn" onclick="toggleObsEdit(${row})">＋ Anotar no card <small>(não conclui a tarefa)</small></button>`;
 }
 function toggleObsEdit(row) {
   const rep = document.getElementById('obsr-' + row);
@@ -2428,7 +2440,13 @@ async function saveObs(row) {
           if (viewDiv) viewDiv.innerHTML = buildObsViewHtml(row, textoReal);
         }
         setLeadTs(row);
-        showToast('Observação salva ✓');
+        const _tAberta = leadAtualizado && leadAtualizado.tarefaAberta;
+        if (!estavaConcluindo && _tAberta && _tAberta.id) {
+          // 13/10 (Robert): rep confundia "anotar" com "concluir" e a tarefa ficava aberta e atrasada.
+          showToastAcao('Anotado ✓ A tarefa "' + String(_tAberta.texto || _tAberta.tipo || 'sem título').split('\n')[0].slice(0, 40) + '" continua aberta.', 'Concluir', () => concludeCard(row));
+        } else {
+          showToast('Observação salva ✓');
+        }
         if (estavaConcluindo) concludeCard(row);
         else scheduleReload(2500);
       } catch (err) {
