@@ -242,15 +242,15 @@ const plural=(n,a,b)=>n===1?a:b;
 function renderRank(){
   const T=D.tiers,MAX=T[T.length-1].valor;
   const dias=Math.max(0,Math.round((new Date(D.fim)-new Date(D.hoje))/864e5));
-  document.getElementById('camp').innerHTML=`<div><b>Campanha de objetivos:</b> ${dm(D.corte)} a ${dm(D.fim)} · faltam <b>${dias} dias</b>. Vale o valor fechado pelo representante (lojas fechadas desde 22/09).</div><div class="tl">${T.map(t=>`<span>${esc(t.nome)} · ${brl(t.valor)}</span>`).join('')}</div>`;
+  document.getElementById('camp').innerHTML=`<div><b>Campanha de objetivos:</b> ${dm(D.corte)} a ${dm(D.fim)} · faltam <b>${dias} dias</b>. Vale o valor fechado pelo representante (vendas fechadas desde 22/09).</div><div class="tl">${T.map(t=>`<span>${esc(t.nome)} · ${brl(t.valor)}</span>`).join('')}</div>`;
   document.getElementById('tickrow').innerHTML=T.map(t=>`<span style="left:${t.valor/MAX*100}%">${t.valor/1000} mil</span>`).join('');
   const L=D.rcas.slice().sort((a,b)=>b.fechado_v-a.fechado_v||b.fechado_n-a.fechado_n||a.rca.localeCompare(b.rca));
   const tot=L.reduce((s,x)=>s+x.fechado_v,0),tn=L.reduce((s,x)=>s+x.fechado_n,0);
-  document.getElementById('tot').innerHTML=`<div class="big">${brl2(tot)}</div><span>fechados pelo time · <b>${tn}</b> lojas</span>`;
+  document.getElementById('tot').innerHTML=`<div class="big">${brl2(tot)}</div><span>fechados pelo time · <b>${tn}</b> ${plural(tn,'venda','vendas')}</span>`;
   document.getElementById('rk').innerHTML=L.map((x,i)=>{
     const ach=T.filter(t=>x.fechado_v>=t.valor).pop(),nxt=T.find(t=>x.fechado_v<t.valor);
     const info=ach?`<b>✓ ${esc(ach.nome)}</b>${nxt?` · faltam ${brl2(nxt.valor-x.fechado_v)} para ${esc(nxt.nome)}`:' · todos os prêmios'}`:(nxt?`faltam ${brl2(nxt.valor-x.fechado_v)} para ${esc(nxt.nome)}`:'');
-    return `<div class="row ${i<3&&x.fechado_v>0?'t'+(i+1):''} ${x.fechado_v===0?'zero':''}"><div class="pos">${i+1}º</div><div class="nm"><i style="background:${x.cor}"></i>${esc(x.rca)}<small>${x.fechado_n} ${plural(x.fechado_n,'loja fechada','lojas fechadas')}${x.interna?' · vendas internas do Felipe':''}</small></div><div class="vl">${brl2(x.fechado_v)}</div><div class="tb"><div class="f" style="width:${Math.min(x.fechado_v/MAX*100,100)}%"></div>${T.map(t=>`<i style="left:${t.valor/MAX*100}%"></i>`).join('')}</div><div class="xx">${info}</div></div>`}).join('');
+    return `<div class="row ${i<3&&x.fechado_v>0?'t'+(i+1):''} ${x.fechado_v===0?'zero':''}"><div class="pos">${i+1}º</div><div class="nm"><i style="background:${x.cor}"></i>${esc(x.rca)}<small>${x.fechado_n} ${plural(x.fechado_n,'venda fechada','vendas fechadas')}${x.interna?' · vendas internas do Felipe':''}</small></div><div class="vl">${brl2(x.fechado_v)}</div><div class="tb"><div class="f" style="width:${Math.min(x.fechado_v/MAX*100,100)}%"></div>${T.map(t=>`<i style="left:${t.valor/MAX*100}%"></i>`).join('')}</div><div class="xx">${info}</div></div>`}).join('');
   const items=[],sv=D.fechados.filter(f=>f.semVF);
   (D.overrides||[]).forEach(o=>items.push(`<b>Desmarcado por você:</b> ${esc(o.nome)} (${esc(o.rca)}, ${brl2(o.valor)}): ${esc(o.motivo)}.`));
   if(D.antes.length){const s=D.antes.reduce((a,x)=>a+x.valor,0);items.push(`<b>Fechadas antes de 22/09 (não contam):</b> ${D.antes.map(a=>esc(a.nome)+' ('+esc(a.rca)+', '+dm(a.data)+', '+brl2(a.valor)+')').join('; ')}. Total ${brl2(s)}.`)}
@@ -266,12 +266,12 @@ function renderVis(){
   document.getElementById('vsub').textContent=`Visitas registradas no app de rotas de ${dm(V.de)} a ${dm(V.ate)}. Pipeline = lojas ainda em aberto (a contatar, contatadas, agendadas ou visitadas).`;
   document.getElementById('vc').innerHTML=R.map(r=>{
     const ago=r.diasSem==null?'nunca visitou':(r.diasSem===0?'visitou hoje':'última visita há '+r.diasSem+' '+plural(r.diasSem,'dia','dias'));
-    const ch=Object.entries(r.resultados).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`<span>${n} ${esc(k.toLowerCase())}</span>`).join('');
-    if(r.interna)return `<div class="vcard"><div class="a"><b><i style="background:${r.cor}"></i>${esc(r.rca)} · vendas internas</b><div class="big" style="color:var(--muted)">—<small>sem visita</small></div></div><div class="mini" style="font-size:12px;font-weight:700;color:var(--muted)">Carteira interna da empresa: o Felipe vende de dentro, por isso não gera visita.</div><div class="vgrid"><div><b>${brl(r.pipeline_v)}</b><span>pipeline (${r.pipeline_n} lojas)</span></div><div><b>${r.aContatar}</b><span>ainda a contatar</span></div><div><b>${r.fechado_n}</b><span>${plural(r.fechado_n,'loja fechada','lojas fechadas')}</span></div></div></div>`;
+    const ch=Object.entries(r.resultados).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`<span>${n} ${esc(k==='Loja fechada'?'encontrou a porta fechada':k.toLowerCase())}</span>`).join('');
+    if(r.interna)return `<div class="vcard"><div class="a"><b><i style="background:${r.cor}"></i>${esc(r.rca)} · vendas internas</b><div class="big" style="color:var(--muted)">—<small>sem visita</small></div></div><div class="mini" style="font-size:12px;font-weight:700;color:var(--muted)">Carteira interna da empresa: o Felipe vende de dentro, por isso não gera visita.</div><div class="vgrid"><div><b>${brl(r.pipeline_v)}</b><span>pipeline (${r.pipeline_n} lojas)</span></div><div><b>${r.aContatar}</b><span>ainda a contatar</span></div><div><b>${r.fechado_n}</b><span>${plural(r.fechado_n,'venda fechada','vendas fechadas')}</span></div></div></div>`;
     return `<div class="vcard ${r.visitas===0?'zero':''}"><div class="a"><b><i style="background:${r.cor}"></i>${esc(r.rca)}</b><div class="big">${r.visitas}<small>${plural(r.visitas,'visita','visitas')}</small></div></div>
     <div class="${r.visitas===0||r.diasSem>=5?'warnl':'mini'}" style="font-size:12px;font-weight:700;color:${r.visitas===0||r.diasSem>=5?'var(--red)':'var(--muted)'}">${r.lojasVisitadas} ${plural(r.lojasVisitadas,'loja visitada','lojas visitadas')} · ${ago}</div>
     ${ch?`<div class="rchips">${ch}</div>`:''}
-    <div class="vgrid"><div><b>${brl(r.pipeline_v)}</b><span>pipeline (${r.pipeline_n} lojas)</span></div><div><b>${r.aContatar}</b><span>ainda a contatar</span></div><div><b>${r.fechado_n}</b><span>${plural(r.fechado_n,'loja fechada','lojas fechadas')}</span></div></div></div>`}).join('');
+    <div class="vgrid"><div><b>${brl(r.pipeline_v)}</b><span>pipeline (${r.pipeline_n} lojas)</span></div><div><b>${r.aContatar}</b><span>ainda a contatar</span></div><div><b>${r.fechado_n}</b><span>${plural(r.fechado_n,'venda fechada','vendas fechadas')}</span></div></div></div>`}).join('');
 }
 /* ---------- Felipe: cadência GS + cobrança ---------- */
 function renderGS(){
