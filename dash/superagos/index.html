@@ -301,6 +301,19 @@ function renderGS(){
   document.getElementById('who').innerHTML=keys.map(k=>`<div class="w"><div class="t"><span>${esc(k)}</span><b>${by[k].length}</b></div><div class="chips">${by[k].map(q=>`<a href="${esc(q.url)}" target="_blank" rel="noopener" class="${q.fase==='negociacao'?'neg':''}" title="${esc(q.etapa)}${q.agendorDono&&q.agendorDono!==k?' · dono no Agendor: '+esc(q.agendorDono):''}">${esc(q.titulo)}</a>`).join('')}</div></div>`).join('')+(internas.length?`<div class="w" style="background:#faf9fd"><div class="t"><span>Vendas internas do Felipe</span><b style="background:#ebe6f5;color:var(--purple)">${internas.length}</b></div><div class="chips">${internas.map(q=>`<a href="${esc(q.url)}" target="_blank" rel="noopener" class="${q.fase==='negociacao'?'neg':''}">${esc(q.titulo)} · ${q.fase==='fechado'?'fechado':q.fase==='negociacao'?'em negociação':'conexão'}</a>`).join('')}</div><div class="hint" style="padding:8px 0 0">O Felipe vende de dentro da empresa, então não gera visita e não entra na cobrança.</div></div>`:'');
 }
 renderRank();renderVis();renderGS();
+/* atualiza sozinho: confere a cada 60s se saiu versão nova e recarrega mantendo a posição */
+(function(){
+  try{var y=sessionStorage.getItem('sa_y');if(y){sessionStorage.removeItem('sa_y');requestAnimationFrame(function(){scrollTo(0,+y)})}}catch(e){}
+  var cur=D.now;
+  function chk(){
+    fetch(location.pathname+'?v='+Date.now(),{cache:'no-store'}).then(function(r){return r.text()}).then(function(t){
+      var m=t.match(/"now": "([^"]+)"/);
+      if(m&&m[1]!==cur){try{sessionStorage.setItem('sa_y',String(scrollY))}catch(e){}location.reload()}
+    }).catch(function(){});
+  }
+  setInterval(chk,60000);
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)chk()});
+})();
 </script>
 </body>
 </html>
