@@ -442,7 +442,7 @@ function desenharMapa() {
   var r = resumoLeads(I.leads);
   var abasOk = I.abas.filter(function (a) { return !a.ignorada; });
   // obrigatórios (somando as abas lidas)
-  var temEmpresa = abasOk.some(function (a) { return a.colunas.some(function (c) { return c.campo === 'empresa'; }); }) || I.leads.some(function (l) { return l.cnpj; });
+  var temEmpresa = I.abas.some(function (a) { return a.colunas.some(function (c) { return c.campo === 'empresa'; }); }) || I.leads.some(function (l) { return l.cnpj; });
   var temTel = abasOk.some(function (a) { return a.colunas.some(function (c) { return c.campo === 'telefone'; }); });
   if (!abasOk.length) {
     var mot = I.abas.map(function (a) { return a.motivo || ''; }).join(' ');
@@ -450,7 +450,7 @@ function desenharMapa() {
     else if (/empresa/.test(mot)) faltas.push('Falta o nome da empresa: escolha qual coluna é.');
     else faltas.push('Não achei nenhuma aba com empresas e telefones. Escolha as colunas abaixo ou confira o arquivo.');
   }
-  if (abasOk.length && !temEmpresa) faltas.push('Falta o nome da empresa: escolha qual coluna é.');
+  if (!temEmpresa && abasOk.length) faltas.push('Falta o nome da empresa: escolha qual coluna é.');
   if (abasOk.length && !temTel) faltas.push('Falta o telefone do contato: escolha qual coluna é.');
   if (abasOk.length && r.emp > 0 && r.comTel === 0) faltas.push('Nenhuma linha tem telefone válido.');
   if (r.bloq > 0) confirme.push(plural(r.bloq, 'linha será deixada de fora', 'linhas serão deixadas de fora') + ' (sem telefone válido ou sem empresa).');
@@ -473,12 +473,12 @@ function desenharMapa() {
   // por aba
   var origemOk = !!$('origem').value && !!$('origemMae').value;
   h += '<h3>O que é obrigatório</h3>';
-  h += '<div class="req ' + (temEmpresa ? 'ok' : 'falta') + '"><div class="top"><span class="nm">Nome da empresa</span><span class="pill ' + (temEmpresa ? 'p-ok' : 'p-obr') + '">' + (temEmpresa ? 'ok' : 'obrigatório') + '</span></div><div class="ex">' + (temEmpresa ? esc(colDe(abasOk, 'empresa')) : 'Não achei. Escolha a coluna na lista abaixo.') + '</div></div>';
+  h += '<div class="req ' + (temEmpresa ? 'ok' : 'falta') + '"><div class="top"><span class="nm">Nome da empresa</span><span class="pill ' + (temEmpresa ? 'p-ok' : 'p-obr') + '">' + (temEmpresa ? 'ok' : 'obrigatório') + '</span></div><div class="ex">' + (temEmpresa ? esc(colDe(I.abas, 'empresa')) : 'Não achei. Escolha a coluna na lista abaixo.') + '</div></div>';
   h += '<div class="req ' + (temTel ? 'ok' : 'falta') + '"><div class="top"><span class="nm">Telefone do contato</span><span class="pill ' + (temTel ? 'p-ok' : 'p-obr') + '">' + (temTel ? 'ok' : 'obrigatório') + '</span></div><div class="ex">' + (temTel ? esc(colDe(abasOk, 'telefone')) : 'Não achei. Escolha a coluna na lista abaixo.') + '</div></div>';
   h += '<div class="req ' + (origemOk ? 'ok' : 'falta') + '"><div class="top"><span class="nm">Origens</span><span class="pill ' + (origemOk ? 'p-ok' : 'p-obr') + '">' + (origemOk ? 'ok' : 'obrigatório') + '</span></div><div class="ex">Lead: ' + esc($('origemMae').value) + ' · Negócio: ' + esc(($('origem').selectedOptions[0] || {}).textContent || '') + '</div></div>';
   I.abas.forEach(function (a, ai) {
     h += '<h3>Aba "' + esc(a.nome) + '" ' + (a.ignorada ? '<span class="pill p-cinza">ignorada</span>' : '<span class="muted">(' + (a.linhasUsadas || 0) + ' linhas)</span>') + '</h3>';
-    if (a.ignorada) h += '<p class="muted">' + esc(a.motivo) + '</p>';
+    if (a.ignorada) h += '<p class="muted">' + esc(a.motivo.charAt(0).toUpperCase() + a.motivo.slice(1)) + '</p>';
     var cheias = a.colunas.filter(function (c) { return (c.exemplos || []).length > 0; });
     var vazias = a.colunas.length - cheias.length;
     var obr = cheias.filter(function (c) { return OBRIG.indexOf(c.campo) >= 0; });
@@ -565,7 +565,7 @@ function desenharPrevia() {
     if (d.v === 'criar' || ehDuvida) h += '<input type="text" class="nomeEd grow" data-i="' + idx + '" value="' + esc(it.nome) + '" placeholder="nome da empresa" aria-label="Nome da empresa">';
     else h += '<span class="nome">' + esc(it.nome || l.empresa || '(sem nome)') + '</span>';
     h += '</div><div class="ln">' + (l.cnpj ? 'CNPJ ' + esc(l.cnpj) + ' · ' : '') + esc([l.cidade, l.uf].filter(Boolean).join('/')) + ' · linha ' + esc((l.linhas || []).map(function (x) { return x.linha; }).join(', ')) + '</div>';
-    if (d.v === 'pular' && d.motivo) h += '<div class="ln" style="margin-top:4px;color:var(--text)"><b>' + (d.tipo === 'problema' ? 'Problema: ' : 'Pulado: ') + '</b>' + esc(d.motivo) + linkAbrir(d.existente) + '</div>';
+    if (d.v === 'pular' && d.motivo && !ehDuvida) h += '<div class="ln" style="margin-top:4px;color:var(--text)"><b>' + (d.tipo === 'problema' ? 'Problema: ' : 'Pulado: ') + '</b>' + esc(d.motivo) + linkAbrir(d.existente) + '</div>';
     (l.contatos || []).forEach(function (c, ci) { h += '<div class="ct">' + (ci === 0 ? '<b>' + esc(c.nome) + '</b>' : esc(c.nome)) + (c.cargo ? ' (' + esc(c.cargo) + ')' : '') + ' · ' + (c.telefones || []).map(function (t) { return esc(fone(t.n)); }).join(', ') + (c.email ? ' · ' + esc(c.email) : '') + '</div>'; });
     h += '<div class="row" style="margin-top:8px"><span class="ln">Segmento:</span><select class="segEd" data-i="' + idx + '" style="width:auto" aria-label="Segmento"><option value="">(vazio)</option>' + ['Drogaria', 'Supermercado', 'Cosméticos', 'Utilidades', 'Outros'].map(function (s) { return '<option' + (s === it.segmento ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' +
       '<span class="ln">Origem do negócio:</span><select class="oriEd" data-i="' + idx + '" style="width:auto" aria-label="Origem do negócio"><option value="">' + (l.origem ? esc((S.origens.filter(function (o) { return o.v === l.origem; })[0] || {}).label) + ' (da planilha)' : esc(($('origem').selectedOptions[0] || {}).textContent || 'escolha') + ' (da lista)') + '</option>' + S.origens.map(function (o) { return '<option value="' + esc(o.v) + '"' + (it.origem === o.v ? ' selected' : '') + '>' + esc(o.label) + '</option>'; }).join('') + '</select>';
@@ -787,7 +787,7 @@ $('bNova').onclick = novaLista;
 $('bRetomar').onclick = function () { var o = JSON.parse(lsGet('sl_job') || '{}'); if (!o.job) return; S.jobId = o.job; S.nomeArq = o.arquivo || ''; rodarJob(0, []); };
 $('bDescartar').onclick = function () { lsDel('sl_job'); $('retomar').classList.add('hide'); };
 
-window.__slTeste = { lerXlsx: lerXlsx, lerArquivo: lerArquivo, parseCsv: parseCsv, traduz: traduz };
+window.__slTeste = { lerXlsx: lerXlsx, lerArquivo: lerArquivo, parseCsv: parseCsv, traduz: traduz, progresso: function (run) { mostrar('s-subindo'); $('subTitulo').textContent = '5. Subindo para o Agendor'; $('progBox').classList.remove('hide'); $('relBox').classList.add('hide'); desenhaProg(run); } };
 // ---------- início ----------
 (async function () {
   var t = lsGet('sl_tok');
