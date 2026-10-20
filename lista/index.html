@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="robots" content="noindex,nofollow">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src https://gs-agendor-worker.robert131196.workers.dev; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Subir lista | Life B</title>
 <link rel="icon" href="/favicon-32.png">
@@ -146,7 +147,6 @@ a{color:var(--purple)}
 <p class="muted" style="text-align:center;margin:18px 0"><a href="#" id="bSair2">Sair</a></p>
 </main>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
 (function () {
 'use strict';
@@ -157,7 +157,7 @@ var S = { token: '', origens: [], abas: null, nomeArq: '', mapa: {}, interp: nul
 function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
 function lsDel(k) { try { localStorage.removeItem(k); } catch (e) {} }
-function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"'`\/]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;', '/': '&#47;' }[c]; }); } // todo texto da planilha passa por aqui antes de entrar em HTML ou atributo
 function mostrar(id) { ['s-login', 's-off', 's-arquivo', 's-mapa', 's-conf', 's-previa', 's-subindo'].forEach(function (x) { $(x).classList.toggle('hide', x !== id); }); window.scrollTo(0, 0); }
 function fone(n) { n = String(n || ''); return n.length === 11 ? '(' + n.slice(0, 2) + ') ' + n.slice(2, 7) + '-' + n.slice(7) : n.length === 10 ? '(' + n.slice(0, 2) + ') ' + n.slice(2, 6) + '-' + n.slice(6) : n; }
 function pausa(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
@@ -222,12 +222,65 @@ async function lerArquivo(file) {
     var txt; try { txt = new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch (e) { txt = new TextDecoder('windows-1252').decode(buf); }
     return [{ nome: 'CSV', linhas: parseCsv(txt) }];
   }
-  if (typeof XLSX === 'undefined') throw new Error('Não consegui carregar o leitor de Excel. Verifique a internet ou salve a planilha como CSV.');
-  var wb = XLSX.read(buf, { type: 'array', cellDates: false });
-  return wb.SheetNames.map(function (n) {
-    var rows = XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: '', blankrows: true });
-    return { nome: n, linhas: rows.map(function (r) { return r.map(celulaTexto); }) };
-  });
+  if (/\.xls$/i.test(nome)) throw new Error('Arquivo .xls antigo: abra no Excel e salve como .xlsx ou CSV.');
+  return await lerXlsx(buf);
+}
+
+// ---------- leitor de .xlsx próprio (sem biblioteca externa): zip + XML ----------
+async function inflarRaw(dados) {
+  var ds = new DecompressionStream('deflate-raw');
+  var rs = new ReadableStream({ start: function (c) { c.enqueue(dados); c.close(); } }).pipeThrough(ds);
+  var reader = rs.getReader(), partes = [], total = 0, LIM = 40 * 1024 * 1024;
+  while (true) { var r = await reader.read(); if (r.done) break; total += r.value.length; if (total > LIM) throw new Error('Planilha descompactada grande demais.'); partes.push(r.value); }
+  var out = new Uint8Array(total), o = 0; partes.forEach(function (p) { out.set(p, o); o += p.length; }); return out;
+}
+async function lerZip(buf) {
+  var u = new Uint8Array(buf), dv = new DataView(buf), n = u.length, fim = -1;
+  for (var i = n - 22; i >= Math.max(0, n - 65557); i--) { if (dv.getUint32(i, true) === 0x06054b50) { fim = i; break; } }
+  if (fim < 0) throw new Error('Isso não parece um arquivo .xlsx. Salve como .xlsx ou CSV.');
+  var total = dv.getUint16(fim + 10, true), pos = dv.getUint32(fim + 16, true), arq = {};
+  if (total > 400) throw new Error('Arquivo com itens demais.');
+  var dec = new TextDecoder('utf-8');
+  for (var k = 0; k < total; k++) {
+    if (dv.getUint32(pos, true) !== 0x02014b50) break;
+    var metodo = dv.getUint16(pos + 10, true), comp = dv.getUint32(pos + 20, true), desc = dv.getUint32(pos + 24, true), nl = dv.getUint16(pos + 28, true), el = dv.getUint16(pos + 30, true), cl = dv.getUint16(pos + 32, true), off = dv.getUint32(pos + 42, true);
+    var nome = dec.decode(u.subarray(pos + 46, pos + 46 + nl)); pos += 46 + nl + el + cl;
+    if (!/^xl\/(workbook\.xml|_rels\/workbook\.xml\.rels|sharedStrings\.xml|worksheets\/[^\/]+\.xml)$/.test(nome)) continue;
+    if (desc > 40 * 1024 * 1024) throw new Error('Planilha grande demais.');
+    var ini = off + 30 + dv.getUint16(off + 26, true) + dv.getUint16(off + 28, true), dados = u.subarray(ini, ini + comp);
+    arq[nome] = metodo === 0 ? dados : metodo === 8 ? await inflarRaw(dados) : null;
+    if (!arq[nome]) throw new Error('Compressão não suportada no .xlsx.');
+  }
+  return arq;
+}
+function colIdx(ref) { var m = /^([A-Z]+)/.exec(ref || ''); if (!m) return 0; var n = 0; for (var i = 0; i < m[1].length; i++) n = n * 26 + m[1].charCodeAt(i) - 64; return n - 1; }
+function xmlDoc(bytes) { var d = new DOMParser().parseFromString(new TextDecoder('utf-8').decode(bytes), 'application/xml'); if (d.getElementsByTagName('parsererror').length) throw new Error('XML inválido no .xlsx.'); return d; }
+function textoSI(si) { var t = ''; var ts = si.getElementsByTagName('t'); for (var i = 0; i < ts.length; i++) { if (ts[i].parentNode.nodeName === 'rPh') continue; t += ts[i].textContent; } return t; }
+async function lerXlsx(buf) {
+  var arq = await lerZip(buf);
+  if (!arq['xl/workbook.xml']) throw new Error('Isso não parece um arquivo .xlsx. Salve como .xlsx ou CSV.');
+  var comp = [];
+  if (arq['xl/sharedStrings.xml']) { var sis = xmlDoc(arq['xl/sharedStrings.xml']).getElementsByTagName('si'); for (var i = 0; i < sis.length; i++) comp.push(textoSI(sis[i])); }
+  var rels = {}; if (arq['xl/_rels/workbook.xml.rels']) { var rr = xmlDoc(arq['xl/_rels/workbook.xml.rels']).getElementsByTagName('Relationship'); for (var j = 0; j < rr.length; j++) rels[rr[j].getAttribute('Id')] = rr[j].getAttribute('Target'); }
+  var abas = xmlDoc(arq['xl/workbook.xml']).getElementsByTagName('sheet'), saida = [];
+  for (var a = 0; a < abas.length && a < 8; a++) {
+    var rid = abas[a].getAttribute('r:id') || abas[a].getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id');
+    var alvo = (rels[rid] || ('worksheets/sheet' + (a + 1) + '.xml')).replace(/^\/?(xl\/)?/, ''); var bytes = arq['xl/' + alvo];
+    if (!bytes) { saida.push({ nome: abas[a].getAttribute('name') || ('Aba ' + (a + 1)), linhas: [] }); continue; }
+    var linhas = [], rows = xmlDoc(bytes).getElementsByTagName('row');
+    for (var r = 0; r < rows.length && r < 5000; r++) {
+      var rnum = Number(rows[r].getAttribute('r')) || (linhas.length + 1), cels = rows[r].getElementsByTagName('c'), lin = [];
+      for (var c = 0; c < cels.length; c++) {
+        var ci = colIdx(cels[c].getAttribute('r')); if (ci > 59) continue; var tipo = cels[c].getAttribute('t'), vN = cels[c].getElementsByTagName('v')[0], v = vN ? vN.textContent : '', txt = '';
+        if (tipo === 's') txt = comp[Number(v)] || ''; else if (tipo === 'inlineStr') { var is = cels[c].getElementsByTagName('is')[0]; txt = is ? textoSI(is) : ''; }
+        else if (tipo === 'b' || tipo === 'e') txt = ''; else txt = celulaTexto(/^-?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(v) ? (/[eE]/.test(v) || v.length > 15 ? Number(v) : (/^-?\d+$/.test(v) ? v : Number(v))) : v);
+        while (lin.length < ci) lin.push(''); lin[ci] = txt;
+      }
+      while (linhas.length < rnum - 1) linhas.push([]); linhas[rnum - 1] = lin;
+    }
+    saida.push({ nome: abas[a].getAttribute('name') || ('Aba ' + (a + 1)), linhas: linhas });
+  }
+  return saida;
 }
 
 // ---------- interpretar ----------
@@ -251,7 +304,7 @@ function desenharMapa() {
     if (!a.colunas.length) return;
     h += '<div style="overflow:auto"><table><tr><th>Coluna</th><th>Exemplos</th><th>A Bia entendeu como</th></tr>';
     a.colunas.forEach(function (c) {
-      var op = CAMPOS.map(function (f) { return '<option value="' + f[0] + '"' + (f[0] === c.campo ? ' selected' : '') + '>' + f[1] + '</option>'; }).join('');
+      var op = CAMPOS.map(function (f) { return '<option value="' + esc(f[0]) + '"' + (f[0] === c.campo ? ' selected' : '') + '>' + f[1] + '</option>'; }).join('');
       h += '<tr><td>' + esc(c.titulo || 'coluna ' + (c.col + 1)) + '</td><td class="muted">' + esc((c.exemplos || []).join(' | ')) + '</td><td><select class="mini mapSel" data-aba="' + ai + '" data-col="' + c.col + '">' + op + '</select>' +
         (c.origem === 'ia' ? ' <span class="pill p-duvida">sugerido pela IA, confira</span>' : '') + (c.motivo && c.origem !== 'cabecalho' ? '<div class="muted" style="font-size:11px">' + esc(c.motivo) + '</div>' : '') + '</td></tr>';
     });
@@ -326,12 +379,12 @@ function desenharPrevia() {
     if (d.v === 'pular' && d.motivo) h += '<div class="ln" style="margin-top:4px">Pulado: ' + esc(d.motivo) + '</div>';
     (l.contatos || []).forEach(function (c, ci) { h += '<div class="ct">' + (ci === 0 ? '<b>' + esc(c.nome) + '</b>' : esc(c.nome)) + (c.cargo ? ' (' + esc(c.cargo) + ')' : '') + ' · ' + (c.telefones || []).map(function (t) { return fone(t.n); }).join(', ') + (c.email ? ' · ' + esc(c.email) : '') + '</div>'; });
     if (l.segmento || true) { h += '<div class="row" style="margin-top:6px"><span class="ln">Segmento:</span><select class="mini segEd" data-i="' + idx + '"><option value="">(vazio)</option>' + ['Drogaria', 'Supermercado', 'Cosméticos', 'Utilidades', 'Outros'].map(function (s) { return '<option' + (s === it.segmento ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' +
-      '<span class="ln">Origem:</span><select class="mini oriEd" data-i="' + idx + '"><option value="">' + (l.origem ? esc((S.origens.filter(function (o) { return o.v === l.origem; })[0] || {}).label) + ' (da planilha)' : esc((S.origens.filter(function (o) { return o.v === $('origem').value; })[0] || {}).label || 'escolha') + ' (da lista)') + '</option>' + S.origens.map(function (o) { return '<option value="' + o.v + '"' + (it.origem === o.v ? ' selected' : '') + '>' + esc(o.label) + '</option>'; }).join('') + '</select>';
+      '<span class="ln">Origem:</span><select class="mini oriEd" data-i="' + idx + '"><option value="">' + (l.origem ? esc((S.origens.filter(function (o) { return o.v === l.origem; })[0] || {}).label) + ' (da planilha)' : esc((S.origens.filter(function (o) { return o.v === $('origem').value; })[0] || {}).label || 'escolha') + ' (da lista)') + '</option>' + S.origens.map(function (o) { return '<option value="' + esc(o.v) + '"' + (it.origem === o.v ? ' selected' : '') + '>' + esc(o.label) + '</option>'; }).join('') + '</select>';
       if (d.v === 'criar' || ehDuvida) h += '<label style="display:inline-flex;gap:5px;align-items:center;margin:0 0 0 auto"><input type="checkbox" class="incEd" data-i="' + idx + '"' + (it.incluir ? ' checked' : '') + '> incluir</label>'; h += '</div>'; }
     if (l.observacao) h += '<div class="ln" style="margin-top:4px">Observação SDR: ' + esc(l.observacao) + '</div>';
     (l.avisos || []).forEach(function (a) { h += '<div class="aviso">' + esc(a.texto) + '</div>'; });
     (it.conf.avisos || []).forEach(function (a) { h += '<div class="aviso">' + esc(a) + '</div>'; });
-    if (ehDuvida) (it.conf.duvidas || []).forEach(function (dv) { h += '<div class="duv">' + esc(dv.texto) + '<br>' + (dv.opcoes || []).map(function (o) { return '<label><input type="radio" class="duvEd" name="d' + idx + '_' + dv.codigo + '" data-i="' + idx + '" data-c="' + dv.codigo + '" value="' + o.v + '"' + (it.escolhas[dv.codigo] === o.v ? ' checked' : '') + '> ' + esc(o.label) + '</label>'; }).join('') + '</div>'; });
+    if (ehDuvida) (it.conf.duvidas || []).forEach(function (dv) { h += '<div class="duv">' + esc(dv.texto) + '<br>' + (dv.opcoes || []).map(function (o) { return '<label><input type="radio" class="duvEd" name="d' + idx + '_' + esc(dv.codigo) + '" data-i="' + idx + '" data-c="' + esc(dv.codigo) + '" value="' + esc(o.v) + '"' + (it.escolhas[dv.codigo] === o.v ? ' checked' : '') + '> ' + esc(o.label) + '</label>'; }).join('') + '</div>'; });
     if (l.origem === null && l.avisos && l.avisos.some(function (a) { return a.codigo === 'origem_desconhecida'; })) h += '<div class="aviso">A origem escrita na planilha não existe no Agendor: vale a origem escolhida acima, ou troque aqui.</div>';
     h += '</div>';
   });
@@ -397,7 +450,7 @@ async function mostrarRelatorio() {
 }
 function baixarCsv() {
   if (!S.relatorio) return;
-  var q = function (s) { return '"' + String(s == null ? '' : s).replace(/"/g, '""') + '"'; };
+  var q = function (s) { var t = String(s == null ? '' : s); if (/^[=+\-@\t\r]/.test(t)) t = "'" + t; return '"' + t.replace(/"/g, '""') + '"'; }; // célula que começa com = + - @ viraria fórmula no Excel
   var L = [['Empresa', 'Linha da planilha', 'Situação', 'Link', 'Detalhe'].map(q).join(';')];
   S.relatorio.linhas.forEach(function (x) { L.push([x.empresa, (x.linhasPlanilha || []).map(function (z) { return z.linha; }).join(','), x.status, x.link || '', (x.erro || '') + ' ' + (x.avisos || []).join(' | ')].map(q).join(';')); });
   S.relatorio.resumo.pulados.forEach(function (p) { L.push([p.empresa, (p.linhas || []).map(function (z) { return z.linha; }).join(','), 'pulado', '', p.motivo].map(q).join(';')); });
@@ -451,6 +504,7 @@ $('bNova').onclick = function () { S.itens = []; S.interp = null; S.abas = null;
 $('bRetomar').onclick = function () { var o = JSON.parse(lsGet('sl_job') || '{}'); if (!o.job) return; S.jobId = o.job; S.nomeArq = o.arquivo || ''; rodarJob(0); };
 $('bDescartar').onclick = function () { lsDel('sl_job'); $('retomar').classList.add('hide'); };
 
+window.__slTeste = { lerXlsx: lerXlsx }; // só para o teste automático da página
 // ---------- início ----------
 (async function () {
   var t = lsGet('sl_tok');
