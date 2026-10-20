@@ -87,6 +87,8 @@ a{color:var(--purple)}
   <p class="sub">Pode ser Excel (.xlsx) ou CSV, mesmo bagunçada. A Bia lê, mostra o que entendeu e só cria no Agendor depois que você confirmar. Até 300 empresas por envio.</p>
   <label for="origem">Origem desta lista (obrigatória)</label>
   <select id="origem"><option value="">Escolha a origem</option></select>
+  <label for="resp">Responsável (dono da empresa, dos contatos, do negócio e das tarefas)</label>
+  <select id="resp"></select>
   <p class="muted" style="margin-top:4px">É a origem do negócio no Agendor. Sem origem não sobe. Vale para toda a lista; você pode trocar linha a linha na prévia.</p>
   <div id="drop" class="drop" style="margin-top:12px"><b>Clique aqui ou arraste o arquivo</b><div class="muted" id="arqNome">nenhum arquivo escolhido</div></div>
   <input type="file" id="arq" accept=".csv,.xlsx,.xls,.txt,text/csv" class="hide">
@@ -182,7 +184,8 @@ async function entrar(token, silencioso) {
   if (j._status === 429) { if (!silencioso) $('loginMsg').textContent = 'Muitas tentativas. Espere 10 minutos.'; return false; }
   if (!j.ok) { if (!silencioso) $('loginMsg').textContent = 'Não consegui entrar agora.'; return false; }
   if ($('lembrar').checked) lsSet('sl_tok', token);
-  S.origens = j.origens || [];
+  S.origens = j.origens || []; S.resp = j.responsaveis || []; S.respPadrao = j.padrao;
+  $('resp').innerHTML = S.resp.map(function (r) { return '<option value="' + esc(r.id) + '"' + (r.id === S.respPadrao ? ' selected' : '') + '>' + esc(r.nome) + '</option>'; }).join('');
   if (j.modo !== 'on') { mostrar('s-off'); return true; }
   var sel = $('origem'); sel.innerHTML = '<option value="">Escolha a origem</option>' + S.origens.map(function (o) { return '<option value="' + esc(o.v) + '">' + esc(o.label) + '</option>'; }).join('');
   var salvo = lsGet('sl_job'); if (salvo) { try { var o = JSON.parse(salvo); $('retNome').textContent = o.arquivo || 'sem nome'; $('retomar').classList.remove('hide'); } catch (e) { lsDel('sl_job'); } }
@@ -403,11 +406,11 @@ function montarPayload() {
     if (d.v !== 'criar') return { id: l.id, empresa: it.nome || l.empresa, linhas: l.linhas, decisao: 'pular', motivoPulo: d.motivo };
     return Object.assign({}, l, { empresa: it.nome || l.empresa, segmento: it.segmento || '', origemEscolhida: origemDe(it), decisao: 'criar', avisos: undefined, bloqueios: undefined, confirmou: Object.keys(it.escolhas || {}).filter(function (k) { return it.escolhas[k] === 'criar'; }) });
   });
-  return { arquivo: S.nomeArq, origem: $('origem').value, leads: leads };
+  return { arquivo: S.nomeArq, origem: $('origem').value, responsavel: Number($('resp').value) || null, leads: leads };
 }
 async function subir() {
   var qtd = S.itens.filter(function (it) { return decisao(it).v === 'criar'; }).length;
-  if (!window.confirm('Criar ' + qtd + ' negócio(s) no funil SDR Outbound, com responsável Felipe? Quem já existe não será duplicado.')) return;
+  if (!window.confirm('Criar ' + qtd + ' negócio(s) no funil SDR Outbound, com responsável ' + ($('resp').selectedOptions[0] ? $('resp').selectedOptions[0].textContent : 'Felipe') + '? Quem já existe não será duplicado.')) return;
   $('bSubir').disabled = true;
   var j; try { j = await api('/job', { body: montarPayload() }); } catch (e) { alert('Falha de conexão. Nada foi criado. Tente de novo.'); $('bSubir').disabled = false; return; }
   if (!j.ok) { alert((j.mensagem || j.erro || 'Não foi possível criar o envio.') + (j.invalidos ? '\n' + j.invalidos.map(function (x) { return (x.empresa || '') + ': ' + x.motivo; }).join('\n') : '')); $('bSubir').disabled = false; return; }
@@ -504,7 +507,7 @@ $('bNova').onclick = function () { S.itens = []; S.interp = null; S.abas = null;
 $('bRetomar').onclick = function () { var o = JSON.parse(lsGet('sl_job') || '{}'); if (!o.job) return; S.jobId = o.job; S.nomeArq = o.arquivo || ''; rodarJob(0); };
 $('bDescartar').onclick = function () { lsDel('sl_job'); $('retomar').classList.add('hide'); };
 
-window.__slTeste = { lerXlsx: lerXlsx }; // só para o teste automático da página
+window.__slTeste = { lerXlsx: lerXlsx, lerArquivo: lerArquivo }; // só para o teste automático da página
 // ---------- início ----------
 (async function () {
   var t = lsGet('sl_tok');
