@@ -141,6 +141,19 @@ button:disabled{opacity:.55;cursor:not-allowed}
   .item a.bt{grid-column:1 / -1;grid-row:auto;width:100%;min-height:44px}
   .cab2 input[type=search]{width:100%} .relogio{font-size:22px} .atalhos{display:none}
 }
+
+.seg{display:inline-flex;border:1.5px solid var(--purple);border-radius:8px;overflow:hidden}
+.seg button{background:transparent;color:var(--purple);border-radius:0;min-height:34px;padding:4px 12px;font-size:13px}
+.seg button[aria-pressed="true"]{background:var(--purple-bt);color:#fff}
+.chip.forte b{color:var(--magenta)}
+.est{font-size:12px;font-weight:700;grid-column:1 / -1}
+.est.feito{color:var(--green)} .est.andamento{color:var(--amber)} .est.nao_iniciado{color:var(--muted)}
+.item .pas{grid-column:1 / -1}
+.cont{font-size:13px;font-weight:700;color:var(--muted);white-space:nowrap}
+.lib-col{border:2px solid var(--purple)} .lib-col .col-h{background:var(--track)}
+.fi .est{display:block}
+.pend{color:var(--amber);font-weight:700}
+
 </style>
 </head>
 <body>
@@ -177,18 +190,13 @@ button:disabled{opacity:.55;cursor:not-allowed}
   <header id="cab">
     <div class="cab1">
       <img src="/logo-lifeb.png" alt="Life B">
-      <div><div class="titulo" id="topoTitulo">Hoje do SDR</div><div class="relogio" id="relogio">--:--</div></div>
-      <div class="pctgrande" id="topoPct">0%</div>
-      <div class="resumo">
-        <div class="linha" id="topoTxt"></div>
-        <div class="bar" id="topoBar"><i></i></div>
-      </div>
+      <div><div class="titulo">Hoje do SDR</div><div class="relogio" id="relogio">--:--</div></div>
       <div class="chips" id="chips"></div>
       <div class="espaco"></div>
       <div style="text-align:right">
         <div class="atual" id="atualizado"></div>
         <div class="row" style="justify-content:flex-end;margin-top:4px">
-          <button class="sec" id="bAtualizar" title="Atualizar agora (R)">Atualizar</button>
+          <button class="sec" id="bAtualizar" title="Atualizar agora, lendo o Agendor de novo (R)">Atualizar</button>
           <button class="sec" id="bTema" title="Tema claro/escuro (T)">Tema</button>
           <button class="link" id="bSair2">Sair</button>
         </div>
@@ -196,26 +204,20 @@ button:disabled{opacity:.55;cursor:not-allowed}
     </div>
     <div class="cab2">
       <input type="search" id="busca" placeholder="Buscar empresa (tecla /)" aria-label="Buscar empresa" autocomplete="off">
-      <select id="ordem" aria-label="Ordenar"><option value="pend">Pendentes primeiro</option><option value="az">Ordem alfabética</option></select>
+      <div class="seg" role="group" aria-label="Funil"><button id="fTodos" aria-pressed="true">Todos</button><button id="fOut" aria-pressed="false">Outbound</button><button id="fIn" aria-pressed="false">Inbound</button></div>
+      <select id="ordem" aria-label="Ordenar"><option value="pend">Pendentes primeiro</option><option value="az">Ordem alfabética</option><option value="hora">Hora da liberação</option></select>
       <label><input type="checkbox" id="esconder"> Esconder feitos (H)</label>
       <span class="atalhos"><kbd>/</kbd> buscar &nbsp; <kbd>R</kbd> atualizar &nbsp; <kbd>H</kbd> esconder feitos &nbsp; <kbd>T</kbd> tema &nbsp; <kbd>F</kbd> fila &nbsp; <kbd>Esc</kbd> limpar</span>
     </div>
     <div class="ctl" id="ctl">
       <div class="grupo">
-        <span class="rot" id="rotQtd">Quantos leads iniciar hoje</span>
+        <span class="rot" id="rotQtd">Iniciar leads do Outbound (você decide quantos)</span>
         <div class="linha-ctl">
-          <select id="qtd" aria-labelledby="rotQtd"><option selected>10</option><option>20</option><option>30</option><option>40</option><option>50</option><option value="outro">Outro</option></select>
-          <input type="number" id="qtdOutro" min="1" max="50" step="1" value="50" class="hide" aria-label="Quantidade">
+          <select id="qtd" aria-labelledby="rotQtd"><option selected>10</option><option>20</option><option>30</option><option>40</option><option>50</option><option>100</option><option value="outro">Outro</option></select>
+          <input type="number" id="qtdOutro" min="1" step="1" value="50" class="hide" aria-label="Quantidade">
           <button class="forte" id="bLiberar">Iniciar os recomendados</button>
-          <button class="sec" id="bFila">Escolher leads da fila</button>
-        </div>
-      </div>
-      <div class="grupo">
-        <span class="rot" id="rotAuto">Liberação automática às 08:02</span>
-        <div class="linha-ctl">
-          <input type="number" id="autoN" min="0" max="500" step="1" value="40" aria-labelledby="rotAuto">
-          <button class="sec" id="bAutoSalvar">Salvar</button>
-          <button class="sec" id="bAutoOff">Desligar</button>
+          <button class="sec" id="bTodos">Iniciar todos da fila</button>
+          <button class="sec" id="bFila">Fila de espera (escolher leads)</button>
         </div>
       </div>
       <div class="grupo status-ctl" id="statusCtl"></div>
@@ -238,7 +240,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
   <div class="corpo" id="filaLista"></div>
   <div class="rodape">
     <div class="msgacao aviso" id="filaAviso" role="status" aria-live="polite"></div>
-    <div class="row"><button class="forte" id="bLiberarSel" disabled>Liberar selecionados (0)</button><button class="sec" id="bSelRecom">Marcar os 10 primeiros recomendados</button></div>
+    <div class="row"><button class="forte" id="bLiberarSel" disabled>Liberar selecionados (0)</button><button class="sec" id="bLiberarTodosFunil">Liberar todos deste funil</button><button class="sec" id="bSelRecom">Marcar os 10 primeiros</button></div>
   </div>
 </section>
 
@@ -247,14 +249,14 @@ button:disabled{opacity:.55;cursor:not-allowed}
 'use strict';
 var API = 'https://gs-agendor-worker.robert131196.workers.dev/sdr-hoje';
 var $ = function (id) { return document.getElementById(id); };
-var S = { token: '', timer: null, carregando: false, tem: false, dados: null, ctl: null, fila: [], sel: {}, idem: null, ocupado: false };
+var S = { token: '', timer: null, relogio: null, carregando: false, tem: false, dados: null, ctl: null, fila: [], filaFunis: [], sel: {}, idem: null, ocupado: false, funil: 'todos', msgFixa: false };
 function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
 function lsDel(k) { try { localStorage.removeItem(k); } catch (e) {} }
 function mostrar(id) { ['s-login', 's-off', 's-erro', 's-dia'].forEach(function (x) { $(x).classList.toggle('hide', x !== id); }); }
 function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
 function plural(n, s, p) { return n + ' ' + (n === 1 ? s : p); }
-function semAcento(t) { return String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
+function semAcento(t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
 
 // ---------- tema ----------
 function aplicarTema(t) { document.documentElement.setAttribute('data-tema', t); }
@@ -265,20 +267,24 @@ function aplicarTema(t) { document.documentElement.setAttribute('data-tema', t);
 })();
 function alternarTema() { var t = document.documentElement.getAttribute('data-tema') === 'dark' ? 'light' : 'dark'; aplicarTema(t); lsSet('sh_tema', t); }
 
-// ---------- relógio e atraso (horário de Brasília) ----------
-function agoraBRT() {
+// ---------- relógio, "atualizado há X s" e atraso (horário de Brasília) ----------
+function partesBRT(d) {
   try {
-    var p = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date());
+    var p = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(d || new Date());
     var h = 0, m = 0; p.forEach(function (x) { if (x.type === 'hour') h = Number(x.value) % 24; if (x.type === 'minute') m = Number(x.value); });
     return { h: h, m: m };
-  } catch (e) { var d = new Date(); return { h: d.getHours(), m: d.getMinutes() }; }
+  } catch (e) { var dd = d || new Date(); return { h: dd.getHours(), m: dd.getMinutes() }; }
 }
 function hh(n) { return ('0' + n).slice(-2); }
-function tickRelogio() { var b = agoraBRT(); $('relogio').textContent = hh(b.h) + ':' + hh(b.m); }
-function passouDas18() { return agoraBRT().h >= 18; } // todas as tarefas da cadência vencem às 18h de Brasília
+function horaBRT(iso) { if (!iso) return ''; var b = partesBRT(new Date(iso)); return hh(b.h) + ':' + hh(b.m); }
+function tickRelogio() {
+  var b = partesBRT(); $('relogio').textContent = hh(b.h) + ':' + hh(b.m);
+  if (S.dados && S.dados.tarefasEm) { var s = Math.max(0, Math.round((Date.now() - S.recebidoEm) / 1000) + 0); $('atualizado').textContent = 'Atualizado há ' + s + ' s (tarefas lidas às ' + horaBRT(S.dados.tarefasEm) + '). Atualiza sozinho a cada 30 s.'; }
+}
+function passouDas18() { return partesBRT().h >= 18; }
 
 async function api(path, corpo) {
-  var ctrl = new AbortController(); var tm = setTimeout(function () { ctrl.abort(); }, corpo ? 60000 : 45000);
+  var ctrl = new AbortController(); var tm = setTimeout(function () { ctrl.abort(); }, corpo ? 90000 : 60000);
   try {
     var init = { method: corpo ? 'POST' : 'GET', headers: { 'Authorization': 'Bearer ' + S.token }, signal: ctrl.signal };
     if (corpo) { init.headers['Content-Type'] = 'application/json'; init.body = JSON.stringify(corpo); }
@@ -289,122 +295,141 @@ async function api(path, corpo) {
 }
 
 // ---------- desenho ----------
+function visivel(it) { return S.funil === 'todos' || !it.funil || it.funil === S.funil; }
 function ordenar(itens, modo) {
   var a = itens.slice();
+  var peso = { nao_iniciado: 0, andamento: 1, feito: 2 };
   a.sort(function (x, y) {
-    if (modo === 'pend' && x.feito !== y.feito) return x.feito ? 1 : -1;
+    if (modo === 'hora') return String(x.quando || 'zz').localeCompare(String(y.quando || 'zz')) || String(x.empresa).localeCompare(String(y.empresa), 'pt-BR');
+    if (modo === 'pend' && x.feito !== undefined && x.feito !== y.feito) return x.feito ? 1 : -1;
+    if (modo === 'pend' && x.estado && y.estado && peso[x.estado] !== peso[y.estado]) return peso[x.estado] - peso[y.estado];
     return String(x.empresa).localeCompare(String(y.empresa), 'pt-BR');
   });
   return a;
 }
-function desenharTopo(d) {
-  $('topoPct').textContent = d.pctDia + '%';
-  var barra = $('topoBar'); barra.firstChild.style.width = d.pctDia + '%'; barra.classList.toggle('verde', d.totalDia > 0 && d.feitasDia === d.totalDia);
-  $('topoTxt').textContent = d.totalDia ? (d.feitasDia + ' de ' + plural(d.totalDia, 'atendimento feito', 'atendimentos feitos')) : 'Nenhum atendimento para hoje';
-  $('topoTitulo').textContent = d.totalDia && d.feitasDia === d.totalDia ? 'Dia completo! 🎉' : 'Hoje do SDR';
-  var chips = $('chips'); chips.textContent = '';
-  function chip(n, t, cls) { var c = el('div', 'chip' + (cls ? ' ' + cls : '')); c.appendChild(el('b', null, String(n))); c.appendChild(document.createTextNode(t)); chips.appendChild(c); }
-  var atrasadas = 0;
-  if (passouDas18()) d.blocos.forEach(function (b) { if (b.progresso) b.itens.forEach(function (i) { if (!i.feito) atrasadas++; }); });
-  if (d.cota) chip(d.usadosHoje + ' de ' + d.cota, 'aberturas liberadas hoje');
-  chip(d.fila, 'aguardando na fila');
-  if (atrasadas) chip(atrasadas, 'atrasados', 'alerta');
-  $('atualizado').textContent = 'Atualizado às ' + hh(new Date(d.atualizadoEm || Date.now()).getHours()) + ':' + hh(new Date(d.atualizadoEm || Date.now()).getMinutes()) + '. Sobe sozinho a cada 1 minuto.';
+function estadoTxt(it) {
+  if (it.estado === 'feito') return 'Feito' + (it.ultimoPasso ? ' às ' + horaBRT(it.ultimoPasso) : '');
+  if (it.estado === 'andamento') return 'Em andamento (' + it.passosFeitos + ' de ' + it.passosTotal + ' passos)' + (it.ultimoPasso ? ', último às ' + horaBRT(it.ultimoPasso) : '');
+  return 'Não iniciado';
 }
-function desenharBlocos() {
-  var d = S.dados; if (!d) return;
-  var bl = $('blocos');
-  var rolagem = {}; // guarda a rolagem de cada coluna para não voltar ao topo na atualização
-  Array.prototype.forEach.call(bl.querySelectorAll('.lista'), function (l) { rolagem[l.getAttribute('data-bloco')] = l.scrollTop; });
-  var busca = semAcento($('busca').value.trim()); var modo = $('ordem').value; var esconder = $('esconder').checked; var atrasado = passouDas18();
-  bl.textContent = '';
-  if (d.atrasadas && d.atrasadas.total) { // ATRASADAS: tarefas abertas de dias anteriores, em destaque e nunca escondidas
-    var ca = el('section', 'col atras-col'); ca.setAttribute('data-col', 'atrasadas');
-    var ha = el('div', 'col-h'); var h3a = el('h3'); h3a.appendChild(el('span', null, 'Atrasadas')); h3a.appendChild(el('span', 'n', plural(d.atrasadas.total, 'tarefa', 'tarefas'))); ha.appendChild(h3a);
-    ha.appendChild(el('p', 'dica', 'Tarefas abertas de dias anteriores. Nada se perde: o que sobra do dia vem para cá.')); ca.appendChild(ha);
-    var la = el('div', 'lista'); la.setAttribute('data-bloco', 'atrasadas');
-    d.atrasadas.itens.filter(function (it) { return !busca || semAcento(it.empresa).indexOf(busca) >= 0; }).forEach(function (it) {
-      var li = el('div', 'item atrasado'); li.appendChild(el('div', 'emp', it.empresa)); li.appendChild(el('div', 'pas', it.passo + ' (venceu em ' + it.venceEm.slice(8, 10) + '/' + it.venceEm.slice(5, 7) + ')')); var a2 = el('a', 'bt', 'Abrir no Agendor'); a2.href = it.link; a2.target = '_blank'; a2.rel = 'noopener noreferrer'; li.appendChild(a2); la.appendChild(li);
-    });
-    ca.appendChild(la); bl.appendChild(ca); if (rolagem.atrasadas) la.scrollTop = rolagem.atrasadas;
-  }
-  d.blocos.forEach(function (b) {
-    if (b.id === 'inbound_follow' && !b.total) return; // coluna extra só aparece quando há follow-up de Inbound
-    var inb = b.id.indexOf('inbound') === 0;
-    var c = el('section', 'col' + (inb ? ' inb' : '')); c.setAttribute('data-col', b.id);
-    var h = el('div', 'col-h'); var h3 = el('h3'); h3.appendChild(el('span', null, b.titulo));
-    h3.appendChild(el('span', 'n', b.progresso ? (b.feitas + ' de ' + b.total + ' feitas') : plural(b.total, 'empresa', 'empresas')));
-    h.appendChild(h3);
-    if (b.dica) h.appendChild(el('p', 'dica', b.dica));
-    if (b.progresso && b.total) { var bar = el('div', 'bar' + (b.feitas === b.total ? ' verde' : '')); var i = el('i'); i.style.width = b.pct + '%'; bar.appendChild(i); h.appendChild(bar); }
-    c.appendChild(h);
-    var lista = el('div', 'lista'); lista.setAttribute('data-bloco', b.id);
-    var itens = ordenar(b.itens, modo).filter(function (it) { return (!busca || semAcento(it.empresa).indexOf(busca) >= 0) && !(esconder && it.feito); });
-    if (!b.total) lista.appendChild(el('p', 'vazio', 'Nada para hoje aqui.'));
-    else if (!itens.length) lista.appendChild(el('p', 'vazio', busca ? 'Nenhuma empresa com esse nome aqui.' : 'Tudo certo por aqui.'));
-    itens.forEach(function (it) {
-      var atras = atrasado && b.progresso && !it.feito;
-      var li = el('div', 'item' + (it.feito ? ' feito' : '') + (atras ? ' atrasado' : '') + (inb && !it.feito ? ' inbitem' : ''));
-      li.appendChild(el('div', 'emp', it.empresa));
-      li.appendChild(el('div', 'pas', it.feito ? 'Tudo feito ✓' : (it.passoPendente || '') + (it.passosTotal > 1 ? ' (' + it.passosFeitos + ' de ' + it.passosTotal + ' passos)' : '')));
-      var extra = el('div', 'extra');
-      if (atras) extra.appendChild(el('span', 'pill red', 'Atrasado'));
-      if (it.depoisExpediente) extra.appendChild(el('span', 'pill amber', 'Chegou depois do expediente, entra na frente da fila'));
-      li.appendChild(extra);
-      var a = el('a', 'bt', 'Abrir no Agendor'); a.href = it.link; a.target = '_blank'; a.rel = 'noopener noreferrer'; li.appendChild(a);
-      lista.appendChild(li);
-    });
-    c.appendChild(lista); bl.appendChild(c);
-    if (rolagem[b.id]) lista.scrollTop = rolagem[b.id];
-  });
+function contar(d) {
+  var tot = 0, fe = 0;
+  d.blocos.forEach(function (b) { if (b.progresso) b.itens.forEach(function (i) { if (visivel(i)) { tot++; if (i.feito) fe++; } }); });
+  return { fazer: tot - fe, feitos: fe, total: tot };
+}
+function desenharTopo(d) {
+  var c = contar(d); var chips = $('chips'); chips.textContent = '';
+  function chip(n, t, cls) { var x = el('div', 'chip' + (cls ? ' ' + cls : '')); x.appendChild(el('b', null, String(n))); x.appendChild(document.createTextNode(t)); chips.appendChild(x); }
+  chip(c.fazer, 'Para fazer agora', 'forte');
+  chip(c.feitos, 'Feitos hoje');
+  var atr = d.atrasadas ? d.atrasadas.itens.filter(visivel).length : 0; if (atr) chip(atr, 'Atrasadas', 'alerta');
+  chip((d.liberadosHoje || []).filter(visivel).length, 'Liberados por mim hoje');
+  var fo = d.filaFunis ? d.filaFunis.outbound : d.fila, fi = d.filaFunis ? d.filaFunis.inbound : 0;
+  chip(S.funil === 'inbound' ? fi : S.funil === 'outbound' ? fo : fo + fi, 'Na fila de espera');
+  tickRelogio();
 }
 function desenharControle(d) {
   var c = d.controle || null; S.ctl = c; if (!c) return;
   var st = $('statusCtl'); st.textContent = '';
   function linha(t, v) { var p = el('div'); p.appendChild(document.createTextNode(t + ' ')); p.appendChild(el('b', null, String(v))); st.appendChild(p); }
-  linha('Liberados hoje:', c.usados + (c.ligada ? ' de ' + c.efetiva + ' vagas' : ''));
-  linha('Na fila:', d.fila);
-  if (c.ligada && d.fila > 0) { var ritmo = c.auto > 0 ? c.auto : 0; linha('A fila acaba em', ritmo > 0 ? plural(Math.ceil(d.fila / ritmo), 'dia útil', 'dias úteis') + ' no ritmo atual' : 'quando você liberar (automático desligado)'); }
-  if (c.ligada) linha('Pode liberar a mais hoje:', c.salaTeto + ' (teto do dia ' + c.teto + ')');
-  if (d.filaAtencao) linha('Em atenção:', d.filaAtencao + ' (negócio em outro funil, não saem no automático)');
-  if (!c.ligada) linha('Fila:', 'cota desligada, nada a liberar');
-  var off = !c.ligada || !c.janelaAberta || !c.cadenciaLive || S.ocupado;
-  ['bLiberar', 'bFila'].forEach(function (id) { $(id).disabled = !c.ligada || S.ocupado; });
-  $('bLiberar').disabled = off; $('bAutoSalvar').disabled = S.ocupado; $('bAutoOff').disabled = S.ocupado;
+  var fo = d.filaFunis ? d.filaFunis.outbound : d.fila, fi = d.filaFunis ? d.filaFunis.inbound : 0;
+  linha('Liberados hoje:', c.usados);
+  linha('Na fila:', 'Outbound ' + fo + ' | Inbound ' + fi);
+  if (c.pendentes) { var p = el('div', 'pend'); p.textContent = 'Saindo aos poucos: faltam ' + c.pendentes + '. A Bia continua sozinha a cada 10 minutos, sem você clicar de novo.'; st.appendChild(p); }
+  if (d.filaAtencao) linha('Em atenção:', d.filaAtencao + ' (negócio em outro funil, confira antes de iniciar)');
+  var ok = c.janelaAberta && c.cadenciaLive && !S.ocupado;
+  ['bLiberar', 'bTodos', 'bFila'].forEach(function (id) { $(id).disabled = S.ocupado; });
+  $('bLiberar').disabled = !ok || fo === 0 || !c.ligada; $('bTodos').disabled = !ok || fo === 0 || !c.ligada;
   $('bLiberar').title = !c.janelaAberta ? (c.janelaMsg || '') : '';
-  if (c.ligada && !c.janelaAberta) { $('msgAcao').textContent = c.janelaMsg; $('msgAcao').className = 'msgacao aviso'; }
-  if (document.activeElement !== $('autoN')) $('autoN').value = c.auto;
+  if (!c.janelaAberta) { $('msgAcao').textContent = c.janelaMsg; $('msgAcao').className = 'msgacao aviso'; }
+  else if (!c.cadenciaLive) { $('msgAcao').textContent = 'A cadência da Bia está desligada: não dá para liberar agora.'; $('msgAcao').className = 'msgacao aviso'; }
   var h = d.historico || []; var hist = $('historico');
   if (!h.length) hist.textContent = 'Nenhuma liberação hoje ainda.';
   else hist.textContent = 'Hoje: ' + h.map(function (x) { return (x.origem === 'ajuste_auto' ? 'ajuste automático para ' + x.pedido : (x.origem === 'manual' ? 'você liberou ' : 'a Bia liberou ') + x.n) + ' às ' + x.quando + (x.resultado && x.resultado !== 'ok' ? ' (' + String(x.resultado).replace(/_/g, ' ') + ')' : ''); }).join(', ') + '.';
 }
+function cartao(it, opts) {
+  var atras = opts.atras, li = el('div', 'item' + (it.feito || it.estado === 'feito' ? ' feito' : '') + (atras ? ' atrasado' : '') + (opts.inb && !(it.feito) ? ' inbitem' : ''));
+  li.appendChild(el('div', 'emp', it.empresa));
+  if (opts.estado) { li.appendChild(el('div', 'est ' + it.estado, estadoTxt(it))); }
+  if (opts.passo) li.appendChild(el('div', 'pas', it.feito ? 'Tudo feito ✓' : (it.passoPendente ? 'Próximo: ' + it.passoPendente : '')));
+  if (opts.texto) li.appendChild(el('div', 'pas', opts.texto(it)));
+  var extra = el('div', 'extra');
+  if (atras) extra.appendChild(el('span', 'pill red', 'Atrasado'));
+  if (it.depoisExpediente) extra.appendChild(el('span', 'pill amber', 'Chegou depois do expediente, entra na frente da fila'));
+  li.appendChild(extra);
+  var a = el('a', 'bt', 'Abrir no Agendor'); a.href = it.link; a.target = '_blank'; a.rel = 'noopener noreferrer'; li.appendChild(a);
+  return li;
+}
+function coluna(id, titulo, dica, contTxt, cls) {
+  var c = el('section', 'col' + (cls ? ' ' + cls : '')); c.setAttribute('data-col', id);
+  var h = el('div', 'col-h'); var h3 = el('h3'); h3.appendChild(el('span', null, titulo)); h3.appendChild(el('span', 'cont', contTxt)); h.appendChild(h3);
+  if (dica) h.appendChild(el('p', 'dica', dica)); c.appendChild(h);
+  var l = el('div', 'lista'); l.setAttribute('data-bloco', id); c.appendChild(l);
+  return { c: c, l: l };
+}
+function desenharBlocos() {
+  var d = S.dados; if (!d) return;
+  var bl = $('blocos'); var rolagem = {};
+  Array.prototype.forEach.call(bl.querySelectorAll('.lista'), function (l) { rolagem[l.getAttribute('data-bloco')] = l.scrollTop; });
+  var busca = semAcento($('busca').value.trim()), modo = $('ordem').value, esconder = $('esconder').checked, atrasado = passouDas18();
+  var passa = function (it) { return visivel(it) && (!busca || semAcento(it.empresa).indexOf(busca) >= 0); };
+  bl.textContent = '';
+  var cols = [];
+  // 1) ATRASADAS (nunca somem)
+  if (d.atrasadas && d.atrasadas.total) {
+    var ati = d.atrasadas.itens.filter(visivel); var k = coluna('atrasadas', 'Atrasadas', 'Tarefas abertas de dias anteriores. Nada se perde: o que sobra do dia vem para cá.', plural(ati.length, 'tarefa', 'tarefas'), 'atras-col');
+    ati.filter(passa).forEach(function (it) { k.l.appendChild(cartao(it, { atras: true, texto: function (x) { return x.passo + ' (venceu em ' + x.venceEm.slice(8, 10) + '/' + x.venceEm.slice(5, 7) + ')'; } })); });
+    cols.push(k);
+  }
+  // 2) LIBERADOS POR MIM HOJE (automático e manual): ninguém que você iniciou some da tela
+  var lib = (d.liberadosHoje || []).filter(visivel); var lf = lib.filter(function (x) { return x.estado === 'feito'; }).length;
+  var kl = coluna('liberados', 'Liberados por mim hoje', 'Todos que você iniciou hoje, com o estado de cada um.', lf + '/' + lib.length + ' feitos', 'lib-col');
+  var li = ordenar(lib, modo).filter(function (it) { return passa(it) && !(esconder && it.estado === 'feito'); });
+  if (!lib.length) kl.l.appendChild(el('p', 'vazio', 'Você ainda não liberou ninguém hoje.'));
+  li.forEach(function (it) { it.feito = it.estado === 'feito'; kl.l.appendChild(cartao(it, { estado: true, texto: function (x) { return (x.funil === 'inbound' ? 'Inbound' : 'Outbound') + (x.quando ? ', liberado às ' + x.quando : '') + (x.origem === 'manual' ? ' por você' : ' pela Bia'); } })); });
+  cols.push(kl);
+  // 3) colunas por tipo
+  d.blocos.forEach(function (b) {
+    if (b.id === 'inbound_follow' && !b.total) return;
+    var inb = b.id.indexOf('inbound') === 0;
+    if (S.funil === 'outbound' && inb) return; if (S.funil === 'inbound' && !inb && b.id !== 'fim') return;
+    var itens = b.itens.filter(visivel); var feitas = itens.filter(function (i) { return i.feito; }).length;
+    var k2 = coluna(b.id, b.titulo, b.dica, b.progresso ? (feitas + '/' + itens.length + ' feitos') : plural(itens.length, 'empresa', 'empresas'), inb ? 'inb' : '');
+    var lista = ordenar(itens, modo === 'hora' ? 'pend' : modo).filter(function (it) { return passa(it) && !(esconder && it.feito); });
+    if (!itens.length) k2.l.appendChild(el('p', 'vazio', 'Nada para hoje aqui.'));
+    else if (!lista.length) k2.l.appendChild(el('p', 'vazio', busca ? 'Nenhuma empresa com esse nome aqui.' : 'Tudo certo por aqui.'));
+    lista.forEach(function (it) { k2.l.appendChild(cartao(it, { atras: atrasado && b.progresso && !it.feito, inb: inb, estado: b.progresso, passo: true })); });
+    cols.push(k2);
+  });
+  cols.forEach(function (k) { bl.appendChild(k.c); var id = k.c.getAttribute('data-col'); if (rolagem[id]) k.l.scrollTop = rolagem[id]; });
+}
 function desenhar(d) {
-  S.dados = d; desenharTopo(d); desenharControle(d);
+  S.dados = d; S.recebidoEm = Date.now(); desenharTopo(d); desenharControle(d);
   var av = $('avisos'); av.textContent = '';
   if (d.truncado) av.appendChild(el('div', 'aviso', 'Atenção: o Agendor tem tarefas demais hoje e a lista pode estar incompleta. Confira também direto no Agendor.'));
   desenharBlocos();
 }
 
-async function carregar(silencioso) {
+async function carregar(silencioso, fresco) {
   if (S.carregando) return; S.carregando = true;
   try {
-    var j = await api('/dados');
+    var j = await api('/dados' + (fresco ? '?fresco=1' : ''));
     if (j._status === 401) { sair('Senha não confere.'); return; }
     if (j._status === 429) { sair('Muitas tentativas. Espere 10 minutos.'); return; }
     if (j._status === 409) { mostrar('s-off'); return; }
-    if (!j.ok) { var m = j.mensagem || 'Não consegui atualizar agora.'; if (!S.tem) { $('erroMsg').textContent = m; mostrar('s-erro'); } else $('atualizado').textContent = m + ' Tentando de novo em 1 minuto.'; return; }
-    desenhar(j); S.tem = true; mostrar('s-dia'); tickRelogio();
+    if (!j.ok) { var m = j.mensagem || 'Não consegui atualizar agora.'; if (!S.tem) { $('erroMsg').textContent = m; mostrar('s-erro'); } else $('atualizado').textContent = m + ' Tentando de novo em 30 segundos.'; return; }
+    desenhar(j); S.tem = true; mostrar('s-dia');
   } catch (e) {
-    if (!S.tem) { $('erroMsg').textContent = 'Sem conexão. Tente de novo.'; mostrar('s-erro'); } else $('atualizado').textContent = 'Sem conexão. Tentando de novo em 1 minuto.';
+    if (!S.tem) { $('erroMsg').textContent = 'Sem conexão. Tente de novo.'; mostrar('s-erro'); } else $('atualizado').textContent = 'Sem conexão. Tentando de novo em 30 segundos.';
   } finally { S.carregando = false; }
 }
 function agendar() {
   if (S.timer) clearInterval(S.timer);
-  S.timer = setInterval(function () { if (!document.hidden && S.token && (S.tem || !$('s-erro').classList.contains('hide'))) carregar(true); }, 60000);
+  S.timer = setInterval(function () { if (!document.hidden && S.token && (S.tem || !$('s-erro').classList.contains('hide'))) carregar(true, false); }, 30000); // a tarefa finalizada no Agendor aparece em até ~30 s
   if (S.relogio) clearInterval(S.relogio);
-  S.relogio = setInterval(tickRelogio, 15000);
+  S.relogio = setInterval(tickRelogio, 5000);
 }
-document.addEventListener('visibilitychange', function () { if (!document.hidden && S.token && S.tem) carregar(true); });
+document.addEventListener('visibilitychange', function () { if (!document.hidden && S.token && S.tem) carregar(true, false); });
 
 async function entrar(token, silencioso) {
   S.token = token;
@@ -415,31 +440,10 @@ async function entrar(token, silencioso) {
   if (!j.ok) { if (!silencioso) $('loginMsg').textContent = 'Não consegui entrar agora.'; return false; }
   if ($('lembrar').checked) lsSet('sh_tok', token);
   if (j.modo !== 'on') { mostrar('s-off'); return true; }
-  agendar(); await carregar(false);
+  agendar(); await carregar(false, false);
   return true;
 }
 function sair(msg) { lsDel('sh_tok'); S.token = ''; S.tem = false; S.dados = null; if (S.timer) clearInterval(S.timer); if (S.relogio) clearInterval(S.relogio); $('tok').value = ''; $('loginMsg').textContent = msg || ''; mostrar('s-login'); }
-
-$('bEntrar').onclick = async function () { var v = $('tok').value.trim(); if (!v) { $('loginMsg').textContent = 'Digite a senha.'; return; } $('loginMsg').textContent = ''; await entrar(v, false); };
-$('tok').onkeydown = function (e) { if (e.key === 'Enter') $('bEntrar').click(); };
-$('bTentar').onclick = function () { carregar(false); };
-$('bAtualizar').onclick = function () { $('atualizado').textContent = 'Atualizando...'; carregar(false); };
-$('bSair1').onclick = function () { sair(''); };
-$('bSair2').onclick = function () { sair(''); };
-$('bTema').onclick = alternarTema;
-$('busca').oninput = desenharBlocos; $('ordem').onchange = desenharBlocos; $('esconder').onchange = desenharBlocos;
-document.addEventListener('keydown', function (e) {
-  if (e.ctrlKey || e.metaKey || e.altKey || $('s-dia').classList.contains('hide')) return;
-  var alvo = e.target && e.target.tagName; var digitando = alvo === 'INPUT' || alvo === 'SELECT' || alvo === 'TEXTAREA';
-  if (e.key === 'Escape') { if (!$('painelFila').classList.contains('hide')) { $('painelFila').classList.add('hide'); return; } $('busca').value = ''; $('busca').blur(); desenharBlocos(); return; }
-  if (digitando) return;
-  var k = String(e.key).toLowerCase();
-  if (k === '/') { e.preventDefault(); $('busca').focus(); }
-  else if (k === 'r') carregar(false);
-  else if (k === 'h') { $('esconder').checked = !$('esconder').checked; desenharBlocos(); }
-  else if (k === 't') alternarTema();
-  else if (k === 'f') { $('bFila').click(); }
-});
 
 // ---------- liberar ----------
 function novaChave() { var a = new Uint8Array(12); try { crypto.getRandomValues(a); } catch (e) { for (var i = 0; i < 12; i++) a[i] = Math.floor(Math.random() * 256); } return 'c' + Array.prototype.map.call(a, function (x) { return ('0' + x.toString(16)).slice(-2); }).join(''); }
@@ -449,12 +453,12 @@ function mostrarLiberados(lista) {
   lista.forEach(function (x) { ul.appendChild(el('li', null, (x.empresa || ('Negócio ' + x.dealId)) + (x.motivo ? ' (' + x.motivo + ')' : ''))); });
   $('detLiberados').classList.toggle('hide', !lista.length); $('detResumo').textContent = 'Quem foi liberado agora (' + lista.length + ')'; if (lista.length) $('detLiberados').open = true;
 }
-function qtdEscolhida() { var v = $('qtd').value === 'outro' ? Number($('qtdOutro').value) : Number($('qtd').value); return Number.isInteger(v) && v >= 1 && v <= 50 ? v : null; }
+function qtdEscolhida() { var v = $('qtd').value === 'outro' ? Number($('qtdOutro').value) : Number($('qtd').value); return Number.isInteger(v) && v >= 1 ? v : null; }
 // envia o pedido com a MESMA chave até dar certo (duplo clique e nova tentativa nunca liberam duas vezes); espera crescente em 503
-async function liberar(corpo, rotulo) {
+async function liberar(corpo) {
   if (S.ocupado) return; S.ocupado = true; if (S.dados) desenharControle(S.dados);
   if (!S.idem || JSON.stringify(S.idem.corpo) !== JSON.stringify(corpo)) S.idem = { chave: novaChave(), corpo: corpo };
-  msg('Liberando... pode levar até 30 segundos.', 'aviso');
+  msg('Liberando... pode levar até 30 segundos. Não clique de novo.', 'aviso');
   try {
     var pedido = Object.assign({ idem: S.idem.chave }, corpo), j = null;
     for (var t = 0; t < 4; t++) {
@@ -467,71 +471,92 @@ async function liberar(corpo, rotulo) {
       break;
     }
     if (j._status === 401) { sair('Senha não confere.'); return; }
-    if (j.ok) { S.idem = null; mostrarLiberados(j.liberados || []); msg(j.mensagem, 'ok'); await carregar(false); if (!$('painelFila').classList.contains('hide')) await carregarFila(); S.msgFixa = true; msg(j.mensagem, 'ok'); }
+    if (j._status === 202 || j.emAndamento) { msg(j.mensagem || 'Ainda processando. Atualize em instantes.', 'aviso'); return; } // mantém a MESMA chave: nunca libera N de novo
+    if (j.ok) { S.idem = null; mostrarLiberados(j.liberados || []); await carregar(false, true); if (!$('painelFila').classList.contains('hide')) await carregarFila(); msg(j.mensagem, 'ok'); }
     else { msg((j.mensagem || 'Não consegui liberar.') + ' Clique de novo para tentar outra vez.', 'erro'); if (j.erro && j.erro !== 'cadencia_ocupada' && j.erro !== 'ocupado' && j.erro !== 'kv_falhou') S.idem = null; }
   } finally { S.ocupado = false; if (S.dados) desenharControle(S.dados); }
 }
 $('qtd').onchange = function () { $('qtdOutro').classList.toggle('hide', $('qtd').value !== 'outro'); atualizaRotuloLiberar(); };
 $('qtdOutro').oninput = atualizaRotuloLiberar;
 function atualizaRotuloLiberar() { var n = qtdEscolhida(); $('bLiberar').textContent = n ? 'Iniciar os ' + n + ' recomendados' : 'Iniciar os recomendados'; }
-$('bLiberar').onclick = function () { var n = qtdEscolhida(); if (!n) { msg('Digite uma quantidade inteira de 1 a 50 por clique.', 'erro'); return; } if (!window.confirm('Iniciar os ' + n + ' leads recomendados agora? As tarefas do Dia 1 são criadas na hora.')) return; liberar({ n: n }); };
-$('bAutoSalvar').onclick = async function () {
-  var n = Number($('autoN').value); if (!Number.isInteger(n) || n < 0 || n > 500) { msg('Digite um número inteiro de 0 a 500.', 'erro'); return; }
-  S.ocupado = true; desenharControle(S.dados); var j; try { j = await api('/auto', { n: n }); } catch (e) { j = { mensagem: 'Sem conexão. Tente de novo.' }; } S.ocupado = false;
-  if (j.ok) { msg(j.mensagem, 'ok'); await carregar(false); S.msgFixa = true; msg(j.mensagem, 'ok'); } else { msg(j.mensagem || 'Não consegui salvar.', 'erro'); if (S.dados) desenharControle(S.dados); }
-};
-$('bAutoOff').onclick = function () { $('autoN').value = 0; $('bAutoSalvar').click(); };
+$('bLiberar').onclick = function () { var n = qtdEscolhida(); if (!n) { msg('Digite uma quantidade inteira maior que zero.', 'erro'); return; } if (!window.confirm('Iniciar os ' + n + ' leads recomendados do Outbound agora? As tarefas do Dia 1 são criadas na hora.')) return; liberar({ n: n }); };
+$('bTodos').onclick = function () { var fo = S.dados && S.dados.filaFunis ? S.dados.filaFunis.outbound : 0; if (!window.confirm('Iniciar TODOS os ' + fo + ' leads da fila do Outbound? Eles saem em lotes e a Bia termina sozinha se for muita gente.')) return; liberar({ todos: true }); };
 
-// ---------- fila de espera ----------
-var NIVEL = { 2: 'Quente', 3: 'Feira', 4: 'Bom sinal', 5: 'Comum' };
+// ---------- fila de espera (os dois funis) ----------
+var NIVEL = { 1: 'Antes do expediente', 2: 'Quente', 3: 'Feira', 4: 'Bom sinal', 5: 'Comum' };
+function funilAtual() { return $('filaFunil').value || 'outbound'; }
 async function carregarFila() {
-  var funil = $('filaFunil').value || 'outbound', q = $('filaBusca').value.trim();
+  var funil = funilAtual(), q = $('filaBusca').value.trim();
   var j; try { j = await api('/fila?funil=' + encodeURIComponent(funil) + '&q=' + encodeURIComponent(q)); } catch (e) { $('filaResumo').textContent = 'Sem conexão.'; return; }
   if (j._status === 401) { sair('Senha não confere.'); return; }
   if (!j.ok) { $('filaResumo').textContent = j.mensagem || 'Não consegui ler a fila.'; return; }
-  var fs = $('filaFunil'); var ant = fs.value; fs.textContent = '';
-  var opts = j.funisComFila && j.funisComFila.length ? j.funisComFila : ['outbound'];
-  opts.forEach(function (f) { var o = el('option', null, f === 'outbound' ? 'SDR · Outbound' : 'SDR · Inbound'); o.value = f; fs.appendChild(o); });
-  fs.value = opts.indexOf(ant) >= 0 ? ant : opts[0];
-  S.fila = j.itens || []; $('filaResumo').textContent = plural(j.total, 'lead na fila', 'leads na fila') + '. Automático ainda libera hoje: ' + j.vagas + '. Você pode liberar mais: até ' + j.salaTeto + '.';
+  var fs = $('filaFunil'); var ant = fs.value || funil; fs.textContent = '';
+  (j.funis || [{ id: 'outbound', nome: 'SDR · Outbound', total: 0 }, { id: 'inbound', nome: 'SDR · Inbound', total: 0 }]).forEach(function (f) { var o = el('option', null, f.nome + ' (' + (f.total ? f.total + ' na fila' : 'fila vazia') + ')'); o.value = f.id; fs.appendChild(o); }); // os dois funis sempre visíveis
+  fs.value = ant;
+  S.fila = j.itens || []; S.filaFunil = j.funil;
+  $('filaResumo').textContent = j.total ? plural(j.total, 'lead na fila', 'leads na fila') + '.' : 'Fila vazia.';
   desenharFila();
 }
 function selIds() { return Object.keys(S.sel).filter(function (k) { return S.sel[k]; }).map(Number); }
 function avisoPulo() {
-  var ids = selIds(), box = $('filaAviso'); box.textContent = '';
-  if (!ids.length) return;
-  var esc = S.fila.filter(function (i) { return S.sel[i.dealId]; }); if (!esc.length) return;
+  var box = $('filaAviso'); box.textContent = '';
+  var esc = S.fila.filter(function (i) { return S.sel[i.dealId]; }); if (!esc.length || S.filaFunil !== 'outbound') return;
   var pior = Math.max.apply(null, esc.map(function (i) { return i.nivel; }));
   var ag = S.fila.filter(function (i) { return !S.sel[i.dealId] && !i.atencao && i.nivel < pior; });
   if (ag.length) { var mn = Math.min.apply(null, ag.map(function (i) { return i.nivel; })); var qtd = ag.filter(function (i) { return i.nivel === mn; }).length; box.textContent = 'Você está iniciando um lead de nível ' + pior + ' enquanto ' + qtd + ' ' + (mn === 2 ? 'indicações, recuperações ou reativações' : mn === 3 ? 'leads da feira SuperAgos' : 'leads com bom sinal') + ' aguardam. Pode seguir, é só um aviso.'; }
   var at = esc.filter(function (i) { return i.atencao; }); if (at.length) box.textContent += (box.textContent ? ' ' : '') + at.length + ' dos escolhidos já têm negócio aberto em outro funil.';
 }
+function podeLiberar() { return !!(S.ctl && S.ctl.janelaAberta && S.ctl.cadenciaLive && (S.filaFunil === 'inbound' || S.ctl.ligada)); }
 function desenharFila() {
   var l = $('filaLista'); l.textContent = '';
-  if (!S.fila.length) l.appendChild(el('p', 'vazio', 'Ninguém na fila com esse filtro.'));
+  if (!S.fila.length) l.appendChild(el('p', 'vazio', 'Fila vazia neste funil (ou nenhum lead com esse nome).'));
   S.fila.forEach(function (i) {
     var row = el('div', 'fi n' + i.nivel + (i.atencao ? ' atencao' : ''));
     var cb = el('input'); cb.type = 'checkbox'; cb.checked = !!S.sel[i.dealId]; cb.setAttribute('aria-label', 'Escolher ' + i.empresa); cb.onchange = function () { S.sel[i.dealId] = cb.checked; atualizaSel(); };
     row.appendChild(cb);
-    var tx = el('div', 'tx'); var emp = el('div', 'emp'); emp.appendChild(el('span', 'nv n' + i.nivel, '#' + i.posicao + ' ' + (NIVEL[i.nivel] || 'Nível ' + i.nivel))); emp.appendChild(document.createTextNode(i.empresa)); tx.appendChild(emp);
+    var tx = el('div', 'tx'); var emp = el('div', 'emp'); emp.appendChild(el('span', 'nv n' + i.nivel, '#' + i.posicao + ' ' + (S.filaFunil === 'inbound' ? (i.depoisExpediente ? 'Depois do expediente' : 'Aguardando') : (NIVEL[i.nivel] || 'Nível ' + i.nivel)))); emp.appendChild(document.createTextNode(i.empresa)); tx.appendChild(emp);
     tx.appendChild(el('div', 'mot', i.motivo));
-    var meta = [i.cidade, i.origem && i.origem !== 'OUTBOUND' ? 'origem ' + i.origem : '', i.entrada ? 'entrou em ' + i.entrada.slice(8, 10) + '/' + i.entrada.slice(5, 7) + '/' + i.entrada.slice(0, 4) : ''].filter(Boolean).join(' · ');
+    var meta = [i.cidade, i.origem && i.origem !== 'OUTBOUND' && i.origem !== 'INBOUND' ? 'origem ' + i.origem : '', i.entrada ? 'entrou em ' + i.entrada.slice(8, 10) + '/' + i.entrada.slice(5, 7) + '/' + i.entrada.slice(0, 4) : ''].filter(Boolean).join(' · ');
     if (meta) tx.appendChild(el('div', 'meta', meta));
     if (i.atencao && i.aviso) tx.appendChild(el('div', 'aviso-linha', 'Atenção: ' + i.aviso));
     row.appendChild(tx);
-    var b = el('button', 'sec', 'Liberar este'); b.onclick = function () { if (window.confirm('Iniciar ' + i.empresa + ' agora?' + (i.atencao ? ' Atenção: ' + i.aviso : ''))) liberar({ dealIds: [i.dealId] }); }; b.disabled = S.ocupado || !podeLiberar();
+    var b = el('button', 'sec', 'Liberar este'); b.onclick = function () { if (window.confirm('Iniciar ' + i.empresa + ' agora?' + (i.atencao ? ' Atenção: ' + i.aviso : ''))) liberar({ dealIds: [i.dealId], funil: S.filaFunil }); }; b.disabled = S.ocupado || !podeLiberar();
     row.appendChild(b); l.appendChild(row);
   });
   atualizaSel();
 }
-function podeLiberar() { return !!(S.ctl && S.ctl.ligada && S.ctl.janelaAberta && S.ctl.cadenciaLive && S.ctl.salaTeto > 0); } // mesma regra do botão do topo e da fila
-function atualizaSel() { var n = selIds().length; $('bLiberarSel').textContent = 'Liberar selecionados (' + n + ')'; $('bLiberarSel').disabled = !n || S.ocupado || !podeLiberar(); avisoPulo(); }
-$('bFila').onclick = async function () { $('painelFila').classList.remove('hide'); await carregarFila(); $('filaBusca').focus(); };
+function atualizaSel() { var n = selIds().length; $('bLiberarSel').textContent = 'Liberar selecionados (' + n + ')'; $('bLiberarSel').disabled = !n || S.ocupado || !podeLiberar(); $('bLiberarTodosFunil').disabled = !S.fila.length || S.ocupado || !podeLiberar(); avisoPulo(); }
+$('bFila').onclick = async function () { $('painelFila').classList.remove('hide'); if (!$('filaFunil').value) { var o = el('option', null, 'SDR · Outbound'); o.value = 'outbound'; $('filaFunil').appendChild(o); } await carregarFila(); $('filaBusca').focus(); };
 $('bFecharFila').onclick = function () { $('painelFila').classList.add('hide'); };
-$('filaFunil').onchange = carregarFila; $('filaBusca').oninput = function () { clearTimeout(S.tb); S.tb = setTimeout(carregarFila, 250); };
-$('bLiberarSel').onclick = function () { var ids = selIds(); if (!ids.length) return; if (!window.confirm('Iniciar ' + plural(ids.length, 'lead escolhido', 'leads escolhidos') + ' agora?')) return; liberar({ dealIds: ids.slice(0, 50) }).then(function () { S.sel = {}; atualizaSel(); }); };
+$('filaFunil').onchange = function () { S.sel = {}; carregarFila(); }; $('filaBusca').oninput = function () { clearTimeout(S.tb); S.tb = setTimeout(carregarFila, 250); };
+$('bLiberarSel').onclick = function () { var ids = selIds(); if (!ids.length) return; if (!window.confirm('Iniciar ' + plural(ids.length, 'lead escolhido', 'leads escolhidos') + ' agora?')) return; liberar({ dealIds: ids, funil: S.filaFunil }).then(function () { S.sel = {}; atualizaSel(); }); };
+$('bLiberarTodosFunil').onclick = function () { if (!window.confirm('Iniciar TODOS os ' + S.fila.length + ' leads da fila (' + (S.filaFunil === 'inbound' ? 'Inbound' : 'Outbound') + ') agora?')) return; liberar({ funil: S.filaFunil, todos: true }); };
 $('bSelRecom').onclick = function () { S.sel = {}; S.fila.filter(function (i) { return i.recomendado; }).slice(0, 10).forEach(function (i) { S.sel[i.dealId] = true; }); desenharFila(); };
 atualizaRotuloLiberar();
+
+// ---------- eventos ----------
+$('bEntrar').onclick = async function () { var v = $('tok').value.trim(); if (!v) { $('loginMsg').textContent = 'Digite a senha.'; return; } $('loginMsg').textContent = ''; await entrar(v, false); };
+$('tok').onkeydown = function (e) { if (e.key === 'Enter') $('bEntrar').click(); };
+$('bTentar').onclick = function () { carregar(false, false); };
+$('bAtualizar').onclick = function () { $('atualizado').textContent = 'Atualizando, lendo o Agendor de novo...'; carregar(false, true); };
+$('bSair1').onclick = function () { sair(''); };
+$('bSair2').onclick = function () { sair(''); };
+$('bTema').onclick = alternarTema;
+$('busca').oninput = desenharBlocos; $('ordem').onchange = desenharBlocos; $('esconder').onchange = desenharBlocos;
+function setFunil(f) { S.funil = f; [['fTodos', 'todos'], ['fOut', 'outbound'], ['fIn', 'inbound']].forEach(function (p) { $(p[0]).setAttribute('aria-pressed', p[1] === f ? 'true' : 'false'); }); if (S.dados) { desenharTopo(S.dados); desenharBlocos(); } }
+$('fTodos').onclick = function () { setFunil('todos'); }; $('fOut').onclick = function () { setFunil('outbound'); }; $('fIn').onclick = function () { setFunil('inbound'); };
+document.addEventListener('keydown', function (e) {
+  if (e.ctrlKey || e.metaKey || e.altKey || $('s-dia').classList.contains('hide')) return;
+  var alvo = e.target && e.target.tagName; var digitando = alvo === 'INPUT' || alvo === 'SELECT' || alvo === 'TEXTAREA';
+  if (e.key === 'Escape') { if (!$('painelFila').classList.contains('hide')) { $('painelFila').classList.add('hide'); return; } $('busca').value = ''; $('busca').blur(); desenharBlocos(); return; }
+  if (digitando) return;
+  var k = String(e.key).toLowerCase();
+  if (k === '/') { e.preventDefault(); $('busca').focus(); }
+  else if (k === 'r') carregar(false, true);
+  else if (k === 'h') { $('esconder').checked = !$('esconder').checked; desenharBlocos(); }
+  else if (k === 't') alternarTema();
+  else if (k === 'f') { $('bFila').click(); }
+});
 
 window.__shTeste = { desenhar: desenhar, carregar: carregar };
 (async function () {
