@@ -246,7 +246,7 @@ button.chip{font-family:var(--font);cursor:pointer;text-align:left;font-weight:6
           <div class="linha-ctl">
             <select id="qtd" aria-labelledby="rotQtd"><option selected>10</option><option>20</option><option>30</option><option>40</option><option>50</option><option>100</option><option value="outro">Outro</option></select>
             <input type="number" id="qtdOutro" min="1" step="1" value="50" class="hide" aria-label="Quantidade">
-            <button class="forte" id="bLiberar">Iniciar os primeiros da fila</button>
+            <button class="forte" id="bLiberar">Iniciar os primeiros da lista</button>
             <button class="sec" id="bTodos">Iniciar TODOS do Outbound</button>
             <button class="sec" id="bFila">Fila de espera (escolher leads)</button>
           </div>
@@ -380,8 +380,9 @@ function estadoTxt(it) {
   return 'Não iniciado';
 }
 function contar(d) {
-  var emp = 0, tar = 0, feitos = 0, inb = 0;
-  (d.blocos || []).forEach(function (b) { if (!b.progresso) return; b.itens.forEach(function (i) { if (!visivel(i)) return; if (i.feito) feitos++; else { emp++; tar += Math.max(0, i.passosTotal - i.passosFeitos); if (b.id === 'inbound_novo') inb++; } }); });
+  var emp = 0, tar = 0, feitos = 0, inb = 0; var pend = {}, ok = {}, inbV = {};
+  (d.blocos || []).forEach(function (b) { if (!b.progresso) return; b.itens.forEach(function (i) { if (!visivel(i)) return; if (i.feito) ok[i.dealId] = 1; else { pend[i.dealId] = 1; tar += Math.max(0, i.passosTotal - i.passosFeitos); if (b.id === 'inbound_novo') inbV[i.dealId] = 1; } }); }); // a empresa conta UMA vez, mesmo em 2 colunas (ex.: 2º contato remarcado e 3º contato novo); as tarefas somam
+  emp = Object.keys(pend).length; inb = Object.keys(inbV).length; Object.keys(ok).forEach(function (k) { if (!pend[k]) feitos++; });
   var atr = d.atrasadas ? (d.atrasadas.grupos || []).filter(visivel) : [];
   return { empresas: emp, tarefas: tar, feitos: feitos, inboundNovo: inb, atrasadasEmpresas: atr.length, atrasadasTarefas: atr.reduce(function (s, g) { return s + g.n; }, 0) };
 }
@@ -401,7 +402,7 @@ function desenharControle(d) {
   var fo = totalOut(d); $('iniciarResumo').textContent = 'Começar leads novos (' + fo + (fo === 1 ? ' esperando)' : ' esperando)');
   var st = $('statusCtl'); st.textContent = '';
   function linha(t, v) { var p = el('div'); p.appendChild(document.createTextNode(t + ' ')); p.appendChild(el('b', null, String(v))); st.appendChild(p); }
-  linha('Na fila do Outbound:', fo);
+  linha('Esperando você iniciar:', fo);
   if (c.pendentes) { var p = el('div', 'pend'); p.textContent = 'Saindo aos poucos: faltam ' + c.pendentes + '. A Bia continua sozinha a cada 10 minutos, sem você clicar de novo.'; st.appendChild(p); }
   if (d.filaAtencao) { var at = el('div', 'pend'); at.textContent = d.filaAtencao + (d.filaAtencao === 1 ? ' lead já tem negócio aberto em outro funil (ex.: com representante na Arena). Ele NÃO entra no "Iniciar todos". Abra e confira antes.' : ' leads já têm negócio aberto em outro funil (ex.: com representante na Arena). Eles NÃO entram no "Iniciar todos". Abra e confira antes.'); st.appendChild(at); }
   var ok = c.janelaAberta && c.cadenciaLive && !S.ocupado;
@@ -530,14 +531,26 @@ function tickRelogio() {
 
 // ---------- versão: o painel nunca anda para trás ----------
 function versaoDe(j) { return j && j.versao ? j.versao : null; }
-function aceitar(j, manual) {
-  if (!S.dados || !S.vm) return true;
-  if (j.dia && S.dados.dia && j.dia !== S.dados.dia) return true; // virada de dia
-  var v = versaoDe(j); if (!v) return true; // servidor antigo sem versão: aceita
-  var m = S.vm;
-  var ok = v.negocios >= m.negocios && v.atrasadas >= m.atrasadas && v.tarefas >= m.tarefas; // nenhuma camada pode ser mais velha que a já exibida
-  return ok || !!manual && v.tarefas >= m.tarefas && v.negocios >= m.negocios;
+var CAMPOS_ESTADO = ['feito', 'estado', 'passosFeitos', 'passosTotal', 'ultimoPasso', 'passoPendente'];
+function todosItens(d, fn) { (d.blocos || []).forEach(function (b) { (b.itens || []).forEach(function (i) { fn(i, b); }); }); (d.liberadosHoje || []).forEach(function (i) { fn(i, null); }); }
+function mesclar(j, manual) { // junta camada por camada, guardando a MAIS NOVA de cada uma: nunca regride, e a tarefa finalizada nunca deixa de ficar verde por causa de outra camada mais velha
+  if (!S.dados || !S.vm) return j;
+  if (j.dia && S.dados.dia && j.dia !== S.dados.dia) return j; // virada de dia
+  var v = versaoDe(j); if (!v) return j; // servidor antigo sem versão: aceita
+  var m = S.vm; var novoNeg = v.negocios >= m.negocios, novoTar = v.tarefas >= m.tarefas, novoAtr = v.atrasadas >= m.atrasadas;
+  if (novoNeg && novoTar && novoAtr) { semFoneCarrega(j); return j; }
+  var base = JSON.parse(JSON.stringify(S.dados)); var algo = false;
+  if (novoNeg && v.negocios > m.negocios) { // estrutura (quem está em qual coluna) mais nova: usa a da resposta; o estado das tarefas vem da camada mais nova dentre as duas
+    var antigo = {}; todosItens(S.dados, function (i) { antigo[i.dealId] = i; });
+    var r = JSON.parse(JSON.stringify(j)); if (!novoTar) todosItens(r, function (i) { var o = antigo[i.dealId]; if (o) CAMPOS_ESTADO.forEach(function (c) { if (o[c] !== undefined) i[c] = o[c]; }); });
+    r.versao = { negocios: v.negocios, atrasadas: novoAtr ? v.atrasadas : m.atrasadas, tarefas: novoTar ? v.tarefas : m.tarefas }; if (!novoAtr) r.atrasadas = base.atrasadas; if (!novoTar) r.tarefasEm = base.tarefasEm; semFoneCarrega(r); return r;
+  }
+  if (novoTar && v.tarefas > m.tarefas) { var porId = {}; todosItens(j, function (i) { porId[i.dealId] = i; }); todosItens(base, function (i) { var n = porId[i.dealId]; if (n) CAMPOS_ESTADO.forEach(function (c) { if (n[c] !== undefined) i[c] = n[c]; }); }); base.tarefasEm = j.tarefasEm; base.versao.tarefas = v.tarefas; algo = true; }
+  if (novoAtr && v.atrasadas > m.atrasadas && j.atrasadas) { base.atrasadas = j.atrasadas; base.atrasadasEm = j.atrasadasEm; base.versao.atrasadas = v.atrasadas; algo = true; }
+  return algo ? base : null;
 }
+function semFoneCarrega(j) { var tel = {}; todosItens(S.dados || {}, function (i) { if (i.fone) tel[i.dealId] = i.fone; }); todosItens(j, function (i) { if (!i.fone && tel[i.dealId]) i.fone = tel[i.dealId]; }); } // o sh_ultimo não guarda telefone: o que já está na tela continua
+function aceitar(j, manual) { return !!mesclar(j, manual); }
 async function carregar(silencioso, modo) {
   var fresco = modo === true || modo === 'fresco'; var soTarefas = modo === 'tarefas';
   if (S.carregando) { if (!fresco) return; try { S.ctrlCarregar.abort(); } catch (e) {} } // o auto-refresh nunca empilha pedidos; o clique em Atualizar cancela o anterior e vale
@@ -550,10 +563,10 @@ async function carregar(silencioso, modo) {
     if (j._status === 429) { sair('Muitas tentativas. Espere 10 minutos.'); return; }
     if (j._status === 409) { mostrar('s-off'); return; }
     if (!j.ok) { var m = j.mensagem || 'Não consegui atualizar agora.'; if (!S.tem) { $('erroMsg').textContent = m; mostrar('s-erro'); } else { S.conferindo = false; $('atualizado').textContent = m + ' Tentando de novo em 30 segundos.'; } return; }
-    if (!aceitar(j, fresco)) { S.conferindo = false; tickRelogio(); return; } // versão mais velha que a já exibida: ignora, o número nunca volta atrás
-    S.vm = j.versao ? { negocios: j.versao.negocios, atrasadas: j.versao.atrasadas, tarefas: j.versao.tarefas } : S.vm;
+    var jm = mesclar(j, fresco); if (!jm) { S.conferindo = false; tickRelogio(); return; } // todas as camadas mais velhas que as já exibidas: ignora, o número nunca volta atrás
+    j = jm; S.vm = j.versao ? { negocios: j.versao.negocios, atrasadas: j.versao.atrasadas, tarefas: j.versao.tarefas } : S.vm;
     S.conferindo = false; desenhar(j); S.tem = true; mostrar('s-dia');
-    try { var tx = JSON.stringify(j); if (tx.length < 1500000) lsSet('sh_ultimo', tx); } catch (e) {} // último dado conhecido: aparece na hora na próxima abertura (e nas outras abas)
+    try { var tx = JSON.stringify(j, function (k2, v2) { return k2 === 'fone' ? undefined : v2; }); /* sh_ultimo SEM telefones: só ids e contagens */ if (tx.length < 1500000) lsSet('sh_ultimo', tx); } catch (e) {} // último dado conhecido: aparece na hora na próxima abertura (e nas outras abas)
   } catch (e) {
     if (S.reqSeq !== meu) return;
     S.conferindo = false;
@@ -574,7 +587,7 @@ document.addEventListener('visibilitychange', function () {
 });
 window.addEventListener('storage', function (e) { // outra aba leu mais novo: esta aba também mostra (só se a versão não for mais velha)
   if (e.key !== 'sh_ultimo' || !e.newValue || !S.tem) return;
-  try { var j = JSON.parse(e.newValue); if (j && j.ok && aceitar(j, false) && versaoDe(j) && S.vm && (j.versao.tarefas > S.vm.tarefas || j.versao.negocios > S.vm.negocios || j.versao.atrasadas > S.vm.atrasadas)) { S.vm = { negocios: j.versao.negocios, atrasadas: j.versao.atrasadas, tarefas: j.versao.tarefas }; desenhar(j); } } catch (er) {}
+  try { var j = JSON.parse(e.newValue); if (j && j.ok && versaoDe(j) && S.vm && (j.versao.tarefas > S.vm.tarefas || j.versao.negocios > S.vm.negocios || j.versao.atrasadas > S.vm.atrasadas)) { var jm = mesclar(j, false); if (jm) { S.vm = { negocios: jm.versao.negocios, atrasadas: jm.versao.atrasadas, tarefas: jm.versao.tarefas }; desenhar(jm); } } } catch (er) {}
 });
 
 async function entrar(token, silencioso) {
@@ -630,8 +643,8 @@ async function liberar(corpo) {
 }
 $('qtd').onchange = function () { $('qtdOutro').classList.toggle('hide', $('qtd').value !== 'outro'); atualizaRotuloLiberar(); };
 $('qtdOutro').oninput = atualizaRotuloLiberar;
-function atualizaRotuloLiberar() { var n = qtdEscolhida(); $('bLiberar').textContent = n ? 'Iniciar os ' + n + ' primeiros da fila' : 'Iniciar os primeiros da fila'; }
-$('bLiberar').onclick = function () { var n = qtdEscolhida(); if (!n) { msg('Digite uma quantidade inteira maior que zero.', 'erro'); return; } if (!window.confirm('Iniciar os ' + n + ' primeiros da fila do Outbound agora? As tarefas do Dia 1 são criadas na hora.' + avisoTarde())) return; liberar({ n: n }); };
+function atualizaRotuloLiberar() { var n = qtdEscolhida(); $('bLiberar').textContent = n ? 'Iniciar os ' + n + ' primeiros da lista' : 'Iniciar os primeiros da lista'; }
+$('bLiberar').onclick = function () { var n = qtdEscolhida(); if (!n) { msg('Digite uma quantidade inteira maior que zero.', 'erro'); return; } if (!window.confirm('Iniciar os ' + n + ' primeiros da lista do Outbound agora? As tarefas do 1º contato são criadas na hora.' + avisoTarde())) return; liberar({ n: n }); };
 $('bTodos').onclick = function () { var fo = totalOut(S.dados); if (!window.confirm('ATENÇÃO: iniciar TODOS os ' + fo + ' do Outbound (menos os que estão em atenção)? Eles saem uns 15 a 20 por vez e a Bia termina sozinha nos próximos minutos.' + avisoTarde() + ' Confirma?')) return; liberar({ todos: true }); };
 
 // ---------- fila de espera (os dois funis): carrega a lista inteira UMA vez e filtra no cliente ----------
@@ -643,7 +656,7 @@ async function carregarFila() {
   if (j._status === 401) { sair('Senha não confere.'); return; }
   if (!j.ok) { $('filaResumo').textContent = j.mensagem || 'Não consegui ler a fila.'; return; }
   var fs = $('filaFunil'); var ant = fs.value || funil; fs.textContent = '';
-  (j.funis || [{ id: 'outbound', nome: 'SDR · Outbound', total: 0 }, { id: 'inbound', nome: 'SDR · Inbound', total: 0 }]).forEach(function (f) { S.filaTotais[f.id] = f.total; var o = el('option', null, f.nome + ' (' + (f.total ? f.total + ' na fila' : 'fila vazia') + ')'); o.value = f.id; fs.appendChild(o); }); // os dois funis sempre visíveis
+  (j.funis || [{ id: 'outbound', nome: 'SDR · Outbound', total: 0 }, { id: 'inbound', nome: 'SDR · Inbound', total: 0 }]).forEach(function (f) { S.filaTotais[f.id] = f.total; var o = el('option', null, f.nome + ' (' + (f.total ? f.total + ' esperando você iniciar' : 'ninguém esperando') + ')'); o.value = f.id; fs.appendChild(o); }); // os dois funis sempre visíveis
   fs.value = ant; S.fila = j.itens || []; S.filaFunil = j.funil;
   desenharFila();
 }
@@ -661,8 +674,8 @@ function buscando() { return $('filaBusca').value.trim() !== ''; }
 function desenharFila() {
   var l = $('filaLista'); l.textContent = '';
   var q = $('filaBusca').value.trim(); S.filaVis = S.fila.filter(function (i) { return casaBusca(i, q); }); // busca instantânea no cliente
-  $('filaResumo').textContent = S.fila.length ? (q ? plural(S.filaVis.length, 'lead', 'leads') + ' de ' + S.fila.length : plural(S.fila.length, 'lead na fila', 'leads na fila')) + '.' : 'Fila vazia.';
-  if (!S.filaVis.length) l.appendChild(el('p', 'vazio', S.fila.length ? 'Nenhum lead com essa busca.' : 'Fila vazia neste funil.'));
+  $('filaResumo').textContent = S.fila.length ? (q ? plural(S.filaVis.length, 'lead', 'leads') + ' de ' + S.fila.length : plural(S.fila.length, 'lead esperando você iniciar', 'leads esperando você iniciar')) + '.' : 'Ninguém esperando você iniciar.';
+  if (!S.filaVis.length) l.appendChild(el('p', 'vazio', S.fila.length ? 'Nenhum lead com essa busca.' : 'Ninguém esperando você iniciar neste funil.'));
   S.filaVis.forEach(function (i) {
     var row = el('div', 'fi n' + i.nivel + (i.atencao ? ' atencao' : ''));
     var cb = el('input'); cb.type = 'checkbox'; cb.checked = !!S.sel[i.dealId]; cb.setAttribute('aria-label', 'Escolher ' + i.empresa); cb.onchange = function () { S.sel[i.dealId] = cb.checked; atualizaSel(); };
