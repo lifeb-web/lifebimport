@@ -187,7 +187,7 @@ a{color:var(--purple-d)}
   <p class="sub">Nada foi criado ainda. Dúvidas já vêm marcadas em "Pular"; mude só se tiver certeza.</p>
   <div class="counts" id="counts"></div>
   <div class="row"><label class="l" style="margin:0">Mostrar:</label>
-    <select id="filtro" style="width:auto;min-width:200px"><option value="todos">Todos</option><option value="criar">Vão ser criados</option><option value="duvida">Precisam da sua decisão</option><option value="pular">Pulados (já existem)</option><option value="erro">Com problema</option></select>
+    <select id="filtro" style="width:auto;min-width:200px"><option value="todos">Todos</option><option value="criar">Vão ser criados</option><option value="duvida">Precisam da sua decisão</option><option value="naovao">Não vão subir (com o motivo)</option><option value="pular">Pulados (já existem)</option><option value="erro">Com problema</option></select>
     <button class="sec" id="bReconferir">Conferir de novo os que deram erro</button>
   </div>
   <div id="leads"></div>
@@ -557,7 +557,7 @@ function desenharPrevia() {
     if (d.v === 'criar') cont.criar++; else if (d.tipo === 'problema') cont.problema++; else if (ehDuvida && d.tipo === 'voce') cont.duvida++; else cont.pulado++;
     if (ehDuvida && d.v === 'criar') { /* dúvida que você liberou conta em criar */ }
     var grupo = d.v === 'criar' ? (ehDuvida ? 'duvida' : 'criar') : (d.tipo === 'problema' ? 'erro' : (ehDuvida ? 'duvida' : 'pular'));
-    if (f !== 'todos' && f !== grupo) return;
+    if (f !== 'todos' && f !== grupo && !(f === 'naovao' && (grupo === 'pular' || grupo === 'erro' || (grupo === 'duvida' && d.v === 'pular')))) return;
     var l = it.lead;
     var cls = d.v === 'criar' && !ehDuvida ? '' : (ehDuvida ? 'duvida' : (d.tipo === 'problema' ? 'erro' : 'pular'));
     var pill = d.v === 'criar' && !ehDuvida ? '<span class="pill p-ok">Vai criar</span>' : (ehDuvida ? '<span class="pill p-conf">Decida</span>' : (d.tipo === 'problema' ? '<span class="pill p-obr">Problema</span>' : '<span class="pill p-cinza">Pulado</span>'));
@@ -578,7 +578,7 @@ function desenharPrevia() {
     h += '</div>';
   });
   $('leads').innerHTML = h || '<p class="muted">Nada para mostrar neste filtro.</p>';
-  $('counts').innerHTML = '<div class="c-verde"><b>' + cont.criar + '</b>vão ser criados</div><div class="c-amarelo"><b>' + cont.duvida + '</b>precisam da sua decisão</div><div><b>' + cont.pulado + '</b>pulados (já existem ou você tirou)</div><div class="' + (cont.problema ? 'c-vermelho' : '') + '"><b>' + cont.problema + '</b>com problema</div>';
+  $('counts').innerHTML = '<div class="c-verde"><b>' + cont.criar + '</b>vão ser criados</div><div class="c-amarelo"><b>' + cont.duvida + '</b>precisam da sua decisão</div><div><b>' + cont.pulado + '</b>não vão subir (já existem ou você tirou)</div><div class="' + (cont.problema ? 'c-vermelho' : '') + '"><b>' + cont.problema + '</b>com problema</div>';
   var criar = S.itens.filter(function (it) { return decisao(it).v === 'criar'; }).length; var temOrigem = !!$('origem').value && !!$('origemMae').value;
   $('bSubir').disabled = !(criar > 0 && temOrigem); $('bSubir').textContent = 'Subir ' + criar + ' negócio' + (criar === 1 ? '' : 's') + ' no SDR Outbound';
   $('subirTxt').textContent = !temOrigem ? 'Falta escolher as origens (passo 1).' : (criar ? 'Nada é criado até você clicar.' : 'Nada para criar.');
@@ -661,6 +661,7 @@ async function mostrarRelatorio() {
   S.relatorio = { resumo: ult, criados: criados, erros: erros };
   var pulados = ult.pulados || [];
   var h = '';
+  if (criados.length) h += '<div class="blk verde"><h3>Os ' + criados.length + ' leads entraram na FILA DE ESPERA do Outbound.</h3><div class="ex">Nada começa sozinho: abra a página Hoje e clique em Iniciar quando quiser.</div><div style="margin-top:8px"><a class="big" style="display:inline-block;text-decoration:none;padding:12px 18px;border-radius:10px;background:var(--acc,#0a7a3d);color:#fff;font-weight:700" target="_blank" rel="noopener" href="https://projetojlbv.com.br/hoje/">Abrir a página Hoje</a> <span class="muted">https://projetojlbv.com.br/hoje/</span></div></div>';
   h += '<div class="blk verde"><h3>CRIADOS: ' + criados.length + '</h3>' + (criados.length ? '' : '<div class="ex">Nenhum negócio novo.</div>') + criados.map(function (x) { return '<div class="item"><b>' + esc(x.empresa) + '</b> <span class="muted">linha ' + esc((x.linhasPlanilha || []).map(function (q) { return q.linha; }).join(', ')) + '</span>' + (x.link ? ' <a target="_blank" rel="noopener" href="' + esc(x.link) + '">abrir no Agendor</a>' : '') + (x.incompleto ? ' <span class="pill p-conf">faltou tarefa ou nota: reenviar</span>' : '') + ((x.problemas || []).length ? ' <span class="pill p-conf">conferir no Agendor</span>' : '') + '</div>'; }).join('') + '</div>';
   h += '<div class="blk amarelo"><h3>PULADOS: ' + pulados.length + '</h3>' + (pulados.length ? '' : '<div class="ex">Nenhum.</div>') + pulados.map(function (p) { return '<div class="item"><b>' + esc(p.empresa) + '</b> <span class="muted">linha ' + esc((p.linhas || []).map(function (q) { return q.linha; }).join(', ')) + '</span><div>' + esc(p.motivo) + (p.existente && p.existente.link ? ' <a target="_blank" rel="noopener" href="' + esc(p.existente.link) + '">abrir "' + esc(p.existente.titulo || 'negócio') + '" no Agendor</a>' : '') + '</div></div>'; }).join('') + '</div>';
   h += '<div class="blk vermelho"><h3>COM ERRO: ' + erros.length + '</h3>' + (erros.length ? '' : '<div class="ex">Nenhum.</div>') + erros.map(function (x) { return '<div class="item"><b>' + esc(x.empresa) + '</b> <span class="muted">linha ' + esc((x.linhasPlanilha || []).map(function (q) { return q.linha; }).join(', ')) + '</span><div class="err">' + esc(x.erro) + '</div></div>'; }).join('') + '</div>';
