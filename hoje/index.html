@@ -8,7 +8,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Hoje do SDR | Life B</title>
 <link rel="icon" href="/favicon-32.png">
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'"><noscript><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
 :root{
   --bg:#f1eef7; --card:#ffffff; --head:#ffffff; --border:#d9d1e8; --text:#1d1630; --muted:#4f4866;
@@ -153,6 +154,10 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .lib-col{border:2px solid var(--purple)} .lib-col .col-h{background:var(--track)}
 .fi .est{display:block}
 .pend{color:var(--amber);font-weight:700}
+.atual.velho{color:#8a8499;font-style:italic}
+.esq{background:linear-gradient(90deg,var(--track),var(--card),var(--track));background-size:200% 100%;animation:brilho 1.2s linear infinite;border-radius:12px;min-height:200px;border:1px solid var(--border)}
+@keyframes brilho{to{background-position:-200% 0}}
+.carregando-msg{grid-column:1 / -1;font-weight:700;color:var(--muted);padding:6px 2px}
 
 </style>
 </head>
@@ -279,12 +284,16 @@ function hh(n) { return ('0' + n).slice(-2); }
 function horaBRT(iso) { if (!iso) return ''; var b = partesBRT(new Date(iso)); return hh(b.h) + ':' + hh(b.m); }
 function tickRelogio() {
   var b = partesBRT(); $('relogio').textContent = hh(b.h) + ':' + hh(b.m);
-  if (S.dados && S.dados.tarefasEm) { var s = Math.max(0, Math.round((Date.now() - S.recebidoEm) / 1000) + 0); $('atualizado').textContent = 'Atualizado há ' + s + ' s (tarefas lidas às ' + horaBRT(S.dados.tarefasEm) + '). Atualiza sozinho a cada 30 s.'; }
+  if (S.dados && S.dados.tarefasEm) {
+    var seg = Math.max(0, Math.round((Date.now() - S.dados.tarefasEm) / 1000)); var velho = seg > 120; var a = $('atualizado'); a.classList.toggle('velho', velho);
+    var quando = seg < 90 ? seg + ' s' : Math.round(seg / 60) + ' min';
+    a.textContent = 'Atualizado há ' + quando + (velho ? ' (dado antigo' + (S.carregando ? ', atualizando agora...' : '') + ')' : ' (tarefas lidas às ' + horaBRT(S.dados.tarefasEm) + ')') + '. Atualiza sozinho a cada 30 s.';
+  }
 }
 function passouDas18() { return partesBRT().h >= 18; }
 
-async function api(path, corpo) {
-  var ctrl = new AbortController(); var tm = setTimeout(function () { ctrl.abort(); }, corpo ? 90000 : 60000);
+async function api(path, corpo, ext) {
+  var ctrl = ext || new AbortController(); var tm = setTimeout(function () { ctrl.abort(); }, corpo ? 90000 : 60000);
   try {
     var init = { method: corpo ? 'POST' : 'GET', headers: { 'Authorization': 'Bearer ' + S.token }, signal: ctrl.signal };
     if (corpo) { init.headers['Content-Type'] = 'application/json'; init.body = JSON.stringify(corpo); }
@@ -411,17 +420,23 @@ function desenhar(d) {
 }
 
 async function carregar(silencioso, fresco) {
-  if (S.carregando) return; S.carregando = true;
+  if (S.carregando) { if (!fresco) return; try { S.ctrlCarregar.abort(); } catch (e) {} } // o auto-refresh nunca empilha pedidos; o clique em Atualizar cancela o anterior e vale
+  var meu = {}; S.carregando = meu; S.ctrlCarregar = new AbortController();
+  var bt = $('bAtualizar'); if (fresco) { bt.textContent = 'Atualizando...'; bt.disabled = true; }
   try {
-    var j = await api('/dados' + (fresco ? '?fresco=1' : ''));
+    var j = await api('/dados' + (fresco ? '?fresco=1' : ''), null, S.ctrlCarregar);
+    if (S.carregando !== meu) return;
     if (j._status === 401) { sair('Senha não confere.'); return; }
     if (j._status === 429) { sair('Muitas tentativas. Espere 10 minutos.'); return; }
     if (j._status === 409) { mostrar('s-off'); return; }
-    if (!j.ok) { var m = j.mensagem || 'Não consegui atualizar agora.'; if (!S.tem) { $('erroMsg').textContent = m; mostrar('s-erro'); } else $('atualizado').textContent = m + ' Tentando de novo em 30 segundos.'; return; }
+    if (!j.ok) { var m = j.mensagem || 'Não consegui atualizar agora.'; if (!S.tem) { $('erroMsg').textContent = m; mostrar('s-erro'); } else { $('atualizado').textContent = m + ' Tentando de novo em 30 segundos.'; } return; }
     desenhar(j); S.tem = true; mostrar('s-dia');
+    try { var tx = JSON.stringify(j); if (tx.length < 1500000) localStorage.setItem('sh_ultimo', tx); } catch (e) {} // último dado conhecido: aparece na hora na próxima abertura
   } catch (e) {
+    if (S.carregando !== meu) return;
+    if (e && e.name === 'AbortError' && S.tem) { return; }
     if (!S.tem) { $('erroMsg').textContent = 'Sem conexão. Tente de novo.'; mostrar('s-erro'); } else $('atualizado').textContent = 'Sem conexão. Tentando de novo em 30 segundos.';
-  } finally { S.carregando = false; }
+  } finally { if (S.carregando === meu) S.carregando = false; if (fresco && S.carregando === false) { bt.textContent = 'Atualizar'; bt.disabled = false; } }
 }
 function agendar() {
   if (S.timer) clearInterval(S.timer);
@@ -440,10 +455,14 @@ async function entrar(token, silencioso) {
   if (!j.ok) { if (!silencioso) $('loginMsg').textContent = 'Não consegui entrar agora.'; return false; }
   if ($('lembrar').checked) lsSet('sh_tok', token);
   if (j.modo !== 'on') { mostrar('s-off'); return true; }
-  agendar(); await carregar(false, false);
+  agendar();
+  var ult = null; try { ult = JSON.parse(lsGet('sh_ultimo') || 'null'); } catch (e) { ult = null; }
+  if (ult && ult.ok) { desenhar(ult); S.tem = true; mostrar('s-dia'); $('atualizado').classList.add('velho'); } // mostra o último dado conhecido NA HORA (cinza) e troca sozinho quando o novo chegar
+  else { S.tem = false; var bl = $('blocos'); bl.textContent = ''; bl.appendChild(el('div', 'carregando-msg', 'Carregando o seu dia... a primeira leitura pode levar alguns segundos.')); for (var q = 0; q < 4; q++) bl.appendChild(el('div', 'esq')); mostrar('s-dia'); }
+  await carregar(false, false);
   return true;
 }
-function sair(msg) { lsDel('sh_tok'); S.token = ''; S.tem = false; S.dados = null; if (S.timer) clearInterval(S.timer); if (S.relogio) clearInterval(S.relogio); $('tok').value = ''; $('loginMsg').textContent = msg || ''; mostrar('s-login'); }
+function sair(msg) { lsDel('sh_tok'); lsDel('sh_ultimo'); S.token = ''; S.tem = false; S.dados = null; if (S.timer) clearInterval(S.timer); if (S.relogio) clearInterval(S.relogio); $('tok').value = ''; $('loginMsg').textContent = msg || ''; mostrar('s-login'); }
 
 // ---------- liberar ----------
 function novaChave() { var a = new Uint8Array(12); try { crypto.getRandomValues(a); } catch (e) { for (var i = 0; i < 12; i++) a[i] = Math.floor(Math.random() * 256); } return 'c' + Array.prototype.map.call(a, function (x) { return ('0' + x.toString(16)).slice(-2); }).join(''); }
@@ -551,7 +570,7 @@ atualizaRotuloLiberar();
 $('bEntrar').onclick = async function () { var v = $('tok').value.trim(); if (!v) { $('loginMsg').textContent = 'Digite a senha.'; return; } $('loginMsg').textContent = ''; await entrar(v, false); };
 $('tok').onkeydown = function (e) { if (e.key === 'Enter') $('bEntrar').click(); };
 $('bTentar').onclick = function () { carregar(false, false); };
-$('bAtualizar').onclick = function () { $('atualizado').textContent = 'Atualizando, lendo o Agendor de novo...'; carregar(false, true); };
+$('bAtualizar').onclick = function () { carregar(false, true); };
 $('bSair1').onclick = function () { sair(''); };
 $('bSair2').onclick = function () { sair(''); };
 $('bTema').onclick = alternarTema;
