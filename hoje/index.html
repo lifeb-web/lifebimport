@@ -204,8 +204,8 @@ button:disabled{opacity:.55;cursor:not-allowed}
       <div class="grupo">
         <span class="rot" id="rotQtd">Quantos leads iniciar hoje</span>
         <div class="linha-ctl">
-          <select id="qtd" aria-labelledby="rotQtd"><option selected>10</option><option>20</option><option>30</option><option>40</option><option>60</option><option>80</option><option value="outro">Outro</option></select>
-          <input type="number" id="qtdOutro" min="1" max="200" step="1" value="50" class="hide" aria-label="Quantidade">
+          <select id="qtd" aria-labelledby="rotQtd"><option selected>10</option><option>20</option><option>30</option><option>40</option><option>50</option><option value="outro">Outro</option></select>
+          <input type="number" id="qtdOutro" min="1" max="50" step="1" value="50" class="hide" aria-label="Quantidade">
           <button class="forte" id="bLiberar">Iniciar os recomendados</button>
           <button class="sec" id="bFila">Escolher leads da fila</button>
         </div>
@@ -449,7 +449,7 @@ function mostrarLiberados(lista) {
   lista.forEach(function (x) { ul.appendChild(el('li', null, (x.empresa || ('Negócio ' + x.dealId)) + (x.motivo ? ' (' + x.motivo + ')' : ''))); });
   $('detLiberados').classList.toggle('hide', !lista.length); $('detResumo').textContent = 'Quem foi liberado agora (' + lista.length + ')'; if (lista.length) $('detLiberados').open = true;
 }
-function qtdEscolhida() { var v = $('qtd').value === 'outro' ? Number($('qtdOutro').value) : Number($('qtd').value); return Number.isInteger(v) && v >= 1 && v <= 200 ? v : null; }
+function qtdEscolhida() { var v = $('qtd').value === 'outro' ? Number($('qtdOutro').value) : Number($('qtd').value); return Number.isInteger(v) && v >= 1 && v <= 50 ? v : null; }
 // envia o pedido com a MESMA chave até dar certo (duplo clique e nova tentativa nunca liberam duas vezes); espera crescente em 503
 async function liberar(corpo, rotulo) {
   if (S.ocupado) return; S.ocupado = true; if (S.dados) desenharControle(S.dados);
@@ -474,7 +474,7 @@ async function liberar(corpo, rotulo) {
 $('qtd').onchange = function () { $('qtdOutro').classList.toggle('hide', $('qtd').value !== 'outro'); atualizaRotuloLiberar(); };
 $('qtdOutro').oninput = atualizaRotuloLiberar;
 function atualizaRotuloLiberar() { var n = qtdEscolhida(); $('bLiberar').textContent = n ? 'Iniciar os ' + n + ' recomendados' : 'Iniciar os recomendados'; }
-$('bLiberar').onclick = function () { var n = qtdEscolhida(); if (!n) { msg('Digite uma quantidade inteira de 1 a 200.', 'erro'); return; } if (!window.confirm('Iniciar os ' + n + ' leads recomendados agora? As tarefas do Dia 1 são criadas na hora.')) return; liberar({ n: n }); };
+$('bLiberar').onclick = function () { var n = qtdEscolhida(); if (!n) { msg('Digite uma quantidade inteira de 1 a 50 por clique.', 'erro'); return; } if (!window.confirm('Iniciar os ' + n + ' leads recomendados agora? As tarefas do Dia 1 são criadas na hora.')) return; liberar({ n: n }); };
 $('bAutoSalvar').onclick = async function () {
   var n = Number($('autoN').value); if (!Number.isInteger(n) || n < 0 || n > 500) { msg('Digite um número inteiro de 0 a 500.', 'erro'); return; }
   S.ocupado = true; desenharControle(S.dados); var j; try { j = await api('/auto', { n: n }); } catch (e) { j = { mensagem: 'Sem conexão. Tente de novo.' }; } S.ocupado = false;
