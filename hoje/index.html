@@ -420,7 +420,7 @@ function desenharControle(d) {
   if (meus.length) txt.push('Hoje você iniciou: ' + meus.join(', ') + '.');
   if (bia.length) txt.push('A Bia iniciou: ' + bia.join(', ') + '.');
   if (volt.length) txt.push('Voltou à cadência: ' + volt.join('; ') + '.');
-  hist.textContent = txt.length ? txt.join(' ') : 'Você ainda não iniciou nenhum lead hoje.';
+  hist.textContent = txt.length ? txt.join(' ') : 'Nenhum lead iniciado hoje. Os do Outbound ficam em "Esperando você iniciar" e só começam quando você clica em Iniciar. Nada do Outbound começa sozinho.';
 }
 function linhaContato(li, it) {
   if (it.pessoa) li.appendChild(el('div', 'pes', it.pessoa));
@@ -497,7 +497,7 @@ function desenharBlocos() {
   var lib = (d.liberadosHoje || []).filter(visivel); var lf = lib.filter(function (x) { return x.estado === 'feito'; }).length;
   var kl = coluna('liberados', 'Iniciados hoje', 'Todos que foram iniciados hoje (por você ou pela Bia), com o estado de cada um.', lf + '/' + lib.length + ' feitos', 'lib-col');
   var li = ordenar(lib, modo).filter(function (it) { return passa(it) && !(esconder && it.estado === 'feito'); });
-  if (!lib.length) kl.l.appendChild(el('p', 'vazio', 'Você ainda não iniciou nenhum lead hoje.'));
+  if (!lib.length) kl.l.appendChild(el('p', 'vazio', 'Nenhum lead iniciado hoje. Os do Outbound ficam em "Esperando você iniciar" e só começam quando você clica em Iniciar. Nada do Outbound começa sozinho.'));
   li.forEach(function (it) { it.feito = it.estado === 'feito'; kl.l.appendChild(cartao(it, { estado: true, texto: function (x) { return (x.funil === 'inbound' ? 'Inbound' : 'Outbound') + (x.quando ? ', iniciado às ' + x.quando : '') + (x.origem === 'auto' ? ' pela Bia' : ' por você'); } })); });
   kl.vazio = false; kl.id = 'liberados'; kl.titulo = 'Iniciados hoje'; kl.n = lib.length; kl.recolherPadrao = true; cols.push(kl);
   // colunas vazias (e "Iniciados hoje", por padrão) viram uma faixa fina clicável; as demais dividem a largura da tela, sem rolagem lateral
