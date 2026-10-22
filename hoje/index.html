@@ -410,8 +410,9 @@ function desenharControle(d) {
   $('bLiberar').disabled = !ok || fo === 0 || !c.ligada; $('bTodos').disabled = !ok || fo === 0 || !c.ligada;
   $('bTodos').textContent = 'Iniciar TODOS os ' + fo + ' do Outbound';
   $('bLiberar').title = !c.janelaAberta ? (c.janelaMsg || '') : '';
-  if (!c.janelaAberta) { $('msgAcao').textContent = c.janelaMsg; $('msgAcao').className = 'msgacao aviso'; }
-  else if (!c.cadenciaLive || !c.ligada) { $('msgAcao').textContent = 'Iniciar está pausado agora. Fale com o Robert.'; $('msgAcao').className = 'msgacao aviso'; }
+  if (!c.janelaAberta) { $('msgAcao').textContent = c.janelaMsg; $('msgAcao').className = 'msgacao aviso'; S.avisoJanela = true; }
+  else if (!c.cadenciaLive || !c.ligada) { $('msgAcao').textContent = 'Iniciar está pausado agora. Fale com o Robert.'; $('msgAcao').className = 'msgacao aviso'; S.avisoJanela = true; }
+  else if (S.avisoJanela) { $('msgAcao').textContent = ''; $('msgAcao').className = 'msgacao'; S.avisoJanela = false; } // a janela abriu: o aviso de horário não pode ficar na tela depois das 08:00
   var h = (d.historico || []).filter(function (x) { return x.origem !== 'ajuste_auto' && !/teto/.test(String(x.resultado || '')); }); var hist = $('historico');
   var meus = h.filter(function (x) { return x.origem === 'manual'; }).map(function (x) { return x.n + ' às ' + x.quando + (x.resultado && x.resultado !== 'ok' ? ' (' + String(x.resultado).replace(/_/g, ' ') + ')' : ''); });
   var bia = h.filter(function (x) { return x.origem === 'auto'; }).map(function (x) { return x.n + ' às ' + x.quando; });
