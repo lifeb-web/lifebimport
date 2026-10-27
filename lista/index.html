@@ -297,6 +297,9 @@ function sair(msg) { lsDel('sl_tok'); S.token = ''; $('tok').value = ''; $('logi
 
 // ---------- origem mãe sugerida pela sub-origem ----------
 var MAE_POR_SUB = { INBOUND: 'INBOUND' };
+// 27/10: o FUNIL de destino vem da origem do lead (INBOUND vai para o SDR Inbound, etapa D0; o resto para o SDR Outbound, etapa D1). O texto do botão e da confirmação sempre diz o destino real.
+function destinoSdr() { return $('origemMae').value === 'INBOUND' ? { nome: 'SDR Inbound', etapa: 'D0', hoje: 'Entra direto na sua página Hoje, com a tarefa de WhatsApp na hora. Atenda primeiro.' } : { nome: 'SDR Outbound', etapa: 'D1', hoje: 'Entra na fila de espera da página Hoje. Nada começa sozinho: você clica em Iniciar.' }; }
+function avisoOrigemTxt() { var o = $('origem').value, m = $('origemMae').value; if (!o || !m) return ''; if (m === 'INBOUND' && o !== 'INBOUND') return '⚠️ A origem do lead é INBOUND, mas a origem do negócio é ' + o + '. Confira se é isso mesmo.'; if (m === 'OUTBOUND' && o === 'INBOUND') return '🚫 A origem do negócio é INBOUND, mas a origem do lead está OUTBOUND. Escolha INBOUND nas duas (vai para o SDR Inbound) ou troque a origem do negócio. Não dá para subir assim.'; return ''; }
 function sugerirMae() { var v = $('origem').value; if (!v) return; $('origemMae').value = MAE_POR_SUB[v] || 'OUTBOUND'; }
 function atualizaBotoes() {
   var falta = [];
@@ -580,8 +583,10 @@ function desenharPrevia() {
   $('leads').innerHTML = h || '<p class="muted">Nada para mostrar neste filtro.</p>';
   $('counts').innerHTML = '<div class="c-verde"><b>' + cont.criar + '</b>vão ser criados</div><div class="c-amarelo"><b>' + cont.duvida + '</b>precisam da sua decisão</div><div><b>' + cont.pulado + '</b>não vão subir (já existem ou você tirou)</div><div class="' + (cont.problema ? 'c-vermelho' : '') + '"><b>' + cont.problema + '</b>com problema</div>';
   var criar = S.itens.filter(function (it) { return decisao(it).v === 'criar'; }).length; var temOrigem = !!$('origem').value && !!$('origemMae').value;
-  $('bSubir').disabled = !(criar > 0 && temOrigem); $('bSubir').textContent = 'Subir ' + criar + ' negócio' + (criar === 1 ? '' : 's') + ' no SDR Outbound';
-  $('subirTxt').textContent = !temOrigem ? 'Falta escolher as origens (passo 1).' : (criar ? 'Nada é criado até você clicar.' : 'Nada para criar.');
+  var cruz = $('origemMae').value === 'OUTBOUND' && $('origem').value === 'INBOUND'; $('bSubir').disabled = !(criar > 0 && temOrigem) || cruz; $('bSubir').textContent = 'Subir ' + criar + ' negócio' + (criar === 1 ? '' : 's') + ' no ' + destinoSdr().nome;
+  var bn = $('destBanner'); if (!bn) { bn = document.createElement('div'); bn.id = 'destBanner'; $('counts').parentNode.insertBefore(bn, $('counts')); }
+  var dd = destinoSdr(), av = avisoOrigemTxt(); bn.className = 'aviso'; bn.style.margin = '8px 0'; bn.innerHTML = '<b>Destino: ' + esc(dd.nome) + ', etapa ' + dd.etapa + '.</b> ' + esc(dd.hoje) + (av ? '<br>' + esc(av) : '');
+  $('subirTxt').textContent = cruz ? 'Corrija as origens (passo 1): INBOUND nas duas.' : !temOrigem ? 'Falta escolher as origens (passo 1).' : (criar ? 'Nada é criado até você clicar.' : 'Nada para criar.');
   $('bReconferir').classList.toggle('hide', cont.problema === 0 || !S.itens.some(function (it) { return it.conf && it.conf.decisao === 'erro'; }));
 }
 
@@ -597,7 +602,7 @@ function montarPayload() {
 function nomeResp() { return $('resp').selectedOptions[0] ? $('resp').selectedOptions[0].textContent : 'Felipe'; }
 async function subir() {
   var qtd = S.itens.filter(function (it) { return decisao(it).v === 'criar'; }).length;
-  if (!window.confirm('Criar ' + qtd + ' negócio(s) no funil SDR Outbound, com responsável ' + nomeResp() + '? Quem já existe não será duplicado.')) return;
+  var dsub = destinoSdr(); if (!window.confirm('Criar ' + qtd + ' negócio(s) no funil ' + dsub.nome + ' (etapa ' + dsub.etapa + '), com responsável ' + nomeResp() + '? ' + dsub.hoje + ' Quem já existe não será duplicado.' + (avisoOrigemTxt() ? '\n\n' + avisoOrigemTxt() : ''))) return;
   $('bSubir').disabled = true;
   var j; try { j = await api('/job', { body: montarPayload() }); } catch (e) { alert('Falha de conexão. Nada foi criado. Tente de novo.'); $('bSubir').disabled = false; return; }
   if (trataFatal(j)) return;
@@ -683,6 +688,26 @@ function baixarCsv() {
   var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + L.join('\n')], { type: 'text/csv;charset=utf-8' })); a.download = 'relatorio-lista.csv'; a.click();
 }
 
+// ---------- 27/10: ao digitar o CNPJ no cadastro manual, a Bia já traz nome, cidade/UF e segmento (só preenche o que está vazio) ----------
+function notaCnpj(i, txt) { var m = S.manual[i]; if (m) m.cnpjMsg = txt; var el = document.querySelector('[data-cnpjmsg="' + i + '"]'); if (el) el.textContent = txt; }
+function preencherCampo(i, f, v) { S.manual[i][f] = v; var el = document.querySelector('[data-m="' + i + '"][data-f="' + f + '"]:not([data-k])'); if (el) el.value = v; }
+function consultarCnpjManual(i) {
+  var m = S.manual[i]; if (!m) return; var c = String(m.cnpj || '').replace(/\D/g, '');
+  if (c.length !== 14) { if (c.length === 0) notaCnpj(i, ''); return; }
+  if (m.cnpjConsultado === c) return; m.cnpjConsultado = c; notaCnpj(i, '🔎 Consultando o CNPJ…');
+  api('/cnpj?cnpj=' + c, { timeout: 20000 }).then(function (j) {
+    if (!S.manual[i] || S.manual[i].cnpjConsultado !== c) return;
+    if (!j || j.ok === false) { S.manual[i].cnpjConsultado = ''; notaCnpj(i, '⚠️ ' + ((j && j.mensagem) || 'Não consegui consultar agora.')); return; }
+    if (!j.encontrado) { notaCnpj(i, 'Não achei dados desse CNPJ agora. Preencha à mão; a Bia tenta de novo depois de criar.'); return; }
+    var pre = [], mm = S.manual[i];
+    if (!String(mm.empresa || '').trim() && (j.fantasia || j.razao)) { preencherCampo(i, 'empresa', j.fantasia || j.razao); pre.push('nome'); }
+    if (!String(mm.cidade || '').trim() && j.cidade) { preencherCampo(i, 'cidade', j.cidade); pre.push('cidade'); }
+    if (!String(mm.uf || '').trim() && j.uf) { preencherCampo(i, 'uf', j.uf); pre.push('UF'); }
+    if (!String(mm.segmento || '').trim() && j.segmento) { preencherCampo(i, 'segmento', j.segmento); pre.push('segmento'); }
+    notaCnpj(i, '✅ Receita: ' + (j.razao || j.fantasia || '') + (j.situacao && !/ativa/i.test(j.situacao) ? ' (situação: ' + j.situacao + ')' : '') + (pre.length ? '. Preenchi: ' + pre.join(', ') + '.' : '.') + (j.dentroIcp === false ? ' ⚠️ CNAE fora do perfil (ICP): confirme se vale a pena.' : ''));
+    atualizaBotoes();
+  }).catch(function () { if (S.manual[i]) S.manual[i].cnpjConsultado = ''; notaCnpj(i, 'Não consegui consultar agora. Preencha à mão.'); });
+}
 // ---------- cadastrar na mão: monta a MESMA planilha e usa o mesmo caminho ----------
 function novoLeadManual() { return { empresa: '', cnpj: '', cidade: '', uf: '', segmento: '', obs: '', contatos: [{ nome: '', cargo: '', tel: '' }] }; }
 function desenharManual() {
@@ -691,7 +716,7 @@ function desenharManual() {
   S.manual.forEach(function (m, i) {
     h += '<div class="manual-lead"><div class="row"><b class="grow">Lead ' + (i + 1) + '</b>' + (S.manual.length > 1 ? '<button class="sec" data-rm="' + i + '" style="width:auto">Remover</button>' : '') + '</div>';
     h += '<label class="l">Nome da empresa <span class="pill p-obr">obrigatório</span></label><input type="text" data-m="' + i + '" data-f="empresa" value="' + esc(m.empresa) + '" autocomplete="off">';
-    h += '<label class="l">CNPJ (opcional)</label><input type="text" inputmode="numeric" data-m="' + i + '" data-f="cnpj" value="' + esc(m.cnpj) + '" autocomplete="off">';
+    h += '<label class="l">CNPJ (opcional, a Bia preenche o que a Receita informar)</label><input type="text" inputmode="numeric" data-m="' + i + '" data-f="cnpj" value="' + esc(m.cnpj) + '" autocomplete="off"><div class="muted" data-cnpjmsg="' + i + '" style="margin:4px 0">' + esc(m.cnpjMsg || '') + '</div>';
     h += '<div class="ctrow" style="grid-template-columns:2fr 1fr 1fr"><div><label class="l">Cidade</label><input type="text" data-m="' + i + '" data-f="cidade" value="' + esc(m.cidade) + '"></div><div><label class="l">UF</label><input type="text" maxlength="2" data-m="' + i + '" data-f="uf" value="' + esc(m.uf) + '"></div><div><label class="l">Segmento</label><select data-m="' + i + '" data-f="segmento"><option value="">(vazio)</option>' + ['Drogaria', 'Supermercado', 'Cosméticos', 'Utilidades', 'Outros'].map(function (s) { return '<option' + (s === m.segmento ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select></div></div>';
     h += '<h3>Contatos <span class="pill p-obr">pelo menos 1 telefone</span></h3>';
     m.contatos.forEach(function (c, k) {
@@ -741,16 +766,17 @@ async function escolheu(file) {
 $('arq').onchange = function () { escolheu($('arq').files[0]); };
 $('drop').addEventListener('drop', function (e) { var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]; escolheu(f); });
 $('origem').onchange = function () { sugerirMae(); atualizaBotoes(); };
-$('origemMae').onchange = atualizaBotoes;
+$('origemMae').onchange = function () { atualizaBotoes(); try { if (S.itens && S.itens.length) desenharPrevia(); } catch (e) {} };
 $('tabPlan').onclick = function () { S.modo = 'plan'; $('tabPlan').classList.add('on'); $('tabMan').classList.remove('on'); $('boxPlan').classList.remove('hide'); $('boxMan').classList.add('hide'); atualizaBotoes(); };
 $('tabMan').onclick = function () { S.modo = 'man'; $('tabMan').classList.add('on'); $('tabPlan').classList.remove('on'); $('boxMan').classList.remove('hide'); $('boxPlan').classList.add('hide'); atualizaBotoes(); };
 $('bLer').onclick = function () { if (S.abas) interpretar(false); };
 $('manLeads').addEventListener('input', function (e) {
   var t = e.target, i = t.getAttribute('data-m'); if (i == null) return; var f = t.getAttribute('data-f'), k = t.getAttribute('data-k');
   if (k != null) S.manual[Number(i)].contatos[Number(k)][f] = t.value; else S.manual[Number(i)][f] = t.value;
+  if (f === 'cnpj' && k == null && t.value.replace(/\D/g, '').length === 14) consultarCnpjManual(Number(i));
   atualizaBotoes();
 });
-$('manLeads').addEventListener('change', function (e) { var t = e.target; if (t.tagName === 'SELECT' && t.getAttribute('data-m') != null) { S.manual[Number(t.getAttribute('data-m'))][t.getAttribute('data-f')] = t.value; atualizaBotoes(); } });
+$('manLeads').addEventListener('change', function (e) { var t = e.target; if (t.getAttribute && t.getAttribute('data-f') === 'cnpj' && t.getAttribute('data-k') == null) consultarCnpjManual(Number(t.getAttribute('data-m'))); if (t.tagName === 'SELECT' && t.getAttribute('data-m') != null) { S.manual[Number(t.getAttribute('data-m'))][t.getAttribute('data-f')] = t.value; atualizaBotoes(); } });
 $('manLeads').addEventListener('click', function (e) {
   var rm = e.target.getAttribute && e.target.getAttribute('data-rm'), ad = e.target.getAttribute && e.target.getAttribute('data-addct');
   if (rm != null) { S.manual.splice(Number(rm), 1); desenharManual(); atualizaBotoes(); }
