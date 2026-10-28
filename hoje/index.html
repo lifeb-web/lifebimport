@@ -346,6 +346,7 @@ a.subir{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:6
           <button class="sec" id="bTema" title="Tema claro/escuro (T)">Tema</button>
           <button class="sec" id="bAjuda" title="Atalhos do teclado" aria-expanded="false">?</button>
           <button class="link" id="bSair2">Sair</button>
+          <button class="link" id="bSairApagar" title="Para aparelho compartilhado" style="font-size:13px">Sair e apagar dados deste aparelho</button>
         </div>
       </div>
     </div>
@@ -536,7 +537,7 @@ function casaBusca(it, q) {
 
 // ---------- chamadas ----------
 // ---------- resiliência: rede com retry, disjuntor, caixa de saída, versão, relógio do servidor, telemetria ----------
-var PAGINA_VERSAO = '2026-10-27.1';
+var PAGINA_VERSAO = '2026-10-28.1';
 var REDE = { escala: 1, falhas: 0, ultima: 0, desvio: 0 };
 function dormir(ms) { return new Promise(function (r) { setTimeout(r, ms * REDE.escala); }); }
 function jitter(ms) { return ms * (0.5 + Math.random() * 0.5); }
@@ -647,10 +648,16 @@ async function processarSaida(opt) {
       var c = classe(j, false);
       if (c === 'rede') { alvo.tent = (alvo.tent || 0) + 1; var espera = j._status === 429 ? 5000 : Math.min(30000, 1000 * Math.pow(2, alvo.tent)); alvo.proximo = Date.now() + jitter(espera) * REDE.escala; gravarSaida(lerSaida().map(function (x) { return x.id === alvo.id ? alvo : x; })); if (alvo.tent >= 12 && j._status !== 0) { gravarSaida(lerSaida().filter(function (x) { return x.id !== alvo.id; })); saidaRecusada(alvo, j); } break; }
       gravarSaida(lerSaida().filter(function (x) { return x.id !== alvo.id; }));
-      if (c === 'ok') saidaOk(alvo, j); else saidaRecusada(alvo, j);
+      if (c === 'ok') { propagarBase(alvo); soltarBase(alvo); saidaOk(alvo, j); } else { soltarBase(alvo); saidaRecusada(alvo, j); }
     }
   } finally { S.processando = false; }
 }
+function propagarBase(ok) { // o que esta ação gravou passa a ser o valor CONFIRMADO: as próximas da fila (mesmo lead) esperam esse valor como base
+  if (ok.tipo !== 'campos' || !ok.corpo || !ok.corpo.base) return; var a = lerSaida(), mexeu = false;
+  a.forEach(function (x) { if (x.id !== ok.id && x.dealId === ok.dealId && x.tipo === 'campos' && x.corpo && x.corpo.base) Object.keys(ok.corpo.base).forEach(function (campo) { var v = valorEnviado(ok.corpo, campo); if (v !== undefined && Object.prototype.hasOwnProperty.call(x.corpo.base, campo)) { x.corpo.base[campo] = String(v); mexeu = true; } }); });
+  if (mexeu) gravarSaida(a);
+}
+function soltarBase(e) { if (e.tipo !== 'campos' || !S.L || S.L.dealId !== e.dealId || !S.L.baseConf || lerSaida().some(function (x) { return x.dealId === e.dealId && x.tipo === 'campos'; })) return; S.L.baseConf = {}; }
 function avisar(texto, tipo, acao) { // aviso que fica na tela até ele fechar (nunca descarta em silêncio)
   var box = $('faixas'); if (!box) return; var f = el('div', 'faixa ' + (tipo || 'aviso')); f.setAttribute('role', 'alert'); f.appendChild(el('span', null, texto));
   if (acao) { var b = el('button', 'sec', acao.rot); b.type = 'button'; b.onclick = function () { acao.f(); f.remove(); }; f.appendChild(b); }
@@ -1267,7 +1274,7 @@ async function abrirLead(dealId, opener, item) {
   var painel = $('painelLead'); var mesmo = S.L && S.L.dealId === dealId && S.L.lead;
   var L = mesmo ? S.L : { dealId: dealId, lead: null, opcoes: {}, motivos: [], responsaveis: [], edits: lerRascunho(dealId), forcar: {}, origemCampo: {}, mostrar: [], todos: false, ocupado: false, estado: null, receita: null, receitaCnpj: '', perdidoAberto: false, refs: {} };
   L.opener = opener || L.opener || null; S.L = L; painel.classList.remove('hide');
-  try { if (location.hash !== '#lead=' + dealId) history.pushState(null, '', '#lead=' + dealId); } catch (e) {}
+  try { if (location.hash !== '#lead=' + dealId) { history.pushState(null, '', '#lead=' + dealId); S.pushou = true; } } catch (e) {}
   var pre = !mesmo && S.pre[dealId] && Date.now() - S.pre[dealId].t < 30000 ? S.pre[dealId].j : null;
   if (pre) { aplicarResposta(L, pre); limparEditsIguais(L); recomputarMostrar(L); mesmo = true; }
   $('leadTitulo').textContent = mesmo ? (L.lead.titulo || 'Lead') : ((item && item.empresa) || 'Carregando o lead...'); $('leadBarra').textContent = ''; $('leadRodape').textContent = '';
@@ -1293,11 +1300,12 @@ async function carregarLead(L, silencioso) {
   aplicarResposta(L, j); limparEditsIguais(L); recomputarMostrar(L); redesenhar(L);
 }
 function aplicarResposta(L, j) { if (j.lead) L.lead = j.lead; if (j.opcoes && typeof j.opcoes === 'object') { var op0 = Object.assign({}, L.opcoes); Object.keys(j.opcoes).forEach(function (k) { if (Array.isArray(j.opcoes[k]) && j.opcoes[k].length) op0[k] = j.opcoes[k]; }); L.opcoes = op0; } if (j.motivosPerda) L.motivos = j.motivosPerda; if (j.responsaveis) L.responsaveis = j.responsaveis; }
-function fecharLead() { var L = S.L; $('painelLead').classList.add('hide'); try { if (/^#lead=/.test(location.hash)) history.replaceState(null, '', location.pathname + location.search); } catch (e) {} if (L && L.opener) { try { L.opener.focus(); } catch (e) {} } }
+function fecharLead() { var L = S.L; $('painelLead').classList.add('hide'); try { if (/^#lead=/.test(location.hash)) { if (S.pushou) { S.pushou = false; S.ignoraPop = Date.now(); history.back(); } else history.replaceState(null, '', location.pathname + location.search); } } catch (e) {} if (L && L.opener) { try { L.opener.focus(); } catch (e) {} } }
 function aoMudarHash() {
+  if (S.ignoraPop && Date.now() - S.ignoraPop < 800) return; // eco do history.back() que a própria página pediu ao fechar
   var m = /^#lead=(\d+)/.exec(location.hash);
   if (m) { if (!S.token || !S.tem) return; var id = Number(m[1]); if (!S.L || S.L.dealId !== id || $('painelLead').classList.contains('hide')) abrirLead(id, null); }
-  else if (!$('painelLead').classList.contains('hide')) $('painelLead').classList.add('hide'); // botão Voltar do navegador fecha o painel
+  else if (!$('painelLead').classList.contains('hide')) { S.pushou = false; $('painelLead').classList.add('hide'); } // botão Voltar do navegador fecha o painel
 }
 window.addEventListener('hashchange', aoMudarHash); window.addEventListener('popstate', aoMudarHash);
 function acoesDe(L) { return (L.lead && L.lead.acoes) || {}; }
@@ -1450,10 +1458,11 @@ function campoDeApi(L, campo) { var p = String(campo).split('.'); if (p[0] === '
 async function enviarCampos(L) {
   var diff = calcDiff(L); if (!diff.length) { return 'nada'; }
   var corpo = montarCorpo(diff); var antes = copia(L.lead); var edits = {};
-  corpo.base = {}; diff.forEach(function (d) { corpo.base[campoApi(d.k)] = String(valorOrig(L.lead, d.k) == null ? '' : valorOrig(L.lead, d.k)); edits[d.k] = L.edits[d.k]; }); // o valor que a página LEU: se mudou no Agendor, o servidor avisa em vez de sobrescrever
+  L.baseConf = L.baseConf || {}; corpo.base = {}; diff.forEach(function (d) { if (!Object.prototype.hasOwnProperty.call(L.baseConf, d.k)) L.baseConf[d.k] = String(valorOrig(L.lead, d.k) == null ? '' : valorOrig(L.lead, d.k)); corpo.base[campoApi(d.k)] = L.baseConf[d.k]; edits[d.k] = L.edits[d.k]; }); // o valor que a página LEU: se mudou no Agendor, o servidor avisa em vez de sobrescrever
   diff.forEach(function (d) { gravarLocal(L.lead, d.k, d.v); }); // aparece na hora
   L.ocupado = true; redesenhar(L); setEstado(L, 'salvando', 'Salvando... já mostrei na tela e estou conferindo no Agendor.');
   var j = await chamarLead(L, '/campos', corpo, null, { tipo: 'campos', meta: { titulo: L.lead.titulo, edits: edits } }); if (!j) return 'erro'; L.ocupado = false;
+  if (!j._enfileirado) diff.forEach(function (d) { delete L.baseConf[d.k]; }); // resolvido (confirmado ou recusado): a próxima edição lê o valor do servidor de novo
   if (j._enfileirado) { diff.forEach(function (d) { delete L.edits[d.k]; }); gravarRascunho(L); if (S.L === L) { redesenhar(L); setEstado(L, 'salvando', 'Sem conexão. Guardei a alteração neste aparelho e envio sozinho quando a rede voltar.'); } return 'fila'; }
   if (j.ok && j.confirmado !== false) {
     var nao = Array.isArray(j.naoConfirmados) ? j.naoConfirmados : []; aplicarResposta(L, j);
@@ -1691,8 +1700,19 @@ $('bEntrar').onclick = async function () { var v = $('tok').value.trim(); if (!v
 $('tok').onkeydown = function (e) { if (e.key === 'Enter') $('bEntrar').click(); };
 $('bTentar').onclick = function () { carregar(false, false); };
 $('bAtualizar').onclick = function () { carregar(false, true); };
-$('bSair1').onclick = function () { sair(''); };
-$('bSair2').onclick = function () { sair(''); };
+function apagarDadosLocais(incluiSaida) { // tudo que a página guardou neste aparelho (menos o tema e preferências de tela)
+  try { var ks = []; for (var i = 0; i < localStorage.length; i++) ks.push(localStorage.key(i)); ks.forEach(function (k) { if (k && (/^(sh_rasc_|sh_fila_|sh_abriu|sh_ultimo|sh_poll_ate|sh_ult_poll|sh_lider)/.test(k) || (incluiSaida && k === SAIDA_KEY))) { try { localStorage.removeItem(k); } catch (e) {} } }); } catch (e) {}
+  if (incluiSaida) S.saidaMem = null; S.pre = {}; atualizarSelo();
+}
+function sairManual(apagar) {
+  var n = lerSaida().length;
+  if (apagar) { if (!window.confirm(n ? 'As ' + n + (n === 1 ? ' ação pendente será PERDIDA' : ' ações pendentes serão PERDIDAS') + '. Apagar tudo deste aparelho e sair?' : 'Apagar todos os dados deste aparelho e sair?')) return; sair(''); apagarDadosLocais(true); return; }
+  if (n) { if (!window.confirm('Há ' + n + (n === 1 ? ' ação que ainda não foi enviada' : ' ações que ainda não foram enviadas') + '. Sair mesmo? Elas ficam guardadas neste aparelho até a próxima entrada.')) return; sair(''); return; }
+  sair(''); apagarDadosLocais(false); // sem nada pendente, sair não deixa rastro de lead no aparelho
+}
+$('bSair1').onclick = function () { sairManual(false); };
+$('bSair2').onclick = function () { sairManual(false); };
+$('bSairApagar').onclick = function () { sairManual(true); };
 $('bTema').onclick = alternarTema;
 $('bAjuda').onclick = function () { var b = $('ajudaBox'); b.classList.toggle('hide'); $('bAjuda').setAttribute('aria-expanded', b.classList.contains('hide') ? 'false' : 'true'); };
 var debBusca = null; $('busca').oninput = function () { clearTimeout(debBusca); debBusca = setTimeout(function () { desenharBlocos(); }, 150); }; $('ordem').onchange = desenharBlocos; $('esconder').onchange = desenharBlocos;
