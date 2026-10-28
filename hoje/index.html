@@ -1300,6 +1300,7 @@ async function enviarGanho(L) {
     if (j.lead) aplicarResposta(L, j); var ch = chavesDe(j); L.lead.faltando = j.faltando || L.lead.faltando; if (ch) L.lead.faltandoChaves = ch;
     abrirGanho(L, j.faltando, true, ch); setEstado(L, 'erro', j.mensagem || 'O Agendor ainda precisa de mais dados. Os campos que faltam estão marcados.'); return;
   }
+  if (j.repasseDesligado) { aplicarResposta(L, j); L.rep = { desligado: true, mensagem: j.mensagem }; msg((L.lead.titulo || 'Lead') + ': Ganho registrado ✓', 'ok'); renderGanho(L); carregar(true, 'tarefas'); return; }
   if (j.repassePendente) { aplicarResposta(L, j); L.rep = { pendente: true, ate: Date.now() + 60000 }; msg((L.lead.titulo || 'Lead') + ': Ganho registrado ✓', 'ok'); renderGanho(L); carregar(true, 'tarefas'); return; }
   if (j.ok !== false && j._status < 300) {
     aplicarResposta(L, j); msg((L.lead.titulo || 'Lead') + ': Ganho registrado ✓', 'ok'); carregar(true, 'tarefas'); carregarAguardando(true);
@@ -1310,7 +1311,9 @@ async function enviarGanho(L) {
   renderGanho(L); setEstado(L, 'erro', msgErro(j), function () { enviarGanho(L); });
 }
 // passo "Escolha o representante" (depois do Ganho) e atribuição, usada também pela lista "Aguardando representante"
+function semAcaoRep(r) { return !r || r.semAcao || r.tipo === 'sistema' || !r.id; } // 'Deixar a Bia distribuir': não chama o servidor
 async function postRep(arenaId, r) {
+  if (semAcaoRep(r)) return { cancelado: true, semAcao: true };
   var corpo = { repId: r.id };
   for (var tent = 0; tent < 2; tent++) {
     var j; try { j = await api('/lead/' + arenaId + '/representante', corpo); } catch (e) { j = { _status: 0, ok: false }; }
@@ -1320,7 +1323,7 @@ async function postRep(arenaId, r) {
   }
   return { ok: false, _status: 409, mensagem: 'Não consegui trocar o representante.' };
 }
-function confirmaRep(titulo, r) { return window.confirm('Passar "' + (titulo || 'este lead') + '" para ' + r.nome + '?' + (r.tipo === 'rep' ? ' Essa pessoa será avisada.' : '')); }
+function confirmaRep(titulo, r) { if (semAcaoRep(r)) return true; return window.confirm('Passar "' + (titulo || 'este lead') + '" para ' + r.nome + '?' + (r.tipo === 'rep' ? ' Essa pessoa será avisada.' : '')); }
 function renderRepStep(L) {
   var c = $('gCorpo'); c.textContent = ''; var rd = $('gRodape'); rd.textContent = ''; var rp = L.rep; $('gTitulo').textContent = 'Ganho registrado ✓';
   L.refs.estado = el('div', 'estado hide'); L.refs.estado.setAttribute('role', 'status'); L.refs.estado.setAttribute('aria-live', 'polite'); rd.appendChild(L.refs.estado);
@@ -1328,12 +1331,14 @@ function renderRepStep(L) {
   if (rp.pendente) {
     c.appendChild(el('p', null, 'A Bia está concluindo o envio ao time de vendas.')); c.appendChild(el('p', 'sub', 'Isso leva cerca de 1 minuto. Depois dele, escolha o representante aqui ou na aba "Aguardando representante".'));
     var at = el('button', 'forte', 'Atualizar'); at.type = 'button'; at.onclick = function () { if (Date.now() < rp.ate) { setEstado(L, '', 'Ainda dentro de 1 minuto. Espere um pouco e clique de novo.'); return; } enviarGanho(L); }; row.appendChild(at);
+  } else if (rp.desligado) {
+    c.appendChild(el('p', null, rp.mensagem || 'O envio ao time de vendas está desligado agora.'));
   } else if (rp.dono) {
     c.appendChild(el('p', null, 'Agora é de ' + rp.dono + (rp.avisou ? '. A pessoa foi avisada.' : '.') + ' ✓'));
   } else {
     c.appendChild(el('h3', null, 'Escolha o representante')); c.appendChild(el('p', 'sub', 'Quem recebe este lead? Se preferir, deixe a Bia distribuir.'));
-    (rp.responsaveis || []).forEach(function (r) { var b = el('button', 'sec', r.nome); b.type = 'button'; b.className = 'sec rep-op'; b.onclick = function () { escolherRep(L, r); }; c.appendChild(b); });
-    var bia = el('button', 'sec', 'Deixar a Bia distribuir'); bia.type = 'button'; bia.onclick = fecharGanho; row.appendChild(bia);
+    (rp.responsaveis || []).forEach(function (r) { var b = el('button', 'sec', r.nome); b.type = 'button'; b.className = 'sec rep-op'; b.onclick = function () { if (semAcaoRep(r)) { fecharGanho(); return; } escolherRep(L, r); }; c.appendChild(b); });
+    if (!(rp.responsaveis || []).some(semAcaoRep)) { var bia = el('button', 'sec', 'Deixar a Bia distribuir'); bia.type = 'button'; bia.onclick = fecharGanho; row.appendChild(bia); }
   }
   var fc = el('button', rp.dono ? 'forte' : 'sec', 'Fechar'); fc.type = 'button'; fc.onclick = fecharGanho; row.appendChild(fc); rd.appendChild(row);
 }
@@ -1351,7 +1356,7 @@ function secaoRep(L) {
   s.appendChild(sel); s.appendChild(b); return s;
 }
 async function acaoRep(L, r) {
-  if (L.ocupado) return; if (!confirmaRep(L.lead.titulo, r)) return;
+  if (L.ocupado) return; if (semAcaoRep(r)) { setEstado(L, '', 'Fica com a Bia distribuir. Nada mudou.'); return; } if (!confirmaRep(L.lead.titulo, r)) return;
   L.ocupado = true; setEstado(L, 'salvando', 'Passando para ' + r.nome + '...'); var j = await postRep(L.dealId, r); if (!j) return; L.ocupado = false;
   if (j.cancelado) { setEstado(L, '', 'Cancelado. Nada mudou.'); return; }
   if (j.ok !== false && j._status < 300 && j.confirmado !== false) { var nome = (j.dono && j.dono.nome) || r.nome; await carregarLead(L, false); setEstado(L, 'ok', 'Agora é de ' + nome + (r.tipo === 'rep' ? '. A pessoa foi avisada.' : '.') + ' ✓'); carregarAguardando(true); }
@@ -1398,8 +1403,8 @@ $('bFecharLead').onclick = fecharLead; $('bFecharGanho').onclick = fecharGanho;
 // ---------- Aguardando representante (leads que o Felipe qualificou e ainda estão com o Sistema ou com ele) ----------
 S.ag = { itens: [], total: 0, responsaveis: [], ocultos: {}, timer: null, aberto: false, seq: 0 };
 function rotuloAguard() { var n = S.ag.itens.filter(function (i) { return !S.ag.ocultos[i.dealId]; }).length; $('bAguard').textContent = 'Aguardando representante (' + (S.ag.total != null ? Math.max(0, S.ag.total - Object.keys(S.ag.ocultos).length) : n) + ')'; }
-async function carregarAguardando(silencioso) {
-  if (!S.token) return; var meu = ++S.ag.seq; var j; try { j = await api('/aguardando-representante'); } catch (e) { j = { _status: 0 }; }
+async function carregarAguardando(silencioso, fresco) {
+  if (!S.token) return; var meu = ++S.ag.seq; var j; try { j = await api('/aguardando-representante' + (fresco ? '?fresco=1' : '')); } catch (e) { j = { _status: 0 }; }
   if (j._status === 401) { sair('Senha não confere.'); return; } if (meu !== S.ag.seq) return;
   if (j.ok === false || j._status >= 400 || j._status === 0) { if (!silencioso) $('agAviso').textContent = msgErro(j); return; }
   S.ag.itens = j.itens || []; S.ag.total = j.total != null ? j.total : S.ag.itens.length; S.ag.responsaveis = j.responsaveis || S.ag.responsaveis; S.ag.ocultos = {}; $('agAviso').textContent = ''; rotuloAguard(); if (S.ag.aberto) desenharAguardando();
@@ -1421,6 +1426,7 @@ function desenharAguardando() {
   });
 }
 async function atribuirAguardando(i, r) {
+  if (semAcaoRep(r)) { $('agAviso').textContent = (i.titulo || 'Lead') + ': fica com a Bia distribuir. Nada mudou.'; return; }
   if (!confirmaRep(i.titulo, r)) return; S.ag.ocultos[i.dealId] = true; desenharAguardando(); rotuloAguard(); $('agAviso').textContent = (i.titulo || 'Lead') + ': passando para ' + r.nome + '...';
   var j = await postRep(i.dealId, r); if (!j) return;
   if (j.cancelado) { delete S.ag.ocultos[i.dealId]; desenharAguardando(); rotuloAguard(); $('agAviso').textContent = 'Cancelado. Nada mudou.'; return; }
@@ -1429,7 +1435,7 @@ async function atribuirAguardando(i, r) {
 }
 function abrirAguardando() { S.ag.aberto = true; $('painelAguard').classList.remove('hide'); $('agLista').textContent = ''; desenharAguardando(); carregarAguardando(false); if (S.ag.timer) clearInterval(S.ag.timer); S.ag.timer = setInterval(function () { if (!document.hidden && S.ag.aberto) carregarAguardando(true); }, 60000); try { $('bFecharAguard').focus(); } catch (e) {} }
 function fecharAguardando() { S.ag.aberto = false; $('painelAguard').classList.add('hide'); if (S.ag.timer) { clearInterval(S.ag.timer); S.ag.timer = null; } try { $('bAguard').focus(); } catch (e) {} }
-$('bAguard').onclick = abrirAguardando; $('bFecharAguard').onclick = fecharAguardando; $('bAtualizarAguard').onclick = function () { carregarAguardando(false); };
+$('bAguard').onclick = abrirAguardando; $('bFecharAguard').onclick = fecharAguardando; $('bAtualizarAguard').onclick = function () { carregarAguardando(false, true); };
 
 // ---------- eventos ----------
 $('bEntrar').onclick = async function () { var v = $('tok').value.trim(); if (!v) { $('loginMsg').textContent = 'Digite a senha.'; return; } $('loginMsg').textContent = ''; await entrar(v, false); };
