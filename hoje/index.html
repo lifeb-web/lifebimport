@@ -384,6 +384,21 @@ details.sec-empresa>summary,details.dados-opcional>summary{cursor:pointer;font-w
 #modalGanho .secao{border:1px solid var(--border);border-radius:10px;background:var(--card);padding:10px 12px;margin-bottom:10px}
 #modalGanho .secao h3{font-size:15px;font-weight:800;color:var(--purple);margin-bottom:4px}
 #modalGanho .pessoa-tel{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+/* tarefas organizadas */
+#painelLead .t2{display:flex;flex-direction:column;align-items:stretch;gap:4px;border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin:6px 0;background:var(--card)}
+#painelLead .t2.destaque{border:1.5px solid var(--magenta);border-left-width:6px}
+#painelLead .t2.atrasada .dt{color:var(--red);font-weight:700}
+#painelLead .t2 .tt{font-size:16px;font-weight:700;min-width:0}
+#painelLead .t2 .dt{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.rot-prox{font-size:13px;font-weight:800;color:var(--magenta);text-transform:uppercase;letter-spacing:.6px}
+#painelLead .acoes-t{display:flex;gap:8px;margin-top:4px} #painelLead .acoes-t button.forte{flex:2;min-height:48px;font-size:16px} #painelLead .acoes-t button.sec{flex:1;min-height:48px}
+#painelLead .adiar-op{display:flex;gap:6px;flex-wrap:wrap} #painelLead .adiar-op button{flex:1 1 90px;min-height:44px}
+#painelLead .adiar-data{display:flex;gap:6px;flex-wrap:wrap} #painelLead .adiar-data input{flex:1 1 150px}
+#painelLead details.concluidas>summary,#painelLead details.nova-tarefa>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:700;color:var(--purple)}
+#painelLead .nova-corpo{display:flex;flex-direction:column;gap:8px} #painelLead .nova-corpo input[type=text]{width:100%;font-family:var(--font);font-size:16px;min-height:44px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--card);color:var(--text)}
+#painelLead .tarefa.feita .tt{text-decoration:line-through;color:var(--muted);font-weight:600}
+.aviso-discreto{color:var(--muted);font-size:13px}
+.bia-padrao{width:100%;min-height:52px;font-size:17px}
 </style>
 </head>
 <body>
@@ -626,7 +641,7 @@ function casaBusca(it, q) {
 
 // ---------- chamadas ----------
 // ---------- resiliência: rede com retry, disjuntor, caixa de saída, versão, relógio do servidor, telemetria ----------
-var PAGINA_VERSAO = '2026-10-28.7';
+var PAGINA_VERSAO = '2026-10-28.8';
 var REDE = { escala: 1, falhas: 0, ultima: 0, desvio: 0 };
 function dormir(ms) { return new Promise(function (r) { setTimeout(r, ms * REDE.escala); }); }
 function jitter(ms) { return ms * (0.5 + Math.random() * 0.5); }
@@ -714,9 +729,12 @@ async function executar(e, keepalive) {
   } finally { delete S.emVoo[e.id]; }
 }
 // envia já; se a rede não deixar, a ação fica guardada (devolve _enfileirado) e sai sozinha depois
+function semBase(c) { if (!c || typeof c !== 'object') return c; var o = Object.assign({}, c); delete o.base; return o; }
 async function enviarAcao(def) {
   var e = { id: novaChave(), dealId: def.dealId, caminho: def.caminho, corpo: def.corpo, tipo: def.tipo, meta: def.meta || {}, criado: Date.now(), tent: 0, proximo: 0 };
-  var a = lerSaida(); var atras = a.some(function (x) { return x.dealId === e.dealId; }); a.push(e); gravarSaida(a); // grava ANTES de enviar: se a aba morrer, a ação não se perde
+  var a = lerSaida(); var chaveE = e.dealId + '|' + e.caminho + '|' + JSON.stringify(semBase(e.corpo)); var igual = a.filter(function (x) { return x.dealId === e.dealId && x.caminho === e.caminho && x.tipo === e.tipo && (x.dealId + '|' + x.caminho + '|' + JSON.stringify(semBase(x.corpo))) === chaveE; })[0];
+  if (igual) { setTimeout(processarSaida, 0); return { _status: 0, ok: false, _enfileirado: true }; } // a mesma ação já está na fila (ex.: depois de um 401): não entra duas vezes
+  var atras = a.some(function (x) { return x.dealId === e.dealId; }); a.push(e); gravarSaida(a); // grava ANTES de enviar: se a aba morrer, a ação não se perde
   if (atras) { S.proxTick = 0; setTimeout(processarSaida, 0); return { _status: 0, ok: false, _enfileirado: true }; } // mesma ordem por lead
   var j = await executar(e);
   if (j._status === 401) { return j; }
@@ -730,7 +748,7 @@ async function processarSaida(opt) {
   try {
     for (var guarda = 0; guarda < 50; guarda++) {
       var a = lerSaida(); var vistos = {}; var alvo = null;
-      for (var i = 0; i < a.length; i++) { if (vistos[a[i].dealId]) continue; vistos[a[i].dealId] = true; if (S.emVoo[a[i].id]) continue; if ((a[i].proximo || 0) <= Date.now() || (opt && opt.agora)) { alvo = a[i]; break; } }
+      for (var i = 0; i < a.length; i++) { if (vistos[a[i].dealId]) continue; vistos[a[i].dealId] = true; if (S.emVoo[a[i].id]) continue; if ((a[i].proximo || 0) <= Date.now() || (opt && opt.agora && !a[i].adiado) || (opt && opt.keepalive)) { alvo = a[i]; break; } }
       if (!alvo) break;
       var j = await executar(alvo, opt && opt.keepalive);
       if (j._status === 401) { sair('Senha não confere. O que estava guardado continua aqui e sai quando você entrar de novo.'); return; }
@@ -754,9 +772,21 @@ function avisar(texto, tipo, acao) { // aviso que fica na tela até ele fechar (
   if (acao) { var b = el('button', 'sec', acao.rot); b.type = 'button'; b.onclick = function () { acao.f(); f.remove(); }; f.appendChild(b); }
   var x = el('button', 'link', 'Fechar'); x.type = 'button'; x.onclick = function () { f.remove(); }; f.appendChild(x); box.appendChild(f);
 }
+S.repPend = {}; try { S.repPend = JSON.parse(lsGet('sh_reppend') || '{}') || {}; var _hj = Date.now(); Object.keys(S.repPend).forEach(function (k) { if (_hj - (S.repPend[k].t || 0) > 2 * 86400000) delete S.repPend[k]; }); } catch (e) { S.repPend = {}; }
+function guardaRepPend() { try { lsSet('sh_reppend', JSON.stringify(S.repPend)); } catch (e) {} }
+function registrarRepPend(dealId, titulo, j) { if (!(j && j.arena && j.arena.dealId)) return false; S.repPend[dealId] = { t: Date.now(), arenaId: j.arena.dealId, link: j.arena.link, responsaveis: j.responsaveis || [], mensagem: j.mensagem || '', titulo: titulo || '' }; guardaRepPend(); return true; }
+function soltaRepPend(dealId) { delete S.repPend[dealId]; guardaRepPend(); }
+async function abrirEscolhaRep(dealId) { await abrirLead(dealId, null); var L = S.L, pend = S.repPend[dealId]; if (L && L.dealId === dealId && pend) { L.rep = { arenaId: pend.arenaId, link: pend.link, responsaveis: pend.responsaveis, mensagem: pend.mensagem, dono: null }; mostrarGanhoModal(L); } }
+function tocandoCampo() { var a = document.activeElement; return !!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)); }
 function saidaOk(e, j) {
-  if (e.tipo === 'ganho') { var Lg = S.L && S.L.dealId === e.dealId && S.L.lead ? S.L : null; if (Lg) resolverGanho(Lg, j); else { delete S.qualif[e.dealId]; redesenharTudo(); avisar((e.meta.titulo || 'Lead') + ': ' + (j.mensagem || 'qualificado ✓'), 'ok'); carregarAguardando(true); } carregar(true, 'tarefas'); return; }
-  var L = S.L; if (L && L.dealId === e.dealId && L.lead) { if (j.lead) { aplicarResposta(L, j); limparEditsIguais(L); redesenhar(L); setEstado(L, 'ok', 'Salvo e conferido no Agendor ✓ (enviado quando a conexão voltou)'); } else carregarLead(L, true); }
+  if (e.tipo === 'ganho') { // ganho que saiu da fila depois: NÃO abre pop-up por cima do que ele estiver fazendo
+    var Lg = S.L && S.L.dealId === e.dealId && S.L.lead ? S.L : null; var titulo = e.meta.titulo || 'Lead'; delete S.qualif[e.dealId]; var tinha = registrarRepPend(e.dealId, titulo, j); redesenharTudo();
+    var olhando = Lg && !$('painelLead').classList.contains('hide') && $('modalGanho').classList.contains('hide') && !tocandoCampo();
+    if (olhando) resolverGanho(Lg, j);
+    else { if (Lg) { aplicarResposta(Lg, j); renderLead(); } avisar(titulo + ' qualificado.' + (j.mensagem ? ' ' + j.mensagem : ''), 'ok', tinha ? { rot: 'Escolher representante', f: function () { abrirEscolhaRep(e.dealId); } } : null); }
+    carregarAguardando(true); carregar(true, 'tarefas'); return;
+  }
+  var L = S.L; if (L && L.dealId === e.dealId && L.lead) { if (j.lead) { aplicarResposta(L, j); limparEditsIguais(L); redesenhar(L); setEstado(L, 'ok', e.tipo === 'tarefa' ? 'Tarefa concluída e conferida no Agendor ✓' : 'Salvo e conferido no Agendor ✓ (enviado quando a conexão voltou)'); } else carregarLead(L, true); }
   if (e.tipo === 'perdido') avisar((e.meta.titulo || 'Lead') + ': marcado como Perdido e conferido no Agendor ✓', 'ok');
   else if (e.tipo === 'campos') avisar((e.meta.titulo || 'Lead') + ': alterações salvas e conferidas ✓', 'ok');
   carregar(true, 'tarefas'); try { if (S.canal) S.canal.postMessage({ t: 'dados' }); } catch (er) {}
@@ -765,7 +795,10 @@ function saidaRecusada(e, j) {
   if (e.tipo === 'ganho') { var Lr = S.L && S.L.dealId === e.dealId && S.L.lead ? S.L : null; if (Lr) { resolverGanho(Lr, j); return; } delete S.qualif[e.dealId]; redesenharTudo(); avisar((e.meta.titulo || 'Lead') + ': não consegui qualificar. ' + ((j && j.mensagem) || 'O servidor não aceitou.'), 'erro', { rot: 'Abrir o lead', f: function () { abrirLead(e.dealId, null); } }); return; }
   var m = (j && j.mensagem) || 'O servidor não aceitou.';
   if (e.tipo === 'perdido') { delete S.ocultos[e.dealId]; redesenharTudo(); }
+  if (e.tipo === 'campos') { var rest = lerSaida(); var temGanho = rest.some(function (x) { return x.dealId === e.dealId && x.tipo === 'ganho'; }); if (temGanho) gravarSaida(rest.filter(function (x) { return !(x.dealId === e.dealId && x.tipo === 'ganho'); })); if (temGanho || S.qualif[e.dealId]) { delete S.qualif[e.dealId]; redesenharTudo(); } e.reabrirGanho = temGanho || !!(S.L && S.L.ganhoRodando && S.L.dealId === e.dealId); } // campos recusado: o ganho que vinha logo atrás NUNCA sai sem os campos corrigidos
+  if (e.tipo === 'tarefa') { invalidaLead(e.dealId); if (S.L && S.L.dealId === e.dealId) carregarLead(S.L, true); }
   if (e.tipo === 'campos' && e.meta.edits) { try { var cur = lerRascunho(e.dealId); Object.keys(e.meta.edits).forEach(function (k) { cur[k] = e.meta.edits[k]; }); lsSet(rascKey(e.dealId), JSON.stringify({ t: Date.now(), e: cur })); } catch (er) {} if (S.L && S.L.dealId === e.dealId) { Object.keys(e.meta.edits).forEach(function (k) { S.L.edits[k] = e.meta.edits[k]; }); carregarLead(S.L, true); } }
+  if (e.reabrirGanho && S.L && S.L.dealId === e.dealId && S.L.lead && !$('painelLead').classList.contains('hide')) { var Lq = S.L; Lq.ganhoRodando = false; setQualificando(Lq, false); setTimeout(function () { reabrirGanho(Lq, true); setEstado(Lq, 'erro', m + ' O que você digitou continua aqui.'); }, 0); } // reabre o pop-up de Ganho no ponto do problema, com o que ele digitou
   avisar((e.meta.titulo || 'Lead') + ': não consegui concluir. ' + m + (e.tipo === 'campos' ? ' O que você digitou foi devolvido para a tela.' : ''), 'erro', { rot: 'Abrir o lead', f: function () { abrirLead(e.dealId, null); } });
 }
 function iniciarSaida() {
@@ -778,10 +811,15 @@ function iniciarSaida() {
 function recarregar() { if (window.__shTeste && window.__shTeste.hooks && window.__shTeste.hooks.recarregar) { window.__shTeste.hooks.recarregar(); return; } location.reload(); }
 function temRascunho() { try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k.indexOf('sh_rasc_') === 0) return true; } } catch (e) {} return !!(S.L && (Object.keys(S.L.edits).length || S.L.ocupado)); }
 function podeRecarregarSozinha() { return !temRascunho() && !lerSaida().length && !S.ocupado && !(S.L && S.L.ocupado) && $('painelLead').classList.contains('hide') && $('modalGanho').classList.contains('hide'); }
+function parseVersao(v) { var m = /^(\d{4})-(\d{2})-(\d{2})\.(\d+)$/.exec(String(v || '')); return m ? [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4])] : null; }
+function versaoMaisNova(a, b) { var x = parseVersao(a), y = parseVersao(b); if (!x || !y) return false; for (var i = 0; i < 4; i++) { if (x[i] !== y[i]) return x[i] > y[i]; } return false; } // 'AAAA-MM-DD.N': o dia e depois o N como número ('.10' é maior que '.9')
+function lerRecarga() { var o = null; try { o = JSON.parse(sessionStorage.getItem('sh_recarga') || 'null'); } catch (e) {} if (!o) { try { o = JSON.parse(localStorage.getItem('sh_recarga') || 'null'); } catch (e) {} } return o; }
+function gravarRecarga(v) { var t = JSON.stringify({ v: v, t: Date.now() }); try { sessionStorage.setItem('sh_recarga', t); } catch (e) {} try { localStorage.setItem('sh_recarga', t); } catch (e) {} }
 function aplicarStatus(j) {
   if (j && typeof j.agora === 'number') REDE.desvio = j.agora - Date.now();
-  if (j && j.paginaVersao && j.paginaVersao !== PAGINA_VERSAO) {
-    if (podeRecarregarSozinha()) { recarregar(); return; }
+  if (j && j.paginaVersao && versaoMaisNova(j.paginaVersao, PAGINA_VERSAO)) { // só quando o worker é MAIS NOVO que esta página (igual ou mais antigo não faz nada)
+    var ult = lerRecarga(); var recente = ult && ult.v === j.paginaVersao && Date.now() - ult.t < 180000 * REDE.escala; // trava anti-loop: não recarrega sozinho de novo para a mesma versão antes de 3 min
+    if (!recente && podeRecarregarSozinha()) { gravarRecarga(j.paginaVersao); recarregar(); return; }
     faixa('versao', 'Há uma versão nova da página. Termine o que está fazendo e atualize.', 'aviso', { rot: 'Atualizar', acao: recarregar });
   } else faixa('versao', '');
 }
@@ -895,7 +933,7 @@ function cartao(it, opts) {
   var abriu = opts.sem_abriu ? null : lerAbriu()[it.dealId]; var feito = it.feito || it.estado === 'feito';
   var li = el('div', 'item' + (feito ? ' feito' : '') + (opts.atras ? ' atrasado' : '') + (opts.inb && !feito ? ' inbitem' : '') + (abriu && !feito ? ' aberto' : ''));
   var lo = linhaOrigem(it); if (lo) li.appendChild(lo);
-  empClicavel(li, it.empresa, it.dealId, it); if (S.qualif[it.dealId]) li.appendChild(el('div', 'est andamento', 'Qualificando... (enviando ao time de vendas)')); linhaContato(li, it);
+  empClicavel(li, it.empresa, it.dealId, it); if (S.qualif[it.dealId]) li.appendChild(el('div', 'est andamento', 'Qualificando... (enviando ao time de vendas)')); else if (S.repPend[it.dealId]) li.appendChild(el('div', 'est andamento', 'Qualificado: falta escolher o representante')); linhaContato(li, it);
   if (it.subtitulo) li.appendChild(el('div', 'pas', it.subtitulo));
   if (opts.estado) li.appendChild(el('div', 'est ' + it.estado, estadoTxt(it)));
   if (opts.passo && !it.nota) li.appendChild(el('div', 'pas', feito ? 'Tudo feito ✓' : (it.passoPendente ? 'Próximo: ' + it.passoPendente : '')));
@@ -1305,7 +1343,7 @@ var CAMPOS = [
 var GANHO_ORDEM = ['e.aprovado_serasa', 'e.quantidade_de_lojas', 'e.faturamento_mensal', 'e.mais_de_2_anos', 'e.disposicao_para_investimento', 'e.segmento', 'n.observacao_sdr', 'e.cnpj', 'e.nome', 'e.razao_social', 'e.end.cep', 'e.end.rua', 'e.end.numero', 'e.end.bairro', 'e.end.cidade', 'e.end.uf'];
 var OBS_MAX = 150;
 function campoDe(k) { for (var i = 0; i < CAMPOS.length; i++) if (CAMPOS[i].k === k) return CAMPOS[i]; return null; }
-function pessoaPrincipal(lead) { var ps = (lead && lead.pessoas) || []; for (var i = 0; i < ps.length; i++) if (ps[i].principal) return ps[i]; return ps[0] || null; }
+function pessoaPrincipal(lead) { var ps = (lead && lead.pessoas) || []; for (var i = 0; i < ps.length; i++) if (ps[i].principal === true) return ps[i]; return null; } // nunca usa a primeira pessoa como substituta
 function chavesPessoa(lead) { var p = pessoaPrincipal(lead); return p ? [{ k: 'p.' + p.id + '.nome', rot: 'Nome do contato', tipo: 'nome', tok: [] }, { k: 'p.' + p.id + '.whatsapp', rot: 'WhatsApp do contato', tipo: 'fone', tok: [] }, { k: 'p.' + p.id + '.cargo', rot: 'Cargo do contato', tipo: 'texto', tok: ['cargo'] }] : []; }
 function todosCampos(lead) { return CAMPOS.concat(chavesPessoa(lead)); }
 function campoDeK(lead, k) { return campoDe(k) || chavesPessoa(lead).filter(function (c) { return c.k === k; })[0] || null; }
@@ -1322,7 +1360,7 @@ function gravarLocal(lead, k, v) { // aplica no objeto local (atualização otim
   else if (p[0] === 'n') lead.observacaoSdr = v;
   else if (p[0] === 'p') { (lead.pessoas || []).forEach(function (x) { if (String(x.id) === p[1]) x[p[2] === 'whatsapp' ? 'whatsappPrincipal' : p[2]] = v; }); }
 }
-function digFone(v) { var d = soDigitos(v); return d.length > 11 && d.indexOf('55') === 0 ? d.slice(2) : d; }
+function digFone(v) { var d = soDigitos(v).replace(/^0+/, ''); return d.length > 11 && d.indexOf('55') === 0 ? d.slice(2) : d; } // tira o zero da esquerda e o 55 antes de contar
 function mascFone(v) { var d = digFone(v).slice(0, 11); if (d.length > 6) return '(' + d.slice(0, 2) + ') ' + d.slice(2, d.length - 4) + '-' + d.slice(-4); if (d.length > 2) return '(' + d.slice(0, 2) + ') ' + d.slice(2); return d; }
 function normVal(k, v) { v = String(v == null ? '' : v).trim(); if (/\.whatsapp$/.test(k)) return digFone(v); if (k === 'e.cnpj' || k === 'e.end.cep') return soDigitos(v); if (k === 'e.end.uf') return v.toUpperCase(); return v; }
 function valorAtual(k) { var L = S.L; return L && Object.prototype.hasOwnProperty.call(L.edits, k) ? L.edits[k] : fmtOrig(k, valorOrig(L && L.lead, k)); }
@@ -1331,7 +1369,7 @@ function validarCampo(L, f) {
   var v = normVal(f.k, valorAtual(f.k)); if (!v) return '';
   if (f.tipo === 'cnpj') return v.length !== 14 ? 'O CNPJ tem 14 números.' : (cnpjValido(v) ? '' : 'Esse CNPJ não é válido. Confira os números.');
   if (f.tipo === 'cep') return v.length === 8 ? '' : 'O CEP tem 8 números.';
-  if (f.tipo === 'fone') return v.length === 10 || v.length === 11 ? '' : 'O WhatsApp precisa ter DDD e 8 ou 9 números.';
+  if (f.tipo === 'fone') { if (!(v.length === 10 || v.length === 11)) return 'O WhatsApp precisa ter DDD e 8 ou 9 números.'; var ddd = Number(v.slice(0, 2)); return ddd >= 11 && ddd <= 99 ? '' : 'DDD inválido. Use um DDD de 11 a 99.'; }
   if (f.tipo === 'nome') return (v.match(/[A-Za-zÀ-ÿ]/g) || []).length >= 2 ? '' : 'Informe o nome (pelo menos 2 letras).';
   if (f.tipo === 'uf') return /^[A-Z]{2}$/.test(v) ? '' : 'Use 2 letras, por exemplo DF.';
   if (f.tipo === 'sel') { var ops = (L.opcoes || {})[f.op]; if (ops && ops.length && ops.indexOf(v) < 0 && v !== normVal(f.k, valorOrig(L.lead, f.k))) return 'Escolha uma das opções da lista.'; }
@@ -1465,7 +1503,7 @@ async function carregarLead(L, silencioso) {
   if (silencioso && L.ocupado) return;
   aplicarResposta(L, j); limparEditsIguais(L); recomputarMostrar(L); redesenhar(L);
 }
-function aplicarResposta(L, j) { if (j.lead) L.lead = j.lead; if (j.opcoes && typeof j.opcoes === 'object') { var op0 = Object.assign({}, L.opcoes); Object.keys(j.opcoes).forEach(function (k) { if (Array.isArray(j.opcoes[k]) && j.opcoes[k].length) op0[k] = j.opcoes[k]; }); L.opcoes = op0; } if (j.motivosPerda) L.motivos = j.motivosPerda; if (j.responsaveis) L.responsaveis = j.responsaveis; S.listas = { opcoes: L.opcoes, motivos: L.motivos, responsaveis: L.responsaveis }; } // guarda as listas do pop-up de Ganho: o próximo lead já abre com elas
+function aplicarResposta(L, j) { if (j.lead) L.lead = j.lead; if (j.opcoes && typeof j.opcoes === 'object') { var op0 = Object.assign({}, L.opcoes); Object.keys(j.opcoes).forEach(function (k) { if (Array.isArray(j.opcoes[k]) && j.opcoes[k].length) op0[k] = j.opcoes[k]; }); L.opcoes = op0; } if (j.motivosPerda) L.motivos = j.motivosPerda; if (j.responsaveis) L.responsaveis = j.responsaveis; S.listas = { opcoes: L.opcoes, motivos: L.motivos, responsaveis: L.responsaveis }; if (Array.isArray(j.avisos)) L.avisos = j.avisos; } // guarda as listas do pop-up de Ganho: o próximo lead já abre com elas
 function fecharLead() { var L = S.L; $('painelLead').classList.add('hide'); try { if (/^#lead=/.test(location.hash)) { if (S.pushou) { S.pushou = false; S.ignoraPop = Date.now(); history.back(); } else history.replaceState(null, '', location.pathname + location.search); } } catch (e) {} if (L && L.opener) { try { L.opener.focus(); } catch (e) {} } }
 function aoMudarHash() {
   if (S.ignoraPop && Date.now() - S.ignoraPop < 800) return; // eco do history.back() que a própria página pediu ao fechar
@@ -1474,7 +1512,7 @@ function aoMudarHash() {
   else if (!$('painelLead').classList.contains('hide')) { S.pushou = false; $('painelLead').classList.add('hide'); } // botão Voltar do navegador fecha o painel
 }
 window.addEventListener('hashchange', aoMudarHash); window.addEventListener('popstate', aoMudarHash);
-function acoesDe(L) { return (L.lead && L.lead.acoes) || {}; }
+function acoesDe(L) { if (L.lead && L.lead.status && L.lead.status !== 'andamento') return {}; return (L.lead && L.lead.acoes) || {}; } // lead ganho ou perdido: somente leitura
 
 function redesenhar(L) { if (L.modalAberto) renderGanho(L); else renderLead(); }
 function renderLead() {
@@ -1527,6 +1565,7 @@ function proximaAcaoEl(L) { // o que fazer agora, em destaque, com um botão pri
     box.appendChild(el('div', 'proxima-txt', 'Este lead ainda não foi iniciado. Ao iniciar, a cadência começa e as tarefas do 1º contato são criadas.'));
     var bi = el('button', 'forte', 'Iniciar este lead'); bi.type = 'button'; bi.onclick = function () { if (!window.confirm('Iniciar ' + (lead.titulo || 'este lead') + ' agora?' + avisoTarde())) return; liberar({ dealIds: [L.dealId], funil: L.ctx.funil || lead.funil || 'outbound' }); fecharLead(); }; box.appendChild(bi); return box;
   }
+  if ((lead.tarefas || []).some(function (t) { return !t.feita; })) return null; // há tarefa aberta: ela aparece em destaque na lista (sem repetir)
   var ts = (lead.tarefas || []).filter(function (t) { return !t.feita && !t._salvando; }).sort(function (a, b) { return (b.atrasada ? 1 : 0) - (a.atrasada ? 1 : 0) || String(a.venc).localeCompare(String(b.venc)); }); var t = ts[0];
   if (!t) { box.appendChild(el('div', 'proxima-txt', 'Nenhuma tarefa aberta agora.')); return box; }
   box.appendChild(el('div', 'proxima-txt', limpaTarefa(t.texto))); box.appendChild(el('div', 'sub', (t.atrasada ? 'Atrasada, venceu em ' : 'Vence ') + (t.venc === 'amanha' ? 'amanhã' : dataBR(t.venc))));
@@ -1614,6 +1653,7 @@ function renderRodape(L) {
   var row = el('div', 'row');
   if (ac.campos && andamento) { L.refs.salvar = el('button', 'forte', 'Salvar'); L.refs.salvar.type = 'button'; L.refs.salvar.onclick = function () { salvarCampos(L); }; row.appendChild(L.refs.salvar); atualizarSalvar(L); }
   if (ac.ganho && andamento) { var bg = el('button', 'sec', 'Marcar como Ganho / Qualificado'); bg.type = 'button'; bg.onclick = function () { abrirGanho(L, L.lead.faltando, false, L.lead.faltandoChaves); }; row.appendChild(bg); }
+  if (lead.status === 'ganho' && S.repPend[L.dealId]) { var br = el('button', 'forte', 'Escolher representante'); br.type = 'button'; br.onclick = function () { var pd = S.repPend[L.dealId]; L.rep = { arenaId: pd.arenaId, link: pd.link, responsaveis: pd.responsaveis, mensagem: pd.mensagem, dono: null }; mostrarGanhoModal(L); }; row.appendChild(br); }
   if (ac.perdido && andamento) { var bp = el('button', 'sec', 'Marcar como Perdido'); bp.type = 'button'; bp.setAttribute('aria-expanded', L.perdidoAberto ? 'true' : 'false'); bp.onclick = function () { L.perdidoAberto = !L.perdidoAberto; renderRodape(L); }; row.appendChild(bp); }
   if (L.perdidoAberto && ac.perdido && andamento) {
     var f = el('div', 'secao'); f.style.marginTop = '8px'; f.appendChild(el('h3', null, 'Por que perdeu?'));
@@ -1648,7 +1688,7 @@ async function enviarCampos(L) {
     var nao = Array.isArray(j.naoConfirmados) ? j.naoConfirmados : []; aplicarResposta(L, j);
     diff.forEach(function (d) { var nome = d.k.split('.').pop(); if (nao.indexOf(nome) >= 0) return; delete L.edits[d.k]; });
     gravarRascunho(L); L.receita = null; L.receitaCnpj = '';
-    if (S.L === L) { redesenhar(L); setEstado(L, nao.length ? 'erro' : 'ok', nao.length ? 'Salvei, mas o Agendor não confirmou: ' + nao.join(', ') + '. O que você digitou continua aqui.' : 'Salvo e conferido no Agendor ✓', nao.length ? function () { (L.modalAberto ? confirmarGanho : salvarCampos)(L); } : null); }
+    if (S.L === L) { redesenhar(L); setEstado(L, nao.length ? 'erro' : 'ok', nao.length ? 'Salvei, mas o Agendor não confirmou: ' + nao.join(', ') + '. O que você digitou continua aqui.' : 'Salvo e conferido no Agendor ✓', nao.length ? function () { (L.modalAberto ? confirmarGanho : salvarCampos)(L); } : null); notaAvisos(L, j); }
     if (!j.lead) carregarLead(L, true);
     return nao.length ? 'erro' : 'ok';
   }
@@ -1713,13 +1753,24 @@ function mostrarGanhoModal(L, semRender) { L.modalAberto = true; $('modalGanho')
 function reabrirGanho(L, marcar) { var est = L.estado; abrirGanho(L, L.lead.faltando, marcar, L.lead.faltandoChaves); if (est) setEstado(L, est.tipo, est.texto, est.retry); }
 function fecharGanho() { var L = S.L; $('modalGanho').classList.add('hide'); if (L) { L.modalAberto = false; L.rep = null; if (L.lead) renderLead(); } carregarAguardando(true); }
 function blocoContato(L) { // contato principal (quem decide): nome e WhatsApp já preenchidos para ele confirmar ou corrigir
-  var sec = el('div', 'secao contato'); sec.appendChild(el('h3', null, 'Contato principal (quem decide)')); sec.appendChild(el('p', 'sub contato-frase', 'Confirme ou corrija: este é o contato que o representante vai chamar.'));
+  var sec = el('div', 'secao contato'); sec.appendChild(el('h3', null, 'Contato principal (quem decide)'));
   var id = L.ganhoPessoa;
-  if (id == null) { sec.appendChild(el('p', 'pend', 'Este lead não tem contato cadastrado. Cadastre a pessoa no Agendor e abra de novo.')); return sec; }
+  if (id == null) { // só vale a pessoa marcada como principal: nunca a primeira da lista
+    sec.appendChild(el('p', 'pend', 'Não consegui ler o contato principal. Atualize e tente de novo.'));
+    (L.avisos || []).map(textoAviso).filter(Boolean).forEach(function (t) { sec.appendChild(el('p', 'sub aviso-discreto', t)); });
+    var bu = el('button', 'sec', 'Atualizar'); bu.type = 'button'; bu.onclick = async function () { bu.disabled = true; invalidaLead(L.dealId); await carregarLead(L, false); if (S.L === L && L.modalAberto) reabrirGanho(L, false); }; sec.appendChild(bu); return sec;
+  }
+  sec.appendChild(el('p', 'sub contato-frase', 'Confirme ou corrija: este é o contato que o representante vai chamar.'));
+  (L.avisos || []).map(textoAviso).filter(Boolean).forEach(function (t) { sec.appendChild(el('p', 'sub aviso-discreto', t)); });
   var fN = campoDeK(L.lead, 'p.' + id + '.nome'), fW = campoDeK(L.lead, 'p.' + id + '.whatsapp'); var kW = fW.k;
-  sec.appendChild(campoEl(L, fN, 'gf_', true, L.ganhoMarcar)); sec.appendChild(campoEl(L, fW, 'gf_', true, L.ganhoMarcar));
+  sec.appendChild(campoEl(L, fN, 'gf_', true, L.ganhoMarcar)); var wW = campoEl(L, fW, 'gf_', true, L.ganhoMarcar); sec.appendChild(wW);
+  var rotW = wW.querySelector('label'); var pp = pessoaPrincipal(L.lead) || {}; var fixo = ((pp.telefones || []).filter(function (t) { return t.tipo === 'fixo'; })[0]) || null;
+  var lbl = el('label', 'fixo-op'); lbl.style.cssText = 'display:flex;gap:8px;align-items:center;min-height:44px;font-weight:600'; var ck = el('input'); ck.type = 'checkbox'; ck.checked = !!L.ganhoFixo; ck.style.cssText = 'width:22px;height:22px'; lbl.appendChild(ck); lbl.appendChild(document.createTextNode('Sem WhatsApp, usar o telefone fixo')); sec.appendChild(lbl);
+  var dica = el('div', 'sub'); sec.appendChild(dica);
+  function aplicaFixo() { L.ganhoFixo = ck.checked; if (rotW && rotW.firstChild) rotW.firstChild.textContent = (ck.checked ? 'Telefone fixo (digite o número) *' : 'WhatsApp do contato *'); dica.textContent = ''; if (ck.checked) { dica.appendChild(document.createTextNode('Digite o número do fixo. Sem número, não dá para confirmar.')); if (fixo) { var bf = el('button', 'sec', 'Usar o fixo cadastrado: ' + (fixo.bonito || fixo.e164)); bf.type = 'button'; bf.style.cssText = 'margin-top:6px;min-height:44px'; bf.onclick = function () { var inp = sec.querySelector('#gf_' + kW.replace(/\./g, '_')); inp.value = mascFone(fixo.e164 || fixo.bonito); inp.dispatchEvent(new Event('input')); }; dica.appendChild(bf); } } }
+  ck.onchange = aplicaFixo; aplicaFixo();
   var linha = el('div', 'pessoa-tel'); sec.appendChild(linha);
-  function atualizaWa() { linha.textContent = ''; var d = soDigitos(valorAtual(kW)); if (d.length >= 10 && d.length <= 11) { var fl = foneLinha(d, 'pessoa-tel', null, mascFone(d), true); if (fl) linha.appendChild(fl); } }
+  function atualizaWa() { linha.textContent = ''; var d = digFone(valorAtual(kW)); if (d.length >= 10 && d.length <= 11) { var fl = foneLinha(d, 'pessoa-tel', null, mascFone(d), true); if (fl) linha.appendChild(fl); } }
   var inpW = sec.querySelector('#gf_' + kW.replace(/\./g, '_')); if (inpW) inpW.addEventListener('input', atualizaWa); atualizaWa();
   return sec;
 }
@@ -1750,6 +1801,8 @@ function atualizarGanhoBtn(L) {
   if (L.refs.gFalta) L.refs.gFalta.textContent = falta.length ? (falta.length === 1 ? 'Falta 1 campo obrigatório.' : 'Faltam ' + falta.length + ' campos obrigatórios.') : '';
   b.disabled = !!(falta.length || inval || L.ocupado); b.title = falta.length ? 'Falta preencher: ' + falta.map(function (k) { return (campoDeK(L.lead, k) || {}).rot; }).join(', ') : '';
 }
+function textoAviso(a) { var t = typeof a === 'string' ? a : (a && (a.mensagem || a.campo)) || ''; if (/razao_social/.test(typeof a === 'string' ? a : (a && a.campo) || t)) return 'A razão social não foi gravada agora; o resto foi salvo.'; return t; }
+function notaAvisos(L, j) { var av = (j && Array.isArray(j.avisos) ? j.avisos : []).map(textoAviso).filter(Boolean); var box = L.refs && L.refs.estado; if (!box || !av.length) return; var n = el('div', 'sub aviso-discreto', av.join(' ')); box.appendChild(n); } // aviso discreto, nunca erro
 function chavesDe(j) { return (j && j.faltandoChaves) || (j && j.lead && j.lead.faltandoChaves) || null; }
 function setQualificando(L, on) { var a = $('leadAtualiza'); if (!a) return; if (on) { a.textContent = 'Qualificando... (enviando ao time de vendas)'; a.classList.remove('hide'); } else { a.textContent = 'Atualizando...'; a.classList.toggle('hide', !(L && L.atualizando)); } }
 async function confirmarGanho(L) {
@@ -1781,7 +1834,7 @@ function resolverGanho(L, j) { // resposta final do /ganho: mostra o resultado o
   if (j.repassePendente) { aplicarResposta(L, j); L.rep = { pendente: true, ate: Date.now() + 60000 }; msg(titulo + ': Ganho registrado ✓', 'ok'); mostrarGanhoModal(L); carregar(true, 'tarefas'); return; }
   if (j.ok !== false && j._status < 300) {
     aplicarResposta(L, j); msg(j.mensagem || (titulo + ': Ganho registrado ✓'), 'ok'); carregar(true, 'tarefas'); carregarAguardando(true);
-    if (j.arena && j.arena.dealId) { L.rep = { arenaId: j.arena.dealId, link: j.arena.link, responsaveis: j.responsaveis || L.responsaveis || [], dono: null, mensagem: j.mensagem || '' }; mostrarGanhoModal(L); }
+    if (j.arena && j.arena.dealId) { registrarRepPend(L.dealId, titulo, j); L.rep = { arenaId: j.arena.dealId, link: j.arena.link, responsaveis: j.responsaveis || L.responsaveis || [], dono: null, mensagem: j.mensagem || '' }; mostrarGanhoModal(L); }
     else { $('modalGanho').classList.add('hide'); L.modalAberto = false; renderLead(); }
     return;
   }
@@ -1801,29 +1854,32 @@ async function postRep(arenaId, r) {
   return { ok: false, _status: 409, mensagem: 'Não consegui trocar o representante.' };
 }
 function confirmaRep(titulo, r) { if (semAcaoRep(r)) return true; return window.confirm('Passar "' + (titulo || 'este lead') + '" para ' + r.nome + '?' + (r.tipo === 'rep' ? ' Essa pessoa será avisada.' : '')); }
-function renderRepStep(L) {
+function renderRepStep(L) { // depois do Ganho: "Quem atende esta loja?" (a Bia distribuir é o padrão; escolher um representante é opcional)
   var c = $('gCorpo'); c.textContent = ''; var rd = $('gRodape'); rd.textContent = ''; var rp = L.rep; $('gTitulo').textContent = 'Ganho registrado ✓';
   L.refs.estado = el('div', 'estado hide'); L.refs.estado.setAttribute('role', 'status'); L.refs.estado.setAttribute('aria-live', 'polite'); rd.appendChild(L.refs.estado);
   var row = el('div', 'row');
+  function botaoBia(destaque) { var b = el('button', destaque ? 'forte' : 'sec', 'Deixar a Bia distribuir'); b.type = 'button'; b.className = (destaque ? 'forte' : 'sec') + ' rep-op bia-padrao'; b.onclick = function () { soltaRepPend(L.dealId); fecharGanho(); }; return b; }
   if (rp.pendente) {
     c.appendChild(el('p', null, 'A Bia está concluindo o envio ao time de vendas.')); c.appendChild(el('p', 'sub', 'Isso leva cerca de 1 minuto. Depois dele, escolha o representante aqui ou na aba "Aguardando representante".'));
-    var at = el('button', 'forte', 'Atualizar'); at.type = 'button'; at.onclick = function () { if (Date.now() < rp.ate) { setEstado(L, '', 'Ainda dentro de 1 minuto. Espere um pouco e clique de novo.'); return; } enviarGanho(L); }; row.appendChild(at);
+    var at = el('button', 'forte', 'Atualizar'); at.type = 'button'; at.onclick = function () { if (Date.now() < rp.ate) { setEstado(L, '', 'Ainda dentro de 1 minuto. Espere um pouco e clique de novo.'); return; } enviarGanho(L); }; row.appendChild(at); c.appendChild(botaoBia(false));
   } else if (rp.desligado) {
-    c.appendChild(el('p', null, rp.mensagem || 'O envio ao time de vendas está desligado agora.'));
+    c.appendChild(el('p', null, rp.mensagem || 'O envio ao time de vendas está desligado agora.')); c.appendChild(botaoBia(true));
   } else if (rp.dono) {
     c.appendChild(el('p', null, 'Agora é de ' + rp.dono + (rp.avisou ? '. A pessoa foi avisada.' : '.') + ' ✓'));
   } else {
-    if (rp.mensagem) c.appendChild(el('p', null, rp.mensagem)); c.appendChild(el('h3', null, 'Escolha o representante')); c.appendChild(el('p', 'sub', 'Quem recebe este lead? Se preferir, deixe a Bia distribuir.'));
-    (rp.responsaveis || []).forEach(function (r) { var b = el('button', 'sec', r.nome); b.type = 'button'; b.className = 'sec rep-op'; b.onclick = function () { if (semAcaoRep(r)) { fecharGanho(); return; } escolherRep(L, r); }; c.appendChild(b); });
-    if (!(rp.responsaveis || []).some(semAcaoRep)) { var bia = el('button', 'sec', 'Deixar a Bia distribuir'); bia.type = 'button'; bia.onclick = fecharGanho; row.appendChild(bia); }
+    var reps = (rp.responsaveis || []).filter(function (r) { return !semAcaoRep(r); });
+    if (rp.mensagem) c.appendChild(el('p', null, rp.mensagem));
+    c.appendChild(el('h3', null, 'Quem atende esta loja?')); c.appendChild(botaoBia(true));
+    if (reps.length) { c.appendChild(el('p', 'sub', 'Ou escolha um representante de campo:')); reps.forEach(function (r) { var b = el('button', 'sec', r.nome); b.type = 'button'; b.className = 'sec rep-op'; b.onclick = function () { escolherRep(L, r); }; c.appendChild(b); }); }
+    else c.appendChild(el('p', 'sub', 'A Bia escolhe o representante e avisa a pessoa.'));
   }
-  var fc = el('button', rp.dono ? 'forte' : 'sec', 'Fechar'); fc.type = 'button'; fc.onclick = fecharGanho; row.appendChild(fc); rd.appendChild(row);
+  var fc = el('button', rp.dono ? 'forte' : 'sec', rp.dono || rp.pendente || rp.desligado ? 'Fechar' : 'Escolher depois'); fc.type = 'button'; fc.onclick = fecharGanho; row.appendChild(fc); rd.appendChild(row);
 }
 async function escolherRep(L, r) {
   if (L.ocupado) return; if (!confirmaRep(L.lead.titulo, r)) return;
   L.ocupado = true; setEstado(L, 'salvando', 'Passando para ' + r.nome + '...'); var j = await postRep(L.rep.arenaId, r); if (!j) return; L.ocupado = false;
   if (j.cancelado) { setEstado(L, '', 'Cancelado. Nada mudou.'); return; }
-  if (j.ok !== false && j._status < 300 && j.confirmado !== false) { L.rep.dono = (j.dono && j.dono.nome) || r.nome; L.rep.avisou = r.tipo === 'rep'; renderRepStep(L); setEstado(L, 'ok', j.mensagem || 'Feito ✓'); carregarAguardando(true); }
+  if (j.ok !== false && j._status < 300 && j.confirmado !== false) { L.rep.dono = (j.dono && j.dono.nome) || r.nome; L.rep.avisou = r.tipo === 'rep'; soltaRepPend(L.dealId); renderRepStep(L); setEstado(L, 'ok', j.mensagem || 'Feito ✓'); carregarAguardando(true); }
   else setEstado(L, 'erro', msgErro(j), function () { escolherRep(L, r); });
 }
 function secaoRep(L) {
@@ -1840,31 +1896,65 @@ async function acaoRep(L, r) {
   else setEstado(L, 'erro', j.ok !== false && j.confirmado === false ? 'O Agendor não confirmou a troca. Nada mudou.' : msgErro(j), function () { acaoRep(L, r); });
 }
 // ---- tarefas ----
+// ---- tarefas: uma lista organizada (a próxima em destaque), Concluir com desfazer de 5 s, Adiar com opções rápidas ----
+function addDiasISO(iso, n) { var d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+function diaSemanaISO(iso) { return new Date(iso + 'T12:00:00Z').getUTCDay(); } // 0 domingo ... 6 sábado
+function util(iso) { var w = diaSemanaISO(iso); return w === 6 ? addDiasISO(iso, 2) : w === 0 ? addDiasISO(iso, 1) : iso; }
+function proximaSegunda(iso) { var w = diaSemanaISO(iso); return addDiasISO(iso, ((8 - w) % 7) || 7); }
+function opcoesAdiar() { var h = hojeISO(); return [{ rot: 'Amanhã', v: 'amanha' }, { rot: 'Em 2 dias', v: util(addDiasISO(h, 2)) }, { rot: 'Segunda', v: proximaSegunda(h) }]; }
+function prazoTxt(t) { return t.venc === 'amanha' ? 'amanhã' : t.venc ? dataBR(t.venc) : 'sem prazo'; }
+function linhaTarefa(L, t, destaque, pode) {
+  var r = el('div', 'tarefa t2' + (destaque ? ' destaque' : '') + (t.atrasada ? ' atrasada' : ''));
+  if (destaque) { var rp0 = el('div', 'rot-prox', 'Próxima ação'); if (L.revalidado === false) rp0.appendChild(el('span', 'rotulo-cache', 'dado guardado, atualizando...')); r.appendChild(rp0); }
+  var topo = el('div', 't2-topo'); topo.appendChild(el('span', 'tt', limpaTarefa(t.texto) || t.texto || 'Tarefa sem texto')); r.appendChild(topo);
+  var info = el('div', 'dt'); info.appendChild(document.createTextNode('Prazo ' + prazoTxt(t) + (t._salvando ? ' · salvando...' : ''))); if (t.atrasada) info.appendChild(el('span', 'pill red', 'Atrasada')); r.appendChild(info);
+  if (pode && !t._salvando) {
+    var ac = el('div', 'acoes-t'); var bc = el('button', 'forte', 'Concluir'); bc.type = 'button'; bc.onclick = function () { concluirComDesfazer(L, t); }; ac.appendChild(bc);
+    var ba = el('button', 'sec', 'Adiar'); ba.type = 'button'; ba.setAttribute('aria-expanded', 'false'); ac.appendChild(ba); r.appendChild(ac);
+    var op = el('div', 'adiar-op hide'); opcoesAdiar().forEach(function (o) { var b = el('button', 'sec', o.rot); b.type = 'button'; b.onclick = function () { acaoTarefa(L, '/tarefa/' + t.id + '/adiar', { para: o.v }, function (ld) { ld.tarefas.forEach(function (x) { if (x.id === t.id) { x.venc = o.v; x.atrasada = false; } }); }); }; op.appendChild(b); });
+    var bd = el('button', 'sec', 'Escolher data'); bd.type = 'button'; op.appendChild(bd); var ed = el('div', 'adiar-data hide'); var di = el('input'); di.type = 'date'; di.setAttribute('aria-label', 'Adiar para a data'); var ok = el('button', 'forte', 'Adiar para esta data'); ok.type = 'button'; ed.appendChild(di); ed.appendChild(ok);
+    bd.onclick = function () { ed.classList.toggle('hide'); }; ok.onclick = function () { if (!di.value) { setEstado(L, 'erro', 'Escolha a data para adiar.'); return; } acaoTarefa(L, '/tarefa/' + t.id + '/adiar', { para: di.value }, function (ld) { ld.tarefas.forEach(function (x) { if (x.id === t.id) { x.venc = di.value; x.atrasada = false; } }); }); };
+    ba.onclick = function () { var abre = op.classList.contains('hide'); op.classList.toggle('hide', !abre); if (!abre) ed.classList.add('hide'); ba.setAttribute('aria-expanded', abre ? 'true' : 'false'); };
+    r.appendChild(op); r.appendChild(ed);
+  }
+  return r;
+}
 function secaoTarefas(L) {
-  var s = el('div', 'secao'); s.appendChild(el('h3', null, 'Tarefas')); var ts = L.lead.tarefas || []; var pode = !!acoesDe(L).tarefas && L.lead.status === 'andamento';
-  if (!ts.length) s.appendChild(el('p', 'sub', 'Nenhuma tarefa aberta.'));
-  ts.forEach(function (t) {
-    var r = el('div', 'tarefa' + (t.feita ? ' feita' : '') + (t.atrasada ? ' atrasada' : '')); r.appendChild(el('span', 'tt', limpaTarefa(t.texto) || t.texto)); r.appendChild(el('span', 'dt', (t.venc === 'amanha' ? 'amanhã' : dataBR(t.venc)) + (t.feita ? ' · feita' : t.atrasada ? ' · atrasada' : '') + (t._salvando ? ' · salvando...' : '')));
-    if (pode && !t.feita && !t._salvando) {
-      var c = el('button', 'sec', 'Concluir'); c.type = 'button'; c.onclick = function () { acaoTarefa(L, '/tarefa/' + t.id + '/concluir', {}, function (lead) { lead.tarefas.forEach(function (x) { if (x.id === t.id) x.feita = true; }); }); }; r.appendChild(c);
-      var am = el('button', 'sec', 'Amanhã'); am.type = 'button'; am.title = 'Adiar para o próximo dia útil'; am.onclick = function () { acaoTarefa(L, '/tarefa/' + t.id + '/adiar', { para: 'amanha' }, function (lead) { lead.tarefas.forEach(function (x) { if (x.id === t.id) { x.venc = 'amanha'; x.atrasada = false; } }); }); }; r.appendChild(am);
-      var di = el('input'); di.type = 'date'; di.setAttribute('aria-label', 'Adiar para a data'); di.style.width = '150px';
-      var a = el('button', 'sec', 'Adiar'); a.type = 'button'; a.onclick = function () { if (!di.value) { setEstado(L, 'erro', 'Escolha a data para adiar, ou use o botão Amanhã.'); return; } acaoTarefa(L, '/tarefa/' + t.id + '/adiar', { para: di.value }, function (lead) { lead.tarefas.forEach(function (x) { if (x.id === t.id) { x.venc = di.value; x.atrasada = false; } }); }); };
-      r.appendChild(di); r.appendChild(a);
-    }
-    s.appendChild(r);
-  });
+  var s = el('div', 'secao secao-tarefas'); s.appendChild(el('h3', null, 'Tarefas')); var todas = L.lead.tarefas || []; var pode = !!acoesDe(L).tarefas && L.lead.status === 'andamento';
+  var abertas = todas.filter(function (t) { return !t.feita; }).sort(function (a, b) { return (b.atrasada ? 1 : 0) - (a.atrasada ? 1 : 0) || String(a.venc).localeCompare(String(b.venc)); }); var feitas = todas.filter(function (t) { return t.feita; });
+  var emFila = L.ctx && L.ctx.fila;
+  if (!abertas.length) s.appendChild(el('p', 'sub', 'Nenhuma tarefa aberta.'));
+  abertas.forEach(function (t, i) { s.appendChild(linhaTarefa(L, t, i === 0 && !emFila, pode)); });
+  if (feitas.length) { var df = el('details', 'concluidas'); df.appendChild(el('summary', null, feitas.length === 1 ? '1 concluída' : feitas.length + ' concluídas')); feitas.forEach(function (t) { var r = el('div', 'tarefa feita'); r.appendChild(el('span', 'tt', limpaTarefa(t.texto) || t.texto)); df.appendChild(r); }); s.appendChild(df); }
   if (pode) {
-    var n = el('div', 'tarefa'); var tx = el('input'); tx.type = 'text'; tx.placeholder = 'Nova tarefa'; tx.setAttribute('aria-label', 'Texto da nova tarefa'); tx.style.cssText = 'flex:1;min-width:140px;min-height:44px;font-size:16px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--card);color:var(--text)';
-    var qd = el('select'); qd.setAttribute('aria-label', 'Para quando'); [['hoje', 'Hoje'], ['amanha', 'Amanhã'], ['data', 'Escolher data']].forEach(function (o) { var op = el('option', null, o[1]); op.value = o[0]; qd.appendChild(op); });
-    var dv = el('input'); dv.type = 'date'; dv.setAttribute('aria-label', 'Data da nova tarefa'); dv.style.width = '150px'; dv.classList.add('hide'); qd.onchange = function () { dv.classList.toggle('hide', qd.value !== 'data'); };
-    var cr = el('button', null, 'Criar tarefa'); cr.type = 'button'; cr.onclick = function () {
-      var venc = qd.value === 'data' ? dv.value : qd.value; if (!tx.value.trim() || !venc) { setEstado(L, 'erro', 'Escreva a tarefa e escolha para quando.'); return; }
+    var dn = el('details', 'nova-tarefa'); dn.appendChild(el('summary', null, '+ Nova tarefa')); var n = el('div', 'nova-corpo');
+    var lb = el('label', null, 'O que fazer'); lb.setAttribute('for', 'nt_texto'); var tx = el('input'); tx.id = 'nt_texto'; tx.type = 'text'; tx.setAttribute('aria-label', 'Texto da nova tarefa'); tx.setAttribute('enterkeyhint', 'done');
+    var qd = el('select'); qd.setAttribute('aria-label', 'Para quando'); var h = hojeISO(); [['hoje', 'Hoje'], ['amanha', 'Amanhã'], [util(addDiasISO(h, 2)), 'Em 2 dias'], [proximaSegunda(h), 'Segunda'], ['data', 'Escolher data']].forEach(function (o) { var op = el('option', null, o[1]); op.value = o[0]; qd.appendChild(op); });
+    var dv = el('input'); dv.type = 'date'; dv.setAttribute('aria-label', 'Data da nova tarefa'); dv.classList.add('hide'); qd.onchange = function () { dv.classList.toggle('hide', qd.value !== 'data'); };
+    var cr = el('button', 'forte', 'Criar tarefa'); cr.type = 'button'; cr.onclick = function () {
+      var venc = qd.value === 'data' ? dv.value : qd.value; if (!tx.value.trim() || !venc) { setEstado(L, 'erro', 'Escreva o que fazer e escolha o prazo.'); return; }
       var texto = tx.value.trim(); acaoTarefa(L, '/tarefa', { texto: texto, venc: venc }, function (lead) { lead.tarefas = (lead.tarefas || []).concat([{ id: 'novo', texto: texto, venc: venc === 'hoje' ? hojeISO() : venc, feita: false, atrasada: false, _salvando: true }]); });
     };
-    n.appendChild(tx); n.appendChild(qd); n.appendChild(dv); n.appendChild(cr); s.appendChild(n);
+    n.appendChild(lb); n.appendChild(tx); n.appendChild(qd); n.appendChild(dv); n.appendChild(cr); dn.appendChild(n); s.appendChild(dn);
   }
   return s;
+}
+// concluir: aparece feita na hora; a ação fica guardada na caixa de saída e só sai depois de 5 s (dá tempo de desfazer); se a aba fechar, ela sai mesmo assim
+function guardarAcaoAdiada(def, atrasoMs) {
+  var e = { id: novaChave(), dealId: def.dealId, caminho: def.caminho, corpo: def.corpo, tipo: def.tipo, meta: def.meta || {}, criado: Date.now(), tent: 0, proximo: Date.now() + atrasoMs, adiado: true };
+  var a = lerSaida(); var igual = a.filter(function (x) { return x.dealId === e.dealId && x.caminho === e.caminho && x.tipo === e.tipo; })[0]; if (igual) return igual; // já está na fila (duplo toque)
+  a.push(e); gravarSaida(a); setTimeout(function () { processarSaida(); }, atrasoMs + 80); return e;
+}
+function concluirComDesfazer(L, t) {
+  var tid = t.id; var antes = copia(L.lead); L.lead.tarefas.forEach(function (x) { if (x.id === tid) x.feita = true; }); renderLead();
+  var e = guardarAcaoAdiada({ dealId: L.dealId, caminho: '/tarefa/' + tid + '/concluir', corpo: {}, tipo: 'tarefa', meta: { titulo: L.lead.titulo } }, 5000);
+  var fx = function () { faixa('desfazer', ''); }; clearTimeout(S.desfazTimer);
+  faixa('desfazer', 'Tarefa concluída. Dá para desfazer por 5 segundos.', 'ok', { rot: 'Desfazer', acao: function () {
+    var ainda = lerSaida().some(function (x) { return x.id === e.id; }) && !S.emVoo[e.id];
+    if (ainda) { gravarSaida(lerSaida().filter(function (x) { return x.id !== e.id; })); if (S.L === L) { L.lead.tarefas.forEach(function (x) { if (x.id === tid) x.feita = false; }); renderLead(); setEstado(L, 'ok', 'Desfeito. A tarefa continua aberta.'); } fx(); }
+    else { faixa('desfazer', 'Essa tarefa já foi enviada ao Agendor, não dá mais para desfazer.', 'aviso'); setTimeout(fx, 3000); }
+  } });
+  S.desfazTimer = setTimeout(fx, 5200);
 }
 function hojeISO() { try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(agoraMs())); } catch (e) { var d = new Date(agoraMs()); return d.getFullYear() + '-' + hh(d.getMonth() + 1) + '-' + hh(d.getDate()); } }
 async function acaoTarefa(L, caminho, corpo, otimista) { // aparece na hora; se o servidor não confirmar, volta como estava e mostra a mensagem
@@ -1970,7 +2060,7 @@ document.addEventListener('keydown', function (e) {
 desenharTopo = seguro('desenharTopo', desenharTopo); desenharControle = seguro('desenharControle', desenharControle); desenharBlocos = seguro('desenharBlocos', desenharBlocos); desenharFila = seguro('desenharFila', desenharFila); desenharAguardando = seguro('desenharAguardando', desenharAguardando); renderLead = seguro('renderLead', renderLead); renderGanho = seguro('renderGanho', renderGanho);
 cartao = seguro('cartao', cartao, function (it) { var f = el('div', 'item'); f.appendChild(el('div', 'emp', (it && it.empresa) || 'Item')); f.appendChild(el('div', 'pas', 'Não consegui mostrar os detalhes deste item.')); return f; });
 cartaoAtrasado = seguro('cartaoAtrasado', cartaoAtrasado, function (g) { var f = el('div', 'item'); f.appendChild(el('div', 'emp', (g && g.empresa) || 'Item')); return f; });
-window.__shTeste = { iniciarContinuar: iniciarContinuar, continuarLaco: continuarLaco, fmtCampo: fmtCampo, fadeChips: fadeChips, REDE: REDE, lerSaida: lerSaida, processarSaida: processarSaida, reportarErro: reportarErro, aplicarStatus: aplicarStatus, hooks: { recarregar: null }, falhaDePagina: falhaDePagina, verificarVersao: verificarVersao, agoraMs: agoraMs, PAGINA_VERSAO: PAGINA_VERSAO, carregarAguardando: carregarAguardando, S: S, desenhar: desenhar, carregar: carregar, casaBusca: casaBusca, foneFmt: foneFmt, aceitar: aceitar, abrirLead: abrirLead, abrirGanho: abrirGanho, cnpjValido: cnpjValido, desenharFila: desenharFila, carregarFila: carregarFila, origemClasse: origemClasse, mascCnpj: mascCnpj };
+window.__shTeste = { enviarAcao: enviarAcao, versaoMaisNova: versaoMaisNova, iniciarContinuar: iniciarContinuar, continuarLaco: continuarLaco, fmtCampo: fmtCampo, fadeChips: fadeChips, REDE: REDE, lerSaida: lerSaida, processarSaida: processarSaida, reportarErro: reportarErro, aplicarStatus: aplicarStatus, hooks: { recarregar: null }, falhaDePagina: falhaDePagina, verificarVersao: verificarVersao, agoraMs: agoraMs, PAGINA_VERSAO: PAGINA_VERSAO, carregarAguardando: carregarAguardando, S: S, desenhar: desenhar, carregar: carregar, casaBusca: casaBusca, foneFmt: foneFmt, aceitar: aceitar, abrirLead: abrirLead, abrirGanho: abrirGanho, cnpjValido: cnpjValido, desenharFila: desenharFila, carregarFila: carregarFila, origemClasse: origemClasse, mascCnpj: mascCnpj };
 (async function () {
   var t = lsGet('sh_tok');
   if (t) { var ok = await entrar(t, true); if (ok) return; }
