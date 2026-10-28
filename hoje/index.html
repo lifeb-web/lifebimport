@@ -381,6 +381,9 @@ details.sec-empresa>summary,details.dados-opcional>summary{cursor:pointer;font-w
 #leadAtualiza{font-size:13px}
 .painel .rodape{padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
 .rotulo-cache{font-size:13px;font-weight:600;color:var(--muted);margin-left:6px;text-transform:none;letter-spacing:0}
+#modalGanho .secao{border:1px solid var(--border);border-radius:10px;background:var(--card);padding:10px 12px;margin-bottom:10px}
+#modalGanho .secao h3{font-size:15px;font-weight:800;color:var(--purple);margin-bottom:4px}
+#modalGanho .pessoa-tel{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -623,7 +626,7 @@ function casaBusca(it, q) {
 
 // ---------- chamadas ----------
 // ---------- resiliência: rede com retry, disjuntor, caixa de saída, versão, relógio do servidor, telemetria ----------
-var PAGINA_VERSAO = '2026-10-28.5';
+var PAGINA_VERSAO = '2026-10-28.6';
 var REDE = { escala: 1, falhas: 0, ultima: 0, desvio: 0 };
 function dormir(ms) { return new Promise(function (r) { setTimeout(r, ms * REDE.escala); }); }
 function jitter(ms) { return ms * (0.5 + Math.random() * 0.5); }
@@ -752,12 +755,14 @@ function avisar(texto, tipo, acao) { // aviso que fica na tela até ele fechar (
   var x = el('button', 'link', 'Fechar'); x.type = 'button'; x.onclick = function () { f.remove(); }; f.appendChild(x); box.appendChild(f);
 }
 function saidaOk(e, j) {
+  if (e.tipo === 'ganho') { var Lg = S.L && S.L.dealId === e.dealId && S.L.lead ? S.L : null; if (Lg) resolverGanho(Lg, j); else { delete S.qualif[e.dealId]; redesenharTudo(); avisar((e.meta.titulo || 'Lead') + ': ' + (j.mensagem || 'qualificado ✓'), 'ok'); carregarAguardando(true); } carregar(true, 'tarefas'); return; }
   var L = S.L; if (L && L.dealId === e.dealId && L.lead) { if (j.lead) { aplicarResposta(L, j); limparEditsIguais(L); redesenhar(L); setEstado(L, 'ok', 'Salvo e conferido no Agendor ✓ (enviado quando a conexão voltou)'); } else carregarLead(L, true); }
   if (e.tipo === 'perdido') avisar((e.meta.titulo || 'Lead') + ': marcado como Perdido e conferido no Agendor ✓', 'ok');
   else if (e.tipo === 'campos') avisar((e.meta.titulo || 'Lead') + ': alterações salvas e conferidas ✓', 'ok');
   carregar(true, 'tarefas'); try { if (S.canal) S.canal.postMessage({ t: 'dados' }); } catch (er) {}
 }
 function saidaRecusada(e, j) {
+  if (e.tipo === 'ganho') { var Lr = S.L && S.L.dealId === e.dealId && S.L.lead ? S.L : null; if (Lr) { resolverGanho(Lr, j); return; } delete S.qualif[e.dealId]; redesenharTudo(); avisar((e.meta.titulo || 'Lead') + ': não consegui qualificar. ' + ((j && j.mensagem) || 'O servidor não aceitou.'), 'erro', { rot: 'Abrir o lead', f: function () { abrirLead(e.dealId, null); } }); return; }
   var m = (j && j.mensagem) || 'O servidor não aceitou.';
   if (e.tipo === 'perdido') { delete S.ocultos[e.dealId]; redesenharTudo(); }
   if (e.tipo === 'campos' && e.meta.edits) { try { var cur = lerRascunho(e.dealId); Object.keys(e.meta.edits).forEach(function (k) { cur[k] = e.meta.edits[k]; }); lsSet(rascKey(e.dealId), JSON.stringify({ t: Date.now(), e: cur })); } catch (er) {} if (S.L && S.L.dealId === e.dealId) { Object.keys(e.meta.edits).forEach(function (k) { S.L.edits[k] = e.meta.edits[k]; }); carregarLead(S.L, true); } }
@@ -890,7 +895,7 @@ function cartao(it, opts) {
   var abriu = opts.sem_abriu ? null : lerAbriu()[it.dealId]; var feito = it.feito || it.estado === 'feito';
   var li = el('div', 'item' + (feito ? ' feito' : '') + (opts.atras ? ' atrasado' : '') + (opts.inb && !feito ? ' inbitem' : '') + (abriu && !feito ? ' aberto' : ''));
   var lo = linhaOrigem(it); if (lo) li.appendChild(lo);
-  empClicavel(li, it.empresa, it.dealId, it); linhaContato(li, it);
+  empClicavel(li, it.empresa, it.dealId, it); if (S.qualif[it.dealId]) li.appendChild(el('div', 'est andamento', 'Qualificando... (enviando ao time de vendas)')); linhaContato(li, it);
   if (it.subtitulo) li.appendChild(el('div', 'pas', it.subtitulo));
   if (opts.estado) li.appendChild(el('div', 'est ' + it.estado, estadoTxt(it)));
   if (opts.passo && !it.nota) li.appendChild(el('div', 'pas', feito ? 'Tudo feito ✓' : (it.passoPendente ? 'Próximo: ' + it.passoPendente : '')));
@@ -1301,29 +1306,33 @@ var GANHO_ORDEM = ['e.aprovado_serasa', 'e.quantidade_de_lojas', 'e.faturamento_
 var OBS_MAX = 150;
 function campoDe(k) { for (var i = 0; i < CAMPOS.length; i++) if (CAMPOS[i].k === k) return CAMPOS[i]; return null; }
 function pessoaPrincipal(lead) { var ps = (lead && lead.pessoas) || []; for (var i = 0; i < ps.length; i++) if (ps[i].principal) return ps[i]; return ps[0] || null; }
-function chavesPessoa(lead) { var p = pessoaPrincipal(lead); return p ? [{ k: 'p.' + p.id + '.nome', rot: 'Nome do contato', tipo: 'texto', tok: [] }, { k: 'p.' + p.id + '.cargo', rot: 'Cargo do contato', tipo: 'texto', tok: ['cargo'] }] : []; }
+function chavesPessoa(lead) { var p = pessoaPrincipal(lead); return p ? [{ k: 'p.' + p.id + '.nome', rot: 'Nome do contato', tipo: 'nome', tok: [] }, { k: 'p.' + p.id + '.whatsapp', rot: 'WhatsApp do contato', tipo: 'fone', tok: [] }, { k: 'p.' + p.id + '.cargo', rot: 'Cargo do contato', tipo: 'texto', tok: ['cargo'] }] : []; }
 function todosCampos(lead) { return CAMPOS.concat(chavesPessoa(lead)); }
 function campoDeK(lead, k) { return campoDe(k) || chavesPessoa(lead).filter(function (c) { return c.k === k; })[0] || null; }
 function valorOrig(lead, k) {
   var p = k.split('.'); lead = lead || {};
   if (p[0] === 'e') { var e = lead.empresa || {}; if (p[1] === 'end') return (e.endereco || {})[p[2]] || ''; if (p[1] === 'razao_social') return e.razaoSocial || ''; if (p[1] === 'cnpj' || p[1] === 'nome' || p[1] === 'segmento') return e[p[1]] || ''; return (e.campos || {})[p[1]] || ''; }
   if (p[0] === 'n') return lead.observacaoSdr || '';
-  if (p[0] === 'p') { var ps = lead.pessoas || []; for (var i = 0; i < ps.length; i++) if (String(ps[i].id) === p[1]) return ps[i][p[2]] || ''; }
+  if (p[0] === 'p') { var ps = lead.pessoas || []; for (var i = 0; i < ps.length; i++) if (String(ps[i].id) === p[1]) return (p[2] === 'whatsapp' ? ps[i].whatsappPrincipal : ps[i][p[2]]) || ''; }
   return '';
 }
 function gravarLocal(lead, k, v) { // aplica no objeto local (atualização otimista)
   var p = k.split('.');
   if (p[0] === 'e') { lead.empresa = lead.empresa || {}; var e = lead.empresa; if (p[1] === 'end') { e.endereco = e.endereco || {}; e.endereco[p[2]] = v; } else if (p[1] === 'razao_social') e.razaoSocial = v; else if (p[1] === 'cnpj' || p[1] === 'nome' || p[1] === 'segmento') e[p[1]] = v; else { e.campos = e.campos || {}; e.campos[p[1]] = v; } }
   else if (p[0] === 'n') lead.observacaoSdr = v;
-  else if (p[0] === 'p') { (lead.pessoas || []).forEach(function (x) { if (String(x.id) === p[1]) x[p[2]] = v; }); }
+  else if (p[0] === 'p') { (lead.pessoas || []).forEach(function (x) { if (String(x.id) === p[1]) x[p[2] === 'whatsapp' ? 'whatsappPrincipal' : p[2]] = v; }); }
 }
-function normVal(k, v) { v = String(v == null ? '' : v).trim(); if (k === 'e.cnpj' || k === 'e.end.cep') return soDigitos(v); if (k === 'e.end.uf') return v.toUpperCase(); return v; }
+function digFone(v) { var d = soDigitos(v); return d.length > 11 && d.indexOf('55') === 0 ? d.slice(2) : d; }
+function mascFone(v) { var d = digFone(v).slice(0, 11); if (d.length > 6) return '(' + d.slice(0, 2) + ') ' + d.slice(2, d.length - 4) + '-' + d.slice(-4); if (d.length > 2) return '(' + d.slice(0, 2) + ') ' + d.slice(2); return d; }
+function normVal(k, v) { v = String(v == null ? '' : v).trim(); if (/\.whatsapp$/.test(k)) return digFone(v); if (k === 'e.cnpj' || k === 'e.end.cep') return soDigitos(v); if (k === 'e.end.uf') return v.toUpperCase(); return v; }
 function valorAtual(k) { var L = S.L; return L && Object.prototype.hasOwnProperty.call(L.edits, k) ? L.edits[k] : fmtOrig(k, valorOrig(L && L.lead, k)); }
-function fmtOrig(k, v) { return k === 'e.cnpj' ? mascCnpj(v) : k === 'e.end.cep' ? mascCep(v) : String(v == null ? '' : v); }
+function fmtOrig(k, v) { return /\.whatsapp$/.test(k) ? mascFone(v) : k === 'e.cnpj' ? mascCnpj(v) : k === 'e.end.cep' ? mascCep(v) : String(v == null ? '' : v); }
 function validarCampo(L, f) {
   var v = normVal(f.k, valorAtual(f.k)); if (!v) return '';
   if (f.tipo === 'cnpj') return v.length !== 14 ? 'O CNPJ tem 14 números.' : (cnpjValido(v) ? '' : 'Esse CNPJ não é válido. Confira os números.');
   if (f.tipo === 'cep') return v.length === 8 ? '' : 'O CEP tem 8 números.';
+  if (f.tipo === 'fone') return v.length === 10 || v.length === 11 ? '' : 'O WhatsApp precisa ter DDD e 8 ou 9 números.';
+  if (f.tipo === 'nome') return (v.match(/[A-Za-zÀ-ÿ]/g) || []).length >= 2 ? '' : 'Informe o nome (pelo menos 2 letras).';
   if (f.tipo === 'uf') return /^[A-Z]{2}$/.test(v) ? '' : 'Use 2 letras, por exemplo DF.';
   if (f.tipo === 'sel') { var ops = (L.opcoes || {})[f.op]; if (ops && ops.length && ops.indexOf(v) < 0 && v !== normVal(f.k, valorOrig(L.lead, f.k))) return 'Escolha uma das opções da lista.'; }
   return '';
@@ -1366,7 +1375,7 @@ function reqDe(L, faltando, chaves) { // obrigatórios do GANHO: pelas CHAVES do
   faltandoGrupos(faltando).forEach(function (g) { g.itens.forEach(function (t) { var n = semAcento(t); if (/vincul/.test(n)) { vinculo = true; return; } var achou = false; todosCampos(L.lead).forEach(function (f) { if (f.tok.some(function (k) { return n.indexOf(k) >= 0; })) { req[f.k] = true; achou = true; } }); if (!achou) soltos.push(t); }); });
   return { req: req, soltos: soltos, vinculo: vinculo };
 }
-function faltaAinda(L) { return Object.keys(L.ganhoReq || {}).filter(function (k) { return GANHO_ORDEM.indexOf(k) >= 0 && normVal(k, valorAtual(k)) === ''; }); } // só campos que o pop-up realmente desenha
+function faltaAinda(L) { return Object.keys(L.ganhoReq || {}).filter(function (k) { return (GANHO_ORDEM.indexOf(k) >= 0 || /^p\./.test(k)) && normVal(k, valorAtual(k)) === ''; }); } // só campos que o pop-up realmente desenha
 function enderecoTxt(e) { e = e || {}; var a = [[e.rua, e.numero].filter(Boolean).join(', '), e.bairro, [e.cidade, e.uf].filter(Boolean).join('/'), e.cep ? 'CEP ' + mascCep(e.cep) : ''].filter(Boolean); return a.join(' · '); }
 // rascunho local por negócio (nada do que ele digitou se perde)
 function rascKey(id) { return 'sh_rasc_' + id; }
@@ -1399,7 +1408,7 @@ function recomputarMostrar(L) { L.mostrar = todosCampos(L.lead).map(function (f)
 function limparEditsIguais(L) { Object.keys(L.edits).forEach(function (k) { var f = campoDeK(L.lead, k); if (f && normVal(k, L.edits[k]) === normVal(k, valorOrig(L.lead, k))) delete L.edits[k]; }); }
 
 // ---- leitura do lead: cache em memória (stale-while-revalidate), uma leitura por lead, pré-carga no toque ----
-S.preProm = {}; S.inval = {}; S.leadReal = 0; S.preUlt = 0;
+S.preProm = {}; S.inval = {}; S.qualif = {}; S.leadReal = 0; S.preUlt = 0;
 function invalidaLead(id) { delete S.pre[id]; delete S.preProm[id]; S.inval[id] = Date.now(); } // houve gravação ou conflito: o que está guardado não vale mais
 function guardaPre(id, j) { S.pre[id] = { t: Date.now(), j: j }; var ks = Object.keys(S.pre); if (ks.length > 30) { ks.sort(function (a, b) { return S.pre[a].t - S.pre[b].t; }); delete S.pre[ks[0]]; } }
 function buscarLead(id) { // várias chamadas para o mesmo lead reaproveitam a mesma leitura
@@ -1430,7 +1439,7 @@ function renderCardInfo(L) { // o que o cartão já sabe + esqueleto onde ainda 
 }
 async function abrirLead(dealId, opener, item, ctx) {
   var painel = $('painelLead'); var mesmo = S.L && S.L.dealId === dealId && S.L.lead;
-  var L = mesmo ? S.L : { dealId: dealId, lead: null, opcoes: {}, motivos: [], responsaveis: [], edits: lerRascunho(dealId), forcar: {}, origemCampo: {}, mostrar: [], todos: false, ocupado: false, estado: null, receita: null, receitaCnpj: '', perdidoAberto: false, refs: {} };
+  var L = mesmo ? S.L : { dealId: dealId, lead: null, opcoes: (S.listas && S.listas.opcoes) || {}, motivos: (S.listas && S.listas.motivos) || [], responsaveis: (S.listas && S.listas.responsaveis) || [], edits: lerRascunho(dealId), forcar: {}, origemCampo: {}, mostrar: [], todos: false, ocupado: false, estado: null, receita: null, receitaCnpj: '', perdidoAberto: false, refs: {} };
   L.opener = opener || L.opener || null; L.item = item || L.item || null; L.ctx = ctx || L.ctx || null; S.L = L; painel.classList.remove('hide');
   try { if (location.hash !== '#lead=' + dealId) { history.pushState(null, '', '#lead=' + dealId); S.pushou = true; } } catch (e) {}
   var cache = S.pre[dealId]; var fresco = cache && Date.now() - cache.t < 3000;
@@ -1456,7 +1465,7 @@ async function carregarLead(L, silencioso) {
   if (silencioso && L.ocupado) return;
   aplicarResposta(L, j); limparEditsIguais(L); recomputarMostrar(L); redesenhar(L);
 }
-function aplicarResposta(L, j) { if (j.lead) L.lead = j.lead; if (j.opcoes && typeof j.opcoes === 'object') { var op0 = Object.assign({}, L.opcoes); Object.keys(j.opcoes).forEach(function (k) { if (Array.isArray(j.opcoes[k]) && j.opcoes[k].length) op0[k] = j.opcoes[k]; }); L.opcoes = op0; } if (j.motivosPerda) L.motivos = j.motivosPerda; if (j.responsaveis) L.responsaveis = j.responsaveis; }
+function aplicarResposta(L, j) { if (j.lead) L.lead = j.lead; if (j.opcoes && typeof j.opcoes === 'object') { var op0 = Object.assign({}, L.opcoes); Object.keys(j.opcoes).forEach(function (k) { if (Array.isArray(j.opcoes[k]) && j.opcoes[k].length) op0[k] = j.opcoes[k]; }); L.opcoes = op0; } if (j.motivosPerda) L.motivos = j.motivosPerda; if (j.responsaveis) L.responsaveis = j.responsaveis; S.listas = { opcoes: L.opcoes, motivos: L.motivos, responsaveis: L.responsaveis }; } // guarda as listas do pop-up de Ganho: o próximo lead já abre com elas
 function fecharLead() { var L = S.L; $('painelLead').classList.add('hide'); try { if (/^#lead=/.test(location.hash)) { if (S.pushou) { S.pushou = false; S.ignoraPop = Date.now(); history.back(); } else history.replaceState(null, '', location.pathname + location.search); } } catch (e) {} if (L && L.opener) { try { L.opener.focus(); } catch (e) {} } }
 function aoMudarHash() {
   if (S.ignoraPop && Date.now() - S.ignoraPop < 800) return; // eco do history.back() que a própria página pediu ao fechar
@@ -1533,11 +1542,11 @@ function campoEl(L, f, pref, req, marcar) {
     if (atual && ops.indexOf(atual) < 0) ops = ops.concat([atual]);
     ops.forEach(function (o) { var op = el('option', null, o); op.value = o; inp.appendChild(op); }); inp.value = atual;
   } else if (f.tipo === 'area') { inp = el('textarea'); inp.value = String(atual).slice(0, OBS_MAX); inp.rows = 3; inp.setAttribute('maxlength', String(OBS_MAX)); }
-  else { inp = el('input'); inp.type = 'text'; inp.value = atual; inp.autocomplete = 'off'; if (f.max) inp.setAttribute('maxlength', String(f.max)); if (f.tipo === 'cnpj' || f.tipo === 'cep') inp.setAttribute('inputmode', 'numeric'); if (f.tipo === 'uf') { inp.setAttribute('maxlength', '2'); inp.setAttribute('autocapitalize', 'characters'); } }
+  else { inp = el('input'); inp.type = 'text'; inp.value = atual; inp.autocomplete = 'off'; if (f.max) inp.setAttribute('maxlength', String(f.max)); if (f.tipo === 'cnpj' || f.tipo === 'cep') inp.setAttribute('inputmode', 'numeric'); if (f.tipo === 'fone') { inp.setAttribute('inputmode', 'tel'); inp.setAttribute('autocomplete', 'tel'); } if (f.tipo === 'uf') { inp.setAttribute('maxlength', '2'); inp.setAttribute('autocapitalize', 'characters'); } }
   inp.id = id; inp.setAttribute('enterkeyhint', f.tipo === 'area' ? 'enter' : 'done'); inp.addEventListener('focus', function () { setTimeout(function () { try { if (inp.scrollIntoView) inp.scrollIntoView({ block: 'center' }); } catch (e) {} }, 300); }); if (req) inp.setAttribute('aria-required', 'true'); var err = el('div', 'erro-c'); err.setAttribute('role', 'alert'); err.classList.add('hide');
   function mostrarErro() { var m = validarCampo(L, f); if (!m && req && marcar) m = normVal(f.k, valorAtual(f.k)) === '' ? 'Falta preencher este campo.' : 'O Agendor ainda pede este campo. Confira o valor.'; err.textContent = m; err.classList.toggle('hide', !m); wrap.classList.toggle('erro', !!m); inp.setAttribute('aria-invalid', m ? 'true' : 'false'); return m; }
   function mudou() {
-    var v = inp.value; if (f.tipo === 'cnpj') v = mascCnpj(v); else if (f.tipo === 'cep') v = mascCep(v); else if (f.tipo === 'uf') v = mascUf(v);
+    var v = inp.value; if (f.tipo === 'cnpj') v = mascCnpj(v); else if (f.tipo === 'fone') v = mascFone(v); else if (f.tipo === 'cep') v = mascCep(v); else if (f.tipo === 'uf') v = mascUf(v);
     if (v !== inp.value) inp.value = v; L.edits[f.k] = v; delete L.origemCampo[f.k]; var tg = lb.querySelector('.tag-origem'); if (tg) tg.remove();
     gravarRascunho(L); if (err.textContent) { marcar = false; mostrarErro(); } atualizarSalvar(L); atualizarGanhoBtn(L);
   }
@@ -1697,13 +1706,28 @@ function secaoGanho(L) {
 }
 function abrirGanho(L, faltando, marcar, chaves) {
   var r = reqDe(L, faltando, chaves); L.ganhoReq = r.req; L.ganhoSoltos = r.soltos; L.ganhoVinculo = r.vinculo; L.ganhoMarcar = !!marcar; L.modalAberto = true; L.rep = null;
-  $('gTitulo').textContent = 'Marcar como Ganho / Qualificado'; $('modalGanho').classList.remove('hide'); renderGanho(L); try { $('gTitulo').focus(); } catch (e) {}
+  var pp = pessoaPrincipal(L.lead); L.ganhoPessoa = pp ? pp.id : null; if (pp) { L.ganhoReq['p.' + pp.id + '.nome'] = true; L.ganhoReq['p.' + pp.id + '.whatsapp'] = true; } // contato principal: sempre confirmado no Ganho
+  $('gTitulo').textContent = 'Marcar como Ganho / Qualificado'; $('modalGanho').classList.remove('hide'); renderGanho(L); try { $('gTitulo').focus({ preventScroll: true }); } catch (e) {}
 }
+function mostrarGanhoModal(L, semRender) { L.modalAberto = true; $('modalGanho').classList.remove('hide'); if (!semRender) renderGanho(L); }
+function reabrirGanho(L, marcar) { var est = L.estado; abrirGanho(L, L.lead.faltando, marcar, L.lead.faltandoChaves); if (est) setEstado(L, est.tipo, est.texto, est.retry); }
 function fecharGanho() { var L = S.L; $('modalGanho').classList.add('hide'); if (L) { L.modalAberto = false; L.rep = null; if (L.lead) renderLead(); } carregarAguardando(true); }
+function blocoContato(L) { // contato principal (quem decide): nome e WhatsApp já preenchidos para ele confirmar ou corrigir
+  var sec = el('div', 'secao contato'); sec.appendChild(el('h3', null, 'Contato principal (quem decide)')); sec.appendChild(el('p', 'sub contato-frase', 'Confirme ou corrija: este é o contato que o representante vai chamar.'));
+  var id = L.ganhoPessoa;
+  if (id == null) { sec.appendChild(el('p', 'pend', 'Este lead não tem contato cadastrado. Cadastre a pessoa no Agendor e abra de novo.')); return sec; }
+  var fN = campoDeK(L.lead, 'p.' + id + '.nome'), fW = campoDeK(L.lead, 'p.' + id + '.whatsapp'); var kW = fW.k;
+  sec.appendChild(campoEl(L, fN, 'gf_', true, L.ganhoMarcar)); sec.appendChild(campoEl(L, fW, 'gf_', true, L.ganhoMarcar));
+  var linha = el('div', 'pessoa-tel'); sec.appendChild(linha);
+  function atualizaWa() { linha.textContent = ''; var d = soDigitos(valorAtual(kW)); if (d.length >= 10 && d.length <= 11) { var fl = foneLinha(d, 'pessoa-tel', null, mascFone(d), true); if (fl) linha.appendChild(fl); } }
+  var inpW = sec.querySelector('#gf_' + kW.replace(/\./g, '_')); if (inpW) inpW.addEventListener('input', atualizaWa); atualizaWa();
+  return sec;
+}
 function renderGanho(L) {
   if (L.rep) { renderRepStep(L); $('bFecharGanho').textContent = 'Fechar'; return; }
   $('bFecharGanho').textContent = 'Cancelar';
   var c = $('gCorpo'); var rol = c.scrollTop; c.textContent = ''; L.refs = L.refs || {}; var lead = L.lead;
+  c.appendChild(blocoContato(L));
   c.appendChild(el('p', 'sub', 'Confirme as respostas de qualificação e os dados da empresa. Campos com * são obrigatórios; o que já existe vem preenchido.'));
   if (L.ganhoVinculo) c.appendChild(el('p', 'pend', 'Esta empresa não está vinculada. Vincule no Agendor (isso não trava o resto).'));
   if ((L.ganhoSoltos || []).length) c.appendChild(el('p', 'pend', 'Também falta (precisa ser resolvido fora desta tela): ' + L.ganhoSoltos.join('; ') + '.'));
@@ -1721,34 +1745,47 @@ function renderGanho(L) {
 function atualizarGanhoBtn(L) {
   var b = L.refs && L.refs.ganhoBtn; if (!b || !L.modalAberto || L.rep) return; var falta = faltaAinda(L); var inval = false;
   Object.keys(L.ganhoReq || {}).forEach(function (k) { var f = campoDeK(L.lead, k); if (f && validarCampo(L, f)) inval = true; });
+  if (L.ganhoPessoa == null) inval = true; // sem contato cadastrado não dá para qualificar
   if (L.refs.gFalta) L.refs.gFalta.classList.toggle('hide', !falta.length);
   if (L.refs.gFalta) L.refs.gFalta.textContent = falta.length ? (falta.length === 1 ? 'Falta 1 campo obrigatório.' : 'Faltam ' + falta.length + ' campos obrigatórios.') : '';
   b.disabled = !!(falta.length || inval || L.ocupado); b.title = falta.length ? 'Falta preencher: ' + falta.map(function (k) { return (campoDeK(L.lead, k) || {}).rot; }).join(', ') : '';
 }
 function chavesDe(j) { return (j && j.faltandoChaves) || (j && j.lead && j.lead.faltandoChaves) || null; }
+function setQualificando(L, on) { var a = $('leadAtualiza'); if (!a) return; if (on) { a.textContent = 'Qualificando... (enviando ao time de vendas)'; a.classList.remove('hide'); } else { a.textContent = 'Atualizando...'; a.classList.toggle('hide', !(L && L.atualizando)); } }
 async function confirmarGanho(L) {
-  if (L.ocupado || S.L !== L) return;
+  if (L.ocupado || S.L !== L || L.ganhoRodando) return;
   var bad = null; todosCampos(L.lead).forEach(function (f) { if (!Object.prototype.hasOwnProperty.call(L.edits, f.k)) return; var m = validarCampo(L, f); if (m && !bad) bad = f; });
-  if (bad || faltaAinda(L).length) { L.ganhoMarcar = true; renderGanho(L); setEstado(L, 'erro', 'Preencha os campos obrigatórios (*) antes de confirmar.'); return; }
-  var r = await enviarCampos(L); if (r === 'fila') { setEstado(L, 'erro', 'Sem conexão. Guardei os dados. Quando a rede voltar, confirme o ganho de novo.'); return; } if (r === 'erro') return; // a mensagem de erro já está no pop-up, com "tentar de novo"
-  await enviarGanho(L);
+  if (bad || faltaAinda(L).length || L.ganhoPessoa == null) { L.ganhoMarcar = true; renderGanho(L); setEstado(L, 'erro', L.ganhoPessoa == null ? 'Este lead não tem contato cadastrado. Cadastre a pessoa no Agendor e tente de novo.' : 'Preencha os campos obrigatórios (*) antes de confirmar.'); return; }
+  // fecha o pop-up na hora: o envio roda por trás (salvar campos e depois ganho), pela caixa de saída e com retry
+  L.ganhoRodando = true; S.qualif[L.dealId] = true; $('modalGanho').classList.add('hide'); setQualificando(L, true); redesenharTudo();
+  var r = await enviarCampos(L); // se a rede cair, fica guardado e o ganho entra na fila logo atrás
+  if (r === 'erro') { L.ganhoRodando = false; delete S.qualif[L.dealId]; setQualificando(L, false); redesenharTudo(); mostrarGanhoModal(L, true); return; } // reabre no ponto do problema (a mensagem e o conflito já estão no pop-up)
+  var j = await chamarLead(L, '/ganho', {}, null, { tipo: 'ganho', meta: { titulo: L.lead.titulo } }); if (!j) return;
+  if (j._enfileirado) { L.ganhoRodando = false; msg((L.lead.titulo || 'Lead') + ': sem conexão. A qualificação ficou guardada e sai sozinha quando a rede voltar.', 'aviso'); return; }
+  resolverGanho(L, j);
 }
-async function enviarGanho(L) {
-  L.ocupado = true; atualizarGanhoBtn(L); setEstado(L, 'salvando', 'Conferindo e marcando como Ganho...');
-  var j = await chamarLead(L, '/ganho', {}); if (!j) return; L.ocupado = false;
+async function enviarGanho(L) { // só o POST /ganho (usado no "Tentar de novo" e no "Atualizar" do repasse)
+  L.ocupado = true; atualizarGanhoBtn(L); setEstado(L, 'salvando', 'Conferindo e marcando como Ganho...'); S.qualif[L.dealId] = true; setQualificando(L, true);
+  var j = await chamarLead(L, '/ganho', {}, null, { tipo: 'ganho', meta: { titulo: L.lead.titulo } }); if (!j) return; L.ocupado = false;
+  if (j._enfileirado) { setEstado(L, 'salvando', 'Sem conexão. A qualificação ficou guardada e sai sozinha.'); return; }
+  resolverGanho(L, j);
+}
+function resolverGanho(L, j) { // resposta final do /ganho: mostra o resultado ou reabre exatamente onde está o problema
+  L.ganhoRodando = false; delete S.qualif[L.dealId]; setQualificando(L, false); redesenharTudo();
   if (j.erro === 'faltando' || (!j.ok && faltandoGrupos(j.faltando).length)) { // 422: o Agendor ainda pede dados
     if (j.lead) aplicarResposta(L, j); var ch = chavesDe(j); L.lead.faltando = j.faltando || L.lead.faltando; if (ch) L.lead.faltandoChaves = ch;
     abrirGanho(L, j.faltando, true, ch); setEstado(L, 'erro', j.mensagem || 'O Agendor ainda precisa de mais dados. Os campos que faltam estão marcados.'); return;
   }
-  if (j.repasseDesligado) { aplicarResposta(L, j); L.rep = { desligado: true, mensagem: j.mensagem }; msg((L.lead.titulo || 'Lead') + ': Ganho registrado ✓', 'ok'); renderGanho(L); carregar(true, 'tarefas'); return; }
-  if (j.repassePendente) { aplicarResposta(L, j); L.rep = { pendente: true, ate: Date.now() + 60000 }; msg((L.lead.titulo || 'Lead') + ': Ganho registrado ✓', 'ok'); renderGanho(L); carregar(true, 'tarefas'); return; }
+  var titulo = L.lead.titulo || 'Lead';
+  if (j.repasseDesligado) { aplicarResposta(L, j); L.rep = { desligado: true, mensagem: j.mensagem }; msg(j.mensagem || (titulo + ': Ganho registrado ✓'), 'ok'); mostrarGanhoModal(L); carregar(true, 'tarefas'); return; }
+  if (j.repassePendente) { aplicarResposta(L, j); L.rep = { pendente: true, ate: Date.now() + 60000 }; msg(titulo + ': Ganho registrado ✓', 'ok'); mostrarGanhoModal(L); carregar(true, 'tarefas'); return; }
   if (j.ok !== false && j._status < 300) {
-    aplicarResposta(L, j); msg((L.lead.titulo || 'Lead') + ': Ganho registrado ✓', 'ok'); carregar(true, 'tarefas'); carregarAguardando(true);
-    if (j.arena && j.arena.dealId) { L.rep = { arenaId: j.arena.dealId, link: j.arena.link, responsaveis: j.responsaveis || L.responsaveis || [], dono: null }; renderGanho(L); }
+    aplicarResposta(L, j); msg(j.mensagem || (titulo + ': Ganho registrado ✓'), 'ok'); carregar(true, 'tarefas'); carregarAguardando(true);
+    if (j.arena && j.arena.dealId) { L.rep = { arenaId: j.arena.dealId, link: j.arena.link, responsaveis: j.responsaveis || L.responsaveis || [], dono: null, mensagem: j.mensagem || '' }; mostrarGanhoModal(L); }
     else { $('modalGanho').classList.add('hide'); L.modalAberto = false; renderLead(); }
     return;
   }
-  renderGanho(L); setEstado(L, 'erro', msgErro(j), function () { enviarGanho(L); });
+  reabrirGanho(L, false); setEstado(L, 'erro', msgErro(j), function () { enviarGanho(L); });
 }
 // passo "Escolha o representante" (depois do Ganho) e atribuição, usada também pela lista "Aguardando representante"
 function semAcaoRep(r) { return !r || r.semAcao || r.tipo === 'sistema' || !r.id; } // 'Deixar a Bia distribuir': não chama o servidor
@@ -1776,7 +1813,7 @@ function renderRepStep(L) {
   } else if (rp.dono) {
     c.appendChild(el('p', null, 'Agora é de ' + rp.dono + (rp.avisou ? '. A pessoa foi avisada.' : '.') + ' ✓'));
   } else {
-    c.appendChild(el('h3', null, 'Escolha o representante')); c.appendChild(el('p', 'sub', 'Quem recebe este lead? Se preferir, deixe a Bia distribuir.'));
+    if (rp.mensagem) c.appendChild(el('p', null, rp.mensagem)); c.appendChild(el('h3', null, 'Escolha o representante')); c.appendChild(el('p', 'sub', 'Quem recebe este lead? Se preferir, deixe a Bia distribuir.'));
     (rp.responsaveis || []).forEach(function (r) { var b = el('button', 'sec', r.nome); b.type = 'button'; b.className = 'sec rep-op'; b.onclick = function () { if (semAcaoRep(r)) { fecharGanho(); return; } escolherRep(L, r); }; c.appendChild(b); });
     if (!(rp.responsaveis || []).some(semAcaoRep)) { var bia = el('button', 'sec', 'Deixar a Bia distribuir'); bia.type = 'button'; bia.onclick = fecharGanho; row.appendChild(bia); }
   }
