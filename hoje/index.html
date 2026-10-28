@@ -339,7 +339,8 @@ details.mais{display:contents}
   .cab2 .seg{flex:1 1 100%} .cab2 .seg button{flex:1;min-height:44px}
   .cab2 select{flex:1 1 140px;min-height:44px;font-size:16px}
   .cab2 button,.cab2 label{min-height:44px}
-  #cab button{min-height:40px}
+  #cab button,#cab summary{min-height:44px}
+  .chips.tem-mais{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 36px),transparent)}
   .histo{font-size:13px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .item .emp{font-size:15px}
   .item .acoes button.abrir,.item .acoes a.bt{min-height:44px}
@@ -820,6 +821,7 @@ function contar(d) {
   return { empresas: emp, tarefas: tar, feitos: feitos, inboundNovo: inb, atrasadasEmpresas: atr.length, atrasadasTarefas: atr.reduce(function (s, g) { return s + g.n; }, 0) };
 }
 function totalOut(d) { return d && d.filaFunis ? d.filaFunis.outbound : 0; }
+function fadeChips() { var c = $('chips'); if (c) c.classList.toggle('tem-mais', c.scrollWidth - c.clientWidth - c.scrollLeft > 4); } // há mais totais à direita: esmaece a borda
 function desenharTopo(d) {
   var c = contar(d); var chips = $('chips'); chips.textContent = '';
   function chip(n, t, cls, ac) { var x = el(ac ? 'button' : 'div', 'chip' + (cls ? ' ' + cls : '')); x.appendChild(el('b', null, String(n))); x.appendChild(document.createTextNode(t)); if (ac) { x.onclick = ac; x.title = 'Clique para abrir a lista'; } chips.appendChild(x); return x; }
@@ -828,7 +830,7 @@ function desenharTopo(d) {
   chip(c.empresas, 'empresas para atender hoje (' + plural(c.tarefas, 'tarefa', 'tarefas') + ')', 'forte');
   if (S.funil !== 'inbound') chip(totalOut(d), 'esperando você iniciar (Outbound)', '');
   chip((d.liberadosHoje || []).filter(visivel).length, 'iniciados hoje', 'cl', function () { S.expande.liberados = !S.expande.liberados; desenharBlocos(); });
-  tickRelogio();
+  tickRelogio(); fadeChips();
 }
 function desenharControle(d) {
   var c = d.controle || null; S.ctl = c; if (!c) return;
@@ -1310,7 +1312,7 @@ function reqDe(L, faltando, chaves) { // obrigatórios do GANHO: pelas CHAVES do
   faltandoGrupos(faltando).forEach(function (g) { g.itens.forEach(function (t) { var n = semAcento(t); if (/vincul/.test(n)) { vinculo = true; return; } var achou = false; todosCampos(L.lead).forEach(function (f) { if (f.tok.some(function (k) { return n.indexOf(k) >= 0; })) { req[f.k] = true; achou = true; } }); if (!achou) soltos.push(t); }); });
   return { req: req, soltos: soltos, vinculo: vinculo };
 }
-function faltaAinda(L) { return Object.keys(L.ganhoReq || {}).filter(function (k) { return normVal(k, valorAtual(k)) === ''; }); }
+function faltaAinda(L) { return Object.keys(L.ganhoReq || {}).filter(function (k) { return GANHO_ORDEM.indexOf(k) >= 0 && normVal(k, valorAtual(k)) === ''; }); } // só campos que o pop-up realmente desenha
 function enderecoTxt(e) { e = e || {}; var a = [[e.rua, e.numero].filter(Boolean).join(', '), e.bairro, [e.cidade, e.uf].filter(Boolean).join('/'), e.cep ? 'CEP ' + mascCep(e.cep) : ''].filter(Boolean); return a.join(' · '); }
 // rascunho local por negócio (nada do que ele digitou se perde)
 function rascKey(id) { return 'sh_rasc_' + id; }
@@ -1554,6 +1556,12 @@ async function enviarCampos(L) {
   return 'erro';
 }
 // alguém alterou o campo no Agendor enquanto ele editava: nada foi gravado; ele escolhe o valor atual ou o dele, campo a campo
+function fmtCampo(campo, v) { // só para mostrar (nunca altera o que é enviado); nomes exatos, para um campo futuro com 'cep' no nome não ser mexido
+  campo = String(campo); v = v == null ? '' : String(v);
+  if (campo === 'empresa.cnpj' || /^empresa\.cnpj_loja_\d+$/.test(campo)) return mascCnpj(v);
+  if (campo === 'empresa.endereco.cep') return mascCep(v);
+  return v;
+}
 function mostrarConflitos(L, j) {
   var itens = j.conflitos.map(function (c) { return { campo: c.campo, atual: c.atual == null ? '' : String(c.atual), k: campoDeApi(L, c.campo), escolha: null }; }).filter(function (c) { return c.k; });
   setEstado(L, 'erro', itens.length === 1 ? 'Alguém alterou um campo enquanto você editava. Nada foi salvo.' : 'Alguém alterou ' + itens.length + ' campos enquanto você editava. Nada foi salvo.');
@@ -1567,8 +1575,7 @@ function mostrarConflitos(L, j) {
   }
   itens.forEach(function (c) {
     var f = campoDeK(L.lead, c.k) || { rot: c.campo }; var row = el('div', 'conflito');
-    var fmtV = function (v) { return /cnpj/.test(c.campo) ? mascCnpj(v) : /cep/.test(c.campo) ? mascCep(v) : v; };
-    row.appendChild(el('div', null, 'Alguém alterou "' + f.rot + '" para "' + (fmtV(c.atual) || 'vazio') + '". O seu: "' + (L.edits[c.k] == null ? '' : L.edits[c.k]) + '".'));
+    row.appendChild(el('div', null, 'Alguém alterou "' + f.rot + '" para "' + (fmtCampo(c.campo, c.atual) || 'vazio') + '". O seu: "' + fmtCampo(c.campo, L.edits[c.k] == null ? '' : L.edits[c.k]) + '".'));
     var b1 = el('button', 'sec', 'Usar o atual'); b1.type = 'button'; var b2 = el('button', null, 'Manter o meu'); b2.type = 'button';
     function esc(v) { c.escolha = v; b1.disabled = b2.disabled = true; row.appendChild(el('span', 'sub', v === 'atual' ? ' Vai usar o atual.' : ' Vai manter o seu.')); fim(); }
     b1.onclick = function () { esc('atual'); }; b2.onclick = function () { esc('meu'); }; row.appendChild(b1); row.appendChild(b2); lista.appendChild(row);
@@ -1619,6 +1626,7 @@ function renderGanho(L) {
 function atualizarGanhoBtn(L) {
   var b = L.refs && L.refs.ganhoBtn; if (!b || !L.modalAberto || L.rep) return; var falta = faltaAinda(L); var inval = false;
   Object.keys(L.ganhoReq || {}).forEach(function (k) { var f = campoDeK(L.lead, k); if (f && validarCampo(L, f)) inval = true; });
+  if (L.refs.gFalta) L.refs.gFalta.classList.toggle('hide', !falta.length);
   if (L.refs.gFalta) L.refs.gFalta.textContent = falta.length ? (falta.length === 1 ? 'Falta 1 campo obrigatório.' : 'Faltam ' + falta.length + ' campos obrigatórios.') : '';
   b.disabled = !!(falta.length || inval || L.ocupado); b.title = falta.length ? 'Falta preencher: ' + falta.map(function (k) { return (campoDeK(L.lead, k) || {}).rot; }).join(', ') : '';
 }
@@ -1777,7 +1785,7 @@ $('bAguard').onclick = abrirAguardando; $('bFecharAguard').onclick = fecharAguar
 
 var larguraLarga = null;
 function ajustaMais() { var largo = window.innerWidth >= 700; if (largo === larguraLarga) return; larguraLarga = largo; var m = $('maisMenu'); if (m) m.open = largo; } // no computador o menu "Mais" já vem aberto; no celular fica recolhido
-ajustaMais(); window.addEventListener('resize', ajustaMais);
+ajustaMais(); window.addEventListener('resize', ajustaMais); $('chips').addEventListener('scroll', fadeChips, { passive: true }); window.addEventListener('resize', fadeChips);
 // ---------- eventos ----------
 $('bEntrar').onclick = async function () { var v = $('tok').value.trim(); if (!v) { $('loginMsg').textContent = 'Digite a senha.'; return; } $('loginMsg').textContent = ''; await entrar(v, false); };
 $('tok').onkeydown = function (e) { if (e.key === 'Enter') $('bEntrar').click(); };
@@ -1830,7 +1838,7 @@ document.addEventListener('keydown', function (e) {
 desenharTopo = seguro('desenharTopo', desenharTopo); desenharControle = seguro('desenharControle', desenharControle); desenharBlocos = seguro('desenharBlocos', desenharBlocos); desenharFila = seguro('desenharFila', desenharFila); desenharAguardando = seguro('desenharAguardando', desenharAguardando); renderLead = seguro('renderLead', renderLead); renderGanho = seguro('renderGanho', renderGanho);
 cartao = seguro('cartao', cartao, function (it) { var f = el('div', 'item'); f.appendChild(el('div', 'emp', (it && it.empresa) || 'Item')); f.appendChild(el('div', 'pas', 'Não consegui mostrar os detalhes deste item.')); return f; });
 cartaoAtrasado = seguro('cartaoAtrasado', cartaoAtrasado, function (g) { var f = el('div', 'item'); f.appendChild(el('div', 'emp', (g && g.empresa) || 'Item')); return f; });
-window.__shTeste = { REDE: REDE, lerSaida: lerSaida, processarSaida: processarSaida, reportarErro: reportarErro, aplicarStatus: aplicarStatus, hooks: { recarregar: null }, falhaDePagina: falhaDePagina, verificarVersao: verificarVersao, agoraMs: agoraMs, PAGINA_VERSAO: PAGINA_VERSAO, carregarAguardando: carregarAguardando, S: S, desenhar: desenhar, carregar: carregar, casaBusca: casaBusca, foneFmt: foneFmt, aceitar: aceitar, abrirLead: abrirLead, abrirGanho: abrirGanho, cnpjValido: cnpjValido, desenharFila: desenharFila, carregarFila: carregarFila, origemClasse: origemClasse, mascCnpj: mascCnpj };
+window.__shTeste = { fmtCampo: fmtCampo, fadeChips: fadeChips, REDE: REDE, lerSaida: lerSaida, processarSaida: processarSaida, reportarErro: reportarErro, aplicarStatus: aplicarStatus, hooks: { recarregar: null }, falhaDePagina: falhaDePagina, verificarVersao: verificarVersao, agoraMs: agoraMs, PAGINA_VERSAO: PAGINA_VERSAO, carregarAguardando: carregarAguardando, S: S, desenhar: desenhar, carregar: carregar, casaBusca: casaBusca, foneFmt: foneFmt, aceitar: aceitar, abrirLead: abrirLead, abrirGanho: abrirGanho, cnpjValido: cnpjValido, desenharFila: desenharFila, carregarFila: carregarFila, origemClasse: origemClasse, mascCnpj: mascCnpj };
 (async function () {
   var t = lsGet('sh_tok');
   if (t) { var ok = await entrar(t, true); if (ok) return; }
