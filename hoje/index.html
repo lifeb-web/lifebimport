@@ -5,7 +5,7 @@
 <meta name="robots" content="noindex,nofollow">
 <meta name="color-scheme" content="light dark">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src https://gs-agendor-worker.robert131196.workers.dev; base-uri 'none'; form-action 'none'">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
 <title>Hoje do SDR | Life B</title>
 <link rel="icon" href="/favicon-32.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -379,6 +379,8 @@ details.mais{display:contents}
 details.sec-empresa>summary,details.dados-opcional>summary{cursor:pointer;font-weight:800;color:var(--purple);min-height:32px}
 #leadRodape .row{gap:6px} #leadRodape .row button{flex:1 1 auto}
 #leadAtualiza{font-size:13px}
+.painel .rodape{padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
+.rotulo-cache{font-size:13px;font-weight:600;color:var(--muted);margin-left:6px;text-transform:none;letter-spacing:0}
 </style>
 </head>
 <body>
@@ -1113,25 +1115,32 @@ async function liberar(corpo) {
     }
     if (j._status === 401) { sair('Senha não confere.'); return; }
     if (j._status === 202 || j.emAndamento) { msg(j.mensagem || 'Ainda processando. Atualize em instantes.', 'aviso'); return; } // mantém a MESMA chave: nunca inicia N de novo
-    if (j.ok) { S.idem = null; mostrarLiberados(j.liberados || []); await carregar(false, true); if (!$('painelFila').classList.contains('hide')) await carregarFila(); if (podeContinuar()) { msg('Primeiro lote iniciado. A página continua sozinha: faltam ' + S.ctl.pendentes + '.', 'ok'); } else msg(j.mensagem, 'ok'); iniciarContinuar(); }
+    if (j.ok) { S.idem = null; mostrarLiberados(j.liberados || []); await carregar(false, true); if (!$('painelFila').classList.contains('hide')) await carregarFila(); if (podeContinuar()) { msg('Primeiro lote iniciado. A página continua sozinha: faltam ' + S.ctl.pendentes + '.', 'ok'); } else msg(j.mensagem, 'ok'); iniciarContinuar(true); }
     else { msg((j.mensagem || 'Não consegui iniciar.') + ' Clique de novo para tentar outra vez.', 'erro'); if (j.erro && j.erro !== 'cadencia_ocupada' && j.erro !== 'ocupado' && j.erro !== 'kv_falhou') S.idem = null; }
   } finally { S.ocupado = false; if (S.dados) desenharControle(S.dados); }
 }
 // ---------- continuar a saída em lotes (uma chamada por vez, só uma aba conduz) ----------
-S.cont = { rodando: false, pendentes: null, parou: null };
+S.cont = { rodando: false, pendentes: null, parou: null, paradoAte: 0, paradoPend: null };
 function podeContinuar() { var c = S.ctl; return !!(S.token && c && c.pendentes > 0 && c.janelaAberta && c.cadenciaLive && c.ligada && !S.doCache); }
-function iniciarContinuar() {
-  if (S.cont.rodando || !podeContinuar() || document.hidden) return;
+function iniciarContinuar(manual) {
+  var C = S.cont; if (manual) C.paradoAte = 0;
+  if (C.rodando || !podeContinuar() || document.hidden) return;
+  if (C.paradoAte && Date.now() < C.paradoAte && S.ctl.pendentes === C.paradoPend) return; // parou por segurança: só recomeça passado o prazo, se o número mudou ou se ele clicar Iniciar de novo
   if (!souLider()) { try { if (S.canal) S.canal.postMessage({ t: 'continuar' }); } catch (e) {} return; } // outra aba conduz: avisa e deixa com ela
   continuarLaco();
 }
+async function dormirRenovando(ms) { var resta = ms; while (resta > 0 && S.token) { var f = Math.min(resta, 10000); await dormir(f); resta -= f; souLider(); } }
 async function continuarLaco() {
   var C = S.cont; if (C.rodando) return; C.rodando = true; C.parou = null; C.pendentes = S.ctl ? S.ctl.pendentes : null; if (S.dados) desenharControle(S.dados);
   var semProgresso = 0, espera = 3000, voltas = 0;
   try {
     while (S.token) {
-      souLider(); // renova o direito de conduzir
-      var j; try { j = await api('/continuar', {}); } catch (e) { j = { _status: 0, ok: false }; }
+      while (document.hidden && S.token) await dormir(1000); // aba escondida: pausa e retoma quando voltar a ficar visível
+      if (!S.token) break;
+      if (!souLider()) { C.parou = 'outra'; break; } // outra aba assumiu
+      var renova = setInterval(souLider, 10000); var j; // renova a liderança também durante a chamada longa
+      try { j = await api('/continuar', {}); } catch (e) { j = { _status: 0, ok: false }; } finally { clearInterval(renova); }
+      souLider();
       if (j._status === 401) { sair('Senha não confere.'); return; }
       if (j.aguardando) { C.parou = 'aguardando'; break; } // fora do horário: não insiste
       var progrediu = false;
@@ -1143,10 +1152,11 @@ async function continuarLaco() {
       if (S.dados) desenharControle(S.dados);
       if (progrediu) { semProgresso = 0; espera = 3000; if (++voltas % 5 === 0) carregar(true, 'tarefas'); continue; }
       semProgresso++; if (semProgresso >= 8) { C.parou = 'seguranca'; break; }
-      await dormir(espera); espera = Math.min(15000, Math.round(espera * 1.5));
+      await dormirRenovando(espera); espera = Math.min(15000, Math.round(espera * 1.5));
     }
   } finally {
     C.rodando = false; var fim = C.parou === 'fim'; if (fim) C.pendentes = null;
+    if (C.parou === 'seguranca' || C.parou === 'aguardando') { C.paradoAte = Date.now() + 300000 * REDE.escala; C.paradoPend = C.pendentes; } // não recomeça a cada refresh
     if (S.token) { if (fim) { await carregar(false, true); if (!$('painelFila').classList.contains('hide')) carregarFila(); msg('Todos os leads foram iniciados ✓', 'ok'); } else if (S.dados) desenharControle(S.dados); }
   }
 }
@@ -1388,7 +1398,7 @@ function recomputarMostrar(L) { L.mostrar = todosCampos(L.lead).map(function (f)
 function limparEditsIguais(L) { Object.keys(L.edits).forEach(function (k) { var f = campoDeK(L.lead, k); if (f && normVal(k, L.edits[k]) === normVal(k, valorOrig(L.lead, k))) delete L.edits[k]; }); }
 
 // ---- leitura do lead: cache em memória (stale-while-revalidate), uma leitura por lead, pré-carga no toque ----
-S.preProm = {}; S.inval = {};
+S.preProm = {}; S.inval = {}; S.leadReal = 0; S.preUlt = 0;
 function invalidaLead(id) { delete S.pre[id]; delete S.preProm[id]; S.inval[id] = Date.now(); } // houve gravação ou conflito: o que está guardado não vale mais
 function guardaPre(id, j) { S.pre[id] = { t: Date.now(), j: j }; var ks = Object.keys(S.pre); if (ks.length > 30) { ks.sort(function (a, b) { return S.pre[a].t - S.pre[b].t; }); delete S.pre[ks[0]]; } }
 function buscarLead(id) { // várias chamadas para o mesmo lead reaproveitam a mesma leitura
@@ -1396,15 +1406,17 @@ function buscarLead(id) { // várias chamadas para o mesmo lead reaproveitam a m
   var p = api('/lead/' + encodeURIComponent(id)).then(function (j) { if (j && j.ok && j.lead && !(S.inval[id] > t0)) guardaPre(id, j); return j; }, function () { return { _status: 0, ok: false }; }).then(function (j) { if (S.preProm[id] === p) delete S.preProm[id]; return j; });
   S.preProm[id] = p; return p;
 }
-function prefetchLead(id) { // toque ou clique no botão: já começa a ler (no máximo 1 pré-carga em voo)
-  if (!S.token || S.preProm[id] || S.preVoo || (S.pre[id] && Date.now() - S.pre[id].t < 5000)) return; S.preVoo = true;
+function prefetchLead(id) { // pré-carga: no máximo 1 em voo, 1,5 s entre uma e outra, nunca durante gravação nem com a leitura do lead real em andamento
+  if (!S.token || S.preProm[id] || S.preVoo || S.leadReal > 0 || Object.keys(S.emVoo).length || (S.L && S.L.ocupado) || (S.pre[id] && Date.now() - S.pre[id].t < 5000) || Date.now() - (S.preUlt || 0) < 1500) return;
+  S.preVoo = true; S.preUlt = Date.now();
   buscarLead(id).then(function () { S.preVoo = false; }, function () { S.preVoo = false; });
 }
-function ligaPrefetch(elm, id) { ['pointerdown', 'touchstart'].forEach(function (ev) { elm.addEventListener(ev, function () { prefetchLead(id); }, { passive: true }); }); }
+function ligaPrefetch(elm, id) { elm.addEventListener('pointerdown', function (ev) { if (ev && ev.pointerType === 'touch') return; prefetchLead(id); }, { passive: true }); } // só mouse e caneta: no toque a leitura começa no clique (rolar a lista não dispara nada)
 function redeBoa() { try { var cn = navigator.connection; if (cn && (cn.saveData || /(^|-)2g$/.test(cn.effectiveType || ''))) return false; } catch (e) {} return true; }
 function proximoDaColuna(opener) { var e = opener && opener.closest ? opener.closest('[data-deal]') : null; var n = e ? e.nextElementSibling : null; while (n && !n.getAttribute('data-deal')) n = n.nextElementSibling; return n ? Number(n.getAttribute('data-deal')) : null; }
 function prefetchProximo(L) { // abriu um lead: deixa o próximo da mesma coluna pronto (só com rede boa e sem gravação em andamento)
-  setTimeout(function () { if (S.L !== L || L.ocupado || Object.keys(S.emVoo).length || !redeBoa()) return; var id = proximoDaColuna(L.opener); if (id) prefetchLead(id); }, 800);
+  if (L.proxFeito) return; var espera = Math.max(800, 1500 - (Date.now() - (S.preUlt || 0)) + 50);
+  setTimeout(function () { if (S.L !== L || L.proxFeito || L.ocupado || Object.keys(S.emVoo).length || !redeBoa()) return; if (S.leadReal > 0) return; var id = proximoDaColuna(L.opener); if (id) { L.proxFeito = true; prefetchLead(id); } }, espera);
 }
 function marcaAtualiza(on) { var a = $('leadAtualiza'); if (a) a.classList.toggle('hide', !on); }
 function limpaTarefa(t) { return String(t || '').replace(/^\s*\[[^\]]*\]\s*/, '').replace(/\s*\|\s*[^|]*$/, ''); }
@@ -1412,7 +1424,7 @@ function renderCardInfo(L) { // o que o cartão já sabe + esqueleto onde ainda 
   var it = L.item || {}; var corpo = $('leadCorpo'); corpo.textContent = '';
   var bar = $('leadBarra'); bar.textContent = ''; var so = seloOrigem(it.origem, true); if (so) bar.appendChild(so); if (it.etiqueta) bar.appendChild(el('span', 'etq', it.etiqueta));
   if (it.pessoa || it.fone) { var s1 = el('div', 'secao'); s1.appendChild(el('h3', null, 'Pessoas e telefones')); if (it.pessoa) s1.appendChild(el('div', 'emp', it.pessoa)); var fl = foneLinha(it.fone, 'pessoa-tel', null, null, true); if (fl) s1.appendChild(fl); if (it.cidade) s1.appendChild(el('div', 'sub', it.cidade)); corpo.appendChild(s1); }
-  if (it.passoPendente) { var px = el('div', 'proxima'); px.appendChild(el('h3', null, 'Próxima ação')); px.appendChild(el('div', 'proxima-txt', it.passoPendente)); corpo.appendChild(px); }
+  if (it.passoPendente) { var px = el('div', 'proxima'); var hx = el('h3', null, 'Próxima ação'); hx.appendChild(el('span', 'rotulo-cache', 'do cartão')); px.appendChild(hx); px.appendChild(el('div', 'proxima-txt', it.passoPendente)); corpo.appendChild(px); }
   ['Tarefas', 'Empresa e qualificação'].forEach(function (t, k) { var e = el('div', 'secao esqueleto'); e.setAttribute('aria-hidden', 'true'); e.appendChild(el('h3', null, t)); for (var q = 0; q < (k ? 3 : 2); q++) e.appendChild(el('div', 'esq-l')); corpo.appendChild(e); });
 }
 async function abrirLead(dealId, opener, item, ctx) {
@@ -1421,7 +1433,7 @@ async function abrirLead(dealId, opener, item, ctx) {
   L.opener = opener || L.opener || null; L.item = item || L.item || null; L.ctx = ctx || L.ctx || null; S.L = L; painel.classList.remove('hide');
   try { if (location.hash !== '#lead=' + dealId) { history.pushState(null, '', '#lead=' + dealId); S.pushou = true; } } catch (e) {}
   var cache = S.pre[dealId]; var fresco = cache && Date.now() - cache.t < 3000;
-  var pintouCache = false; if (!mesmo && cache) { aplicarResposta(L, cache.j); limparEditsIguais(L); recomputarMostrar(L); mesmo = true; pintouCache = true; }
+  var pintouCache = false; if (!mesmo && cache) { aplicarResposta(L, cache.j); limparEditsIguais(L); recomputarMostrar(L); mesmo = true; pintouCache = true; L.revalidado = !!fresco; }
   $('leadTitulo').textContent = mesmo ? (L.lead.titulo || 'Lead') : ((L.item && L.item.empresa) || 'Carregando o lead...'); $('leadRodape').textContent = '';
   if (mesmo) renderLead(); else renderCardInfo(L);
   try { $('leadTitulo').focus({ preventScroll: true }); } catch (e) {}
@@ -1430,8 +1442,9 @@ async function abrirLead(dealId, opener, item, ctx) {
   await carregarLead(L, !!mesmo);
 }
 async function carregarLead(L, silencioso) {
-  L.atualizando = true; marcaAtualiza(true); var j; try { j = await buscarLead(L.dealId); } catch (e) { j = { _status: 0 }; }
+  L.atualizando = true; marcaAtualiza(true); S.leadReal++; var j; try { j = await buscarLead(L.dealId); } catch (e) { j = { _status: 0 }; } finally { S.leadReal--; }
   if (S.L === L) { L.atualizando = false; marcaAtualiza(false); }
+  if (S.L === L && j && j.ok && j.lead) { L.revalidado = true; prefetchProximo(L); }
   if (j._status === 401) { sair('Senha não confere.'); return; }
   if (S.L !== L) return;
   if (!j.ok || !j.lead) {
@@ -1499,7 +1512,7 @@ function renderLead() {
   if (afKey) { var nf = corpo.querySelector(afKey); if (nf) { try { nf.focus({ preventScroll: true }); if (afSel && afSel[0] != null && nf.setSelectionRange) nf.setSelectionRange(afSel[0], afSel[1]); } catch (e) {} } corpo.scrollTop = rol; }
 }
 function proximaAcaoEl(L) { // o que fazer agora, em destaque, com um botão principal só
-  var lead = L.lead; if (lead.status !== 'andamento') return null; var box = el('div', 'proxima'); box.appendChild(el('h3', null, 'Próxima ação')); var pode = !!acoesDe(L).tarefas;
+  var lead = L.lead; if (lead.status !== 'andamento') return null; var box = el('div', 'proxima'); var hb = el('h3', null, 'Próxima ação'); if (L.revalidado === false) hb.appendChild(el('span', 'rotulo-cache', 'dado guardado, atualizando...')); box.appendChild(hb); var pode = !!acoesDe(L).tarefas;
   if (L.ctx && L.ctx.fila) {
     box.appendChild(el('div', 'proxima-txt', 'Este lead ainda não foi iniciado. Ao iniciar, a cadência começa e as tarefas do 1º contato são criadas.'));
     var bi = el('button', 'forte', 'Iniciar este lead'); bi.type = 'button'; bi.onclick = function () { if (!window.confirm('Iniciar ' + (lead.titulo || 'este lead') + ' agora?' + avisoTarde())) return; liberar({ dealIds: [L.dealId], funil: L.ctx.funil || lead.funil || 'outbound' }); fecharLead(); }; box.appendChild(bi); return box;
