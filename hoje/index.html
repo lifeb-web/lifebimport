@@ -648,13 +648,15 @@ async function processarSaida(opt) {
       var c = classe(j, false);
       if (c === 'rede') { alvo.tent = (alvo.tent || 0) + 1; var espera = j._status === 429 ? 5000 : Math.min(30000, 1000 * Math.pow(2, alvo.tent)); alvo.proximo = Date.now() + jitter(espera) * REDE.escala; gravarSaida(lerSaida().map(function (x) { return x.id === alvo.id ? alvo : x; })); if (alvo.tent >= 12 && j._status !== 0) { gravarSaida(lerSaida().filter(function (x) { return x.id !== alvo.id; })); saidaRecusada(alvo, j); } break; }
       gravarSaida(lerSaida().filter(function (x) { return x.id !== alvo.id; }));
-      if (c === 'ok') { propagarBase(alvo); soltarBase(alvo); saidaOk(alvo, j); } else { soltarBase(alvo); saidaRecusada(alvo, j); }
+      if (c === 'ok') { propagarBase(alvo, j); soltarBase(alvo); saidaOk(alvo, j); } else { soltarBase(alvo); saidaRecusada(alvo, j); }
     }
   } finally { S.processando = false; }
 }
-function propagarBase(ok) { // o que esta ação gravou passa a ser o valor CONFIRMADO: as próximas da fila (mesmo lead) esperam esse valor como base
+function limparBaseSeVazia() { if (S.L && S.L.baseConf && !lerSaida().some(function (x) { return x.dealId === S.L.dealId && x.tipo === 'campos'; })) S.L.baseConf = {}; } // fila esvaziada (aqui ou em outra aba): a próxima edição lê o valor do servidor
+function propagarBase(ok, j) {
+  var nao = (j && Array.isArray(j.naoConfirmados)) ? j.naoConfirmados : []; // o que esta ação gravou passa a ser o valor CONFIRMADO: as próximas da fila (mesmo lead) esperam esse valor como base
   if (ok.tipo !== 'campos' || !ok.corpo || !ok.corpo.base) return; var a = lerSaida(), mexeu = false;
-  a.forEach(function (x) { if (x.id !== ok.id && x.dealId === ok.dealId && x.tipo === 'campos' && x.corpo && x.corpo.base) Object.keys(ok.corpo.base).forEach(function (campo) { var v = valorEnviado(ok.corpo, campo); if (v !== undefined && Object.prototype.hasOwnProperty.call(x.corpo.base, campo)) { x.corpo.base[campo] = String(v); mexeu = true; } }); });
+  a.forEach(function (x) { if (x.id !== ok.id && x.dealId === ok.dealId && x.tipo === 'campos' && x.corpo && x.corpo.base) Object.keys(ok.corpo.base).forEach(function (campo) { if (nao.indexOf(campo.split('.').pop()) >= 0) return; var v = valorEnviado(ok.corpo, campo); if (v !== undefined && Object.prototype.hasOwnProperty.call(x.corpo.base, campo)) { x.corpo.base[campo] = String(v); mexeu = true; } }); });
   if (mexeu) gravarSaida(a);
 }
 function soltarBase(e) { if (e.tipo !== 'campos' || !S.L || S.L.dealId !== e.dealId || !S.L.baseConf || lerSaida().some(function (x) { return x.dealId === e.dealId && x.tipo === 'campos'; })) return; S.L.baseConf = {}; }
@@ -967,10 +969,10 @@ document.addEventListener('visibilitychange', function () {
 });
 function iniciarCanal() {
   if (S.canal || typeof BroadcastChannel === 'undefined') return;
-  try { S.canal = new BroadcastChannel('sh_hoje'); S.canal.onmessage = function (ev) { var t = ev && ev.data && ev.data.t; if (t === 'saida') atualizarSelo(); else if (t === 'dados' && S.token && S.tem && !document.hidden) carregar(true, 'tarefas'); }; } catch (e) { S.canal = null; }
+  try { S.canal = new BroadcastChannel('sh_hoje'); S.canal.onmessage = function (ev) { var t = ev && ev.data && ev.data.t; if (t === 'saida') { atualizarSelo(); limparBaseSeVazia(); } else if (t === 'dados' && S.token && S.tem && !document.hidden) carregar(true, 'tarefas'); }; } catch (e) { S.canal = null; }
 }
 window.addEventListener('beforeunload', function (ev) { try { if (lerSaida().length || (S.L && S.L.ocupado)) { processarSaida({ keepalive: true, agora: true }); ev.preventDefault(); ev.returnValue = ''; return ''; } } catch (e) {} });
-window.addEventListener('storage', function (e) { if (e.key === SAIDA_KEY) atualizarSelo(); }); // a caixa de saída mudou em outra aba
+window.addEventListener('storage', function (e) { if (e.key === SAIDA_KEY) { atualizarSelo(); limparBaseSeVazia(); } }); // a caixa de saída mudou em outra aba
 window.addEventListener('storage', function (e) { // outra aba leu mais novo: esta aba também mostra (só se a versão não for mais velha)
   if (e.key !== 'sh_ultimo' || !e.newValue || !S.tem) return;
   try { var j = JSON.parse(e.newValue); if (j && j.ok && versaoDe(j) && S.vm && (j.versao.tarefas > S.vm.tarefas || j.versao.negocios > S.vm.negocios || j.versao.atrasadas > S.vm.atrasadas)) { var jm = mesclar(j, false); if (jm) { S.vm = { negocios: jm.versao.negocios, atrasadas: jm.versao.atrasadas, tarefas: jm.versao.tarefas }; desenhar(jm); } } } catch (er) {}
@@ -1702,13 +1704,21 @@ $('bTentar').onclick = function () { carregar(false, false); };
 $('bAtualizar').onclick = function () { carregar(false, true); };
 function apagarDadosLocais(incluiSaida) { // tudo que a página guardou neste aparelho (menos o tema e preferências de tela)
   try { var ks = []; for (var i = 0; i < localStorage.length; i++) ks.push(localStorage.key(i)); ks.forEach(function (k) { if (k && (/^(sh_rasc_|sh_fila_|sh_abriu|sh_ultimo|sh_poll_ate|sh_ult_poll|sh_lider)/.test(k) || (incluiSaida && k === SAIDA_KEY))) { try { localStorage.removeItem(k); } catch (e) {} } }); } catch (e) {}
-  if (incluiSaida) S.saidaMem = null; S.pre = {}; atualizarSelo();
+  if (incluiSaida) S.saidaMem = null; S.pre = {}; atualizarSelo(); limparBaseSeVazia();
 }
+function contarRascunhos() { // rascunhos digitados e não enviados (não vazios e dentro da validade)
+  var n = 0; try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k.indexOf('sh_rasc_') === 0) { try { var o = JSON.parse(localStorage.getItem(k) || 'null'); if (o && o.e && Object.keys(o.e).length && Date.now() - (o.t || 0) < 3 * 86400000) n++; } catch (e) {} } } } catch (e) {}
+  return n;
+}
+function descPendencias(n, m) { var p = []; if (n) p.push(n + (n === 1 ? ' ação' : ' ações')); if (m) p.push(m + (m === 1 ? ' rascunho' : ' rascunhos')); return p.join(' e '); }
 function sairManual(apagar) {
-  var n = lerSaida().length;
-  if (apagar) { if (!window.confirm(n ? 'As ' + n + (n === 1 ? ' ação pendente será PERDIDA' : ' ações pendentes serão PERDIDAS') + '. Apagar tudo deste aparelho e sair?' : 'Apagar todos os dados deste aparelho e sair?')) return; sair(''); apagarDadosLocais(true); return; }
-  if (n) { if (!window.confirm('Há ' + n + (n === 1 ? ' ação que ainda não foi enviada' : ' ações que ainda não foram enviadas') + '. Sair mesmo? Elas ficam guardadas neste aparelho até a próxima entrada.')) return; sair(''); return; }
-  sair(''); apagarDadosLocais(false); // sem nada pendente, sair não deixa rastro de lead no aparelho
+  var n = lerSaida().length, m = contarRascunhos();
+  if (apagar) {
+    var ps = []; if (n) ps.push(n === 1 ? 'A 1 ação pendente será PERDIDA' : 'As ' + n + ' ações pendentes serão PERDIDAS'); if (m) ps.push(m === 1 ? 'O 1 rascunho que você digitou e não enviou será apagado' : 'Os ' + m + ' rascunhos que você digitou e não enviou serão apagados');
+    if (!window.confirm(ps.length ? ps.join('. ') + '. Apagar tudo deste aparelho e sair?' : 'Apagar todos os dados deste aparelho e sair?')) return; apagarDadosLocais(true); sair(''); return;
+  }
+  if (n || m) { if (!window.confirm('Há ' + descPendencias(n, m) + ' ainda não enviados. Sair mesmo? Ficam guardados neste aparelho até a próxima entrada.')) return; sair(''); return; }
+  apagarDadosLocais(false); sair(''); // sem nada pendente e sem rascunho, sair não deixa rastro de lead no aparelho
 }
 $('bSair1').onclick = function () { sairManual(false); };
 $('bSair2').onclick = function () { sairManual(false); };
