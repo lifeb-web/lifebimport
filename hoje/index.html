@@ -623,7 +623,7 @@ function casaBusca(it, q) {
 
 // ---------- chamadas ----------
 // ---------- resiliência: rede com retry, disjuntor, caixa de saída, versão, relógio do servidor, telemetria ----------
-var PAGINA_VERSAO = '2026-10-28.4';
+var PAGINA_VERSAO = '2026-10-28.5';
 var REDE = { escala: 1, falhas: 0, ultima: 0, desvio: 0 };
 function dormir(ms) { return new Promise(function (r) { setTimeout(r, ms * REDE.escala); }); }
 function jitter(ms) { return ms * (0.5 + Math.random() * 0.5); }
@@ -1282,6 +1282,7 @@ atualizaRotuloLiberar();
 var CAMPOS = [
   { k: 'e.cnpj', rot: 'CNPJ', tipo: 'cnpj', tok: ['cnpj'] },
   { k: 'e.nome', rot: 'Nome da empresa', tipo: 'texto', tok: ['nome da empresa'] },
+  { k: 'e.razao_social', rot: 'Razão social', tipo: 'texto', tok: ['razao social'], max: 150 },
   { k: 'e.segmento', rot: 'Segmento', tipo: 'sel', op: 'segmento', tok: ['segmento'] },
   { k: 'e.aprovado_serasa', rot: 'Aprovado no Serasa', tipo: 'sel', op: 'aprovado_serasa', tok: ['serasa'] },
   { k: 'e.quantidade_de_lojas', rot: 'Quantidade de lojas', tipo: 'sel', op: 'quantidade_de_lojas', tok: ['lojas'] },
@@ -1296,7 +1297,7 @@ var CAMPOS = [
   { k: 'e.end.uf', rot: 'UF', tipo: 'uf', tok: ['uf', 'endereco'], par: true },
   { k: 'n.observacao_sdr', rot: 'Observação do SDR', tipo: 'area', tok: ['observacao'] }
 ];
-var GANHO_ORDEM = ['e.aprovado_serasa', 'e.quantidade_de_lojas', 'e.faturamento_mensal', 'e.mais_de_2_anos', 'e.disposicao_para_investimento', 'e.segmento', 'n.observacao_sdr', 'e.cnpj', 'e.nome', 'e.end.cep', 'e.end.rua', 'e.end.numero', 'e.end.bairro', 'e.end.cidade', 'e.end.uf'];
+var GANHO_ORDEM = ['e.aprovado_serasa', 'e.quantidade_de_lojas', 'e.faturamento_mensal', 'e.mais_de_2_anos', 'e.disposicao_para_investimento', 'e.segmento', 'n.observacao_sdr', 'e.cnpj', 'e.nome', 'e.razao_social', 'e.end.cep', 'e.end.rua', 'e.end.numero', 'e.end.bairro', 'e.end.cidade', 'e.end.uf'];
 var OBS_MAX = 150;
 function campoDe(k) { for (var i = 0; i < CAMPOS.length; i++) if (CAMPOS[i].k === k) return CAMPOS[i]; return null; }
 function pessoaPrincipal(lead) { var ps = (lead && lead.pessoas) || []; for (var i = 0; i < ps.length; i++) if (ps[i].principal) return ps[i]; return ps[0] || null; }
@@ -1305,14 +1306,14 @@ function todosCampos(lead) { return CAMPOS.concat(chavesPessoa(lead)); }
 function campoDeK(lead, k) { return campoDe(k) || chavesPessoa(lead).filter(function (c) { return c.k === k; })[0] || null; }
 function valorOrig(lead, k) {
   var p = k.split('.'); lead = lead || {};
-  if (p[0] === 'e') { var e = lead.empresa || {}; if (p[1] === 'end') return (e.endereco || {})[p[2]] || ''; if (p[1] === 'cnpj' || p[1] === 'nome' || p[1] === 'segmento') return e[p[1]] || ''; return (e.campos || {})[p[1]] || ''; }
+  if (p[0] === 'e') { var e = lead.empresa || {}; if (p[1] === 'end') return (e.endereco || {})[p[2]] || ''; if (p[1] === 'razao_social') return e.razaoSocial || ''; if (p[1] === 'cnpj' || p[1] === 'nome' || p[1] === 'segmento') return e[p[1]] || ''; return (e.campos || {})[p[1]] || ''; }
   if (p[0] === 'n') return lead.observacaoSdr || '';
   if (p[0] === 'p') { var ps = lead.pessoas || []; for (var i = 0; i < ps.length; i++) if (String(ps[i].id) === p[1]) return ps[i][p[2]] || ''; }
   return '';
 }
 function gravarLocal(lead, k, v) { // aplica no objeto local (atualização otimista)
   var p = k.split('.');
-  if (p[0] === 'e') { lead.empresa = lead.empresa || {}; var e = lead.empresa; if (p[1] === 'end') { e.endereco = e.endereco || {}; e.endereco[p[2]] = v; } else if (p[1] === 'cnpj' || p[1] === 'nome' || p[1] === 'segmento') e[p[1]] = v; else { e.campos = e.campos || {}; e.campos[p[1]] = v; } }
+  if (p[0] === 'e') { lead.empresa = lead.empresa || {}; var e = lead.empresa; if (p[1] === 'end') { e.endereco = e.endereco || {}; e.endereco[p[2]] = v; } else if (p[1] === 'razao_social') e.razaoSocial = v; else if (p[1] === 'cnpj' || p[1] === 'nome' || p[1] === 'segmento') e[p[1]] = v; else { e.campos = e.campos || {}; e.campos[p[1]] = v; } }
   else if (p[0] === 'n') lead.observacaoSdr = v;
   else if (p[0] === 'p') { (lead.pessoas || []).forEach(function (x) { if (String(x.id) === p[1]) x[p[2]] = v; }); }
 }
@@ -1491,7 +1492,7 @@ function renderLead() {
   // 2) empresa
   var emp = lead.empresa || {}; var s3 = el('details', 'secao sec-empresa'); s3.open = lead.completo === false; s3.appendChild(el('summary', null, 'Empresa e qualificação')); var dl = el('dl');
   function par(t, v) { if (!v) return; dl.appendChild(el('dt', null, t)); dl.appendChild(el('dd', null, v)); }
-  if (emp.nome && emp.nome !== lead.titulo) par('Empresa', emp.nome); par('CNPJ', fmtCnpj(emp.cnpj)); par('Segmento', emp.segmento); par('Endereço', enderecoTxt(emp.endereco));
+  if (emp.nome && emp.nome !== lead.titulo) par('Empresa', emp.nome); par('Razão social', emp.razaoSocial); par('CNPJ', fmtCnpj(emp.cnpj)); par('Segmento', emp.segmento); par('Endereço', enderecoTxt(emp.endereco));
   CAMPOS.forEach(function (f) { if (f.op && f.k !== 'e.segmento') par(f.rot, (emp.campos || {})[f.op]); });
   par('Dono do negócio', lead.dono && lead.dono.nome); par('Criado em', dataBR(lead.criadoEm, true)); s3.appendChild(dl); corpo.appendChild(s3);
   if (lead.observacaoSdr) { var s5 = el('div', 'secao'); s5.appendChild(el('h3', null, 'Observação do SDR')); var ob = el('p', null, lead.observacaoSdr); ob.style.whiteSpace = 'pre-wrap'; ob.style.overflowWrap = 'anywhere'; s5.appendChild(ob); corpo.appendChild(s5); }
@@ -1532,7 +1533,7 @@ function campoEl(L, f, pref, req, marcar) {
     if (atual && ops.indexOf(atual) < 0) ops = ops.concat([atual]);
     ops.forEach(function (o) { var op = el('option', null, o); op.value = o; inp.appendChild(op); }); inp.value = atual;
   } else if (f.tipo === 'area') { inp = el('textarea'); inp.value = String(atual).slice(0, OBS_MAX); inp.rows = 3; inp.setAttribute('maxlength', String(OBS_MAX)); }
-  else { inp = el('input'); inp.type = 'text'; inp.value = atual; inp.autocomplete = 'off'; if (f.tipo === 'cnpj' || f.tipo === 'cep') inp.setAttribute('inputmode', 'numeric'); if (f.tipo === 'uf') { inp.setAttribute('maxlength', '2'); inp.setAttribute('autocapitalize', 'characters'); } }
+  else { inp = el('input'); inp.type = 'text'; inp.value = atual; inp.autocomplete = 'off'; if (f.max) inp.setAttribute('maxlength', String(f.max)); if (f.tipo === 'cnpj' || f.tipo === 'cep') inp.setAttribute('inputmode', 'numeric'); if (f.tipo === 'uf') { inp.setAttribute('maxlength', '2'); inp.setAttribute('autocapitalize', 'characters'); } }
   inp.id = id; inp.setAttribute('enterkeyhint', f.tipo === 'area' ? 'enter' : 'done'); inp.addEventListener('focus', function () { setTimeout(function () { try { if (inp.scrollIntoView) inp.scrollIntoView({ block: 'center' }); } catch (e) {} }, 300); }); if (req) inp.setAttribute('aria-required', 'true'); var err = el('div', 'erro-c'); err.setAttribute('role', 'alert'); err.classList.add('hide');
   function mostrarErro() { var m = validarCampo(L, f); if (!m && req && marcar) m = normVal(f.k, valorAtual(f.k)) === '' ? 'Falta preencher este campo.' : 'O Agendor ainda pede este campo. Confira o valor.'; err.textContent = m; err.classList.toggle('hide', !m); wrap.classList.toggle('erro', !!m); inp.setAttribute('aria-invalid', m ? 'true' : 'false'); return m; }
   function mudou() {
@@ -1566,7 +1567,7 @@ async function consultarReceita(L) {
   renderReceita(L);
 }
 function propostasReceita(L, j) { // só campos vazios (no servidor E no que ele digitou)
-  var cand = [['e.nome', j.fantasia || j.razao], ['e.segmento', j.segmento], ['e.end.cep', j.cep], ['e.end.rua', j.logradouro || j.rua], ['e.end.numero', j.numero], ['e.end.bairro', j.bairro], ['e.end.cidade', j.cidade], ['e.end.uf', j.uf]]; var out = [];
+  var cand = [['e.nome', j.fantasia || j.razao], ['e.razao_social', j.razao], ['e.segmento', j.segmento], ['e.end.cep', j.cep], ['e.end.rua', j.logradouro || j.rua], ['e.end.numero', j.numero], ['e.end.bairro', j.bairro], ['e.end.cidade', j.cidade], ['e.end.uf', j.uf]]; var out = [];
   cand.forEach(function (c) {
     var f = campoDeK(L.lead, c[0]); var v = c[1] == null ? '' : String(c[1]).trim(); if (!f || !v) return;
     if (normVal(c[0], valorAtual(c[0])) !== '') return;
