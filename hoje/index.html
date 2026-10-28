@@ -776,11 +776,13 @@ S.repPend = {}; try { S.repPend = JSON.parse(lsGet('sh_reppend') || '{}') || {};
 function guardaRepPend() { try { lsSet('sh_reppend', JSON.stringify(S.repPend)); } catch (e) {} }
 function registrarRepPend(dealId, titulo, j) { if (!(j && j.arena && j.arena.dealId)) return false; S.repPend[dealId] = { t: Date.now(), arenaId: j.arena.dealId, link: j.arena.link, responsaveis: j.responsaveis || [], mensagem: j.mensagem || '', titulo: titulo || '' }; guardaRepPend(); return true; }
 function soltaRepPend(dealId) { delete S.repPend[dealId]; guardaRepPend(); }
+function soltaRepPorArena(arenaId) { var mexeu = false; Object.keys(S.repPend).forEach(function (k) { if (String(S.repPend[k].arenaId) === String(arenaId)) { delete S.repPend[k]; mexeu = true; } }); if (mexeu) guardaRepPend(); }
+function soltaRepSumidos(itens) { var ids = {}; (itens || []).forEach(function (i) { ids[String(i.dealId)] = true; }); var mexeu = false; Object.keys(S.repPend).forEach(function (k) { var p = S.repPend[k]; if (!ids[String(p.arenaId)] && Date.now() - (p.t || 0) > 120000) { delete S.repPend[k]; mexeu = true; } }); if (mexeu) { guardaRepPend(); redesenharTudo(); } } // saiu de "aguardando representante" (ficou com alguém): a pendência acaba
 async function abrirEscolhaRep(dealId) { await abrirLead(dealId, null); var L = S.L, pend = S.repPend[dealId]; if (L && L.dealId === dealId && pend) { L.rep = { arenaId: pend.arenaId, link: pend.link, responsaveis: pend.responsaveis, mensagem: pend.mensagem, dono: null }; mostrarGanhoModal(L); } }
 function tocandoCampo() { var a = document.activeElement; return !!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)); }
 function saidaOk(e, j) {
   if (e.tipo === 'ganho') { // ganho que saiu da fila depois: NÃO abre pop-up por cima do que ele estiver fazendo
-    var Lg = S.L && S.L.dealId === e.dealId && S.L.lead ? S.L : null; var titulo = e.meta.titulo || 'Lead'; delete S.qualif[e.dealId]; var tinha = registrarRepPend(e.dealId, titulo, j); redesenharTudo();
+    var Lg = S.L && S.L.dealId === e.dealId && S.L.lead ? S.L : null; var titulo = e.meta.titulo || 'Lead'; delete S.qualif[e.dealId]; if (Lg) Lg.ganhoRodando = false; limpaQualificando(); var tinha = registrarRepPend(e.dealId, titulo, j); redesenharTudo();
     var olhando = Lg && !$('painelLead').classList.contains('hide') && $('modalGanho').classList.contains('hide') && !tocandoCampo();
     if (olhando) resolverGanho(Lg, j);
     else { if (Lg) { aplicarResposta(Lg, j); renderLead(); } avisar(titulo + ' qualificado.' + (j.mensagem ? ' ' + j.mensagem : ''), 'ok', tinha ? { rot: 'Escolher representante', f: function () { abrirEscolhaRep(e.dealId); } } : null); }
@@ -792,7 +794,7 @@ function saidaOk(e, j) {
   carregar(true, 'tarefas'); try { if (S.canal) S.canal.postMessage({ t: 'dados' }); } catch (er) {}
 }
 function saidaRecusada(e, j) {
-  if (e.tipo === 'ganho') { var Lr = S.L && S.L.dealId === e.dealId && S.L.lead ? S.L : null; if (Lr) { resolverGanho(Lr, j); return; } delete S.qualif[e.dealId]; redesenharTudo(); avisar((e.meta.titulo || 'Lead') + ': não consegui qualificar. ' + ((j && j.mensagem) || 'O servidor não aceitou.'), 'erro', { rot: 'Abrir o lead', f: function () { abrirLead(e.dealId, null); } }); return; }
+  if (e.tipo === 'ganho') { var Lr = S.L && S.L.dealId === e.dealId && S.L.lead ? S.L : null; limpaQualificando(); if (Lr) { resolverGanho(Lr, j); return; } delete S.qualif[e.dealId]; redesenharTudo(); avisar((e.meta.titulo || 'Lead') + ': não consegui qualificar. ' + ((j && j.mensagem) || 'O servidor não aceitou.'), 'erro', { rot: 'Abrir o lead', f: function () { abrirLead(e.dealId, null); } }); return; }
   var m = (j && j.mensagem) || 'O servidor não aceitou.';
   if (e.tipo === 'perdido') { delete S.ocultos[e.dealId]; redesenharTudo(); }
   if (e.tipo === 'campos') { var rest = lerSaida(); var temGanho = rest.some(function (x) { return x.dealId === e.dealId && x.tipo === 'ganho'; }); if (temGanho) gravarSaida(rest.filter(function (x) { return !(x.dealId === e.dealId && x.tipo === 'ganho'); })); if (temGanho || S.qualif[e.dealId]) { delete S.qualif[e.dealId]; redesenharTudo(); } e.reabrirGanho = temGanho || !!(S.L && S.L.ganhoRodando && S.L.dealId === e.dealId); } // campos recusado: o ganho que vinha logo atrás NUNCA sai sem os campos corrigidos
@@ -813,8 +815,9 @@ function temRascunho() { try { for (var i = 0; i < localStorage.length; i++) { v
 function podeRecarregarSozinha() { return !temRascunho() && !lerSaida().length && !S.ocupado && !(S.L && S.L.ocupado) && $('painelLead').classList.contains('hide') && $('modalGanho').classList.contains('hide'); }
 function parseVersao(v) { var m = /^(\d{4})-(\d{2})-(\d{2})\.(\d+)$/.exec(String(v || '')); return m ? [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4])] : null; }
 function versaoMaisNova(a, b) { var x = parseVersao(a), y = parseVersao(b); if (!x || !y) return false; for (var i = 0; i < 4; i++) { if (x[i] !== y[i]) return x[i] > y[i]; } return false; } // 'AAAA-MM-DD.N': o dia e depois o N como número ('.10' é maior que '.9')
-function lerRecarga() { var o = null; try { o = JSON.parse(sessionStorage.getItem('sh_recarga') || 'null'); } catch (e) {} if (!o) { try { o = JSON.parse(localStorage.getItem('sh_recarga') || 'null'); } catch (e) {} } return o; }
-function gravarRecarga(v) { var t = JSON.stringify({ v: v, t: Date.now() }); try { sessionStorage.setItem('sh_recarga', t); } catch (e) {} try { localStorage.setItem('sh_recarga', t); } catch (e) {} }
+S.recargaMem = null;
+function lerRecarga() { var o = null; try { o = JSON.parse(sessionStorage.getItem('sh_recarga') || 'null'); } catch (e) {} if (!o) { try { o = JSON.parse(localStorage.getItem('sh_recarga') || 'null'); } catch (e) {} } if (!o) o = S.recargaMem; return o; }
+function gravarRecarga(v) { S.recargaMem = { v: v, t: Date.now() }; var t = JSON.stringify({ v: v, t: Date.now() }); try { sessionStorage.setItem('sh_recarga', t); } catch (e) {} try { localStorage.setItem('sh_recarga', t); } catch (e) {} }
 function aplicarStatus(j) {
   if (j && typeof j.agora === 'number') REDE.desvio = j.agora - Date.now();
   if (j && j.paginaVersao && versaoMaisNova(j.paginaVersao, PAGINA_VERSAO)) { // só quando o worker é MAIS NOVO que esta página (igual ou mais antigo não faz nada)
@@ -1478,7 +1481,7 @@ function renderCardInfo(L) { // o que o cartão já sabe + esqueleto onde ainda 
 async function abrirLead(dealId, opener, item, ctx) {
   var painel = $('painelLead'); var mesmo = S.L && S.L.dealId === dealId && S.L.lead;
   var L = mesmo ? S.L : { dealId: dealId, lead: null, opcoes: (S.listas && S.listas.opcoes) || {}, motivos: (S.listas && S.listas.motivos) || [], responsaveis: (S.listas && S.listas.responsaveis) || [], edits: lerRascunho(dealId), forcar: {}, origemCampo: {}, mostrar: [], todos: false, ocupado: false, estado: null, receita: null, receitaCnpj: '', perdidoAberto: false, refs: {} };
-  L.opener = opener || L.opener || null; L.item = item || L.item || null; L.ctx = ctx || L.ctx || null; S.L = L; painel.classList.remove('hide');
+  if (!mesmo) limpaQualificando(); L.opener = opener || L.opener || null; L.item = item || L.item || null; L.ctx = ctx || L.ctx || null; S.L = L; painel.classList.remove('hide');
   try { if (location.hash !== '#lead=' + dealId) { history.pushState(null, '', '#lead=' + dealId); S.pushou = true; } } catch (e) {}
   var cache = S.pre[dealId]; var fresco = cache && Date.now() - cache.t < 3000;
   var pintouCache = false; if (!mesmo && cache) { aplicarResposta(L, cache.j); limparEditsIguais(L); recomputarMostrar(L); mesmo = true; pintouCache = true; L.revalidado = !!fresco; }
@@ -1681,7 +1684,7 @@ async function enviarCampos(L) {
   L.baseConf = L.baseConf || {}; corpo.base = {}; diff.forEach(function (d) { if (!Object.prototype.hasOwnProperty.call(L.baseConf, d.k)) L.baseConf[d.k] = String(valorOrig(L.lead, d.k) == null ? '' : valorOrig(L.lead, d.k)); corpo.base[campoApi(d.k)] = L.baseConf[d.k]; edits[d.k] = L.edits[d.k]; }); // o valor que a página LEU: se mudou no Agendor, o servidor avisa em vez de sobrescrever
   diff.forEach(function (d) { gravarLocal(L.lead, d.k, d.v); }); // aparece na hora
   L.ocupado = true; redesenhar(L); setEstado(L, 'salvando', 'Salvando... já mostrei na tela e estou conferindo no Agendor.');
-  var j = await chamarLead(L, '/campos', corpo, null, { tipo: 'campos', meta: { titulo: L.lead.titulo, edits: edits } }); if (!j) return 'erro'; L.ocupado = false;
+  var j = await chamarLead(L, '/campos', corpo, null, { tipo: 'campos', meta: { titulo: L.lead.titulo, edits: edits } }); if (!j) { L.ocupado = false; return 'erro'; } L.ocupado = false;
   if (!j._enfileirado) diff.forEach(function (d) { delete L.baseConf[d.k]; }); // resolvido (confirmado ou recusado): a próxima edição lê o valor do servidor de novo
   if (j._enfileirado) { diff.forEach(function (d) { delete L.edits[d.k]; }); gravarRascunho(L); if (S.L === L) { redesenhar(L); setEstado(L, 'salvando', 'Sem conexão. Guardei a alteração neste aparelho e envio sozinho quando a rede voltar.'); } return 'fila'; }
   if (j.ok && j.confirmado !== false) {
@@ -1746,7 +1749,7 @@ function secaoGanho(L) {
 }
 function abrirGanho(L, faltando, marcar, chaves) {
   var r = reqDe(L, faltando, chaves); L.ganhoReq = r.req; L.ganhoSoltos = r.soltos; L.ganhoVinculo = r.vinculo; L.ganhoMarcar = !!marcar; L.modalAberto = true; L.rep = null;
-  var pp = pessoaPrincipal(L.lead); L.ganhoPessoa = pp ? pp.id : null; if (pp) { L.ganhoReq['p.' + pp.id + '.nome'] = true; L.ganhoReq['p.' + pp.id + '.whatsapp'] = true; } // contato principal: sempre confirmado no Ganho
+  var pp = pessoaPrincipal(L.lead); L.ganhoPessoa = pp ? pp.id : null; if (pp) { L.ganhoReq['p.' + pp.id + '.nome'] = true; if (!(L.ganhoFixo && (pp.telefones || []).length)) L.ganhoReq['p.' + pp.id + '.whatsapp'] = true; else L.ganhoFixo = true; } // contato principal: sempre confirmado no Ganho
   $('gTitulo').textContent = 'Marcar como Ganho / Qualificado'; $('modalGanho').classList.remove('hide'); renderGanho(L); try { $('gTitulo').focus({ preventScroll: true }); } catch (e) {}
 }
 function mostrarGanhoModal(L, semRender) { L.modalAberto = true; $('modalGanho').classList.remove('hide'); if (!semRender) renderGanho(L); }
@@ -1764,11 +1767,17 @@ function blocoContato(L) { // contato principal (quem decide): nome e WhatsApp j
   (L.avisos || []).map(textoAviso).filter(Boolean).forEach(function (t) { sec.appendChild(el('p', 'sub aviso-discreto', t)); });
   var fN = campoDeK(L.lead, 'p.' + id + '.nome'), fW = campoDeK(L.lead, 'p.' + id + '.whatsapp'); var kW = fW.k;
   sec.appendChild(campoEl(L, fN, 'gf_', true, L.ganhoMarcar)); var wW = campoEl(L, fW, 'gf_', true, L.ganhoMarcar); sec.appendChild(wW);
-  var rotW = wW.querySelector('label'); var pp = pessoaPrincipal(L.lead) || {}; var fixo = ((pp.telefones || []).filter(function (t) { return t.tipo === 'fixo'; })[0]) || null;
-  var lbl = el('label', 'fixo-op'); lbl.style.cssText = 'display:flex;gap:8px;align-items:center;min-height:44px;font-weight:600'; var ck = el('input'); ck.type = 'checkbox'; ck.checked = !!L.ganhoFixo; ck.style.cssText = 'width:22px;height:22px'; lbl.appendChild(ck); lbl.appendChild(document.createTextNode('Sem WhatsApp, usar o telefone fixo')); sec.appendChild(lbl);
-  var dica = el('div', 'sub'); sec.appendChild(dica);
-  function aplicaFixo() { L.ganhoFixo = ck.checked; if (rotW && rotW.firstChild) rotW.firstChild.textContent = (ck.checked ? 'Telefone fixo (digite o número) *' : 'WhatsApp do contato *'); dica.textContent = ''; if (ck.checked) { dica.appendChild(document.createTextNode('Digite o número do fixo. Sem número, não dá para confirmar.')); if (fixo) { var bf = el('button', 'sec', 'Usar o fixo cadastrado: ' + (fixo.bonito || fixo.e164)); bf.type = 'button'; bf.style.cssText = 'margin-top:6px;min-height:44px'; bf.onclick = function () { var inp = sec.querySelector('#gf_' + kW.replace(/\./g, '_')); inp.value = mascFone(fixo.e164 || fixo.bonito); inp.dispatchEvent(new Event('input')); }; dica.appendChild(bf); } } }
-  ck.onchange = aplicaFixo; aplicaFixo();
+  var rotW = wW.querySelector('label'); var pp = pessoaPrincipal(L.lead) || {}; var tels = pp.telefones || []; var inpWW = wW.querySelector('input'); var dica = el('div', 'sub');
+  if (tels.length) { // o contato já tem telefone cadastrado (de qualquer tipo): pode seguir com ele, sem informar WhatsApp. Nada de telefone é enviado nesse caso.
+    var lbl = el('label', 'fixo-op'); lbl.style.cssText = 'display:flex;gap:8px;align-items:center;min-height:44px;font-weight:600'; var ck = el('input'); ck.type = 'checkbox'; ck.checked = !!L.ganhoFixo; ck.style.cssText = 'width:22px;height:22px'; lbl.appendChild(ck); lbl.appendChild(document.createTextNode('Seguir com o telefone fixo já cadastrado')); sec.appendChild(lbl); sec.appendChild(dica);
+    var aplicaFixo = function () {
+      L.ganhoFixo = ck.checked; dica.textContent = '';
+      if (ck.checked) { delete L.ganhoReq[kW]; delete L.edits[kW]; gravarRascunho(L); inpWW.value = fmtOrig(kW, valorOrig(L.lead, kW)); inpWW.disabled = true; if (rotW && rotW.firstChild) rotW.firstChild.textContent = 'WhatsApp do contato (opcional)'; dica.textContent = 'Vamos seguir com o telefone já cadastrado: ' + tels.map(function (t) { return t.bonito || t.e164; }).join(', ') + '. Nenhum número será alterado.'; }
+      else { L.ganhoReq[kW] = true; inpWW.disabled = false; if (rotW && rotW.firstChild) rotW.firstChild.textContent = 'WhatsApp do contato *'; }
+      atualizarGanhoBtn(L);
+    };
+    ck.onchange = aplicaFixo; if (L.ganhoFixo) aplicaFixo();
+  } else sec.appendChild(el('p', 'sub', 'Este contato não tem telefone cadastrado. Informe o WhatsApp para continuar.'));
   var linha = el('div', 'pessoa-tel'); sec.appendChild(linha);
   function atualizaWa() { linha.textContent = ''; var d = digFone(valorAtual(kW)); if (d.length >= 10 && d.length <= 11) { var fl = foneLinha(d, 'pessoa-tel', null, mascFone(d), true); if (fl) linha.appendChild(fl); } }
   var inpW = sec.querySelector('#gf_' + kW.replace(/\./g, '_')); if (inpW) inpW.addEventListener('input', atualizaWa); atualizaWa();
@@ -1804,22 +1813,24 @@ function atualizarGanhoBtn(L) {
 function textoAviso(a) { var t = typeof a === 'string' ? a : (a && (a.mensagem || a.campo)) || ''; if (/razao_social/.test(typeof a === 'string' ? a : (a && a.campo) || t)) return 'A razão social não foi gravada agora; o resto foi salvo.'; return t; }
 function notaAvisos(L, j) { var av = (j && Array.isArray(j.avisos) ? j.avisos : []).map(textoAviso).filter(Boolean); var box = L.refs && L.refs.estado; if (!box || !av.length) return; var n = el('div', 'sub aviso-discreto', av.join(' ')); box.appendChild(n); } // aviso discreto, nunca erro
 function chavesDe(j) { return (j && j.faltandoChaves) || (j && j.lead && j.lead.faltandoChaves) || null; }
-function setQualificando(L, on) { var a = $('leadAtualiza'); if (!a) return; if (on) { a.textContent = 'Qualificando... (enviando ao time de vendas)'; a.classList.remove('hide'); } else { a.textContent = 'Atualizando...'; a.classList.toggle('hide', !(L && L.atualizando)); } }
+function limpaQualificando() { var a = $('leadAtualiza'); if (!a) return; a.textContent = 'Atualizando...'; a.classList.toggle('hide', !(S.L && S.L.atualizando)); }
+function setQualificando(L, on) { var a = $('leadAtualiza'); if (!a) return; if (S.L !== L) { if (!on) limpaQualificando(); return; } if (on) { a.textContent = 'Qualificando... (enviando ao time de vendas)'; a.classList.remove('hide'); } else { a.textContent = 'Atualizando...'; a.classList.toggle('hide', !(L && L.atualizando)); } }
 async function confirmarGanho(L) {
   if (L.ocupado || S.L !== L || L.ganhoRodando) return;
   var bad = null; todosCampos(L.lead).forEach(function (f) { if (!Object.prototype.hasOwnProperty.call(L.edits, f.k)) return; var m = validarCampo(L, f); if (m && !bad) bad = f; });
   if (bad || faltaAinda(L).length || L.ganhoPessoa == null) { L.ganhoMarcar = true; renderGanho(L); setEstado(L, 'erro', L.ganhoPessoa == null ? 'Este lead não tem contato cadastrado. Cadastre a pessoa no Agendor e tente de novo.' : 'Preencha os campos obrigatórios (*) antes de confirmar.'); return; }
+  if (L.ganhoFixo && L.ganhoPessoa != null) delete L.edits['p.' + L.ganhoPessoa + '.whatsapp']; // seguindo com o telefone cadastrado: não envia telefone nenhum
   // fecha o pop-up na hora: o envio roda por trás (salvar campos e depois ganho), pela caixa de saída e com retry
   L.ganhoRodando = true; S.qualif[L.dealId] = true; $('modalGanho').classList.add('hide'); setQualificando(L, true); redesenharTudo();
   var r = await enviarCampos(L); // se a rede cair, fica guardado e o ganho entra na fila logo atrás
-  if (r === 'erro') { L.ganhoRodando = false; delete S.qualif[L.dealId]; setQualificando(L, false); redesenharTudo(); mostrarGanhoModal(L, true); return; } // reabre no ponto do problema (a mensagem e o conflito já estão no pop-up)
-  var j = await chamarLead(L, '/ganho', {}, null, { tipo: 'ganho', meta: { titulo: L.lead.titulo } }); if (!j) return;
-  if (j._enfileirado) { L.ganhoRodando = false; msg((L.lead.titulo || 'Lead') + ': sem conexão. A qualificação ficou guardada e sai sozinha quando a rede voltar.', 'aviso'); return; }
+  if (r === 'erro') { L.ganhoRodando = false; delete S.qualif[L.dealId]; setQualificando(L, false); redesenharTudo(); if (!S.token) return; mostrarGanhoModal(L, true); return; } // reabre no ponto do problema (a mensagem e o conflito já estão no pop-up)
+  var j = await chamarLead(L, '/ganho', {}, null, { tipo: 'ganho', meta: { titulo: L.lead.titulo } }); if (!j) { L.ganhoRodando = false; delete S.qualif[L.dealId]; return; } // 401: volta ao login
+  if (j._enfileirado) { L.ganhoRodando = false; L.modalAberto = false; msg((L.lead.titulo || 'Lead') + ': sem conexão. A qualificação ficou guardada e sai sozinha quando a rede voltar.', 'aviso'); return; }
   resolverGanho(L, j);
 }
 async function enviarGanho(L) { // só o POST /ganho (usado no "Tentar de novo" e no "Atualizar" do repasse)
   L.ocupado = true; atualizarGanhoBtn(L); setEstado(L, 'salvando', 'Conferindo e marcando como Ganho...'); S.qualif[L.dealId] = true; setQualificando(L, true);
-  var j = await chamarLead(L, '/ganho', {}, null, { tipo: 'ganho', meta: { titulo: L.lead.titulo } }); if (!j) return; L.ocupado = false;
+  var j = await chamarLead(L, '/ganho', {}, null, { tipo: 'ganho', meta: { titulo: L.lead.titulo } }); if (!j) { L.ocupado = false; delete S.qualif[L.dealId]; return; } L.ocupado = false;
   if (j._enfileirado) { setEstado(L, 'salvando', 'Sem conexão. A qualificação ficou guardada e sai sozinha.'); return; }
   resolverGanho(L, j);
 }
@@ -1901,7 +1912,11 @@ function addDiasISO(iso, n) { var d = new Date(iso + 'T12:00:00Z'); d.setUTCDate
 function diaSemanaISO(iso) { return new Date(iso + 'T12:00:00Z').getUTCDay(); } // 0 domingo ... 6 sábado
 function util(iso) { var w = diaSemanaISO(iso); return w === 6 ? addDiasISO(iso, 2) : w === 0 ? addDiasISO(iso, 1) : iso; }
 function proximaSegunda(iso) { var w = diaSemanaISO(iso); return addDiasISO(iso, ((8 - w) % 7) || 7); }
-function opcoesAdiar() { var h = hojeISO(); return [{ rot: 'Amanhã', v: 'amanha' }, { rot: 'Em 2 dias', v: util(addDiasISO(h, 2)) }, { rot: 'Segunda', v: proximaSegunda(h) }]; }
+function opcoesAdiar(h) { // sem opções repetidas: se duas caem no mesmo dia, aparece uma só (Amanhã e Segunda têm prioridade sobre Em 2 dias)
+  h = h || hojeISO(); var todas = [{ rot: 'Amanhã', v: 'amanha', d: util(addDiasISO(h, 1)) }, { rot: 'Em 2 dias', v: util(addDiasISO(h, 2)), d: util(addDiasISO(h, 2)) }, { rot: 'Segunda', v: proximaSegunda(h), d: proximaSegunda(h) }];
+  var vistos = {}, ficam = {}; ['Amanhã', 'Segunda', 'Em 2 dias'].forEach(function (r) { var o = todas.filter(function (x) { return x.rot === r; })[0]; if (!vistos[o.d]) { vistos[o.d] = true; ficam[r] = true; } });
+  return todas.filter(function (o) { return ficam[o.rot]; });
+}
 function prazoTxt(t) { return t.venc === 'amanha' ? 'amanhã' : t.venc ? dataBR(t.venc) : 'sem prazo'; }
 function linhaTarefa(L, t, destaque, pode) {
   var r = el('div', 'tarefa t2' + (destaque ? ' destaque' : '') + (t.atrasada ? ' atrasada' : ''));
@@ -1912,7 +1927,7 @@ function linhaTarefa(L, t, destaque, pode) {
     var ac = el('div', 'acoes-t'); var bc = el('button', 'forte', 'Concluir'); bc.type = 'button'; bc.onclick = function () { concluirComDesfazer(L, t); }; ac.appendChild(bc);
     var ba = el('button', 'sec', 'Adiar'); ba.type = 'button'; ba.setAttribute('aria-expanded', 'false'); ac.appendChild(ba); r.appendChild(ac);
     var op = el('div', 'adiar-op hide'); opcoesAdiar().forEach(function (o) { var b = el('button', 'sec', o.rot); b.type = 'button'; b.onclick = function () { acaoTarefa(L, '/tarefa/' + t.id + '/adiar', { para: o.v }, function (ld) { ld.tarefas.forEach(function (x) { if (x.id === t.id) { x.venc = o.v; x.atrasada = false; } }); }); }; op.appendChild(b); });
-    var bd = el('button', 'sec', 'Escolher data'); bd.type = 'button'; op.appendChild(bd); var ed = el('div', 'adiar-data hide'); var di = el('input'); di.type = 'date'; di.setAttribute('aria-label', 'Adiar para a data'); var ok = el('button', 'forte', 'Adiar para esta data'); ok.type = 'button'; ed.appendChild(di); ed.appendChild(ok);
+    var bd = el('button', 'sec', 'Escolher data'); bd.type = 'button'; op.appendChild(bd); var ed = el('div', 'adiar-data hide'); var di = el('input'); di.type = 'date'; di.min = addDiasISO(hojeISO(), 1); di.setAttribute('aria-label', 'Adiar para a data'); var ok = el('button', 'forte', 'Adiar para esta data'); ok.type = 'button'; ed.appendChild(di); ed.appendChild(ok);
     bd.onclick = function () { ed.classList.toggle('hide'); }; ok.onclick = function () { if (!di.value) { setEstado(L, 'erro', 'Escolha a data para adiar.'); return; } acaoTarefa(L, '/tarefa/' + t.id + '/adiar', { para: di.value }, function (ld) { ld.tarefas.forEach(function (x) { if (x.id === t.id) { x.venc = di.value; x.atrasada = false; } }); }); };
     ba.onclick = function () { var abre = op.classList.contains('hide'); op.classList.toggle('hide', !abre); if (!abre) ed.classList.add('hide'); ba.setAttribute('aria-expanded', abre ? 'true' : 'false'); };
     r.appendChild(op); r.appendChild(ed);
@@ -1929,8 +1944,8 @@ function secaoTarefas(L) {
   if (pode) {
     var dn = el('details', 'nova-tarefa'); dn.appendChild(el('summary', null, '+ Nova tarefa')); var n = el('div', 'nova-corpo');
     var lb = el('label', null, 'O que fazer'); lb.setAttribute('for', 'nt_texto'); var tx = el('input'); tx.id = 'nt_texto'; tx.type = 'text'; tx.setAttribute('aria-label', 'Texto da nova tarefa'); tx.setAttribute('enterkeyhint', 'done');
-    var qd = el('select'); qd.setAttribute('aria-label', 'Para quando'); var h = hojeISO(); [['hoje', 'Hoje'], ['amanha', 'Amanhã'], [util(addDiasISO(h, 2)), 'Em 2 dias'], [proximaSegunda(h), 'Segunda'], ['data', 'Escolher data']].forEach(function (o) { var op = el('option', null, o[1]); op.value = o[0]; qd.appendChild(op); });
-    var dv = el('input'); dv.type = 'date'; dv.setAttribute('aria-label', 'Data da nova tarefa'); dv.classList.add('hide'); qd.onchange = function () { dv.classList.toggle('hide', qd.value !== 'data'); };
+    var qd = el('select'); qd.setAttribute('aria-label', 'Para quando'); var h = hojeISO(); [['hoje', 'Hoje']].concat(opcoesAdiar(h).map(function (o) { return [o.v, o.rot]; }), [['data', 'Escolher data']]).forEach(function (o) { var op = el('option', null, o[1]); op.value = o[0]; qd.appendChild(op); });
+    var dv = el('input'); dv.type = 'date'; dv.min = hojeISO(); dv.setAttribute('aria-label', 'Data da nova tarefa'); dv.classList.add('hide'); qd.onchange = function () { dv.classList.toggle('hide', qd.value !== 'data'); };
     var cr = el('button', 'forte', 'Criar tarefa'); cr.type = 'button'; cr.onclick = function () {
       var venc = qd.value === 'data' ? dv.value : qd.value; if (!tx.value.trim() || !venc) { setEstado(L, 'erro', 'Escreva o que fazer e escolha o prazo.'); return; }
       var texto = tx.value.trim(); acaoTarefa(L, '/tarefa', { texto: texto, venc: venc }, function (lead) { lead.tarefas = (lead.tarefas || []).concat([{ id: 'novo', texto: texto, venc: venc === 'hoje' ? hojeISO() : venc, feita: false, atrasada: false, _salvando: true }]); });
@@ -1975,7 +1990,7 @@ async function carregarAguardando(silencioso, fresco) {
   if (!S.token) return; var meu = ++S.ag.seq; var j; try { j = await api('/aguardando-representante' + (fresco ? '?fresco=1' : '')); } catch (e) { j = { _status: 0 }; }
   if (j._status === 401) { sair('Senha não confere.'); return; } if (meu !== S.ag.seq) return;
   if (j.ok === false || j._status >= 400 || j._status === 0) { if (!silencioso) $('agAviso').textContent = msgErro(j); return; }
-  S.ag.itens = j.itens || []; S.ag.total = j.total != null ? j.total : S.ag.itens.length; S.ag.responsaveis = j.responsaveis || S.ag.responsaveis; S.ag.ocultos = {}; $('agAviso').textContent = ''; rotuloAguard(); if (S.ag.aberto) desenharAguardando();
+  S.ag.itens = j.itens || []; if (j.total == null || j.total <= S.ag.itens.length) soltaRepSumidos(S.ag.itens); S.ag.total = j.total != null ? j.total : S.ag.itens.length; S.ag.responsaveis = j.responsaveis || S.ag.responsaveis; S.ag.ocultos = {}; $('agAviso').textContent = ''; rotuloAguard(); if (S.ag.aberto) desenharAguardando();
 }
 function desenharAguardando() {
   var l = $('agLista'); l.textContent = ''; var itens = S.ag.itens.filter(function (i) { return !S.ag.ocultos[i.dealId]; });
@@ -1998,7 +2013,7 @@ async function atribuirAguardando(i, r) {
   if (!confirmaRep(i.titulo, r)) return; S.ag.ocultos[i.dealId] = true; desenharAguardando(); rotuloAguard(); $('agAviso').textContent = (i.titulo || 'Lead') + ': passando para ' + r.nome + '...';
   var j = await postRep(i.dealId, r); if (!j) return;
   if (j.cancelado) { delete S.ag.ocultos[i.dealId]; desenharAguardando(); rotuloAguard(); $('agAviso').textContent = 'Cancelado. Nada mudou.'; return; }
-  if (j.ok !== false && j._status < 300 && j.confirmado !== false) { $('agAviso').textContent = (i.titulo || 'Lead') + ' agora é de ' + ((j.dono && j.dono.nome) || r.nome) + (r.tipo === 'rep' ? '. A pessoa foi avisada.' : '.') + ' ✓'; }
+  if (j.ok !== false && j._status < 300 && j.confirmado !== false) { soltaRepPorArena(i.dealId); $('agAviso').textContent = (i.titulo || 'Lead') + ' agora é de ' + ((j.dono && j.dono.nome) || r.nome) + (r.tipo === 'rep' ? '. A pessoa foi avisada.' : '.') + ' ✓'; }
   else { delete S.ag.ocultos[i.dealId]; desenharAguardando(); rotuloAguard(); $('agAviso').textContent = (i.titulo || 'Lead') + ' voltou para a lista: ' + (j.ok !== false && j.confirmado === false ? 'o Agendor não confirmou a troca.' : msgErro(j)); }
 }
 function abrirAguardando() { S.ag.aberto = true; $('painelAguard').classList.remove('hide'); $('agLista').textContent = ''; desenharAguardando(); carregarAguardando(false); if (S.ag.timer) clearInterval(S.ag.timer); S.ag.timer = setInterval(function () { if (!document.hidden && S.ag.aberto) carregarAguardando(true); }, 60000); try { $('bFecharAguard').focus(); } catch (e) {} }
@@ -2014,8 +2029,8 @@ $('tok').onkeydown = function (e) { if (e.key === 'Enter') $('bEntrar').click();
 $('bTentar').onclick = function () { carregar(false, false); };
 $('bAtualizar').onclick = function () { carregar(false, true); };
 function apagarDadosLocais(incluiSaida) { // tudo que a página guardou neste aparelho (menos o tema e preferências de tela)
-  try { var ks = []; for (var i = 0; i < localStorage.length; i++) ks.push(localStorage.key(i)); ks.forEach(function (k) { if (k && (/^(sh_rasc_|sh_fila_|sh_abriu|sh_ultimo|sh_poll_ate|sh_ult_poll|sh_lider)/.test(k) || (incluiSaida && k === SAIDA_KEY))) { try { localStorage.removeItem(k); } catch (e) {} } }); } catch (e) {}
-  if (incluiSaida) S.saidaMem = null; S.pre = {}; atualizarSelo(); limparBaseSeVazia();
+  try { var ks = []; for (var i = 0; i < localStorage.length; i++) ks.push(localStorage.key(i)); ks.forEach(function (k) { if (k && (/^(sh_rasc_|sh_fila_|sh_abriu|sh_ultimo|sh_poll_ate|sh_ult_poll|sh_lider|sh_reppend|sh_recarga)/.test(k) || (incluiSaida && k === SAIDA_KEY))) { try { localStorage.removeItem(k); } catch (e) {} } }); } catch (e) {}
+  if (incluiSaida) S.saidaMem = null; S.pre = {}; S.repPend = {}; atualizarSelo(); limparBaseSeVazia();
 }
 function contarRascunhos() { // rascunhos digitados e não enviados (não vazios e dentro da validade)
   var n = 0; try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k.indexOf('sh_rasc_') === 0) { try { var o = JSON.parse(localStorage.getItem(k) || 'null'); if (o && o.e && Object.keys(o.e).length && Date.now() - (o.t || 0) < 3 * 86400000) n++; } catch (e) {} } } } catch (e) {}
@@ -2060,7 +2075,7 @@ document.addEventListener('keydown', function (e) {
 desenharTopo = seguro('desenharTopo', desenharTopo); desenharControle = seguro('desenharControle', desenharControle); desenharBlocos = seguro('desenharBlocos', desenharBlocos); desenharFila = seguro('desenharFila', desenharFila); desenharAguardando = seguro('desenharAguardando', desenharAguardando); renderLead = seguro('renderLead', renderLead); renderGanho = seguro('renderGanho', renderGanho);
 cartao = seguro('cartao', cartao, function (it) { var f = el('div', 'item'); f.appendChild(el('div', 'emp', (it && it.empresa) || 'Item')); f.appendChild(el('div', 'pas', 'Não consegui mostrar os detalhes deste item.')); return f; });
 cartaoAtrasado = seguro('cartaoAtrasado', cartaoAtrasado, function (g) { var f = el('div', 'item'); f.appendChild(el('div', 'emp', (g && g.empresa) || 'Item')); return f; });
-window.__shTeste = { enviarAcao: enviarAcao, versaoMaisNova: versaoMaisNova, iniciarContinuar: iniciarContinuar, continuarLaco: continuarLaco, fmtCampo: fmtCampo, fadeChips: fadeChips, REDE: REDE, lerSaida: lerSaida, processarSaida: processarSaida, reportarErro: reportarErro, aplicarStatus: aplicarStatus, hooks: { recarregar: null }, falhaDePagina: falhaDePagina, verificarVersao: verificarVersao, agoraMs: agoraMs, PAGINA_VERSAO: PAGINA_VERSAO, carregarAguardando: carregarAguardando, S: S, desenhar: desenhar, carregar: carregar, casaBusca: casaBusca, foneFmt: foneFmt, aceitar: aceitar, abrirLead: abrirLead, abrirGanho: abrirGanho, cnpjValido: cnpjValido, desenharFila: desenharFila, carregarFila: carregarFila, origemClasse: origemClasse, mascCnpj: mascCnpj };
+window.__shTeste = { opcoesAdiar: opcoesAdiar, enviarAcao: enviarAcao, versaoMaisNova: versaoMaisNova, iniciarContinuar: iniciarContinuar, continuarLaco: continuarLaco, fmtCampo: fmtCampo, fadeChips: fadeChips, REDE: REDE, lerSaida: lerSaida, processarSaida: processarSaida, reportarErro: reportarErro, aplicarStatus: aplicarStatus, hooks: { recarregar: null }, falhaDePagina: falhaDePagina, verificarVersao: verificarVersao, agoraMs: agoraMs, PAGINA_VERSAO: PAGINA_VERSAO, carregarAguardando: carregarAguardando, S: S, desenhar: desenhar, carregar: carregar, casaBusca: casaBusca, foneFmt: foneFmt, aceitar: aceitar, abrirLead: abrirLead, abrirGanho: abrirGanho, cnpjValido: cnpjValido, desenharFila: desenharFila, carregarFila: carregarFila, origemClasse: origemClasse, mascCnpj: mascCnpj };
 (async function () {
   var t = lsGet('sh_tok');
   if (t) { var ok = await entrar(t, true); if (ok) return; }
