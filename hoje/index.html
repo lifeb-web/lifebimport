@@ -611,7 +611,7 @@ function casaBusca(it, q) {
 
 // ---------- chamadas ----------
 // ---------- resiliência: rede com retry, disjuntor, caixa de saída, versão, relógio do servidor, telemetria ----------
-var PAGINA_VERSAO = '2026-10-28.2';
+var PAGINA_VERSAO = '2026-10-28.3';
 var REDE = { escala: 1, falhas: 0, ultima: 0, desvio: 0 };
 function dormir(ms) { return new Promise(function (r) { setTimeout(r, ms * REDE.escala); }); }
 function jitter(ms) { return ms * (0.5 + Math.random() * 0.5); }
@@ -838,7 +838,7 @@ function desenharControle(d) {
   var st = $('statusCtl'); st.textContent = '';
   function linha(t, v) { var p = el('div'); p.appendChild(document.createTextNode(t + ' ')); p.appendChild(el('b', null, String(v))); st.appendChild(p); }
   linha('Esperando você iniciar:', fo);
-  if (c.pendentes) { var p = el('div', 'pend'); p.textContent = 'Saindo aos poucos: faltam ' + c.pendentes + '. A Bia continua sozinha a cada 10 minutos, sem você clicar de novo.'; st.appendChild(p); }
+  if (c.pendentes || S.cont.rodando) { var p = el('div', 'pend'); p.setAttribute('role', 'status'); var nFalta = S.cont.rodando && S.cont.pendentes != null ? S.cont.pendentes : c.pendentes; p.textContent = S.cont.rodando ? 'Iniciando seus leads: faltam ' + nFalta + '.' : 'Faltam ' + nFalta + '. A Bia termina sozinha, você não precisa clicar de novo.'; st.appendChild(p); }
   if (d.filaAtencao) { var at = el('div', 'pend'); at.textContent = d.filaAtencao + (d.filaAtencao === 1 ? ' lead já tem negócio aberto em outro funil (ex.: com representante na Arena). Ele NÃO entra no "Iniciar todos". Abra e confira antes.' : ' leads já têm negócio aberto em outro funil (ex.: com representante na Arena). Eles NÃO entram no "Iniciar todos". Abra e confira antes.'); st.appendChild(at); }
   var ok = c.janelaAberta && c.cadenciaLive && !S.ocupado;
   ['bLiberar', 'bTodos', 'bFila'].forEach(function (id) { $(id).disabled = S.ocupado; });
@@ -966,7 +966,7 @@ function desenharBlocos() {
   cols.forEach(function (k) { bl.appendChild(k.c); var id = k.c.getAttribute('data-col'); if (rolagem[id]) k.l.scrollTop = rolagem[id]; });
 }
 function desenhar(d) {
-  S.dados = d; S.recebidoEm = Date.now(); desenharTopo(d); desenharControle(d);
+  S.dados = d; S.recebidoEm = Date.now(); desenharTopo(d); desenharControle(d); setTimeout(iniciarContinuar, 0);
   var av = $('avisos'); av.textContent = '';
   if (d.truncado) av.appendChild(el('div', 'aviso', 'Atenção: o Agendor tem tarefas demais hoje e a lista pode estar incompleta. Confira também direto no Agendor.'));
   desenharBlocos();
@@ -1045,7 +1045,7 @@ document.addEventListener('visibilitychange', function () {
 });
 function iniciarCanal() {
   if (S.canal || typeof BroadcastChannel === 'undefined') return;
-  try { S.canal = new BroadcastChannel('sh_hoje'); S.canal.onmessage = function (ev) { var t = ev && ev.data && ev.data.t; if (t === 'saida') { atualizarSelo(); limparBaseSeVazia(); } else if (t === 'dados' && S.token && S.tem && !document.hidden) carregar(true, 'tarefas'); }; } catch (e) { S.canal = null; }
+  try { S.canal = new BroadcastChannel('sh_hoje'); S.canal.onmessage = function (ev) { var t = ev && ev.data && ev.data.t; if (t === 'continuar') iniciarContinuar(); else if (t === 'saida') { atualizarSelo(); limparBaseSeVazia(); } else if (t === 'dados' && S.token && S.tem && !document.hidden) carregar(true, 'tarefas'); }; } catch (e) { S.canal = null; }
 }
 window.addEventListener('beforeunload', function (ev) { try { if (lerSaida().length || (S.L && S.L.ocupado)) { processarSaida({ keepalive: true, agora: true }); ev.preventDefault(); ev.returnValue = ''; return ''; } } catch (e) {} });
 window.addEventListener('storage', function (e) { if (e.key === SAIDA_KEY) { atualizarSelo(); limparBaseSeVazia(); } }); // a caixa de saída mudou em outra aba
@@ -1073,7 +1073,7 @@ async function entrar(token, silencioso) {
   if (haAbertoSemConfirmar()) iniciarPoll();
   return true;
 }
-function sair(msg) { S.L = null; S.ag.itens = []; S.ag.total = 0; S.ag.ocultos = {}; if (S.ag.timer) { clearInterval(S.ag.timer); S.ag.timer = null; } S.ag.aberto = false; $('painelAguard').classList.add('hide'); S.ocultos = {}; $('painelLead').classList.add('hide'); $('painelFila').classList.add('hide'); lsDel('sh_tok'); lsDel('sh_ultimo'); S.token = ''; S.tem = false; S.dados = null; S.vm = null; if (S.timer) clearInterval(S.timer); if (S.relogio) clearInterval(S.relogio); if (S.pollTimer) { clearInterval(S.pollTimer); S.pollTimer = null; } $('tok').value = ''; $('loginMsg').textContent = msg || ''; mostrar('s-login'); }
+function sair(msg) { S.cont.rodando = false; S.L = null; S.ag.itens = []; S.ag.total = 0; S.ag.ocultos = {}; if (S.ag.timer) { clearInterval(S.ag.timer); S.ag.timer = null; } S.ag.aberto = false; $('painelAguard').classList.add('hide'); S.ocultos = {}; $('painelLead').classList.add('hide'); $('painelFila').classList.add('hide'); lsDel('sh_tok'); lsDel('sh_ultimo'); S.token = ''; S.tem = false; S.dados = null; S.vm = null; if (S.timer) clearInterval(S.timer); if (S.relogio) clearInterval(S.relogio); if (S.pollTimer) { clearInterval(S.pollTimer); S.pollTimer = null; } $('tok').value = ''; $('loginMsg').textContent = msg || ''; mostrar('s-login'); }
 
 // ---------- iniciar ----------
 function novaChave() { var a = new Uint8Array(12); try { crypto.getRandomValues(a); } catch (e) { for (var i = 0; i < 12; i++) a[i] = Math.floor(Math.random() * 256); } return 'c' + Array.prototype.map.call(a, function (x) { return ('0' + x.toString(16)).slice(-2); }).join(''); }
@@ -1103,15 +1103,48 @@ async function liberar(corpo) {
     }
     if (j._status === 401) { sair('Senha não confere.'); return; }
     if (j._status === 202 || j.emAndamento) { msg(j.mensagem || 'Ainda processando. Atualize em instantes.', 'aviso'); return; } // mantém a MESMA chave: nunca inicia N de novo
-    if (j.ok) { S.idem = null; mostrarLiberados(j.liberados || []); await carregar(false, true); if (!$('painelFila').classList.contains('hide')) await carregarFila(); msg(j.mensagem, 'ok'); }
+    if (j.ok) { S.idem = null; mostrarLiberados(j.liberados || []); await carregar(false, true); if (!$('painelFila').classList.contains('hide')) await carregarFila(); if (podeContinuar()) { msg('Primeiro lote iniciado. A página continua sozinha: faltam ' + S.ctl.pendentes + '.', 'ok'); } else msg(j.mensagem, 'ok'); iniciarContinuar(); }
     else { msg((j.mensagem || 'Não consegui iniciar.') + ' Clique de novo para tentar outra vez.', 'erro'); if (j.erro && j.erro !== 'cadencia_ocupada' && j.erro !== 'ocupado' && j.erro !== 'kv_falhou') S.idem = null; }
   } finally { S.ocupado = false; if (S.dados) desenharControle(S.dados); }
+}
+// ---------- continuar a saída em lotes (uma chamada por vez, só uma aba conduz) ----------
+S.cont = { rodando: false, pendentes: null, parou: null };
+function podeContinuar() { var c = S.ctl; return !!(S.token && c && c.pendentes > 0 && c.janelaAberta && c.cadenciaLive && c.ligada && !S.doCache); }
+function iniciarContinuar() {
+  if (S.cont.rodando || !podeContinuar() || document.hidden) return;
+  if (!souLider()) { try { if (S.canal) S.canal.postMessage({ t: 'continuar' }); } catch (e) {} return; } // outra aba conduz: avisa e deixa com ela
+  continuarLaco();
+}
+async function continuarLaco() {
+  var C = S.cont; if (C.rodando) return; C.rodando = true; C.parou = null; C.pendentes = S.ctl ? S.ctl.pendentes : null; if (S.dados) desenharControle(S.dados);
+  var semProgresso = 0, espera = 3000, voltas = 0;
+  try {
+    while (S.token) {
+      souLider(); // renova o direito de conduzir
+      var j; try { j = await api('/continuar', {}); } catch (e) { j = { _status: 0, ok: false }; }
+      if (j._status === 401) { sair('Senha não confere.'); return; }
+      if (j.aguardando) { C.parou = 'aguardando'; break; } // fora do horário: não insiste
+      var progrediu = false;
+      if (j.ok !== false && j._status < 300 && typeof j.pendentes === 'number') {
+        C.pendentes = j.pendentes; if (S.dados && S.dados.controle) S.dados.controle.pendentes = j.pendentes; if (S.ctl) S.ctl.pendentes = j.pendentes;
+        if (j.pendentes === 0) { C.parou = 'fim'; break; }
+        progrediu = (j.liberadosAgora || 0) > 0 && !j.ocupado && !j.erroTemporario;
+      }
+      if (S.dados) desenharControle(S.dados);
+      if (progrediu) { semProgresso = 0; espera = 3000; if (++voltas % 5 === 0) carregar(true, 'tarefas'); continue; }
+      semProgresso++; if (semProgresso >= 8) { C.parou = 'seguranca'; break; }
+      await dormir(espera); espera = Math.min(15000, Math.round(espera * 1.5));
+    }
+  } finally {
+    C.rodando = false; var fim = C.parou === 'fim'; if (fim) C.pendentes = null;
+    if (S.token) { if (fim) { await carregar(false, true); if (!$('painelFila').classList.contains('hide')) carregarFila(); msg('Todos os leads foram iniciados ✓', 'ok'); } else if (S.dados) desenharControle(S.dados); }
+  }
 }
 $('qtd').onchange = function () { $('qtdOutro').classList.toggle('hide', $('qtd').value !== 'outro'); atualizaRotuloLiberar(); };
 $('qtdOutro').oninput = atualizaRotuloLiberar;
 function atualizaRotuloLiberar() { var n = qtdEscolhida(); $('bLiberar').textContent = n ? 'Iniciar os ' + n + ' primeiros da lista' : 'Iniciar os primeiros da lista'; }
 $('bLiberar').onclick = function () { var n = qtdEscolhida(); if (!n) { msg('Digite uma quantidade inteira maior que zero.', 'erro'); return; } if (!window.confirm('Iniciar os ' + n + ' primeiros da lista do Outbound agora? As tarefas do 1º contato são criadas na hora.' + avisoTarde())) return; liberar({ n: n }); };
-$('bTodos').onclick = function () { var fo = totalOut(S.dados); if (!window.confirm('ATENÇÃO: iniciar TODOS os ' + fo + ' do Outbound (menos os que estão em atenção)? Eles saem uns 15 a 20 por vez e a Bia termina sozinha nos próximos minutos.' + avisoTarde() + ' Confirma?')) return; liberar({ todos: true }); };
+$('bTodos').onclick = function () { var fo = totalOut(S.dados); if (!window.confirm('ATENÇÃO: iniciar TODOS os ' + fo + ' do Outbound (menos os que estão em atenção)? Eles saem em lotes, um depois do outro, até terminar.' + avisoTarde() + ' Confirma?')) return; liberar({ todos: true }); };
 
 // ---------- fila de espera (os dois funis): carrega a lista inteira UMA vez e filtra no cliente ----------
 var NIVEL = { 1: 'Inbound (urgente)', 2: 'Já conhecido', 3: 'Feira', 4: 'Bom sinal', 5: 'Comum' };
@@ -1838,7 +1871,7 @@ document.addEventListener('keydown', function (e) {
 desenharTopo = seguro('desenharTopo', desenharTopo); desenharControle = seguro('desenharControle', desenharControle); desenharBlocos = seguro('desenharBlocos', desenharBlocos); desenharFila = seguro('desenharFila', desenharFila); desenharAguardando = seguro('desenharAguardando', desenharAguardando); renderLead = seguro('renderLead', renderLead); renderGanho = seguro('renderGanho', renderGanho);
 cartao = seguro('cartao', cartao, function (it) { var f = el('div', 'item'); f.appendChild(el('div', 'emp', (it && it.empresa) || 'Item')); f.appendChild(el('div', 'pas', 'Não consegui mostrar os detalhes deste item.')); return f; });
 cartaoAtrasado = seguro('cartaoAtrasado', cartaoAtrasado, function (g) { var f = el('div', 'item'); f.appendChild(el('div', 'emp', (g && g.empresa) || 'Item')); return f; });
-window.__shTeste = { fmtCampo: fmtCampo, fadeChips: fadeChips, REDE: REDE, lerSaida: lerSaida, processarSaida: processarSaida, reportarErro: reportarErro, aplicarStatus: aplicarStatus, hooks: { recarregar: null }, falhaDePagina: falhaDePagina, verificarVersao: verificarVersao, agoraMs: agoraMs, PAGINA_VERSAO: PAGINA_VERSAO, carregarAguardando: carregarAguardando, S: S, desenhar: desenhar, carregar: carregar, casaBusca: casaBusca, foneFmt: foneFmt, aceitar: aceitar, abrirLead: abrirLead, abrirGanho: abrirGanho, cnpjValido: cnpjValido, desenharFila: desenharFila, carregarFila: carregarFila, origemClasse: origemClasse, mascCnpj: mascCnpj };
+window.__shTeste = { iniciarContinuar: iniciarContinuar, continuarLaco: continuarLaco, fmtCampo: fmtCampo, fadeChips: fadeChips, REDE: REDE, lerSaida: lerSaida, processarSaida: processarSaida, reportarErro: reportarErro, aplicarStatus: aplicarStatus, hooks: { recarregar: null }, falhaDePagina: falhaDePagina, verificarVersao: verificarVersao, agoraMs: agoraMs, PAGINA_VERSAO: PAGINA_VERSAO, carregarAguardando: carregarAguardando, S: S, desenhar: desenhar, carregar: carregar, casaBusca: casaBusca, foneFmt: foneFmt, aceitar: aceitar, abrirLead: abrirLead, abrirGanho: abrirGanho, cnpjValido: cnpjValido, desenharFila: desenharFila, carregarFila: carregarFila, origemClasse: origemClasse, mascCnpj: mascCnpj };
 (async function () {
   var t = lsGet('sh_tok');
   if (t) { var ok = await entrar(t, true); if (ok) return; }
