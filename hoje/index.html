@@ -369,6 +369,16 @@ details.mais{display:contents}
   #painelFila #bLiberarSel{flex:1 1 100%}
   .item .acoes{flex-wrap:nowrap}
 }
+/* painel do lead: abre na hora, próxima ação em destaque, ações fixas no rodapé */
+.proxima{border:1.5px solid var(--magenta);border-left-width:6px;border-radius:10px;background:var(--card);padding:10px 12px}
+.proxima h3{font-size:13px;font-weight:800;color:var(--magenta);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px}
+.proxima-txt{font-size:16px;font-weight:700;overflow-wrap:anywhere;margin-bottom:4px}
+.proxima button{margin-top:8px;min-height:44px;font-size:16px;width:100%}
+.esq-l{height:14px;border-radius:7px;margin:10px 0;background:linear-gradient(90deg,var(--track),var(--card),var(--track));background-size:200% 100%;animation:brilho 1.2s linear infinite}
+.esqueleto h3{margin-bottom:2px}
+details.sec-empresa>summary,details.dados-opcional>summary{cursor:pointer;font-weight:800;color:var(--purple);min-height:32px}
+#leadRodape .row{gap:6px} #leadRodape .row button{flex:1 1 auto}
+#leadAtualiza{font-size:13px}
 </style>
 </head>
 <body>
@@ -473,7 +483,7 @@ details.mais{display:contents}
 </section>
 
 <section id="painelLead" class="painel hide" role="dialog" aria-modal="true" aria-labelledby="leadTitulo">
-  <header><h2 id="leadTitulo" tabindex="-1">Lead</h2><button class="sec" id="bFecharLead" title="Fechar (Esc)">Fechar</button></header>
+  <header><h2 id="leadTitulo" tabindex="-1">Lead</h2><span id="leadAtualiza" class="sub hide" role="status" aria-live="polite">Atualizando...</span><button class="sec" id="bFecharLead" title="Fechar (Esc)">Fechar</button></header>
   <div class="barra" id="leadBarra"></div>
   <div class="corpo" id="leadCorpo"></div>
   <div class="rodape" id="leadRodape"></div>
@@ -580,9 +590,9 @@ function copiarTexto(txt, btn, alvo) {
 function foneLinha(fone, cls, wa, bonito, ligar) {
   var d = foneDigitos(fone); if (!d) return null;
   var linha = el('div', cls || 'fone');
-  var a = el('a', 'wa', bonito || foneFmt(fone)); a.href = (typeof wa === 'string' && wa.indexOf('https://wa.me/') === 0) ? wa : 'https://wa.me/' + d; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.title = 'Abrir conversa no WhatsApp'; a.setAttribute('aria-label', 'Abrir WhatsApp de ' + (bonito || foneFmt(fone)));
+  var a = el('a', 'wa', bonito || foneFmt(fone)); a.href = (typeof wa === 'string' && wa.indexOf('https://wa.me/') === 0) ? wa : 'https://wa.me/' + d; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.setAttribute('data-fk', 'fone-' + d + '-wa'); a.title = 'Abrir conversa no WhatsApp'; a.setAttribute('aria-label', 'Abrir WhatsApp de ' + (bonito || foneFmt(fone)));
   linha.appendChild(a);
-  var b = el('button', 'copiar', 'Copiar'); b.type = 'button'; b.setAttribute('aria-label', 'Copiar telefone ' + (bonito || foneFmt(fone))); b.onclick = function (ev) { ev.stopPropagation(); copiarTexto('+' + d, b, a); };
+  var b = el('button', 'copiar', 'Copiar'); b.type = 'button'; b.setAttribute('data-fk', 'fone-' + d + '-copiar'); b.setAttribute('aria-label', 'Copiar telefone ' + (bonito || foneFmt(fone))); b.onclick = function (ev) { ev.stopPropagation(); copiarTexto('+' + d, b, a); };
   linha.appendChild(b);
   if (ligar) { var lg = el('a', 'wa', 'Ligar'); lg.href = 'tel:+' + d; lg.setAttribute('aria-label', 'Ligar para ' + (bonito || foneFmt(fone))); lg.style.fontWeight = '600'; linha.appendChild(lg); }
   return linha;
@@ -611,7 +621,7 @@ function casaBusca(it, q) {
 
 // ---------- chamadas ----------
 // ---------- resiliência: rede com retry, disjuntor, caixa de saída, versão, relógio do servidor, telemetria ----------
-var PAGINA_VERSAO = '2026-10-28.3';
+var PAGINA_VERSAO = '2026-10-28.4';
 var REDE = { escala: 1, falhas: 0, ultima: 0, desvio: 0 };
 function dormir(ms) { return new Promise(function (r) { setTimeout(r, ms * REDE.escala); }); }
 function jitter(ms) { return ms * (0.5 + Math.random() * 0.5); }
@@ -691,7 +701,7 @@ function jaSalvo(corpo, j) { // 409 "conflito" em que o valor atual é exatament
   return j.conflitos.every(function (c) { var env = valorEnviado(corpo, c.campo); return env !== undefined && normCmp(c.campo, env) === normCmp(c.campo, c.atual); });
 }
 async function executar(e, keepalive) {
-  S.emVoo[e.id] = true;
+  S.emVoo[e.id] = true; invalidaLead(e.dealId);
   try {
     var j = await api('/lead/' + e.dealId + e.caminho, e.corpo || {}, null, null, { idem: e.id, keepalive: keepalive });
     if (e.tipo === 'campos' && jaSalvo(e.corpo, j)) return Object.assign({}, j, { ok: true, confirmado: true, _status: 200, naoConfirmados: [], _jaSalvo: true });
@@ -865,7 +875,7 @@ function linhaContato(li, it) {
 }
 function acoesCartao(li, dealId, link, aoAbrirAgendor, item) {
   var ac = el('div', 'acoes');
-  if (dealId != null) { var ab = el('button', 'abrir', 'Abrir'); ab.type = 'button'; ab.setAttribute('aria-label', 'Abrir o lead completo'); ab.onclick = function () { abrirLead(dealId, ab, item); }; ['mouseenter', 'touchstart', 'focus'].forEach(function (ev) { ab.addEventListener(ev, function () { prefetchLead(dealId); }, { passive: true }); }); ac.appendChild(ab); }
+  if (dealId != null) { var ab = el('button', 'abrir', 'Abrir'); ab.type = 'button'; ab.setAttribute('aria-label', 'Abrir o lead completo'); ab.onclick = function () { abrirLead(dealId, ab, item); }; ligaPrefetch(ab, dealId); ac.appendChild(ab); }
   if (typeof link === 'string' && /^https:\/\//.test(link)) { // só link https de verdade (nunca javascript: nem dado estranho)
     var a = el('a', 'bt', '↗ Agendor'); a.setAttribute('aria-label', 'Abrir no Agendor'); a.title = 'Abrir no Agendor'; a.href = link; a.target = '_blank'; a.rel = 'noopener noreferrer';
     if (aoAbrirAgendor) a.addEventListener('click', aoAbrirAgendor);
@@ -873,7 +883,7 @@ function acoesCartao(li, dealId, link, aoAbrirAgendor, item) {
   }
   li.appendChild(ac);
 }
-function empClicavel(li, nome, dealId, item) { var e = el('div', 'emp' + (dealId != null ? ' clic' : ''), nome); if (dealId != null) e.onclick = function () { abrirLead(dealId, e, item); }; li.appendChild(e); }
+function empClicavel(li, nome, dealId, item) { var e = el('div', 'emp' + (dealId != null ? ' clic' : ''), nome); if (dealId != null) { li.setAttribute('data-deal', String(dealId)); ligaPrefetch(e, dealId); e.onclick = function () { abrirLead(dealId, e, item); }; } li.appendChild(e); }
 function cartao(it, opts) {
   var abriu = opts.sem_abriu ? null : lerAbriu()[it.dealId]; var feito = it.feito || it.estado === 'feito';
   var li = el('div', 'item' + (feito ? ' feito' : '') + (opts.atras ? ' atrasado' : '') + (opts.inb && !feito ? ' inbitem' : '') + (abriu && !feito ? ' aberto' : ''));
@@ -1202,7 +1212,7 @@ function desenharFila() {
   $('filaResumo').textContent = S.fila.length ? (filtrando ? plural(S.filaVis.length, 'lead', 'leads') + ' de ' + S.fila.length : plural(S.fila.length, 'lead esperando você iniciar', 'leads esperando você iniciar')) + '.' : 'Ninguém esperando você iniciar.';
   if (!S.filaVis.length) l.appendChild(el('p', 'vazio', S.fila.length ? 'Nenhum lead com esse filtro.' : 'Ninguém esperando você iniciar neste funil.'));
   anexarEmBlocos(l, S.filaVis, function (i) {
-    var row = el('div', 'fi n' + i.nivel + (i.atencao ? ' atencao' : ''));
+    var row = el('div', 'fi n' + i.nivel + (i.atencao ? ' atencao' : '')); row.setAttribute('data-deal', String(i.dealId));
     var cb = el('input'); cb.type = 'checkbox'; cb.checked = !!S.sel[i.dealId]; cb.setAttribute('aria-label', 'Escolher ' + i.empresa); cb.onchange = function () { S.sel[i.dealId] = cb.checked; atualizaSel(); };
     row.appendChild(cb);
     var tx = el('div', 'tx'); var lo = linhaOrigem(i); if (lo) { lo.style.marginBottom = '3px'; tx.appendChild(lo); }
@@ -1215,7 +1225,7 @@ function desenharFila() {
     row.appendChild(tx);
     var col = el('div'); col.style.cssText = 'display:flex;flex-direction:column;gap:4px';
     var b = el('button', 'sec', 'Iniciar este'); b.onclick = function () { if (window.confirm('Iniciar ' + i.empresa + ' agora?' + (i.atencao ? ' Atenção: ' + i.aviso : '') + avisoTarde())) liberar({ dealIds: [i.dealId], funil: S.filaFunil }); }; b.disabled = S.ocupado || !podeLiberar();
-    var ab = el('button', 'sec', 'Abrir'); ab.type = 'button'; ab.setAttribute('aria-label', 'Abrir o lead ' + i.empresa); ab.onclick = function () { abrirLead(i.dealId, ab, i); };
+    var ab = el('button', 'sec', 'Abrir'); ab.type = 'button'; ab.setAttribute('aria-label', 'Abrir o lead ' + i.empresa); ab.onclick = function () { abrirLead(i.dealId, ab, i, { fila: true, funil: S.filaFunil }); }; ligaPrefetch(ab, i.dealId);
     col.appendChild(b); col.appendChild(ab); row.appendChild(col); return row;
   });
   atualizaSel();
@@ -1363,7 +1373,7 @@ function msgErro(j) {
 async function chamarLead(L, caminho, corpo, idAlvo, fila) {
   var alvo = idAlvo || L.dealId; var j;
   if (fila) j = await enviarAcao({ dealId: alvo, caminho: caminho, corpo: corpo || {}, tipo: fila.tipo, meta: fila.meta });
-  else j = await api('/lead/' + alvo + caminho, corpo || {}, null, null, { idem: novaChave() }); // x-idem: repetir a mesma chamada nunca grava duas vezes
+  else { invalidaLead(alvo); j = await api('/lead/' + alvo + caminho, corpo || {}, null, null, { idem: novaChave() }); invalidaLead(alvo); } // x-idem: repetir a mesma chamada nunca grava duas vezes
   if (j._status === 401) { sair('Senha não confere. O que você digitou continua guardado neste aparelho.'); return null; }
   return j;
 }
@@ -1377,37 +1387,59 @@ function setEstado(L, tipo, texto, retry) {
 function recomputarMostrar(L) { L.mostrar = todosCampos(L.lead).map(function (f) { return f.k; }); } // 'Dados do lead' mostra tudo, sempre opcional
 function limparEditsIguais(L) { Object.keys(L.edits).forEach(function (k) { var f = campoDeK(L.lead, k); if (f && normVal(k, L.edits[k]) === normVal(k, valorOrig(L.lead, k))) delete L.edits[k]; }); }
 
-function prefetchLead(id) { // ao passar o mouse/dedo: já busca (no máximo 1 em voo)
-  var pr = S.pre[id]; if (S.preVoo || (pr && Date.now() - pr.t < 20000) || !S.token) return; S.preVoo = true;
-  api('/lead/' + encodeURIComponent(id)).then(function (j) { if (j && j.ok && j.lead) S.pre[id] = { t: Date.now(), j: j }; }).catch(function () {}).then(function () { S.preVoo = false; });
+// ---- leitura do lead: cache em memória (stale-while-revalidate), uma leitura por lead, pré-carga no toque ----
+S.preProm = {}; S.inval = {};
+function invalidaLead(id) { delete S.pre[id]; delete S.preProm[id]; S.inval[id] = Date.now(); } // houve gravação ou conflito: o que está guardado não vale mais
+function guardaPre(id, j) { S.pre[id] = { t: Date.now(), j: j }; var ks = Object.keys(S.pre); if (ks.length > 30) { ks.sort(function (a, b) { return S.pre[a].t - S.pre[b].t; }); delete S.pre[ks[0]]; } }
+function buscarLead(id) { // várias chamadas para o mesmo lead reaproveitam a mesma leitura
+  if (S.preProm[id]) return S.preProm[id]; var t0 = Date.now();
+  var p = api('/lead/' + encodeURIComponent(id)).then(function (j) { if (j && j.ok && j.lead && !(S.inval[id] > t0)) guardaPre(id, j); return j; }, function () { return { _status: 0, ok: false }; }).then(function (j) { if (S.preProm[id] === p) delete S.preProm[id]; return j; });
+  S.preProm[id] = p; return p;
 }
-async function abrirLead(dealId, opener, item) {
+function prefetchLead(id) { // toque ou clique no botão: já começa a ler (no máximo 1 pré-carga em voo)
+  if (!S.token || S.preProm[id] || S.preVoo || (S.pre[id] && Date.now() - S.pre[id].t < 5000)) return; S.preVoo = true;
+  buscarLead(id).then(function () { S.preVoo = false; }, function () { S.preVoo = false; });
+}
+function ligaPrefetch(elm, id) { ['pointerdown', 'touchstart'].forEach(function (ev) { elm.addEventListener(ev, function () { prefetchLead(id); }, { passive: true }); }); }
+function redeBoa() { try { var cn = navigator.connection; if (cn && (cn.saveData || /(^|-)2g$/.test(cn.effectiveType || ''))) return false; } catch (e) {} return true; }
+function proximoDaColuna(opener) { var e = opener && opener.closest ? opener.closest('[data-deal]') : null; var n = e ? e.nextElementSibling : null; while (n && !n.getAttribute('data-deal')) n = n.nextElementSibling; return n ? Number(n.getAttribute('data-deal')) : null; }
+function prefetchProximo(L) { // abriu um lead: deixa o próximo da mesma coluna pronto (só com rede boa e sem gravação em andamento)
+  setTimeout(function () { if (S.L !== L || L.ocupado || Object.keys(S.emVoo).length || !redeBoa()) return; var id = proximoDaColuna(L.opener); if (id) prefetchLead(id); }, 800);
+}
+function marcaAtualiza(on) { var a = $('leadAtualiza'); if (a) a.classList.toggle('hide', !on); }
+function limpaTarefa(t) { return String(t || '').replace(/^\s*\[[^\]]*\]\s*/, '').replace(/\s*\|\s*[^|]*$/, ''); }
+function renderCardInfo(L) { // o que o cartão já sabe + esqueleto onde ainda falta: o painel abre na hora
+  var it = L.item || {}; var corpo = $('leadCorpo'); corpo.textContent = '';
+  var bar = $('leadBarra'); bar.textContent = ''; var so = seloOrigem(it.origem, true); if (so) bar.appendChild(so); if (it.etiqueta) bar.appendChild(el('span', 'etq', it.etiqueta));
+  if (it.pessoa || it.fone) { var s1 = el('div', 'secao'); s1.appendChild(el('h3', null, 'Pessoas e telefones')); if (it.pessoa) s1.appendChild(el('div', 'emp', it.pessoa)); var fl = foneLinha(it.fone, 'pessoa-tel', null, null, true); if (fl) s1.appendChild(fl); if (it.cidade) s1.appendChild(el('div', 'sub', it.cidade)); corpo.appendChild(s1); }
+  if (it.passoPendente) { var px = el('div', 'proxima'); px.appendChild(el('h3', null, 'Próxima ação')); px.appendChild(el('div', 'proxima-txt', it.passoPendente)); corpo.appendChild(px); }
+  ['Tarefas', 'Empresa e qualificação'].forEach(function (t, k) { var e = el('div', 'secao esqueleto'); e.setAttribute('aria-hidden', 'true'); e.appendChild(el('h3', null, t)); for (var q = 0; q < (k ? 3 : 2); q++) e.appendChild(el('div', 'esq-l')); corpo.appendChild(e); });
+}
+async function abrirLead(dealId, opener, item, ctx) {
   var painel = $('painelLead'); var mesmo = S.L && S.L.dealId === dealId && S.L.lead;
   var L = mesmo ? S.L : { dealId: dealId, lead: null, opcoes: {}, motivos: [], responsaveis: [], edits: lerRascunho(dealId), forcar: {}, origemCampo: {}, mostrar: [], todos: false, ocupado: false, estado: null, receita: null, receitaCnpj: '', perdidoAberto: false, refs: {} };
-  L.opener = opener || L.opener || null; S.L = L; painel.classList.remove('hide');
+  L.opener = opener || L.opener || null; L.item = item || L.item || null; L.ctx = ctx || L.ctx || null; S.L = L; painel.classList.remove('hide');
   try { if (location.hash !== '#lead=' + dealId) { history.pushState(null, '', '#lead=' + dealId); S.pushou = true; } } catch (e) {}
-  var pre = !mesmo && S.pre[dealId] && Date.now() - S.pre[dealId].t < 30000 ? S.pre[dealId].j : null;
-  if (pre) { aplicarResposta(L, pre); limparEditsIguais(L); recomputarMostrar(L); mesmo = true; }
-  $('leadTitulo').textContent = mesmo ? (L.lead.titulo || 'Lead') : ((item && item.empresa) || 'Carregando o lead...'); $('leadBarra').textContent = ''; $('leadRodape').textContent = '';
-  if (mesmo) renderLead();
-  else { // abre já com o que o cartão sabe e completa quando o GET chegar
-    var cp = $('leadCorpo'); cp.textContent = '';
-    if (item) { var so = seloOrigem(item.origem, true); if (so) $('leadBarra').appendChild(so); if (item.pessoa) cp.appendChild(el('div', 'emp', item.pessoa)); var fl = foneLinha(item.fone, 'pessoa-tel'); if (fl) cp.appendChild(fl); }
-    cp.appendChild(el('p', 'vazio', 'Buscando o resto no Agendor...'));
-  }
-  try { $('leadTitulo').focus(); } catch (e) {}
+  var cache = S.pre[dealId]; var fresco = cache && Date.now() - cache.t < 3000;
+  var pintouCache = false; if (!mesmo && cache) { aplicarResposta(L, cache.j); limparEditsIguais(L); recomputarMostrar(L); mesmo = true; pintouCache = true; }
+  $('leadTitulo').textContent = mesmo ? (L.lead.titulo || 'Lead') : ((L.item && L.item.empresa) || 'Carregando o lead...'); $('leadRodape').textContent = '';
+  if (mesmo) renderLead(); else renderCardInfo(L);
+  try { $('leadTitulo').focus({ preventScroll: true }); } catch (e) {}
+  prefetchProximo(L);
+  if (pintouCache && fresco && !S.preProm[dealId]) return; // acabou de ler: não precisa ler de novo
   await carregarLead(L, !!mesmo);
 }
 async function carregarLead(L, silencioso) {
-  var j; try { j = await api('/lead/' + encodeURIComponent(L.dealId)); } catch (e) { j = { _status: 0 }; }
+  L.atualizando = true; marcaAtualiza(true); var j; try { j = await buscarLead(L.dealId); } catch (e) { j = { _status: 0 }; }
+  if (S.L === L) { L.atualizando = false; marcaAtualiza(false); }
   if (j._status === 401) { sair('Senha não confere.'); return; }
   if (S.L !== L) return;
   if (!j.ok || !j.lead) {
-    if (silencioso) return;
-    var c = $('leadCorpo'); c.textContent = ''; var p = el('p', 'err', msgErro(j)); c.appendChild(p);
-    var b = el('button', null, 'Tentar de novo'); b.type = 'button'; b.onclick = function () { c.textContent = ''; c.appendChild(el('p', 'vazio', 'Buscando no Agendor...')); carregarLead(L, false); }; c.appendChild(b); try { b.focus(); } catch (e) {} return;
+    if (L.lead) { if (!silencioso) return; setEstado(L, 'erro', 'Não consegui atualizar agora. Estou mostrando o que já tinha.', function () { carregarLead(L, false); }); return; } // com dado já na tela, nunca esconde
+    renderCardInfo(L); var c = $('leadCorpo'); var cx = el('div', 'estado erro'); cx.setAttribute('role', 'alert'); cx.appendChild(el('span', null, msgErro(j) + ' Mostrando só o que o cartão sabe.'));
+    var b = el('button', null, 'Tentar de novo'); b.type = 'button'; b.style.marginLeft = '8px'; b.onclick = function () { renderCardInfo(L); carregarLead(L, false); }; cx.appendChild(b); c.insertBefore(cx, c.firstChild); try { b.focus({ preventScroll: true }); } catch (e) {} return;
   }
-  if (silencioso && (L.ocupado || Object.keys(L.edits).length)) { L.lead = L.ocupado ? L.lead : L.lead; if (L.ocupado) return; }
+  if (silencioso && L.ocupado) return;
   aplicarResposta(L, j); limparEditsIguais(L); recomputarMostrar(L); redesenhar(L);
 }
 function aplicarResposta(L, j) { if (j.lead) L.lead = j.lead; if (j.opcoes && typeof j.opcoes === 'object') { var op0 = Object.assign({}, L.opcoes); Object.keys(j.opcoes).forEach(function (k) { if (Array.isArray(j.opcoes[k]) && j.opcoes[k].length) op0[k] = j.opcoes[k]; }); L.opcoes = op0; } if (j.motivosPerda) L.motivos = j.motivosPerda; if (j.responsaveis) L.responsaveis = j.responsaveis; }
@@ -1424,6 +1456,7 @@ function acoesDe(L) { return (L.lead && L.lead.acoes) || {}; }
 function redesenhar(L) { if (L.modalAberto) renderGanho(L); else renderLead(); }
 function renderLead() {
   var L = S.L; if (!L || !L.lead) return; var lead = L.lead; var corpo = $('leadCorpo'); var rol = corpo.scrollTop;
+  var af = document.activeElement, afSel = null, afKey = null; if (af && corpo.contains(af)) { afKey = af.getAttribute('data-fk') ? '[data-fk="' + af.getAttribute('data-fk') + '"]' : (af.id ? '#' + af.id : null); try { afSel = [af.selectionStart, af.selectionEnd]; } catch (e) {} } // guarda o foco para não perdê-lo quando o dado completo chega
   $('leadTitulo').textContent = lead.titulo || 'Lead';
   var bar = $('leadBarra'); bar.textContent = '';
   var sel = seloOrigem((lead.origemDeal && lead.origemDeal.nome) || lead.origemMae || '', true); if (sel) bar.appendChild(sel);
@@ -1440,9 +1473,10 @@ function renderLead() {
     if (!(p.telefones || []).length) bx.appendChild(el('div', 'sub', 'Sem telefone.'));
     s4.appendChild(bx);
   }); corpo.appendChild(s4);
+  var pxa = proximaAcaoEl(L); if (pxa) corpo.appendChild(pxa);
   corpo.appendChild(secaoTarefas(L)); // o que fazer agora vem logo depois de quem ligar
   // 2) empresa
-  var emp = lead.empresa || {}; var s3 = el('div', 'secao'); s3.appendChild(el('h3', null, 'Empresa')); var dl = el('dl');
+  var emp = lead.empresa || {}; var s3 = el('details', 'secao sec-empresa'); s3.open = lead.completo === false; s3.appendChild(el('summary', null, 'Empresa e qualificação')); var dl = el('dl');
   function par(t, v) { if (!v) return; dl.appendChild(el('dt', null, t)); dl.appendChild(el('dd', null, v)); }
   if (emp.nome && emp.nome !== lead.titulo) par('Empresa', emp.nome); par('CNPJ', fmtCnpj(emp.cnpj)); par('Segmento', emp.segmento); par('Endereço', enderecoTxt(emp.endereco));
   CAMPOS.forEach(function (f) { if (f.op && f.k !== 'e.segmento') par(f.rot, (emp.campos || {})[f.op]); });
@@ -1451,7 +1485,7 @@ function renderLead() {
   // 4) Dados do lead: edição OPCIONAL (nada é cobrado aqui; quem cobra é o pop-up de Ganho)
   var editavel = ac.campos && lead.status !== 'perdido';
   if (editavel) {
-    var dt = el('details', 'secao'); dt.open = !!L.dadosAberto; dt.addEventListener('toggle', function () { L.dadosAberto = dt.open; });
+    var dt = el('details', 'secao dados-opcional'); dt.open = L.dadosAberto != null ? !!L.dadosAberto : Object.keys(L.edits).length > 0; dt.addEventListener('toggle', function () { L.dadosAberto = dt.open; });
     var sm = el('summary', null, 'Dados do lead (opcional)'); sm.style.cssText = 'cursor:pointer;font-weight:800;color:var(--purple);min-height:32px'; dt.appendChild(sm);
     dt.appendChild(el('p', 'sub', 'Se já souber, pode ir completando. Nada aqui é obrigatório.'));
     L.refs.receita = el('div'); dt.appendChild(L.refs.receita); renderReceita(L);
@@ -1459,10 +1493,22 @@ function renderLead() {
     corpo.appendChild(dt);
   }
   // 5) ganho e representante (só se o servidor liga)
-  if (lead.status === 'andamento' && ac.ganho) corpo.appendChild(secaoGanho(L));
   if (ac.representante) corpo.appendChild(secaoRep(L));
   if (lead.link && /^https:\/\//.test(lead.link)) { var pl = el('p', 'sub'); var a = el('a', null, 'Abrir no Agendor (só em último caso)'); a.href = lead.link; a.target = '_blank'; a.rel = 'noopener noreferrer'; pl.appendChild(a); corpo.appendChild(pl); }
   corpo.scrollTop = rol; renderRodape(L);
+  if (afKey) { var nf = corpo.querySelector(afKey); if (nf) { try { nf.focus({ preventScroll: true }); if (afSel && afSel[0] != null && nf.setSelectionRange) nf.setSelectionRange(afSel[0], afSel[1]); } catch (e) {} } corpo.scrollTop = rol; }
+}
+function proximaAcaoEl(L) { // o que fazer agora, em destaque, com um botão principal só
+  var lead = L.lead; if (lead.status !== 'andamento') return null; var box = el('div', 'proxima'); box.appendChild(el('h3', null, 'Próxima ação')); var pode = !!acoesDe(L).tarefas;
+  if (L.ctx && L.ctx.fila) {
+    box.appendChild(el('div', 'proxima-txt', 'Este lead ainda não foi iniciado. Ao iniciar, a cadência começa e as tarefas do 1º contato são criadas.'));
+    var bi = el('button', 'forte', 'Iniciar este lead'); bi.type = 'button'; bi.onclick = function () { if (!window.confirm('Iniciar ' + (lead.titulo || 'este lead') + ' agora?' + avisoTarde())) return; liberar({ dealIds: [L.dealId], funil: L.ctx.funil || lead.funil || 'outbound' }); fecharLead(); }; box.appendChild(bi); return box;
+  }
+  var ts = (lead.tarefas || []).filter(function (t) { return !t.feita && !t._salvando; }).sort(function (a, b) { return (b.atrasada ? 1 : 0) - (a.atrasada ? 1 : 0) || String(a.venc).localeCompare(String(b.venc)); }); var t = ts[0];
+  if (!t) { box.appendChild(el('div', 'proxima-txt', 'Nenhuma tarefa aberta agora.')); return box; }
+  box.appendChild(el('div', 'proxima-txt', limpaTarefa(t.texto))); box.appendChild(el('div', 'sub', (t.atrasada ? 'Atrasada, venceu em ' : 'Vence ') + (t.venc === 'amanha' ? 'amanhã' : dataBR(t.venc))));
+  if (pode) { var bc = el('button', 'forte', 'Concluir esta tarefa'); bc.type = 'button'; bc.onclick = function () { acaoTarefa(L, '/tarefa/' + t.id + '/concluir', {}, function (ld) { ld.tarefas.forEach(function (x) { if (x.id === t.id) x.feita = true; }); }); }; box.appendChild(bc); }
+  return box;
 }
 function campoEl(L, f, pref, req, marcar) {
   var wrap = el('div', 'campo'); var id = pref + f.k.replace(/\./g, '_'); var lb = el('label', null, f.rot + (req ? ' *' : '')); lb.setAttribute('for', id);
@@ -1544,6 +1590,7 @@ function renderRodape(L) {
   var andamento = lead.status === 'andamento';
   var row = el('div', 'row');
   if (ac.campos && andamento) { L.refs.salvar = el('button', 'forte', 'Salvar'); L.refs.salvar.type = 'button'; L.refs.salvar.onclick = function () { salvarCampos(L); }; row.appendChild(L.refs.salvar); atualizarSalvar(L); }
+  if (ac.ganho && andamento) { var bg = el('button', 'sec', 'Marcar como Ganho / Qualificado'); bg.type = 'button'; bg.onclick = function () { abrirGanho(L, L.lead.faltando, false, L.lead.faltandoChaves); }; row.appendChild(bg); }
   if (ac.perdido && andamento) { var bp = el('button', 'sec', 'Marcar como Perdido'); bp.type = 'button'; bp.setAttribute('aria-expanded', L.perdidoAberto ? 'true' : 'false'); bp.onclick = function () { L.perdidoAberto = !L.perdidoAberto; renderRodape(L); }; row.appendChild(bp); }
   if (L.perdidoAberto && ac.perdido && andamento) {
     var f = el('div', 'secao'); f.style.marginTop = '8px'; f.appendChild(el('h3', null, 'Por que perdeu?'));
@@ -1559,7 +1606,7 @@ function renderRodape(L) {
 async function salvarCampos(L) { // botão Salvar do painel
   if (L.ocupado || S.L !== L) return;
   var bad = null; todosCampos(L.lead).forEach(function (f) { if (!Object.prototype.hasOwnProperty.call(L.edits, f.k)) return; var m = validarCampo(L, f); if (m && !bad) bad = f; });
-  if (bad) { renderLead(); var inp = document.getElementById('lf_' + bad.k.replace(/\./g, '_')); var dt = $('leadCorpo').querySelector('details'); if (dt) dt.open = true; if (inp) { try { inp.focus(); inp.dispatchEvent(new Event('blur')); } catch (e) {} } setEstado(L, 'erro', 'Confira o campo marcado em vermelho antes de salvar.'); return; }
+  if (bad) { renderLead(); var inp = document.getElementById('lf_' + bad.k.replace(/\./g, '_')); var dt = $('leadCorpo').querySelector('details.dados-opcional'); if (dt) { dt.open = true; L.dadosAberto = true; } if (inp) { try { inp.focus(); inp.dispatchEvent(new Event('blur')); } catch (e) {} } setEstado(L, 'erro', 'Confira o campo marcado em vermelho antes de salvar.'); return; }
   await enviarCampos(L);
 }
 // grava só o que mudou, com atualização otimista; devolve 'ok' | 'erro' | 'nada'
@@ -1596,6 +1643,7 @@ function fmtCampo(campo, v) { // só para mostrar (nunca altera o que é enviado
   return v;
 }
 function mostrarConflitos(L, j) {
+  invalidaLead(L.dealId);
   var itens = j.conflitos.map(function (c) { return { campo: c.campo, atual: c.atual == null ? '' : String(c.atual), k: campoDeApi(L, c.campo), escolha: null }; }).filter(function (c) { return c.k; });
   setEstado(L, 'erro', itens.length === 1 ? 'Alguém alterou um campo enquanto você editava. Nada foi salvo.' : 'Alguém alterou ' + itens.length + ' campos enquanto você editava. Nada foi salvo.');
   var box = L.refs && L.refs.estado; if (!box) return; var lista = el('div', 'conflitos'); box.appendChild(lista);
@@ -1745,7 +1793,7 @@ function secaoTarefas(L) {
   var s = el('div', 'secao'); s.appendChild(el('h3', null, 'Tarefas')); var ts = L.lead.tarefas || []; var pode = !!acoesDe(L).tarefas && L.lead.status === 'andamento';
   if (!ts.length) s.appendChild(el('p', 'sub', 'Nenhuma tarefa aberta.'));
   ts.forEach(function (t) {
-    var r = el('div', 'tarefa' + (t.feita ? ' feita' : '') + (t.atrasada ? ' atrasada' : '')); r.appendChild(el('span', 'tt', t.texto)); r.appendChild(el('span', 'dt', (t.venc === 'amanha' ? 'amanhã' : dataBR(t.venc)) + (t.feita ? ' · feita' : t.atrasada ? ' · atrasada' : '') + (t._salvando ? ' · salvando...' : '')));
+    var r = el('div', 'tarefa' + (t.feita ? ' feita' : '') + (t.atrasada ? ' atrasada' : '')); r.appendChild(el('span', 'tt', limpaTarefa(t.texto) || t.texto)); r.appendChild(el('span', 'dt', (t.venc === 'amanha' ? 'amanhã' : dataBR(t.venc)) + (t.feita ? ' · feita' : t.atrasada ? ' · atrasada' : '') + (t._salvando ? ' · salvando...' : '')));
     if (pode && !t.feita && !t._salvando) {
       var c = el('button', 'sec', 'Concluir'); c.type = 'button'; c.onclick = function () { acaoTarefa(L, '/tarefa/' + t.id + '/concluir', {}, function (lead) { lead.tarefas.forEach(function (x) { if (x.id === t.id) x.feita = true; }); }); }; r.appendChild(c);
       var am = el('button', 'sec', 'Amanhã'); am.type = 'button'; am.title = 'Adiar para o próximo dia útil'; am.onclick = function () { acaoTarefa(L, '/tarefa/' + t.id + '/adiar', { para: 'amanha' }, function (lead) { lead.tarefas.forEach(function (x) { if (x.id === t.id) { x.venc = 'amanha'; x.atrasada = false; } }); }); }; r.appendChild(am);
