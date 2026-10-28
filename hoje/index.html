@@ -286,9 +286,20 @@ a.subir{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:6
 @media(max-width:480px){.item .acoes{flex-wrap:nowrap}.item .acoes button.abrir{flex:1;min-height:44px} .item .acoes a.bt{width:auto;min-height:44px;padding:1px 12px} a.subir{width:100%;justify-content:center;min-height:44px}}
 .rep-op{display:block;width:100%;margin-bottom:6px;text-align:left}
 .ag-sel{width:100%;min-height:44px;font-size:16px;margin-top:4px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--card);color:var(--text)}
+/* resiliência */
+#faixas{position:sticky;top:0;z-index:95}
+.faixa{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 10px;padding:8px 12px;border-radius:10px;border:1px solid var(--amber);background:var(--amber-bg);color:var(--amber);font-weight:700}
+.faixa.erro{border-color:var(--red);background:var(--red-bg);color:var(--red)} .faixa.ok{border-color:var(--green-bd);background:var(--green-bg);color:var(--green)}
+.faixa button{min-height:36px}
+.selo{display:inline-block;padding:4px 12px;border-radius:999px;background:var(--amber-bg);color:var(--amber);border:1.5px solid var(--amber);font-weight:800;font-size:13px}
+.col-h .conf.velho{color:var(--amber);font-weight:700}
+.conflitos{margin-top:6px;display:flex;flex-direction:column;gap:6px;font-weight:600} .conflito{display:flex;gap:6px;align-items:center;flex-wrap:wrap;color:var(--text)}
+@media(max-width:700px){#busca,#filaBusca,#tok,#ordem,#filaFunil,#qtd,#qtdOutro{font-size:16px!important}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
+<div id="faixas" aria-live="polite"></div>
 
 <section id="s-login" class="centro hide">
   <div class="card">
@@ -324,6 +335,7 @@ a.subir{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:6
       <img src="/logo-lifeb.png" alt="Life B">
       <div><div class="titulo">Hoje do SDR</div><div class="relogio" id="relogio">--:--</div></div>
       <div class="chips" id="chips"></div>
+      <span id="seloSaida" class="selo hide" role="status" aria-live="polite"></span>
       <a class="subir" id="bSubir" href="https://projetojlbv.com.br/lista/" target="_blank" rel="noopener noreferrer" title="Subir uma lista de leads (a mesma senha)">⬆ Subir lista</a>
       <div class="espaco"></div>
       <div style="text-align:right">
@@ -410,9 +422,9 @@ a.subir{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:6
 var API = 'https://gs-agendor-worker.robert131196.workers.dev/sdr-hoje';
 var API_LISTA = 'https://gs-agendor-worker.robert131196.workers.dev/sdr-lista'; // só para consultar o CNPJ na Receita (mesma senha)
 var $ = function (id) { return document.getElementById(id); };
-var S = { token: '', timer: null, relogio: null, pollTimer: null, carregando: false, reqSeq: 0, ctrlCarregar: null, tem: false, dados: null, vm: null, ctl: null, fila: [], filaVis: [], filaTotais: {}, filaFunil: 'outbound', sel: {}, idem: null, ocupado: false, funil: 'todos', msgFixa: false, expande: {}, conferindo: false, ocultoDesde: 0, ocultos: {}, filaOrigem: '', L: null };
+var S = { token: '', timer: null, relogio: null, pollTimer: null, carregando: false, reqSeq: 0, ctrlCarregar: null, tem: false, dados: null, vm: null, ctl: null, fila: [], filaVis: [], filaTotais: {}, filaFunil: 'outbound', sel: {}, idem: null, ocupado: false, funil: 'todos', msgFixa: false, expande: {}, conferindo: false, ocultoDesde: 0, ocultos: {}, filaOrigem: '', L: null, emVoo: {}, saidaMem: null, abaId: 'a' + Math.random().toString(36).slice(2, 10), canal: null, pre: {}, doCache: false, saidaTimer: null, processando: false };
 function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
-function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { try { var vel = ['sh_ultimo', 'sh_fila_outbound', 'sh_fila_inbound', 'sh_abriu']; for (var i = 0; i < vel.length; i++) { if (vel[i] !== k && localStorage.getItem(vel[i]) != null) { localStorage.removeItem(vel[i]); try { localStorage.setItem(k, v); return; } catch (e2) {} } } } catch (e3) {} } } // cota cheia: apaga o cache mais velho e tenta de novo (rascunhos e caixa de saída nunca são apagados)
 function lsDel(k) { try { localStorage.removeItem(k); } catch (e) {} }
 function mostrar(id) { ['s-login', 's-off', 's-erro', 's-dia'].forEach(function (x) { $(x).classList.toggle('hide', x !== id); }); }
 function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; } // tudo entra por textContent: nome de pessoa com HTML/emoji nunca vira código
@@ -432,7 +444,7 @@ function alternarTema() { var t = document.documentElement.getAttribute('data-te
 // ---------- relógio (horário de Brasília) ----------
 function partesBRT(d) {
   try {
-    var p = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).formatToParts(d || new Date());
+    var p = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).formatToParts(d || new Date(agoraMs()));
     var h = 0, m = 0, s = 0; p.forEach(function (x) { if (x.type === 'hour') h = Number(x.value) % 24; if (x.type === 'minute') m = Number(x.value); if (x.type === 'second') s = Number(x.value); });
     return { h: h, m: m, s: s };
   } catch (e) { var dd = d || new Date(); return { h: dd.getHours(), m: dd.getMinutes(), s: dd.getSeconds() }; }
@@ -489,13 +501,15 @@ function copiarTexto(txt, btn, alvo) {
   fim(fallbackCopia(txt));
 }
 // linha com o número bonito (link do WhatsApp, abre em nova aba) + botão copiar
-function foneLinha(fone, cls, wa, bonito) {
+function foneLinha(fone, cls, wa, bonito, ligar) {
   var d = foneDigitos(fone); if (!d) return null;
   var linha = el('div', cls || 'fone');
   var a = el('a', 'wa', bonito || foneFmt(fone)); a.href = (typeof wa === 'string' && wa.indexOf('https://wa.me/') === 0) ? wa : 'https://wa.me/' + d; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.title = 'Abrir conversa no WhatsApp'; a.setAttribute('aria-label', 'Abrir WhatsApp de ' + (bonito || foneFmt(fone)));
   linha.appendChild(a);
   var b = el('button', 'copiar', 'Copiar'); b.type = 'button'; b.setAttribute('aria-label', 'Copiar telefone ' + (bonito || foneFmt(fone))); b.onclick = function (ev) { ev.stopPropagation(); copiarTexto('+' + d, b, a); };
-  linha.appendChild(b); return linha;
+  linha.appendChild(b);
+  if (ligar) { var lg = el('a', 'wa', 'Ligar'); lg.href = 'tel:+' + d; lg.setAttribute('aria-label', 'Ligar para ' + (bonito || foneFmt(fone))); lg.style.fontWeight = '600'; linha.appendChild(lg); }
+  return linha;
 }
 function dataBR(s, comAno) { s = String(s || ''); if (!/^\d{4}-\d{2}-\d{2}/.test(s)) return s; return s.slice(8, 10) + '/' + s.slice(5, 7) + (comAno ? '/' + s.slice(0, 4) : ''); }
 function fmtCnpj(c) { var d = soDigitos(c); return d.length === 14 ? d.slice(0, 2) + '.' + d.slice(2, 5) + '.' + d.slice(5, 8) + '/' + d.slice(8, 12) + '-' + d.slice(12) : String(c || ''); }
@@ -520,16 +534,160 @@ function casaBusca(it, q) {
 }
 
 // ---------- chamadas ----------
-async function api(path, corpo, ext, base) {
-  var ctrl = ext || new AbortController(); var tm = setTimeout(function () { ctrl.abort(); }, corpo ? 90000 : 60000);
-  try {
-    var init = { method: corpo ? 'POST' : 'GET', headers: { 'Authorization': 'Bearer ' + S.token }, signal: ctrl.signal };
-    if (corpo) { init.headers['Content-Type'] = 'application/json'; init.body = JSON.stringify(corpo); }
-    var r = await fetch((base || API) + path, init);
-    var j = await r.json().catch(function () { return {}; });
-    j._status = r.status; return j;
-  } finally { clearTimeout(tm); }
+// ---------- resiliência: rede com retry, disjuntor, caixa de saída, versão, relógio do servidor, telemetria ----------
+var PAGINA_VERSAO = '2026-10-27.1';
+var REDE = { escala: 1, falhas: 0, ultima: 0, desvio: 0 };
+function dormir(ms) { return new Promise(function (r) { setTimeout(r, ms * REDE.escala); }); }
+function jitter(ms) { return ms * (0.5 + Math.random() * 0.5); }
+function agoraMs() { return Date.now() + REDE.desvio; } // horário do servidor (o relógio do aparelho pode estar errado)
+function disjuntorAberto() { return REDE.falhas >= 5; }
+function faixa(id, texto, tipo, botao) { // faixa discreta e única por id (rede, versão, erro)
+  var box = $('faixas'); if (!box) return; var f = document.getElementById('fx_' + id);
+  if (!texto) { if (f) f.remove(); return; }
+  if (!f) { f = el('div', 'faixa'); f.id = 'fx_' + id; box.appendChild(f); }
+  f.className = 'faixa ' + (tipo || ''); f.setAttribute('role', tipo === 'erro' ? 'alert' : 'status'); f.textContent = texto;
+  if (botao) { var b = el('button', 'sec', botao.rot); b.type = 'button'; b.onclick = botao.acao; f.appendChild(b); }
 }
+function marcaRede(ok) {
+  if (ok) { REDE.falhas = 0; faixa('rede', ''); } else { REDE.falhas++; if (disjuntorAberto()) faixa('rede', 'Sem conexão estável. Seus dados estão salvos neste aparelho. Tentando de novo a cada 15 segundos.', 'aviso'); else if (REDE.falhas >= 2) faixa('rede', 'Sem conexão, tentando de novo...', 'aviso'); }
+}
+// uma chamada com timeout, tentativas e espera crescente. Só repete o que é seguro: GET, ou POST com x-idem (o servidor devolve a mesma resposta sem repetir a escrita).
+async function api(path, corpo, ext, base, opt) {
+  opt = opt || {}; var seguro = !corpo || !!opt.idem; var max = seguro ? 3 : 1; var ultimo = null;
+  if (disjuntorAberto() && Date.now() - REDE.ultima < 15000 * REDE.escala && !opt.furaDisjuntor) return { _status: 0, ok: false, _disjuntor: true, mensagem: 'Sem conexão no momento. Tentando de novo em instantes.' };
+  for (var t = 0; t < max; t++) {
+    if (ext && ext.signal && ext.signal.aborted) throw Object.assign(new Error('abortado'), { name: 'AbortError' });
+    REDE.ultima = Date.now(); var c = new AbortController(); var estourou = false; var aoAbortar = function () { c.abort(); };
+    if (ext && ext.signal) ext.signal.addEventListener('abort', aoAbortar);
+    var tm = setTimeout(function () { estourou = true; c.abort(); }, (opt.timeout || (!corpo ? 15000 : opt.idem ? 30000 : 90000)) * REDE.escala);
+    var espera = 0, j;
+    try {
+      var init = { method: corpo ? 'POST' : 'GET', headers: { 'Authorization': 'Bearer ' + S.token }, signal: c.signal };
+      if (opt.keepalive) init.keepalive = true;
+      if (corpo) { init.headers['Content-Type'] = 'application/json'; init.body = JSON.stringify(corpo); }
+      if (opt.idem) init.headers['x-idem'] = opt.idem;
+      var r = await fetch((base || API) + path, init); var quebrado = false;
+      j = await r.json().catch(function () { quebrado = true; return {}; }); if (!j || typeof j !== 'object') { j = {}; quebrado = true; }
+      j._status = r.status; if (quebrado) { j._quebrado = true; if (r.status < 300) { j.ok = false; j.mensagem = j.mensagem || 'O servidor respondeu algo que não entendi.'; } }
+      try { if (r.headers && r.headers.get('x-idem-replay')) j._replay = true; } catch (e) {}
+      var ra = 0; try { ra = r.headers && r.headers.get ? Number(r.headers.get('retry-after')) || 0 : 0; } catch (e) {}
+      var st = r.status; var repete = false;
+      if (st === 429) { repete = true; espera = Math.min(30000, ra ? ra * 1000 : 2000); }
+      else if (st === 409 && j.erro === 'ocupado' && seguro) { repete = true; espera = 1000; }
+      else if (quebrado && r.status < 300 && seguro) { repete = true; espera = jitter(1000 * Math.pow(2, t)); }
+      else if (st >= 500 && st !== 502 && seguro) { repete = true; espera = jitter(1000 * Math.pow(2, t)); }
+      else if (st === 423 && seguro) { repete = true; espera = jitter(1000 * Math.pow(2, t)); }
+      if (st >= 500 && st !== 502) marcaRede(false); else if (!quebrado) marcaRede(true);
+      if (st === 429 || (st === 409 && j.erro === 'ocupado')) { /* servidor respondeu: rede ok */ }
+      ultimo = j; clearTimeout(tm); if (ext && ext.signal) ext.signal.removeEventListener('abort', aoAbortar);
+      if (!repete || t === max - 1) return j;
+      await dormir(espera);
+    } catch (e) {
+      clearTimeout(tm); if (ext && ext.signal) ext.signal.removeEventListener('abort', aoAbortar);
+      if (ext && ext.signal && ext.signal.aborted) throw e; // o próprio usuário cancelou
+      marcaRede(false); ultimo = { _status: 0, ok: false, mensagem: estourou ? 'O servidor demorou para responder. Tente de novo.' : 'Sem conexão. Tente de novo.' };
+      if (t === max - 1) return ultimo; await dormir(jitter(1000 * Math.pow(2, t)));
+    }
+  }
+  return ultimo;
+}
+
+// ---------- caixa de saída persistente (ações que não puderam ser enviadas ficam guardadas e saem sozinhas, em ordem) ----------
+var SAIDA_KEY = 'sh_saida';
+function lerSaida() { try { var a = JSON.parse(lsGet(SAIDA_KEY) || 'null'); if (Array.isArray(a)) return a; } catch (e) {} return S.saidaMem || []; }
+function gravarSaida(a) { S.saidaMem = a; if (!a.length) lsDel(SAIDA_KEY); else lsSet(SAIDA_KEY, JSON.stringify(a)); atualizarSelo(); try { if (S.canal) S.canal.postMessage({ t: 'saida' }); } catch (e) {} }
+function atualizarSelo() {
+  var n = lerSaida().length; var s = $('seloSaida'); if (!s) return; s.classList.toggle('hide', !n);
+  s.textContent = n ? (n === 1 ? '1 ação aguardando conexão' : n + ' ações aguardando conexão') : '';
+}
+function souLider() { try { var o = JSON.parse(lsGet('sh_lider') || 'null'); var agora = Date.now(); if (!o || o.id === S.abaId || agora - o.ts > 15000) { lsSet('sh_lider', JSON.stringify({ id: S.abaId, ts: agora })); return true; } return false; } catch (e) { return true; } }
+function classe(j, imediato) { // 'ok' | 'rede' (tenta de novo) | 'recusa' (definitivo: volta para a tela com a mensagem)
+  var st = j._status;
+  if (j.ok !== false && st < 300 && j.confirmado !== false && !j._quebrado) return 'ok';
+  if (st === 0 || j._disjuntor || st === 429 || st === 423 || j._quebrado || (st >= 500 && st !== 502) || (st === 409 && j.erro === 'ocupado')) return 'rede';
+  if (st === 502 && !imediato) return 'rede';
+  return 'recusa';
+}
+async function executar(e, keepalive) {
+  S.emVoo[e.id] = true;
+  try { return await api('/lead/' + e.dealId + e.caminho, e.corpo || {}, null, null, { idem: e.id, keepalive: keepalive }); } finally { delete S.emVoo[e.id]; }
+}
+// envia já; se a rede não deixar, a ação fica guardada (devolve _enfileirado) e sai sozinha depois
+async function enviarAcao(def) {
+  var e = { id: novaChave(), dealId: def.dealId, caminho: def.caminho, corpo: def.corpo, tipo: def.tipo, meta: def.meta || {}, criado: Date.now(), tent: 0, proximo: 0 };
+  var a = lerSaida(); var atras = a.some(function (x) { return x.dealId === e.dealId; }); a.push(e); gravarSaida(a); // grava ANTES de enviar: se a aba morrer, a ação não se perde
+  if (atras) { S.proxTick = 0; setTimeout(processarSaida, 0); return { _status: 0, ok: false, _enfileirado: true }; } // mesma ordem por lead
+  var j = await executar(e);
+  if (j._status === 401) { return j; }
+  var c = classe(j, true);
+  if (c === 'rede') { e.tent = 1; e.proximo = Date.now() + jitter(2000) * REDE.escala; gravarSaida(lerSaida().map(function (x) { return x.id === e.id ? e : x; })); return { _status: 0, ok: false, _enfileirado: true }; }
+  gravarSaida(lerSaida().filter(function (x) { return x.id !== e.id; }));
+  return j;
+}
+async function processarSaida(opt) {
+  if (S.processando || !S.token) return; if (!souLider()) return; S.processando = true;
+  try {
+    for (var guarda = 0; guarda < 50; guarda++) {
+      var a = lerSaida(); var vistos = {}; var alvo = null;
+      for (var i = 0; i < a.length; i++) { if (vistos[a[i].dealId]) continue; vistos[a[i].dealId] = true; if (S.emVoo[a[i].id]) continue; if ((a[i].proximo || 0) <= Date.now() || (opt && opt.agora)) { alvo = a[i]; break; } }
+      if (!alvo) break;
+      var j = await executar(alvo, opt && opt.keepalive);
+      if (j._status === 401) { sair('Senha não confere. O que estava guardado continua aqui e sai quando você entrar de novo.'); return; }
+      var c = classe(j, false);
+      if (c === 'rede') { alvo.tent = (alvo.tent || 0) + 1; var espera = j._status === 429 ? 5000 : Math.min(30000, 1000 * Math.pow(2, alvo.tent)); alvo.proximo = Date.now() + jitter(espera) * REDE.escala; gravarSaida(lerSaida().map(function (x) { return x.id === alvo.id ? alvo : x; })); if (alvo.tent >= 12 && j._status !== 0) { gravarSaida(lerSaida().filter(function (x) { return x.id !== alvo.id; })); saidaRecusada(alvo, j); } break; }
+      gravarSaida(lerSaida().filter(function (x) { return x.id !== alvo.id; }));
+      if (c === 'ok') saidaOk(alvo, j); else saidaRecusada(alvo, j);
+    }
+  } finally { S.processando = false; }
+}
+function avisar(texto, tipo, acao) { // aviso que fica na tela até ele fechar (nunca descarta em silêncio)
+  var box = $('faixas'); if (!box) return; var f = el('div', 'faixa ' + (tipo || 'aviso')); f.setAttribute('role', 'alert'); f.appendChild(el('span', null, texto));
+  if (acao) { var b = el('button', 'sec', acao.rot); b.type = 'button'; b.onclick = function () { acao.f(); f.remove(); }; f.appendChild(b); }
+  var x = el('button', 'link', 'Fechar'); x.type = 'button'; x.onclick = function () { f.remove(); }; f.appendChild(x); box.appendChild(f);
+}
+function saidaOk(e, j) {
+  var L = S.L; if (L && L.dealId === e.dealId && L.lead) { if (j.lead) { aplicarResposta(L, j); limparEditsIguais(L); redesenhar(L); setEstado(L, 'ok', 'Salvo e conferido no Agendor ✓ (enviado quando a conexão voltou)'); } else carregarLead(L, true); }
+  if (e.tipo === 'perdido') avisar((e.meta.titulo || 'Lead') + ': marcado como Perdido e conferido no Agendor ✓', 'ok');
+  else if (e.tipo === 'campos') avisar((e.meta.titulo || 'Lead') + ': alterações salvas e conferidas ✓', 'ok');
+  carregar(true, 'tarefas'); try { if (S.canal) S.canal.postMessage({ t: 'dados' }); } catch (er) {}
+}
+function saidaRecusada(e, j) {
+  var m = (j && j.mensagem) || 'O servidor não aceitou.';
+  if (e.tipo === 'perdido') { delete S.ocultos[e.dealId]; redesenharTudo(); }
+  if (e.tipo === 'campos' && e.meta.edits) { try { var cur = lerRascunho(e.dealId); Object.keys(e.meta.edits).forEach(function (k) { cur[k] = e.meta.edits[k]; }); lsSet(rascKey(e.dealId), JSON.stringify({ t: Date.now(), e: cur })); } catch (er) {} if (S.L && S.L.dealId === e.dealId) { Object.keys(e.meta.edits).forEach(function (k) { S.L.edits[k] = e.meta.edits[k]; }); carregarLead(S.L, true); } }
+  avisar((e.meta.titulo || 'Lead') + ': não consegui concluir. ' + m + (e.tipo === 'campos' ? ' O que você digitou foi devolvido para a tela.' : ''), 'erro', { rot: 'Abrir o lead', f: function () { abrirLead(e.dealId, null); } });
+}
+function iniciarSaida() {
+  atualizarSelo(); if (S.saidaTimer) return;
+  S.saidaTimer = setInterval(function () { if (!document.hidden) { processarSaida(); souLider(); } }, 3000);
+  window.addEventListener('online', function () { processarSaida({ agora: true }); });
+}
+
+// ---------- versão da página, relógio do servidor e telemetria ----------
+function recarregar() { if (window.__shTeste && window.__shTeste.hooks && window.__shTeste.hooks.recarregar) { window.__shTeste.hooks.recarregar(); return; } location.reload(); }
+function temRascunho() { try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k.indexOf('sh_rasc_') === 0) return true; } } catch (e) {} return !!(S.L && (Object.keys(S.L.edits).length || S.L.ocupado)); }
+function podeRecarregarSozinha() { return !temRascunho() && !lerSaida().length && !S.ocupado && !(S.L && S.L.ocupado) && $('painelLead').classList.contains('hide') && $('modalGanho').classList.contains('hide'); }
+function aplicarStatus(j) {
+  if (j && typeof j.agora === 'number') REDE.desvio = j.agora - Date.now();
+  if (j && j.paginaVersao && j.paginaVersao !== PAGINA_VERSAO) {
+    if (podeRecarregarSozinha()) { recarregar(); return; }
+    faixa('versao', 'Há uma versão nova da página. Termine o que está fazendo e atualize.', 'aviso', { rot: 'Atualizar', acao: recarregar });
+  } else faixa('versao', '');
+}
+async function verificarVersao() { if (!S.token) return; try { var j = await api('/status'); if (j.ok) aplicarStatus(j); } catch (e) {} }
+function reportarErro(msg, rota) {
+  try {
+    msg = String(msg || 'erro').slice(0, 300); var agora = Date.now(); S.errRep = S.errRep || { ult: {}, ultimoEnvio: 0, n: 0, off: 0 };
+    if (S.errRep.off > agora) return; if (S.errRep.ult[msg] && agora - S.errRep.ult[msg] < 60000) return; if (agora - S.errRep.ultimoEnvio < 3000) return;
+    if (S.errRep.n >= 20) return; S.errRep.ult[msg] = agora; S.errRep.ultimoEnvio = agora; S.errRep.n++;
+    if (!S.token) return;
+    fetch(API + '/erro', { method: 'POST', headers: { 'Authorization': 'Bearer ' + S.token, 'Content-Type': 'application/json' }, body: JSON.stringify({ msg: msg, rota: String(rota || '').slice(0, 80), versao: PAGINA_VERSAO }) }).then(function (r) { if (!r || r.status >= 400) S.errRep.off = Date.now() + 300000; }, function () { S.errRep.off = Date.now() + 300000; }); // se o próprio /erro falhar, para por 5 min (sem loop)
+  } catch (e) {}
+}
+function falhaDePagina(msg, rota) { reportarErro(msg, rota); faixa('erro', 'Algo falhou nesta tela, mas seus dados estão salvos.', 'erro', { rot: 'Recarregar', acao: recarregar }); }
+window.addEventListener('error', function (ev) { falhaDePagina((ev && ev.message) || 'erro', 'window.onerror'); });
+window.addEventListener('unhandledrejection', function (ev) { falhaDePagina((ev && ev.reason && (ev.reason.message || ev.reason)) || 'promessa rejeitada', 'unhandledrejection'); });
+function seguro(nome, fn, fallback) { return function () { try { return fn.apply(this, arguments); } catch (e) { falhaDePagina(nome + ': ' + (e && e.message), nome); return fallback ? fallback.apply(this, arguments) : undefined; } }; }
 
 // ---------- "Você abriu no Agendor": hora do clique guardada no aparelho (nunca vira "feito" sem o Agendor confirmar) ----------
 function lerAbriu() { try { var o = JSON.parse(lsGet('sh_abriu') || '{}'); var ini = new Date(); ini.setHours(0, 0, 0, 0); Object.keys(o).forEach(function (k) { if (o[k] < ini.getTime()) delete o[k]; }); return o; } catch (e) { return {}; } }
@@ -610,19 +768,19 @@ function linhaContato(li, it) {
   var f = foneLinha(it.fone, 'fone'); if (f) li.appendChild(f); // número clicável (WhatsApp) + copiar
   if (it.cidade) li.appendChild(el('div', 'cid', it.cidade));
 }
-function acoesCartao(li, dealId, link, aoAbrirAgendor) {
+function acoesCartao(li, dealId, link, aoAbrirAgendor, item) {
   var ac = el('div', 'acoes');
-  if (dealId != null) { var ab = el('button', 'abrir', 'Abrir'); ab.type = 'button'; ab.setAttribute('aria-label', 'Abrir o lead completo'); ab.onclick = function () { abrirLead(dealId, ab); }; ac.appendChild(ab); }
+  if (dealId != null) { var ab = el('button', 'abrir', 'Abrir'); ab.type = 'button'; ab.setAttribute('aria-label', 'Abrir o lead completo'); ab.onclick = function () { abrirLead(dealId, ab, item); }; ['mouseenter', 'touchstart', 'focus'].forEach(function (ev) { ab.addEventListener(ev, function () { prefetchLead(dealId); }, { passive: true }); }); ac.appendChild(ab); }
   var a = el('a', 'bt', '↗ Agendor'); a.setAttribute('aria-label', 'Abrir no Agendor'); a.title = 'Abrir no Agendor'; a.href = link; a.target = '_blank'; a.rel = 'noopener noreferrer';
   if (aoAbrirAgendor) a.addEventListener('click', aoAbrirAgendor);
   ac.appendChild(a); li.appendChild(ac);
 }
-function empClicavel(li, nome, dealId) { var e = el('div', 'emp' + (dealId != null ? ' clic' : ''), nome); if (dealId != null) e.onclick = function () { abrirLead(dealId, e); }; li.appendChild(e); }
+function empClicavel(li, nome, dealId, item) { var e = el('div', 'emp' + (dealId != null ? ' clic' : ''), nome); if (dealId != null) e.onclick = function () { abrirLead(dealId, e, item); }; li.appendChild(e); }
 function cartao(it, opts) {
   var abriu = opts.sem_abriu ? null : lerAbriu()[it.dealId]; var feito = it.feito || it.estado === 'feito';
   var li = el('div', 'item' + (feito ? ' feito' : '') + (opts.atras ? ' atrasado' : '') + (opts.inb && !feito ? ' inbitem' : '') + (abriu && !feito ? ' aberto' : ''));
   var lo = linhaOrigem(it); if (lo) li.appendChild(lo);
-  empClicavel(li, it.empresa, it.dealId); linhaContato(li, it);
+  empClicavel(li, it.empresa, it.dealId, it); linhaContato(li, it);
   if (it.subtitulo) li.appendChild(el('div', 'pas', it.subtitulo));
   if (opts.estado) li.appendChild(el('div', 'est ' + it.estado, estadoTxt(it)));
   if (opts.passo && !it.nota) li.appendChild(el('div', 'pas', feito ? 'Tudo feito ✓' : (it.passoPendente ? 'Próximo: ' + it.passoPendente : '')));
@@ -634,20 +792,25 @@ function cartao(it, opts) {
   if (it.depoisExpediente) extra.appendChild(el('span', 'pill amber', 'Chegou ontem depois das 17:30. Atenda primeiro.'));
   li.appendChild(extra);
   if (abriu && !feito) li.appendChild(el('div', 'abriu', 'Você abriu às ' + horaClique(abriu) + '. Quando finalizar no Agendor, fica verde aqui em poucos segundos.'));
-  acoesCartao(li, it.dealId, it.link, function () { if (!feito) { gravarAbriu(it.dealId); setTimeout(function () { if (S.dados) desenharBlocos(); }, 50); } });
+  acoesCartao(li, it.dealId, it.link, function () { if (!feito) { gravarAbriu(it.dealId); setTimeout(function () { if (S.dados) desenharBlocos(); }, 50); } }, it);
   return li;
 }
 function cartaoAtrasado(g) {
   var li = el('div', 'item atrasado'); var lo = linhaOrigem(g); if (lo) li.appendChild(lo);
-  empClicavel(li, g.empresa, g.dealId); linhaContato(li, g);
+  empClicavel(li, g.empresa, g.dealId, g); linhaContato(li, g);
   li.appendChild(el('div', 'pas', g.n + (g.n === 1 ? ' tarefa atrasada' : ' tarefas atrasadas') + ' (desde ' + g.desde.slice(8, 10) + '/' + g.desde.slice(5, 7) + ')'));
   li.appendChild(el('div', 'pas', (g.passos || []).slice(0, 3).join(' · ')));
-  acoesCartao(li, g.dealId, g.link, null); return li;
+  acoesCartao(li, g.dealId, g.link, null, g); return li;
+}
+function anexarEmBlocos(cont, itens, fazer) { // listas grandes entram aos poucos (não trava o celular)
+  var tok = (cont._tok = (cont._tok || 0) + 1), i = 0;
+  function passo() { if (cont._tok !== tok) return; var fim = Math.min(i + 60, itens.length); for (; i < fim; i++) { try { cont.appendChild(fazer(itens[i])); } catch (e) { falhaDePagina('item: ' + (e && e.message), 'render'); var f = el('div', 'item'); f.appendChild(el('div', 'emp', 'Não consegui mostrar este item.')); cont.appendChild(f); } } if (i < itens.length) setTimeout(passo, 0); }
+  passo();
 }
 function coluna(id, titulo, dica, contTxt, cls, confTs) {
   var c = el('section', 'col' + (cls ? ' ' + cls : '')); c.setAttribute('data-col', id);
   var h = el('div', 'col-h'); var h3 = el('h3'); h3.appendChild(el('span', null, titulo)); h3.appendChild(el('span', 'cont', contTxt)); h.appendChild(h3);
-  if (confTs) h.appendChild(el('div', 'conf', 'conferido às ' + horaBRTs(confTs)));
+  if (confTs) { var cf = el('div', 'conf', 'conferido às ' + horaBRTs(confTs)); cf.setAttribute('data-ts', String(confTs)); h.appendChild(cf); }
   if (dica) h.appendChild(el('p', 'dica', dica)); c.appendChild(h);
   var l = el('div', 'lista'); l.setAttribute('data-bloco', id); c.appendChild(l);
   return { c: c, l: l };
@@ -672,7 +835,7 @@ function desenharBlocos() {
     var lista = ordenar(itens, modo === 'hora' ? 'pend' : modo).filter(function (it) { return passa(it) && !(esconder && it.feito); });
     if (!itens.length) k2.l.appendChild(el('p', 'vazio', 'Nada para hoje aqui.'));
     else if (!lista.length) k2.l.appendChild(el('p', 'vazio', busca ? 'Nenhum resultado para essa busca aqui.' : 'Tudo certo por aqui.'));
-    lista.forEach(function (it) { k2.l.appendChild(cartao(it, { atras: atrasado && b.progresso && !it.feito, inb: inb, estado: b.progresso, passo: true })); });
+    anexarEmBlocos(k2.l, lista, function (it) { return cartao(it, { atras: atrasado && b.progresso && !it.feito, inb: inb, estado: b.progresso, passo: true }); });
     k2.vazio = itens.length === 0; k2.id = b.id; k2.titulo = b.titulo; k2.n = itens.length; cols.push(k2);
   }
   colBloco(porId.inbound_novo);
@@ -709,14 +872,17 @@ function desenhar(d) {
   if (d.truncado) av.appendChild(el('div', 'aviso', 'Atenção: o Agendor tem tarefas demais hoje e a lista pode estar incompleta. Confira também direto no Agendor.'));
   desenharBlocos();
 }
+function frescorBlocos() { Array.prototype.forEach.call(document.querySelectorAll('.conf[data-ts]'), function (c) { var min = Math.floor((agoraMs() - Number(c.getAttribute('data-ts'))) / 60000); c.classList.toggle('velho', min > 10); c.textContent = 'conferido às ' + horaBRTs(Number(c.getAttribute('data-ts'))) + (min >= 2 ? ' (há ' + min + ' min)' : ''); }); }
 function tickRelogio() {
+  S.tk = (S.tk || 0) + 1; if (S.tk % 15 === 1) frescorBlocos();
   var b = partesBRT(); $('relogio').textContent = hh(b.h) + ':' + hh(b.m);
   var a = $('atualizado');
-  var seg = S.dados && S.dados.tarefasEm ? Math.max(0, Math.round((Date.now() - S.dados.tarefasEm) / 1000)) : 0; var velho = seg > 60; var idade = seg < 90 ? seg + ' s' : Math.round(seg / 60) + ' min';
+  var seg = S.dados && S.dados.tarefasEm ? Math.max(0, Math.round((agoraMs() - S.dados.tarefasEm) / 1000)) : 0; var velho = seg > 60; var idade = seg < 90 ? seg + ' s' : Math.round(seg / 60) + ' min';
+  if (S.doCache && S.dados && S.dados.tarefasEm) { a.classList.add('velho'); a.textContent = 'Dado antigo, de ' + horaBRT(S.dados.tarefasEm) + '. Atualizando...'; return; }
   if (S.conferindo) { a.classList.toggle('velho', velho); a.textContent = 'Conferindo o Agendor...' + (velho ? ' (mostrando dado antigo, de há ' + idade + ')' : ''); return; }
   if (S.dados && S.dados.tarefasEm) {
     a.classList.toggle('velho', velho);
-    a.textContent = 'Conferido às ' + horaBRTs(S.dados.tarefasEm) + (velho ? ' (dado antigo, há ' + idade + ')' : '') + '. Confere sozinho a cada 30 s.';
+    a.textContent = 'Conferido às ' + horaBRTs(S.dados.tarefasEm) + (velho ? ' (dado antigo, há ' + idade + ')' : '') + '. Confere sozinho a cada 60 s.';
   }
 }
 
@@ -756,8 +922,8 @@ async function carregar(silencioso, modo) {
     if (!j.ok) { var m = j.mensagem || 'Não consegui atualizar agora.'; if (!S.tem) { $('erroMsg').textContent = m; mostrar('s-erro'); } else { S.conferindo = false; $('atualizado').textContent = m + ' Tentando de novo em 30 segundos.'; } return; }
     var jm = mesclar(j, fresco); if (!jm) { S.conferindo = false; tickRelogio(); return; } // todas as camadas mais velhas que as já exibidas: ignora, o número nunca volta atrás
     j = jm; S.vm = j.versao ? { negocios: j.versao.negocios, atrasadas: j.versao.atrasadas, tarefas: j.versao.tarefas } : S.vm;
-    S.conferindo = false; desenhar(j); S.tem = true; mostrar('s-dia');
-    try { var tx = JSON.stringify(j, function (k2, v2) { return k2 === 'fone' ? undefined : v2; }); /* sh_ultimo SEM telefones: só ids e contagens */ if (tx.length < 1500000) lsSet('sh_ultimo', tx); } catch (e) {} // último dado conhecido: aparece na hora na próxima abertura (e nas outras abas)
+    S.conferindo = false; S.doCache = false; desenhar(j); S.tem = true; mostrar('s-dia');
+    try { j._fmt = 2; var tx = JSON.stringify(j, function (k2, v2) { return k2 === 'fone' ? undefined : v2; }); /* sh_ultimo SEM telefones: só ids e contagens */ if (tx.length < 1500000) lsSet('sh_ultimo', tx); } catch (e) {} // último dado conhecido: aparece na hora na próxima abertura (e nas outras abas)
   } catch (e) {
     if (S.reqSeq !== meu) return;
     S.conferindo = false;
@@ -767,15 +933,23 @@ async function carregar(silencioso, modo) {
 }
 function agendar() {
   if (S.timer) clearInterval(S.timer);
-  S.timer = setInterval(function () { if (!document.hidden && S.token && (S.tem || !$('s-erro').classList.contains('hide'))) carregar(true, false); }, 30000);
+  S.timer = setInterval(function () { if (!document.hidden && S.token && (S.tem || !$('s-erro').classList.contains('hide'))) carregar(true, false); }, 60000);
+  if (S.verTimer) clearInterval(S.verTimer); S.verTimer = setInterval(function () { if (!document.hidden) verificarVersao(); }, 300000);
   if (S.relogio) clearInterval(S.relogio);
   S.relogio = setInterval(tickRelogio, 1000);
 }
 document.addEventListener('visibilitychange', function () {
-  if (document.hidden) { S.ocultoDesde = Date.now(); return; }
+  if (document.hidden) { S.ocultoDesde = Date.now(); if (S.token) processarSaida({ keepalive: true, agora: true }); return; }
+  if (S.token) { verificarVersao(); processarSaida({ agora: true }); }
   if (S.token && S.tem && S.ocultoDesde && Date.now() - S.ocultoDesde >= 5000) carregar(true, 'tarefas'); // voltou para a aba depois de 5 s+: confere as tarefas na hora
   S.ocultoDesde = 0;
 });
+function iniciarCanal() {
+  if (S.canal || typeof BroadcastChannel === 'undefined') return;
+  try { S.canal = new BroadcastChannel('sh_hoje'); S.canal.onmessage = function (ev) { var t = ev && ev.data && ev.data.t; if (t === 'saida') atualizarSelo(); else if (t === 'dados' && S.token && S.tem && !document.hidden) carregar(true, 'tarefas'); }; } catch (e) { S.canal = null; }
+}
+window.addEventListener('beforeunload', function (ev) { try { if (lerSaida().length || (S.L && S.L.ocupado)) { processarSaida({ keepalive: true, agora: true }); ev.preventDefault(); ev.returnValue = ''; return ''; } } catch (e) {} });
+window.addEventListener('storage', function (e) { if (e.key === SAIDA_KEY) atualizarSelo(); }); // a caixa de saída mudou em outra aba
 window.addEventListener('storage', function (e) { // outra aba leu mais novo: esta aba também mostra (só se a versão não for mais velha)
   if (e.key !== 'sh_ultimo' || !e.newValue || !S.tem) return;
   try { var j = JSON.parse(e.newValue); if (j && j.ok && versaoDe(j) && S.vm && (j.versao.tarefas > S.vm.tarefas || j.versao.negocios > S.vm.negocios || j.versao.atrasadas > S.vm.atrasadas)) { var jm = mesclar(j, false); if (jm) { S.vm = { negocios: jm.versao.negocios, atrasadas: jm.versao.atrasadas, tarefas: jm.versao.tarefas }; desenhar(jm); } } } catch (er) {}
@@ -784,17 +958,19 @@ window.addEventListener('storage', function (e) { // outra aba leu mais novo: es
 async function entrar(token, silencioso) {
   S.token = token;
   var j;
-  try { j = await api('/status'); } catch (e) { if (!silencioso) $('loginMsg').textContent = 'Sem conexão com a Bia. Tente de novo.'; return false; }
+  try { j = await api('/status'); } catch (e) { j = { _status: 0 }; }
+  if (j._status === 0) { if (silencioso && lsGet('sh_ultimo')) j = { ok: true, modo: 'on', _status: 200 }; else { if (!silencioso) $('loginMsg').textContent = 'Sem conexão com a Bia. Tente de novo.'; return false; } } // sem rede mas com dado salvo: abre o painel com o que já tem
   if (j._status === 401) { lsDel('sh_tok'); if (!silencioso) $('loginMsg').textContent = 'Senha não confere.'; return false; }
   if (j._status === 429) { if (!silencioso) $('loginMsg').textContent = 'Muitas tentativas. Espere 10 minutos.'; return false; }
   if (!j.ok) { if (!silencioso) $('loginMsg').textContent = 'Não consegui entrar agora.'; return false; }
   if ($('lembrar').checked) lsSet('sh_tok', token);
+  aplicarStatus(j); iniciarCanal(); iniciarSaida();
   if (j.modo !== 'on') { mostrar('s-off'); return true; }
   agendar();
   var ult = null; try { ult = JSON.parse(lsGet('sh_ultimo') || 'null'); } catch (e) { ult = null; }
-  if (ult && ult.ok) { S.vm = ult.versao ? { negocios: ult.versao.negocios, atrasadas: ult.versao.atrasadas, tarefas: ult.versao.tarefas } : null; desenhar(ult); S.tem = true; mostrar('s-dia'); $('atualizado').classList.add('velho'); } // mostra o último dado conhecido NA HORA (cinza) e troca sozinho quando o novo chegar
+  if (ult && ult.ok && ult._fmt === 2) { S.doCache = true; S.vm = ult.versao ? { negocios: ult.versao.negocios, atrasadas: ult.versao.atrasadas, tarefas: ult.versao.tarefas } : null; desenhar(ult); S.tem = true; mostrar('s-dia'); $('atualizado').classList.add('velho'); } // mostra o último dado conhecido NA HORA (cinza) e troca sozinho quando o novo chegar
   else { S.tem = false; var bl = $('blocos'); bl.textContent = ''; bl.appendChild(el('div', 'carregando-msg', 'Carregando o seu dia... a primeira leitura pode levar alguns segundos.')); for (var q = 0; q < 4; q++) bl.appendChild(el('div', 'esq')); mostrar('s-dia'); }
-  await carregar(false, false); carregarAguardando(true);
+  await carregar(false, false); carregarAguardando(true); processarSaida({ agora: true }); aoMudarHash();
   if (haAbertoSemConfirmar()) iniciarPoll();
   return true;
 }
@@ -843,12 +1019,14 @@ var NIVEL = { 1: 'Inbound (urgente)', 2: 'Já conhecido', 3: 'Feira', 4: 'Bom si
 function funilAtual() { return $('filaFunil').value || 'outbound'; }
 async function carregarFila() {
   var funil = funilAtual();
+  if (!S.fila.length) { try { var cf = JSON.parse(lsGet('sh_fila_' + funil) || 'null'); if (cf && cf._fmt === 1 && Array.isArray(cf.itens)) { S.fila = cf.itens; S.filaFunil = funil; desenharFila(); $('filaResumo').textContent += ' (dados de ' + horaBRT(cf.ts) + ', atualizando...)'; } } catch (e) {} }
   var j; try { j = await api('/fila?funil=' + encodeURIComponent(funil)); } catch (e) { $('filaResumo').textContent = 'Sem conexão.'; return; }
   if (j._status === 401) { sair('Senha não confere.'); return; }
   if (!j.ok) { $('filaResumo').textContent = j.mensagem || 'Não consegui ler a fila.'; return; }
   var fs = $('filaFunil'); var ant = fs.value || funil; fs.textContent = '';
   (j.funis || [{ id: 'outbound', nome: 'SDR · Outbound', total: 0 }, { id: 'inbound', nome: 'SDR · Inbound', total: 0 }]).forEach(function (f) { S.filaTotais[f.id] = f.total; var o = el('option', null, f.nome + ' (' + (f.total ? f.total + ' esperando você iniciar' : 'ninguém esperando') + ')'); o.value = f.id; fs.appendChild(o); }); // os dois funis sempre visíveis
   fs.value = ant; S.fila = j.itens || []; S.filaFunil = j.funil;
+  try { lsSet('sh_fila_' + j.funil, JSON.stringify({ _fmt: 1, ts: Date.now(), itens: S.fila.map(function (x) { var c = Object.assign({}, x); delete c.fone; return c; }) })); } catch (e) {}
   desenharFila();
 }
 function selIds() { return Object.keys(S.sel).filter(function (k) { return S.sel[k]; }).map(Number); }
@@ -891,7 +1069,7 @@ function desenharFila() {
   var filtrando = q || S.filaOrigem;
   $('filaResumo').textContent = S.fila.length ? (filtrando ? plural(S.filaVis.length, 'lead', 'leads') + ' de ' + S.fila.length : plural(S.fila.length, 'lead esperando você iniciar', 'leads esperando você iniciar')) + '.' : 'Ninguém esperando você iniciar.';
   if (!S.filaVis.length) l.appendChild(el('p', 'vazio', S.fila.length ? 'Nenhum lead com esse filtro.' : 'Ninguém esperando você iniciar neste funil.'));
-  S.filaVis.forEach(function (i) {
+  anexarEmBlocos(l, S.filaVis, function (i) {
     var row = el('div', 'fi n' + i.nivel + (i.atencao ? ' atencao' : ''));
     var cb = el('input'); cb.type = 'checkbox'; cb.checked = !!S.sel[i.dealId]; cb.setAttribute('aria-label', 'Escolher ' + i.empresa); cb.onchange = function () { S.sel[i.dealId] = cb.checked; atualizaSel(); };
     row.appendChild(cb);
@@ -905,8 +1083,8 @@ function desenharFila() {
     row.appendChild(tx);
     var col = el('div'); col.style.cssText = 'display:flex;flex-direction:column;gap:4px';
     var b = el('button', 'sec', 'Iniciar este'); b.onclick = function () { if (window.confirm('Iniciar ' + i.empresa + ' agora?' + (i.atencao ? ' Atenção: ' + i.aviso : '') + avisoTarde())) liberar({ dealIds: [i.dealId], funil: S.filaFunil }); }; b.disabled = S.ocupado || !podeLiberar();
-    var ab = el('button', 'sec', 'Abrir'); ab.type = 'button'; ab.setAttribute('aria-label', 'Abrir o lead ' + i.empresa); ab.onclick = function () { abrirLead(i.dealId, ab); };
-    col.appendChild(b); col.appendChild(ab); row.appendChild(col); l.appendChild(row);
+    var ab = el('button', 'sec', 'Abrir'); ab.type = 'button'; ab.setAttribute('aria-label', 'Abrir o lead ' + i.empresa); ab.onclick = function () { abrirLead(i.dealId, ab, i); };
+    col.appendChild(b); col.appendChild(ab); row.appendChild(col); return row;
   });
   atualizaSel();
 }
@@ -930,7 +1108,7 @@ function iniciarPorOrigem() {
 }
 $('bFila').onclick = async function () { $('painelFila').classList.remove('hide'); if (!$('filaFunil').value) { var o = el('option', null, 'SDR · Outbound'); o.value = 'outbound'; $('filaFunil').appendChild(o); } await carregarFila(); $('filaBusca').focus(); };
 $('bFecharFila').onclick = function () { $('painelFila').classList.add('hide'); };
-$('filaFunil').onchange = function () { S.sel = {}; S.filaOrigem = ''; carregarFila(); }; $('filaBusca').oninput = desenharFila;
+$('filaFunil').onchange = function () { S.sel = {}; S.filaOrigem = ''; carregarFila(); }; var debFila = null; $('filaBusca').oninput = function () { clearTimeout(debFila); debFila = setTimeout(function () { desenharFila(); }, 150); };
 $('bLiberarSel').onclick = function () { var ids = selIds(); if (!ids.length) return; if (!window.confirm('Iniciar ' + plural(ids.length, 'lead marcado', 'leads marcados') + ' agora?' + avisoTarde())) return; liberar({ dealIds: ids, funil: S.filaFunil }).then(function () { S.sel = {}; atualizaSel(); }); };
 $('bLiberarTodosFunil').onclick = function () {
   var nome = S.filaFunil === 'inbound' ? 'Inbound' : 'Outbound';
@@ -1049,9 +1227,11 @@ function msgErro(j) {
   if (st >= 500) return 'O sistema falhou agora. O que você digitou continua aqui. Tente de novo.';
   return 'Não consegui concluir. Tente de novo.';
 }
-async function chamarLead(L, caminho, corpo, idAlvo) {
-  var j; try { j = await api('/lead/' + (idAlvo || L.dealId) + caminho, corpo || null); } catch (e) { j = { _status: 0, ok: false }; }
-  if (j._status === 401) { sair('Senha não confere.'); return null; }
+async function chamarLead(L, caminho, corpo, idAlvo, fila) {
+  var alvo = idAlvo || L.dealId; var j;
+  if (fila) j = await enviarAcao({ dealId: alvo, caminho: caminho, corpo: corpo || {}, tipo: fila.tipo, meta: fila.meta });
+  else j = await api('/lead/' + alvo + caminho, corpo || {}, null, null, { idem: novaChave() }); // x-idem: repetir a mesma chamada nunca grava duas vezes
+  if (j._status === 401) { sair('Senha não confere. O que você digitou continua guardado neste aparelho.'); return null; }
   return j;
 }
 function copia(o) { return JSON.parse(JSON.stringify(o)); }
@@ -1064,12 +1244,24 @@ function setEstado(L, tipo, texto, retry) {
 function recomputarMostrar(L) { L.mostrar = todosCampos(L.lead).map(function (f) { return f.k; }); } // 'Dados do lead' mostra tudo, sempre opcional
 function limparEditsIguais(L) { Object.keys(L.edits).forEach(function (k) { var f = campoDeK(L.lead, k); if (f && normVal(k, L.edits[k]) === normVal(k, valorOrig(L.lead, k))) delete L.edits[k]; }); }
 
-async function abrirLead(dealId, opener) {
+function prefetchLead(id) { // ao passar o mouse/dedo: já busca (no máximo 1 em voo)
+  var pr = S.pre[id]; if (S.preVoo || (pr && Date.now() - pr.t < 20000) || !S.token) return; S.preVoo = true;
+  api('/lead/' + encodeURIComponent(id)).then(function (j) { if (j && j.ok && j.lead) S.pre[id] = { t: Date.now(), j: j }; }).catch(function () {}).then(function () { S.preVoo = false; });
+}
+async function abrirLead(dealId, opener, item) {
   var painel = $('painelLead'); var mesmo = S.L && S.L.dealId === dealId && S.L.lead;
   var L = mesmo ? S.L : { dealId: dealId, lead: null, opcoes: {}, motivos: [], responsaveis: [], edits: lerRascunho(dealId), forcar: {}, origemCampo: {}, mostrar: [], todos: false, ocupado: false, estado: null, receita: null, receitaCnpj: '', perdidoAberto: false, refs: {} };
-  L.opener = opener || null; S.L = L; painel.classList.remove('hide');
-  $('leadTitulo').textContent = mesmo ? (L.lead.titulo || 'Lead') : 'Carregando o lead...'; $('leadBarra').textContent = ''; $('leadRodape').textContent = '';
-  if (mesmo) renderLead(); else { $('leadCorpo').textContent = ''; $('leadCorpo').appendChild(el('p', 'vazio', 'Buscando no Agendor... pode levar alguns segundos.')); }
+  L.opener = opener || L.opener || null; S.L = L; painel.classList.remove('hide');
+  try { if (location.hash !== '#lead=' + dealId) history.pushState(null, '', '#lead=' + dealId); } catch (e) {}
+  var pre = !mesmo && S.pre[dealId] && Date.now() - S.pre[dealId].t < 30000 ? S.pre[dealId].j : null;
+  if (pre) { aplicarResposta(L, pre); limparEditsIguais(L); recomputarMostrar(L); mesmo = true; }
+  $('leadTitulo').textContent = mesmo ? (L.lead.titulo || 'Lead') : ((item && item.empresa) || 'Carregando o lead...'); $('leadBarra').textContent = ''; $('leadRodape').textContent = '';
+  if (mesmo) renderLead();
+  else { // abre já com o que o cartão sabe e completa quando o GET chegar
+    var cp = $('leadCorpo'); cp.textContent = '';
+    if (item) { var so = seloOrigem(item.origem, true); if (so) $('leadBarra').appendChild(so); if (item.pessoa) cp.appendChild(el('div', 'emp', item.pessoa)); var fl = foneLinha(item.fone, 'pessoa-tel'); if (fl) cp.appendChild(fl); }
+    cp.appendChild(el('p', 'vazio', 'Buscando o resto no Agendor...'));
+  }
   try { $('leadTitulo').focus(); } catch (e) {}
   await carregarLead(L, !!mesmo);
 }
@@ -1086,7 +1278,13 @@ async function carregarLead(L, silencioso) {
   aplicarResposta(L, j); limparEditsIguais(L); recomputarMostrar(L); redesenhar(L);
 }
 function aplicarResposta(L, j) { if (j.lead) L.lead = j.lead; if (j.opcoes && typeof j.opcoes === 'object') { var op0 = Object.assign({}, L.opcoes); Object.keys(j.opcoes).forEach(function (k) { if (Array.isArray(j.opcoes[k]) && j.opcoes[k].length) op0[k] = j.opcoes[k]; }); L.opcoes = op0; } if (j.motivosPerda) L.motivos = j.motivosPerda; if (j.responsaveis) L.responsaveis = j.responsaveis; }
-function fecharLead() { var L = S.L; $('painelLead').classList.add('hide'); if (L && L.opener) { try { L.opener.focus(); } catch (e) {} } }
+function fecharLead() { var L = S.L; $('painelLead').classList.add('hide'); try { if (/^#lead=/.test(location.hash)) history.replaceState(null, '', location.pathname + location.search); } catch (e) {} if (L && L.opener) { try { L.opener.focus(); } catch (e) {} } }
+function aoMudarHash() {
+  var m = /^#lead=(\d+)/.exec(location.hash);
+  if (m) { if (!S.token || !S.tem) return; var id = Number(m[1]); if (!S.L || S.L.dealId !== id || $('painelLead').classList.contains('hide')) abrirLead(id, null); }
+  else if (!$('painelLead').classList.contains('hide')) $('painelLead').classList.add('hide'); // botão Voltar do navegador fecha o painel
+}
+window.addEventListener('hashchange', aoMudarHash); window.addEventListener('popstate', aoMudarHash);
 function acoesDe(L) { return (L.lead && L.lead.acoes) || {}; }
 
 function redesenhar(L) { if (L.modalAberto) renderGanho(L); else renderLead(); }
@@ -1104,7 +1302,7 @@ function renderLead() {
   if (!(lead.pessoas || []).length) s4.appendChild(el('p', 'sub', 'Nenhuma pessoa cadastrada.'));
   (lead.pessoas || []).forEach(function (p) {
     var bx = el('div', 'pessoa'); bx.appendChild(el('div', 'emp', (p.nome || 'Sem nome') + (p.principal ? ' (principal)' : ''))); if (p.cargo) bx.appendChild(el('div', 'sub', p.cargo)); if (p.email) bx.appendChild(el('div', 'sub', p.email));
-    (p.telefones || []).forEach(function (t) { var l = foneLinha(t.e164 || t.bonito, 'pessoa-tel', t.whatsapp, t.bonito); if (l) { if (t.tipo) l.appendChild(el('span', 'sub', t.tipo)); bx.appendChild(l); } });
+    (p.telefones || []).forEach(function (t) { var l = foneLinha(t.e164 || t.bonito, 'pessoa-tel', t.whatsapp, t.bonito, true); if (l) { if (t.tipo) l.appendChild(el('span', 'sub', t.tipo)); bx.appendChild(l); } });
     if (!(p.telefones || []).length) bx.appendChild(el('div', 'sub', 'Sem telefone.'));
     s4.appendChild(bx);
   }); corpo.appendChild(s4);
@@ -1143,7 +1341,7 @@ function campoEl(L, f, pref, req, marcar) {
     ops.forEach(function (o) { var op = el('option', null, o); op.value = o; inp.appendChild(op); }); inp.value = atual;
   } else if (f.tipo === 'area') { inp = el('textarea'); inp.value = atual; inp.rows = 3; }
   else { inp = el('input'); inp.type = 'text'; inp.value = atual; inp.autocomplete = 'off'; if (f.tipo === 'cnpj' || f.tipo === 'cep') inp.setAttribute('inputmode', 'numeric'); if (f.tipo === 'uf') { inp.setAttribute('maxlength', '2'); inp.setAttribute('autocapitalize', 'characters'); } }
-  inp.id = id; if (req) inp.setAttribute('aria-required', 'true'); var err = el('div', 'erro-c'); err.setAttribute('role', 'alert'); err.classList.add('hide');
+  inp.id = id; inp.setAttribute('enterkeyhint', f.tipo === 'area' ? 'enter' : 'done'); inp.addEventListener('focus', function () { setTimeout(function () { try { if (inp.scrollIntoView) inp.scrollIntoView({ block: 'center' }); } catch (e) {} }, 300); }); if (req) inp.setAttribute('aria-required', 'true'); var err = el('div', 'erro-c'); err.setAttribute('role', 'alert'); err.classList.add('hide');
   function mostrarErro() { var m = validarCampo(L, f); if (!m && req && marcar) m = normVal(f.k, valorAtual(f.k)) === '' ? 'Falta preencher este campo.' : 'O Agendor ainda pede este campo. Confira o valor.'; err.textContent = m; err.classList.toggle('hide', !m); wrap.classList.toggle('erro', !!m); inp.setAttribute('aria-invalid', m ? 'true' : 'false'); return m; }
   function mudou() {
     var v = inp.value; if (f.tipo === 'cnpj') v = mascCnpj(v); else if (f.tipo === 'cep') v = mascCep(v); else if (f.tipo === 'uf') v = mascUf(v);
@@ -1223,12 +1421,16 @@ async function salvarCampos(L) { // botão Salvar do painel
   await enviarCampos(L);
 }
 // grava só o que mudou, com atualização otimista; devolve 'ok' | 'erro' | 'nada'
+function campoApi(k) { var p = k.split('.'); if (p[0] === 'e' && p[1] === 'end') return 'empresa.endereco.' + p[2]; if (p[0] === 'e') return 'empresa.' + p[1]; if (p[0] === 'n') return 'negocio.' + p[1]; if (p[0] === 'p') return 'pessoa.' + p[2]; return k; }
+function campoDeApi(L, campo) { var p = String(campo).split('.'); if (p[0] === 'empresa' && p[1] === 'endereco') return 'e.end.' + p[2]; if (p[0] === 'empresa') return 'e.' + p[1]; if (p[0] === 'negocio') return 'n.' + p[1]; if (p[0] === 'pessoa') { var pp = pessoaPrincipal(L.lead); return pp ? 'p.' + pp.id + '.' + p[1] : null; } return null; }
 async function enviarCampos(L) {
   var diff = calcDiff(L); if (!diff.length) { return 'nada'; }
-  var corpo = montarCorpo(diff); var antes = copia(L.lead);
+  var corpo = montarCorpo(diff); var antes = copia(L.lead); var edits = {};
+  corpo.base = {}; diff.forEach(function (d) { corpo.base[campoApi(d.k)] = String(valorOrig(L.lead, d.k) == null ? '' : valorOrig(L.lead, d.k)); edits[d.k] = L.edits[d.k]; }); // o valor que a página LEU: se mudou no Agendor, o servidor avisa em vez de sobrescrever
   diff.forEach(function (d) { gravarLocal(L.lead, d.k, d.v); }); // aparece na hora
   L.ocupado = true; redesenhar(L); setEstado(L, 'salvando', 'Salvando... já mostrei na tela e estou conferindo no Agendor.');
-  var j = await chamarLead(L, '/campos', corpo); if (!j) return 'erro'; L.ocupado = false;
+  var j = await chamarLead(L, '/campos', corpo, null, { tipo: 'campos', meta: { titulo: L.lead.titulo, edits: edits } }); if (!j) return 'erro'; L.ocupado = false;
+  if (j._enfileirado) { diff.forEach(function (d) { delete L.edits[d.k]; }); gravarRascunho(L); if (S.L === L) { redesenhar(L); setEstado(L, 'salvando', 'Sem conexão. Guardei a alteração neste aparelho e envio sozinho quando a rede voltar.'); } return 'fila'; }
   if (j.ok && j.confirmado !== false) {
     var nao = Array.isArray(j.naoConfirmados) ? j.naoConfirmados : []; aplicarResposta(L, j);
     diff.forEach(function (d) { var nome = d.k.split('.').pop(); if (nao.indexOf(nome) >= 0) return; delete L.edits[d.k]; });
@@ -1238,9 +1440,30 @@ async function enviarCampos(L) {
     return nao.length ? 'erro' : 'ok';
   }
   L.lead = antes; // desfaz na tela; o que ele digitou fica nos campos
+  if (j._status === 409 && j.erro === 'conflito' && Array.isArray(j.conflitos) && j.conflitos.length) { if (S.L === L) { redesenhar(L); mostrarConflitos(L, j); } return 'erro'; }
   var msg2 = msgErro(j) + (j.link && /^https:\/\//.test(j.link) ? ' ' + j.link : '');
   if (S.L === L) { redesenhar(L); setEstado(L, 'erro', j.ok && j.confirmado === false ? 'O Agendor não confirmou a gravação. Desfiz na tela. ' + (j.mensagem || '') : msg2, function () { (L.modalAberto ? confirmarGanho : salvarCampos)(L); }); }
   return 'erro';
+}
+// alguém alterou o campo no Agendor enquanto ele editava: nada foi gravado; ele escolhe o valor atual ou o dele, campo a campo
+function mostrarConflitos(L, j) {
+  var itens = j.conflitos.map(function (c) { return { campo: c.campo, atual: c.atual == null ? '' : String(c.atual), k: campoDeApi(L, c.campo), escolha: null }; }).filter(function (c) { return c.k; });
+  setEstado(L, 'erro', itens.length === 1 ? 'Alguém alterou um campo enquanto você editava. Nada foi salvo.' : 'Alguém alterou ' + itens.length + ' campos enquanto você editava. Nada foi salvo.');
+  var box = L.refs && L.refs.estado; if (!box) return; var lista = el('div', 'conflitos'); box.appendChild(lista);
+  function fim() {
+    if (itens.some(function (c) { return !c.escolha; })) return;
+    if (j.lead) aplicarResposta(L, j);
+    itens.forEach(function (c) { gravarLocal(L.lead, c.k, c.atual); if (c.escolha === 'atual') delete L.edits[c.k]; });
+    gravarRascunho(L); var meus = itens.some(function (c) { return c.escolha === 'meu'; });
+    if (meus) enviarCampos(L); else { redesenhar(L); setEstado(L, 'ok', 'Ficou o valor que está no Agendor.'); }
+  }
+  itens.forEach(function (c) {
+    var f = campoDeK(L.lead, c.k) || { rot: c.campo }; var row = el('div', 'conflito');
+    row.appendChild(el('div', null, 'Alguém alterou "' + f.rot + '" para "' + (c.atual || 'vazio') + '". O seu: "' + (L.edits[c.k] == null ? '' : L.edits[c.k]) + '".'));
+    var b1 = el('button', 'sec', 'Usar o atual'); b1.type = 'button'; var b2 = el('button', null, 'Manter o meu'); b2.type = 'button';
+    function esc(v) { c.escolha = v; b1.disabled = b2.disabled = true; row.appendChild(el('span', 'sub', v === 'atual' ? ' Vai usar o atual.' : ' Vai manter o seu.')); fim(); }
+    b1.onclick = function () { esc('atual'); }; b2.onclick = function () { esc('meu'); }; row.appendChild(b1); row.appendChild(b2); lista.appendChild(row);
+  });
 }
 // ---- perdido (otimista) ----
 async function marcarPerdido(L) {
@@ -1250,8 +1473,9 @@ async function marcarPerdido(L) {
   if (!window.confirm('Marcar "' + nome + '" como PERDIDO (' + (mot ? mot.nome : 'motivo') + ')? As tarefas abertas da cadência serão encerradas.')) return;
   var corpo = { motivoId: mid }; if (String(L.notaPerda || '').trim()) corpo.nota = String(L.notaPerda).trim();
   L.ocupado = true; S.ocultos[L.dealId] = true; redesenharTudo(); fecharLead(); msg(nome + ': marcando como Perdido... (já saiu da tela, estou conferindo no Agendor)', 'aviso');
-  var j = await chamarLead(L, '/perdido', corpo); if (!j) return; L.ocupado = false;
-  if (j.ok && j.confirmado !== false) { L.lead.status = 'perdido'; delete L.edits_; lsDel(rascKey(L.dealId)); L.edits = {}; msg(nome + ' marcado como Perdido e conferido no Agendor ✓', 'ok'); carregar(true, 'tarefas'); }
+  var j = await chamarLead(L, '/perdido', corpo, null, { tipo: 'perdido', meta: { titulo: nome } }); if (!j) return; L.ocupado = false;
+  if (j._enfileirado) { msg(nome + ': sem conexão. Guardei o Perdido e envio sozinho quando a rede voltar.', 'aviso'); return; }
+  if (j.ok && j.confirmado !== false) { L.lead.status = 'perdido'; lsDel(rascKey(L.dealId)); L.edits = {}; msg(nome + ' marcado como Perdido e conferido no Agendor ✓', 'ok'); carregar(true, 'tarefas'); }
   else { delete S.ocultos[L.dealId]; redesenharTudo(); msg(nome + ' voltou para a tela: ' + (j.ok && j.confirmado === false ? 'o Agendor não confirmou o Perdido.' : msgErro(j)), 'erro'); S.L = L; $('painelLead').classList.remove('hide'); renderLead(); setEstado(L, 'erro', j.ok && j.confirmado === false ? 'O Agendor não confirmou o Perdido. Nada mudou. Tente de novo.' : msgErro(j), function () { marcarPerdido(L); }); }
 }
 function redesenharTudo() { if (S.dados) { desenharTopo(S.dados); desenharBlocos(); } if (!$('painelFila').classList.contains('hide')) desenharFila(); }
@@ -1290,7 +1514,7 @@ async function confirmarGanho(L) {
   if (L.ocupado || S.L !== L) return;
   var bad = null; todosCampos(L.lead).forEach(function (f) { if (!Object.prototype.hasOwnProperty.call(L.edits, f.k)) return; var m = validarCampo(L, f); if (m && !bad) bad = f; });
   if (bad || faltaAinda(L).length) { L.ganhoMarcar = true; renderGanho(L); setEstado(L, 'erro', 'Preencha os campos obrigatórios (*) antes de confirmar.'); return; }
-  var r = await enviarCampos(L); if (r === 'erro') return; // a mensagem de erro já está no pop-up, com "tentar de novo"
+  var r = await enviarCampos(L); if (r === 'fila') { setEstado(L, 'erro', 'Sem conexão. Guardei os dados. Quando a rede voltar, confirme o ganho de novo.'); return; } if (r === 'erro') return; // a mensagem de erro já está no pop-up, com "tentar de novo"
   await enviarGanho(L);
 }
 async function enviarGanho(L) {
@@ -1316,7 +1540,7 @@ async function postRep(arenaId, r) {
   if (semAcaoRep(r)) return { cancelado: true, semAcao: true };
   var corpo = { repId: r.id };
   for (var tent = 0; tent < 2; tent++) {
-    var j; try { j = await api('/lead/' + arenaId + '/representante', corpo); } catch (e) { j = { _status: 0, ok: false }; }
+    var j; try { j = await api('/lead/' + arenaId + '/representante', corpo, null, null, { idem: novaChave() }); } catch (e) { j = { _status: 0, ok: false }; }
     if (j._status === 401) { sair('Senha não confere.'); return null; }
     if (j._status === 409 && j.precisaConfirmar) { if (!window.confirm((j.mensagem || 'Este lead já está com um representante.') + ' Trocar mesmo?')) return { cancelado: true }; corpo = { repId: r.id, confirmaTroca: true }; continue; }
     return j;
@@ -1389,11 +1613,12 @@ function secaoTarefas(L) {
   }
   return s;
 }
-function hojeISO() { var d = new Date(); return d.getFullYear() + '-' + hh(d.getMonth() + 1) + '-' + hh(d.getDate()); }
+function hojeISO() { try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(agoraMs())); } catch (e) { var d = new Date(agoraMs()); return d.getFullYear() + '-' + hh(d.getMonth() + 1) + '-' + hh(d.getDate()); } }
 async function acaoTarefa(L, caminho, corpo, otimista) { // aparece na hora; se o servidor não confirmar, volta como estava e mostra a mensagem
   if (L.ocupado) return; var antes = copia(L.lead); L.lead.tarefas = L.lead.tarefas || []; otimista(L.lead);
   L.ocupado = true; renderLead(); setEstado(L, 'salvando', 'Salvando a tarefa... já mostrei na tela e estou conferindo no Agendor.');
-  var j = await chamarLead(L, caminho, corpo); if (!j) return; L.ocupado = false;
+  var j = await chamarLead(L, caminho, corpo, null, { tipo: 'tarefa', meta: { titulo: L.lead.titulo } }); if (!j) return; L.ocupado = false;
+  if (j._enfileirado) { if (S.L === L) { renderLead(); setEstado(L, 'salvando', 'Sem conexão. Guardei a tarefa e envio sozinho quando a rede voltar.'); } return; }
   if (j.ok !== false && j._status < 300 && j.confirmado !== false) { aplicarResposta(L, j); if (S.L === L) { renderLead(); setEstado(L, 'ok', j.mensagem || 'Tarefa atualizada e conferida ✓'); } carregar(true, 'tarefas'); }
   else { L.lead = antes; if (S.L === L) { renderLead(); setEstado(L, 'erro', j.ok !== false && j.confirmado === false ? 'O Agendor não confirmou. Desfiz na tela. ' + (j.mensagem || '') : msgErro(j), function () { acaoTarefa(L, caminho, corpo, otimista); }); } }
 }
@@ -1446,12 +1671,13 @@ $('bSair1').onclick = function () { sair(''); };
 $('bSair2').onclick = function () { sair(''); };
 $('bTema').onclick = alternarTema;
 $('bAjuda').onclick = function () { var b = $('ajudaBox'); b.classList.toggle('hide'); $('bAjuda').setAttribute('aria-expanded', b.classList.contains('hide') ? 'false' : 'true'); };
-$('busca').oninput = desenharBlocos; $('ordem').onchange = desenharBlocos; $('esconder').onchange = desenharBlocos;
+var debBusca = null; $('busca').oninput = function () { clearTimeout(debBusca); debBusca = setTimeout(function () { desenharBlocos(); }, 150); }; $('ordem').onchange = desenharBlocos; $('esconder').onchange = desenharBlocos;
 function setFunil(f) { S.funil = f; [['fTodos', 'todos'], ['fOut', 'outbound'], ['fIn', 'inbound']].forEach(function (p) { $(p[0]).setAttribute('aria-pressed', p[1] === f ? 'true' : 'false'); }); if (S.dados) { desenharTopo(S.dados); desenharBlocos(); } }
 $('fTodos').onclick = function () { setFunil('todos'); }; $('fOut').onclick = function () { setFunil('outbound'); }; $('fIn').onclick = function () { setFunil('inbound'); };
 try { $('blocoIniciar').open = lsGet('sh_iniciar_aberto') === '1'; } catch (e) {}
 $('blocoIniciar').addEventListener('toggle', function () { lsSet('sh_iniciar_aberto', $('blocoIniciar').open ? '1' : '0'); });
 document.addEventListener('keydown', function (e) {
+  if (e.key === 'Tab') { var dlg = ['modalGanho', 'painelLead', 'painelAguard', 'painelFila'].map($).filter(function (x) { return !x.classList.contains('hide'); })[0]; if (dlg) { var fs = Array.prototype.filter.call(dlg.querySelectorAll('button,a[href],input,select,textarea,[tabindex]'), function (x) { return !x.disabled && x.getAttribute('tabindex') !== '-1' && !x.closest('.hide'); }); if (fs.length) { var a0 = fs[0], z = fs[fs.length - 1]; if (e.shiftKey && (document.activeElement === a0 || !dlg.contains(document.activeElement))) { e.preventDefault(); z.focus(); } else if (!e.shiftKey && (document.activeElement === z || !dlg.contains(document.activeElement))) { e.preventDefault(); a0.focus(); } } } return; }
   if (e.ctrlKey || e.metaKey || e.altKey || $('s-dia').classList.contains('hide')) return;
   var alvo = e.target && e.target.tagName; var digitando = alvo === 'INPUT' || alvo === 'SELECT' || alvo === 'TEXTAREA';
   if (e.key === 'Escape') { if (!$('painelAguard').classList.contains('hide')) { fecharAguardando(); return; } if (!$('modalGanho').classList.contains('hide')) { fecharGanho(); return; } if (!$('painelLead').classList.contains('hide')) { fecharLead(); return; } if (!$('painelFila').classList.contains('hide')) { $('painelFila').classList.add('hide'); return; } $('busca').value = ''; $('busca').blur(); desenharBlocos(); return; }
@@ -1465,7 +1691,10 @@ document.addEventListener('keydown', function (e) {
   else if (k === '?') { $('bAjuda').click(); }
 });
 
-window.__shTeste = { carregarAguardando: carregarAguardando, S: S, desenhar: desenhar, carregar: carregar, casaBusca: casaBusca, foneFmt: foneFmt, aceitar: aceitar, abrirLead: abrirLead, abrirGanho: abrirGanho, cnpjValido: cnpjValido, desenharFila: desenharFila, carregarFila: carregarFila, origemClasse: origemClasse, mascCnpj: mascCnpj };
+desenharTopo = seguro('desenharTopo', desenharTopo); desenharControle = seguro('desenharControle', desenharControle); desenharBlocos = seguro('desenharBlocos', desenharBlocos); desenharFila = seguro('desenharFila', desenharFila); desenharAguardando = seguro('desenharAguardando', desenharAguardando); renderLead = seguro('renderLead', renderLead); renderGanho = seguro('renderGanho', renderGanho);
+cartao = seguro('cartao', cartao, function (it) { var f = el('div', 'item'); f.appendChild(el('div', 'emp', (it && it.empresa) || 'Item')); f.appendChild(el('div', 'pas', 'Não consegui mostrar os detalhes deste item.')); return f; });
+cartaoAtrasado = seguro('cartaoAtrasado', cartaoAtrasado, function (g) { var f = el('div', 'item'); f.appendChild(el('div', 'emp', (g && g.empresa) || 'Item')); return f; });
+window.__shTeste = { REDE: REDE, lerSaida: lerSaida, processarSaida: processarSaida, reportarErro: reportarErro, aplicarStatus: aplicarStatus, hooks: { recarregar: null }, falhaDePagina: falhaDePagina, verificarVersao: verificarVersao, agoraMs: agoraMs, PAGINA_VERSAO: PAGINA_VERSAO, carregarAguardando: carregarAguardando, S: S, desenhar: desenhar, carregar: carregar, casaBusca: casaBusca, foneFmt: foneFmt, aceitar: aceitar, abrirLead: abrirLead, abrirGanho: abrirGanho, cnpjValido: cnpjValido, desenharFila: desenharFila, carregarFila: carregarFila, origemClasse: origemClasse, mascCnpj: mascCnpj };
 (async function () {
   var t = lsGet('sh_tok');
   if (t) { var ok = await entrar(t, true); if (ok) return; }
