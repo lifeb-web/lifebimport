@@ -293,6 +293,7 @@ a.subir{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:6
 .faixa button{min-height:36px}
 .selo{display:inline-block;padding:4px 12px;border-radius:999px;background:var(--amber-bg);color:var(--amber);border:1.5px solid var(--amber);font-weight:800;font-size:13px}
 .col-h .conf.velho{color:var(--amber);font-weight:700}
+.contador.amber{color:var(--amber);font-weight:700}
 .conflitos{margin-top:6px;display:flex;flex-direction:column;gap:6px;font-weight:600} .conflito{display:flex;gap:6px;align-items:center;flex-wrap:wrap;color:var(--text)}
 @media(max-width:700px){#busca,#filaBusca,#tok,#ordem,#filaFunil,#qtd,#qtdOutro{font-size:16px!important}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
@@ -608,9 +609,19 @@ function classe(j, imediato) { // 'ok' | 'rede' (tenta de novo) | 'recusa' (defi
   if (st === 502 && !imediato) return 'rede';
   return 'recusa';
 }
+function normCmp(campo, v) { v = String(v == null ? '' : v); if (/cnpj|cep/.test(campo)) return soDigitos(v); return semAcento(v).replace(/\s+/g, ' ').trim(); }
+function valorEnviado(corpo, campo) { var p = String(campo).split('.'), o = corpo; for (var i = 0; i < p.length; i++) { if (o == null || typeof o !== 'object') return undefined; o = o[p[i]]; } return o; }
+function jaSalvo(corpo, j) { // 409 "conflito" em que o valor atual é exatamente o que esta ação enviava: é a própria gravação (reenvio depois da janela da idempotência, ou duas abas)
+  if (!j || j._status !== 409 || j.erro !== 'conflito' || !Array.isArray(j.conflitos) || !j.conflitos.length) return false;
+  return j.conflitos.every(function (c) { var env = valorEnviado(corpo, c.campo); return env !== undefined && normCmp(c.campo, env) === normCmp(c.campo, c.atual); });
+}
 async function executar(e, keepalive) {
   S.emVoo[e.id] = true;
-  try { return await api('/lead/' + e.dealId + e.caminho, e.corpo || {}, null, null, { idem: e.id, keepalive: keepalive }); } finally { delete S.emVoo[e.id]; }
+  try {
+    var j = await api('/lead/' + e.dealId + e.caminho, e.corpo || {}, null, null, { idem: e.id, keepalive: keepalive });
+    if (e.tipo === 'campos' && jaSalvo(e.corpo, j)) return Object.assign({}, j, { ok: true, confirmado: true, _status: 200, naoConfirmados: [], _jaSalvo: true });
+    return j;
+  } finally { delete S.emVoo[e.id]; }
 }
 // envia já; se a rede não deixar, a ação fica guardada (devolve _enfileirado) e sai sozinha depois
 async function enviarAcao(def) {
@@ -771,9 +782,12 @@ function linhaContato(li, it) {
 function acoesCartao(li, dealId, link, aoAbrirAgendor, item) {
   var ac = el('div', 'acoes');
   if (dealId != null) { var ab = el('button', 'abrir', 'Abrir'); ab.type = 'button'; ab.setAttribute('aria-label', 'Abrir o lead completo'); ab.onclick = function () { abrirLead(dealId, ab, item); }; ['mouseenter', 'touchstart', 'focus'].forEach(function (ev) { ab.addEventListener(ev, function () { prefetchLead(dealId); }, { passive: true }); }); ac.appendChild(ab); }
-  var a = el('a', 'bt', '↗ Agendor'); a.setAttribute('aria-label', 'Abrir no Agendor'); a.title = 'Abrir no Agendor'; a.href = link; a.target = '_blank'; a.rel = 'noopener noreferrer';
-  if (aoAbrirAgendor) a.addEventListener('click', aoAbrirAgendor);
-  ac.appendChild(a); li.appendChild(ac);
+  if (typeof link === 'string' && /^https:\/\//.test(link)) { // só link https de verdade (nunca javascript: nem dado estranho)
+    var a = el('a', 'bt', '↗ Agendor'); a.setAttribute('aria-label', 'Abrir no Agendor'); a.title = 'Abrir no Agendor'; a.href = link; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    if (aoAbrirAgendor) a.addEventListener('click', aoAbrirAgendor);
+    ac.appendChild(a);
+  }
+  li.appendChild(ac);
 }
 function empClicavel(li, nome, dealId, item) { var e = el('div', 'emp' + (dealId != null ? ' clic' : ''), nome); if (dealId != null) e.onclick = function () { abrirLead(dealId, e, item); }; li.appendChild(e); }
 function cartao(it, opts) {
@@ -1145,6 +1159,7 @@ var CAMPOS = [
   { k: 'n.observacao_sdr', rot: 'Observação do SDR', tipo: 'area', tok: ['observacao'] }
 ];
 var GANHO_ORDEM = ['e.aprovado_serasa', 'e.quantidade_de_lojas', 'e.faturamento_mensal', 'e.mais_de_2_anos', 'e.disposicao_para_investimento', 'e.segmento', 'n.observacao_sdr', 'e.cnpj', 'e.nome', 'e.end.cep', 'e.end.rua', 'e.end.numero', 'e.end.bairro', 'e.end.cidade', 'e.end.uf'];
+var OBS_MAX = 150;
 function campoDe(k) { for (var i = 0; i < CAMPOS.length; i++) if (CAMPOS[i].k === k) return CAMPOS[i]; return null; }
 function pessoaPrincipal(lead) { var ps = (lead && lead.pessoas) || []; for (var i = 0; i < ps.length; i++) if (ps[i].principal) return ps[i]; return ps[0] || null; }
 function chavesPessoa(lead) { var p = pessoaPrincipal(lead); return p ? [{ k: 'p.' + p.id + '.nome', rot: 'Nome do contato', tipo: 'texto', tok: [] }, { k: 'p.' + p.id + '.cargo', rot: 'Cargo do contato', tipo: 'texto', tok: ['cargo'] }] : []; }
@@ -1339,7 +1354,7 @@ function campoEl(L, f, pref, req, marcar) {
     inp = el('select'); var o0 = el('option', null, 'Escolha...'); o0.value = ''; inp.appendChild(o0); var ops = (L.opcoes || {})[f.op] || [];
     if (atual && ops.indexOf(atual) < 0) ops = ops.concat([atual]);
     ops.forEach(function (o) { var op = el('option', null, o); op.value = o; inp.appendChild(op); }); inp.value = atual;
-  } else if (f.tipo === 'area') { inp = el('textarea'); inp.value = atual; inp.rows = 3; }
+  } else if (f.tipo === 'area') { inp = el('textarea'); inp.value = String(atual).slice(0, OBS_MAX); inp.rows = 3; inp.setAttribute('maxlength', String(OBS_MAX)); }
   else { inp = el('input'); inp.type = 'text'; inp.value = atual; inp.autocomplete = 'off'; if (f.tipo === 'cnpj' || f.tipo === 'cep') inp.setAttribute('inputmode', 'numeric'); if (f.tipo === 'uf') { inp.setAttribute('maxlength', '2'); inp.setAttribute('autocapitalize', 'characters'); } }
   inp.id = id; inp.setAttribute('enterkeyhint', f.tipo === 'area' ? 'enter' : 'done'); inp.addEventListener('focus', function () { setTimeout(function () { try { if (inp.scrollIntoView) inp.scrollIntoView({ block: 'center' }); } catch (e) {} }, 300); }); if (req) inp.setAttribute('aria-required', 'true'); var err = el('div', 'erro-c'); err.setAttribute('role', 'alert'); err.classList.add('hide');
   function mostrarErro() { var m = validarCampo(L, f); if (!m && req && marcar) m = normVal(f.k, valorAtual(f.k)) === '' ? 'Falta preencher este campo.' : 'O Agendor ainda pede este campo. Confira o valor.'; err.textContent = m; err.classList.toggle('hide', !m); wrap.classList.toggle('erro', !!m); inp.setAttribute('aria-invalid', m ? 'true' : 'false'); return m; }
@@ -1347,6 +1362,15 @@ function campoEl(L, f, pref, req, marcar) {
     var v = inp.value; if (f.tipo === 'cnpj') v = mascCnpj(v); else if (f.tipo === 'cep') v = mascCep(v); else if (f.tipo === 'uf') v = mascUf(v);
     if (v !== inp.value) inp.value = v; L.edits[f.k] = v; delete L.origemCampo[f.k]; var tg = lb.querySelector('.tag-origem'); if (tg) tg.remove();
     gravarRascunho(L); if (err.textContent) { marcar = false; mostrarErro(); } atualizarSalvar(L); atualizarGanhoBtn(L);
+  }
+  if (f.k === 'n.observacao_sdr') { // o Agendor guarda 150 letras: contador n/150 e corte avisado
+    var cont = el('div', 'dica-c contador'); cont.setAttribute('aria-live', 'polite'); wrap.appendChild(cont);
+    var cortou = false;
+    var atualizaCont = function () { var n = inp.value.length; cont.textContent = n + '/' + OBS_MAX + (cortou ? ' O campo guarda até ' + OBS_MAX + ' letras: cortei o final.' : ''); cont.classList.toggle('amber', n >= 130 || cortou); };
+    var corta = function () { if (inp.value.length > OBS_MAX) { inp.value = inp.value.slice(0, OBS_MAX); cortou = true; } };
+    inp.addEventListener('paste', function (ev) { try { var t = ((ev.clipboardData || window.clipboardData).getData('text')) || ''; var sel = (inp.selectionEnd || 0) - (inp.selectionStart || 0); if (inp.value.length - sel + t.length > OBS_MAX) { cortou = true; atualizaCont(); setTimeout(function () { corta(); atualizaCont(); mudou(); }, 0); } } catch (e) {} });
+    inp.addEventListener('input', function () { var antes = inp.value.length; corta(); if (antes <= OBS_MAX && inp.value.length <= OBS_MAX && cortou && inp.value.length < OBS_MAX) cortou = false; atualizaCont(); });
+    atualizaCont();
   }
   inp.addEventListener(f.tipo === 'sel' ? 'change' : 'input', mudou);
   inp.addEventListener('blur', function () { var m = mostrarErro(); if (f.tipo === 'cnpj' && !m) consultarReceita(L); });
@@ -1681,7 +1705,8 @@ document.addEventListener('keydown', function (e) {
   if (e.ctrlKey || e.metaKey || e.altKey || $('s-dia').classList.contains('hide')) return;
   var alvo = e.target && e.target.tagName; var digitando = alvo === 'INPUT' || alvo === 'SELECT' || alvo === 'TEXTAREA';
   if (e.key === 'Escape') { if (!$('painelAguard').classList.contains('hide')) { fecharAguardando(); return; } if (!$('modalGanho').classList.contains('hide')) { fecharGanho(); return; } if (!$('painelLead').classList.contains('hide')) { fecharLead(); return; } if (!$('painelFila').classList.contains('hide')) { $('painelFila').classList.add('hide'); return; } $('busca').value = ''; $('busca').blur(); desenharBlocos(); return; }
-  if (digitando) return;
+  if (digitando || (e.target && e.target.isContentEditable)) return;
+  if (['painelFila', 'painelLead', 'painelAguard', 'modalGanho'].some(function (id) { return !$(id).classList.contains('hide'); })) return; // com painel ou pop-up aberto, as teclas de atalho ficam quietas
   var k = String(e.key).toLowerCase();
   if (k === '/') { e.preventDefault(); $('busca').focus(); }
   else if (k === 'r') carregar(false, true);
