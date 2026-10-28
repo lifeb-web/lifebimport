@@ -297,6 +297,77 @@ a.subir{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:6
 .conflitos{margin-top:6px;display:flex;flex-direction:column;gap:6px;font-weight:600} .conflito{display:flex;gap:6px;align-items:center;flex-wrap:wrap;color:var(--text)}
 @media(max-width:700px){#busca,#filaBusca,#tok,#ordem,#filaFunil,#qtd,#qtdOutro{font-size:16px!important}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+/* revisão de design 28/10: leitura rápida do cartão, cabeçalho enxuto no celular, nada pulando de lugar */
+.org{flex-wrap:wrap;border-radius:12px;line-height:1.25;row-gap:2px}
+.org .max{border-radius:6px;white-space:nowrap}
+.fone a.wa,.pessoa-tel a.wa{white-space:nowrap}
+.item .acoes{flex-wrap:nowrap;align-items:stretch}
+.item .acoes button.abrir{flex:1 1 auto;min-height:34px;font-size:14px}
+.item .acoes a.bt{display:inline-flex;align-items:center;min-height:34px}
+.item .emp{font-size:14px}
+.atual{min-height:20px}
+#leadTitulo:focus,#gTitulo:focus{outline:none}
+#filaAviso:empty,#agAviso:empty{display:none}
+#filaAviso,#agAviso{border:0;background:none}
+.vazio-dia{grid-column:1 / -1;align-self:start;background:var(--card);border:1px dashed var(--border);border-radius:12px;padding:18px;color:var(--muted);font-size:15px;line-height:1.5}
+.vazio-dia strong{display:block;color:var(--text);font-size:17px;margin-bottom:4px}
+details.mais>summary{list-style:none;cursor:pointer;display:none;font-weight:700;color:var(--purple);min-height:44px;align-items:center;padding:0 10px;border:1.5px solid var(--purple);border-radius:8px}
+details.mais>summary::-webkit-details-marker{display:none}
+.mais-itens{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+details.mais{display:contents}
+#painelLead .secao h3{font-size:15px}
+#painelLead .pessoa-tel{gap:8px;margin-top:4px}
+#painelLead .pessoa-tel button.copiar,#painelLead .pessoa-tel a.wa{min-height:36px}
+.ganho-falta{font-weight:700}
+@media(max-width:700px){
+  #cab{padding:8px 10px}
+  .cab1{gap:6px 10px}
+  .cab1 .espaco{display:none}
+  .cab1 img{height:24px}
+  .relogio{font-size:20px}
+  a.subir{order:1;margin-left:auto;width:auto;min-height:40px;padding:4px 14px;font-size:14px}
+  .chips{order:2;width:100%;flex-wrap:nowrap;overflow-x:auto;gap:6px;padding-bottom:2px}
+  .chip{flex:none;min-width:0;padding:3px 10px;font-size:13px;white-space:nowrap} .chip b{display:inline;font-size:16px;margin-right:6px}
+  .cab1>div:last-child{order:3;width:100%;text-align:left!important}
+  .cab1>div:last-child .row{justify-content:flex-start!important;gap:6px}
+  details.mais{display:block} details.mais>summary{display:inline-flex}
+  details.mais:not([open])>.mais-itens{display:none}
+  details.mais[open]{flex-basis:100%}
+  .mais-itens{margin-top:6px}
+  .cab2{gap:6px}
+  .cab2 input[type=search]{width:100%;flex:1 1 100%;font-size:16px;min-height:44px}
+  .cab2 .seg{flex:1 1 100%} .cab2 .seg button{flex:1;min-height:44px}
+  .cab2 select{flex:1 1 140px;min-height:44px;font-size:16px}
+  .cab2 button,.cab2 label{min-height:44px}
+  #cab button{min-height:40px}
+  .histo{font-size:13px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .item .emp{font-size:15px}
+  .item .acoes button.abrir,.item .acoes a.bt{min-height:44px}
+  .item .fone a.wa{font-size:14px;min-height:32px}
+  .item button.copiar{min-height:36px}
+  .orgfiltro{flex-wrap:nowrap;overflow-x:auto;gap:6px}
+  .orgfiltro button.of{flex:none}
+  #painelFila .barra select,#painelFila .barra input{width:100%;max-width:100%;font-size:16px;min-height:44px}
+  #painelFila .rodape .row{gap:6px} #painelFila .rodape button{flex:1 1 auto;min-height:44px;font-size:13px;padding:4px 8px}
+  .painel header{padding:10px 12px} .painel h2{font-size:17px}
+  .painel header button{min-height:44px}
+}
+/* segunda passada */
+.item .acoes{flex-wrap:wrap}
+.item .acoes button.abrir{flex:1 1 70px;min-width:0}
+.item .acoes a.bt{flex:1 1 70px;justify-content:center;min-width:0}
+.org .max{white-space:normal;letter-spacing:0}
+.cab2 input[type=search]{min-width:230px}
+.fi input[type=checkbox]{width:26px;height:26px}
+@media(max-width:999px){ /* celular e tablet: a página rola inteira; as colunas nunca encolhem nem cortam os cartões */
+  #s-dia{flex:0 0 auto;height:auto} #blocos{flex:0 0 auto} .col{flex:0 0 auto;overflow:visible;min-height:0}
+  .col.colapsada{overflow:hidden}
+}
+@media(max-width:700px){
+  .cab2 select#ordem{flex:1 1 55%} .cab2 label{flex:0 0 auto}
+  #painelFila #bLiberarSel{flex:1 1 100%}
+  .item .acoes{flex-wrap:nowrap}
+}
 </style>
 </head>
 <body>
@@ -343,16 +414,18 @@ a.subir{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:6
         <div class="atual" id="atualizado" aria-live="polite"></div>
         <div class="row" style="justify-content:flex-end;margin-top:4px">
           <button class="sec" id="bAtualizar" title="Conferir o Agendor agora (R)">Atualizar</button>
-          <button class="sec" id="bTema" title="Tema claro/escuro (T)">Tema</button>
-          <button class="sec" id="bAjuda" title="Atalhos do teclado" aria-expanded="false">?</button>
           <button class="link" id="bSair2">Sair</button>
-          <button class="link" id="bSairApagar" title="Para aparelho compartilhado" style="font-size:13px">Sair e apagar dados deste aparelho</button>
+          <details class="mais" id="maisMenu"><summary>Mais</summary><div class="mais-itens">
+            <button class="sec" id="bTema" title="Tema claro/escuro (T)">Tema</button>
+            <button class="sec" id="bAjuda" title="Atalhos do teclado" aria-expanded="false">?</button>
+            <button class="link" id="bSairApagar" title="Para aparelho compartilhado" style="font-size:13px">Sair e apagar dados deste aparelho</button>
+          </div></details>
         </div>
       </div>
     </div>
     <div class="ajuda-box hide" id="ajudaBox" role="note"><kbd>/</kbd> buscar &nbsp; <kbd>R</kbd> atualizar &nbsp; <kbd>H</kbd> esconder feitos &nbsp; <kbd>T</kbd> tema &nbsp; <kbd>F</kbd> fila de espera &nbsp; <kbd>Esc</kbd> limpar a busca ou fechar</div>
     <div class="cab2">
-      <input type="search" id="busca" placeholder="Buscar por empresa, pessoa ou telefone (tecla /)" aria-label="Buscar por empresa, pessoa ou telefone" autocomplete="off">
+      <input type="search" id="busca" placeholder="Buscar empresa, pessoa..." aria-label="Buscar por empresa, pessoa ou telefone" autocomplete="off">
       <div class="seg" role="group" aria-label="Funil"><button id="fTodos" aria-pressed="true">Todos</button><button id="fOut" aria-pressed="false">Outbound</button><button id="fIn" aria-pressed="false">Inbound</button></div>
       <select id="ordem" aria-label="Ordenar"><option value="pend">Pendentes primeiro</option><option value="az">Ordem alfabética</option><option value="hora">Hora em que foi iniciado</option></select>
       <button class="sec" id="bAguard" title="Leads que você qualificou e ainda esperam representante">Aguardando representante (0)</button>
@@ -384,7 +457,7 @@ a.subir{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:6
 </section>
 
 <section id="painelFila" class="painel hide" role="dialog" aria-modal="true" aria-label="Fila de espera">
-  <header><h2>Fila de espera</h2><button class="sec" id="bFecharFila">Fechar (Esc)</button></header>
+  <header><h2>Fila de espera</h2><button class="sec" id="bFecharFila" title="Fechar (Esc)">Fechar</button></header>
   <div class="barra">
     <select id="filaFunil" aria-label="Funil"></select>
     <input type="search" id="filaBusca" placeholder="Buscar por empresa, pessoa ou telefone" aria-label="Buscar na fila" autocomplete="off">
@@ -399,14 +472,14 @@ a.subir{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:6
 </section>
 
 <section id="painelLead" class="painel hide" role="dialog" aria-modal="true" aria-labelledby="leadTitulo">
-  <header><h2 id="leadTitulo" tabindex="-1">Lead</h2><button class="sec" id="bFecharLead">Fechar (Esc)</button></header>
+  <header><h2 id="leadTitulo" tabindex="-1">Lead</h2><button class="sec" id="bFecharLead" title="Fechar (Esc)">Fechar</button></header>
   <div class="barra" id="leadBarra"></div>
   <div class="corpo" id="leadCorpo"></div>
   <div class="rodape" id="leadRodape"></div>
 </section>
 
 <section id="painelAguard" class="painel hide" role="dialog" aria-modal="true" aria-label="Aguardando representante">
-  <header><h2>Aguardando representante</h2><div class="row"><button class="sec" id="bAtualizarAguard">Atualizar</button><button class="sec" id="bFecharAguard">Fechar (Esc)</button></div></header>
+  <header><h2>Aguardando representante</h2><div class="row"><button class="sec" id="bAtualizarAguard">Atualizar</button><button class="sec" id="bFecharAguard" title="Fechar (Esc)">Fechar</button></div></header>
   <div class="barra"><span class="status-ctl" id="agResumo"></span></div>
   <div class="corpo" id="agLista"></div>
   <div class="rodape"><div class="msgacao aviso" id="agAviso" role="status" aria-live="polite"></div></div>
@@ -537,7 +610,7 @@ function casaBusca(it, q) {
 
 // ---------- chamadas ----------
 // ---------- resiliência: rede com retry, disjuntor, caixa de saída, versão, relógio do servidor, telemetria ----------
-var PAGINA_VERSAO = '2026-10-28.1';
+var PAGINA_VERSAO = '2026-10-28.2';
 var REDE = { escala: 1, falhas: 0, ultima: 0, desvio: 0 };
 function dormir(ms) { return new Promise(function (r) { setTimeout(r, ms * REDE.escala); }); }
 function jitter(ms) { return ms * (0.5 + Math.random() * 0.5); }
@@ -846,6 +919,7 @@ function desenharBlocos() {
   var passa = function (it) { return visivel(it) && casaBusca(it, busca); };
   bl.textContent = '';
   var cols = [];
+  if (!contar(d).empresas && !(d.atrasadas && d.atrasadas.total) && !busca) { var vz = el('div', 'vazio-dia'); vz.appendChild(el('strong', null, 'Tudo em dia por aqui.')); vz.appendChild(el('div', null, 'Nenhuma empresa para atender agora. Para ter mais trabalho, abra "Começar leads novos" e inicie os próximos da lista.')); bl.appendChild(vz); }
   var porId = {}; (d.blocos || []).forEach(function (b) { porId[b.id] = b; });
   function colBloco(b) {
     if (!b) return;
@@ -1331,15 +1405,14 @@ function renderLead() {
     if (!(p.telefones || []).length) bx.appendChild(el('div', 'sub', 'Sem telefone.'));
     s4.appendChild(bx);
   }); corpo.appendChild(s4);
+  corpo.appendChild(secaoTarefas(L)); // o que fazer agora vem logo depois de quem ligar
   // 2) empresa
   var emp = lead.empresa || {}; var s3 = el('div', 'secao'); s3.appendChild(el('h3', null, 'Empresa')); var dl = el('dl');
   function par(t, v) { if (!v) return; dl.appendChild(el('dt', null, t)); dl.appendChild(el('dd', null, v)); }
-  par('Empresa', emp.nome); par('CNPJ', fmtCnpj(emp.cnpj)); par('Segmento', emp.segmento); par('Endereço', enderecoTxt(emp.endereco));
+  if (emp.nome && emp.nome !== lead.titulo) par('Empresa', emp.nome); par('CNPJ', fmtCnpj(emp.cnpj)); par('Segmento', emp.segmento); par('Endereço', enderecoTxt(emp.endereco));
   CAMPOS.forEach(function (f) { if (f.op && f.k !== 'e.segmento') par(f.rot, (emp.campos || {})[f.op]); });
   par('Dono do negócio', lead.dono && lead.dono.nome); par('Criado em', dataBR(lead.criadoEm, true)); s3.appendChild(dl); corpo.appendChild(s3);
   if (lead.observacaoSdr) { var s5 = el('div', 'secao'); s5.appendChild(el('h3', null, 'Observação do SDR')); var ob = el('p', null, lead.observacaoSdr); ob.style.whiteSpace = 'pre-wrap'; ob.style.overflowWrap = 'anywhere'; s5.appendChild(ob); corpo.appendChild(s5); }
-  // 3) tarefas
-  corpo.appendChild(secaoTarefas(L));
   // 4) Dados do lead: edição OPCIONAL (nada é cobrado aqui; quem cobra é o pop-up de Ganho)
   var editavel = ac.campos && lead.status !== 'perdido';
   if (editavel) {
@@ -1494,7 +1567,8 @@ function mostrarConflitos(L, j) {
   }
   itens.forEach(function (c) {
     var f = campoDeK(L.lead, c.k) || { rot: c.campo }; var row = el('div', 'conflito');
-    row.appendChild(el('div', null, 'Alguém alterou "' + f.rot + '" para "' + (c.atual || 'vazio') + '". O seu: "' + (L.edits[c.k] == null ? '' : L.edits[c.k]) + '".'));
+    var fmtV = function (v) { return /cnpj/.test(c.campo) ? mascCnpj(v) : /cep/.test(c.campo) ? mascCep(v) : v; };
+    row.appendChild(el('div', null, 'Alguém alterou "' + f.rot + '" para "' + (fmtV(c.atual) || 'vazio') + '". O seu: "' + (L.edits[c.k] == null ? '' : L.edits[c.k]) + '".'));
     var b1 = el('button', 'sec', 'Usar o atual'); b1.type = 'button'; var b2 = el('button', null, 'Manter o meu'); b2.type = 'button';
     function esc(v) { c.escolha = v; b1.disabled = b2.disabled = true; row.appendChild(el('span', 'sub', v === 'atual' ? ' Vai usar o atual.' : ' Vai manter o seu.')); fim(); }
     b1.onclick = function () { esc('atual'); }; b2.onclick = function () { esc('meu'); }; row.appendChild(b1); row.appendChild(b2); lista.appendChild(row);
@@ -1525,14 +1599,17 @@ function abrirGanho(L, faltando, marcar, chaves) {
 }
 function fecharGanho() { var L = S.L; $('modalGanho').classList.add('hide'); if (L) { L.modalAberto = false; L.rep = null; if (L.lead) renderLead(); } carregarAguardando(true); }
 function renderGanho(L) {
-  if (L.rep) { renderRepStep(L); return; }
+  if (L.rep) { renderRepStep(L); $('bFecharGanho').textContent = 'Fechar'; return; }
+  $('bFecharGanho').textContent = 'Cancelar';
   var c = $('gCorpo'); var rol = c.scrollTop; c.textContent = ''; L.refs = L.refs || {}; var lead = L.lead;
   c.appendChild(el('p', 'sub', 'Confirme as respostas de qualificação e os dados da empresa. Campos com * são obrigatórios; o que já existe vem preenchido.'));
   if (L.ganhoVinculo) c.appendChild(el('p', 'pend', 'Esta empresa não está vinculada. Vincule no Agendor (isso não trava o resto).'));
   if ((L.ganhoSoltos || []).length) c.appendChild(el('p', 'pend', 'Também falta (precisa ser resolvido fora desta tela): ' + L.ganhoSoltos.join('; ') + '.'));
   L.refs.receita = el('div'); c.appendChild(L.refs.receita); renderReceita(L);
   var grade = null;
-  GANHO_ORDEM.forEach(function (k) { var f = campoDe(k); if (!f) return; var req = !!(L.ganhoReq || {})[k]; if (f.par) { if (!grade) { grade = el('div', 'grade2'); c.appendChild(grade); } grade.appendChild(campoEl(L, f, 'gf_', req, L.ganhoMarcar && req)); } else { grade = null; c.appendChild(campoEl(L, f, 'gf_', req, L.ganhoMarcar && req)); } });
+  var ordemG = GANHO_ORDEM.filter(function (k) { return (L.ganhoReq || {})[k]; }).concat(GANHO_ORDEM.filter(function (k) { return !(L.ganhoReq || {})[k]; })); // o que falta vem primeiro
+  L.refs.gFalta = el('p', 'pend'); L.refs.gFalta.setAttribute('role', 'status'); c.appendChild(L.refs.gFalta);
+  ordemG.forEach(function (k) { var f = campoDe(k); if (!f) return; var req = !!(L.ganhoReq || {})[k]; if (f.par) { if (!grade) { grade = el('div', 'grade2'); c.appendChild(grade); } grade.appendChild(campoEl(L, f, 'gf_', req, L.ganhoMarcar && req)); } else { grade = null; c.appendChild(campoEl(L, f, 'gf_', req, L.ganhoMarcar && req)); } });
   c.scrollTop = rol; var rd = $('gRodape'); rd.textContent = '';
   L.refs.estado = el('div', 'estado hide'); L.refs.estado.setAttribute('role', 'status'); L.refs.estado.setAttribute('aria-live', 'polite'); rd.appendChild(L.refs.estado);
   var row = el('div', 'row'); L.refs.ganhoBtn = el('button', 'forte', 'Confirmar ganho'); L.refs.ganhoBtn.type = 'button'; L.refs.ganhoBtn.onclick = function () { confirmarGanho(L); };
@@ -1542,6 +1619,7 @@ function renderGanho(L) {
 function atualizarGanhoBtn(L) {
   var b = L.refs && L.refs.ganhoBtn; if (!b || !L.modalAberto || L.rep) return; var falta = faltaAinda(L); var inval = false;
   Object.keys(L.ganhoReq || {}).forEach(function (k) { var f = campoDeK(L.lead, k); if (f && validarCampo(L, f)) inval = true; });
+  if (L.refs.gFalta) L.refs.gFalta.textContent = falta.length ? (falta.length === 1 ? 'Falta 1 campo obrigatório.' : 'Faltam ' + falta.length + ' campos obrigatórios.') : '';
   b.disabled = !!(falta.length || inval || L.ocupado); b.title = falta.length ? 'Falta preencher: ' + falta.map(function (k) { return (campoDeK(L.lead, k) || {}).rot; }).join(', ') : '';
 }
 function chavesDe(j) { return (j && j.faltandoChaves) || (j && j.lead && j.lead.faltandoChaves) || null; }
@@ -1697,6 +1775,9 @@ function abrirAguardando() { S.ag.aberto = true; $('painelAguard').classList.rem
 function fecharAguardando() { S.ag.aberto = false; $('painelAguard').classList.add('hide'); if (S.ag.timer) { clearInterval(S.ag.timer); S.ag.timer = null; } try { $('bAguard').focus(); } catch (e) {} }
 $('bAguard').onclick = abrirAguardando; $('bFecharAguard').onclick = fecharAguardando; $('bAtualizarAguard').onclick = function () { carregarAguardando(false, true); };
 
+var larguraLarga = null;
+function ajustaMais() { var largo = window.innerWidth >= 700; if (largo === larguraLarga) return; larguraLarga = largo; var m = $('maisMenu'); if (m) m.open = largo; } // no computador o menu "Mais" já vem aberto; no celular fica recolhido
+ajustaMais(); window.addEventListener('resize', ajustaMais);
 // ---------- eventos ----------
 $('bEntrar').onclick = async function () { var v = $('tok').value.trim(); if (!v) { $('loginMsg').textContent = 'Digite a senha.'; return; } $('loginMsg').textContent = ''; await entrar(v, false); };
 $('tok').onkeydown = function (e) { if (e.key === 'Enter') $('bEntrar').click(); };
