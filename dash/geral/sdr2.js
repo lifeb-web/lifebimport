@@ -320,19 +320,34 @@
     return { a: a, j: j, feitas: somaTipos(a), junto: somaTipos(j), porDia: porDia, diasAtivos: diasAtivos, media: diasAtivos ? somaTipos(a) / diasAtivos : null };
   }
   // Janela do período que o Agendor cobre (a partir de atvInicio, até hoje) e quais dias dela têm agregado.
-  function janelaAtv(per, docs, semDado) {
+  function somaObj(o) { var n = 0; Object.keys(o || {}).forEach(function (k) { n += Number(o[k]) || 0; }); return n; }
+  function janelaAtv(per, docs, semDado, ultima) {
     var hoje = hojeBRT(), de = per.from < CFG.atvInicio ? CFG.atvInicio : per.from, ate = per.to > hoje ? hoje : per.to;
-    if (ate < de) return { antes: per.to < CFG.atvInicio, de: de, ate: ate, dias: 0, comDado: 0, sem: [] };
+    var vazio = { lidas: 0, sdr: 0, junto: 0, nc: 0, fora: 0, sis: 0, out: 0, pend: 0 };
+    if (ate < de) return { antes: per.to < CFG.atvInicio, de: de, ate: ate, dias: 0, comDado: 0, sem: [], parcial: 0, apur: { ativo: false, dias: [], pend: 0, falha: false }, bruto: vazio };
     var known = {}; (docs || []).forEach(function (d) { known[d.dia] = d; });
-    var sem = [], n = 0, com = 0, parcial = 0;
-    for (var t = de; t <= ate; t = addDays(t, 1)) { n++; if (known[t]) { com++; if (known[t].incompleto || known[t].pendente) parcial++; } else sem.push(t); }
-    return { antes: false, de: de, ate: ate, dias: n, comDado: com, sem: sem, parcial: parcial };
+    var sem = [], n = 0, com = 0, parcial = 0, apDias = [], pendTot = 0, br = { lidas: 0, sdr: 0, junto: 0, nc: 0, fora: 0, sis: 0, out: 0, pend: 0 };
+    for (var t = de; t <= ate; t = addDays(t, 1)) {
+      n++;
+      var d = known[t];
+      if (!d) { sem.push(t); continue; }
+      com++;
+      var pd = Number(d.pend) || 0;
+      if (d.incompleto || d.pendente) parcial++;
+      if (pd > 0 || d.pendente || d.incompleto) { apDias.push(t); pendTot += pd; }
+      Object.keys(d.sdr || {}).forEach(function (q) { (d.sdr[q] || []).forEach(function (l) { br.sdr += somaObj(l.a); br.junto += somaObj(l.j); }); });
+      br.nc += somaObj(d.nc); br.fora += Number(d.fora) || 0; br.sis += Number(d.sis) || 0; br.out += Number(d.out) || 0; br.pend += pd;
+    }
+    br.lidas = br.sdr + br.junto + br.nc + br.fora + br.sis + br.out + br.pend;
+    var falha = !!(ultima && ultima.ok === false);
+    return { antes: false, de: de, ate: ate, dias: n, comDado: com, sem: sem, parcial: parcial, apur: { ativo: apDias.length > 0 || falha, dias: apDias, pend: pendTot, falha: falha }, bruto: br };
   }
   function serieAtv(ag, jn, docs) {
     var known = {}; (docs || []).forEach(function (d) { known[d.dia] = 1; });
+    var ap = {}; (jn.apur ? jn.apur.dias : []).forEach(function (d) { ap[d] = 1; });
     var out = [];
     if (jn.antes || jn.dias === 0) return out;
-    for (var t = jn.de; t <= jn.ate; t = addDays(t, 1)) { var pd = ag.porDia[t]; out.push({ k: t, a: pd ? pd.a : 0, j: pd ? pd.j : 0, lig: pd ? pd.lig : 0, sem: !known[t] }); }
+    for (var t = jn.de; t <= jn.ate; t = addDays(t, 1)) { var pd = ag.porDia[t]; out.push({ k: t, a: pd ? pd.a : 0, j: pd ? pd.j : 0, lig: pd ? pd.lig : 0, sem: !known[t], ap: !!ap[t] }); }
     return out;
   }
   function etpLinhas(eventos, byId) {
@@ -384,10 +399,10 @@
     var atv = null;
     if (ext.atv) {
       var ls = filtra(atvLinhas(ext.atv.dias, byId), f);
-      var jn = janelaAtv(per, ext.atv.dias, ext.atv.semDado);
+      var jn = janelaAtv(per, ext.atv.dias, ext.atv.semDado, ext.atv.ultimaRodada);
       var agA = agregaAtv(ls, per.from, per.to);
       var agAAnt = null;
-      if (ant && ant.to >= CFG.atvInicio) { var jAnt = janelaAtv(ant, ext.atv.dias); if (jAnt.dias && !jAnt.sem.length) agAAnt = agregaAtv(ls, ant.from, ant.to); }
+      if (ant && ant.to >= CFG.atvInicio) { var jAnt = janelaAtv(ant, ext.atv.dias, null, ext.atv.ultimaRodada); if (jAnt.dias && !jAnt.sem.length && !jAnt.apur.ativo) agAAnt = agregaAtv(ls, ant.from, ant.to); }
       atv = { ag: agA, ant: agAAnt, jn: jn, serie: serieAtv(agA, jn, ext.atv.dias), linhas: ls };
     }
     var etp = null;
@@ -419,6 +434,8 @@
     '.s2-kd{font-size:10px;font-weight:800;margin-left:6px}',
     '.s2-kd.up{color:#15803d}.s2-kd.down{color:#b91c1c}.s2-kd.flat{color:var(--muted,#6b6484)}',
     '.s2-kt{font-size:10px;font-weight:600;color:var(--muted,#6b6484);line-height:1.3}',
+    '.s2-k.ap{background:#fffbeb;border-color:#f3d28a}.s2-ap{display:inline-block;margin-left:5px;padding:1px 5px;border-radius:8px;background:#fde7b0;color:#92400e;font-size:9px;font-weight:800;letter-spacing:.2px;vertical-align:middle;white-space:nowrap}.s2-k.ap .s2-kt{color:#92400e}',
+    '.s2-ban{background:#fffbeb;border:1px solid #f3d28a;color:#92400e;border-radius:8px;padding:6px 8px;font-size:11px;font-weight:700;margin-bottom:6px}',
     '.s2-k.gr{background:#f4f3f7}.s2-k.gr .s2-kv{color:#8a859c}',
     '.s2-k.gr .s2-kl,.s2-k.gr .s2-kt{color:#8a859c}',
     '.s2-card{background:var(--card,#fff);border:1px solid var(--border,#eae7f2);border-radius:14px;overflow:hidden;min-width:0;display:flex;flex-direction:column;box-shadow:0 1px 3px rgba(26,22,38,.04),0 4px 14px -6px rgba(26,22,38,.08)}',
@@ -542,19 +559,32 @@
   }
   function chip(label, val, sub, o) {
     o = o || {};
-    return '<div class="s2-k' + (o.cinza ? ' gr' : '') + '"' + (o.go ? ' data-go="' + o.go + '"' : '') + (o.tip ? ' title="' + esc(o.tip) + '"' : '') + '>' +
+    return '<div class="s2-k' + (o.cinza ? ' gr' : '') + (o.apur ? ' ap' : '') + '"' + (o.go ? ' data-go="' + o.go + '"' : '') + (o.tip ? ' title="' + esc(o.tip) + '"' : '') + '>' +
       '<span class="s2-kl">' + label + '</span><span class="s2-kv">' + val + (o.delta || '') + '</span>' +
       '<span class="s2-kt">' + sub + '</span></div>';
   }
 
+  // "Em apuração": o Agendor ainda não terminou de atribuir tarefas lidas ao funil (pend), ou o dia está incompleto/pendente,
+  // ou a última leitura falhou. Nesse caso o número é parcial e NUNCA é apresentado como final nem comparado com o período anterior.
+  function apurTexto(jn) {
+    var ap = jn.apur, ds = ap.dias.slice(0, 3).map(dm).join(', ') + (ap.dias.length > 3 ? '...' : '');
+    if (ap.pend > 0) return 'faltam ' + num(ap.pend) + (ap.pend === 1 ? ' tarefa' : ' tarefas') + ' a atribuir (' + (ap.dias.length === 1 ? 'dia ' : 'dias ') + ds + ')';
+    if (ap.dias.length) return (ap.dias.length === 1 ? 'dia ' : 'dias ') + ds + ' com leitura incompleta do Agendor';
+    return 'a última leitura do Agendor falhou; o valor pode estar incompleto';
+  }
+  var TIP_LIDAS = 'Total lido = tudo que o Agendor devolveu como concluído no período, sem filtros: feitas pelo SDR + fechadas junto + notas e migração do GS (não são trabalho) + tarefas em negócios fora dos funis SDR + tarefas do Sistema (a Bia) + tarefas de outras pessoas + tarefas ainda sem negócio identificado (a atribuir). Só "feitas pelo SDR" entra no cartão Atividades; o resto é lido para conferência e não conta como trabalho do SDR.';
   function chipAtividades(r) {
     var tip = 'Tarefas concluídas no Agendor pelo SDR no período (WhatsApp, ligação, pesquisa...). As encerradas no mesmo instante do ganho/perda do negócio ficam à parte ("fechadas junto") e não entram aqui.';
     if (!S.atv) return S.atvErr ? chip('Atividades', 'n/d', 'não consegui ler agora', { cinza: true, tip: tip }) : chip('Atividades', '…', 'carregando', { cinza: true, tip: tip });
     var t = r.atv;
     if (t.jn.antes) return chip('Atividades', 'n/d', 'Agendor só desde ' + dm(CFG.atvInicio) + ' (antes: faixa do GS)', { cinza: true, tip: tip });
-    var a = t.ag, p = t.ant;
+    var a = t.ag, p = t.ant, ap = t.jn.apur;
     var sub = 'inclui ' + num(a.a.lig) + (a.a.lig === 1 ? ' ligação' : ' ligações') + ' (à parte)' + (a.junto ? ' · ' + num(a.junto) + ' fechadas junto' : '');
     if (t.jn.sem.length) sub += ' · ' + t.jn.sem.length + (t.jn.sem.length === 1 ? ' dia sem dado' : ' dias sem dado');
+    if (ap.ativo) {
+      var tipAp = 'EM APURAÇÃO: este valor é parcial e vai subir. ' + apurTexto(t.jn) + '. Total lido no Agendor até agora: ' + num(t.jn.bruto.lidas) + ' tarefas (' + num(t.jn.bruto.pend) + ' ainda a atribuir). ' + tip;
+      return chip('Atividades ⓘ', num(a.feitas) + '<span class="s2-ap">em apuração</span>', apurTexto(t.jn) + ' · ' + sub, { tip: tipAp, apur: true });
+    }
     return chip('Atividades ⓘ', num(a.feitas), sub, { tip: tip, delta: delta(a.feitas, p ? p.feitas : null) });
   }
   function htmlKpis(r) {
@@ -722,36 +752,39 @@
     var W = tv ? 480 : (S.cw || 340), H = tv ? Math.max(70, Math.min(120, Math.round((w.innerHeight || 940) * 0.11))) : 110, padL = 24, padR = 4, padT = 12, padB = 18;
     var max = 2; b.forEach(function (x) { if (x.a > max) max = x.a; });
     var iw = W - padL - padR, ih = H - padT - padB, gw = iw / b.length, bw = Math.max(2, Math.min(18, gw * 0.62));
-    var s = '<svg class="s2-chart" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Atividades feitas por dia">';
+    var s = '<svg class="s2-chart" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Atividades feitas por dia"><defs><pattern id="s2hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#fffbeb"/><line x1="0" y1="0" x2="0" y2="5" stroke="#d97706" stroke-width="1.6"/></pattern></defs>';
     [0, 1].forEach(function (f) { var y = padT + ih - ih * f; s += '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + y + '" y2="' + y + '" stroke="#eae7f2"/><text x="' + (padL - 4) + '" y="' + (y + 3) + '" text-anchor="end" font-size="9" fill="#9b93b0">' + Math.round(max * f) + '</text>'; });
     var passo = Math.ceil(b.length / (tv ? 10 : Math.max(4, Math.floor(iw / 44))));
     b.forEach(function (x, i) {
       var cx = padL + gw * i + gw / 2, hA = ih * (x.a - x.lig) / max, hL = ih * x.lig / max;
-      var tip = dm(x.k) + ': ' + x.a + ' atividades (' + x.lig + ' ligações)' + (x.j ? ', ' + x.j + ' fechadas junto' : '') + (x.sem ? ' · dia sem dado' : '');
+      var tip = dm(x.k) + ': ' + x.a + ' atividades (' + x.lig + ' ligações)' + (x.j ? ', ' + x.j + ' fechadas junto' : '') + (x.sem ? ' · dia sem dado' : '') + (x.ap ? ' · EM APURAÇÃO (tarefas ainda a atribuir; o valor vai subir)' : '');
       s += '<g><title>' + esc(tip) + '</title>';
+      if (x.ap) s += '<rect x="' + (cx - gw / 2 + 0.5) + '" y="' + padT + '" width="' + Math.max(2, gw - 1) + '" height="' + ih + '" fill="url(#s2hatch)" stroke="#d97706" stroke-dasharray="2 2" stroke-width=".8" opacity=".85"/>';
       if (x.sem) s += '<rect x="' + (cx - bw / 2) + '" y="' + (padT + ih - 3) + '" width="' + bw + '" height="3" fill="#e3e0ec"/>';
       else s += '<rect x="' + (cx - bw / 2) + '" y="' + (padT + ih - hA - hL) + '" width="' + bw + '" height="' + Math.max(hA + hL, x.a ? 1 : 0) + '" rx="2" fill="' + C_ROXO + '" opacity=".85"/>' +
         (x.lig ? '<rect x="' + (cx - bw / 2) + '" y="' + (padT + ih - hL) + '" width="' + bw + '" height="' + hL + '" fill="#0e9aa0"/>' : '');
       if (i % passo === 0) s += '<text x="' + cx + '" y="' + (H - 5) + '" text-anchor="middle" font-size="9" fill="#6b6484">' + dm(x.k) + '</text>';
       s += '</g>';
     });
-    return s + '</svg><div class="s2-lg"><span><i style="background:' + C_ROXO + ';opacity:.85"></i>Atividades</span><span><i style="background:#0e9aa0"></i>Ligações (parte das atividades)</span></div>';
+    return s + '</svg><div class="s2-lg"><span><i style="background:' + C_ROXO + ';opacity:.85"></i>Atividades</span><span><i style="background:#0e9aa0"></i>Ligações (parte das atividades)</span>' + (b.some(function (x) { return x.ap; }) ? '<span><i style="background:repeating-linear-gradient(45deg,#fffbeb 0 2px,#d97706 2px 3px);border:1px solid #d97706"></i>Em apuração</span>' : '') + '</div>';
   }
   function htmlAtividades(r, tv) {
     if (!S.atv) return S.atvErr ? '<div class="s2-empty">Não consegui ler as atividades agora.<br><button class="s2-c" data-retry="atv" style="margin-top:6px">Tentar de novo</button></div>' : '<div class="s2-empty">Carregando atividades…</div>';
     var t = r.atv, a = t.ag;
     if (t.jn.antes) return '<div class="s2-empty">O Agendor só tem atividades do SDR desde ' + dmy(CFG.atvInicio) + '. Antes disso vale a faixa congelada do GS (abaixo).</div>';
-    var h = '';
+    var h = '', ap = t.jn.apur;
+    if (ap.ativo) h += '<div class="s2-ban">EM APURAÇÃO: ' + apurTexto(t.jn) + '. Os números abaixo são parciais, vão subir e não devem ser comparados com outro período.</div>';
     if (t.jn.sem.length) h += '<div class="s2-st warn">' + t.jn.sem.length + (t.jn.sem.length === 1 ? ' dia do período ainda sem dado (' : ' dias do período ainda sem dado (') + t.jn.sem.slice(0, 3).map(dm).join(', ') + (t.jn.sem.length > 3 ? '...' : '') + '). Os totais abaixo são parciais.</div>';
-    if (t.jn.parcial) h += '<div class="s2-st warn">' + t.jn.parcial + (t.jn.parcial === 1 ? ' dia' : ' dias') + ' com leitura incompleta do Agendor; o valor será corrigido na próxima atualização.</div>';
     var linhas = TIPOS.filter(function (x) { return x[0] !== 'lig' && (a.a[x[0]] || a.j[x[0]] || x[0] === 'wa'); });
     h += '<table class="s2-tb"><thead><tr><th>Tipo</th><th>Feitas</th><th title="Encerradas no mesmo instante do ganho/perda do negócio">Fechadas junto</th></tr></thead><tbody>';
     function lin(nome, f, j, cls) { return '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td>' + nome + '</td><td class="' + (f ? '' : 'z') + '">' + (f ? num(f) : '·') + '</td><td class="' + (j ? 'gc' : 'z') + '">' + (j ? num(j) : '·') + '</td></tr>'; }
     linhas.forEach(function (x) { h += lin(x[1], a.a[x[0]], a.j[x[0]]); });
     h += lin('Ligações · à parte', a.a.lig, a.j.lig, 's2-lig');
-    h += '<tr style="font-weight:800"><td>Total</td><td>' + num(a.feitas) + '</td><td class="gc">' + num(a.junto) + '</td></tr></tbody></table>';
+    h += '<tr style="font-weight:800"><td>' + (ap.ativo ? 'Total parcial' : 'Total') + '</td><td>' + num(a.feitas) + '</td><td class="gc">' + num(a.junto) + '</td></tr></tbody></table>';
     h += svgAtv(r, tv);
-    h += '<div class="s2-nt' + (tv ? ' s2-xs' : '') + '">' + (a.media != null ? '<b>' + dec1(a.media) + '</b> por dia com atividade (' + a.diasAtivos + (a.diasAtivos === 1 ? ' dia' : ' dias') + '). ' : '') + '<b>Fechadas junto</b> = tarefas encerradas no mesmo instante em que o negócio foi ganho ou perdido; não são trabalho do dia. <b>Ligações</b> aparecem sempre separadas (não entram na comissão).</div>';
+    var bq = t.jn.bruto;
+    h += '<div class="s2-nt' + (tv ? ' s2-xs' : '') + '" title="' + esc(TIP_LIDAS) + '"><b>Lidas no Agendor: ' + num(bq.lidas) + ' tarefas</b> <span class="s2-i">ⓘ</span> (sem filtros) = ' + num(bq.sdr) + ' feitas pelo SDR · ' + num(bq.junto) + ' fechadas junto · ' + num(bq.nc) + ' notas/migração GS · ' + num(bq.out) + ' de outras pessoas · ' + num(bq.sis) + ' do Sistema · ' + num(bq.fora) + ' fora dos funis SDR · ' + num(bq.pend) + ' a atribuir. Só as feitas pelo SDR contam como atividade; o restante não é trabalho do SDR.</div>';
+    h += '<div class="s2-nt' + (tv ? ' s2-xs' : '') + '">' + (a.media != null && !ap.ativo ? '<b>' + dec1(a.media) + '</b> por dia com atividade (' + a.diasAtivos + (a.diasAtivos === 1 ? ' dia' : ' dias') + '). ' : '') + '<b>Fechadas junto</b> = tarefas encerradas no mesmo instante em que o negócio foi ganho ou perdido; não são trabalho do dia. <b>Ligações</b> aparecem sempre separadas (não entram na comissão).</div>';
     return h;
   }
   function htmlEtapasMov(r) {
