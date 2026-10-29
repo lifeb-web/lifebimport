@@ -1,0 +1,3 @@
+import http from "node:http"; import fs from "node:fs"; import path from "node:path";
+const root = process.argv[2]; const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".jpg": "image/jpeg", ".svg": "image/svg+xml", ".json": "application/json" };
+http.createServer((q, r) => { let p = decodeURIComponent(q.url.split("?")[0]); let f = path.join(root, p); if (fs.existsSync(f) && fs.statSync(f).isDirectory()) f = path.join(f, "index.html"); if (!fs.existsSync(f)) { f = path.join(root, "404.html"); r.statusCode = 404; } r.setHeader("content-type", types[path.extname(f)] || "application/octet-stream"); fs.createReadStream(f).pipe(r); }).listen(8765, () => console.log("up"));
