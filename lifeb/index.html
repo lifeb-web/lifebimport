@@ -914,15 +914,20 @@
       body: JSON.stringify(body)
     }).catch(function () {});
     // Mesma integração com GS Engage/Agendor que as outras LPs já usam (faltava aqui)
+    // 29/10: keepalive (sobrevive à abertura do WhatsApp e ao fechamento da aba) e text/plain (requisição simples, sem preflight que pode falhar); agora leva também UTM
     fetch(GS_WORKER_INBOUND_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      keepalive: true,
+      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
       body: JSON.stringify({
         nome: payload.nome,
         telefone: payload.telefone,
         origem: payload.origem,
         pagina: window.location.href,
-        cnpj: payload.cnpj || undefined
+        cnpj: payload.cnpj || undefined,
+        campanha: utms.campanha,
+        conjunto: utms.conjunto,
+        anuncio: utms.anuncio
       })
     }).catch(function () {});
   }
@@ -1056,6 +1061,12 @@
         anuncio: utms.anuncio
       });
       navigator.sendBeacon(SHEETS_WEBHOOK_URL, new Blob([body], { type: 'text/plain;charset=utf-8' }));
+      try { // 29/10: o fechamento da aba também vai ao worker (antes só à planilha)
+        navigator.sendBeacon(GS_WORKER_INBOUND_URL, new Blob([JSON.stringify({
+          nome: nomeInput.value.trim(), telefone: telInput.value.trim(), origem: currentOrigem + ' (Fechou a Pagina)',
+          pagina: window.location.href, campanha: utms.campanha, conjunto: utms.conjunto, anuncio: utms.anuncio
+        })], { type: 'text/plain;charset=UTF-8' }));
+      } catch (e) {}
       saveLocalLead(nomeInput.value.trim(), telInput.value.trim());
     }
   });
