@@ -551,8 +551,8 @@ footer strong{color:#fff}
   .rep-stats{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:10px}
 }
 </style>
-<!-- Dossiê do SDR (Fase 1): só carrega com ?sdr=2, não afeta a aba atual -->
-<script>if (/[?&]sdr=2\b/.test(location.search)) document.write('<script src="sdr2.js?v=20261028a"><\/script>');</script>
+<!-- Dossiê do SDR (Fase 1): padrão da aba SDR; ?sdr=1 volta à aba antiga -->
+<script>if (!/[?&]sdr=1\b/.test(location.search)) document.write('<script src="sdr2.js?v=20261029a"><\/script>');</script>
 </head>
 <body>
 <div id="lb"></div>
@@ -3404,8 +3404,8 @@ function restorePeriodBeforeSpecial_() {
 // de novo em segundo plano toda vez que a aba é aberta — nunca fica preso
 // no dado da 1ª visita, mas nunca gasta rede sozinho sem alguém realmente
 // olhar a aba.
-const SDR2_ON = /[?&]sdr=2\b/.test(location.search);
-// Dossiê do SDR (?sdr=2): monta o painel novo dentro de #sdr-view e esconde o antigo. Mesmo motor do telão (sdr2.js).
+const SDR2_ON = !/[?&]sdr=1\b/.test(location.search); // dossiê é o padrão; ?sdr=1 volta à aba antiga (reserva)
+// Dossiê do SDR (padrão): monta o painel novo dentro de #sdr-view e esconde o antigo. Mesmo motor do telão (sdr2.js).
 function sdr2Activate_() {
   const v = el('sdr-view'); if (!v) return;
   let r = el('s2-root');

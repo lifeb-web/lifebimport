@@ -986,8 +986,8 @@ body.tv-grande .rv-k-val{font-size:19px}
 #tv-toggle{width:26px;height:26px;border-radius:7px;border:1.5px solid var(--border);background:#fff;color:var(--muted);font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 #tv-toggle.active{background:var(--purple);color:#fff;border-color:var(--purple)}
 </style>
-<!-- Dossiê do SDR (Fase 1): só carrega com ?sdr=2, não afeta a aba atual -->
-<script>if (/[?&]sdr=2\b/.test(location.search)) document.write('<script src="../sdr2.js?v=20261028a"><\/script>');</script>
+<!-- Dossiê do SDR (Fase 1): padrão da aba SDR; ?sdr=1 volta à aba antiga -->
+<script>if (!/[?&]sdr=1\b/.test(location.search)) document.write('<script src="../sdr2.js?v=20261029a"><\/script>');</script>
 </head>
 <body>
 <div id="lb"></div>
@@ -4865,8 +4865,8 @@ function restorePeriodBeforeSpecial_() {
   loadData(false);
 }
 
-const SDR2_ON = /[?&]sdr=2\b/.test(location.search);
-// Dossiê do SDR (?sdr=2): painel novo (mesmo motor do mobile, sdr2.js) no lugar do hero + 3 colunas antigos.
+const SDR2_ON = !/[?&]sdr=1\b/.test(location.search); // dossiê é o padrão; ?sdr=1 volta à aba antiga (reserva)
+// Dossiê do SDR (padrão): painel novo (mesmo motor do mobile, sdr2.js) no lugar do hero + 3 colunas antigos.
 function sdr2Activate_() {
   const r = el('s2-root'); if (!r) return;
   if (!window.SDR2) { r.innerHTML = '<div class="feed-empty">Não consegui carregar o módulo do SDR.</div>'; return; }
