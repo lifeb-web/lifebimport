@@ -849,7 +849,7 @@ qualquer badge/contagem nunca mais entrar embaixo do botão. */
 footer{background:var(--text);color:rgba(255,255,255,.6);text-align:center;padding:6px;font-size:10px;flex-shrink:0}
 footer strong{color:#fff}
 
-#bia-trend-card{max-height:170px}
+#bia-trend-card{max-height:none;min-height:150px}
 
 @media(max-height:860px){
   header{min-height:44px}
@@ -883,7 +883,9 @@ footer strong{color:#fff}
      Saúde do Sistema novo + Motor Proativo maior) cabia numa TV mas
      transbordava ~37-61px no MacBook 13" dele (mesma janela que já usa
      este breakpoint). Encolhe só aqui, onde já é seguro fazer isso. */
-  #bia-trend-card{max-height:80px}
+  #bia-trend-card{max-height:none;min-height:110px}
+  #bia-saude-rows .bia-opc{display:none}
+  #bia-saude-rows .stat-row{padding:3px 0}
   #bia-worker-health-card .stat-row{padding:3px 0}
   /* tv-grande aumenta .stat-row (achado da auditoria: combinação real de
      tela curta + modo TV ligado sobrava ~10-12px) — nessa tela curta
@@ -1819,7 +1821,7 @@ body.tv-grande .rv-k-val{font-size:19px}
            era flex:1 (tomava toda sobra da coluna); virou altura fixa
            menor pra abrir espaço pro card de Saúde do Sistema logo abaixo,
            sem precisar cortar nada de Confiança&Saúde nem Estrutura SDR. -->
-      <div class="card" id="bia-trend-card" style="flex:0 0 auto;display:flex;flex-direction:column;min-height:0">
+      <div class="card" id="bia-trend-card" style="flex:1 1 auto;display:flex;flex-direction:column;min-height:0">
         <div class="card-hd">
           <span class="card-hd-title">Tendência de Custo × Notificações (14 dias)</span>
           <span class="badge" id="bia-trend-badge"></span>
@@ -1843,7 +1845,7 @@ body.tv-grande .rv-k-val{font-size:19px}
           <div class="stat-row"><span class="k">Worker (bia-dash-sync) — agora</span><span class="v" id="bia-worker-health-status">—</span></div>
         </div>
       </div>
-      <div class="card" id="bia-sdr-card" style="flex:1;min-height:0">
+      <div class="card" id="bia-sdr-card" style="display:none">
         <div class="card-hd">
           <span class="card-hd-title">Estrutura SDR</span>
           <span class="badge" id="bia-sdr-badge"></span>
@@ -3685,6 +3687,7 @@ function renderBiaSectionTelao(s) {
   el('bia-trend-badge').textContent = (s.trend.dias ? s.trend.dias.length : 14) + ' dias';
   renderBiaTrendChart_(s.trend.dias, s.trend.custo, s.trend.notif, 'bia-trend-chart');
 
+  renderBiaSaude_(); // o cartão de saúde mostra também o SDR cadastrado (vem deste snapshot)
   el('bia-sdr-badge').textContent = s.sdrsConhecidosAgendor + ' no Agendor';
   el('bia-sdr-cards').innerHTML = (s.sdrCards || []).filter(c => c && c.nome && c.nome !== '?').map(c => c.nome ?
     `<div class="bia-sdr-card"><span class="bia-sdr-avatar">${escHtml(c.nome.slice(0, 2).toUpperCase())}</span>${escHtml(c.nome)}<span class="pill good" style="margin-left:auto;font-size:.62rem;padding:2px 8px;border-radius:20px;background:#dcfce7;color:#166534">${escHtml(c.cargo || 'SDR')}</span></div>` :
@@ -3820,7 +3823,8 @@ function renderBiaSaude_() {
   const box = document.getElementById('bia-saude-rows'), badge = document.getElementById('bia-saude-badge');
   if (!box) return;
   const cls = { ok: 'good', atencao: 'warn', falha: 'crit', desconhecido: '' };
-  const row = (k, v, n, tip) => `<div class="stat-row"${tip ? ' title="' + escHtml(tip) + '"' : ''}><span class="k">${escHtml(k)}</span><span class="v ${cls[n] || ''}">${escHtml(v)}</span></div>`;
+  const OPC = ['Última resposta da Bia', 'Vigia externo (healthchecks)', 'Varredura do SDR', 'Fila de envios do Motor', 'Identidade obrigatória nas escritas', 'Modo teste', 'SDR cadastrado no Agendor'];
+  const row = (k, v, n, tip) => `<div class="stat-row${OPC.includes(k) ? ' bia-opc' : ''}"${tip ? ' title="' + escHtml(tip) + '"' : ''}><span class="k">${escHtml(k)}</span><span class="v ${cls[n] || ''}">${escHtml(v)}</span></div>`;
   if (!_biaSaude) {
     box.innerHTML = _biaSaudeErr ? row('Worker da Bia', 'não respondeu', 'falha', String(_biaSaudeErr.message || _biaSaudeErr)) : row('Worker da Bia', 'carregando…', 'desconhecido');
     if (badge) badge.textContent = _biaSaudeErr ? 'sem resposta' : '';
@@ -3843,6 +3847,8 @@ function renderBiaSaude_() {
     rows.push(row('Alertas das últimas 4 h', txt, it.alertas.nivel, (a.onde || []).join(' | ')));
   }
   if (it.pausa) rows.push(row('Bia pausada (botão de emergência)', it.pausa.biaPausada == null ? '—' : (it.pausa.biaPausada ? 'SIM, PAUSADA' : 'não'), it.pausa.nivel));
+  const sdrs = ((_biaSnap && _biaSnap.sdrCards) || []).filter(c => c && c.nome && c.nome !== '?').map(c => c.nome);
+  if (_biaSnap) rows.push(row('SDR cadastrado no Agendor', sdrs.length ? sdrs.join(', ') : 'nenhum', sdrs.length ? 'ok' : 'atencao'));
   const fl = s.flags || {};
   if (fl.ENFORCE_IDENTITY !== undefined) rows.push(row('Identidade obrigatória nas escritas', on(fl.ENFORCE_IDENTITY) ? 'ligada' : 'desligada', on(fl.ENFORCE_IDENTITY) ? 'ok' : 'atencao'));
   if (fl.TEST_MODE !== undefined) rows.push(row('Modo teste', on(fl.TEST_MODE) ? 'LIGADO' : 'desligado', on(fl.TEST_MODE) ? 'falha' : 'ok'));
