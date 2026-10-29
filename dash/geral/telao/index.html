@@ -986,6 +986,8 @@ body.tv-grande .rv-k-val{font-size:19px}
 #tv-toggle{width:26px;height:26px;border-radius:7px;border:1.5px solid var(--border);background:#fff;color:var(--muted);font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 #tv-toggle.active{background:var(--purple);color:#fff;border-color:var(--purple)}
 </style>
+<!-- Dossiê do SDR (Fase 1): só carrega com ?sdr=2, não afeta a aba atual -->
+<script>if (/[?&]sdr=2\b/.test(location.search)) document.write('<script src="../sdr2.js?v=20261028a"><\/script>');</script>
 </head>
 <body>
 <div id="lb"></div>
@@ -1224,6 +1226,8 @@ body.tv-grande .rv-k-val{font-size:19px}
       <span class="kc-sub">no período</span>
     </div>
   </div>
+
+  <div id="s2-root" style="display:none"></div>
 
   <div id="sdr-main">
     <div id="sdr-col-left">
@@ -4861,6 +4865,16 @@ function restorePeriodBeforeSpecial_() {
   loadData(false);
 }
 
+const SDR2_ON = /[?&]sdr=2\b/.test(location.search);
+// Dossiê do SDR (?sdr=2): painel novo (mesmo motor do mobile, sdr2.js) no lugar do hero + 3 colunas antigos.
+function sdr2Activate_() {
+  const r = el('s2-root'); if (!r) return;
+  if (!window.SDR2) { r.innerHTML = '<div class="feed-empty">Não consegui carregar o módulo do SDR.</div>'; return; }
+  SDR2.init({ root: r, mode: 't', getPeriod: () => (_data && _data.period) ? _data.period : null, getOrigin: () => _originMode,
+              bridge: SUPABASE_URL, key: SUPABASE_ANON_KEY, isActive: () => _sdrViewActive });
+  SDR2.activate();
+}
+
 function setView(btn) {
   const bar = btn.closest('.oseg');
   bar.querySelectorAll('.ochip').forEach(b => b.classList.remove('active'));
@@ -4884,8 +4898,9 @@ function setView(btn) {
   el('main').style.display     = view === 'vendas' ? '' : 'none';
   el('ltv-hero-row').style.display = view === 'ltv' ? 'grid' : 'none';
   el('ltv-main').style.display     = view === 'ltv' ? 'grid' : 'none';
-  el('sdr-hero-row').style.display = view === 'sdr' ? 'grid' : 'none';
-  el('sdr-main').style.display     = view === 'sdr' ? 'grid' : 'none';
+  el('sdr-hero-row').style.display = view === 'sdr' && !SDR2_ON ? 'grid' : 'none';
+  el('sdr-main').style.display     = view === 'sdr' && !SDR2_ON ? 'grid' : 'none';
+  el('s2-root').style.display      = view === 'sdr' && SDR2_ON ? 'flex' : 'none';
   el('ads-hero-row').style.display  = view === 'ads' ? 'grid' : 'none';
   el('ads-hero-row2').style.display = view === 'ads' ? 'grid' : 'none';
   el('ads-main').style.display      = view === 'ads' ? 'grid' : 'none';
@@ -4899,12 +4914,14 @@ function setView(btn) {
   // ("Painel Geral"/"Dados: Agendor") mesmo com uma aba de fonte diferente
   // claramente ativa.
   const label = view === 'ltv' ? 'LTV (Pós-venda)' : (view === 'sdr' ? 'SDR (Felipe)' : (view === 'ads' ? 'Meta Ads' : (view === 'ga4' ? 'GA4 Analytics' : (view === 'bia' ? 'Bia (IA)' : ORIGIN_LABELS[_originMode]))));
-  const source = view === 'ltv' ? 'Agendor' : (view === 'sdr' ? 'GS Engage' : (view === 'ads' ? 'Meta Ads' : (view === 'ga4' ? 'Google Analytics' : (view === 'bia' ? 'bia-dash-sync' : 'Agendor'))));
+  const source = view === 'ltv' ? 'Agendor' : (view === 'sdr' ? (SDR2_ON ? 'Agendor' : 'GS Engage') : (view === 'ads' ? 'Meta Ads' : (view === 'ga4' ? 'Google Analytics' : (view === 'bia' ? 'bia-dash-sync' : 'Agendor'))));
   el('footer-mode').textContent = label;
   el('h-title-text').textContent = label;
   el('footer-source').textContent = source;
   if (_ltvViewActive) renderLtvIfPossible_();
-  if (_sdrViewActive) {
+  if (_sdrViewActive && SDR2_ON) {
+    sdr2Activate_();
+  } else if (_sdrViewActive) {
     if (_sdrRaw && _data && _data.period) renderSdrSectionTelao(computeSdrData(_sdrRaw, _data.period.from, _data.period.to, _data.period.label));
     loadSdrFresh_();
   }
@@ -5150,6 +5167,7 @@ function renderLtvSectionTelao(d) {
 }
 
 async function loadSdrFresh_() {
+  if (SDR2_ON) return;
   if (_sdrLoading) return;
   _sdrLoading = true;
   try {
@@ -5166,6 +5184,7 @@ async function loadSdrFresh_() {
 }
 
 function refreshSdrIfActive_() {
+  if (SDR2_ON) { if (_sdrViewActive && window.SDR2) SDR2.render(); return; }
   if (_sdrViewActive && _sdrRaw && _data && _data.period) {
     renderSdrSectionTelao(computeSdrData(_sdrRaw, _data.period.from, _data.period.to, _data.period.label));
   }

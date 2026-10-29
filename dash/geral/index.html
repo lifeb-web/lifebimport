@@ -551,6 +551,8 @@ footer strong{color:#fff}
   .rep-stats{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:10px}
 }
 </style>
+<!-- Dossiê do SDR (Fase 1): só carrega com ?sdr=2, não afeta a aba atual -->
+<script>if (/[?&]sdr=2\b/.test(location.search)) document.write('<script src="sdr2.js?v=20261028a"><\/script>');</script>
 </head>
 <body>
 <div id="lb"></div>
@@ -3402,6 +3404,21 @@ function restorePeriodBeforeSpecial_() {
 // de novo em segundo plano toda vez que a aba é aberta — nunca fica preso
 // no dado da 1ª visita, mas nunca gasta rede sozinho sem alguém realmente
 // olhar a aba.
+const SDR2_ON = /[?&]sdr=2\b/.test(location.search);
+// Dossiê do SDR (?sdr=2): monta o painel novo dentro de #sdr-view e esconde o antigo. Mesmo motor do telão (sdr2.js).
+function sdr2Activate_() {
+  const v = el('sdr-view'); if (!v) return;
+  let r = el('s2-root');
+  if (!r) {
+    Array.from(v.children).forEach(c => { c.style.display = 'none'; });
+    r = document.createElement('div'); r.id = 's2-root'; v.appendChild(r);
+  }
+  if (!window.SDR2) { r.innerHTML = '<div class="sdr-empty">Não consegui carregar o módulo do SDR.</div>'; return; }
+  SDR2.init({ root: r, mode: 'm', getPeriod: () => (_data && _data.period) ? _data.period : null, getOrigin: () => _originMode,
+              bridge: SUPABASE_URL, key: SUPABASE_ANON_KEY, isActive: () => _sdrViewActive });
+  SDR2.activate();
+}
+
 function setView(btn) {
   const bar = btn.closest('.oseg');
   bar.querySelectorAll('.ochip').forEach(b => b.classList.remove('active'));
@@ -3434,12 +3451,14 @@ function setView(btn) {
   // 3 textos errados ("Painel Geral"/"Dados: Agendor") mesmo com uma aba
   // de fonte diferente claramente ativa.
   const label = view === 'ltv' ? 'LTV (Pós-venda)' : (view === 'sdr' ? 'SDR (Felipe)' : (view === 'ads' ? 'Meta Ads' : (view === 'ga4' ? 'GA4 Analytics' : (view === 'bia' ? 'Bia (IA)' : ORIGIN_LABELS[_originMode]))));
-  const source = view === 'ltv' ? 'Agendor' : (view === 'sdr' ? 'GS Engage' : (view === 'ads' ? 'Meta Ads' : (view === 'ga4' ? 'Google Analytics' : (view === 'bia' ? 'bia-dash-sync' : 'Agendor'))));
+  const source = view === 'ltv' ? 'Agendor' : (view === 'sdr' ? (SDR2_ON ? 'Agendor' : 'GS Engage') : (view === 'ads' ? 'Meta Ads' : (view === 'ga4' ? 'Google Analytics' : (view === 'bia' ? 'bia-dash-sync' : 'Agendor'))));
   el('h-title-text').textContent = label;
   el('footer-mode').textContent = label;
   el('footer-source').textContent = source;
   if (_ltvViewActive) renderLtvIfPossible_();
-  if (_sdrViewActive) {
+  if (_sdrViewActive && SDR2_ON) {
+    sdr2Activate_();
+  } else if (_sdrViewActive) {
     if (_sdrRaw && _data && _data.period) renderSdrSection(computeSdrData(_sdrRaw, _data.period.from, _data.period.to, _data.period.label));
     loadSdrFresh_();
   }
@@ -3478,6 +3497,7 @@ function setView(btn) {
 }
 
 async function loadSdrFresh_() {
+  if (SDR2_ON) return;
   if (_sdrLoading) return;
   _sdrLoading = true;
   try {
@@ -3497,6 +3517,7 @@ async function loadSdrFresh_() {
 // do MESMO _sdrRaw já carregado, zero rede, exatamente como o resto do
 // painel já faz com _rawDeals.
 function refreshSdrIfActive_() {
+  if (SDR2_ON) { if (_sdrViewActive && window.SDR2) SDR2.render(); return; }
   if (_sdrViewActive && _sdrRaw && _data && _data.period) {
     renderSdrSection(computeSdrData(_sdrRaw, _data.period.from, _data.period.to, _data.period.label));
   }
