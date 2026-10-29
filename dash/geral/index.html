@@ -552,7 +552,7 @@ footer strong{color:#fff}
 }
 </style>
 <!-- Dossiê do SDR (Fase 1): padrão da aba SDR; ?sdr=1 volta à aba antiga -->
-<script>if (!/[?&]sdr=1\b/.test(location.search)) document.write('<script src="sdr2.js?v=20261029a"><\/script>');</script>
+<script>if (!/[?&]sdr=1\b/.test(location.search)) document.write('<script src="sdr2.js?v=20261029b"><\/script>');</script>
 </head>
 <body>
 <div id="lb"></div>
@@ -1233,6 +1233,11 @@ footer strong{color:#fff}
          disfarçado de outro período, sem avisar ninguém. -->
     <div id="bia-periodo-aviso" style="display:none;background:#fff3cd;border:1px solid #e8c468;color:#8a6100;font-size:11px;font-weight:700;padding:8px 12px;border-radius:8px;margin-bottom:10px">
       ⚠ Este período não é suportado pela BIA (fonte só tem Hoje/7 dias/30 dias/Este mês) — mostrando dado de Hoje.
+    </div>
+
+    <div>
+      <div class="sec-hd">Saúde da Bia (ao vivo) <span id="bia-saude-badge" style="font-weight:800;text-transform:none;letter-spacing:0"></span></div>
+      <div class="feed-card" style="padding:2px 14px" id="bia-saude-rows"><div class="stat-row"><span class="k">Worker da Bia</span><span class="v">carregando…</span></div></div>
     </div>
 
     <div class="kpi-strip">
@@ -3491,6 +3496,7 @@ function setView(btn) {
     const hojeChip2 = document.querySelector('.pchip[data-p="today"]');
     if (hojeChip2 && _period !== 'today') setPeriod(hojeChip2);
     if (_biaSnap) renderBiaSection(_biaSnap);
+    renderBiaSaude_();
     loadBiaFresh_();
   }
   saveUiState_();
@@ -5150,7 +5156,7 @@ function renderBiaSection(s) {
   renderBiaTrendChart_(s.trend.dias, s.trend.custo, s.trend.notif, 'bia-trend-chart');
 
   el('bia-sdr-badge').textContent = s.sdrsConhecidosAgendor + ' no Agendor';
-  el('bia-sdr-cards').innerHTML = (s.sdrCards || []).map(c => c.nome ?
+  el('bia-sdr-cards').innerHTML = (s.sdrCards || []).filter(c => c && c.nome && c.nome !== '?').map(c => c.nome ?
     `<div class="bia-sdr-card"><span class="bia-sdr-avatar">${escHtml(c.nome.slice(0, 2).toUpperCase())}</span>${escHtml(c.nome)}<span style="margin-left:auto;font-size:.62rem;padding:2px 8px;border-radius:20px;background:#dcfce7;color:#166534;font-weight:800">${escHtml(c.cargo || 'SDR')}</span></div>` :
     `<div class="bia-sdr-card" style="opacity:.55">não cadastrado</div>`
   ).join('') || '<div class="feed-empty">Sem SDR cadastrado</div>';
@@ -5170,10 +5176,10 @@ function renderBiaSection(s) {
   }
 
   el('bia-deploy-badge').textContent = s.deploy.registrados + ' registrados';
-  el('bia-deploy-suite').textContent = s.deploy.suiteAtual || '—';
+  el('bia-deploy-suite').textContent = (s.deploy.suiteAtual && !/^0+$/.test(String(s.deploy.suiteAtual).trim())) ? s.deploy.suiteAtual : 'sem registro';
   el('bia-deploy-falhas').textContent = s.deploy.falhas;
   el('bia-deploy-falhas').className = 'v ' + (s.deploy.falhas > 0 ? 'crit' : 'good');
-  el('bia-deploy-desde').textContent = s.deploy.desdeInicioLog || '—';
+  el('bia-deploy-desde').textContent = (s.deploy.desdeInicioLog && !/^\+?0+$/.test(String(s.deploy.desdeInicioLog).trim())) ? s.deploy.desdeInicioLog : '—';
 
   // Lista crua de deploys (30 linhas quase idênticas) vira gráfico de
   // frequência por dia — mesmo dado seguro (ts/suiteTotal/suiteFalhou, sem
@@ -5245,9 +5251,72 @@ function computeBiaGatesFromDaily_(rawRows, periodFrom, periodTo, todayStr, live
   };
 }
 
+// 29/10 (aba Bia, fase 3): saúde AO VIVO da Bia, direto do worker dela (GET /bia-saude: só leitura, sem segredo, só contagens e idades).
+// Se o worker não responde, isso É a informação (a Bia está fora): a linha mostra "não respondeu" em vermelho, nunca some em silêncio.
+const BIA_SAUDE_URL = 'https://gs-agendor-worker.robert131196.workers.dev/bia-saude';
+let _biaSaude = null, _biaSaudeErr = null;
+async function fetchBiaSaude_() {
+  const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 15000);
+  try {
+    const r = await fetch(BIA_SAUDE_URL, { cache: 'no-store', signal: ctl.signal });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    if (!j || j.ok === false || !j.itens) throw new Error('resposta inesperada');
+    return j;
+  } finally { clearTimeout(t); }
+}
+function biaIdade_(m) {
+  if (m == null) return '—';
+  if (m < 1) return 'agora';
+  if (m < 60) return m + ' min';
+  const h = Math.floor(m / 60), r = m % 60;
+  return h + 'h' + (r ? r + 'min' : '');
+}
+function renderBiaSaude_() {
+  const box = document.getElementById('bia-saude-rows'), badge = document.getElementById('bia-saude-badge');
+  if (!box) return;
+  const cls = { ok: 'good', atencao: 'warn', falha: 'crit', desconhecido: '' };
+  const row = (k, v, n, tip) => `<div class="stat-row"${tip ? ' title="' + escHtml(tip) + '"' : ''}><span class="k">${escHtml(k)}</span><span class="v ${cls[n] || ''}">${escHtml(v)}</span></div>`;
+  if (!_biaSaude) {
+    box.innerHTML = _biaSaudeErr ? row('Worker da Bia', 'não respondeu', 'falha', String(_biaSaudeErr.message || _biaSaudeErr)) : row('Worker da Bia', 'carregando…', 'desconhecido');
+    if (badge) badge.textContent = _biaSaudeErr ? 'sem resposta' : '';
+    return;
+  }
+  const s = _biaSaude, it = s.itens || {}, on = v => !!v && !['desligada', '0', 'off', 'false'].includes(String(v).toLowerCase());
+  const nome = { ok: 'tudo certo', atencao: 'atenção', falha: 'problema', desconhecido: 'sem leitura' };
+  const rows = [];
+  if (_biaSaudeErr) rows.push(row('Última atualização', 'falhou, mostrando a anterior', 'atencao', String(_biaSaudeErr.message || _biaSaudeErr)));
+  if (s.versao) rows.push(row('Versão no ar', (s.versao.id || '—') + (s.versao.haHoras != null ? ' · há ' + (s.versao.haHoras < 1 ? Math.round(s.versao.haHoras * 60) + ' min' : String(s.versao.haHoras).replace('.', ',') + ' h') : ''), 'ok'));
+  if (it.crons) rows.push(row('Vigias (crons) — última batida', 'há ' + biaIdade_(it.crons.ultimaBatidaMin), it.crons.nivel));
+  if (it.n8n) rows.push(row('Cérebro (n8n)', it.n8n.pronto == null ? '—' : (it.n8n.pronto ? 'no ar' : 'FORA DO AR'), it.n8n.nivel));
+  if (it.cerebro && it.cerebro.ultimaRespostaMin != null) rows.push(row('Última resposta da Bia', 'há ' + biaIdade_(it.cerebro.ultimaRespostaMin), it.cerebro.nivel));
+  if (it.vigiaExterno) rows.push(row('Vigia externo (healthchecks)', it.vigiaExterno.ultimoPingMin == null ? '—' : 'há ' + biaIdade_(it.vigiaExterno.ultimoPingMin), it.vigiaExterno.nivel));
+  if (it.varreduraSdr) rows.push(row('Varredura do SDR', it.varreduraSdr.idadeMin == null ? '—' : 'há ' + biaIdade_(it.varreduraSdr.idadeMin), it.varreduraSdr.nivel));
+  if (it.atividadesSdr) rows.push(row('Leitura das atividades do SDR', it.atividadesSdr.ok === false ? 'falhou' : (it.atividadesSdr.idadeMin == null ? '—' : 'há ' + biaIdade_(it.atividadesSdr.idadeMin)), it.atividadesSdr.nivel));
+  if (it.filaMotor) rows.push(row('Fila de envios do Motor', it.filaMotor.total == null ? '—' : it.filaMotor.total + (it.filaMotor.total === 1 ? ' na fila' : ' na fila'), it.filaMotor.nivel));
+  if (it.alertas) {
+    const a = it.alertas, txt = (a.criticos || a.comuns) ? (a.criticos ? a.criticos + (a.criticos === 1 ? ' crítico' : ' críticos') : '') + (a.criticos && a.comuns ? ' · ' : '') + (a.comuns ? a.comuns + (a.comuns === 1 ? ' comum' : ' comuns') : '') : 'nenhum';
+    rows.push(row('Alertas das últimas 4 h', txt, it.alertas.nivel, (a.onde || []).join(' | ')));
+  }
+  if (it.pausa) rows.push(row('Bia pausada (botão de emergência)', it.pausa.biaPausada == null ? '—' : (it.pausa.biaPausada ? 'SIM, PAUSADA' : 'não'), it.pausa.nivel));
+  const fl = s.flags || {};
+  if (fl.ENFORCE_IDENTITY !== undefined) rows.push(row('Identidade obrigatória nas escritas', on(fl.ENFORCE_IDENTITY) ? 'ligada' : 'desligada', on(fl.ENFORCE_IDENTITY) ? 'ok' : 'atencao'));
+  if (fl.TEST_MODE !== undefined) rows.push(row('Modo teste', on(fl.TEST_MODE) ? 'LIGADO' : 'desligado', on(fl.TEST_MODE) ? 'falha' : 'ok'));
+  if (fl.NOTIF_PAUSE !== undefined && on(fl.NOTIF_PAUSE)) rows.push(row('Notificações pausadas', 'SIM', 'atencao'));
+  box.innerHTML = rows.join('');
+  if (badge) badge.textContent = nome[s.geral] || '';
+  if (badge) badge.style.color = s.geral === 'falha' ? 'var(--red)' : (s.geral === 'atencao' ? 'var(--amber)' : (s.geral === 'ok' ? 'var(--green)' : ''));
+}
+async function loadBiaSaude_() {
+  try { _biaSaude = await fetchBiaSaude_(); _biaSaudeErr = null; }
+  catch (e) { _biaSaudeErr = e; console.warn('bia-saude falhou:', e && e.message); }
+  if (_biaViewActive) renderBiaSaude_();
+}
+
 async function loadBiaFresh_() {
   if (_biaLoading) return;
   _biaLoading = true;
+  loadBiaSaude_();
   try {
     const [snap, gatesDaily] = await Promise.all([
       fetchBiaSnapshot(biaPeriodoFor_(_period) || 'hoje'),

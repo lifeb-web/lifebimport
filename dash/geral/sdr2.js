@@ -5,7 +5,8 @@
  * então os dois nunca divergem (paridade).
  *
  * Fonte: tabela dash_geral_deals (D1, via bridge, SOMENTE LEITURA), filtrada
- * pelos funis SDR. Zero chamada nova ao Agendor. Dados do GS Engage
+ * pelos funis SDR (lida inteira, com conferência do total). Atividades: rota /sdr-atividades do worker da Bia (agregado diário,
+ * só leitura). Etapas: rota /sdr-etapas (aparece só com dado). Entrada no GS: tabela dash_sdr_gs_entrada (opcional). Dados do GS Engage
  * (maio a 19/10) entram como faixa separada e congelada (HIST_GS abaixo).
  *
  * Regras do Robert (28/10/2026):
@@ -32,7 +33,10 @@
     migracao: { de: '2026-10-20T15:00:00Z', ate: '2026-10-20T17:00:00Z' },
     inicioAgendor: '2026-10-20',
     urlNegocio: 'https://web.agendor.com.br/sistema/negocios/historico.php?id=',
+    worker: 'https://gs-agendor-worker.robert131196.workers.dev',   // rotas só de leitura: /sdr-atividades e /sdr-etapas
+    atvInicio: '2026-10-20',                            // início do Agendor como fonte (antes disso vale a faixa congelada do GS)
     atrasoSyncMin: 30,
+    atrasoAtvMin: 120,
     refreshTelaoMs: 10 * 60 * 1000
   };
   var ORIGENS = [
@@ -56,7 +60,8 @@
 
   // ---------- Estado ----------
   var S = { raw: null, rows: [], loading: false, err: null, mode: 'm', root: null, inited: false,
-            f: { sdr: '', funil: '', origem: '' }, gran: '', cfg: null, lastFetch: 0, timer: null };
+            f: { sdr: '', funil: '', origem: '' }, gran: '', cfg: null, lastFetch: 0, timer: null,
+            total: null, dupes: 0, gs: null, atv: null, atvErr: null, etp: null, etpErr: null, byId: {}, etapaNome: {}, w: 'p' };
 
   // ---------- Utilidades ----------
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -102,7 +107,7 @@
   function ehSistema(motivo) { return CFG.perdaSistema.indexOf(String(motivo || '').toLowerCase()) >= 0; }
 
   // ---------- Preparação das linhas ----------
-  function prep(rows) {
+  function prep(rows, gsMap) {
     var out = [];
     rows.forEach(function (d) {
       var oid = String(d.owner_id), fid = String(d.funnel_id);
@@ -114,6 +119,8 @@
       };
       var migr = d.created_at && d.created_at >= CFG.migracao.de && d.created_at < CFG.migracao.ate;
       e.migrado = !!migr;
+      var g = gsMap && gsMap[d.id]; // data de entrada no GS (tabela dash_sdr_gs_entrada), quando existir
+      if (g && g.entrada_gs) { e.entradaGS = String(g.entrada_gs).slice(0, 10); e.confGS = g.confianca; }
       if (d.status === 'won') {
         // data do ganho: data_real_evento, senão end_time (nunca won_at)
         e.data = d.data_real_evento ? String(d.data_real_evento).slice(0, 10) : dataBRT(d.end_time || d.closed_at);
@@ -121,7 +128,10 @@
         e.data = d.data_real_evento ? String(d.data_real_evento).slice(0, 10) : dataBRT(d.end_time || d.lost_at || d.closed_at);
         e.sistema = ehSistema(d.lost_reason_name);
       }
-      if (e.status === 'won' && e.data && e.criada && !e.migrado) e.dias = Math.max(0, diffDays(e.criada, e.data));
+      if (e.status === 'won' && e.data) {
+        if (e.entradaGS) { e.dias = Math.max(0, diffDays(e.entradaGS, e.data)); e.diasGS = true; }
+        else if (e.criada && !e.migrado) e.dias = Math.max(0, diffDays(e.criada, e.data));
+      }
       out.push(e);
     });
     return out;
@@ -156,7 +166,8 @@
       conv: (won.length + lostM.length) > 0 ? won.length / (won.length + lostM.length) : null,
       convGeral: (won.length + lostM.length + lostS.length) > 0 ? won.length / (won.length + lostM.length + lostS.length) : null,
       diasN: dias.length, diasMedia: dias.length ? soma / dias.length : null, diasMed: med,
-      migradosGanhos: won.filter(function (d) { return d.migrado; }).length
+      migradosGanhos: won.filter(function (d) { return d.migrado && d.dias == null; }).length,
+      diasGS: won.filter(function (d) { return d.diasGS; }).length
     };
   }
 
@@ -224,7 +235,78 @@
     return { from: addDays(pt, -(n - 1)), to: pt };
   }
 
-  function calcular(rows, per, f, gran) {
+
+  // ---------- Atividades (rota /sdr-atividades) e etapas (rota /sdr-etapas): motor puro ----------
+  var TIPOS = [['lig', 'Ligações'], ['wa', 'WhatsApp'], ['em', 'E-mails'], ['pe', 'Pesquisas'], ['ou', 'Outras']];
+  function zeroTipos() { return { lig: 0, wa: 0, em: 0, pe: 0, ou: 0 }; }
+  function somaTipos(o) { return (o.lig || 0) + (o.wa || 0) + (o.em || 0) + (o.pe || 0) + (o.ou || 0); }
+  // Documento diário -> linhas (SDR x negócio x dia). Origem e funil vêm da MESMA tabela de negócios do resto da aba,
+  // então os filtros de funil, origem, SDR e a barra Outbound/Inbound do Dash valem igual para atividades.
+  function atvLinhas(docs, byId) {
+    var out = [];
+    (docs || []).forEach(function (doc) {
+      Object.keys(doc.sdr || {}).forEach(function (quem) {
+        (doc.sdr[quem] || []).forEach(function (l) {
+          var row = byId[l.d], funil = String(l.f);
+          out.push({ dia: doc.dia, sdr: String(quem), deal: l.d, funil: funil, origem: row ? row.origem : (funil === '916713' ? 'inbound' : 'outbound'), a: l.a || zeroTipos(), j: l.j || zeroTipos() });
+        });
+      });
+    });
+    return out;
+  }
+  function agregaAtv(linhas, from, to) {
+    var a = zeroTipos(), j = zeroTipos(), porDia = {};
+    linhas.forEach(function (l) {
+      if (l.dia < from || l.dia > to) return;
+      var pd = porDia[l.dia] || (porDia[l.dia] = { a: 0, j: 0, lig: 0 });
+      TIPOS.forEach(function (t) { a[t[0]] += l.a[t[0]] || 0; j[t[0]] += l.j[t[0]] || 0; });
+      pd.a += somaTipos(l.a); pd.j += somaTipos(l.j); pd.lig += l.a.lig || 0;
+    });
+    var diasAtivos = Object.keys(porDia).filter(function (d) { return porDia[d].a > 0; }).length;
+    return { a: a, j: j, feitas: somaTipos(a), junto: somaTipos(j), porDia: porDia, diasAtivos: diasAtivos, media: diasAtivos ? somaTipos(a) / diasAtivos : null };
+  }
+  // Janela do período que o Agendor cobre (a partir de atvInicio, até hoje) e quais dias dela têm agregado.
+  function janelaAtv(per, docs, semDado) {
+    var hoje = hojeBRT(), de = per.from < CFG.atvInicio ? CFG.atvInicio : per.from, ate = per.to > hoje ? hoje : per.to;
+    if (ate < de) return { antes: per.to < CFG.atvInicio, de: de, ate: ate, dias: 0, comDado: 0, sem: [] };
+    var known = {}; (docs || []).forEach(function (d) { known[d.dia] = d; });
+    var sem = [], n = 0, com = 0, parcial = 0;
+    for (var t = de; t <= ate; t = addDays(t, 1)) { n++; if (known[t]) { com++; if (known[t].incompleto || known[t].pendente) parcial++; } else sem.push(t); }
+    return { antes: false, de: de, ate: ate, dias: n, comDado: com, sem: sem, parcial: parcial };
+  }
+  function serieAtv(ag, jn, docs) {
+    var known = {}; (docs || []).forEach(function (d) { known[d.dia] = 1; });
+    var out = [];
+    if (jn.antes || jn.dias === 0) return out;
+    for (var t = jn.de; t <= jn.ate; t = addDays(t, 1)) { var pd = ag.porDia[t]; out.push({ k: t, a: pd ? pd.a : 0, j: pd ? pd.j : 0, lig: pd ? pd.lig : 0, sem: !known[t] }); }
+    return out;
+  }
+  function etpLinhas(eventos, byId) {
+    var out = [];
+    (eventos || []).forEach(function (e) {
+      var row = byId[e.d], funil = String(e.f);
+      out.push({ dia: isoOf(e.ts - 3 * 3600000), sdr: row ? row.sdr : '', funil: funil, origem: row ? row.origem : (funil === '916713' ? 'inbound' : 'outbound'), de: e.de, para: e.para, semLinha: !row });
+    });
+    return out;
+  }
+  function agregaEtp(linhas, from, to, f, etapaNome) {
+    var res = {}, tot = 0;
+    linhas.forEach(function (l) {
+      if (l.dia < from || l.dia > to) return;
+      if (!passaGlobal(l, f.glob) || (f.funil && l.funil !== f.funil) || (f.origem && l.origem !== f.origem)) return;
+      if (f.sdr && l.sdr !== f.sdr) return; // sem linha na tabela de negócios não dá para atribuir ao SDR: fica de fora quando há filtro de SDR
+      var m = res[l.funil] || (res[l.funil] = {});
+      function get(id) { return m[id] || (m[id] = { id: id, nome: etapaNome[id] || ('Etapa ' + id), ord: ordemEtapa(etapaNome[id] || ''), ent: 0, sai: 0 }); }
+      get(l.para).ent++; tot++;
+      if (l.de != null) get(l.de).sai++;
+    });
+    var out = {};
+    Object.keys(res).forEach(function (fid) { out[fid] = Object.keys(res[fid]).map(function (k) { return res[fid][k]; }).sort(function (a, b) { return a.ord - b.ord || (a.nome < b.nome ? -1 : 1); }); });
+    return { porFunil: out, total: tot };
+  }
+
+  function calcular(rows, per, f, gran, ext) {
+    ext = ext || {};
     var base = filtra(rows, f);
     var ag = agrega(base, per.from, per.to);
     var ant = periodoAnterior(per.from, per.to);
@@ -242,8 +324,24 @@
       var a = agrega(baseSdr.filter(function (d) { return d.origem === o.key; }), per.from, per.to);
       cruz.push({ tipo: 'origem', key: o.key, label: o.label, cor: o.cor, a: a });
     });
+    // atividades e movimento de etapas (mesmos filtros)
+    var byId = {}; rows.forEach(function (d) { byId[d.id] = d; });
+    var atv = null;
+    if (ext.atv) {
+      var ls = filtra(atvLinhas(ext.atv.dias, byId), f);
+      var jn = janelaAtv(per, ext.atv.dias, ext.atv.semDado);
+      var agA = agregaAtv(ls, per.from, per.to);
+      var agAAnt = null;
+      if (ant && ant.to >= CFG.atvInicio) { var jAnt = janelaAtv(ant, ext.atv.dias); if (jAnt.dias && !jAnt.sem.length) agAAnt = agregaAtv(ls, ant.from, ant.to); }
+      atv = { ag: agA, ant: agAAnt, jn: jn, serie: serieAtv(agA, jn, ext.atv.dias), linhas: ls };
+    }
+    var etp = null;
+    if (ext.etp && ext.etp.ativo && ext.etp.eventos && ext.etp.eventos.length) {
+      etp = agregaEtp(etpLinhas(ext.etp.eventos, byId), per.from, per.to, f, ext.etapaNome || {});
+      etp.desde = ext.etp.desde;
+    }
     return { per: per, ant: ant, f: f, ag: ag, agAnt: agAnt, etapas: porEtapa(base, per.from, per.to),
-             motivos: motivos(ag.lostM), serie: serie(base, per.from, per.to, gran), cruz: cruz, minData: minData };
+             motivos: motivos(ag.lostM), serie: serie(base, per.from, per.to, gran), cruz: cruz, minData: minData, atv: atv, etp: etp };
   }
 
   // ---------- CSS (injetado uma vez) ----------
@@ -309,6 +407,25 @@
     '.s2-empty{padding:14px 10px;text-align:center;color:var(--faint,#9b93b0);font-size:12px;font-style:italic}',
     '.s2-det summary{cursor:pointer;font-size:11px;font-weight:800;color:var(--purple,#704B9B);padding:2px 0}',
     '.s2-etbar{background:linear-gradient(90deg,rgba(112,75,155,.14) var(--w,0%),transparent var(--w,0%))}',
+    '.s2 > details.s2-card{margin-top:0}',
+    '.s2-cov{font-size:10px;font-weight:600;color:var(--muted,#6b6484);line-height:1.4;margin-top:-2px}',
+    '.s2-cov.warn{color:var(--amber,#b45309);font-weight:700}',
+    '.s2-tb tr.s2-lig td{color:#0e7c82}',
+    '.s2-tb tr.s2-gsin td{color:#5b5670;background:#ece9f4}',
+    '.s2-empty button{font:inherit}',
+    /* PC e tablet: colunas que se completam (sem buracos) */
+    '.s2.m[data-w="m"] .s2-ks,.s2.m[data-w="g"] .s2-ks{grid-template-columns:repeat(4,minmax(0,1fr))}',
+    '.s2.m[data-w="x"] .s2-ks{grid-template-columns:repeat(8,minmax(0,1fr))}',
+    '.s2.m[data-w="m"] .s2-body,.s2.m[data-w="g"] .s2-body,.s2.m[data-w="x"] .s2-body{display:block;column-gap:8px;column-fill:balance}',
+    '.s2.m[data-w="m"] .s2-body{column-count:2}',
+    '.s2.m[data-w="g"] .s2-body,.s2.m[data-w="x"] .s2-body{column-count:3}',
+    '.s2.m[data-w="m"] .s2-body>*,.s2.m[data-w="g"] .s2-body>*,.s2.m[data-w="x"] .s2-body>*{break-inside:avoid;margin-bottom:8px;display:flex}',
+    '.s2.m .s2-body.pack{display:flex!important;flex-direction:row!important;column-count:auto!important;gap:8px;align-items:stretch}',
+    '.s2.m .s2-body.pack>.s2-col{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:8px}',
+    '.s2.m .s2-body.pack>.s2-col>*{margin-bottom:0!important}',
+    '.s2.m .s2-body.pack>.s2-col>.s2-fill{flex:1 1 auto}',
+    '.s2.m .s2-body.pack>.s2-col>.s2-fill>.s2-cb{justify-content:space-between}',
+    '.s2.m[data-w="m"] .s2-body>details,.s2.m[data-w="g"] .s2-body>details,.s2.m[data-w="x"] .s2-body>details{display:block}',
     /* mobile estreito: 390px */
     '.s2.m .s2-body{display:flex;flex-direction:column;gap:8px}',
     '.s2.m .s2-tb{font-size:11px}',
@@ -322,8 +439,14 @@
     '.s2.tv .s2-kv{font-size:clamp(18px,3.1vh,28px)}',
     '.s2.tv .s2-kt{font-size:clamp(9px,1.25vh,11px)}',
     '.s2.tv .s2-kl{font-size:clamp(8.5px,1.2vh,10px)}',
-    '.s2.tv .s2-body{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,27fr) minmax(0,43fr) minmax(0,30fr);gap:8px;overflow:hidden}',
-    '.s2.tv .s2-col{display:flex;flex-direction:column;gap:8px;min-height:0;min-width:0}',
+    '.s2.tv .s2-body{flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:min-content;align-items:start;gap:8px;overflow:hidden}',
+    '.s2.tv .s2-body.pack{align-items:stretch;grid-template-rows:minmax(0,1fr);grid-auto-rows:auto}',
+    '.s2.tv .s2-col{display:flex;flex-direction:column;gap:8px;min-height:0;min-width:0;height:100%;--rp:0px}',
+    '.s2.tv .s2-col>.s2-card{flex:0 0 auto!important}',
+    '.s2.tv .s2-col>.s2-fill{flex:1 1 auto!important}',
+    '.s2.tv .s2-col>.s2-fill>.s2-cb{justify-content:space-between}',
+    '.s2.tv .s2-col .s2-tb td{padding-top:calc(var(--tp,3px) + var(--rp))!important;padding-bottom:calc(var(--tp,3px) + var(--rp))!important}',
+    '.s2.tv .s2-col .s2-mot{gap:calc(4px + var(--rp)*1.6)!important}',
     '.s2.tv .s2-card{min-height:0}',
     '.s2.tv .s2-cb{overflow:hidden;padding:6px 11px 8px;gap:4px}',
     '.s2.tv .s2-tb{font-size:clamp(10px,1.45vh,12.5px)}',
@@ -341,7 +464,10 @@
     '.s2.tv[data-d="3"] .s2-tb td,.s2.tv[data-d="4"] .s2-tb td{padding:2px 4px}',
     '.s2.tv[data-d="3"] .s2-mot,.s2.tv[data-d="4"] .s2-mot{gap:3px}',
     '.s2.tv[data-d="4"] .s2-lg,.s2.tv[data-d="4"] .s2-esg{display:none}',
-    '.s2.tv[data-d="4"] .s2-tb,.s2.tv[data-d="4"] .s2-mr{font-size:9.5px}'
+    '.s2.tv[data-d="4"] .s2-tb,.s2.tv[data-d="4"] .s2-mr{font-size:9.5px}',
+    '.s2.tv[data-d="4"] .s2-gsnote,.s2.tv[data-d="5"] .s2-gsnote{display:none}',
+    '.s2.tv[data-d="5"] .s2-cov,.s2.tv[data-d="5"] .s2-lg,.s2.tv[data-d="5"] .s2-esg,.s2.tv[data-d="5"] .s2-nt,.s2.tv[data-d="5"] .s2-kt{display:none}',
+    '.s2.tv[data-d="5"] .s2-k{padding:4px 9px}.s2.tv[data-d="5"] .s2-tb,.s2.tv[data-d="5"] .s2-mr{font-size:9px}.s2.tv[data-d="5"] .s2-tb td{padding:1px 4px}.s2.tv[data-d="5"] .s2-ch{padding:5px 10px 4px}.s2.tv[data-d="5"] .s2-sub{padding:3px 0 0}'
   ].join('\n');
 
   function injetaCss() {
@@ -364,9 +490,18 @@
       '<span class="s2-kt">' + sub + '</span></div>';
   }
 
+  function chipAtividades(r) {
+    var tip = 'Tarefas concluídas no Agendor pelo SDR no período (WhatsApp, ligação, pesquisa...). As encerradas no mesmo instante do ganho/perda do negócio ficam à parte ("fechadas junto") e não entram aqui.';
+    if (!S.atv) return S.atvErr ? chip('Atividades', 'n/d', 'não consegui ler agora', { cinza: true, tip: tip }) : chip('Atividades', '…', 'carregando', { cinza: true, tip: tip });
+    var t = r.atv;
+    if (t.jn.antes) return chip('Atividades', 'n/d', 'Agendor só desde ' + dm(CFG.atvInicio) + ' (antes: faixa do GS)', { cinza: true, tip: tip });
+    var a = t.ag, p = t.ant;
+    var sub = 'inclui ' + num(a.a.lig) + (a.a.lig === 1 ? ' ligação' : ' ligações') + ' (à parte)' + (a.junto ? ' · ' + num(a.junto) + ' fechadas junto' : '');
+    if (t.jn.sem.length) sub += ' · ' + t.jn.sem.length + (t.jn.sem.length === 1 ? ' dia sem dado' : ' dias sem dado');
+    return chip('Atividades ⓘ', num(a.feitas), sub, { tip: tip, delta: delta(a.feitas, p ? p.feitas : null) });
+  }
   function htmlKpis(r) {
     var a = r.ag, p = r.agAnt;
-    var rotPer = r.per.label || '';
     var convPct = a.conv == null ? 'n/d' : pct(a.q, a.q + a.pm);
     var convPrev = p && p.conv != null ? p.conv : null;
     var convDelta = '';
@@ -376,7 +511,8 @@
     }
     var tempo = a.diasN ? dec1(a.diasMedia) + ' d' : 'n/d';
     var tempoSub = a.diasN ? ('mediana ' + dec1(a.diasMed) + ' d · ' + a.diasN + (a.diasN === 1 ? ' negócio' : ' negócios')) : 'sem negócio com data de entrada';
-    if (a.migradosGanhos) tempoSub += ' · ' + a.migradosGanhos + ' migrados do GS fora';
+    if (a.diasGS) tempoSub += ' · ' + a.diasGS + ' com entrada do GS';
+    if (a.migradosGanhos) tempoSub += ' · ' + a.migradosGanhos + ' migrados do GS sem data fora';
     return chip('Qualificados', num(a.q), 'ganhos no funil SDR', { go: 'won', delta: delta(a.q, p ? p.q : null) }) +
       chip('Perdidos pelo SDR', num(a.pm), 'decisão do SDR (conta na conversão)', { go: 'lostM', delta: delta(a.pm, p ? p.pm : null) }) +
       chip('Conversão ⓘ', convPct, 'sem cadência esgotada · geral: <b>' + (a.convGeral == null ? 'n/d' : pct(a.q, a.q + a.pm + a.ps)) + '</b>',
@@ -384,8 +520,8 @@
       chip('Cadência esgotada', num(a.ps), 'sistema, recuperável (fora da conversão)', { cinza: true, go: 'lostS' }) +
       chip('Em cadência agora', num(a.ong.length), 'abertos nas etapas D1 a D10', { go: 'ong' }) +
       chip('Fim da cadência', num(a.fim.length), 'aguardando, recuperáveis', { cinza: true, go: 'fim' }) +
-      chip('Tempo até qualificar', tempo, tempoSub, { tip: 'Da criação do negócio no Agendor até o ganho. Contatos migrados do GS em 20/10 ficam de fora porque a data de entrada original ainda não foi importada.' }) +
-      chip('Atividades', 'em breve', 'tarefas concluídas entram na Fase 3', { cinza: true });
+      chip('Tempo até qualificar ⓘ', tempo, tempoSub, { tip: 'Da entrada do contato até o ganho. Contatos migrados do GS usam a data em que entraram na cadência do GS (tabela de carga); os demais, a criação do negócio no Agendor.' }) +
+      chipAtividades(r);
   }
 
   function htmlEtapas(r) {
@@ -405,7 +541,7 @@
       });
       h += '</tbody></table>';
     });
-    h += '<div class="s2-nt s2-xs">Agora = abertos hoje. Qualif., Perdidos e Esgot. = o que aconteceu no período, na etapa em que o negócio estava. A entrada em cada etapa (avanço entre etapas) depende do histórico de etapas, Fase 2.</div>';
+    h += '<div class="s2-nt s2-xs">Agora = abertos hoje. Qualif., Perdidos e Esgot. = o que aconteceu no período, na etapa em que o negócio estava. ' + (r.etp ? 'A passagem entre etapas está no bloco Movimento entre etapas.' : 'O movimento entre etapas aparece aqui assim que houver histórico (avisos do Agendor).') + '</div>';
     return h;
   }
 
@@ -413,13 +549,13 @@
   function alturaGraf() {
     var rw = (S.root && S.root.clientWidth) || 1800;
     var cw = Math.max(300, (rw - 16) * 0.43 - 24);
-    var alvo = (w.innerHeight || 940) * 0.27 * [1, 1, .85, .72, .6][S.dens || 0];
+    var alvo = (w.innerHeight || 940) * 0.27 * [1, 1, .85, .72, .6, .5][S.dens || 0];
     return Math.round(Math.max(150, Math.min(340, alvo / (cw / 640))));
   }
   function svgChart(r, tv) {
     var sr = r.serie, b = sr.baldes;
     if (!b.length) return '<div class="s2-empty">Sem qualificados nem perdas neste período</div>';
-    var W = tv ? 640 : 340, H = tv ? alturaGraf() : 150, padL = 24, padR = 4, padT = 14, padB = 20;
+    var W = tv ? 640 : (S.cw || 340), H = tv ? alturaGraf() : 160, padL = 24, padR = 4, padT = 14, padB = 20;
     var max = 1; b.forEach(function (x) { if (x.q > max) max = x.q; if (x.pm > max) max = x.pm; });
     max = Math.max(max, 2);
     var iw = W - padL - padR, ih = H - padT - padB, gw = iw / b.length;
@@ -504,15 +640,88 @@
     return h + '</div>';
   }
 
-  function htmlGS() {
-    var h = '<table class="s2-tb"><thead><tr><th>Mês</th><th>Qualif.</th><th>Perdidos</th><th>Auto.</th><th>Ativ.</th></tr></thead><tbody>';
-    var t = { q: 0, pm: 0, pa: 0, at: 0 };
+  function htmlGS(r) {
+    var per = r && r.per, h = '<table class="s2-tb"><thead><tr><th>Mês</th><th>Qualif.</th><th>Perdidos</th><th>Auto.</th><th>Ativ.</th></tr></thead><tbody>';
+    var t = { q: 0, pm: 0, pa: 0, at: 0 }, tp = { q: 0, pm: 0, pa: 0, at: 0, n: 0 };
     HIST_GS.forEach(function (x, i) {
       t.q += x.q; t.pm += x.pm; t.pa += x.pa; t.at += x.at;
-      h += '<tr' + (i < HIST_GS.length - 3 ? ' class="s2-gsold"' : '') + '><td title="' + esc(x.parcial || '') + '">' + nomeMes(x.m + '-01') + (x.parcial ? ' <span style="font-weight:600;opacity:.8">(1 a 19)</span>' : '') + '</td><td>' + num(x.q) + '</td><td>' + num(x.pm) + '</td><td>' + (x.pa ? num(x.pa) : '·') + '</td><td>' + num(x.at) + '</td></tr>';
+      var ini = x.m + '-01', fim = x.m + '-31', toca = per && per.from <= fim && per.to >= ini;
+      if (toca) { tp.q += x.q; tp.pm += x.pm; tp.pa += x.pa; tp.at += x.at; tp.n++; }
+      h += '<tr class="' + (i < HIST_GS.length - 3 ? 's2-gsold ' : '') + (toca ? 's2-gsin' : '') + '"><td title="' + esc(x.parcial || '') + '">' + nomeMes(x.m + '-01') + (x.parcial ? ' <span style="font-weight:600;opacity:.8">(1 a 19)</span>' : '') + '</td><td>' + num(x.q) + '</td><td>' + num(x.pm) + '</td><td>' + (x.pa ? num(x.pa) : '·') + '</td><td>' + num(x.at) + '</td></tr>';
     });
-    h += '<tr style="font-weight:800"><td>Total</td><td>' + num(t.q) + '</td><td>' + num(t.pm) + '</td><td>' + num(t.pa) + '</td><td>' + num(t.at) + '</td></tr></tbody></table>';
-    return h + '<div class="s2-nt" style="color:#8a859c">Congelado em 19/10, não atualiza. Sistema anterior: cada passo era um registro (inclusive e-mail e pesquisa), por isso não compare 1:1 com o Agendor. A partir de 20/10 vale o Agendor.</div>';
+    h += '<tr style="font-weight:800"><td>Total</td><td>' + num(t.q) + '</td><td>' + num(t.pm) + '</td><td>' + num(t.pa) + '</td><td>' + num(t.at) + '</td></tr>';
+    if (per && tp.n && tp.n < HIST_GS.length) h += '<tr style="font-weight:800" class="s2-gsin"><td>Meses do período</td><td>' + num(tp.q) + '</td><td>' + num(tp.pm) + '</td><td>' + num(tp.pa) + '</td><td>' + num(tp.at) + '</td></tr>';
+    h += '</tbody></table>';
+    var nota = !per ? '' : (tp.n ? 'Em destaque: meses que tocam o período (somados inteiros, o GS só tem totais mensais). ' : 'Nenhum mês do GS toca o período escolhido. ');
+    return h + '<div class="s2-nt s2-gsnote" style="color:#8a859c">' + nota + 'Congelado em 19/10, não atualiza e não responde aos filtros de funil, origem e SDR. Sistema anterior: cada passo era um registro (inclusive e-mail e pesquisa), por isso não compare 1:1 com o Agendor. A partir de 20/10 vale o Agendor.</div>';
+  }
+
+  function svgAtv(r, tv) {
+    var b = r.atv.serie; if (!b.length) return '';
+    var W = tv ? 480 : (S.cw || 340), H = tv ? Math.max(70, Math.min(120, Math.round((w.innerHeight || 940) * 0.11))) : 110, padL = 24, padR = 4, padT = 12, padB = 18;
+    var max = 2; b.forEach(function (x) { if (x.a > max) max = x.a; });
+    var iw = W - padL - padR, ih = H - padT - padB, gw = iw / b.length, bw = Math.max(2, Math.min(18, gw * 0.62));
+    var s = '<svg class="s2-chart" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Atividades feitas por dia">';
+    [0, 1].forEach(function (f) { var y = padT + ih - ih * f; s += '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + y + '" y2="' + y + '" stroke="#eae7f2"/><text x="' + (padL - 4) + '" y="' + (y + 3) + '" text-anchor="end" font-size="9" fill="#9b93b0">' + Math.round(max * f) + '</text>'; });
+    var passo = Math.ceil(b.length / (tv ? 10 : Math.max(4, Math.floor(iw / 44))));
+    b.forEach(function (x, i) {
+      var cx = padL + gw * i + gw / 2, hA = ih * (x.a - x.lig) / max, hL = ih * x.lig / max;
+      var tip = dm(x.k) + ': ' + x.a + ' atividades (' + x.lig + ' ligações)' + (x.j ? ', ' + x.j + ' fechadas junto' : '') + (x.sem ? ' · dia sem dado' : '');
+      s += '<g><title>' + esc(tip) + '</title>';
+      if (x.sem) s += '<rect x="' + (cx - bw / 2) + '" y="' + (padT + ih - 3) + '" width="' + bw + '" height="3" fill="#e3e0ec"/>';
+      else s += '<rect x="' + (cx - bw / 2) + '" y="' + (padT + ih - hA - hL) + '" width="' + bw + '" height="' + Math.max(hA + hL, x.a ? 1 : 0) + '" rx="2" fill="' + C_ROXO + '" opacity=".85"/>' +
+        (x.lig ? '<rect x="' + (cx - bw / 2) + '" y="' + (padT + ih - hL) + '" width="' + bw + '" height="' + hL + '" fill="#0e9aa0"/>' : '');
+      if (i % passo === 0) s += '<text x="' + cx + '" y="' + (H - 5) + '" text-anchor="middle" font-size="9" fill="#6b6484">' + dm(x.k) + '</text>';
+      s += '</g>';
+    });
+    return s + '</svg><div class="s2-lg"><span><i style="background:' + C_ROXO + ';opacity:.85"></i>Atividades</span><span><i style="background:#0e9aa0"></i>Ligações (parte das atividades)</span></div>';
+  }
+  function htmlAtividades(r, tv) {
+    if (!S.atv) return S.atvErr ? '<div class="s2-empty">Não consegui ler as atividades agora.<br><button class="s2-c" data-retry="atv" style="margin-top:6px">Tentar de novo</button></div>' : '<div class="s2-empty">Carregando atividades…</div>';
+    var t = r.atv, a = t.ag;
+    if (t.jn.antes) return '<div class="s2-empty">O Agendor só tem atividades do SDR desde ' + dmy(CFG.atvInicio) + '. Antes disso vale a faixa congelada do GS (abaixo).</div>';
+    var h = '';
+    if (t.jn.sem.length) h += '<div class="s2-st warn">' + t.jn.sem.length + (t.jn.sem.length === 1 ? ' dia do período ainda sem dado (' : ' dias do período ainda sem dado (') + t.jn.sem.slice(0, 3).map(dm).join(', ') + (t.jn.sem.length > 3 ? '...' : '') + '). Os totais abaixo são parciais.</div>';
+    if (t.jn.parcial) h += '<div class="s2-st warn">' + t.jn.parcial + (t.jn.parcial === 1 ? ' dia' : ' dias') + ' com leitura incompleta do Agendor; o valor será corrigido na próxima atualização.</div>';
+    var linhas = TIPOS.filter(function (x) { return x[0] !== 'lig' && (a.a[x[0]] || a.j[x[0]] || x[0] === 'wa'); });
+    h += '<table class="s2-tb"><thead><tr><th>Tipo</th><th>Feitas</th><th title="Encerradas no mesmo instante do ganho/perda do negócio">Fechadas junto</th></tr></thead><tbody>';
+    function lin(nome, f, j, cls) { return '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td>' + nome + '</td><td class="' + (f ? '' : 'z') + '">' + (f ? num(f) : '·') + '</td><td class="' + (j ? 'gc' : 'z') + '">' + (j ? num(j) : '·') + '</td></tr>'; }
+    linhas.forEach(function (x) { h += lin(x[1], a.a[x[0]], a.j[x[0]]); });
+    h += lin('Ligações · à parte', a.a.lig, a.j.lig, 's2-lig');
+    h += '<tr style="font-weight:800"><td>Total</td><td>' + num(a.feitas) + '</td><td class="gc">' + num(a.junto) + '</td></tr></tbody></table>';
+    h += svgAtv(r, tv);
+    h += '<div class="s2-nt' + (tv ? ' s2-xs' : '') + '">' + (a.media != null ? '<b>' + dec1(a.media) + '</b> por dia com atividade (' + a.diasAtivos + (a.diasAtivos === 1 ? ' dia' : ' dias') + '). ' : '') + '<b>Fechadas junto</b> = tarefas encerradas no mesmo instante em que o negócio foi ganho ou perdido; não são trabalho do dia. <b>Ligações</b> aparecem sempre separadas (não entram na comissão).</div>';
+    return h;
+  }
+  function htmlEtapasMov(r) {
+    var e = r.etp; if (!e) return '';
+    var h = '';
+    Object.keys(CFG.funis).forEach(function (fid) {
+      if (r.f.funil && r.f.funil !== fid) return;
+      var linhas = e.porFunil[fid] || []; if (!linhas.length) return;
+      h += '<div class="s2-sub" style="color:' + CFG.funis[fid].cor + '"><i class="s2-dot" style="background:' + CFG.funis[fid].cor + '"></i>' + esc(CFG.funis[fid].nome) + '</div>';
+      h += '<table class="s2-tb"><thead><tr><th>Etapa</th><th>Entraram</th><th>Saíram</th></tr></thead><tbody>';
+      linhas.forEach(function (l) { h += '<tr' + (CFG.etapaFim.test(l.nome) ? ' class="gr"' : '') + '><td title="' + esc(l.nome) + '">' + esc(l.nome) + '</td><td class="' + (l.ent ? 'qc' : 'z') + '">' + (l.ent ? num(l.ent) : '·') + '</td><td class="' + (l.sai ? '' : 'z') + '">' + (l.sai ? num(l.sai) : '·') + '</td></tr>'; });
+      h += '</tbody></table>';
+    });
+    return h + '<div class="s2-nt s2-xs">Histórico de etapas registrado desde ' + dmy(e.desde || '') + ' (avisos do Agendor). Antes disso não há registro de passagem por etapa.</div>';
+  }
+  // Cobertura: o que foi lido e o que cobre (nada some em silêncio).
+  function coberturaInfo(r) {
+    var partes = [], warn = false;
+    var tot = S.total, lidos = S.raw ? S.raw.length : 0;
+    if (tot != null && lidos < tot) { partes.push('<b>leitura incompleta</b>: ' + num(lidos) + ' de ' + num(tot) + ' negócios'); warn = true; }
+    else partes.push(num(S.rows.length) + ' negócios do SDR' + (tot != null ? ' (' + num(lidos) + ' de ' + num(tot) + ' lidos)' : '') + (r.minData ? ' · Agendor desde ' + dm(CFG.atvInicio) : ''));
+    if (S.atv) {
+      var jn = r.atv && r.atv.jn;
+      if (jn && jn.dias) { partes.push('atividades: ' + jn.comDado + ' de ' + jn.dias + ' dias' + (S.atv.ultimaRodada && S.atv.ultimaRodada.ts ? ' · lidas ' + instBRT(new Date(S.atv.ultimaRodada.ts).toISOString()) : '')); if (jn.sem.length || (S.atv.ultimaRodada && S.atv.ultimaRodada.ok === false)) warn = true; }
+      else if (jn && jn.antes) partes.push('atividades: Agendor só desde ' + dm(CFG.atvInicio));
+      if (S.atv.ultimaRodada && S.atv.ultimaRodada.ts && (Date.now() - S.atv.ultimaRodada.ts) / 60000 > CFG.atrasoAtvMin) { partes.push('<b>atividades atrasadas</b>'); warn = true; }
+    } else if (S.atvErr) { partes.push('<b>atividades indisponíveis</b>'); warn = true; }
+    if (S.etpErr) { partes.push('<b>etapas indisponíveis</b>'); warn = true; }
+    else if (r.etp) partes.push('etapas desde ' + dm(r.etp.desde || ''));
+    partes.push('GS congelado mai a 19/10');
+    return { txt: partes.join(' · '), warn: warn };
   }
 
   function htmlNotas() {
@@ -559,28 +768,32 @@
     var root = S.root; if (!root) return;
     var per = S.cfg && S.cfg.getPeriod ? S.cfg.getPeriod() : null;
     if (!per) { root.innerHTML = '<div class="s2-empty">Carregando período…</div>'; return; }
-    if (S.err && !S.rows.length) { root.innerHTML = '<div class="s2-empty">Não consegui ler os negócios do SDR agora. Tente de novo em instantes.</div>'; return; }
+    if (S.err && !S.rows.length) { root.innerHTML = '<div class="s2-empty">Não consegui ler os negócios do SDR agora. Tente de novo em instantes.<br><button class="s2-c" data-retry="deals" style="margin-top:6px">Tentar de novo</button></div>'; return; }
     if (!S.raw) { root.innerHTML = '<div class="s2-empty">Carregando negócios do SDR…</div>'; return; }
     var tv = S.mode === 't';
     var glob = S.cfg.getOrigin ? S.cfg.getOrigin() : 'both';
     if (S.f.origem && !passaGlobal({ origem: S.f.origem }, glob)) S.f.origem = '';
-    var r = calcular(S.rows, per, { sdr: S.f.sdr, funil: S.f.funil, origem: S.f.origem, glob: glob }, S.gran);
+    var r = calcular(S.rows, per, { sdr: S.f.sdr, funil: S.f.funil, origem: S.f.origem, glob: glob }, S.gran, { atv: S.atv, etp: S.etp, etapaNome: Object.assign({}, S.etp && S.etp.nomes, S.etapaNome) });
     S.last = r;
-    var fr = frescor();
-    var topo = '<div class="s2-hd"><div class="s2-ttl">SDR (<b>' + esc(nomeSdrs(r)) + '</b>) · <b>' + esc(per.label || (dm(per.from) + ' a ' + dm(per.to))) + '</b> <span class="s2-st' + (fr.warn ? ' warn' : '') + '" style="text-transform:none;letter-spacing:0">· ' + esc(fr.txt) + (fr.falha ? '' : (fr.warn ? ' (atrasado)' : '')) + '</span></div>' + htmlFiltros(r) + '</div>';
+    var fr = frescor(), cv = coberturaInfo(r);
+    var topo = '<div class="s2-hd"><div class="s2-ttl">SDR (<b>' + esc(nomeSdrs(r)) + '</b>) · <b>' + esc(per.label || (dm(per.from) + ' a ' + dm(per.to))) + '</b> <span class="s2-st' + (fr.warn ? ' warn' : '') + '" style="text-transform:none;letter-spacing:0">· ' + esc(fr.txt) + (fr.falha ? '' : (fr.warn ? ' (atrasado)' : '')) + '</span></div>' + htmlFiltros(r) + '</div>' +
+      '<div class="s2-cov' + (cv.warn ? ' warn' : '') + '" title="O que esta aba leu e o que ela cobre">' + cv.txt + '</div>';
     var kpis = '<div class="s2-ks">' + htmlKpis(r) + '</div>';
-    var cEtapas = card('Etapas da cadência', 'onde estão e onde terminam', htmlEtapas(r), { style: tv ? 'flex:1' : '' });
+    var fl = tv ? 'flex:1' : '';
+    var cEtapas = card('Etapas da cadência', 'onde estão e onde terminam', htmlEtapas(r), { style: fl });
+    var cMov = r.etp ? card('Movimento entre etapas', 'entradas e saídas no período', htmlEtapasMov(r), { style: tv ? 'flex:0 0 auto' : '' }) : '';
     var cGraf = card('Qualificados e perdidos', esc(r.serie.baldes.length ? dm(r.serie.de) + ' a ' + dm(r.serie.ate) : ''), htmlGrafico(r, tv), { style: tv ? 'flex:0 0 auto' : '' });
-    var cCruz = card('Funil e origem', 'período selecionado', htmlCruzada(r), { style: tv ? 'flex:1' : '' });
-    var cMot = card('Motivos de perda', 'período selecionado', htmlMotivos(r), { style: tv ? 'flex:1' : '' });
-    var cGS = card('Histórico GS Engage', 'mai a 19/10 · congelado', htmlGS(), { cls: 's2-gs', style: tv ? 'flex:0 0 auto' : '' });
+    var cCruz = card('Funil e origem', 'período selecionado', htmlCruzada(r), { style: fl });
+    var cMot = card('Motivos de perda', 'período selecionado', htmlMotivos(r), { style: fl });
+    var cAtv = card('Atividades do SDR', r.atv && !r.atv.jn.antes ? 'tarefas concluídas no Agendor' : 'Agendor', htmlAtividades(r, tv), { style: tv ? 'flex:0 0 auto' : '' });
+    var cGS = card('Histórico GS Engage', 'mai a 19/10 · congelado', htmlGS(r), { cls: 's2-gs', style: tv ? 'flex:0 0 auto' : '' });
     var cNotasTv = tv ? card('Como ler', '', '<div class="s2-nt">' + htmlNotas() + '</div>', { cls: 's2-xs', style: 'flex:0 0 auto' }) : '';
     var cNotas = tv ? '' : '<details class="s2-det s2-card"><summary style="padding:9px 12px">Como ler esta aba</summary><div class="s2-cb s2-nt">' + htmlNotas() + '</div></details>';
     var corpo;
     if (tv) {
-      corpo = '<div class="s2-body"><div class="s2-col">' + cEtapas + cNotasTv + '</div><div class="s2-col">' + cGraf + cCruz + '</div><div class="s2-col">' + cMot + cGS + '</div></div>';
+      corpo = '<div class="s2-body">' + cGraf + cAtv + cEtapas + cMov + cCruz + cMot + cGS + cNotasTv + '</div>';
     } else {
-      corpo = '<div class="s2-body">' + cGraf + cEtapas + cCruz + cMot + cGS + cNotas + '</div>';
+      corpo = '<div class="s2-body">' + cGraf + cAtv + cEtapas + cMov + cCruz + cMot + cGS + '</div>' + cNotas;
     }
     root.innerHTML = topo + kpis + corpo;
     root.querySelector('.s2-ks').addEventListener('click', onClick);
@@ -594,13 +807,84 @@
     for (i = 0; i < cols.length; i++) if (cols[i].scrollHeight > cols[i].clientHeight + 1) return true;
     return false;
   }
+  function medeLargura() {
+    var rw = S.root.clientWidth || 360;
+    S.w = rw < 640 ? 'p' : (rw < 1100 ? 'm' : (rw < 1500 ? 'g' : 'x'));
+    S.root.setAttribute('data-w', S.w);
+    var cols = { p: 1, m: 2, g: 3, x: 3 }[S.w];
+    S.cw = Math.max(260, Math.round((rw - (cols - 1) * 8) / cols - 26));
+  }
+  // PC/tablet: distribui os cartões em colunas com alturas quase iguais (sem buracos); o último cartão de cada coluna preenche o resto.
+  function empacota() {
+    var body = S.root.querySelector('.s2-body'), n = { m: 2, g: 3, x: 3 }[S.w];
+    if (!body || !n) return;
+    var cards = [].slice.call(body.children), hs = cards.map(function (c) { return c.offsetHeight + 8; });
+    var best = null, asg = [];
+    (function rec(i, col) {
+      if (i === cards.length) {
+        var tot = []; for (var k = 0; k < n; k++) tot.push(0);
+        var inv = 0;
+        for (var a = 0; a < cards.length; a++) { tot[asg[a]] += hs[a]; for (var b = a + 1; b < cards.length; b++) if (asg[b] < asg[a]) inv++; }
+        var cost = (Math.max.apply(null, tot) - Math.min.apply(null, tot)) * 10 + inv * 18 + Math.max.apply(null, tot) * 0.2;
+        if (!best || cost < best.cost) best = { cost: cost, asg: asg.slice() };
+        return;
+      }
+      for (var c = 0; c < n; c++) { asg[i] = c; rec(i + 1); }
+    })(0);
+    var cols = []; for (var k = 0; k < n; k++) { var d = document.createElement('div'); d.className = 's2-col'; cols.push(d); }
+    cards.forEach(function (c, i) { cols[best.asg[i]].appendChild(c); });
+    body.innerHTML = ''; body.classList.add('pack');
+    cols.forEach(function (c) { body.appendChild(c); });
+    cols.forEach(function (c) { var vis = [].slice.call(c.children).filter(function (k) { return k.offsetHeight > 0 && k.classList.contains('s2-card'); }); var last = vis[vis.length - 1]; if (last) last.classList.add('s2-fill'); });
+  }
+  // Telão: 3 colunas de mesma largura; melhor divisão dos cartões (menor coluna mais alta); cabe sem rolagem e sem espaço vazio:
+  // a folga que sobra em cada coluna vira respiro nas linhas das tabelas e o último cartão preenche o resto.
+  var TP = [8, 5, 3, 2, 2, 1];
+  function empacotaTv() {
+    var body = S.root.querySelector('.s2-body'); if (!body) return true;
+    var H = body.clientHeight, cards = [].slice.call(body.children), n = 3, GAP = 8;
+    var hs = cards.map(function (c) { return c.offsetHeight; });
+    var best = null, asg = [];
+    (function rec(i) {
+      if (i === cards.length) {
+        var tot = [0, 0, 0], inv = 0;
+        for (var a = 0; a < cards.length; a++) { tot[asg[a]] += hs[a] + (tot[asg[a]] ? GAP : 0); for (var b = a + 1; b < cards.length; b++) if (asg[b] < asg[a]) inv++; }
+        var mx = Math.max.apply(null, tot), mn = Math.min.apply(null, tot);
+        var cost = (mx > H ? 100000 + (mx - H) * 50 : 0) + (mx - mn) * 4 + inv * 25;
+        if (!best || cost < best.cost) best = { cost: cost, asg: asg.slice(), mx: mx };
+        return;
+      }
+      for (var c = 0; c < n; c++) { asg[i] = c; rec(i + 1); }
+    })(0);
+    var cols = [0, 1, 2].map(function () { var d = document.createElement('div'); d.className = 's2-col'; return d; });
+    cards.forEach(function (c, i) { cols[best.asg[i]].appendChild(c); });
+    body.innerHTML = ''; body.classList.add('pack');
+    cols.forEach(function (c) { body.appendChild(c); });
+    cols.forEach(function (c) { var vis = [].slice.call(c.children).filter(function (k) { return k.offsetHeight > 0; }); var l = vis[vis.length - 1]; if (l) l.classList.add('s2-fill'); });
+    if (best.mx > H) return false;
+    // respiro nas linhas: a folga que sobra no último cartão de cada coluna vira altura das linhas (medido, em passos)
+    cols.forEach(function (c) {
+      var rows = c.querySelectorAll('.s2-tb tbody tr, .s2-mr').length, fill = c.querySelector('.s2-fill'), cb = fill && fill.querySelector('.s2-cb');
+      if (!rows || !cb) return;
+      function sobra() { var sum = 0; [].slice.call(cb.children).forEach(function (k) { sum += k.offsetHeight; }); return cb.clientHeight - sum - 14 - 4 * Math.max(0, cb.children.length - 1); }
+      var rp = 0;
+      for (var it = 0; it < 10; it++) {
+        var f = sobra(); if (f <= 14 || rp >= 16) break;
+        rp = Math.min(16, rp + Math.max(1, Math.floor(f * 0.8 / (rows * 2))));
+        c.style.setProperty('--rp', rp + 'px');
+      }
+      while (rp > 0 && sobra() < 0) { rp--; c.style.setProperty('--rp', rp + 'px'); }
+    });
+    return true;
+  }
   function render() {
     if (!S.root) return;
-    if (S.mode !== 't') { draw(); return; }
-    for (var d = 0; d <= 4; d++) {
-      S.dens = d; S.root.setAttribute('data-d', d);
+    if (S.mode !== 't') { medeLargura(); draw(); if (S.w !== 'p') empacota(); return; }
+    for (var d = 0; d <= 5; d++) {
+      S.dens = d; S.root.setAttribute('data-d', d); S.root.style.setProperty('--tp', TP[d] + 'px');
       draw();
-      if (!S.last || !S.root.querySelector('.s2-body') || !estoura()) break;
+      if (!S.last || !S.root.querySelector('.s2-body')) break;
+      if (empacotaTv() && !estoura()) break;
     }
   }
 
@@ -632,6 +916,8 @@
     if (TIT[go]) return abreLista(TIT[go], lista(go), cor);
   }
   function onRootClick(ev) {
+    var rt = ev.target.closest('button[data-retry]');
+    if (rt) { var k = rt.getAttribute('data-retry'); if (k === 'atv') { S.atvErr = null; render(); return lerAtividades(); } return carregar(true); }
     var b = ev.target.closest('button[data-f]');
     if (b) { S.f[b.getAttribute('data-f')] = b.getAttribute('data-v'); return render(); }
     var g = ev.target.closest('button[data-gran]');
@@ -654,30 +940,77 @@
 
   // ---------- Dados (somente leitura) ----------
   var COLS = 'id,frozen,title,stage_id,stage_name,funnel_id,owner_id,origin,origem_especial,status,created_at,end_time,lost_at,closed_at,data_real_evento,lost_reason_name,synced_at';
+  function fetchT(url, opts, ms) {
+    var ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var t = ctl ? setTimeout(function () { ctl.abort(); }, ms || 25000) : null;
+    var o = opts || {}; if (ctl) o.signal = ctl.signal;
+    return fetch(url, o).then(function (r) { if (t) clearTimeout(t); return r; }, function (e) { if (t) clearTimeout(t); throw e; });
+  }
+  // Lê TUDO com conferência: o bridge devolve o total em Content-Range; a leitura só termina quando chega ao total (ou a página vem vazia).
+  function lerNegocios() {
+    var base = S.cfg.bridge, key = S.cfg.key, fids = Object.keys(CFG.funis).join(',');
+    var PAGE = 1000, all = [], vistos = {}, total = null, dupes = 0;
+    function pagina(from, tentativa) {
+      return fetchT(base + '/rest/v1/dash_geral_deals?select=' + COLS + '&funnel_id=in.(' + fids + ')&order=id.asc', {
+        headers: { apikey: key, Authorization: 'Bearer ' + key, Range: from + '-' + (from + PAGE - 1), Prefer: 'count=exact' }
+      }).then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        var m = /\/(\d+)\s*$/.exec(res.headers.get('content-range') || ''); if (m) total = +m[1];
+        return res.json();
+      }).then(function (rows) {
+        if (!Array.isArray(rows)) throw new Error('resposta inesperada');
+        rows.forEach(function (d) { if (vistos[d.id]) dupes++; else { vistos[d.id] = 1; all.push(d); } });
+        if (rows.length && (total == null ? rows.length >= PAGE : from + rows.length < total)) return pagina(from + rows.length, 0);
+      }, function (e) { if (tentativa < 2) return new Promise(function (ok) { setTimeout(ok, 800 * (tentativa + 1)); }).then(function () { return pagina(from, tentativa + 1); }); throw e; });
+    }
+    return pagina(0, 0).then(function () { return { rows: all, total: total, dupes: dupes }; });
+  }
+  // Data de entrada no GS dos migrados (tabela opcional: se ainda não foi carregada no D1, a aba segue como antes).
+  function lerGsEntrada() {
+    var base = S.cfg.bridge, key = S.cfg.key, map = {};
+    return fetchT(base + '/rest/v1/dash_sdr_gs_entrada?select=deal_id,entrada_gs,confianca&limit=5000', { headers: { apikey: key, Authorization: 'Bearer ' + key } }, 15000)
+      .then(function (res) { return res.ok ? res.json() : []; })
+      .then(function (rows) { if (Array.isArray(rows)) rows.forEach(function (x) { if (x && x.deal_id != null) map[x.deal_id] = x; }); return map; })
+      .catch(function () { return map; });
+  }
+  function lerAtividades() {
+    if (S.atvLoading) return Promise.resolve();
+    S.atvLoading = true;
+    return fetchT(CFG.worker + '/sdr-atividades?from=' + CFG.atvInicio + '&to=' + hojeBRT(), {}, 30000).then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    }).then(function (j) {
+      if (!j || !Array.isArray(j.dias)) throw new Error('resposta inesperada');
+      S.atv = j; S.atvErr = null; S.atvTs = Date.now();
+    }).catch(function (e) { S.atvErr = e; console.warn('SDR2: atividades falharam', e && e.message); })
+      .then(function () { S.atvLoading = false; render(); });
+  }
+  function lerEtapas() {
+    return fetchT(CFG.worker + '/sdr-etapas?from=2026-10-20&to=' + hojeBRT(), {}, 30000).then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    }).then(function (j) {
+      S.etp = (j && j.ativo && Array.isArray(j.eventos)) ? { ativo: true, eventos: j.eventos, desde: j.cobertura && j.cobertura.desde, nomes: j.nomes || {} } : null;
+      S.etpErr = (j && j.ok === false) ? new Error('parcial') : null;
+    }).catch(function (e) { S.etpErr = e; console.warn('SDR2: etapas falharam', e && e.message); })
+      .then(function () { render(); });
+  }
   function carregar(force) {
     if (S.loading) return Promise.resolve();
     if (!force && S.raw && Date.now() - S.lastFetch < 20000) return Promise.resolve();
     S.loading = true;
-    var base = S.cfg.bridge, key = S.cfg.key;
-    var fids = Object.keys(CFG.funis).join(',');
-    var PAGE = 1000, all = [];
-    function pagina(from) {
-      return fetch(base + '/rest/v1/dash_geral_deals?select=' + COLS + '&funnel_id=in.(' + fids + ')', {
-        headers: { apikey: key, Authorization: 'Bearer ' + key, Range: from + '-' + (from + PAGE - 1) }
-      }).then(function (res) {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.json();
-      }).then(function (rows) {
-        all = all.concat(rows);
-        if (rows.length >= PAGE) return pagina(from + PAGE);
-      });
-    }
-    return pagina(0).then(function () {
-      S.raw = all; S.rows = prep(all); S.err = null; S.lastFetch = Date.now();
+    return Promise.all([lerNegocios(), lerGsEntrada()]).then(function (x) {
+      var d = x[0]; S.raw = d.rows; S.total = d.total; S.dupes = d.dupes; S.gs = x[1];
+      S.rows = prep(d.rows, x[1]); S.err = null; S.lastFetch = Date.now();
+      S.byId = {}; S.etapaNome = {};
+      S.rows.forEach(function (e) { S.byId[e.id] = e; if (e.etapaId) S.etapaNome[e.etapaId] = e.etapa; });
     }).catch(function (e) {
       S.err = e; console.warn('SDR2: leitura falhou', e && e.message);
       if (S.mode === 't') setTimeout(function () { if (S.cfg.isActive && S.cfg.isActive()) carregar(true); }, 60000);
-    }).then(function () { S.loading = false; render(); });
+    }).then(function () {
+      S.loading = false; render();
+      lerAtividades(); lerEtapas();
+    });
   }
 
   // ---------- API pública ----------
@@ -691,18 +1024,24 @@
       if (!S.inited) {
         S.root.addEventListener('click', onRootClick); S.inited = true;
         var rt; w.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { if (S.cfg.isActive && S.cfg.isActive() && S.raw) render(); }, 200); });
+        // PC/tablet: a aba muda de colunas conforme a largura real do bloco (não só da janela)
+        if (S.mode !== 't' && typeof ResizeObserver !== 'undefined') {
+          var ro = new ResizeObserver(function () { var rw = S.root.clientWidth, k = rw < 640 ? 'p' : (rw < 1100 ? 'm' : (rw < 1500 ? 'g' : 'x')); if (rw > 0 && k !== S.w && S.raw && S.cfg.isActive && S.cfg.isActive()) render(); });
+          ro.observe(S.root);
+        }
       }
     },
     activate: function () {
       render();
       carregar(false);
+      if (S.raw && (!S.atv || Date.now() - (S.atvTs || 0) > 300000)) lerAtividades();
       if (S.mode === 't' && !S.timer) {
         S.timer = setInterval(function () { if (S.cfg.isActive && S.cfg.isActive()) carregar(true); }, CFG.refreshTelaoMs);
       }
     },
     render: render,
     // núcleo puro, exposto para teste
-    _core: { prep: prep, calcular: calcular, dataBRT: dataBRT, origemKey: origemKey, agrega: agrega, serie: serie, periodoAnterior: periodoAnterior }
+    _core: { prep: prep, calcular: calcular, dataBRT: dataBRT, origemKey: origemKey, agrega: agrega, serie: serie, periodoAnterior: periodoAnterior, atvLinhas: atvLinhas, agregaAtv: agregaAtv, janelaAtv: janelaAtv, agregaEtp: agregaEtp, etpLinhas: etpLinhas }
   };
   w.SDR2 = API;
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
