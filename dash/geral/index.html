@@ -3072,10 +3072,11 @@ function convValClass_(conversao, leadsNoPeriodo) {
 // que tem 4 stage_ids fixos pra segmentar; LTV usa outros 3 stage_ids
 // próprios, sem essa mesma visualização por representante).
 function renderLtvReps_(reps) {
-  el('ltv-reps-list').innerHTML = reps.map((r, i) => {
-    const rank = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'][i] || (i + 1) + '°';
+  el('ltv-reps-list').innerHTML = gcUltimo_(reps).map((r, i) => {
+    const ehGC = r.id === GRANDES_CONTAS_ID;
+    const rank = ehGC ? '—' : (['🥇', '🥈', '🥉', '4️⃣', '5️⃣'][i] || (i + 1) + '°');
     const initials = r.name.substring(0, 1).toUpperCase();
-    const isTop = i === 0;
+    const isTop = i === 0 && !ehGC;
     const convBadge = convBadgeHTML_(r.conversao, r.leadsNoPeriodo);
     const staleBadge = r.stale > 0 ? `<span class="rep-badge rb-amber">⚠ ${r.stale} parado${r.stale > 1 ? 's' : ''}</span>` : '';
     return `
@@ -5902,11 +5903,15 @@ function openStageModal(stageId, stageName) {
   el('modal-overlay').classList.add('show');
 }
 
+const GRANDES_CONTAS_ID = 973972; // dono "Sistema" no Agendor, exibido como Grandes Contas
+// Grandes Contas fica sempre por ultimo e fora da disputa (sem medalha), igual ao telao; o resto segue a ordem original.
+function gcUltimo_(reps) { return reps.filter(r => r.id !== GRANDES_CONTAS_ID).concat(reps.filter(r => r.id === GRANDES_CONTAS_ID)); }
 function renderReps(reps, deals) {
-  el('reps-list').innerHTML = reps.map((r, i) => {
-    const rank = ['🥇','🥈','🥉','4️⃣','5️⃣'][i] || (i+1)+'°';
+  el('reps-list').innerHTML = gcUltimo_(reps).map((r, i) => {
+    const ehGC = r.id === GRANDES_CONTAS_ID;
+    const rank = ehGC ? '—' : (['🥇','🥈','🥉','4️⃣','5️⃣'][i] || (i+1)+'°');
     const initials = r.name.substring(0,1).toUpperCase();
-    const isTop = i === 0;
+    const isTop = i === 0 && !ehGC;
 
     const ds2 = (r.dealsByStage['3771723'] || 0) + (r.dealsByStage['3771724'] || 0);
     const totalSegs = (r.dealsByStage['3771722'] || 0) + ds2 + (r.dealsByStage['3771725'] || 0);
