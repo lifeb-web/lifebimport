@@ -719,7 +719,14 @@
       if (S.atv.ultimaRodada && S.atv.ultimaRodada.ts && (Date.now() - S.atv.ultimaRodada.ts) / 60000 > CFG.atrasoAtvMin) { partes.push('<b>atividades atrasadas</b>'); warn = true; }
     } else if (S.atvErr) { partes.push('<b>atividades indisponíveis</b>'); warn = true; }
     if (S.etpErr) { partes.push('<b>etapas indisponíveis</b>'); warn = true; }
-    else if (r.etp) partes.push('etapas desde ' + dm(r.etp.desde || ''));
+    else if (r.etp) {
+      partes.push('etapas desde ' + dm(r.etp.desde || ''));
+      if (S.etp && S.etp.truncado) { partes.push('<b>etapas incompletas</b> (leitura cortada pelo limite)'); warn = true; }
+      else if (S.etp && S.etp.recortado) partes.push('etapas só dos últimos 92 dias');
+      if (S.etp && S.etp.semMeta > 0) partes.push(num(S.etp.semMeta) + ' avisos de etapa sem dado');
+    }
+    var cbA = S.atv && S.atv.cobertura, aguard = cbA ? Number(cbA.aguardandoConfirmacao) || 0 : 0;
+    if (aguard > 0) partes.push(aguard + (aguard === 1 ? ' dia recente ainda não confirmado' : ' dias recentes ainda não confirmados'));
     partes.push('GS congelado mai a 19/10');
     return { txt: partes.join(' · '), warn: warn };
   }
@@ -985,13 +992,20 @@
     }).catch(function (e) { S.atvErr = e; console.warn('SDR2: atividades falharam', e && e.message); })
       .then(function () { S.atvLoading = false; render(); });
   }
+  // O worker aceita no máximo 92 dias por pedido de etapas (mais que isso dá erro 400): o pedido é limitado aqui.
+  function etapasDe(ate) {
+    var t = new Date(ate + 'T12:00:00Z').getTime() - 91 * 86400000, min = new Date(t).toISOString().slice(0, 10);
+    return min > CFG.atvInicio ? min : CFG.atvInicio;
+  }
   function lerEtapas() {
-    return fetchT(CFG.worker + '/sdr-etapas?from=2026-10-20&to=' + hojeBRT(), {}, 30000).then(function (res) {
+    var ate = hojeBRT();
+    return fetchT(CFG.worker + '/sdr-etapas?from=' + etapasDe(ate) + '&to=' + ate, {}, 30000).then(function (res) {
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return res.json();
     }).then(function (j) {
-      S.etp = (j && j.ativo && Array.isArray(j.eventos)) ? { ativo: true, eventos: j.eventos, desde: j.cobertura && j.cobertura.desde, nomes: j.nomes || {} } : null;
-      S.etpErr = (j && j.ok === false) ? new Error('parcial') : null;
+      var cb = (j && j.cobertura) || {};
+      S.etp = (j && j.ativo && Array.isArray(j.eventos)) ? { ativo: true, eventos: j.eventos, desde: cb.desde, nomes: j.nomes || {}, truncado: !!cb.truncado, recortado: !!cb.recortado, semMeta: Number(cb.semMetadado) || 0 } : null;
+      S.etpErr = (j && j.ok === false && !cb.truncado) ? new Error('parcial') : null;
     }).catch(function (e) { S.etpErr = e; console.warn('SDR2: etapas falharam', e && e.message); })
       .then(function () { render(); });
   }

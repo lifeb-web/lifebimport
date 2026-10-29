@@ -3798,7 +3798,7 @@ function computeBiaGatesFromDaily_(rawRows, periodFrom, periodTo, todayStr, live
   };
 }
 
-// 29/10 (aba Bia, fase 3): saúde AO VIVO da Bia, direto do worker dela (GET /bia-saude: só leitura, sem segredo, só contagens e idades).
+// 29/10 (aba Bia, fase 3): saúde AO VIVO da Bia, direto do worker dela (GET /bia-saude público: só o nível geral, os motivos e o nível de cada item).
 // Se o worker não responde, isso É a informação (a Bia está fora): a linha mostra "não respondeu" em vermelho, nunca some em silêncio.
 const BIA_SAUDE_URL = 'https://gs-agendor-worker.robert131196.workers.dev/bia-saude';
 let _biaSaude = null, _biaSaudeErr = null;
@@ -3812,50 +3812,35 @@ async function fetchBiaSaude_() {
     return j;
   } finally { clearTimeout(t); }
 }
-function biaIdade_(m) {
-  if (m == null) return '—';
-  if (m < 1) return 'agora';
-  if (m < 60) return m + ' min';
-  const h = Math.floor(m / 60), r = m % 60;
-  return h + 'h' + (r ? r + 'min' : '');
-}
 function renderBiaSaude_() {
   const box = document.getElementById('bia-saude-rows'), badge = document.getElementById('bia-saude-badge');
   if (!box) return;
   const cls = { ok: 'good', atencao: 'warn', falha: 'crit', desconhecido: '' };
-  const OPC = ['Última resposta da Bia', 'Vigia externo (healthchecks)', 'Varredura do SDR', 'Fila de envios do Motor', 'Identidade obrigatória nas escritas', 'Modo teste', 'SDR cadastrado no Agendor'];
+  // 29/10: o /bia-saude PÚBLICO só devolve { geral, motivos, itens:{ item:{nivel} } }. Nada de idades, flags ou versão: o cartão mostra só o nível de cada item.
+  const NOMES = { crons: 'Vigias (crons)', vigiaExterno: 'Vigia externo (healthchecks)', cerebro: 'Última resposta da Bia', n8n: 'Cérebro (n8n)', varreduraSdr: 'Varredura do SDR', atividadesSdr: 'Leitura das atividades do SDR', filaMotor: 'Fila de envios do Motor', alertas: 'Alertas das últimas 4 h', pausa: 'Bia pausada (botão de emergência)', leitura_incompleta: 'Leitura incompleta de algum item' };
+  const OPC = ['Última resposta da Bia', 'Vigia externo (healthchecks)', 'Varredura do SDR', 'Fila de envios do Motor', 'SDR cadastrado no Agendor'];
+  const nomeItem = k => NOMES[k] || String(k).replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').toLowerCase();
+  const nome = { ok: 'tudo certo', atencao: 'atenção', falha: 'problema', desconhecido: 'sem leitura' };
+  const lvl = v => (v && cls[v.nivel] !== undefined) ? v.nivel : 'desconhecido';
   const row = (k, v, n, tip) => `<div class="stat-row${OPC.includes(k) ? ' bia-opc' : ''}"${tip ? ' title="' + escHtml(tip) + '"' : ''}><span class="k">${escHtml(k)}</span><span class="v ${cls[n] || ''}">${escHtml(v)}</span></div>`;
   if (!_biaSaude) {
     box.innerHTML = _biaSaudeErr ? row('Worker da Bia', 'não respondeu', 'falha', String(_biaSaudeErr.message || _biaSaudeErr)) : row('Worker da Bia', 'carregando…', 'desconhecido');
-    if (badge) badge.textContent = _biaSaudeErr ? 'sem resposta' : '';
+    if (badge) { badge.textContent = _biaSaudeErr ? 'sem resposta' : ''; badge.style.color = ''; }
     return;
   }
-  const s = _biaSaude, it = s.itens || {}, on = v => !!v && !['desligada', '0', 'off', 'false'].includes(String(v).toLowerCase());
-  const nome = { ok: 'tudo certo', atencao: 'atenção', falha: 'problema', desconhecido: 'sem leitura' };
+  const s = _biaSaude, it = (s.itens && typeof s.itens === 'object') ? s.itens : {};
+  const geral = cls[s.geral] !== undefined ? s.geral : 'desconhecido';
   const rows = [];
   if (_biaSaudeErr) rows.push(row('Última atualização', 'falhou, mostrando a anterior', 'atencao', String(_biaSaudeErr.message || _biaSaudeErr)));
-  if (s.versao) rows.push(row('Versão no ar', (s.versao.id || '—') + (s.versao.haHoras != null ? ' · há ' + (s.versao.haHoras < 1 ? Math.round(s.versao.haHoras * 60) + ' min' : String(s.versao.haHoras).replace('.', ',') + ' h') : ''), 'ok'));
-  if (it.crons) rows.push(row('Vigias (crons) — última batida', 'há ' + biaIdade_(it.crons.ultimaBatidaMin), it.crons.nivel));
-  if (it.n8n) rows.push(row('Cérebro (n8n)', it.n8n.pronto == null ? '—' : (it.n8n.pronto ? 'no ar' : 'FORA DO AR'), it.n8n.nivel));
-  if (it.cerebro && it.cerebro.ultimaRespostaMin != null) rows.push(row('Última resposta da Bia', 'há ' + biaIdade_(it.cerebro.ultimaRespostaMin), it.cerebro.nivel));
-  if (it.vigiaExterno) rows.push(row('Vigia externo (healthchecks)', it.vigiaExterno.ultimoPingMin == null ? '—' : 'há ' + biaIdade_(it.vigiaExterno.ultimoPingMin), it.vigiaExterno.nivel));
-  if (it.varreduraSdr) rows.push(row('Varredura do SDR', it.varreduraSdr.idadeMin == null ? '—' : 'há ' + biaIdade_(it.varreduraSdr.idadeMin), it.varreduraSdr.nivel));
-  if (it.atividadesSdr) rows.push(row('Leitura das atividades do SDR', it.atividadesSdr.ok === false ? 'falhou' : (it.atividadesSdr.idadeMin == null ? '—' : 'há ' + biaIdade_(it.atividadesSdr.idadeMin)), it.atividadesSdr.nivel));
-  if (it.filaMotor) rows.push(row('Fila de envios do Motor', it.filaMotor.total == null ? '—' : it.filaMotor.total + (it.filaMotor.total === 1 ? ' na fila' : ' na fila'), it.filaMotor.nivel));
-  if (it.alertas) {
-    const a = it.alertas, txt = (a.criticos || a.comuns) ? (a.criticos ? a.criticos + (a.criticos === 1 ? ' crítico' : ' críticos') : '') + (a.criticos && a.comuns ? ' · ' : '') + (a.comuns ? a.comuns + (a.comuns === 1 ? ' comum' : ' comuns') : '') : 'nenhum';
-    rows.push(row('Alertas das últimas 4 h', txt, it.alertas.nivel, (a.onde || []).join(' | ')));
-  }
-  if (it.pausa) rows.push(row('Bia pausada (botão de emergência)', it.pausa.biaPausada == null ? '—' : (it.pausa.biaPausada ? 'SIM, PAUSADA' : 'não'), it.pausa.nivel));
+  rows.push(row('Situação geral', nome[geral], geral));
+  const mot = (Array.isArray(s.motivos) ? s.motivos : []).filter(m => typeof m === 'string').map(nomeItem);
+  if (mot.length) rows.push(row('Pontos de atenção', mot.join(', '), geral === 'falha' ? 'falha' : 'atencao', mot.join(' | ')));
+  Object.keys(it).forEach(k => { const n = lvl(it[k]); rows.push(row(nomeItem(k), nome[n], n)); });
   const sdrs = ((_biaSnap && _biaSnap.sdrCards) || []).filter(c => c && c.nome && c.nome !== '?').map(c => c.nome);
   if (_biaSnap) rows.push(row('SDR cadastrado no Agendor', sdrs.length ? sdrs.join(', ') : 'nenhum', sdrs.length ? 'ok' : 'atencao'));
-  const fl = s.flags || {};
-  if (fl.ENFORCE_IDENTITY !== undefined) rows.push(row('Identidade obrigatória nas escritas', on(fl.ENFORCE_IDENTITY) ? 'ligada' : 'desligada', on(fl.ENFORCE_IDENTITY) ? 'ok' : 'atencao'));
-  if (fl.TEST_MODE !== undefined) rows.push(row('Modo teste', on(fl.TEST_MODE) ? 'LIGADO' : 'desligado', on(fl.TEST_MODE) ? 'falha' : 'ok'));
-  if (fl.NOTIF_PAUSE !== undefined && on(fl.NOTIF_PAUSE)) rows.push(row('Notificações pausadas', 'SIM', 'atencao'));
   box.innerHTML = rows.join('');
-  if (badge) badge.textContent = nome[s.geral] || '';
-  if (badge) badge.style.color = s.geral === 'falha' ? 'var(--red)' : (s.geral === 'atencao' ? 'var(--amber)' : (s.geral === 'ok' ? 'var(--green)' : ''));
+  if (badge) badge.textContent = nome[geral] || '';
+  if (badge) badge.style.color = geral === 'falha' ? 'var(--red)' : (geral === 'atencao' ? 'var(--amber)' : (geral === 'ok' ? 'var(--green)' : ''));
 }
 async function loadBiaSaude_() {
   try { _biaSaude = await fetchBiaSaude_(); _biaSaudeErr = null; }
