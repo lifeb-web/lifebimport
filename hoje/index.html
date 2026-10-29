@@ -296,6 +296,21 @@ a.subir{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:6
 .contador.amber{color:var(--amber);font-weight:700}
 .conflitos{margin-top:6px;display:flex;flex-direction:column;gap:6px;font-weight:600} .conflito{display:flex;gap:6px;align-items:center;flex-wrap:wrap;color:var(--text)}
 @media(max-width:700px){#busca,#filaBusca,#tok,#ordem,#filaFunil,#qtd,#qtdOutro{font-size:16px!important}}
+/* ---------- busca geral (29/10): acha qualquer lead dos funis SDR, em andamento, perdido ou ganho ---------- */
+.busca-geral{margin:8px 10px 0;background:var(--card);border:2px solid var(--purple);border-radius:12px;padding:8px 10px;max-height:46vh;overflow:auto;flex:none}
+.busca-geral .bg-topo{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.busca-geral h3{font-size:16px;font-weight:800;color:var(--purple)}
+.busca-geral .bg-filtros{display:flex;gap:8px 14px;flex-wrap:wrap;margin:6px 0}
+.busca-geral .bg-aviso{margin:6px 0}
+.busca-geral .bg-msg{color:var(--muted);font-size:14px;padding:8px 2px}
+.busca-geral .bg-msg.erro{color:var(--red);font-weight:700}
+.bg-lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:8px}
+.bg-lista .item{align-items:start}
+.bg-lista .item.bg-perdido{border-left-color:var(--red)} .bg-lista .item.bg-ganho{border-left-color:var(--green);background:var(--green-bg)}
+.bg-lista .item.bg-fila{border-left-color:var(--amber)} .bg-lista .item.bg-pendente{border-left-color:var(--magenta)}
+.bg-lista .est.bgst-perdido{color:var(--red)} .bg-lista .est.bgst-ganho{color:var(--green)} .bg-lista .est.bgst-fila,.bg-lista .est.bgst-pendente{color:var(--amber)} .bg-lista .est.bgst-cadencia,.bg-lista .est.bgst-fim{color:var(--purple)}
+.bg-lista .item .acoes button{min-height:26px;padding:1px 10px;font-size:13px;border-radius:7px}
+@media(max-width:700px){ .busca-geral{max-height:none;margin:8px 8px 0} .busca-geral .seg{flex:1 1 100%} .busca-geral .seg button{flex:1;min-height:44px} .bg-lista{grid-template-columns:1fr} .bg-lista .item .acoes{flex-wrap:wrap} .bg-lista .item .acoes button,.bg-lista .item .acoes a.bt{min-height:44px;flex:1 1 40%} }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 /* revisão de design 28/10: leitura rápida do cartão, cabeçalho enxuto no celular, nada pulando de lugar */
 .org{flex-wrap:wrap;border-radius:12px;line-height:1.25;row-gap:2px}
@@ -456,7 +471,7 @@ details.sec-empresa>summary,details.dados-opcional>summary{cursor:pointer;font-w
     </div>
     <div class="ajuda-box hide" id="ajudaBox" role="note"><kbd>/</kbd> buscar &nbsp; <kbd>R</kbd> atualizar &nbsp; <kbd>H</kbd> esconder feitos &nbsp; <kbd>T</kbd> tema &nbsp; <kbd>F</kbd> fila de espera &nbsp; <kbd>Esc</kbd> limpar a busca ou fechar</div>
     <div class="cab2">
-      <input type="search" id="busca" placeholder="Buscar empresa, pessoa..." aria-label="Buscar por empresa, pessoa ou telefone" autocomplete="off">
+      <input type="search" id="busca" placeholder="Buscar em todos os leads: loja, pessoa, telefone, CNPJ..." aria-label="Buscar em todos os leads por loja, pessoa, telefone, CNPJ, número do negócio ou cidade" autocomplete="off">
       <div class="seg" role="group" aria-label="Funil"><button id="fTodos" aria-pressed="true">Todos</button><button id="fOut" aria-pressed="false">Outbound</button><button id="fIn" aria-pressed="false">Inbound</button></div>
       <select id="ordem" aria-label="Ordenar"><option value="pend">Pendentes primeiro</option><option value="az">Ordem alfabética</option><option value="hora">Hora em que foi iniciado</option></select>
       <button class="sec" id="bAguard" title="Leads que você qualificou e ainda esperam representante">Aguardando representante (0)</button>
@@ -484,6 +499,16 @@ details.sec-empresa>summary,details.dados-opcional>summary{cursor:pointer;font-w
     <details id="detLiberados" class="hide"><summary id="detResumo">Quem foi iniciado agora</summary><ul id="listaLiberados"></ul></details>
   </header>
   <div id="avisos"></div>
+  <section id="buscaGeral" class="busca-geral hide" aria-label="Busca em todos os leads">
+    <div class="bg-topo"><h3 id="bgTitulo" tabindex="-1">Todos os leads</h3><span class="sub" id="bgResumo" role="status" aria-live="polite"></span><button class="link" id="bgFechar" type="button">Fechar busca</button></div>
+    <div class="bg-filtros">
+      <div class="seg" role="group" aria-label="Funil da busca"><button id="bgfTodos" type="button" aria-pressed="true">Todos</button><button id="bgfOut" type="button" aria-pressed="false">Outbound</button><button id="bgfIn" type="button" aria-pressed="false">Inbound</button></div>
+      <div class="seg" role="group" aria-label="Situação do lead"><button id="bgsTodos" type="button" aria-pressed="true">Todos</button><button id="bgsAndamento" type="button" aria-pressed="false">Em andamento</button><button id="bgsFila" type="button" aria-pressed="false">Na fila</button><button id="bgsPerdido" type="button" aria-pressed="false">Perdidos</button><button id="bgsGanho" type="button" aria-pressed="false">Ganhos</button></div>
+    </div>
+    <div class="aviso bg-aviso hide" id="bgAviso" role="status"></div>
+    <div class="bg-lista" id="bgLista"></div>
+    <div class="bg-msg" id="bgMsg" role="status"></div>
+  </section>
   <div id="blocos"></div>
 </section>
 
@@ -641,7 +666,7 @@ function casaBusca(it, q) {
 
 // ---------- chamadas ----------
 // ---------- resiliência: rede com retry, disjuntor, caixa de saída, versão, relógio do servidor, telemetria ----------
-var PAGINA_VERSAO = '2026-10-28.8';
+var PAGINA_VERSAO = '2026-10-29.1';
 var REDE = { escala: 1, falhas: 0, ultima: 0, desvio: 0 };
 function dormir(ms) { return new Promise(function (r) { setTimeout(r, ms * REDE.escala); }); }
 function jitter(ms) { return ms * (0.5 + Math.random() * 0.5); }
@@ -1131,7 +1156,7 @@ async function entrar(token, silencioso) {
   if (haAbertoSemConfirmar()) iniciarPoll();
   return true;
 }
-function sair(msg) { S.cont.rodando = false; S.L = null; S.ag.itens = []; S.ag.total = 0; S.ag.ocultos = {}; if (S.ag.timer) { clearInterval(S.ag.timer); S.ag.timer = null; } S.ag.aberto = false; $('painelAguard').classList.add('hide'); S.ocultos = {}; $('painelLead').classList.add('hide'); $('painelFila').classList.add('hide'); lsDel('sh_tok'); lsDel('sh_ultimo'); S.token = ''; S.tem = false; S.dados = null; S.vm = null; if (S.timer) clearInterval(S.timer); if (S.relogio) clearInterval(S.relogio); if (S.pollTimer) { clearInterval(S.pollTimer); S.pollTimer = null; } $('tok').value = ''; $('loginMsg').textContent = msg || ''; mostrar('s-login'); }
+function sair(msg) { try { bgFechar(); } catch (e) {} S.cont.rodando = false; S.L = null; S.ag.itens = []; S.ag.total = 0; S.ag.ocultos = {}; if (S.ag.timer) { clearInterval(S.ag.timer); S.ag.timer = null; } S.ag.aberto = false; $('painelAguard').classList.add('hide'); S.ocultos = {}; $('painelLead').classList.add('hide'); $('painelFila').classList.add('hide'); lsDel('sh_tok'); lsDel('sh_ultimo'); S.token = ''; S.tem = false; S.dados = null; S.vm = null; if (S.timer) clearInterval(S.timer); if (S.relogio) clearInterval(S.relogio); if (S.pollTimer) { clearInterval(S.pollTimer); S.pollTimer = null; } $('tok').value = ''; $('loginMsg').textContent = msg || ''; mostrar('s-login'); }
 
 // ---------- iniciar ----------
 function novaChave() { var a = new Uint8Array(12); try { crypto.getRandomValues(a); } catch (e) { for (var i = 0; i < 12; i++) a[i] = Math.floor(Math.random() * 256); } return 'c' + Array.prototype.map.call(a, function (x) { return ('0' + x.toString(16)).slice(-2); }).join(''); }
@@ -1322,6 +1347,76 @@ $('bLiberarTodosFunil').onclick = function () {
 $('bLiberarOrigem').onclick = iniciarPorOrigem;
 $('bSelRecom').onclick = function () { var n = qtdEscolhida() || 10; S.sel = {}; S.filaVis.filter(function (i) { return i.recomendado; }).slice(0, n).forEach(function (i) { S.sel[i.dealId] = true; }); desenharFila(); };
 atualizaRotuloLiberar();
+
+// ---------- busca geral (29/10): acha QUALQUER lead dos funis SDR (em andamento, perdido, ganho), não só o que está na tela ----------
+// O campo de busca do topo continua filtrando as colunas na hora (local). Com 2+ letras ou 4+ números, além disso, pergunta ao servidor (índice no KV, não varre o Agendor).
+S.bg = { seq: 0, ctrl: null, timer: null, funil: 'todos', status: 'todos', ultimo: null };
+function bgValida(q) { var l = semAcento(q).replace(/[^a-z]/g, '').length; return l >= 2 || soDigitos(q).length >= 4; }
+function bgFechar() { clearTimeout(S.bg.timer); S.bg.seq++; if (S.bg.ctrl) { try { S.bg.ctrl.abort(); } catch (e) {} } S.bg.ctrl = null; S.bg.ultimo = null; $('buscaGeral').classList.add('hide'); $('buscaGeral').removeAttribute('aria-busy'); }
+function bgAgendar() { clearTimeout(S.bg.timer); var q = $('busca').value.trim(); if (!S.token || !bgValida(q)) { bgFechar(); return; } S.bg.timer = setTimeout(buscarGeral, 350); } // debounce: não pergunta a cada tecla
+function bgMsg(texto, erro, botao) { var m = $('bgMsg'); m.textContent = texto || ''; m.className = 'bg-msg' + (erro ? ' erro' : ''); if (botao) { var b = el('button', 'sec', botao.rot); b.type = 'button'; b.style.marginLeft = '8px'; b.onclick = botao.acao; m.appendChild(b); } }
+function bgRotulos(c) {
+  var f = (c && c.funil) || {}, st = (c && c.status) || {}; var and = (st.fila || 0) + (st.pendente || 0) + (st.cadencia || 0) + (st.fim || 0); var tot = and + (st.perdido || 0) + (st.ganho || 0);
+  $('bgfTodos').textContent = 'Todos (' + ((f.outbound || 0) + (f.inbound || 0)) + ')'; $('bgfOut').textContent = 'Outbound (' + (f.outbound || 0) + ')'; $('bgfIn').textContent = 'Inbound (' + (f.inbound || 0) + ')';
+  $('bgsTodos').textContent = 'Todos (' + tot + ')'; $('bgsAndamento').textContent = 'Em andamento (' + and + ')'; $('bgsFila').textContent = 'Na fila (' + (st.fila || 0) + ')'; $('bgsPerdido').textContent = 'Perdidos (' + (st.perdido || 0) + ')'; $('bgsGanho').textContent = 'Ganhos (' + (st.ganho || 0) + ')';
+}
+function bgMarcar() {
+  [['bgfTodos', 'todos'], ['bgfOut', 'outbound'], ['bgfIn', 'inbound']].forEach(function (p) { $(p[0]).setAttribute('aria-pressed', p[1] === S.bg.funil ? 'true' : 'false'); });
+  [['bgsTodos', 'todos'], ['bgsAndamento', 'andamento'], ['bgsFila', 'fila'], ['bgsPerdido', 'perdido'], ['bgsGanho', 'ganho']].forEach(function (p) { $(p[0]).setAttribute('aria-pressed', p[1] === S.bg.status ? 'true' : 'false'); });
+}
+async function buscarGeral() {
+  var q = $('busca').value.trim(); if (!S.token || !bgValida(q)) { bgFechar(); return; }
+  var seq = ++S.bg.seq; if (S.bg.ctrl) { try { S.bg.ctrl.abort(); } catch (e) {} } var ctrl = new AbortController(); S.bg.ctrl = ctrl;
+  var box = $('buscaGeral'); box.classList.remove('hide'); box.setAttribute('aria-busy', 'true');
+  if (!S.bg.ultimo) { $('bgLista').textContent = ''; $('bgAviso').classList.add('hide'); bgMsg('Procurando em todos os leads...'); } else $('bgResumo').textContent = 'Procurando...'; // com resultado antigo na tela, só avisa; a lista não pisca
+  var j; try { j = await api('/busca?q=' + encodeURIComponent(q) + '&funil=' + S.bg.funil + '&status=' + S.bg.status, null, { signal: ctrl.signal }, null, { timeout: 8000 }); } catch (e) { if (e && e.name === 'AbortError') return; j = { _status: 0, ok: false }; }
+  if (seq !== S.bg.seq) return; // chegou uma resposta de uma busca antiga: ignora
+  S.bg.ctrl = null; box.removeAttribute('aria-busy');
+  if (j._status === 401) { sair('Senha não confere.'); return; }
+  if (!j || !j.ok) {
+    var msg = j && j._status === 409 && j.erro === 'desligado' ? (j.mensagem || 'A página está desligada no momento.') : (j && (j._status === 404 || j.erro === 'rota_desconhecida')) ? 'A busca em todos os leads ainda não está ligada no servidor. Avise o Robert.' : (j && j.mensagem) || 'Não consegui buscar agora.';
+    $('bgResumo').textContent = ''; $('bgLista').textContent = ''; $('bgAviso').classList.add('hide'); S.bg.ultimo = null; bgMsg(msg + ' O filtro das colunas continua funcionando.', true, { rot: 'Tentar de novo', acao: buscarGeral }); return;
+  }
+  if (j.curta) { bgFechar(); return; }
+  S.bg.ultimo = j; desenharBuscaGeral(j);
+}
+function bgCartao(it) {
+  var li = el('div', 'item bgitem bg-' + it.status);
+  var lo = linhaOrigem(it); if (lo) li.appendChild(lo);
+  empClicavel(li, it.empresa, it.dealId, it);
+  li.appendChild(el('div', 'est bgst-' + it.status, it.statusTexto));
+  linhaContato(li, it);
+  li.appendChild(el('div', 'pas', ['Negócio ' + it.dealId, it.funilNome, it.etapa].filter(Boolean).join(' · ')));
+  if (it.cnpj) li.appendChild(el('div', 'pas', 'CNPJ ' + fmtCnpj(it.cnpj)));
+  if (it.entrada) li.appendChild(el('div', 'pas', 'Entrou em ' + dataBR(it.entrada)));
+  if (it.achouPor && it.achouPor.length) li.appendChild(el('div', 'pas', 'Achei por: ' + it.achouPor.join(', ')));
+  if (it.aoVivo) li.appendChild(el('div', 'pas', 'Conferido agora no Agendor (ainda não estava na lista rápida).'));
+  var ac = el('div', 'acoes');
+  var ab = el('button', 'abrir', 'Abrir'); ab.type = 'button'; ab.setAttribute('aria-label', 'Abrir o lead completo: ' + it.empresa); ab.onclick = function () { abrirLead(it.dealId, ab, it); }; ligaPrefetch(ab, it.dealId); ac.appendChild(ab);
+  var tb = el('button', 'sec', 'Tarefas'); tb.type = 'button'; tb.setAttribute('aria-label', 'Ver as tarefas de ' + it.empresa); tb.onclick = function () { abrirLead(it.dealId, tb, it); var n = 0; var rola = function () { var sec = document.querySelector('#painelLead .secao-tarefas'); if (sec) { try { sec.scrollIntoView({ block: 'start' }); } catch (e) {} } else if (++n < 12) setTimeout(rola, 250); }; setTimeout(rola, 250); }; ac.appendChild(tb);
+  if (typeof it.link === 'string' && /^https:\/\//.test(it.link)) { var a = el('a', 'bt', '↗ Agendor'); a.setAttribute('aria-label', 'Abrir no Agendor'); a.href = it.link; a.target = '_blank'; a.rel = 'noopener noreferrer'; ac.appendChild(a); }
+  if (it.podeIniciar) {
+    var pode = !!(S.ctl && S.ctl.janelaAberta && S.ctl.cadenciaLive && (it.funil === 'inbound' || S.ctl.ligada));
+    var ib = el('button', 'forte', 'Iniciar'); ib.type = 'button'; ib.disabled = S.ocupado || !pode; ib.title = pode ? 'Começar a cadência deste lead agora' : 'Agora não dá para iniciar (fora do horário ou desligado)';
+    ib.onclick = function () { if (!window.confirm('Iniciar ' + it.empresa + ' agora? As tarefas do 1º contato são criadas na hora.' + avisoTarde())) return; liberar({ dealIds: [it.dealId], funil: it.funil }).then(function () { buscarGeral(); }); };
+    ac.appendChild(ib);
+  }
+  li.appendChild(ac); return li;
+}
+function desenharBuscaGeral(j) {
+  bgMarcar(); bgRotulos(j.contagem);
+  var av = $('bgAviso'); av.textContent = ''; var avs = (j.avisos || []).slice(); if (avs.length) { av.classList.remove('hide'); avs.forEach(function (t, i) { av.appendChild(el('div', null, t)); }); } else av.classList.add('hide');
+  var lista = $('bgLista'); lista.textContent = ''; var itens = j.itens || [];
+  $('bgResumo').textContent = !j.total ? 'Nenhum lead encontrado' : (j.total === 1 ? '1 lead achado' : j.total + ' leads achados') + (j.truncado ? ', mostrando os ' + j.mostrando + ' primeiros' : '') + (j.parcial ? ' (busca parcial)' : '');
+  anexarEmBlocos(lista, itens, bgCartao);
+  var c = j.contagem || {}, st = c.status || {}; var outros = (st.fila || 0) + (st.pendente || 0) + (st.cadencia || 0) + (st.fim || 0) + (st.perdido || 0) + (st.ganho || 0);
+  if (!itens.length) bgMsg(outros ? 'Nenhum lead com esse filtro, mas há ' + outros + ' em outra situação. Clique em "Todos".' : (c.semFiltroDeFunil ? 'Nenhum lead deste funil. Há ' + c.semFiltroDeFunil + ' no outro funil. Clique em "Todos".' : 'Não achei nenhum lead com isso. Confira o nome, o telefone ou o CNPJ. Lead criado há poucos minutos pode demorar a aparecer.'));
+  else if (j.truncado) bgMsg('Tem mais leads do que cabem na tela. Escreva mais letras ou números para achar o que procura.'); else bgMsg('');
+}
+function bgFiltro(chave, valor) { S.bg[chave] = valor; bgMarcar(); buscarGeral(); }
+$('bgfTodos').onclick = function () { bgFiltro('funil', 'todos'); }; $('bgfOut').onclick = function () { bgFiltro('funil', 'outbound'); }; $('bgfIn').onclick = function () { bgFiltro('funil', 'inbound'); };
+$('bgsTodos').onclick = function () { bgFiltro('status', 'todos'); }; $('bgsAndamento').onclick = function () { bgFiltro('status', 'andamento'); }; $('bgsFila').onclick = function () { bgFiltro('status', 'fila'); }; $('bgsPerdido').onclick = function () { bgFiltro('status', 'perdido'); }; $('bgsGanho').onclick = function () { bgFiltro('status', 'ganho'); };
+$('bgFechar').onclick = function () { $('busca').value = ''; bgFechar(); desenharBlocos(); $('busca').focus(); };
 
 // ---------- painel do lead (tudo do negócio sem abrir o Agendor) ----------
 // Campos editáveis. k = chave interna; o corpo do POST /lead/:id/campos é montado a partir dela. tok = trecho do rótulo em "faltando" que some quando o campo é preenchido.
@@ -2051,7 +2146,7 @@ $('bSair2').onclick = function () { sairManual(false); };
 $('bSairApagar').onclick = function () { sairManual(true); };
 $('bTema').onclick = alternarTema;
 $('bAjuda').onclick = function () { var b = $('ajudaBox'); b.classList.toggle('hide'); $('bAjuda').setAttribute('aria-expanded', b.classList.contains('hide') ? 'false' : 'true'); };
-var debBusca = null; $('busca').oninput = function () { clearTimeout(debBusca); debBusca = setTimeout(function () { desenharBlocos(); }, 150); }; $('ordem').onchange = desenharBlocos; $('esconder').onchange = desenharBlocos;
+var debBusca = null; $('busca').oninput = function () { clearTimeout(debBusca); debBusca = setTimeout(function () { desenharBlocos(); }, 150); bgAgendar(); }; $('ordem').onchange = desenharBlocos; $('esconder').onchange = desenharBlocos;
 function setFunil(f) { S.funil = f; [['fTodos', 'todos'], ['fOut', 'outbound'], ['fIn', 'inbound']].forEach(function (p) { $(p[0]).setAttribute('aria-pressed', p[1] === f ? 'true' : 'false'); }); if (S.dados) { desenharTopo(S.dados); desenharBlocos(); } }
 $('fTodos').onclick = function () { setFunil('todos'); }; $('fOut').onclick = function () { setFunil('outbound'); }; $('fIn').onclick = function () { setFunil('inbound'); };
 try { $('blocoIniciar').open = lsGet('sh_iniciar_aberto') === '1'; } catch (e) {}
@@ -2060,7 +2155,7 @@ document.addEventListener('keydown', function (e) {
   if (e.key === 'Tab') { var dlg = ['modalGanho', 'painelLead', 'painelAguard', 'painelFila'].map($).filter(function (x) { return !x.classList.contains('hide'); })[0]; if (dlg) { var fs = Array.prototype.filter.call(dlg.querySelectorAll('button,a[href],input,select,textarea,[tabindex]'), function (x) { return !x.disabled && x.getAttribute('tabindex') !== '-1' && !x.closest('.hide'); }); if (fs.length) { var a0 = fs[0], z = fs[fs.length - 1]; if (e.shiftKey && (document.activeElement === a0 || !dlg.contains(document.activeElement))) { e.preventDefault(); z.focus(); } else if (!e.shiftKey && (document.activeElement === z || !dlg.contains(document.activeElement))) { e.preventDefault(); a0.focus(); } } } return; }
   if (e.ctrlKey || e.metaKey || e.altKey || $('s-dia').classList.contains('hide')) return;
   var alvo = e.target && e.target.tagName; var digitando = alvo === 'INPUT' || alvo === 'SELECT' || alvo === 'TEXTAREA';
-  if (e.key === 'Escape') { if (!$('painelAguard').classList.contains('hide')) { fecharAguardando(); return; } if (!$('modalGanho').classList.contains('hide')) { fecharGanho(); return; } if (!$('painelLead').classList.contains('hide')) { fecharLead(); return; } if (!$('painelFila').classList.contains('hide')) { $('painelFila').classList.add('hide'); return; } $('busca').value = ''; $('busca').blur(); desenharBlocos(); return; }
+  if (e.key === 'Escape') { if (!$('painelAguard').classList.contains('hide')) { fecharAguardando(); return; } if (!$('modalGanho').classList.contains('hide')) { fecharGanho(); return; } if (!$('painelLead').classList.contains('hide')) { fecharLead(); return; } if (!$('painelFila').classList.contains('hide')) { $('painelFila').classList.add('hide'); return; } $('busca').value = ''; $('busca').blur(); bgFechar(); desenharBlocos(); return; }
   if (digitando || (e.target && e.target.isContentEditable)) return;
   if (['painelFila', 'painelLead', 'painelAguard', 'modalGanho'].some(function (id) { return !$(id).classList.contains('hide'); })) return; // com painel ou pop-up aberto, as teclas de atalho ficam quietas
   var k = String(e.key).toLowerCase();
@@ -2075,7 +2170,7 @@ document.addEventListener('keydown', function (e) {
 desenharTopo = seguro('desenharTopo', desenharTopo); desenharControle = seguro('desenharControle', desenharControle); desenharBlocos = seguro('desenharBlocos', desenharBlocos); desenharFila = seguro('desenharFila', desenharFila); desenharAguardando = seguro('desenharAguardando', desenharAguardando); renderLead = seguro('renderLead', renderLead); renderGanho = seguro('renderGanho', renderGanho);
 cartao = seguro('cartao', cartao, function (it) { var f = el('div', 'item'); f.appendChild(el('div', 'emp', (it && it.empresa) || 'Item')); f.appendChild(el('div', 'pas', 'Não consegui mostrar os detalhes deste item.')); return f; });
 cartaoAtrasado = seguro('cartaoAtrasado', cartaoAtrasado, function (g) { var f = el('div', 'item'); f.appendChild(el('div', 'emp', (g && g.empresa) || 'Item')); return f; });
-window.__shTeste = { opcoesAdiar: opcoesAdiar, enviarAcao: enviarAcao, versaoMaisNova: versaoMaisNova, iniciarContinuar: iniciarContinuar, continuarLaco: continuarLaco, fmtCampo: fmtCampo, fadeChips: fadeChips, REDE: REDE, lerSaida: lerSaida, processarSaida: processarSaida, reportarErro: reportarErro, aplicarStatus: aplicarStatus, hooks: { recarregar: null }, falhaDePagina: falhaDePagina, verificarVersao: verificarVersao, agoraMs: agoraMs, PAGINA_VERSAO: PAGINA_VERSAO, carregarAguardando: carregarAguardando, S: S, desenhar: desenhar, carregar: carregar, casaBusca: casaBusca, foneFmt: foneFmt, aceitar: aceitar, abrirLead: abrirLead, abrirGanho: abrirGanho, cnpjValido: cnpjValido, desenharFila: desenharFila, carregarFila: carregarFila, origemClasse: origemClasse, mascCnpj: mascCnpj };
+window.__shTeste = { buscarGeral: buscarGeral, bgValida: bgValida, opcoesAdiar: opcoesAdiar, enviarAcao: enviarAcao, versaoMaisNova: versaoMaisNova, iniciarContinuar: iniciarContinuar, continuarLaco: continuarLaco, fmtCampo: fmtCampo, fadeChips: fadeChips, REDE: REDE, lerSaida: lerSaida, processarSaida: processarSaida, reportarErro: reportarErro, aplicarStatus: aplicarStatus, hooks: { recarregar: null }, falhaDePagina: falhaDePagina, verificarVersao: verificarVersao, agoraMs: agoraMs, PAGINA_VERSAO: PAGINA_VERSAO, carregarAguardando: carregarAguardando, S: S, desenhar: desenhar, carregar: carregar, casaBusca: casaBusca, foneFmt: foneFmt, aceitar: aceitar, abrirLead: abrirLead, abrirGanho: abrirGanho, cnpjValido: cnpjValido, desenharFila: desenharFila, carregarFila: carregarFila, origemClasse: origemClasse, mascCnpj: mascCnpj };
 (async function () {
   var t = lsGet('sh_tok');
   if (t) { var ok = await entrar(t, true); if (ok) return; }
