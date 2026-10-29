@@ -666,7 +666,7 @@ function casaBusca(it, q) {
 
 // ---------- chamadas ----------
 // ---------- resiliência: rede com retry, disjuntor, caixa de saída, versão, relógio do servidor, telemetria ----------
-var PAGINA_VERSAO = '2026-10-29.1';
+var PAGINA_VERSAO = '2026-10-29.2';
 var REDE = { escala: 1, falhas: 0, ultima: 0, desvio: 0 };
 function dormir(ms) { return new Promise(function (r) { setTimeout(r, ms * REDE.escala); }); }
 function jitter(ms) { return ms * (0.5 + Math.random() * 0.5); }
@@ -921,7 +921,8 @@ function desenharControle(d) {
   var st = $('statusCtl'); st.textContent = '';
   function linha(t, v) { var p = el('div'); p.appendChild(document.createTextNode(t + ' ')); p.appendChild(el('b', null, String(v))); st.appendChild(p); }
   linha('Esperando você iniciar:', fo);
-  if (c.pendentes || S.cont.rodando) { var p = el('div', 'pend'); p.setAttribute('role', 'status'); var nFalta = S.cont.rodando && S.cont.pendentes != null ? S.cont.pendentes : c.pendentes; p.textContent = S.cont.rodando ? 'Iniciando seus leads: faltam ' + nFalta + '.' : 'Faltam ' + nFalta + '. A Bia termina sozinha, você não precisa clicar de novo.'; st.appendChild(p); }
+  if (c.pendentes || S.cont.rodando) { var p = el('div', 'pend'); p.setAttribute('role', 'status'); var nFalta = S.cont.rodando && S.cont.pendentes != null ? S.cont.pendentes : c.pendentes; var tot = S.prog && S.prog.total >= nFalta ? S.prog.total : 0; var feitos = tot ? tot - nFalta : 0; p.textContent = (tot ? 'Iniciados ' + feitos + ' de ' + tot + '. ' : '') + (S.cont.rodando ? 'Iniciando seus leads: faltam ' + nFalta + '.' : 'Faltam ' + nFalta + '. A Bia termina sozinha, mesmo se você fechar a página. Não precisa clicar de novo.'); st.appendChild(p); }
+  if (c.atencaoLiberacao && c.atencaoLiberacao.length) { var pa = el('div', 'pend'); pa.setAttribute('role', 'alert'); pa.textContent = 'Atenção: ' + (c.atencaoLiberacao.length === 1 ? '1 lead não conseguiu entrar' : c.atencaoLiberacao.length + ' leads não conseguiram entrar') + ' (negócio ' + c.atencaoLiberacao.map(function (x) { return x.dealId; }).join(', ') + '). Nada foi perdido: eles continuam na fila. Clique em Iniciar neles de novo; se repetir, avise o Robert.'; st.appendChild(pa); }
   if (d.filaAtencao) { var at = el('div', 'pend'); at.textContent = d.filaAtencao + (d.filaAtencao === 1 ? ' lead já tem negócio aberto em outro funil (ex.: com representante na Arena). Ele NÃO entra no "Iniciar todos". Abra e confira antes.' : ' leads já têm negócio aberto em outro funil (ex.: com representante na Arena). Eles NÃO entram no "Iniciar todos". Abra e confira antes.'); st.appendChild(at); }
   var ok = c.janelaAberta && c.cadenciaLive && !S.ocupado;
   ['bLiberar', 'bTodos', 'bFila'].forEach(function (id) { $(id).disabled = S.ocupado; });
@@ -1172,21 +1173,33 @@ function avisoTarde() { return depoisDas1630() ? ' As tarefas vencem hoje às 18
 async function liberar(corpo) {
   if (S.ocupado) return; S.ocupado = true; if (S.dados) desenharControle(S.dados);
   if (!S.idem || JSON.stringify(S.idem.corpo) !== JSON.stringify(corpo)) S.idem = { chave: novaChave(), corpo: corpo };
-  msg('Iniciando... pode levar até 1 minuto. Não clique de novo.', 'aviso');
+  var MSG_INICIANDO = 'Estou iniciando, pode levar até 1 minuto. Não clique de novo.';
+  msg(MSG_INICIANDO, 'aviso');
   try {
-    var pedido = Object.assign({ idem: S.idem.chave }, corpo), j = null;
-    for (var t = 0; t < 4; t++) {
-      try { j = await api('/liberar', pedido); } catch (e) { j = { _status: 0, mensagem: 'Sem conexão. Tente de novo.' }; }
+    var pedido = Object.assign({ idem: S.idem.chave }, corpo), j = null, t0 = Date.now();
+    // Regra: NUNCA mostrar erro enquanto o servidor pode estar trabalhando. Sem resposta (timeout, rede, 'em andamento') repete com a MESMA chave
+    // (o servidor devolve o resultado guardado, sem iniciar ninguém duas vezes) por até ~4 minutos; só mostra erro para recusa definitiva.
+    for (var t = 0; t < 60; t++) {
+      try { j = await api('/liberar', pedido, null, null, { timeout: 100000 }); } catch (e) { j = { _status: 0, mensagem: 'Sem conexão. Tente de novo.' }; }
       if (j._status === 409 && j.erro === 'confirmar_atraso') {
         if (!window.confirm(j.mensagem + ' (' + j.atrasadas + ' atrasadas, aviso a partir de ' + j.limite + ')')) { msg('Cancelado. Nada foi iniciado.', 'aviso'); S.idem = null; return; }
         pedido.confirmaAtraso = true; continue;
       }
-      if (j._status === 503 || j._status === 0) { await new Promise(function (r) { setTimeout(r, 1500 * (t + 1)); }); continue; }
+      var emAndamento = j._status === 0 || j._status === 202 || j.emAndamento || (j._status === 503 && (j.erro === 'cadencia_ocupada' || j.erro === 'ocupado' || j.erro === 'trava_indisponivel' || t < 3)) || j._quebrado;
+      if (emAndamento && Date.now() - t0 < 240000) { msg(MSG_INICIANDO + (Date.now() - t0 > 20000 ? ' Ainda trabalhando (' + Math.round((Date.now() - t0) / 1000) + ' s)...' : ''), 'aviso'); await new Promise(function (r) { setTimeout(r, Math.min(6000, 1500 * (t + 1))); }); continue; }
       break;
     }
     if (j._status === 401) { sair('Senha não confere.'); return; }
-    if (j._status === 202 || j.emAndamento) { msg(j.mensagem || 'Ainda processando. Atualize em instantes.', 'aviso'); return; } // mantém a MESMA chave: nunca inicia N de novo
-    if (j.ok) { S.idem = null; mostrarLiberados(j.liberados || []); await carregar(false, true); if (!$('painelFila').classList.contains('hide')) await carregarFila(); if (podeContinuar()) { msg('Primeiro lote iniciado. A página continua sozinha: faltam ' + S.ctl.pendentes + '.', 'ok'); } else msg(j.mensagem, 'ok'); iniciarContinuar(true); }
+    if (j._status === 202 || j.emAndamento || (j._status === 0 && !j.ok)) { // passou o tempo de espera e o servidor ainda não respondeu: ele continua sozinho
+      msg('O servidor ainda está iniciando seus leads (ele termina sozinho, mesmo se você fechar a página). Veja o andamento em "Faltam" ou atualize em instantes. Não clique de novo.', 'aviso'); await carregar(false, true); iniciarContinuar(true); return; // mantém a MESMA chave: nunca inicia N de novo
+    }
+    if (j.ok) {
+      S.idem = null; S.prog = { total: j.pedido || 0, dia: Date.now() }; mostrarLiberados(j.liberados || []); await carregar(false, true); if (!$('painelFila').classList.contains('hide')) await carregarFila();
+      if (j.emFila) msg(j.mensagem, 'ok');
+      else if (podeContinuar()) { msg('Iniciados ' + (j.liberadosAgora || 0) + ' de ' + (j.pedido || 0) + '. A página continua sozinha: faltam ' + S.ctl.pendentes + '. Se você fechar a página, a Bia termina sozinha.', 'ok'); }
+      else msg(j.mensagem, 'ok');
+      iniciarContinuar(true);
+    }
     else { msg((j.mensagem || 'Não consegui iniciar.') + ' Clique de novo para tentar outra vez.', 'erro'); if (j.erro && j.erro !== 'cadencia_ocupada' && j.erro !== 'ocupado' && j.erro !== 'kv_falhou') S.idem = null; }
   } finally { S.ocupado = false; if (S.dados) desenharControle(S.dados); }
 }
