@@ -62,6 +62,8 @@ export function violacoes(r, W, H) {
   r.labV.forEach(x => out.push('rotulo < ' + MIN_1080.rotulo + 'px(1080p): ' + x));
   r.bodyV.forEach(x => out.push('corpo < ' + MIN_1080.corpo + 'px(1080p): ' + x));
   r.kpiV.forEach(x => out.push('numero KPI < ' + MIN_1080.kpi + 'px(1080p): ' + x));
+  r.apoioV.forEach(x => out.push('numero de apoio < 16px(1080p): ' + x));
+  r.grandeV.forEach(x => out.push('numero grande demais (>22px 1080p) fora de KPI hero: ' + x));
   r.intV.forEach(x => out.push('alvo/icone pequeno: ' + x));
   r.iconV.forEach(x => out.push('icone pequeno: ' + x));
   r.cardV.forEach(x => out.push('cartao achatado/pequeno: ' + x));
