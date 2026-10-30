@@ -609,8 +609,8 @@
     '.s2.m .s2-body{display:flex;flex-direction:column;gap:8px}',
     '.s2.m .s2-tb{font-size:11px}',
     '.s2.m .s2-tb td:first-child{width:38%}',
-    '.s2-sh{display:none}.s2-tb td.s2-sub{display:table-cell}',
-    '@media (max-width:370px){.s2-lg{display:none}.s2-sh{display:inline}.s2.m .s2-tb.cr{table-layout:fixed}.s2.m .s2-tb.cr th:first-child{width:25%}.s2.m .s2-tb.cr th{font-size:7.5px;letter-spacing:0;padding-left:1px;padding-right:1px}.s2.m .s2-tb.cr td{padding-left:1px;padding-right:1px;font-size:10px}.s2.m .s2-tb.cr td:first-child{min-width:0;width:auto;overflow:hidden;text-overflow:ellipsis}.s2.m .s2-gs .s2-tb{table-layout:fixed}.s2.m .s2-gs .s2-tb th:first-child{width:22%}.s2.m .s2-gs .s2-tb th.s2-gsh{font-size:7.5px}.s2.m .s2-gs .s2-tb .s2-i{display:none}}',
+    '.s2-hs{display:none}.s2-tb td.s2-sub{display:table-cell}',
+    '@media (max-width:370px){.s2-hl{display:none}.s2-hs{display:inline}.s2.m .s2-tb.cr{table-layout:fixed}.s2.m .s2-tb.cr th:first-child{width:25%}.s2.m .s2-tb.cr th{font-size:7.5px;letter-spacing:0;padding-left:1px;padding-right:1px}.s2.m .s2-tb.cr td{padding-left:1px;padding-right:1px;font-size:10px}.s2.m .s2-tb.cr td:first-child{min-width:0;width:auto;overflow:hidden;text-overflow:ellipsis}.s2.m .s2-gs .s2-tb{table-layout:fixed}.s2.m .s2-gs .s2-tb th:first-child{width:22%}.s2.m .s2-gs .s2-tb th.s2-gsh{font-size:7.5px}.s2.m .s2-gs .s2-tb .s2-i{display:none}}',
     '@media (max-width:370px){.s2.m .s2-tb{font-size:10px}.s2.m .s2-tb td,.s2.m .s2-tb th{padding-left:2px;padding-right:2px}.s2.m .s2-tb.cr td:first-child{width:27%}.s2.m .s2-cb{padding-left:9px;padding-right:9px}}',
     /* telão: tudo cabe sem rolagem, proporcional à altura */
     '.s2.tv{flex:1;min-height:0;gap:7px;overflow:hidden}',
@@ -929,10 +929,10 @@
 
   function htmlGS(r) {
     var per = r && r.per, h = '<table class="s2-tb"><thead><tr><th>Mês</th>' +
-      '<th class="s2-gsh" title="Contatos que viraram ganho (qualificados) no GS Engage."><span class="s2-lg">Qualificados</span><span class="s2-sh">Qualif.</span> <span class="s2-i">ⓘ</span></th>' +
-      '<th class="s2-gsh" title="Perdidos marcados à mão pelo SDR no GS, com um motivo (sem perfil, sem interesse, duplicado...)."><span class="s2-lg">Perdidos pelo SDR</span><span class="s2-sh">Perd. SDR</span> <span class="s2-i">ⓘ</span></th>' +
-      '<th class="s2-gsh" title="Perdidos pelo próprio sistema do GS quando a cadência acabou sem resposta (motivo &quot;perda automática&quot;). O GS só passou a registrar assim em setembro; antes aparece ·."><span class="s2-lg">Cadência esgotada</span><span class="s2-sh">Esgot.</span> <span class="s2-i">ⓘ</span></th>' +
-      '<th class="s2-gsh" title="Passos da cadência finalizados no GS. Cada passo era um registro, inclusive e-mail e pesquisa; no Agendor só a tarefa feita conta (por isso não compare 1:1)."><span class="s2-lg">Atividades registradas</span><span class="s2-sh">Ativ.</span> <span class="s2-i">ⓘ</span></th></tr></thead><tbody>';
+      '<th class="s2-gsh" title="Contatos que viraram ganho (qualificados) no GS Engage."><span class="s2-hl">Qualificados</span><span class="s2-hs">Qualif.</span> <span class="s2-i">ⓘ</span></th>' +
+      '<th class="s2-gsh" title="Perdidos marcados à mão pelo SDR no GS, com um motivo (sem perfil, sem interesse, duplicado...)."><span class="s2-hl">Perdidos pelo SDR</span><span class="s2-hs">Perd. SDR</span> <span class="s2-i">ⓘ</span></th>' +
+      '<th class="s2-gsh" title="Perdidos pelo próprio sistema do GS quando a cadência acabou sem resposta (motivo &quot;perda automática&quot;). O GS só passou a registrar assim em setembro; antes aparece ·."><span class="s2-hl">Cadência esgotada</span><span class="s2-hs">Esgot.</span> <span class="s2-i">ⓘ</span></th>' +
+      '<th class="s2-gsh" title="Passos da cadência finalizados no GS. Cada passo era um registro, inclusive e-mail e pesquisa; no Agendor só a tarefa feita conta (por isso não compare 1:1)."><span class="s2-hl">Atividades registradas</span><span class="s2-hs">Ativ.</span> <span class="s2-i">ⓘ</span></th></tr></thead><tbody>';
     var t = { q: 0, pm: 0, pa: 0, at: 0 }, tp = { q: 0, pm: 0, pa: 0, at: 0, n: 0 };
     HIST_GS.forEach(function (x, i) {
       t.q += x.q; t.pm += x.pm; t.pa += x.pa; t.at += x.at;
