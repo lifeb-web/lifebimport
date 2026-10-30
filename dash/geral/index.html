@@ -430,6 +430,10 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .orig-i-bar i{display:block;height:100%;background:var(--c);border-radius:3px;transition:width .6s cubic-bezier(.4,0,.2,1)}
 @keyframes origIn{from{opacity:0;transform:rotate(-110deg) scale(.88)}to{opacity:1;transform:rotate(0) scale(1)}}
 .orig-anim{animation:origIn .8s cubic-bezier(.2,.8,.2,1);transform-origin:100px 100px}
+/* QA 30/10: tabela Estado/Cidade do GA4 em 320px (UF quebrava letra por letra e a coluna Leads saia do cartao) */
+.ga4-table-card td.ga4-td-left:not(:first-child){white-space:normal;overflow-wrap:break-word}
+.ga4-table-card table:has(th.ga4-th-left) td:first-child{white-space:nowrap;overflow-wrap:normal;word-break:normal}
+@media(max-width:370px){.ga4-table-card th,.ga4-table-card td{padding-left:4px;padding-right:4px}.ga4-table-card th:first-child,.ga4-table-card td:first-child{padding-left:10px}.ga4-table-card th:last-child,.ga4-table-card td:last-child{padding-right:10px}.ga4-table-card th{font-size:9px;letter-spacing:.2px}}
 /* QA 30/10: alvo de toque >= 44px no celular sem mudar o desenho (a area clicavel cresce por pseudo-elemento) */
 @media (pointer:coarse){
   .ochip,.pchip,.modal-close,.btn-refresh{position:relative}
@@ -574,9 +578,10 @@ footer strong{color:#fff}
      3 linhas de 2, mais arrumado que os 5 antigos). */
   .rep-stats{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:10px}
 }
+@media(max-width:370px){.funil-row{grid-template-columns:10px minmax(0,1fr) 0 26px 64px 38px 10px;column-gap:4px;padding-left:10px;padding-right:10px}.funil-stage-name{font-size:10.5px}.funil-bar-wrap{width:0;visibility:hidden}}
 </style>
 <!-- Dossiê do SDR (Fase 1): padrão da aba SDR; ?sdr=1 volta à aba antiga -->
-<script>if (true) document.write('<script src="sdr2.js?v=20261030b"><\/script>');</script>
+<script>if (true) document.write('<script src="sdr2.js?v=20261030c"><\/script>');</script>
 </head>
 <body>
 <div id="lb"></div>
@@ -3019,7 +3024,7 @@ function renderLtvFunil_(funnel, kpis, recentLost) {
       <div class="funil-row" onclick="openLtvStageModal('${s.stageId}','${escJsAttr_(s.name)}')">
         ${connector}
         <div class="funil-stage-dot" style="background:${LTV_ORD_DOT[ord]}"></div>
-        <span class="funil-stage-name">${s.name}</span>
+        <span class="funil-stage-name">${String(s.name).replace(/\//g,"/<wbr>")}</span>
         <div class="funil-bar-wrap"><div class="funil-bar" style="width:${pct}%;background:${LTV_ORD_DOT[ord]}"></div></div>
         <span class="funil-count">${reached}</span>
         <span class="funil-val">${s.value > 0 ? fmtMoney(s.value) : '—'}</span>
@@ -5973,7 +5978,7 @@ function renderFunil(funnel, kpis, recentLost) {
       <div class="funil-row" onclick="openStageModal('${s.stageId}','${s.name}')">
         ${connector}
         <div class="funil-stage-dot" style="background:${ORD_DOT[ord]}"></div>
-        <span class="funil-stage-name">${s.name}</span>
+        <span class="funil-stage-name">${String(s.name).replace(/\//g,"/<wbr>")}</span>
         <div class="funil-bar-wrap"><div class="funil-bar bar-${ord}" style="width:${pct}%"></div></div>
         <span class="funil-count">${reached}</span>
         <span class="funil-val">${s.value > 0 ? fmtMoney(s.value) : '—'}</span>
@@ -6431,6 +6436,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) loadData(true, true);
 });
+</script>
+<script>
+/* QA 30/10: numero grande do topo nunca quebra em 2 linhas (320px com R$ 6 digitos): encolhe a fonte so o necessario */
+(function () {
+  function fit(n) {
+    if (!n || !n.isConnected) return;
+    n.style.whiteSpace = 'nowrap'; n.style.fontSize = '';
+    var kc = n.classList.contains('kc-val'), base = parseFloat(getComputedStyle(n).fontSize) || 38, f = base, min = kc ? 12 : 16;
+    var lim = function () { return kc ? n.parentElement.clientWidth : n.clientWidth; }, w = lim();
+    if (!w) return;
+    var cur = function () { return kc ? n.getBoundingClientRect().width / (parseFloat(getComputedStyle(document.body).zoom) || 1) : n.scrollWidth; };
+    while (cur() > w + 1 && f > min) { f -= 0.5; n.style.fontSize = f + 'px'; }
+  }
+  function fitAll() { document.querySelectorAll('.hero-val,.kc-val').forEach(fit); }
+  var mo = new MutationObserver(function (ms) { ms.forEach(function (m) { var t = m.target.nodeType === 3 ? m.target.parentNode : m.target; fit(t.closest ? t.closest('.hero-val,.kc-val') : null); }); });
+  function arma() { document.querySelectorAll('.hero-val,.kc-val').forEach(function (n) { mo.observe(n, { childList: true, characterData: true, subtree: true }); }); fitAll(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arma); else arma();
+  window.addEventListener('resize', fitAll); window.addEventListener('load', fitAll);
+  document.querySelectorAll && document.addEventListener('click', function () { setTimeout(fitAll, 60); });
+})();
 </script>
 </body>
 </html>
