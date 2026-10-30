@@ -35,7 +35,10 @@
     migracao: { de: '2026-10-20T15:00:00Z', ate: '2026-10-20T17:00:00Z' },
     inicioAgendor: '2026-10-20',
     urlNegocio: 'https://web.agendor.com.br/sistema/negocios/historico.php?id=',
-    worker: 'https://gs-agendor-worker.robert131196.workers.dev',   // rotas só de leitura: /sdr-atividades e /sdr-etapas
+    worker: 'https://gs-agendor-worker.robert131196.workers.dev',   // rotas só de leitura: /sdr-atividades, /sdr-etapas e /sdr-iniciados
+    iniOutDesde: '2026-10-26',                          // Outbound: o clique em Iniciar só é guardado (marcador/contador) desde o início da cota diária; antes disso o dia de início não existe
+    funilInbound: '916713',
+    corIni: '#704B9B', corFin: '#0e9aa0',
     atvInicio: '2026-10-20',                            // início do Agendor como fonte (antes disso vale a faixa congelada do GS)
     atrasoSyncMin: 30,
     atrasoAtvMin: 120,
@@ -70,7 +73,7 @@
   // ---------- Estado ----------
   var S = { raw: null, rows: [], loading: false, err: null, mode: 'm', root: null, inited: false,
             f: { sdr: '', funil: '', origem: '' }, gran: '', cfg: null, lastFetch: 0, timer: null,
-            total: null, dupes: 0, gs: null, atv: null, atvErr: null, etp: null, etpErr: null, byId: {}, etapaNome: {}, w: 'p' };
+            total: null, dupes: 0, gs: null, atv: null, atvErr: null, ini: null, iniErr: null, etp: null, etpErr: null, byId: {}, etapaNome: {}, w: 'p' };
 
   // ---------- Utilidades ----------
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -379,6 +382,89 @@
     return { porFunil: out, total: tot };
   }
 
+
+  // ---------- Iniciados e finalizados (30/10/2026) ----------
+  // INICIADO = o dia em que o SDR começou a trabalhar o lead.
+  //  - Marcador do worker (rota /sdr-iniciados: sdrcad_ini_<negócio> = dia do clique em Iniciar, ou da liberação do Inbound que esperou na fila) SEMPRE manda.
+  //  - Sem marcador, Inbound: o lead já nasce em cadência (D0/D1 automático), vale o dia da criação do negócio (migrados do GS ficam de fora: criação não é entrada real).
+  //  - Sem marcador, Outbound: não há dia de início guardado (negócio anterior ao controle de cota ou ainda na fila): não conta; aparece em "sem dia de início" na conferência.
+  // FINALIZADO = saiu da cadência no período, pela data real do evento (data_real_evento, senão end_time; nunca won_at):
+  //  Qualificado (ganho) + Perdido pelo SDR + Cadência esgotada + Duplicado. Duplicado não é decisão do SDR (fora da conversão), mas o lead saiu da cadência: conta como finalizado.
+  function iniDia(d, map) {
+    var m = map && map[d.id];
+    if (m) return { dia: m, fonte: 'marcador' };
+    if (d.funil === CFG.funilInbound && d.criada && !d.migrado) return { dia: d.criada, fonte: 'criacao' };
+    return null;
+  }
+  function iniMapa(negocios) { var m = {}; (negocios || []).forEach(function (x) { if (x && x.length >= 2) m[x[0]] = x[1]; }); return m; }
+  function iniDesde(f) { return (f.funil === CFG.funilInbound || f.glob === 'inbound' || f.origem === 'inbound') ? CFG.atvInicio : CFG.iniOutDesde; }
+  function agregaIni(rows, map, from, to) {
+    var lista = [], semOut = 0, abertos = 0, outN = 0, inN = 0, marc = 0, cria = 0;
+    rows.forEach(function (d) {
+      var i = iniDia(d, map);
+      if (!i) { if (d.funil !== CFG.funilInbound) semOut++; return; }
+      if (i.dia <= to && d.status === 'ongoing' && !d.congelado) abertos++;
+      if (i.dia < from || i.dia > to) return;
+      lista.push({ d: d, dia: i.dia, fonte: i.fonte });
+      if (d.funil === CFG.funilInbound) inN++; else outN++;
+      if (i.fonte === 'marcador') marc++; else cria++;
+    });
+    return { lista: lista, n: lista.length, outN: outN, inN: inN, marc: marc, cria: cria, semOut: semOut, abertos: abertos };
+  }
+  function finTotal(a) { return a ? a.q + a.pm + a.ps + a.pd : null; }
+  function serieIniFin(base, map, from, to, gran) {
+    var hoje = hojeBRT(), ate = to < hoje ? to : hoje, datas = [];
+    base.forEach(function (d) {
+      var i = iniDia(d, map); if (i && i.dia >= from && i.dia <= ate) datas.push(i.dia);
+      if ((d.status === 'won' || d.status === 'lost') && noPeriodo(d, from, ate)) datas.push(d.data);
+    });
+    if (!datas.length) return { baldes: [], gran: gran, de: from, ate: ate };
+    datas.sort();
+    var de = datas[0] > from ? datas[0] : from, nDias = diffDays(de, ate) + 1;
+    gran = gran || (nDias <= 31 ? 'd' : (nDias <= 150 ? 's' : 'm'));
+    function chave(iso) { return gran === 'd' ? iso : (gran === 's' ? mondayOf(iso) : iso.slice(0, 7)); }
+    var baldes = [], idx = {};
+    function mk(k) { var b = { k: k, i: 0, f: 0 }; idx[k] = b; baldes.push(b); return b; }
+    if (gran === 'd') { for (var t = de; t <= ate; t = addDays(t, 1)) mk(t); }
+    else if (gran === 's') { for (var s = mondayOf(de); s <= ate; s = addDays(s, 7)) mk(s); }
+    else { var y = +de.slice(0, 4), mo = +de.slice(5, 7), fim = ate.slice(0, 7); while (true) { var k = y + '-' + pad(mo); mk(k); if (k >= fim) break; mo++; if (mo > 12) { mo = 1; y++; } } }
+    base.forEach(function (d) {
+      var i = iniDia(d, map);
+      if (i && i.dia >= de && i.dia <= ate) { var b = idx[chave(i.dia)]; if (b) b.i++; }
+      if ((d.status === 'won' || d.status === 'lost') && noPeriodo(d, de, ate)) { var b2 = idx[chave(d.data)]; if (b2) b2.f++; }
+    });
+    return { baldes: baldes, gran: gran, de: de, ate: ate };
+  }
+  // Conferência (sem filtros locais, só o período): iniciados do Dash x marcadores do KV x soma dos contadores diários; finalizados x partes x contagem direta.
+  function conferir(rows, ini, per) {
+    var out = { fin: null, ini: null };
+    var q = 0, lm = 0, ls = 0, ld = 0, wDir = 0, lDir = 0, semData = 0;
+    rows.forEach(function (d) {
+      if (d.status !== 'won' && d.status !== 'lost') return;
+      if (!d.data) { semData++; return; }
+      if (d.data < per.from || d.data > per.to) return;
+      if (d.status === 'won') wDir++; else lDir++;
+    });
+    var ag = agrega(rows, per.from, per.to);
+    out.fin = { cartao: finTotal(ag), partes: ag.q + ag.pm + ag.ps + ag.pd, q: ag.q, pm: ag.pm, ps: ag.ps, pd: ag.pd, direto: wDir + lDir, wDir: wDir, lDir: lDir, perdasTab: ag.pm + ag.ps + ag.pd, semData: semData };
+    if (ini) {
+      var byId = {}; rows.forEach(function (d) { byId[d.id] = d; });
+      var ag2 = agregaIni(rows, ini.map, per.from, per.to);
+      var marcKv = 0, marcSemNeg = 0, marcInb = 0, cotaSoma = 0, cotaDias = 0, marcDiasCota = 0, marcDiasCotaInb = 0, marcDiasCotaSem = 0;
+      var diaCota = {}; (ini.dias || []).forEach(function (x) { if (x.cota != null && x.dia >= per.from && x.dia <= per.to) { diaCota[x.dia] = 1; cotaSoma += Number(x.cota) || 0; cotaDias++; } });
+      (ini.negocios || []).forEach(function (x) {
+        if (x[1] < per.from || x[1] > per.to) return;
+        marcKv++; var d = byId[x[0]];
+        if (!d) marcSemNeg++; else if (d.funil === CFG.funilInbound) marcInb++;
+        if (diaCota[x[1]]) { marcDiasCota++; if (!d) marcDiasCotaSem++; else if (d.funil === CFG.funilInbound) marcDiasCotaInb++; }
+      });
+      out.ini = { dash: ag2.n, marcDash: ag2.marc, cria: ag2.cria, outN: ag2.outN, inN: ag2.inN, marcKv: marcKv, marcSemNeg: marcSemNeg, marcInb: marcInb, cotaSoma: cotaSoma, cotaDias: cotaDias,
+                  marcDiasCota: marcDiasCota, marcDiasCotaOut: marcDiasCota - marcDiasCotaInb - marcDiasCotaSem, marcDiasCotaSem: marcDiasCotaSem, semOut: ag2.semOut,
+                  diasPedidos: diffDays(per.from, per.to < hojeBRT() ? per.to : hojeBRT()) + 1 };
+    }
+    return out;
+  }
+
   function calcular(rows, per, f, gran, ext) {
     ext = ext || {};
     var base = filtra(rows, f);
@@ -410,13 +496,20 @@
       if (ant && ant.to >= CFG.atvInicio) { var jAnt = janelaAtv(ant, ext.atv.dias, null, ext.atv.ultimaRodada); if (jAnt.dias && !jAnt.sem.length && !jAnt.apur.ativo) agAAnt = agregaAtv(ls, ant.from, ant.to); }
       atv = { ag: agA, ant: agAAnt, jn: jn, serie: serieAtv(agA, jn, ext.atv.dias), linhas: ls };
     }
+    var ini = null;
+    if (ext.ini) {
+      var dsd = iniDesde(f), aI = agregaIni(base, ext.ini.map, per.from, per.to);
+      var aIAnt = (ant && ant.from >= dsd) ? agregaIni(base, ext.ini.map, ant.from, ant.to) : null;
+      ini = { a: aI, ant: aIAnt, desde: dsd, parcial: per.from < dsd, serie: serieIniFin(base, ext.ini.map, per.from, per.to, gran), fin: finTotal(ag), finAnt: finTotal(agAnt),
+              conf: conferir(rows, ext.ini, per) };
+    }
     var etp = null;
     if (ext.etp && ext.etp.ativo && ext.etp.eventos && ext.etp.eventos.length) {
       etp = agregaEtp(etpLinhas(ext.etp.eventos, byId), per.from, per.to, f, ext.etapaNome || {});
       etp.desde = ext.etp.desde;
     }
     return { per: per, ant: ant, f: f, ag: ag, agAnt: agAnt, etapas: porEtapa(base, per.from, per.to),
-             motivos: motivos(ag.lostM), serie: serie(base, per.from, per.to, gran), cruz: cruz, origens: origens, minData: minData, atv: atv, etp: etp };
+             motivos: motivos(ag.lostM), serie: serie(base, per.from, per.to, gran), cruz: cruz, origens: origens, minData: minData, atv: atv, ini: ini, etp: etp };
   }
 
   // ---------- CSS (injetado uma vez) ----------
@@ -494,11 +587,13 @@
     '.s2-cov{font-size:10px;font-weight:600;color:var(--muted,#6b6484);line-height:1.4;margin-top:-2px}',
     '.s2-cov.warn{color:var(--amber,#b45309);font-weight:700}',
     '.s2-tb tr.s2-lig td{color:#0e7c82}',
+    '.s2-kt button{margin-top:3px}',
+    '.s2-conf>summary{cursor:pointer;font-size:11px;font-weight:800;color:var(--purple,#704B9B)}.s2-tb.cf td:first-child{max-width:none}',
     '.s2-tb tr.s2-gsin td{color:#5b5670;background:#ece9f4}',
     '.s2-empty button{font:inherit}',
     /* PC e tablet: colunas que se completam (sem buracos) */
-    '.s2.m[data-w="m"] .s2-ks,.s2.m[data-w="g"] .s2-ks{grid-template-columns:repeat(4,minmax(0,1fr))}',
-    '.s2.m[data-w="x"] .s2-ks{grid-template-columns:repeat(8,minmax(0,1fr))}',
+    '.s2.m[data-w="m"] .s2-ks,.s2.m[data-w="g"] .s2-ks{grid-template-columns:repeat(5,minmax(0,1fr))}',
+    '.s2.m[data-w="x"] .s2-ks{grid-template-columns:repeat(5,minmax(0,1fr))}',
     '.s2.m[data-w="m"] .s2-body,.s2.m[data-w="g"] .s2-body,.s2.m[data-w="x"] .s2-body{display:block;column-gap:8px;column-fill:balance}',
     '.s2.m[data-w="m"] .s2-body{column-count:2}',
     '.s2.m[data-w="g"] .s2-body,.s2.m[data-w="x"] .s2-body{column-count:3}',
@@ -517,7 +612,7 @@
     /* telão: tudo cabe sem rolagem, proporcional à altura */
     '.s2.tv{flex:1;min-height:0;gap:7px;overflow:hidden}',
     '.s2.tv .s2-hd{flex-shrink:0;flex-wrap:nowrap}',
-    '.s2.tv .s2-ks{grid-template-columns:repeat(8,minmax(0,1fr));gap:7px;flex-shrink:0}',
+    '.s2.tv .s2-ks{grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;flex-shrink:0}',
     '.s2.tv .s2-k{padding:7px 11px;border-radius:11px}',
     '.s2.tv .s2-kv{font-size:clamp(18px,3.1vh,28px)}',
     '.s2.tv .s2-kt{font-size:clamp(9px,1.25vh,11px)}',
@@ -596,6 +691,30 @@
     }
     return chip('Atividades ⓘ', num(a.feitas), sub, { tip: tip, delta: delta(a.feitas, p ? p.feitas : null) });
   }
+
+  function tipIni() { return 'Leads que o SDR começou a trabalhar no período. Outbound: o dia em que o Felipe clicou em Iniciar (a Bia guarda esse dia num marcador; só existe desde ' + dm(CFG.iniOutDesde) + '). Inbound: o lead já nasce em cadência (D0/D1 automático), então vale o dia da criação do negócio; se o lead esperou na fila e foi liberado à mão, vale o dia da liberação. Segue todos os filtros da aba.'; }
+  function iniSub(t) {
+    var a = t.a, sub = num(a.outN) + ' Outbound · ' + num(a.inN) + ' Inbound';
+    if (t.parcial) sub += ' · Outbound só desde ' + dm(t.desde);
+    return sub;
+  }
+  function chipIniciados(r) {
+    var tip = tipIni();
+    if (!S.ini) return S.iniErr ? chip('Iniciados', 'n/d', 'não consegui ler agora <button class="s2-c" data-retry="ini">Tentar de novo</button>', { cinza: true, tip: tip }) : chip('Iniciados', '…', 'carregando', { cinza: true, tip: tip });
+    var t = r.ini, a = t.a;
+    if (S.ini.parcial) {
+      return chip('Iniciados ⓘ', num(a.n) + '<span class="s2-ap">em apuração</span>', 'ainda lendo os marcadores do Outbound (a Bia termina na próxima rodada) · ' + iniSub(t), { tip: 'EM APURAÇÃO: o valor é parcial e vai subir. ' + tip, apur: true, go: 'ini' });
+    }
+    var tipFull = tip + (t.parcial ? ' Neste período o Outbound está incompleto: antes de ' + dm(t.desde) + ' o dia do clique não foi guardado.' : '') + ' Saldo no período (iniciados menos finalizados): ' + (a.n - t.fin >= 0 ? '+' : '') + num(a.n - t.fin) + '.';
+    return chip('Iniciados ⓘ', num(a.n), a.n ? iniSub(t) : (t.parcial ? 'nenhum iniciado no período · Outbound só desde ' + dm(t.desde) : 'nenhum lead iniciado no período'), { tip: tipFull, go: 'ini', delta: delta(a.n, t.ant ? t.ant.n : null) });
+  }
+  var TIP_FIN = 'Leads que saíram da cadência no período, pela data real do evento (nunca a data de ganho antiga): qualificados (ganho) + perdidos pelo SDR + cadência esgotada + duplicados. O duplicado não é decisão do SDR e fica fora da conversão, mas o lead saiu da cadência, por isso conta aqui. Segue todos os filtros da aba.';
+  function chipFinalizados(r) {
+    var a = r.ag, p = r.agAnt, tot = finTotal(a);
+    var comp = num(a.q) + ' qualif. · ' + num(a.pm) + ' perd. · ' + num(a.ps) + ' esgot. · ' + num(a.pd) + ' dup.';
+    return chip('Finalizados ⓘ', num(tot), tot ? comp : 'nenhum lead finalizado no período', { tip: TIP_FIN + ' Composição: ' + comp + '.', go: 'fin', delta: delta(tot, p ? finTotal(p) : null) });
+  }
+
   function htmlKpis(r) {
     var a = r.ag, p = r.agAnt;
     var convPct = a.conv == null ? 'n/d' : pct(a.q, a.q + a.pm);
@@ -609,7 +728,8 @@
     var tempoSub = a.diasN ? ('mediana ' + dec1(a.diasMed) + ' d · ' + a.diasN + (a.diasN === 1 ? ' negócio' : ' negócios')) : 'sem negócio com data de entrada';
     if (a.diasGS) tempoSub += ' · ' + a.diasGS + ' com entrada do GS';
     if (a.migradosGanhos) tempoSub += ' · ' + a.migradosGanhos + ' migrados do GS sem data fora';
-    return chip('Qualificados', num(a.q), 'ganhos no funil SDR', { go: 'won', delta: delta(a.q, p ? p.q : null) }) +
+    return chipIniciados(r) + chipFinalizados(r) +
+      chip('Qualificados', num(a.q), 'ganhos no funil SDR', { go: 'won', delta: delta(a.q, p ? p.q : null) }) +
       chip('Perdidos pelo SDR', num(a.pm), 'decisão do SDR (conta na conversão; sem duplicados)', { go: 'lostM', delta: delta(a.pm, p ? p.pm : null) }) +
       chip('Conversão ⓘ', convPct, 'sem esgotada e duplicados · geral: <b>' + (a.convGeral == null ? 'n/d' : pct(a.q, a.q + a.pm + a.ps)) + '</b>',
         { tip: 'Principal: qualificados ÷ (qualificados + perdidos pelo SDR). Fora da conta: cadência esgotada (recuperável) e perdidos com motivo Duplicado (não é decisão do SDR). Geral: inclui também a cadência esgotada; duplicados ficam fora das duas.', delta: convDelta }) +
@@ -708,6 +828,64 @@
     }).join('') + '</div>';
     return tg + svgChart(r, tv) +
       '<div class="s2-lg"><span><i style="background:' + C_GANHO + '"></i>Qualificados</span><span><i style="background:' + C_PERDA + ';opacity:.8"></i>Perdidos pelo SDR</span><span><i style="background:' + C_CINZA + '"></i>Cadência esgotada</span></div>';
+  }
+
+
+  function svgIniFin(r, tv) {
+    var sr = r.ini.serie, b = sr.baldes;
+    if (!b.length) return '<div class="s2-empty">Sem iniciados nem finalizados neste período</div>';
+    var W = tv ? 640 : (S.cw || 340), H = tv ? Math.round(alturaGraf() * 0.8) : 150, padL = 26, padR = 4, padT = 14, padB = 20;
+    var max = 2; b.forEach(function (x) { if (x.i > max) max = x.i; if (x.f > max) max = x.f; });
+    var iw = W - padL - padR, ih = H - padT - padB, gw = iw / b.length, bw = Math.max(2, Math.min(tv ? 22 : 14, gw * 0.36));
+    var gl = sr.gran === 'd' ? 'dia' : sr.gran === 's' ? 'semana' : 'mês';
+    var s = '<svg class="s2-chart" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Iniciados e finalizados por ' + gl + '">';
+    [0, 0.5, 1].forEach(function (f) { var y = padT + ih - ih * f; s += '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + y + '" y2="' + y + '" stroke="#eae7f2" stroke-width="1"/><text x="' + (padL - 4) + '" y="' + (y + 3) + '" text-anchor="end" font-size="9" fill="#9b93b0">' + num(max * f) + '</text>'; });
+    var passo = Math.ceil(b.length / (tv ? 14 : 7));
+    b.forEach(function (x, i) {
+      var cx = padL + gw * i + gw / 2, hi = ih * x.i / max, hf = ih * x.f / max, rot = sr.gran === 'm' ? nomeMes(x.k + '-01') : dm(x.k);
+      s += '<g><title>' + esc(rot + ': ' + x.i + ' iniciados, ' + x.f + ' finalizados') + '</title>' +
+        '<rect x="' + (cx - bw - 1) + '" y="' + (padT + ih - hi) + '" width="' + bw + '" height="' + Math.max(hi, x.i ? 1 : 0) + '" rx="2" fill="' + CFG.corIni + '"/>' +
+        '<rect x="' + (cx + 1) + '" y="' + (padT + ih - hf) + '" width="' + bw + '" height="' + Math.max(hf, x.f ? 1 : 0) + '" rx="2" fill="' + CFG.corFin + '"/>';
+      if (b.length <= (tv ? 16 : 11)) {
+        if (x.i) s += '<text x="' + (cx - bw / 2 - 1) + '" y="' + (padT + ih - hi - 3) + '" text-anchor="middle" font-size="9" font-weight="800" fill="' + CFG.corIni + '">' + num(x.i) + '</text>';
+        if (x.f) s += '<text x="' + (cx + bw / 2 + 1) + '" y="' + (padT + ih - hf - 3) + '" text-anchor="middle" font-size="9" font-weight="800" fill="#0b7378">' + num(x.f) + '</text>';
+      }
+      if (i % passo === 0) s += '<text x="' + cx + '" y="' + (H - 7) + '" text-anchor="middle" font-size="9" fill="#6b6484">' + rot + '</text>';
+      s += '</g>';
+    });
+    return s + '</svg>';
+  }
+  function htmlIniFin(r, tv) {
+    if (!S.ini) return S.iniErr ? '<div class="s2-empty">Não consegui ler os iniciados agora.<br><button class="s2-c" data-retry="ini" style="margin-top:6px">Tentar de novo</button></div>' : '<div class="s2-empty">Carregando iniciados…</div>';
+    var t = r.ini, a = t.a, gran = t.serie.gran;
+    var tg = tv ? '' : '<div class="s2-fg">' + [['d', 'Dia'], ['s', 'Semana'], ['m', 'Mês']].map(function (g) { return '<button class="s2-c' + (gran === g[0] ? ' on' : '') + '" data-gran="' + g[0] + '">' + g[1] + '</button>'; }).join('') + '</div>';
+    var saldo = a.n - t.fin;
+    var h = tg + svgIniFin(r, tv) + '<div class="s2-lg"><span><i style="background:' + CFG.corIni + '"></i>Iniciados</span><span><i style="background:' + CFG.corFin + '"></i>Finalizados</span></div>' +
+      '<div class="s2-nt"><b>Saldo do período:</b> ' + num(a.n) + ' iniciados − ' + num(t.fin) + ' finalizados = <b>' + (saldo > 0 ? '+' : '') + num(saldo) + '</b>' +
+      '<span class="s2-xs"> · <b>' + num(a.abertos) + '</b> dos iniciados ainda estão em cadência</span></div>';
+    if (t.parcial) h += '<div class="s2-nt s2-xs" style="color:var(--amber,#b45309)">Outbound: o dia do clique em Iniciar só existe desde ' + dmy(t.desde) + '. Antes disso os iniciados do Outbound não aparecem (os finalizados aparecem sempre).</div>';
+    return h;
+  }
+  function celDif(d) { return d === 0 ? '<td class="qc">confere</td>' : '<td class="pc">dif. ' + (d > 0 ? '+' : '') + num(d) + '</td>'; }
+  function htmlConferencia(r) {
+    var c = r.ini && r.ini.conf; if (!c) return '<div class="s2-empty">Aguardando a leitura dos iniciados…</div>';
+    var f = c.fin, i = c.ini;
+    var h = '<table class="s2-tb cf"><thead><tr><th>Conferência (sem filtros locais)</th><th>Dash</th><th>Outra fonte</th><th>Situação</th></tr></thead><tbody>';
+    function lin(nome, dash, outra, fonte, dif) { return '<tr><td style="white-space:normal;max-width:none;width:46%">' + nome + '<div class="s2-st" style="font-weight:600">' + fonte + '</div></td><td>' + num(dash) + '</td><td>' + (outra == null ? '·' : num(outra)) + '</td>' + (dif == null ? '<td class="z">·</td>' : celDif(dif)) + '</tr>'; }
+    h += '<tr><td colspan="4" class="s2-sr s2-sub" style="padding:2px 4px 1px;color:var(--faint)">Iniciados</td></tr>';
+    if (i) {
+      h += lin('Iniciados com marcador', i.marcDash, i.marcKv, 'negócios do Dash com marcador × marcadores no KV' + (i.marcSemNeg ? ' (' + num(i.marcSemNeg) + ' sem negócio na tabela)' : ''), i.marcDash - (i.marcKv - i.marcSemNeg));
+      h += lin('Outbound, dias com contador (' + num(i.cotaDias) + ' de ' + num(i.diasPedidos) + ' dias)', i.marcDiasCotaOut, i.cotaSoma, 'marcadores do Outbound × soma dos contadores diários (o contador só vive 5 dias)', i.cotaDias ? i.marcDiasCotaOut - i.cotaSoma : null);
+      h += lin('Inbound sem marcador (pela criação do negócio)', i.cria, null, 'não tem contador nem marcador: nasce em cadência', null);
+      h += lin('Iniciados no cartão (sem filtros)', i.dash, i.marcDash + i.cria, 'com marcador + pela criação', i.dash - (i.marcDash + i.cria));
+      h += '<tr><td colspan="4" class="s2-nt" style="white-space:normal;border-top:0;font-weight:600">Outbound sem dia de início guardado: <b>' + num(i.semOut) + '</b> (anteriores ao controle de cota ou ainda na fila). Não entram nos iniciados.</td></tr>';
+    } else h += '<tr><td colspan="4" class="s2-empty">Iniciados indisponíveis agora</td></tr>';
+    h += '<tr><td colspan="4" class="s2-sr s2-sub" style="padding:5px 4px 1px;color:var(--faint)">Finalizados</td></tr>';
+    h += lin('Finalizados no cartão', f.cartao, f.partes, 'qualif. ' + num(f.q) + ' + perd. ' + num(f.pm) + ' + esgot. ' + num(f.ps) + ' + dup. ' + num(f.pd), f.cartao - f.partes);
+    h += lin('Finalizados × contagem direta', f.cartao, f.direto, 'ganhos ' + num(f.wDir) + ' + perdidos ' + num(f.lDir) + ' com data no período', f.cartao - f.direto);
+    h += lin('Perdidos, esgotados e duplicados', f.perdasTab, f.lDir, 'soma das 3 linhas da aba × perdidos contados direto', f.perdasTab - f.lDir);
+    h += '<tr><td colspan="4" class="s2-nt" style="white-space:normal;border-top:0;font-weight:600">Fechados sem data de evento (fora de qualquer período): <b>' + num(f.semData) + '</b>.</td></tr>';
+    return h + '</tbody></table>';
   }
 
   function htmlCruzada(r) {
@@ -830,6 +1008,11 @@
       else if (jn && jn.antes) partes.push('atividades: Agendor só desde ' + dm(CFG.atvInicio));
       if (S.atv.ultimaRodada && S.atv.ultimaRodada.ts && (Date.now() - S.atv.ultimaRodada.ts) / 60000 > CFG.atrasoAtvMin) { partes.push('<b>atividades atrasadas</b>'); warn = true; }
     } else if (S.atvErr) { partes.push('<b>atividades indisponíveis</b>'); warn = true; }
+    if (S.ini) {
+      var cbI = S.ini.cobertura || {};
+      partes.push('iniciados: ' + num(cbI.marcadores || 0) + ' marcadores' + (cbI.primeiroMarcador ? ' desde ' + dm(cbI.primeiroMarcador) : '') + (S.ini.ts ? ' · lidos ' + instBRT(new Date(S.ini.ts).toISOString()) : ''));
+      if (S.ini.parcial) { partes.push('<b>iniciados em apuração</b>'); warn = true; }
+    } else if (S.iniErr) { partes.push('<b>iniciados indisponíveis</b>'); warn = true; }
     if (S.etpErr) { partes.push('<b>etapas indisponíveis</b>'); warn = true; }
     else if (r.etp) {
       partes.push('etapas desde ' + dm(r.etp.desde || ''));
@@ -892,7 +1075,7 @@
     var tv = S.mode === 't';
     var glob = S.cfg.getOrigin ? S.cfg.getOrigin() : 'both';
     if (S.f.origem && !origemPassaGlobal(S.f.origem, glob)) S.f.origem = '';
-    var r = calcular(S.rows, per, { sdr: S.f.sdr, funil: S.f.funil, origem: S.f.origem, glob: glob }, S.gran, { atv: S.atv, etp: S.etp, etapaNome: Object.assign({}, S.etp && S.etp.nomes, S.etapaNome) });
+    var r = calcular(S.rows, per, { sdr: S.f.sdr, funil: S.f.funil, origem: S.f.origem, glob: glob }, S.gran, { atv: S.atv, ini: S.ini, etp: S.etp, etapaNome: Object.assign({}, S.etp && S.etp.nomes, S.etapaNome) });
     S.last = r;
     var fr = frescor(), cv = coberturaInfo(r);
     var topo = '<div class="s2-hd"><div class="s2-ttl">SDR (<b>' + esc(nomeSdrs(r)) + '</b>) · <b>' + esc(per.label || (dm(per.from) + ' a ' + dm(per.to))) + '</b> <span class="s2-st' + (fr.warn ? ' warn' : '') + '" style="text-transform:none;letter-spacing:0">· ' + esc(fr.txt) + (fr.falha ? '' : (fr.warn ? ' (atrasado)' : '')) + '</span></div>' + htmlFiltros(r) + '</div>' +
@@ -904,15 +1087,17 @@
     var cGraf = card('Qualificados e perdidos', esc(r.serie.baldes.length ? dm(r.serie.de) + ' a ' + dm(r.serie.ate) : ''), htmlGrafico(r, tv), { style: tv ? 'flex:0 0 auto' : '' });
     var cCruz = card('Funil e origem', 'período selecionado', htmlCruzada(r), { style: fl });
     var cMot = card('Motivos de perda', 'período selecionado', htmlMotivos(r), { style: fl });
+    var cIni = card('Iniciados e finalizados', r.ini ? esc(dm(r.ini.serie.de) + ' a ' + dm(r.ini.serie.ate)) : '', htmlIniFin(r, tv), { style: tv ? 'flex:0 0 auto' : '' });
+    var cConf = tv ? '' : '<details class="s2-det s2-card s2-conf"><summary style="padding:9px 12px">Conferência: iniciados e finalizados</summary><div class="s2-cb">' + htmlConferencia(r) + '</div></details>';
     var cAtv = card('Atividades do SDR', r.atv && !r.atv.jn.antes ? 'tarefas concluídas no Agendor' : 'Agendor', htmlAtividades(r, tv), { style: tv ? 'flex:0 0 auto' : '' });
     var cGS = card('Histórico GS Engage', 'mai a 19/10 · congelado', htmlGS(r), { cls: 's2-gs', style: tv ? 'flex:0 0 auto' : '' });
     var cNotasTv = tv ? card('Como ler', '', '<div class="s2-nt">' + htmlNotas() + '</div>', { cls: 's2-xs', style: 'flex:0 0 auto' }) : '';
     var cNotas = tv ? '' : '<details class="s2-det s2-card"><summary style="padding:9px 12px">Como ler esta aba</summary><div class="s2-cb s2-nt">' + htmlNotas() + '</div></details>';
     var corpo;
     if (tv) {
-      corpo = '<div class="s2-body">' + cGraf + cAtv + cEtapas + cMov + cCruz + cMot + cGS + cNotasTv + '</div>';
+      corpo = '<div class="s2-body">' + cGraf + cIni + cAtv + cEtapas + cMov + cCruz + cMot + cGS + cNotasTv + '</div>';
     } else {
-      corpo = '<div class="s2-body">' + cGraf + cAtv + cEtapas + cMov + cCruz + cMot + cGS + '</div>' + cNotas;
+      corpo = '<div class="s2-body">' + cGraf + cIni + cAtv + cEtapas + cMov + cCruz + cMot + cGS + '</div>' + cConf + cNotas;
     }
     root.innerHTML = topo + kpis + corpo;
     root.querySelector('.s2-ks').addEventListener('click', onClick);
@@ -1011,9 +1196,11 @@
   // ---------- Interação ----------
   function lista(kind) {
     var a = S.last.ag;
+    if (kind === 'ini') return (S.last.ini ? S.last.ini.a.lista : []).map(function (x) { return Object.assign({}, x.d, { data: x.dia, rot: 'iniciado em' + (x.fonte === 'criacao' ? ' (criação)' : '') }); });
+    if (kind === 'fin') return [].concat(a.won, a.lostM, a.lostS, a.lostD).map(function (d) { return Object.assign({}, d, { rot: 'finalizado em' }); });
     return kind === 'won' ? a.won : kind === 'lostM' ? a.lostM : kind === 'lostS' ? a.lostS : kind === 'lostD' ? a.lostD : kind === 'ong' ? a.ong : kind === 'fim' ? a.fim : [];
   }
-  var TIT = { won: 'Qualificados', lostM: 'Perdidos pelo SDR', lostS: 'Cadência esgotada', lostD: 'Duplicados (fora da conta)', ong: 'Em cadência agora', fim: 'Fim da cadência (aguardando)' };
+  var TIT = { ini: 'Iniciados', fin: 'Finalizados', won: 'Qualificados', lostM: 'Perdidos pelo SDR', lostS: 'Cadência esgotada', lostD: 'Duplicados (fora da conta)', ong: 'Em cadência agora', fim: 'Fim da cadência (aguardando)' };
   function abreLista(titulo, itens, cor) {
     var mt = document.getElementById('modal-title'), mb = document.getElementById('modal-body'), mo = document.getElementById('modal-overlay');
     if (!mt || !mb || !mo) return;
@@ -1021,7 +1208,7 @@
     mt.textContent = titulo + ' · ' + itens.length;
     mb.innerHTML = itens.length ? itens.map(function (d) {
       var sub = [CFG.funis[d.funil].nome, origemLabel(d.origem), d.etapa];
-      if (d.data) sub.push(dmy(d.data));
+      if (d.data) sub.push((d.rot ? d.rot + ' ' : '') + dmy(d.data));
       if (d.dias != null) sub.push(d.dias + ' d até qualificar');
       if (d.migrado && d.status === 'won') sub.push('migrado do GS');
       if (d.motivo) sub.push(d.motivo);
@@ -1032,12 +1219,12 @@
   function onClick(ev) {
     var t = ev.target.closest('[data-go]'); if (!t || !S.last) return;
     var go = t.getAttribute('data-go');
-    var cor = go === 'won' ? C_GANHO : (go === 'lostM' ? C_PERDA : C_CINZA);
+    var cor = go === 'won' ? C_GANHO : (go === 'lostM' ? C_PERDA : (go === 'ini' ? CFG.corIni : (go === 'fin' ? CFG.corFin : C_CINZA)));
     if (TIT[go]) return abreLista(TIT[go], lista(go), cor);
   }
   function onRootClick(ev) {
     var rt = ev.target.closest('button[data-retry]');
-    if (rt) { var k = rt.getAttribute('data-retry'); if (k === 'atv') { S.atvErr = null; render(); return lerAtividades(); } return carregar(true); }
+    if (rt) { var k = rt.getAttribute('data-retry'); if (k === 'atv') { S.atvErr = null; render(); return lerAtividades(); } if (k === 'ini') { S.iniErr = null; render(); return lerIniciados(); } return carregar(true); }
     var b = ev.target.closest('button[data-f]');
     if (b) { S.f[b.getAttribute('data-f')] = b.getAttribute('data-v'); return render(); }
     var g = ev.target.closest('button[data-gran]');
@@ -1106,6 +1293,19 @@
     }).catch(function (e) { S.atvErr = e; console.warn('SDR2: atividades falharam', e && e.message); })
       .then(function () { S.atvLoading = false; render(); });
   }
+  function lerIniciados() {
+    if (S.iniLoading) return Promise.resolve();
+    S.iniLoading = true;
+    return fetchT(CFG.worker + '/sdr-iniciados?from=' + CFG.atvInicio + '&to=' + hojeBRT(), {}, 30000).then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    }).then(function (j) {
+      if (!j || j.ok !== true || !Array.isArray(j.negocios) || !Array.isArray(j.dias)) throw new Error('resposta inesperada');
+      S.ini = { map: iniMapa(j.negocios), negocios: j.negocios, dias: j.dias, cobertura: j.cobertura || {}, parcial: !!(j.cobertura && j.cobertura.parcial), ts: (j.cobertura && j.cobertura.indiceTs) || null };
+      S.iniErr = null; S.iniTs = Date.now();
+    }).catch(function (e) { S.iniErr = e; console.warn('SDR2: iniciados falharam', e && e.message); })
+      .then(function () { S.iniLoading = false; render(); });
+  }
   // O worker aceita no máximo 92 dias por pedido de etapas (mais que isso dá erro 400): o pedido é limitado aqui.
   function etapasDe(ate) {
     var t = new Date(ate + 'T12:00:00Z').getTime() - 91 * 86400000, min = new Date(t).toISOString().slice(0, 10);
@@ -1137,7 +1337,7 @@
       if (S.mode === 't') setTimeout(function () { if (S.cfg.isActive && S.cfg.isActive()) carregar(true); }, 60000);
     }).then(function () {
       S.loading = false; render();
-      lerAtividades(); lerEtapas();
+      lerAtividades(); lerEtapas(); lerIniciados();
     });
   }
 
@@ -1163,13 +1363,14 @@
       render();
       carregar(false);
       if (S.raw && (!S.atv || Date.now() - (S.atvTs || 0) > 300000)) lerAtividades();
+      if (S.raw && (!S.ini || Date.now() - (S.iniTs || 0) > 300000)) lerIniciados();
       if (S.mode === 't' && !S.timer) {
         S.timer = setInterval(function () { if (S.cfg.isActive && S.cfg.isActive()) carregar(true); }, CFG.refreshTelaoMs);
       }
     },
     render: render,
     // núcleo puro, exposto para teste
-    _core: { prep: prep, calcular: calcular, dataBRT: dataBRT, origemKey: origemKey, origensDe: origensDe, rotuloOrigem: rotuloOrigem, corOrigem: corOrigem, agrega: agrega, serie: serie, periodoAnterior: periodoAnterior, atvLinhas: atvLinhas, agregaAtv: agregaAtv, janelaAtv: janelaAtv, agregaEtp: agregaEtp, etpLinhas: etpLinhas }
+    _core: { prep: prep, calcular: calcular, dataBRT: dataBRT, origemKey: origemKey, origensDe: origensDe, rotuloOrigem: rotuloOrigem, corOrigem: corOrigem, agrega: agrega, serie: serie, periodoAnterior: periodoAnterior, atvLinhas: atvLinhas, iniDia: iniDia, iniMapa: iniMapa, agregaIni: agregaIni, serieIniFin: serieIniFin, conferir: conferir, agregaAtv: agregaAtv, janelaAtv: janelaAtv, agregaEtp: agregaEtp, etpLinhas: etpLinhas }
   };
   w.SDR2 = API;
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
