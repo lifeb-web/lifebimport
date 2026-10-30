@@ -140,7 +140,7 @@
 (function () {
   'use strict';
   var ROWS = 'tbody tr,.lb-row,.feed-row,.abar-row,.funil-row,.bia-motor-row,.stat-row,.s2-mr,.mdeal-row,.orig-item';
-  var X = { card: null, opener: null };
+  var X = { card: null, opener: null, charts: [], sig: '', timer: null, sort: null, titulo: '' };
   function $(id) { return document.getElementById(id); }
   function norm(t) { return String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
   function tituloDe(card) {
@@ -203,11 +203,6 @@
   function achatar(clone, card) {
     // ids duplicados e regras de altura fixa por id não podem ir junto
     var ids = clone.querySelectorAll('[id]'); for (var i = 0; i < ids.length; i++) ids[i].removeAttribute('id');
-    // canvas não clona o desenho: vira imagem
-    var src = card.querySelectorAll('canvas'), dst = clone.querySelectorAll('canvas');
-    for (var k = 0; k < dst.length && k < src.length; k++) {
-      try { var im = new Image(); im.src = src[k].toDataURL('image/png'); im.alt = 'Gráfico'; im.className = 'xp-img'; dst[k].parentNode.replaceChild(im, dst[k]); } catch (e) {}
-    }
     var hid = clone.querySelectorAll('.expand-btn,.xp-btn'); for (var j = 0; j < hid.length; j++) hid[j].parentNode.removeChild(hid[j]);
   }
 
@@ -254,6 +249,7 @@
         function go() {
           var dir = h.getAttribute('aria-sort') === 'ascending' ? -1 : 1;
           th.forEach(function (o) { o.setAttribute('aria-sort', 'none'); });
+          X.sort = { ti: Array.prototype.indexOf.call(clone.querySelectorAll('table'), tb), ci: ci, dir: dir };
           h.setAttribute('aria-sort', dir === 1 ? 'ascending' : 'descending');
           var rs = Array.prototype.slice.call(tbody.rows);
           rs.sort(function (a, b) {
@@ -270,38 +266,131 @@
     });
   }
 
-  function abrirCom(titulo, sub, montar, opener) {
-    var ov = $('expandOverlay'), body = $('expandModalBody'); if (!ov || !body) return;
-    $('expandModalTitle').textContent = titulo + (sub ? ' · ' + sub : '');
-    var modal = ov.querySelector('.expand-modal');
-    modal.setAttribute('role', 'dialog'); modal.setAttribute('aria-modal', 'true'); modal.setAttribute('aria-labelledby', 'expandModalTitle');
+  /* ---------- ajuste ao tamanho do painel (um só lugar para todos os cartões) ---------- */
+  function metricas() {
+    var ov = $('expandOverlay'), m = ov && ov.querySelector('.expand-modal');
+    var w = (m ? m.clientWidth : window.innerWidth) - 44, h = window.innerHeight - 190;
+    return { w: Math.max(200, w), h: Math.max(160, h) };
+  }
+  /* SVG de gráfico: escala proporcional (nunca deforma), no máximo 1,5x o tamanho do cartão e sempre cabendo no painel;
+     o texto interno cresce junto, então o tamanho fica coerente com o resto */
+  function ajustaSvgs(clone) {
+    var M = metricas(), svgs = clone.querySelectorAll('svg'), n = 0, i;
+    for (i = 0; i < svgs.length; i++) if (!svgs[i].parentElement.closest('svg') && svgs[i].getAttribute('viewBox') && !svgs[i].classList.contains('orig-svg')) n++;
+    for (i = 0; i < svgs.length; i++) {
+      var sv = svgs[i]; if (sv.parentElement.closest('svg') || sv.classList.contains('orig-svg')) continue;
+      var vb = (sv.getAttribute('viewBox') || '').split(/[\s,]+/).map(parseFloat);
+      if (vb.length !== 4 || !(vb[2] > 0) || !(vb[3] > 0)) continue;
+      if (/none/.test(sv.getAttribute('preserveAspectRatio') || '')) { sv.style.width = '100%'; sv.style.height = '96px'; continue; }
+      var porGrafico = n > 1 ? M.h * 0.55 : M.h;
+      var k = Math.min(1.5, M.w / vb[2], Math.max(porGrafico, 160) / vb[3]);
+      sv.removeAttribute('width'); sv.removeAttribute('height');
+      sv.style.width = Math.floor(vb[2] * k) + 'px'; sv.style.maxWidth = '100%'; sv.style.height = 'auto';
+      sv.style.display = 'block'; sv.style.margin = '0 auto';
+    }
+    var im = clone.querySelectorAll('img.xp-img');
+    for (i = 0; i < im.length; i++) { im[i].style.maxHeight = Math.max(M.h, 200) + 'px'; im[i].style.width = 'auto'; im[i].style.maxWidth = '100%'; im[i].style.margin = '0 auto'; }
+  }
+  /* tabela mais larga que o painel rola na horizontal SÓ dentro de uma faixa própria */
+  function envolveTabelas(clone) {
+    var tbs = clone.querySelectorAll('table');
+    for (var i = 0; i < tbs.length; i++) {
+      var t = tbs[i]; if (t.parentElement.classList.contains('xp-hs')) continue;
+      var w = document.createElement('div'); w.className = 'xp-hs'; t.parentNode.insertBefore(w, t); w.appendChild(t);
+    }
+  }
+  /* gráfico do Chart.js: recria ao vivo no tamanho do painel (nitidez e proporção certas), com a mesma configuração do cartão */
+  function chartsVivos(clone, card) {
+    var src = card.querySelectorAll('canvas'), dst = clone.querySelectorAll('canvas');
+    for (var k = 0; k < dst.length && k < src.length; k++) {
+      var d = dst[k], ch = null;
+      try { ch = window.Chart && Chart.getChart ? Chart.getChart(src[k]) : null; } catch (e) {}
+      if (ch) {
+        try {
+          var cfg = ch.config, wrap = document.createElement('div'), cv = document.createElement('canvas');
+          wrap.className = 'xp-cv'; wrap.appendChild(cv);
+          var par = d.parentNode; par.replaceChild(wrap, d);
+          var ops = Object.assign({}, cfg.options || {}, { responsive: true, maintainAspectRatio: false, animation: false });
+          var dados = { labels: (cfg.data.labels || []).slice(), datasets: (cfg.data.datasets || []).map(function (x) { return Object.assign({}, x); }) };
+          X.charts.push(new Chart(cv.getContext('2d'), { type: cfg.type, data: dados, options: ops, plugins: cfg._config && cfg._config.plugins ? cfg._config.plugins : (cfg.plugins || []) }));
+          continue;
+        } catch (e) { /* cai para a imagem abaixo */ }
+      }
+      try { var im = new Image(); im.src = src[k].toDataURL('image/png'); im.alt = 'Gráfico'; im.className = 'xp-img'; d.parentNode.replaceChild(im, d); } catch (e2) {}
+    }
+  }
+  function mataCharts() { while (X.charts.length) { try { X.charts.pop().destroy(); } catch (e) {} } }
+  function assinatura(card) {
+    var s = card.innerHTML.length + ':' + (card.textContent || '').length + ':' + card.querySelectorAll('*').length;
+    try { var cs = card.querySelectorAll('canvas'); for (var i = 0; i < cs.length; i++) { var c = window.Chart && Chart.getChart ? Chart.getChart(cs[i]) : null; if (c) s += '|' + JSON.stringify(c.config.data.datasets.map(function (d) { return d.data; })) + (c.config.data.labels || []).length; } } catch (e) {}
+    return s + '|' + (card.textContent || '').replace(/\s+/g, ' ').slice(0, 4000);
+  }
+  function montaConteudo(card) {
+    var ov = $('expandOverlay'), body = $('expandModalBody');
+    mataCharts();
     body.innerHTML = '';
     var clone = document.createElement('div'); clone.className = 'xp' + (X.cls ? ' ' + X.cls : '');
-    montar(clone);
+    Array.prototype.forEach.call(card.children, function (ch) {
+      if (ch.matches('.card-hd,.s2-ch,.expand-btn,.xp-btn')) return;
+      clone.appendChild(ch.cloneNode(true));
+    });
+    achatar(clone, card);
     body.appendChild(clone);
+    chartsVivos(clone, card);
+    envolveTabelas(clone);
     ferramentas(body, clone); ordenavel(clone);
-    body.scrollTop = 0;
+    ajustaSvgs(clone);
+    X.sig = assinatura(card);
+    $('expandModalTitle').textContent = tituloDe(card) + (subDe(card) ? ' · ' + subDe(card) : '');
+  }
+  function abrirCom(card, opener) {
+    var ov = $('expandOverlay'), body = $('expandModalBody'); if (!ov || !body) return;
+    var modal = ov.querySelector('.expand-modal');
+    modal.setAttribute('role', 'dialog'); modal.setAttribute('aria-modal', 'true'); modal.setAttribute('aria-labelledby', 'expandModalTitle');
+    X.sort = null; X.titulo = tituloDe(card);
     X.opener = opener || document.activeElement;
-    ov.classList.add('show');
+    document.documentElement.classList.add('xp-open');
+    ov.classList.add('show');   // visível antes de montar: os gráficos medem o painel de verdade
+    montaConteudo(card);
+    body.scrollTop = 0;
     var c = $('expandModalClose'); if (c) c.focus({ preventScroll: true });
+    if (X.timer) clearInterval(X.timer);
+    X.timer = setInterval(atualiza, 1500);
+  }
+  /* dados renovaram com o painel aberto: refaz o conteúdo mantendo rolagem, busca e ordenação */
+  function atualiza() {
+    var ov = $('expandOverlay'); if (!ov || !ov.classList.contains('show')) return;
+    var card = X.card;
+    if (!card || !document.contains(card)) {
+      card = null;
+      var cs = document.querySelectorAll('#body .card,#s2-root .s2-card');
+      for (var i = 0; i < cs.length; i++) if (cs[i].offsetParent !== null && tituloDe(cs[i]) === X.titulo && podeExpandir(cs[i])) { card = cs[i]; break; }
+      if (!card) return;
+      X.card = card;
+    }
+    if (assinatura(card) === X.sig) return;
+    var body = $('expandModalBody'), st = body.scrollTop, inp = ov.querySelector('.xp-tools input'), q = inp ? inp.value : '', so = X.sort;
+    montaConteudo(card);
+    var ni = ov.querySelector('.xp-tools input');
+    if (ni && q) { ni.value = q; ni.dispatchEvent(new Event('input')); }
+    if (so) { var tb = ov.querySelectorAll('table')[so.ti]; var th = tb && tb.querySelectorAll('thead th')[so.ci]; if (th && th.classList.contains('xp-sort')) { th.click(); if (so.dir === -1) th.click(); } }
+    body.scrollTop = st;
   }
   function abrirCard(card) {
     if (!card || !podeExpandir(card)) return;
     X.card = card; X.cls = String(card.className).split(/\s+/).filter(function (c) { return c && c !== 'card' && c !== 's2-card' && c !== 'has-expand'; }).join(' ');
-    abrirCom(tituloDe(card), subDe(card), function (clone) {
-      Array.prototype.forEach.call(card.children, function (ch) {
-        if (ch.matches('.card-hd,.s2-ch,.expand-btn,.xp-btn')) return;
-        clone.appendChild(ch.cloneNode(true));
-      });
-      achatar(clone, card);
-    }, card.querySelector('.expand-btn,.xp-btn') || card);
+    abrirCom(card, card.querySelector('.expand-btn,.xp-btn') || card);
   }
   function fechar() {
     var ov = $('expandOverlay'); if (!ov || !ov.classList.contains('show')) return;
     ov.classList.remove('show');
+    document.documentElement.classList.remove('xp-open');
+    if (X.timer) { clearInterval(X.timer); X.timer = null; }
+    mataCharts();
     var o = X.opener; X.opener = null; X.card = null;
     try { if (o && document.contains(o)) o.focus({ preventScroll: true }); } catch (e) {}
   }
+  window.addEventListener('resize', function () { var ov = $('expandOverlay'); if (ov && ov.classList.contains('show')) { var c = ov.querySelector('.xp'); if (c) ajustaSvgs(c); } });
   window.LB_XP = {
     open: abrirCard, close: fechar,
     openById: function (targetId, title) {
@@ -470,7 +559,7 @@
         var st = L[ids[n]], el = st.el;
         if (!document.contains(el)) { delete L[ids[n]]; ids.splice(n, 1); n--; continue; }
         if (!el.clientHeight || el.offsetParent === null) continue;               // escondida (outra página) ou sem tamanho
-        if (el.closest('.expand-overlay')) continue;
+        if (el.closest('.expand-overlay') || document.documentElement.classList.contains('xp-open')) continue;   // com o painel aberto, a grade por trás fica parada
         var held = st.hover || st.focus || (ts - st.lastUser) < RESUME * SC;
         if (st.mode === 'anim') {
           st.t += dt; var k = Math.min(1, st.t / st.dur); setTop(st, st.from + (st.to - st.from) * ease(k));
