@@ -586,7 +586,6 @@
     '.s2 > details.s2-card{margin-top:0}',
     '.s2-cov{font-size:10px;font-weight:600;color:var(--muted,#6b6484);line-height:1.4;margin-top:-2px}',
     '.s2-cov.warn{color:var(--amber,#b45309);font-weight:700}',
-    '.s2-tb tr.s2-lig td{color:#0e7c82}',
     '.s2-kt button{margin-top:3px}',
     '.s2-conf>summary{cursor:pointer;font-size:11px;font-weight:800;color:var(--purple,#704B9B)}.s2-tb.cf{table-layout:fixed}.s2-tb.cf td:first-child{max-width:none}.s2-tb.cf th{white-space:normal;line-height:1.15;vertical-align:bottom;padding:2px 2px;font-size:8.5px}.s2-tb.cf td{padding:4px 2px;white-space:normal;overflow-wrap:anywhere;font-size:10.5px}.s2-tb.cf th:nth-child(2),.s2-tb.cf th:nth-child(3){width:15%}.s2-tb.cf th:nth-child(4){width:17%}',
     '.s2-tb tr.s2-gsin td{color:#5b5670;background:#ece9f4}',
@@ -680,7 +679,9 @@
     var t = r.atv;
     if (t.jn.antes) return chip('Atividades', 'n/d', 'Agendor só desde ' + dm(CFG.atvInicio) + ' (antes: faixa do GS)', { cinza: true, tip: tip });
     var a = t.ag, p = t.ant, ap = t.jn.apur;
-    var sub = 'inclui ' + num(a.a.lig) + (a.a.lig === 1 ? ' ligação' : ' ligações') + ' (à parte)' + (a.junto ? ' · ' + num(a.junto) + ' fechadas junto' : '');
+    // 30/10: ligação é tarefa normal. O detalhe por tipo é só composição (todos os tipos no mesmo pé).
+    var porTipo = TIPOS.map(function (x) { return { n: a.a[x[0]] || 0, l: x[1].toLowerCase() }; }).filter(function (x) { return x.n > 0; }).sort(function (u, v) { return v.n - u.n; }).slice(0, 3);
+    var sub = (porTipo.length ? 'por tipo: ' + porTipo.map(function (x) { return num(x.n) + ' ' + x.l; }).join(' · ') : 'por tipo: sem tarefas') + (a.junto ? ' · ' + num(a.junto) + ' fechadas junto' : '');
     if (t.jn.sem.length) sub += ' · ' + t.jn.sem.length + (t.jn.sem.length === 1 ? ' dia sem dado' : ' dias sem dado');
     if (ap.ativo) {
       var tipAp = 'EM APURAÇÃO: este valor é parcial e vai subir. ' + apurTexto(t.jn) + '. Total lido no Agendor até agora: ' + num(t.jn.bruto.lidas) + ' tarefas (' + num(t.jn.bruto.pend) + ' ainda a atribuir). ' + tip;
@@ -949,17 +950,16 @@
     [0, 1].forEach(function (f) { var y = padT + ih - ih * f; s += '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + y + '" y2="' + y + '" stroke="#eae7f2"/><text x="' + (padL - 4) + '" y="' + (y + 3) + '" text-anchor="end" font-size="9" fill="#766e90">' + Math.round(max * f) + '</text>'; });
     var passo = Math.ceil(b.length / (tv ? 10 : Math.max(4, Math.floor(iw / 44))));
     b.forEach(function (x, i) {
-      var cx = padL + gw * i + gw / 2, hA = ih * (x.a - x.lig) / max, hL = ih * x.lig / max;
-      var tip = dm(x.k) + ': ' + x.a + ' atividades (' + x.lig + ' ligações)' + (x.j ? ', ' + x.j + ' fechadas junto' : '') + (x.sem ? ' · dia sem dado' : '') + (x.ap ? ' · EM APURAÇÃO (tarefas ainda a atribuir; o valor vai subir)' : '');
+      var cx = padL + gw * i + gw / 2, hA = ih * x.a / max, hL = 0;
+      var tip = dm(x.k) + ': ' + x.a + ' atividades' + (x.j ? ', ' + x.j + ' fechadas junto' : '') + (x.sem ? ' · dia sem dado' : '') + (x.ap ? ' · EM APURAÇÃO (tarefas ainda a atribuir; o valor vai subir)' : '');
       s += '<g><title>' + esc(tip) + '</title>';
       if (x.ap) s += '<rect x="' + (cx - gw / 2 + 0.5) + '" y="' + padT + '" width="' + Math.max(2, gw - 1) + '" height="' + ih + '" fill="url(#s2hatch)" stroke="#d97706" stroke-dasharray="2 2" stroke-width=".8" opacity=".85"/>';
       if (x.sem) s += '<rect x="' + (cx - bw / 2) + '" y="' + (padT + ih - 3) + '" width="' + bw + '" height="3" fill="#e3e0ec"/>';
-      else s += '<rect x="' + (cx - bw / 2) + '" y="' + (padT + ih - hA - hL) + '" width="' + bw + '" height="' + Math.max(hA + hL, x.a ? 1 : 0) + '" rx="2" fill="' + C_ROXO + '" opacity=".85"/>' +
-        (x.lig ? '<rect x="' + (cx - bw / 2) + '" y="' + (padT + ih - hL) + '" width="' + bw + '" height="' + hL + '" fill="#0e9aa0"/>' : '');
+      else s += '<rect x="' + (cx - bw / 2) + '" y="' + (padT + ih - hA) + '" width="' + bw + '" height="' + Math.max(hA, x.a ? 1 : 0) + '" rx="2" fill="' + C_ROXO + '" opacity=".85"/>';
       if (i % passo === 0) s += '<text x="' + cx + '" y="' + (H - 5) + '" text-anchor="middle" font-size="9" fill="#6b6484">' + dm(x.k) + '</text>';
       s += '</g>';
     });
-    return fz(s + '</svg>', tv) + '<div class="s2-lg"><span><i style="background:' + C_ROXO + ';opacity:.85"></i>Atividades</span><span><i style="background:#0e9aa0"></i>Ligações (parte das atividades)</span>' + (b.some(function (x) { return x.ap; }) ? '<span><i style="background:repeating-linear-gradient(45deg,#fffbeb 0 2px,#d97706 2px 3px);border:1px solid #d97706"></i>Em apuração</span>' : '') + '</div>';
+    return fz(s + '</svg>', tv) + '<div class="s2-lg"><span><i style="background:' + C_ROXO + ';opacity:.85"></i>Atividades</span>' + (b.some(function (x) { return x.ap; }) ? '<span><i style="background:repeating-linear-gradient(45deg,#fffbeb 0 2px,#d97706 2px 3px);border:1px solid #d97706"></i>Em apuração</span>' : '') + '</div>';
   }
   function htmlAtividades(r, tv) {
     if (!S.atv) return S.atvErr ? '<div class="s2-empty">Não consegui ler as atividades agora.<br><button class="s2-c" data-retry="atv" style="margin-top:6px">Tentar de novo</button></div>' : '<div class="s2-empty">Carregando atividades…</div>';
@@ -968,16 +968,15 @@
     var h = '', ap = t.jn.apur;
     if (ap.ativo) h += '<div class="s2-ban">EM APURAÇÃO: ' + apurTexto(t.jn) + '. Os números abaixo são parciais, vão subir e não devem ser comparados com outro período.</div>';
     if (t.jn.sem.length) h += '<div class="s2-st warn">' + t.jn.sem.length + (t.jn.sem.length === 1 ? ' dia do período ainda sem dado (' : ' dias do período ainda sem dado (') + t.jn.sem.slice(0, 3).map(dm).join(', ') + (t.jn.sem.length > 3 ? '...' : '') + '). Os totais abaixo são parciais.</div>';
-    var linhas = TIPOS.filter(function (x) { return x[0] !== 'lig' && (a.a[x[0]] || a.j[x[0]] || x[0] === 'wa'); });
-    h += '<table class="s2-tb"><thead><tr><th>Tipo</th><th>Feitas</th><th title="Encerradas no mesmo instante do ganho/perda do negócio">Fechadas junto</th></tr></thead><tbody>';
+    var linhas = TIPOS.filter(function (x) { return a.a[x[0]] || a.j[x[0]] || x[0] === 'wa'; });
+    h += '<table class="s2-tb"><thead><tr><th>Por tipo</th><th>Feitas</th><th title="Encerradas no mesmo instante do ganho/perda do negócio">Fechadas junto</th></tr></thead><tbody>';
     function lin(nome, f, j, cls) { return '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td>' + nome + '</td><td class="' + (f ? '' : 'z') + '">' + (f ? num(f) : '·') + '</td><td class="' + (j ? 'gc' : 'z') + '">' + (j ? num(j) : '·') + '</td></tr>'; }
     linhas.forEach(function (x) { h += lin(x[1], a.a[x[0]], a.j[x[0]]); });
-    h += lin('Ligações · à parte', a.a.lig, a.j.lig, 's2-lig');
     h += '<tr style="font-weight:800"><td>' + (ap.ativo ? 'Total parcial' : 'Total') + '</td><td>' + num(a.feitas) + '</td><td class="gc">' + num(a.junto) + '</td></tr></tbody></table>';
     h += svgAtv(r, tv);
     var bq = t.jn.bruto;
     h += '<div class="s2-nt' + (tv ? ' s2-xs' : '') + '" title="' + esc(TIP_LIDAS) + '"><b>Lidas no Agendor: ' + num(bq.lidas) + ' tarefas</b> <span class="s2-i">ⓘ</span> (sem filtros) = ' + num(bq.sdr) + ' feitas pelo SDR · ' + num(bq.junto) + ' fechadas junto · ' + num(bq.nc) + ' notas/migração GS · ' + num(bq.out) + ' de outras pessoas · ' + num(bq.sis) + ' do Sistema · ' + num(bq.fora) + ' fora dos funis SDR · ' + num(bq.pend) + ' a atribuir. Só as feitas pelo SDR contam como atividade; o restante não é trabalho do SDR.</div>';
-    h += '<div class="s2-nt' + (tv ? ' s2-xs' : '') + '">' + (a.media != null && !ap.ativo ? '<b>' + dec1(a.media) + '</b> por dia com atividade (' + a.diasAtivos + (a.diasAtivos === 1 ? ' dia' : ' dias') + '). ' : '') + '<b>Fechadas junto</b> = tarefas encerradas no mesmo instante em que o negócio foi ganho ou perdido; não são trabalho do dia. <b>Ligações</b> aparecem sempre separadas (não entram na comissão).</div>';
+    h += '<div class="s2-nt' + (tv ? ' s2-xs' : '') + '">' + (a.media != null && !ap.ativo ? '<b>' + dec1(a.media) + '</b> por dia com atividade (' + a.diasAtivos + (a.diasAtivos === 1 ? ' dia' : ' dias') + '). ' : '') + '<b>Fechadas junto</b> = tarefas encerradas no mesmo instante em que o negócio foi ganho ou perdido; não são trabalho do dia. <b>Ligação</b> conta como tarefa normal, igual às demais (WhatsApp, e-mail, pesquisa, outras).</div>';
     return h;
   }
   function htmlEtapasMov(r) {
@@ -1031,6 +1030,8 @@
 
   function card(titulo, sub, corpo, extra) {
     extra = extra || {};
+    // 30/10: cartão nunca é desenhado oco (só moldura e título): sem conteúdo, não existe
+    if (!String(corpo || '').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim() && !/<(svg|canvas|img|table|button)/i.test(corpo || '')) return '';
     return '<div class="s2-card' + (extra.cls ? ' ' + extra.cls : '') + '"' + (extra.style ? ' style="' + extra.style + '"' : '') + '><div class="s2-ch"><span class="s2-ct">' + titulo + '</span><span class="s2-cs">' + (sub || '') + '</span></div><div class="s2-cb">' + corpo + '</div></div>';
   }
 
@@ -1088,7 +1089,7 @@
     var cConf = tv ? '' : '<details class="s2-det s2-card s2-conf"><summary style="padding:9px 12px">Conferência: iniciados e finalizados</summary><div class="s2-cb">' + htmlConferencia(r) + '</div></details>';
     var cAtv = card('Atividades do SDR', r.atv && !r.atv.jn.antes ? 'tarefas concluídas no Agendor' : 'Agendor', htmlAtividades(r, tv), { style: tv ? 'flex:0 0 auto' : '' });
     var cGS = card('Histórico GS Engage', 'mai a 19/10 · congelado', htmlGS(r), { cls: 's2-gs', style: tv ? 'flex:0 0 auto' : '' });
-    var cNotasTv = tv ? card('Como ler', '', '<div class="s2-nt">' + htmlNotas() + '</div>', { cls: 's2-xs', style: 'flex:0 0 auto' }) : '';
+    var cNotasTv = tv ? card('Como ler', 'regras desta aba', '<div class="s2-nt">' + htmlNotas() + '</div>', { style: 'flex:0 0 auto' }) : '';
     var cNotas = tv ? '' : '<details class="s2-det s2-card"><summary style="padding:9px 12px">Como ler esta aba</summary><div class="s2-cb s2-nt">' + htmlNotas() + '</div></details>';
     var corpo;
     if (tv) {
@@ -1341,6 +1342,8 @@
   // ---------- API pública ----------
   var API = {
     CFG: CFG, HIST_GS: HIST_GS,
+    // 30/10: cartão expandido do telão repassa os cliques (linhas clicáveis, filtros) para o mesmo tratador do painel
+    click: function (ev) { return onRootClick(ev); },
     // cfg: { root:Element, mode:'m'|'t', getPeriod:()=>({from,to,label}), bridge, key, isActive:()=>bool }
     init: function (cfg) {
       S.cfg = cfg; S.mode = cfg.mode || 'm'; S.root = cfg.root;

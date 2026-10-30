@@ -129,3 +129,361 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
+
+/* ============================================================================
+ * CARTÃO EXPANDIDO (30/10/2026)
+ * Clique/toque no título do cartão ou no botão ⤢ abre o cartão grande com TUDO que o cartão tem (listas
+ * completas, sem corte), busca em listas longas e ordenação clicando no título da coluna das tabelas.
+ * Esc, "x" ou clique fora fecham e o foco volta para o cartão. Tab fica preso dentro do expandido.
+ * Respeita todos os filtros globais porque clona o que o cartão já desenhou com os filtros aplicados.
+ * ========================================================================== */
+(function () {
+  'use strict';
+  var ROWS = 'tbody tr,.lb-row,.feed-row,.abar-row,.funil-row,.bia-motor-row,.stat-row,.s2-mr,.mdeal-row,.orig-item';
+  var X = { card: null, opener: null };
+  function $(id) { return document.getElementById(id); }
+  function norm(t) { return String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
+  function tituloDe(card) {
+    var t = card.querySelector('.card-hd-title,.s2-ct');
+    return t ? t.textContent.replace(/\s+/g, ' ').trim() : 'Detalhe';
+  }
+  function subDe(card) {
+    var t = card.querySelector('.card-hd .badge,.card-hd .hd-total,.s2-cs');
+    return t ? t.textContent.replace(/\s+/g, ' ').trim() : '';
+  }
+  function podeExpandir(card) { return !!card.querySelector('.card-hd,.s2-ch'); }
+
+  /* botão ⤢ e foco por teclado nos cabeçalhos (os cartões do SDR são redesenhados a cada filtro) */
+  var pend = false;
+  function decora() {
+    pend = false;
+    limpaVazios();
+    var hs = document.querySelectorAll('#body .card-hd:not([data-x]),#s2-root .s2-ch:not([data-x])');
+    for (var i = 0; i < hs.length; i++) {
+      var h = hs[i], card = h.closest('.card,.s2-card');
+      if (!card || card.closest('.expand-overlay')) continue;
+      h.setAttribute('data-x', '1');
+      h.setAttribute('tabindex', '0'); h.setAttribute('role', 'button');
+      h.setAttribute('aria-label', 'Expandir: ' + tituloDe(card));
+      h.setAttribute('title', 'Clique para expandir');
+      if (!card.querySelector('.expand-btn,.xp-btn')) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.setAttribute('aria-label', 'Expandir: ' + tituloDe(card)); b.title = 'Expandir';
+        if (card.classList.contains('s2-card')) { b.className = 'xp-btn'; b.textContent = '⤢'; h.appendChild(b); }
+        else { b.className = 'expand-btn xp-auto'; b.textContent = '⤢'; card.appendChild(b); card.classList.add('has-expand'); }
+      } else {
+        var eb = card.querySelector('.expand-btn,.xp-btn'); eb.setAttribute('aria-label', 'Expandir: ' + tituloDe(card)); eb.setAttribute('title', 'Expandir');
+      }
+    }
+  }
+  /* cartão sem nada além do título nunca aparece (moldura oca): some até ter conteúdo */
+  function semConteudo(card) {
+    var f = card.children;
+    for (var i = 0; i < f.length; i++) {
+      var c = f[i];
+      if (c.matches('.card-hd,.s2-ch,.expand-btn,.xp-btn')) continue;
+      if ((c.textContent || '').replace(/\s+/g, '').length) return false;
+      if (c.querySelector && c.querySelector('svg,canvas,img,table,input,button')) return false;
+    }
+    return true;
+  }
+  function limpaVazios() {
+    var cs = document.querySelectorAll('#body .card,#s2-root .s2-card');
+    for (var i = 0; i < cs.length; i++) cs[i].classList.toggle('lb-vazio', semConteudo(cs[i]));
+  }
+  function agenda() { if (pend) return; pend = true; (window.requestAnimationFrame || setTimeout)(decora); }
+
+  function achatar(clone, card) {
+    // ids duplicados e regras de altura fixa por id não podem ir junto
+    var ids = clone.querySelectorAll('[id]'); for (var i = 0; i < ids.length; i++) ids[i].removeAttribute('id');
+    // canvas não clona o desenho: vira imagem
+    var src = card.querySelectorAll('canvas'), dst = clone.querySelectorAll('canvas');
+    for (var k = 0; k < dst.length && k < src.length; k++) {
+      try { var im = new Image(); im.src = src[k].toDataURL('image/png'); im.alt = 'Gráfico'; im.className = 'xp-img'; dst[k].parentNode.replaceChild(im, dst[k]); } catch (e) {}
+    }
+    var hid = clone.querySelectorAll('.expand-btn,.xp-btn'); for (var j = 0; j < hid.length; j++) hid[j].parentNode.removeChild(hid[j]);
+  }
+
+  function linhas(root) {
+    var all = root.querySelectorAll(ROWS), out = [];
+    for (var i = 0; i < all.length; i++) {
+      var r = all[i], dentro = false, p = r.parentElement;
+      while (p && p !== root) { if (p.matches && p.matches(ROWS)) { dentro = true; break; } p = p.parentElement; }
+      if (!dentro) out.push(r);
+    }
+    return out;
+  }
+
+  function ferramentas(body, clone) {
+    var old = body.parentNode.querySelector('.xp-tools'); if (old) old.parentNode.removeChild(old);
+    var rs = linhas(clone);
+    if (rs.length < 6) return;
+    var t = document.createElement('div'); t.className = 'xp-tools';
+    var inp = document.createElement('input'); inp.type = 'search'; inp.placeholder = 'Buscar nesta lista'; inp.setAttribute('aria-label', 'Buscar nesta lista'); inp.autocomplete = 'off';
+    var cnt = document.createElement('span'); cnt.className = 'xp-count'; cnt.setAttribute('aria-live', 'polite');
+    cnt.textContent = rs.length + ' itens';
+    t.appendChild(inp); t.appendChild(cnt);
+    body.parentNode.insertBefore(t, body);
+    inp.addEventListener('input', function () {
+      var q = norm(inp.value).trim(), n = 0;
+      rs.forEach(function (r) { var ok = !q || norm(r.textContent).indexOf(q) >= 0; r.style.display = ok ? '' : 'none'; if (ok) n++; });
+      cnt.textContent = q ? n + ' de ' + rs.length : rs.length + ' itens';
+    });
+  }
+
+  function num(t) {
+    var s = String(t).replace(/\s/g, '').replace(/R\$|%|d$/g, '');
+    if (!/\d/.test(s)) return NaN;
+    s = s.replace(/\./g, '').replace(',', '.').replace(/[^0-9.\-]/g, '');
+    var v = parseFloat(s); return isNaN(v) ? NaN : v;
+  }
+  function ordenavel(clone) {
+    var tbs = clone.querySelectorAll('table');
+    tbs.forEach(function (tb) {
+      var th = tb.querySelectorAll('thead th'), tbody = tb.tBodies[0];
+      if (!th.length || !tbody || tbody.rows.length < 4 || tbody.querySelector('td[colspan]')) return;
+      th.forEach(function (h, ci) {
+        h.classList.add('xp-sort'); h.setAttribute('tabindex', '0'); h.setAttribute('role', 'button'); h.setAttribute('aria-sort', 'none');
+        function go() {
+          var dir = h.getAttribute('aria-sort') === 'ascending' ? -1 : 1;
+          th.forEach(function (o) { o.setAttribute('aria-sort', 'none'); });
+          h.setAttribute('aria-sort', dir === 1 ? 'ascending' : 'descending');
+          var rs = Array.prototype.slice.call(tbody.rows);
+          rs.sort(function (a, b) {
+            var ta = (a.cells[ci] || {}).textContent || '', tb2 = (b.cells[ci] || {}).textContent || '';
+            var na = num(ta), nb = num(tb2);
+            if (!isNaN(na) && !isNaN(nb)) return (na - nb) * dir;
+            return ta.localeCompare(tb2, 'pt-BR') * dir;
+          });
+          rs.forEach(function (r) { tbody.appendChild(r); });
+        }
+        h.addEventListener('click', go);
+        h.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+      });
+    });
+  }
+
+  function abrirCom(titulo, sub, montar, opener) {
+    var ov = $('expandOverlay'), body = $('expandModalBody'); if (!ov || !body) return;
+    $('expandModalTitle').textContent = titulo + (sub ? ' · ' + sub : '');
+    var modal = ov.querySelector('.expand-modal');
+    modal.setAttribute('role', 'dialog'); modal.setAttribute('aria-modal', 'true'); modal.setAttribute('aria-labelledby', 'expandModalTitle');
+    body.innerHTML = '';
+    var clone = document.createElement('div'); clone.className = 'xp' + (X.cls ? ' ' + X.cls : '');
+    montar(clone);
+    body.appendChild(clone);
+    ferramentas(body, clone); ordenavel(clone);
+    body.scrollTop = 0;
+    X.opener = opener || document.activeElement;
+    ov.classList.add('show');
+    var c = $('expandModalClose'); if (c) c.focus({ preventScroll: true });
+  }
+  function abrirCard(card) {
+    if (!card || !podeExpandir(card)) return;
+    X.card = card; X.cls = String(card.className).split(/\s+/).filter(function (c) { return c && c !== 'card' && c !== 's2-card' && c !== 'has-expand'; }).join(' ');
+    abrirCom(tituloDe(card), subDe(card), function (clone) {
+      Array.prototype.forEach.call(card.children, function (ch) {
+        if (ch.matches('.card-hd,.s2-ch,.expand-btn,.xp-btn')) return;
+        clone.appendChild(ch.cloneNode(true));
+      });
+      achatar(clone, card);
+    }, card.querySelector('.expand-btn,.xp-btn') || card);
+  }
+  function fechar() {
+    var ov = $('expandOverlay'); if (!ov || !ov.classList.contains('show')) return;
+    ov.classList.remove('show');
+    var o = X.opener; X.opener = null; X.card = null;
+    try { if (o && document.contains(o)) o.focus({ preventScroll: true }); } catch (e) {}
+  }
+  window.LB_XP = {
+    open: abrirCard, close: fechar,
+    openById: function (targetId, title) {
+      var t = $(targetId); var card = t && t.closest('.card,.s2-card'); if (card) abrirCard(card);
+    },
+    isOpen: function () { var ov = $('expandOverlay'); return !!(ov && ov.classList.contains('show')); }
+  };
+
+  function init() {
+    decora();
+    var alvo = [$('body'), $('s2-root')];
+    alvo.forEach(function (a) { if (a && window.MutationObserver) new MutationObserver(agenda).observe(a, { childList: true, subtree: true }); });
+    document.addEventListener('click', function (e) {
+      var ov = $('expandOverlay');
+      if (ov && ov.classList.contains('show')) {
+        if (e.target === ov) { fechar(); return; }
+        // linhas e filtros do SDR dentro do expandido repassam o clique para o tratador do painel
+        if (ov.contains(e.target) && window.SDR2 && e.target.closest('[data-go],[data-mot],button[data-f],button[data-gran],button[data-retry]')) {
+          var filtro = e.target.closest('button[data-f],button[data-gran],button[data-retry],tr[data-go*=":"]');
+          try { window.SDR2.click(e); } catch (err) {}
+          if (filtro) fechar();
+        }
+        return;
+      }
+      var btn = e.target.closest('.expand-btn,.xp-btn');
+      if (btn) { e.preventDefault(); e.stopPropagation(); abrirCard(btn.closest('.card,.s2-card')); return; }
+      var hd = e.target.closest('.card-hd[data-x],.s2-ch[data-x]');
+      if (hd && !e.target.closest('button,a,input,select,.orig-tog,.orig-filtro')) abrirCard(hd.closest('.card,.s2-card'));
+    }, true);
+    document.addEventListener('keydown', function (e) {
+      var ov = $('expandOverlay'), aberto = ov && ov.classList.contains('show');
+      if (e.key === 'Escape' && aberto) {
+        var lm = $('modal-overlay'); if (lm && lm.classList.contains('show')) return; // fecha só o modal de cima
+        e.stopPropagation(); fechar(); return;
+      }
+      if (aberto && e.key === 'Tab') {
+        var f = ov.querySelectorAll('button,input,a[href],th[tabindex],summary,[tabindex="0"]'), v = [];
+        for (var i = 0; i < f.length; i++) if (f[i].offsetParent !== null) v.push(f[i]);
+        if (!v.length) return;
+        var first = v[0], last = v[v.length - 1];
+        if (!ov.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+        else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        return;
+      }
+      if ((e.key === 'Enter' || e.key === ' ') && !aberto) {
+        var hd = e.target && e.target.closest && e.target.closest('.card-hd[data-x],.s2-ch[data-x]');
+        if (hd && e.target === hd) { e.preventDefault(); abrirCard(hd.closest('.card,.s2-card')); }
+      }
+    }, true);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+
+/* ============================================================================
+ * ROLAGEM AUTOMÁTICA DAS LISTAS (30/10/2026)
+ * Lista que não cabe no cartão sobe/desce sozinha, MAS:
+ *  - só rola se realmente não cabe (cabendo, fica parada);
+ *  - anda por "páginas" alinhadas com o topo de uma linha (nunca corta linha no meio), com pausa de leitura
+ *    em cada página e retorno suave ao topo (sem pulo);
+ *  - quando os dados renovam (a cada 20/60 s) a posição NÃO volta ao topo: a linha que estava no alto
+ *    continua no mesmo lugar (âncora por texto da linha);
+ *  - pausa ao passar o mouse, tocar, rolar na mão ou focar com o teclado; retoma depois de 5 s parado;
+ *  - um único laço requestAnimationFrame para todas as listas, só mexe nas visíveis (página atual);
+ *  - prefers-reduced-motion: não rola sozinha (a lista inteira está no cartão expandido).
+ * ========================================================================== */
+(function () {
+  'use strict';
+  var RM = false; try { RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+  var DWELL_MIN = 4500, DWELL_ROW = 260, DWELL_MAX = 10000, ANIM = 700, TOPANIM = 900, RESUME = 5000;
+  var L = {}, ids = [], rafId = 0, last = 0, SC = 1; // SC: escala de tempo (só o teste automatizado mexe)
+
+  function rowsOf(el) {
+    var c = el.children;
+    if (c.length === 1 && c[0].tagName === 'TABLE') { var tb = c[0].tBodies[0]; return tb ? Array.prototype.slice.call(tb.rows) : []; }
+    return Array.prototype.slice.call(c);
+  }
+  function keyOf(r) { return (r.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 90); }
+  function topOf(el, r) { return r.getBoundingClientRect().top - el.getBoundingClientRect().top + el.scrollTop; }
+  function hdrH(el) { var th = el.querySelector('thead'); return th && getComputedStyle(th.rows ? th.rows[0].cells[0] : th).position === 'sticky' ? th.getBoundingClientRect().height : 0; }
+
+  function plan(st) {
+    var el = st.el, ch = el.clientHeight, sh = el.scrollHeight, max = sh - ch;
+    if (max <= 2) return [];
+    var rows = rowsOf(el); if (!rows.length) return [0, max];
+    var hdr = hdrH(el), tops = rows.map(function (r) { return topOf(el, r); }), hs = rows.map(function (r) { return r.getBoundingClientRect().height; });
+    var pages = [0], cur = 0, guard = 0;
+    while (guard++ < 400) {
+      var i = -1;
+      for (var k = 0; k < rows.length; k++) if (tops[k] + hs[k] > cur + ch + 1) { i = k; break; }
+      if (i < 0) break;
+      var next = tops[i] - hdr;
+      if (next <= cur + 1) next = cur + Math.max(ch - hdr, 40);
+      if (next >= max) { pages.push(max); cur = max; break; }
+      pages.push(next); cur = next;
+    }
+    if (cur < max) {
+      var lastTop = max, lt = -1;
+      for (var m = 0; m < rows.length; m++) if (tops[m] - hdr >= max - 1) { lt = m; break; }
+      if (lt >= 0) lastTop = tops[lt] - hdr;
+      if (lastTop > cur + 1) pages.push(Math.min(lastTop, max));
+    }
+    var out = [pages[0]]; for (var p = 1; p < pages.length; p++) if (pages[p] - out[out.length - 1] > 1) out.push(pages[p]);
+    return out.length > 1 ? out : [];
+  }
+  function dwellFor(st) {
+    var vis = Math.max(1, Math.round(st.el.clientHeight / Math.max(20, (rowsOf(st.el)[0] || { getBoundingClientRect: function () { return { height: 40 }; } }).getBoundingClientRect().height)));
+    return SC * Math.min(DWELL_MAX, DWELL_MIN + DWELL_ROW * vis);
+  }
+  function anchorOf(st) {
+    var el = st.el, rows = rowsOf(el), base = el.getBoundingClientRect().top, vistos = {};
+    for (var i = 0; i < rows.length; i++) {
+      var k = keyOf(rows[i]), r = rows[i].getBoundingClientRect();
+      if (r.bottom - base > 2) { st.anchor = { key: k, dup: vistos[k] || 0, off: r.top - base, pos: el.scrollTop }; return; }
+      vistos[k] = (vistos[k] || 0) + 1;
+    }
+    st.anchor = null;
+  }
+  function setTop(st, v) { st.expect = v; st.el.scrollTop = v; }
+  function ease(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
+
+  function bind(st) {
+    var el = st.el;
+    function user() { st.lastUser = performance.now(); }
+    el.addEventListener('mouseenter', function () { st.hover = true; });
+    el.addEventListener('mouseleave', function () { st.hover = false; st.lastUser = performance.now() - RESUME + 1500; });
+    el.addEventListener('wheel', user, { passive: true });
+    el.addEventListener('touchstart', user, { passive: true });
+    el.addEventListener('touchmove', user, { passive: true });
+    el.addEventListener('pointerdown', user, { passive: true });
+    el.addEventListener('focusin', function () { st.focus = true; });
+    el.addEventListener('focusout', function () { st.focus = false; });
+    el.addEventListener('scroll', function () {
+      if (Math.abs(el.scrollTop - (st.expect == null ? el.scrollTop : st.expect)) > 2) { user(); st.mode = 'dwell'; st.wait = dwellFor(st); st.expect = el.scrollTop; anchorOf(st); }
+    }, { passive: true });
+  }
+
+  function register(id, opts) {
+    var el = document.getElementById(id); if (!el) return;
+    var st = L[id];
+    var criou = false;
+    if (!st) { st = L[id] = { id: id, el: el, mode: 'dwell', wait: 0, idx: 0, pages: [], lastUser: -1e9, expect: null, anchor: null }; ids.push(id); criou = true; }
+    var novo = criou || st.el !== el;
+    if (novo) { st.el = el; st.expect = null; bind(st); }
+    // restaura a posição depois de a lista ter sido redesenhada (innerHTML novo volta ao topo sozinho)
+    var a = st.anchor;
+    if (a && !novo) {
+      var rows = rowsOf(el), ok = false, vistos = {};
+      for (var i = 0; i < rows.length; i++) {
+        var k = keyOf(rows[i]);
+        if (k === a.key && (vistos[k] || 0) === a.dup) { setTop(st, Math.max(0, topOf(el, rows[i]) - a.off)); ok = true; break; }
+        vistos[k] = (vistos[k] || 0) + 1;
+      }
+      if (!ok) setTop(st, Math.min(a.pos || 0, Math.max(0, el.scrollHeight - el.clientHeight)));
+    } else { setTop(st, 0); }
+    st.pages = plan(st);
+    if (!st.pages.length) { setTop(st, 0); st.anchor = null; st.mode = 'dwell'; }
+    else { st.idx = 0; for (var p = st.pages.length - 1; p >= 0; p--) if (st.pages[p] <= el.scrollTop + 2) { st.idx = p; break; } anchorOf(st); if (st.mode !== 'anim') st.wait = Math.max(st.wait, 1500 * SC); }
+    if (!rafId) { last = performance.now(); rafId = requestAnimationFrame(frame); }
+  }
+
+  function frame(ts) {
+    var dt = Math.min(100, ts - last); last = ts; rafId = 0;
+    if (!RM && !document.hidden) {
+      for (var n = 0; n < ids.length; n++) {
+        var st = L[ids[n]], el = st.el;
+        if (!document.contains(el)) { delete L[ids[n]]; ids.splice(n, 1); n--; continue; }
+        if (!el.clientHeight || el.offsetParent === null) continue;               // escondida (outra página) ou sem tamanho
+        if (el.closest('.expand-overlay')) continue;
+        var held = st.hover || st.focus || (ts - st.lastUser) < RESUME * SC;
+        if (st.mode === 'anim') {
+          st.t += dt; var k = Math.min(1, st.t / st.dur); setTop(st, st.from + (st.to - st.from) * ease(k));
+          if (k >= 1) { st.mode = 'dwell'; st.wait = dwellFor(st); anchorOf(st); }
+          continue;
+        }
+        if (held) continue;
+        st.wait -= dt;
+        if (st.wait > 0) continue;
+        var pg = plan(st); st.pages = pg;
+        if (!pg.length) { st.wait = 3000; continue; }
+        var cur = el.scrollTop, nextIdx = -1;
+        for (var q = 0; q < pg.length; q++) if (pg[q] > cur + 2) { nextIdx = q; break; }
+        var to = nextIdx < 0 ? 0 : pg[nextIdx];
+        st.from = cur; st.to = to; st.t = 0; st.dur = SC * (nextIdx < 0 ? Math.max(TOPANIM, Math.min(2600, 500 + Math.abs(cur - to) * 0.7)) : ANIM); st.mode = 'anim';
+      }
+    }
+    if (window.LB_SCROLL && window.LB_SCROLL._frameHook) window.LB_SCROLL._frameHook(ts);
+    if (ids.length) rafId = requestAnimationFrame(frame);
+  }
+
+  window.LB_SCROLL = { register: register, _scale: function (v) { SC = v; }, _frameHook: null, _state: L, _plan: function (id) { return L[id] ? plan(L[id]) : null; } };
+})();

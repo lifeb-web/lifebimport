@@ -3301,7 +3301,7 @@ function renderGa4SectionTelao(d) {
   autoScrollIfNeeded('ga4-sources-scroll');
 
   el('ga4-cities-badge').textContent = d.cities.length + ' cidades';
-  el('ga4-cities-rows').innerHTML = d.cities.length === 0 ? ga4EmptyRow_(4) : d.cities.slice(0, 60).map(c => `<tr>
+  el('ga4-cities-rows').innerHTML = d.cities.length === 0 ? ga4EmptyRow_(4) : d.cities.map(c => `<tr>
       <td>${escHtml(c.region)}</td>
       <td class="ga4-td-left">${escHtml(c.city)}</td>
       <td>${fmtInt_(c.users)}</td>
@@ -5366,7 +5366,7 @@ function renderLtvSectionTelao(d) {
   el('ltv-won-total').textContent = fmtMoney(k.ganhoValor);
   el('ltv-won-rows').innerHTML = d.recentWon.length === 0
     ? '<div class="feed-empty">Nenhuma recompra fechada no período</div>'
-    : d.recentWon.slice(0, 60).map(x => `
+    : d.recentWon.slice(0, 300).map(x => `
       <a class="feed-row" href="${AGENDOR_DEAL}${x.id}" target="_blank">
         <div class="feed-dot fd-green"></div>
         <div class="feed-info">
@@ -5383,7 +5383,7 @@ function renderLtvSectionTelao(d) {
   el('ltv-lost-total').textContent = k.perdidoCont + ' ciclos';
   el('ltv-lost-rows').innerHTML = d.recentLost.length === 0
     ? '<div class="feed-empty">Nenhum ciclo perdido no período</div>'
-    : d.recentLost.slice(0, 60).map(x => `
+    : d.recentLost.slice(0, 300).map(x => `
       <a class="feed-row" href="${AGENDOR_DEAL}${x.id}" target="_blank">
         <div class="feed-dot fd-red"></div>
         <div class="feed-info">
@@ -5637,7 +5637,7 @@ function renderSdrSectionTelao(d) {
   el('sdr-won-total').textContent = d.wonList.length + ' no período';
   el('sdr-won-rows').innerHTML = d.wonList.length === 0
     ? '<div class="feed-empty">Nenhum ganho no período</div>'
-    : d.wonList.slice(0, 60).map(p => `
+    : d.wonList.slice(0, 300).map(p => `
       <div class="feed-row" style="cursor:default">
         <div class="feed-dot fd-green"></div>
         <div class="feed-info">
@@ -5653,7 +5653,7 @@ function renderSdrSectionTelao(d) {
   el('sdr-lost-total').textContent = d.lostList.length + ' no período';
   el('sdr-lost-rows').innerHTML = d.lostList.length === 0
     ? '<div class="feed-empty">Nenhum perdido no período</div>'
-    : d.lostList.slice(0, 60).map(p => `
+    : d.lostList.slice(0, 300).map(p => `
       <div class="feed-row" style="cursor:default">
         <div class="feed-dot fd-red"></div>
         <div class="feed-info">
@@ -6791,6 +6791,8 @@ function ajustaRankingSemScroll_() {
   if (!box) return;
   box.classList.remove('ultra');
   if (box.scrollHeight > box.clientHeight + 1) box.classList.add('ultra');
+  // 30/10: se mesmo sem a linha de detalhe sobrar vendedor (mais de 10), a lista anda sozinha em vez de cortar
+  try { autoScrollIfNeeded('lb-rows'); } catch (e) {}
 }
 window.addEventListener('resize', () => { try { ajustaRankingSemScroll_(); } catch (e) {} });
 
@@ -6823,6 +6825,8 @@ const _autoScrollTimers    = {};
 const _manualScrollAt      = {};
 const _autoScrollSignature = {};
 function autoScrollIfNeeded(elId, opts) {
+  // 30/10: motor novo em legivel.js (páginas alinhadas por linha, sem pulo, preserva a posição quando os dados renovam)
+  if (window.LB_SCROLL) { window.LB_SCROLL.register(elId, opts); return; }
   const el2 = document.getElementById(elId);
   if (!el2) return;
 
@@ -7436,22 +7440,13 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { el('modal-
 // gera nós novos e "mudos" — evita herdar o listener de auto-scroll,
 // que fica preso só no elemento fonte).
 function openExpand(targetId, title) {
-  const src = el(targetId);
-  if (!src) return;
-  el('expandModalTitle').textContent = title;
-  el('expandModalBody').innerHTML = src.innerHTML;
-  el('expandOverlay').classList.add('show');
+  // 30/10: o cartão expandido agora vive em legivel.js (lista completa, busca, ordenação, foco e teclado)
+  if (window.LB_XP) LB_XP.openById(targetId, title);
 }
 function closeExpand() {
-  el('expandOverlay').classList.remove('show');
+  if (window.LB_XP) LB_XP.close(); else el('expandOverlay').classList.remove('show');
 }
-document.addEventListener('click', e => {
-  const btn = e.target.closest('.expand-btn');
-  if (btn) { openExpand(btn.dataset.target, btn.dataset.title); return; }
-  if (e.target.id === 'expandOverlay') closeExpand();
-});
 el('expandModalClose').addEventListener('click', closeExpand);
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeExpand(); });
 
 // ── UTILS ─────────────────────────────────────────────────────
 function el(id) { return document.getElementById(id); }

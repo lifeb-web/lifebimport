@@ -66,7 +66,7 @@ footer{font-size:11px;padding:4px 8px}
 .lb-sub{font-size:10.5px}
 .lb-sub span{overflow:visible;text-overflow:clip}
 .lb-stale{font-size:10.5px}
-#lb-rows .lb-row{padding:3px 14px;gap:1px}
+#lb-rows .lb-row{padding:3px 14px;gap:1px;min-height:40px}
 .feed-co{font-size:12px}
 .feed-rep,.feed-date{font-size:10.5px}
 .feed-val{font-size:12px}
@@ -83,7 +83,7 @@ footer{font-size:11px;padding:4px 8px}
 /* LTV: mesma regra de ranking sem rolagem do Vendas */
 #ltv-hero-row{height:96px;gap:8px}
 #ltv-lb-rows{overflow:hidden;justify-content:stretch}
-#ltv-lb-rows .lb-row{flex:1 1 0;min-height:0;justify-content:center;overflow:hidden;padding:3px 14px;gap:1px}
+#ltv-lb-rows .lb-row{flex:1 1 0;min-height:40px;justify-content:center;overflow:hidden;padding:3px 14px;gap:1px}
 
 /* ---------- Páginas do telão ---------- */
 body[data-pg="1"] [data-pg]:not([data-pg~="1"]),
@@ -126,3 +126,56 @@ body[data-view="bia"][data-pg="1"] #bia-worker-health-card{grid-area:8/2/11/3}
 body[data-view="bia"][data-pg="1"] #bia-deploy-stats-card{grid-area:1/3/4/4}
 body[data-view="bia"][data-pg="1"] #bia-deploy-freq-card{grid-area:4/3/11/4}
 body[data-view="bia"][data-pg="2"] #bia-main{grid-template-columns:1fr 1.25fr 1fr;grid-template-rows:minmax(0,1fr);grid-template-areas:"mr mf tr"}
+
+/* ---------- Cartão expandido ---------- */
+.card .card-hd[data-x],.s2-card .s2-ch[data-x]{cursor:pointer}
+.card .card-hd[data-x]:hover .card-hd-title,.s2-ch[data-x]:hover .s2-ct{color:var(--purple)}
+.card .card-hd[data-x]:focus-visible,.s2-ch[data-x]:focus-visible,.expand-btn:focus-visible,.xp-btn:focus-visible{outline:2px solid var(--purple);outline-offset:-2px;border-radius:8px}
+.expand-btn{width:22px;height:22px;font-size:12px;top:9px;right:10px}
+.xp-btn{flex-shrink:0;width:22px;height:22px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:12px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;margin-left:6px;padding:0}
+.xp-btn:hover{background:var(--bg);color:var(--purple);border-color:var(--purple-l)}
+.expand-overlay{padding:20px}
+.expand-modal{width:min(1280px,95vw);max-height:min(94vh,780px);height:min(94vh,780px)}
+.expand-modal-hd{padding:12px 20px}
+.expand-modal-title{font-size:14px}
+.expand-modal-close{width:28px;height:28px;font-size:14px}
+.expand-modal-body{padding:6px 16px 16px;min-height:0}
+.xp-tools{display:flex;align-items:center;gap:12px;padding:8px 20px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg)}
+.xp-tools input{flex:0 1 340px;font:600 12px var(--font);padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:#fff;color:var(--text);min-width:0}
+.xp-tools input:focus{outline:2px solid var(--purple-l);border-color:var(--purple-l)}
+.xp-count{font-size:10.5px;color:var(--muted);font-weight:700}
+.xp-sort{cursor:pointer;user-select:none}
+.xp-sort:hover{color:var(--purple)}
+.xp-sort[aria-sort="ascending"]::after{content:" ▲";font-size:9px}
+.xp-sort[aria-sort="descending"]::after{content:" ▼";font-size:9px}
+.xp-img{width:100%;height:auto;display:block}
+/* dentro do expandido nada tem altura fixa nem rolagem escondida: a lista inteira aparece e o corpo rola */
+.xp{display:block;width:100%}
+.xp *{max-height:none}
+.xp .lb-rows,.xp .feed-scroll,.xp .funil-body,.xp .ga4-table-scroll,.xp .s2-cb,.xp .orig-body,.xp .orig-legend{overflow:visible!important;height:auto!important;flex:none!important;min-height:0!important}
+.xp .lb-row,.xp .funil-row,.xp .abar-row,.xp .feed-row{flex:0 0 auto!important;min-height:0!important;overflow:visible!important;padding-top:8px;padding-bottom:8px}
+.xp .orig-body{flex-direction:column;align-items:stretch}
+.xp .orig-ring{flex:none;height:320px;width:100%;max-width:none;aspect-ratio:auto;display:flex;justify-content:center}
+.xp .orig-svg{width:auto;height:100%}
+.xp .funil-name{white-space:normal;overflow:visible}
+.xp .lb-sub span,.xp .lb-name{overflow:visible;text-overflow:clip;white-space:normal}
+.xp .s2-tb td:first-child{max-width:none;width:auto;white-space:normal}
+.xp .ga4-table-card th{position:static}
+.xp .s2-tb{font-size:12px}.xp .s2-tb td{padding:5px 6px}.xp .s2-tb th{font-size:10px}
+.xp .s2-mr{font-size:12px}.xp .s2-nt,.xp .s2-lg{font-size:11px}
+.xp .s2-chart{max-height:360px;width:100%;margin:0 auto}
+
+/* ---------- Ads: nomes de campanha e anúncio quebram em vez de cortar ---------- */
+#ads-campanhas-rows .funil-name,#ads-campanhas-rows .abar-name-text,#ads-anuncios-rows .og-title-text,.abar-name-text{max-width:none;white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+#ads-campanhas-rows .abar-row{min-height:48px}
+.feed-co{white-space:normal;overflow:visible}
+.og-title-text{white-space:normal;overflow:visible;text-overflow:clip}
+
+/* ---------- Rosca de origem: texto do SVG nunca abaixo de 9px depois da escala ---------- */
+.orig-t1{font-size:13px}.orig-t2{font-size:22px}.orig-t3{font-size:13px}
+.orig-lbn{font-size:13px}.orig-lbp{font-size:14px}
+
+/* ---------- Movimento reduzido: sem animação ---------- */
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+.lb-vazio{display:none!important}
