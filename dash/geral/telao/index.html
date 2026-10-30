@@ -330,6 +330,12 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 #bia-col-center{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
 #bia-col-right{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
 #bia-sdr-cards{display:flex;flex-direction:column;gap:6px;padding:8px 14px}
+.bia-status{font-size:11px;font-weight:700;padding:7px 12px;border-radius:8px;margin-bottom:8px;line-height:1.35;flex-shrink:0}
+.bia-status-ok{background:#ecfdf3;border:1px solid #b7ebc9;color:#166534}
+.bia-status-load{background:#f3f1f8;border:1px solid #e1dcef;color:#6b6484}
+.bia-status-warn{background:#fff3cd;border:1px solid #e8c468;color:#8a6100}
+.bia-status-crit{background:#fee2e2;border:1px solid #f5b5b5;color:#991b1b}
+.bia-status-escopo{font-weight:600;opacity:.85}
 .bia-sdr-card{display:flex;align-items:center;gap:8px;background:var(--bg);border-radius:9px;padding:7px 10px;font-size:.8rem;font-weight:700}
 .bia-sdr-avatar{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.62rem;background:linear-gradient(135deg,var(--purple),var(--magenta))}
 #bia-trend-chart{padding:8px 14px 4px;flex-shrink:0}
@@ -1713,9 +1719,8 @@ body.tv-grande .rv-k-val{font-size:19px}
        período no topo continuava mostrando "Ontem" selecionado — chip e
        dado discordando, sem nenhum aviso explícito. Banner deixa claro
        quando isso acontece, em vez de deixar a inconsistência silenciosa. -->
-  <div id="bia-periodo-aviso" style="display:none;background:#fff3cd;border:1px solid #e8c468;color:#8a6100;font-size:11px;font-weight:700;padding:7px 14px;border-radius:8px;margin-bottom:8px;flex-shrink:0">
-    ⚠ Este período não é suportado pela BIA (fonte só tem Hoje/7 dias/30 dias/Este mês) — mostrando dado de Hoje.
-  </div>
+  <div id="bia-status" class="bia-status bia-status-load">Carregando os dados da Bia…</div>
+    <div id="bia-periodo-aviso" style="display:none;background:#eef1fb;border:1px solid #c9d0ee;color:#3b4a8a;font-size:11px;font-weight:700;padding:7px 14px;border-radius:8px;margin-bottom:8px;flex-shrink:0"></div>
 
   <!-- BIA (25-26/08, redesenhado 26/08) — lê do worker isolado bia-dash-sync
        (GET /api/snapshot), nunca do gs-agendor-worker direto. 7 kchips do
@@ -1729,12 +1734,12 @@ body.tv-grande .rv-k-val{font-size:19px}
       <span class="kc-sub" id="bia-k-gasto-sub">chamadas hoje</span>
     </div>
     <div class="kchip kchip-b" style="--accent-color:var(--magenta)">
-      <span class="kc-label">Mês (IA)</span>
+      <span class="kc-label" title="Gasto com IA no mês atual. Não muda com o período escolhido.">Mês atual (IA) ⓘ</span>
       <div class="kc-row"><span class="kc-val" id="bia-k-mes"><span class="skel"></span></span></div>
       <span class="kc-sub" id="bia-k-mes-sub">projeção</span>
     </div>
     <div class="kchip kchip-b" id="bia-kchip-total" style="--accent-color:var(--green)">
-      <span class="kc-label">Total Projetado</span>
+      <span class="kc-label" title="Projeção do mês atual: IA mais custos fixos. Não muda com o período escolhido.">Total Projetado ⓘ</span>
       <div class="kc-row"><span class="kc-val" id="bia-k-total"><span class="skel"></span></span></div>
       <span class="kc-sub" id="bia-k-teto">teto —</span>
     </div>
@@ -1744,9 +1749,9 @@ body.tv-grande .rv-k-val{font-size:19px}
       <span class="kc-sub" id="bia-k-cache-pct">— hoje</span>
     </div>
     <div class="kchip kchip-b" style="--accent-color:var(--s1)">
-      <span class="kc-label">Leads Monitor.</span>
+      <span class="kc-label" title="Leads que a Bia acompanha no Agendor agora. Não muda com o período nem com Outbound/Inbound.">Leads Monitor. ⓘ</span>
       <div class="kc-row"><span class="kc-val" id="bia-k-leads"><span class="skel"></span></span></div>
-      <span class="kc-sub">Agendor</span>
+      <span class="kc-sub">Agendor, agora</span>
     </div>
     <div class="kchip kchip-b" style="--accent-color:var(--s5)">
       <span class="kc-label" id="bia-k-msgs-label">Mensagens Hoje</span>
@@ -1823,7 +1828,7 @@ body.tv-grande .rv-k-val{font-size:19px}
            sem precisar cortar nada de Confiança&Saúde nem Estrutura SDR. -->
       <div class="card" id="bia-trend-card" style="flex:1 1 auto;display:flex;flex-direction:column;min-height:0">
         <div class="card-hd">
-          <span class="card-hd-title">Tendência de Custo × Notificações (14 dias)</span>
+          <span class="card-hd-title">Tendência de Custo × Mensagens (14 dias, fixo)</span>
           <span class="badge" id="bia-trend-badge"></span>
         </div>
         <div id="bia-trend-chart" style="flex:1;min-height:0"></div>
@@ -1842,7 +1847,8 @@ body.tv-grande .rv-k-val{font-size:19px}
           <span class="badge" id="bia-worker-health-badge"></span>
         </div>
         <div style="padding:2px 14px">
-          <div class="stat-row"><span class="k">Worker (bia-dash-sync) — agora</span><span class="v" id="bia-worker-health-status">—</span></div>
+          <div class="stat-row"><span class="k">Atualizador dos dados (bia-dash-sync)</span><span class="v" id="bia-worker-health-status">—</span></div>
+        <div class="stat-row"><span class="k">Leitura dos dados da Bia</span><span class="v" id="bia-worker-leitura">—</span></div>
         </div>
       </div>
       <div class="card" id="bia-sdr-card" style="display:none">
@@ -1877,9 +1883,9 @@ body.tv-grande .rv-k-val{font-size:19px}
           <span class="badge" id="bia-deploy-badge"></span>
         </div>
         <div style="padding:2px 14px">
-          <div class="stat-row"><span class="k">Testes Automatizados</span><span class="v good" id="bia-deploy-suite">—</span></div>
-          <div class="stat-row"><span class="k">Falhas</span><span class="v" id="bia-deploy-falhas">—</span></div>
-          <div class="stat-row"><span class="k">Desde início do log</span><span class="v" id="bia-deploy-desde">—</span></div>
+          <div class="stat-row"><span class="k">Testes automatizados (último)</span><span class="v good" id="bia-deploy-suite">—</span></div>
+          <div class="stat-row"><span class="k">Falhas no último teste</span><span class="v" id="bia-deploy-falhas">—</span></div>
+          <div class="stat-row"><span class="k">Última atualização do sistema</span><span class="v" id="bia-deploy-desde">—</span></div>
         </div>
       </div>
       <div class="card" id="bia-deploy-freq-card" style="flex:1;display:flex;flex-direction:column;min-height:0">
@@ -3192,10 +3198,10 @@ function renderGa4VisitorsChart_(dias, vals, leadsVals) {
       showLine: false, clip: false, order: 1
     }] : [])
   ];
-  if (n >= 8) {
+  if (vals.filter(v => v !== null && v !== undefined).length >= 8) {
     const media = vals.map((_, i) => {
-      const janela = vals.slice(Math.max(0, i - 2), i + 3);
-      return janela.reduce((a, b) => a + b, 0) / janela.length;
+      const janela = vals.slice(Math.max(0, i - 2), i + 3).filter(v => v !== null && v !== undefined);
+      return janela.length ? janela.reduce((a, b) => a + b, 0) / janela.length : null;
     });
     datasets.push({ type: 'line', label: 'Tendência', data: media, borderColor: 'rgba(107,100,132,.55)', borderWidth: 2, borderDash: [5, 4], pointRadius: 0, fill: false, tension: .4, order: 2 });
   }
@@ -3415,9 +3421,14 @@ let _biaSnap = null;
 let _biaLoading = false;
 
 async function fetchBiaSnapshot(periodo) {
-  const r = await fetch(BIA_SYNC_URL + '?periodo=' + (periodo || 'hoje'));
-  if (!r.ok) throw new Error('bia-dash-sync HTTP ' + r.status);
-  return r.json();
+  const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 20000);
+  try {
+    const r = await fetch(BIA_SYNC_URL + '?periodo=' + (periodo || 'hoje'), { cache: 'no-store', signal: ctl.signal });
+    if (!r.ok) throw new Error('bia-dash-sync HTTP ' + r.status);
+    const j = await r.json();
+    if (!j || typeof j !== 'object' || !j.syncedAt) throw new Error('resposta inesperada');
+    return j;
+  } finally { clearTimeout(t); }
 }
 
 // 26/08 (Robert: "achei o gráfico uma porcaria") — antes eram 2 séries de
@@ -3493,17 +3504,17 @@ function renderBiaBarChart_(canvasId, dias, vals, colorHex, fmtVal, opts) {
     }
   });
 }
-function biaTrendHeroHeader_(label, valText, color) {
+function biaTrendHeroHeader_(label, valText, color, suffix) {
   return `<div style="display:flex;justify-content:space-between;align-items:baseline;padding:0 4px 4px;flex-shrink:0">
     <span style="font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">${escHtml(label)}</span>
-    <span style="font-size:16px;font-weight:800;color:${color}">${valText}<span style="font-size:9px;font-weight:700;color:var(--faint);margin-left:3px">hoje</span></span>
+    <span style="font-size:16px;font-weight:800;color:${color}">${valText}<span style="font-size:9px;font-weight:700;color:var(--faint);margin-left:3px">${escHtml(suffix || 'hoje')}</span></span>
   </div>`;
 }
 function renderBiaTrendChart_(dias, custo, notif, containerId) {
   const box = el(containerId);
   const n = dias.length;
   if (n < 2) { box.innerHTML = '<div class="feed-empty">Sem tendência suficiente ainda</div>'; return; }
-  const custoHoje = custo[custo.length - 1] || 0, notifHoje = notif[notif.length - 1] || 0;
+  const custoHoje = biaNum_(custo[custo.length - 1]) || 0, notifHoje = notif[notif.length - 1];
   box.innerHTML = `
     <div style="display:flex;height:100%">
       <div style="flex:1;min-width:0;display:flex;flex-direction:column;height:100%">
@@ -3512,12 +3523,12 @@ function renderBiaTrendChart_(dias, custo, notif, containerId) {
       </div>
       <div style="width:1px;background:var(--border);flex-shrink:0;margin:4px 10px"></div>
       <div style="flex:1;min-width:0;display:flex;flex-direction:column;height:100%">
-        ${biaTrendHeroHeader_('Notificações', fmtInt_(notifHoje), '#704B9B')}
+        ${biaTrendHeroHeader_('Mensagens enviadas', biaInt_(notifHoje), '#704B9B')}
         <div style="flex:1;min-height:0"><canvas id="bia-chart-notif"></canvas></div>
       </div>
     </div>`;
   renderBiaBarChart_('bia-chart-custo', dias, custo, '#E92085', v => 'R$ ' + (v || 0).toFixed(2), { yFmt: v => 'R$' + Math.round(v) });
-  renderBiaBarChart_('bia-chart-notif', dias, notif, '#704B9B', v => fmtInt_(v));
+  renderBiaBarChart_('bia-chart-notif', dias, notif, '#704B9B', v => biaInt_(v));
 }
 
 function prettyLabel_(s) {
@@ -3538,11 +3549,7 @@ function prettyLabel_(s) {
 }
 function timeAgo_(ts) {
   if (!ts) return '';
-  const mins = Math.round((Date.now() - ts) / 60000);
-  if (mins < 1) return 'agora';
-  if (mins < 60) return mins + 'min atrás';
-  const h = Math.floor(mins / 60);
-  return h + 'h' + (mins % 60 ? (mins % 60) + 'min' : '') + ' atrás';
+  return biaDur_((Date.now() - ts) / 60000);
 }
 
 // 26/08 (Robert: "não tem nada clicável, quase não serve pra nada a aba da
@@ -3555,9 +3562,9 @@ function renderBiaMotorSection_(s) {
   const porResultado = Object.entries(s.motorPorResultado || {}).sort((a, b) => b[1] - a[1]);
   const maxMotor = Math.max(...porResultado.map(x => x[1]), 1);
   el('bia-motor-breakdown').innerHTML = porResultado.length === 0
-    ? '<div class="feed-empty">Nenhum evento hoje ainda</div>'
+    ? '<div class="feed-empty">Nenhum evento hoje ainda (ao vivo)</div>'
     : porResultado.map(([k, v], i) => {
-        const row = ga4Row_(GA4_S[i % GA4_S.length], prettyLabel_(k), v, maxMotor, '', '', `filterBiaMotorFeed_('${escJsAttr_(k)}')`);
+        const row = ga4Row_(GA4_S[i % GA4_S.length], biaTxt_(k, BIA_RESULT_PT), v, maxMotor, '', '', `filterBiaMotorFeed_('${escJsAttr_(k)}')`);
         return _biaMotorFilter === k ? row.replace('class="abar-row"', 'class="abar-row abar-row-active"') : row;
       }).join('');
   autoScrollIfNeeded('bia-motor-breakdown');
@@ -3570,8 +3577,8 @@ function renderBiaMotorSection_(s) {
       <div class="bia-motor-row">
         <div class="bia-motor-dot"></div>
         <div class="bia-motor-main">
-          <b>${escHtml(e.repNome || 'Motor Proativo')}</b>: ${escHtml(prettyLabel_(e.estagio))} → ${escHtml(prettyLabel_(e.resultado))}
-          ${e.dealId ? `<span style="color:var(--faint)"> · deal ${escHtml(String(e.dealId))}</span>` : ''}
+          <b>${escHtml(e.repNome || 'Motor Proativo')}</b>: ${escHtml(biaTxt_(e.estagio, BIA_STAGE_PT))} → ${escHtml(biaTxt_(e.resultado, BIA_RESULT_PT))}
+          ${e.dealId ? `<span style="color:var(--faint)"> · negócio ${escHtml(String(e.dealId))}</span>` : ''}
         </div>
         <div class="bia-motor-time">${timeAgo_(e.ts)}</div>
       </div>`).join('');
@@ -3580,172 +3587,302 @@ function renderBiaMotorSection_(s) {
   // 🔴 FIX 26/08 (2 cards separados) — badge do resumo mostra o total fixo
   // (não muda com o filtro, é o card "ao vivo" de verdade); badge do feed
   // mostra o resultado do filtro aplicado, que é onde o filtro atua.
-  el('bia-motor-badge').textContent = (s.motorProativoHoje || 0) + ' evento' + (s.motorProativoHoje === 1 ? '' : 's') + ' hoje';
-  el('bia-motor-feed-badge').textContent = _biaMotorFilter
-    ? filtered.length + ' de ' + (s.motorProativoHoje || 0) + ' · filtro: ' + prettyLabel_(_biaMotorFilter) + ' (clique de novo p/ limpar)'
-    : filtered.length + ' recentes';
+  const totalHoje = biaNum_(s.motorProativoHoje) || 0;
+  biaSetTxt_('bia-motor-badge', totalHoje + ' evento' + (totalHoje === 1 ? '' : 's') + ' hoje (ao vivo)');
+  biaSetTxt_('bia-motor-feed-badge', _biaMotorFilter
+    ? 'mostrando ' + filtered.length + ' de ' + (biaNum_(s.motorPorResultado[_biaMotorFilter]) || filtered.length) + ' · ' + biaTxt_(_biaMotorFilter, BIA_RESULT_PT) + ' (clique de novo para limpar)'
+    : filtered.length + ' mais recentes de hoje');
 }
 function filterBiaMotorFeed_(key) {
   _biaMotorFilter = (_biaMotorFilter === key) ? null : key;
   if (_biaSnap) renderBiaMotorSection_(_biaSnap);
 }
 
+// ── BIA: motor de período e de texto (29/10, "aba Bia impecável") ────────────────────────
+// Regras que valem para TODOS os cartões da aba Bia (celular e telão usam este mesmo bloco):
+//  1) Custo, economia e mensagens seguem o período: hoje/mês/30 dias vêm prontos do bia-dash-sync;
+//     qualquer período que caiba nos últimos 14 dias (ontem, esta semana, datas escolhidas) é somado da tendência diária;
+//     o que não existe (mês passado, 60/90 dias, total) aparece como "—" com o motivo, nunca com o número de Hoje disfarçado.
+//  2) Contadores de confiança (fingimento etc.) seguem o período pelo histórico do D1 (computeBiaGatesFromDaily_).
+//  3) Cartões "ao vivo" (cérebro, aprovações, saúde, SDR, motor de hoje, atualizações do sistema) não mudam com período
+//     nem com origem (Outbound/Inbound): o rótulo diz isso em texto, não só em dica.
+//  4) Nada de NaN/undefined: todo número passa por biaNum_/biaMoney_.
+function biaNum_(v) { const n = Number(v); return (v === null || v === undefined || v === '' || !isFinite(n)) ? null : n; }
+function biaMoney_(v) { const n = biaNum_(v); return n === null ? '—' : 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function biaInt_(v) { const n = biaNum_(v); return n === null ? '—' : Math.round(n).toLocaleString('pt-BR'); }
+function biaBrtDay_(ms) { return isFinite(ms) ? new Date(ms - 3 * 3600000).toISOString().slice(0, 10) : null; }
+function biaIsoAdd_(iso, n) { const p = iso.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10); }
+function biaDdmm_(iso) { return iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) : ''; }
+function biaHhmm_(ms) { return isFinite(ms) ? new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }) : '—'; }
+function biaDur_(min) {
+  const m = biaNum_(min); if (m === null) return '—';
+  if (m < 1) return 'agora';
+  if (m < 60) return Math.round(m) + ' min atrás';
+  const h = Math.floor(m / 60), r = Math.round(m % 60);
+  if (h < 48) return h + ' h' + (r ? ' ' + r + ' min' : '') + ' atrás';
+  return Math.floor(h / 24) + ' dias atrás';
+}
+// Tendência diária com data ISO. A contagem de notificações da tendência vem de uma consulta que o servidor corta em 1000 linhas
+// (as mais antigas primeiro): quando a soma bate 1000, os dias mais novos ficam incompletos ou zerados. Esses dias saem como
+// "sem contagem" (notifOk=false) em vez de aparecerem com número errado; o dia de hoje é corrigido pela contagem ao vivo.
+function biaTrendDays_(base, todayStr) {
+  const t = base && base.trend;
+  if (!t || !Array.isArray(t.dias) || !t.dias.length || !Array.isArray(t.custo)) return [];
+  const last = biaBrtDay_(Date.parse(base.syncedAt)); if (!last) return [];
+  const n = t.dias.length;
+  const rows = [];
+  for (let i = 0; i < n; i++) rows.push({ iso: biaIsoAdd_(last, i - (n - 1)), custo: biaNum_(t.custo[i]) || 0, economia: biaNum_(t.economia && t.economia[i]) || 0, notif: biaNum_(t.notif && t.notif[i]) || 0, notifOk: true });
+  const soma = rows.reduce((a, r) => a + r.notif, 0);
+  if (soma >= 1000) {
+    let cut = -1; rows.forEach((r, i) => { if (r.notif > 0) cut = i; });
+    rows.forEach((r, i) => { if (i >= cut) r.notifOk = false; });
+  }
+  const ult = rows[rows.length - 1];
+  if (ult.iso === todayStr && base.periodoAplicado === 'hoje') {
+    const g = biaNum_(base.gastoHoje), e = biaNum_(base.economizouHoje), m = biaNum_(base.mensagensHoje);
+    if (g !== null) ult.custo = g;
+    if (e !== null) ult.economia = e;
+    if (m !== null) { ult.notif = m; ult.notifOk = true; }
+  }
+  return rows;
+}
+// Qual retrato extra (além do de Hoje) o período pede: 'mes' = mês atual até hoje; '30d' = 30 dias; null = nenhum.
+function biaExtraPeriodo_(period, range, todayStr) {
+  if (!range || !range.from) return null;
+  if (range.from === todayStr.slice(0, 7) + '-01' && range.to >= todayStr) return 'mes';
+  if (period === '30d') return '30d';
+  return null;
+}
+// Números do período para os 3 cartões (gasto, economia, mensagens). fonte: 'vivo' | 'retrato' | 'tendencia' | 'indisponivel'.
+function biaKpisPeriodo_(period, range, todayStr, base, extra) {
+  const R = { gasto: null, chamadas: null, economia: null, cachePct: null, msgs: null, msgsOk: true, fonte: 'indisponivel', dias: 0, motivo: '', aprox: false };
+  if (!base || !range || !range.from) return R;
+  const from = range.from, to = range.to > todayStr ? todayStr : range.to;
+  const pick = (s, fonte, aprox) => { R.gasto = biaNum_(s.gastoHoje); R.chamadas = biaNum_(s.chamadasHoje); R.economia = biaNum_(s.economizouHoje); R.cachePct = biaNum_(s.cachePct); R.msgs = biaNum_(s.mensagensHoje); R.fonte = fonte; R.aprox = !!aprox; return R; };
+  if (from > todayStr) { R.gasto = 0; R.chamadas = 0; R.economia = 0; R.cachePct = 0; R.msgs = 0; R.fonte = 'tendencia'; return R; }
+  if (from === todayStr && to === todayStr) return pick(base, 'vivo');
+  const ex = biaExtraPeriodo_(period, range, todayStr);
+  if (ex && extra && extra.periodoAplicado === ex) return pick(extra, 'retrato', ex === '30d');
+  const dias = biaTrendDays_(base, todayStr);
+  if (dias.length && from >= dias[0].iso) {
+    const sel = dias.filter(d => d.iso >= from && d.iso <= to);
+    const g = sel.reduce((a, d) => a + d.custo, 0), e = sel.reduce((a, d) => a + d.economia, 0);
+    R.gasto = Math.round(g * 100) / 100; R.economia = Math.round(e * 100) / 100;
+    R.cachePct = (g + e) > 0 ? Math.round(e / (g + e) * 100) : 0;
+    R.dias = sel.length; R.fonte = 'tendencia';
+    if (sel.every(d => d.notifOk)) R.msgs = sel.reduce((a, d) => a + d.notif, 0); else R.msgsOk = false;
+    return R;
+  }
+  R.motivo = 'sem histórico';
+  return R;
+}
+// Rótulos em português claro para os nomes internos do Motor Proativo.
+const BIA_RESULT_PT = {
+  backlog_detectado: 'Atraso detectado', cobranca_dia_util_simulada: 'Cobrança do dia útil', recobranca_1_simulada: 'Recobrança 1', recobranca_2_simulada: 'Recobrança 2',
+  escalada_simulada: 'Escalada', pendencia_critica_simulada: 'Pendência crítica', seria_enviado: 'Mensagem enviada', seria_sinalizado: 'Sinalizado',
+  cancelado_ja_concluida: 'Cancelado (tarefa já concluída)', concluir_ao_vivo: 'Tarefa concluída na hora', proxima_criada: 'Próxima tarefa criada'
+};
+const BIA_STAGE_PT = {
+  ciclo_contato1: 'Ciclo, 1º contato', ciclo_contato2: 'Ciclo, 2º contato', ciclo_contato3: 'Ciclo, 3º contato', ciclo_dia_util_seguinte: 'Ciclo, cobrança no dia útil seguinte',
+  ciclo_recobranca1: 'Ciclo, recobrança 1', ciclo_recobranca2: 'Ciclo, recobrança 2', ciclo_escalada: 'Ciclo, escalada', backlog: 'Atrasadas acumuladas', vence_agora: 'Vence agora',
+  pre_visita_40min: 'Antes da visita (40 min)', pos_visita_40min: 'Depois da visita (40 min)', fecho_proxima: 'Fechamento, próxima tarefa', acao_concluir: 'Concluir tarefa',
+  arena_timeout: 'Lead da Arena sem resposta', reativacao75_semtarefa_contato1: 'Reativação 75, 1º aviso (sem tarefa)', reativacao75_semtarefa_contato2: 'Reativação 75, 2º aviso (sem tarefa)'
+};
+function biaTxt_(k, dic) {
+  if (!k) return '—';
+  if (dic[k]) return dic[k];
+  const low = String(k).toLowerCase();
+  if (dic[low]) return dic[low];
+  return prettyLabel_(k);
+}
+
+// Nome curto do período para rótulos dos cartões (cabe na tira de 7 cartões do celular e do telão).
+function biaPLabel_(range) {
+  const M = { today: 'Hoje', yesterday: 'Ontem', week: 'Esta semana', month: 'Este mês', prev_month: 'Mês anterior', '30d': '30 dias', '60d': '60 dias', '90d': '90 dias', total: 'Total' };
+  if (range && M[range.type]) return M[range.type];
+  if (!range || !range.from) return 'Hoje';
+  return range.from === range.to ? biaDdmm_(range.from) : biaDdmm_(range.from) + ' a ' + biaDdmm_(range.to);
+}
+function biaRange_() {
+  const t = todayLocalStr(), r = _data && _data.period;
+  return (r && r.from) ? { from: r.from, to: r.to || r.from, type: r.type, label: r.label } : { from: t, to: t, type: 'today', label: 'Hoje' };
+}
+// Garante todos os campos que a tela lê, mesmo que o servidor mande um retrato incompleto (nunca quebra, nunca mostra undefined).
+function biaNormalize_(s) {
+  if (!s || typeof s !== 'object') return null;
+  s.gates = Object.assign({ fing: 0, neg: 0, afd: 0, gate3b: 0 }, s.gates || {});
+  s.trend = Object.assign({ dias: [], custo: [], economia: [], notif: [] }, s.trend || {});
+  s.deploy = Object.assign({ log: [] }, s.deploy || {});
+  if (!Array.isArray(s.deploy.log)) s.deploy.log = [];
+  if (!s.motorPorResultado || typeof s.motorPorResultado !== 'object') s.motorPorResultado = {};
+  if (!Array.isArray(s.motorRecentes)) s.motorRecentes = [];
+  if (!Array.isArray(s.sdrCards)) s.sdrCards = [];
+  if (!Array.isArray(s.erros)) s.erros = [];
+  return s;
+}
+function biaSetKpi_(id, txt) { const e = document.getElementById(id); if (!e) return; if (txt === null) e.innerHTML = '<span class="skel"></span>'; else e.textContent = txt; }
+function biaSetTxt_(id, txt) { const e = document.getElementById(id); if (e) e.textContent = txt; }
+
+// Faixa de situação no topo da aba: carregando, erro (com botão), atrasado ou atualizado, sempre com a hora.
+function biaRenderStatus_() {
+  const box = document.getElementById('bia-status'); if (!box) return;
+  const s = _biaSnap, sync = s && Date.parse(s.syncedAt);
+  const idade = (s && isFinite(sync)) ? Math.round((Date.now() - sync) / 60000) : null;
+  const btn = ' <button type="button" onclick="loadBiaFresh_()" style="margin-left:6px;border:1px solid currentColor;background:transparent;color:inherit;border-radius:12px;padding:2px 10px;font:inherit;font-weight:800;cursor:pointer">Tentar de novo</button>';
+  let cor = 'ok', html;
+  if (!s && _biaErr) { cor = 'crit'; html = 'Não consegui carregar os dados da Bia agora.' + btn; }
+  else if (!s) { cor = 'load'; html = 'Carregando os dados da Bia…'; }
+  else if (_biaErr) { cor = 'warn'; html = 'Não consegui atualizar agora. Mostrando os dados de ' + biaHhmm_(sync) + '.' + btn; }
+  else if (idade !== null && idade > 20) { cor = 'warn'; html = 'Dados atrasados: a última atualização foi às ' + biaHhmm_(sync) + ' (' + biaDur_(idade) + ').' + btn; }
+  else html = 'Atualizado às ' + biaHhmm_(sync) + '. Custo, mensagens e contadores renovam a cada 10 min; a saúde da Bia é ao vivo.';
+  box.className = 'bia-status bia-status-' + cor;
+  box.innerHTML = html + '<span class="bia-status-escopo"> Esta aba mostra a Bia inteira: não muda com Outbound/Inbound.</span>';
+}
+
+// Partes que dependem da hora de agora (precisam andar sozinhas, sem esperar o próximo retrato).
+function biaRenderAgora_(s) {
+  if (!s) return;
+  const sync = Date.parse(s.syncedAt), idadeMin = isFinite(sync) ? (Date.now() - sync) / 60000 : null;
+  const cer = biaNum_(s.cerebroMin);
+  biaSetTxt_('bia-cerebro-min', cer === null ? '—' : biaDur_(cer + (idadeMin || 0)));
+  biaSetTxt_('bia-aprovacoes', biaInt_(s.aprovacoesPendentes));
+  const st = document.getElementById('bia-worker-health-status'), bd = document.getElementById('bia-worker-health-badge');
+  if (st && bd) {
+    if (idadeMin !== null) {
+      // cron do bia-dash-sync roda a cada 10 min: folga de 2x antes de marcar atraso
+      const ok = idadeMin <= 20;
+      st.textContent = (ok ? 'Ok' : 'Atrasado') + ' · atualizou às ' + biaHhmm_(sync);
+      st.className = 'v ' + (ok ? 'good' : 'warn');
+      bd.textContent = ok ? 'tudo certo' : 'verificar';
+    } else { st.textContent = '—'; st.className = 'v'; bd.textContent = ''; }
+  }
+  const lt = document.getElementById('bia-worker-leitura');
+  if (lt) {
+    const n = (s.erros || []).length;
+    lt.textContent = n ? 'Parcial (' + n + ' falha' + (n > 1 ? 's' : '') + ')' : 'Completa';
+    lt.className = 'v ' + (n ? 'warn' : 'good');
+    lt.title = n ? s.erros.map(String).join(' | ') : '';
+  }
+  renderBiaMotorSection_(s);
+  biaRenderStatus_();
+}
+let _biaTickT = null;
+function biaStartTicks_() {
+  if (_biaTickT) return;
+  let n = 0;
+  _biaTickT = setInterval(() => {
+    if (!_biaViewActive || document.hidden) return;
+    n++;
+    biaRenderAgora_(_biaSnap);
+    if (n % 2 === 0) loadBiaFresh_(); // a cada 60 s: a aba Bia não depende do relógio de mudanças do Agendor
+  }, 30000);
+}
+
 function renderBiaSectionTelao(s) {
-  // 🔴 FIX 26/08 nº2 (Robert: "audite todos os filtros profundamente") —
-  // aviso explícito quando o período pedido não é suportado pela fonte
-  // (gs-agendor-worker só tem hoje/7d/30d/mes) em vez de deixar a
-  // discordância entre o chip selecionado e o dado mostrado silenciosa.
-  el('bia-periodo-aviso').style.display = (biaPeriodoFor_(_period) === null) ? 'block' : 'none';
-  // 26/08 (fix do "não respeita filtro"): Gasto/Mensagens/Economia agora
-  // vêm de verdade no período pedido (s.periodoLabel confirma qual o
-  // worker aplicou) — rótulo do card muda junto, não fica preso em "Hoje".
-  const pLabel = s.periodoLabel || 'Hoje';
-  el('bia-k-gasto-label').textContent = 'Gasto ' + pLabel;
-  el('bia-k-gasto').textContent = fmtMoney(s.gastoHoje);
-  el('bia-k-gasto-sub').textContent = s.chamadasHoje + ' chamada' + (s.chamadasHoje === 1 ? '' : 's');
-  el('bia-k-mes').textContent = fmtMoney(s.mesIA);
-  el('bia-k-mes-sub').textContent = 'proj. ' + fmtMoney(s.mesIAProjecao);
-  el('bia-k-total').textContent = fmtMoney(s.totalProjetado);
-  el('bia-k-teto').textContent = 'teto ' + fmtMoney(s.tetoMes);
+  s = biaNormalize_(s); if (!s) return;
+  const hoje = todayLocalStr(), range = biaRange_(), pLabel = biaPLabel_(range), pl = pLabel.toLowerCase();
+  const K = biaKpisPeriodo_(_period, range, hoje, s, _biaExtra);
+  const exNeed = biaExtraPeriodo_(_period, range, hoje);
+  const pend = !!exNeed && !(_biaExtra && _biaExtra.periodoAplicado === exNeed) && _biaLoading; // retrato extra a caminho: mostra carregando, não valor errado
+  biaSetTxt_('bia-k-gasto-label', 'Gasto ' + pLabel);
+  biaSetKpi_('bia-k-gasto', pend ? null : biaMoney_(K.gasto));
+  biaSetTxt_('bia-k-gasto-sub', K.gasto === null ? 'sem dado deste período' : (K.chamadas !== null ? biaInt_(K.chamadas) + ' chamada' + (K.chamadas === 1 ? '' : 's') : (K.dias > 0 ? biaMoney_(K.gasto / K.dias) + ' por dia' : '')));
+  biaSetKpi_('bia-k-mes', biaMoney_(s.mesIA));
+  biaSetTxt_('bia-k-mes-sub', 'proj. ' + biaMoney_(s.mesIAProjecao));
+  biaSetKpi_('bia-k-total', biaMoney_(s.totalProjetado));
+  biaSetTxt_('bia-k-teto', 'teto ' + biaMoney_(s.tetoMes));
   const pct = s.tetoMes > 0 ? (s.totalProjetado / s.tetoMes) : 0;
   el('bia-kchip-total').style.setProperty('--accent-color', pct >= 1 ? 'var(--red)' : pct >= 0.85 ? 'var(--amber)' : 'var(--green)');
-  el('bia-k-economia').textContent = fmtMoney(s.economizouHoje);
-  el('bia-k-cache-pct').textContent = s.cachePct + '% cache';
-  el('bia-k-leads').textContent = String(s.leadsMonitor);
-  el('bia-k-msgs-label').textContent = 'Mensagens ' + pLabel;
-  el('bia-k-msgs').textContent = String(s.mensagensHoje);
+  biaSetKpi_('bia-k-economia', pend ? null : biaMoney_(K.economia));
+  biaSetTxt_('bia-k-cache-pct', K.cachePct === null ? 'sem dado deste período' : K.cachePct + '% de cache · ' + pl);
+  biaSetKpi_('bia-k-leads', biaInt_(s.leadsMonitor));
+  biaSetTxt_('bia-k-msgs-label', 'Mensagens ' + pLabel);
+  biaSetKpi_('bia-k-msgs', pend ? null : (K.msgs === null ? '—' : biaInt_(K.msgs)));
+  biaSetTxt_('bia-k-msgs-sub', K.msgs !== null ? 'envios totais' : (K.msgsOk === false ? 'contagem incompleta' : 'sem dado deste período'));
 
-  // 🔴 FIX 27/08: fing/neg/afd/gate3b/Motor Proativo/Respostas somados de
-  // verdade pelo período pedido (ver computeBiaGatesFromDaily_) em vez de
-  // sempre "hoje" — histórico só existe a partir de 27/08 (ver aviso).
-  const periodFromG = (_data && _data.period && _data.period.from) || todayLocalStr();
-  const periodToG = (_data && _data.period && _data.period.to) || todayLocalStr();
-  const gatesC = computeBiaGatesFromDaily_(_biaGatesDailyRaw, periodFromG, periodToG, todayLocalStr(), {
-    fing: s.gates.fing, neg: s.gates.neg, afd: s.gates.afd, gate3b: s.gates.gate3b,
-    motorProativo: s.motorProativoHoje, respostasBia: s.respostasBiaHoje
-  });
-  el('bia-k-motor').textContent = String(gatesC.motorProativo);
-  // 27/08 (mesmo achado do badge de Confiança&Saúde) — sub ficava travado em
-  // "eventos hoje" mesmo já somando o período real desde a historização.
-  el('bia-k-motor-sub').textContent = 'eventos ' + pLabel.toLowerCase();
-
-  // Motor Proativo — o card "ao vivo" de verdade (achado 26/08: Robert
-  // pediu explicitamente esse card, não existia antes, só um número solto).
-  // 🔴 CORRIGIDO 26/08: cheguei a rotular linhas como "🧪 simulação" vs
-  // "✅ real" inferindo isso só pelo NOME do resultado (sufixo "_simulada"/
-  // prefixo "seria_"). Robert confirmou ao vivo que isso estava ERRADO —
-  // "seria_enviado"/"*_simulada" já é mensagem REALMENTE enviada hoje, o
-  // nome é só histórico/legado, não reflete comportamento atual. Nunca
-  // tive prova real de que o nome da string indicasse simulação de
-  // verdade — foi suposição minha, removida. Mostra o resultado cru
-  // (só prettificado), sem inventar um veredito real/simulado que eu não
-  // consigo confirmar de dentro do worker (só leitura, nunca vi o código
-  // que decide enviar ou não).
-  // Achado 26/08 (auditoria): a BIA cacheia snapshot a cada 10min (cron do
-  // worker) — sem mostrar a hora do sync, um número "parado" pode parecer
-  // errado comparado ao /custo ao vivo. Visível no rodapé (texto, não só
-  // tooltip — telão não tem mouse pra hover).
-  if (_biaViewActive && s.syncedAt) {
-    const syncTxt = 'bia-dash-sync (sinc. ' + new Date(s.syncedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + ')';
-    // 26/08: só 4 dos ~11 períodos do dash têm equivalente exato no /custo
-    // (Hoje/Esta semana≈7d/Este mês/30 dias). Pros outros, o Gasto/Mensagens
-    // acima ficam mostrando "Hoje" · aviso explícito aqui em vez de deixar
-    // parecer que seguiu um período que na verdade não seguiu.
-    const currentLabel = (_data && _data.period && _data.period.label) || '';
-    const unsupported = _period && !biaPeriodoFor_(_period);
-    el('footer-source').textContent = unsupported
-      ? syncTxt + ' · período "' + currentLabel + '" não suportado pela BIA (só Hoje/Semana/Mês/30 dias), mostrando Hoje'
-      : syncTxt;
+  // Aviso do período: só aparece quando há algo que o usuário precisa saber.
+  const av = document.getElementById('bia-periodo-aviso');
+  if (av) {
+    let msg = '';
+    if (K.fonte === 'indisponivel') msg = 'Custo, economia e mensagens só existem para Hoje, este mês, 30 dias e os últimos 14 dias. Em "' + pLabel + '" ficam como —. Os contadores de confiança usam o histórico gravado desde 15/09.';
+    else if (K.aprox) msg = 'Custo e mensagens de "30 dias" são dos últimos 30 dias corridos; o painel conta 31 dias, pode haver diferença de 1 dia.';
+    else if (K.msgsOk === false) msg = 'Mensagens deste período ainda sem contagem completa (a fonte corta a leitura em 1000 registros). Custo e economia estão corretos.';
+    av.textContent = msg; av.style.display = msg ? 'block' : 'none';
   }
+
+  // Contadores de confiança: soma o histórico do D1 no período + o ao vivo de hoje.
+  const histOk = Array.isArray(_biaGatesDailyRaw);
+  const soHoje = range.from === hoje && range.to === hoje;
+  const gatesC = computeBiaGatesFromDaily_(_biaGatesDailyRaw, range.from, range.to, hoje, {
+    fing: biaNum_(s.gates.fing) || 0, neg: biaNum_(s.gates.neg) || 0, afd: biaNum_(s.gates.afd) || 0, gate3b: biaNum_(s.gates.gate3b) || 0,
+    motorProativo: biaNum_(s.motorProativoHoje) || 0, respostasBia: biaNum_(s.respostasBiaHoje) || 0
+  });
+  const semHist = !histOk && !soHoje;
+  const gTxt = (n) => semHist ? '—' : biaInt_(n);
+  biaSetKpi_('bia-k-motor', gTxt(gatesC.motorProativo));
+  biaSetTxt_('bia-k-motor-sub', semHist ? 'histórico indisponível agora' : 'eventos ' + pl);
+
+  if (_biaViewActive && s.syncedAt) biaSetTxt_('footer-source', 'bia-dash-sync (atualizado às ' + biaHhmm_(Date.parse(s.syncedAt)) + ')');
   renderBiaMotorSection_(s);
 
   const gv = (n) => n > 0 ? 'crit' : 'good';
-  el('bia-gate-fing').textContent = gatesC.fing; el('bia-gate-fing').className = 'v ' + gv(gatesC.fing);
-  el('bia-gate-neg').textContent = gatesC.neg; el('bia-gate-neg').className = 'v ' + gv(gatesC.neg);
-  el('bia-gate-afd').textContent = gatesC.afd; el('bia-gate-afd').className = 'v ' + (gatesC.afd > 0 ? 'warn' : 'good');
-  el('bia-gate-3b').textContent = gatesC.gate3b; el('bia-gate-3b').className = 'v ' + (gatesC.gate3b > 0 ? 'warn' : 'good');
-
-  // Cérebro (última resposta) e Aprovações pendentes são MEDIDORES do
-  // instante atual (fila/estado agora), não contadores do período — nunca
-  // fazem sentido "somados por período" (mesmo princípio do Pipeline Ativo
-  // em Vendas, que também não filtra por período). Ficam sempre "agora".
-  el('bia-cerebro-min').textContent = s.cerebroMin != null ? s.cerebroMin + ' min atrás' : '—';
-  el('bia-respostas').textContent = String(gatesC.respostasBia);
-  el('bia-aprovacoes').textContent = String(s.aprovacoesPendentes);
-  el('bia-gates-badge').textContent = s.erros && s.erros.length ? '⚠ parcial' : pLabel;
+  const setG = (id, n, cls) => { const e = document.getElementById(id); if (!e) return; e.textContent = gTxt(n); e.className = 'v ' + (semHist ? '' : cls); };
+  setG('bia-gate-fing', gatesC.fing, gv(gatesC.fing));
+  setG('bia-gate-neg', gatesC.neg, gv(gatesC.neg));
+  setG('bia-gate-afd', gatesC.afd, gatesC.afd > 0 ? 'warn' : 'good');
+  setG('bia-gate-3b', gatesC.gate3b, gatesC.gate3b > 0 ? 'warn' : 'good');
+  setG('bia-respostas', gatesC.respostasBia, '');
+  biaSetTxt_('bia-gates-badge', s.erros.length ? 'parcial' : pLabel);
   const gatesAvisoEl = el('bia-gates-historico-aviso');
   if (gatesAvisoEl) {
-    gatesAvisoEl.style.display = gatesC.periodTruncated ? 'block' : 'none';
-    if (gatesC.periodTruncated) {
-      const ep = gatesC.earliestDate.split('-');
-      gatesAvisoEl.textContent = '⚠ histórico desses contadores só começou em ' + ep[2] + '/' + ep[1] + '/' + ep[0] + ' — dias antes disso não têm registro.';
-    }
+    const aviso = semHist ? 'Não consegui ler o histórico agora; só os números de hoje são confiáveis.'
+      : (gatesC.periodTruncated ? 'O histórico desses contadores só começou em ' + biaDdmm_(gatesC.earliestDate) + '/' + gatesC.earliestDate.slice(0, 4) + '. Dias antes disso não têm registro.' : '');
+    gatesAvisoEl.textContent = aviso; gatesAvisoEl.style.display = aviso ? 'block' : 'none';
   }
 
-  // 🔴 FIX 27/08 (auditoria): "14 dias" era literal fixo — bate hoje por
-  // coincidência (janela real do worker), mas mentiria se a janela mudasse.
-  el('bia-trend-badge').textContent = (s.trend.dias ? s.trend.dias.length : 14) + ' dias';
-  renderBiaTrendChart_(s.trend.dias, s.trend.custo, s.trend.notif, 'bia-trend-chart');
+  // Tendência: 14 dias fixos (não muda com o período); dias sem contagem completa ficam em branco.
+  const dias = biaTrendDays_(s, hoje);
+  const incompletos = dias.filter(d => !d.notifOk).length;
+  biaSetTxt_('bia-trend-badge', dias.length + ' dias, fixo' + (incompletos ? ' · ' + incompletos + ' sem contagem' : ''));
+  renderBiaTrendChart_(dias.map(d => biaDdmm_(d.iso)), dias.map(d => d.custo), dias.map(d => d.notifOk ? d.notif : null), 'bia-trend-chart');
 
-  renderBiaSaude_(); // o cartão de saúde mostra também o SDR cadastrado (vem deste snapshot)
-  el('bia-sdr-badge').textContent = s.sdrsConhecidosAgendor + ' no Agendor';
-  el('bia-sdr-cards').innerHTML = (s.sdrCards || []).filter(c => c && c.nome && c.nome !== '?').map(c => c.nome ?
+  renderBiaSaude_();
+  const nSdr = biaNum_(s.sdrsConhecidosAgendor);
+  biaSetTxt_('bia-sdr-badge', (nSdr === null ? '' : nSdr + ' no Agendor, ') + 'agora');
+  const sdrBox = document.getElementById('bia-sdr-cards');
+  if (sdrBox) sdrBox.innerHTML = s.sdrCards.filter(c => c && c.nome && c.nome !== '?').map(c => c.nome ?
     `<div class="bia-sdr-card"><span class="bia-sdr-avatar">${escHtml(c.nome.slice(0, 2).toUpperCase())}</span>${escHtml(c.nome)}<span class="pill good" style="margin-left:auto;font-size:.62rem;padding:2px 8px;border-radius:20px;background:#dcfce7;color:#166534">${escHtml(c.cargo || 'SDR')}</span></div>` :
     `<div class="bia-sdr-card" style="opacity:.55">não cadastrado</div>`
-  ).join('') || '<div class="feed-empty">Sem SDR cadastrado</div>';
+  ).join('') || '<div class="feed-empty">Nenhum SDR cadastrado no Agendor</div>';
 
-  // 27/08 (Robert: "worker se ta ok... nao ter ponto cego") — cron do
-  // bia-dash-sync roda a cada 10min; folga de 2x (20min) antes de marcar
-  // atrasado, pra não gerar falso alarme por um ciclo só de atraso.
-  if (s.syncedAt) {
-    const syncDate = new Date(s.syncedAt);
-    const minAtras = Math.round((Date.now() - syncDate.getTime()) / 60000);
-    const okWorker = minAtras <= 20;
-    el('bia-worker-health-status').textContent = (okWorker ? '✅ Ok' : '⚠ Atrasado') + ' · sinc. ' + syncDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    el('bia-worker-health-status').className = 'v ' + (okWorker ? 'good' : 'warn');
-    el('bia-worker-health-badge').textContent = okWorker ? 'tudo certo' : 'verificar';
-  } else {
-    el('bia-worker-health-status').textContent = '—';
-    el('bia-worker-health-badge').textContent = '';
-  }
+  biaRenderAgora_(s);
 
-  el('bia-deploy-badge').textContent = s.deploy.registrados + ' registrados';
-  el('bia-deploy-suite').textContent = (s.deploy.suiteAtual && !/^0+$/.test(String(s.deploy.suiteAtual).trim())) ? s.deploy.suiteAtual : 'sem registro';
-  el('bia-deploy-falhas').textContent = s.deploy.falhas;
-  el('bia-deploy-falhas').className = 'v ' + (s.deploy.falhas > 0 ? 'crit' : 'good');
-  el('bia-deploy-desde').textContent = (s.deploy.desdeInicioLog && !/^\+?0+$/.test(String(s.deploy.desdeInicioLog).trim())) ? s.deploy.desdeInicioLog : '—';
-  // 🔴 FIX 26/08 (Robert, achado grave: "essas infos aqui no dash da bia
-  // são muito pessoais... pensa o pessoal ler isso? rede de segurança
-  // mentirosa"): o "resumo" de cada deploy é changelog interno de
-  // engenharia — nome de cliente real, empresa citada de forma crítica,
-  // achado de segurança/LGPD, tudo em texto livre. Não tem lugar num
-  // telão. Removido de vez (o worker bia-dash-sync já nem manda mais esse
-  // campo — filtrado na origem).
-  // 26/08 (2ª rodada, Robert: "não gostei muito do log de deploy, toma
-  // todo espaço da direita e mostra apenas a suíte... pode ser mais
-  // enriquecido com informações realmente relevantes") — a lista de 30
-  // linhas quase idênticas virou um gráfico de frequência (deploys por
-  // dia) — mesmo dado seguro (ts/suiteTotal/suiteFalhou), forma mais rica
-  // de mostrar "quão ativa a manutenção da Bia está" do que uma lista
-  // repetitiva. log já vem cronológico ascendente do worker (mais antigo
-  // primeiro) — não precisa reverter pra agrupar por dia em ordem.
-  const log = s.deploy.log || [];
+  // Atualizações do sistema (log de deploy): lido do log, não de números soltos do painel antigo.
+  const log = s.deploy.log.filter(d => d && isFinite(Number(d.ts)));
+  const comTeste = log.filter(d => biaNum_(d.suiteTotal) > 0);
+  const ultTeste = comTeste.length ? comTeste[comTeste.length - 1] : null;
+  const ultimo = log.length ? log[log.length - 1] : null;
+  biaSetTxt_('bia-deploy-badge', 'últimas ' + log.length);
+  biaSetTxt_('bia-deploy-suite', ultTeste ? biaInt_(ultTeste.suiteTotal) + ' testes' : 'sem registro');
+  const fe = document.getElementById('bia-deploy-falhas');
+  if (fe) { const f = ultTeste ? (biaNum_(ultTeste.suiteFalhou) || 0) : null; fe.textContent = f === null ? '—' : String(f); fe.className = 'v ' + (f === null ? '' : (f > 0 ? 'crit' : 'good')); }
+  biaSetTxt_('bia-deploy-desde', ultimo ? biaDdmm_(biaBrtDay_(ultimo.ts)) + ' às ' + biaHhmm_(ultimo.ts) : '—');
   const byDay = {};
-  log.forEach(d => {
-    if (!d.ts) return;
-    const day = new Date(d.ts).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-    byDay[day] = (byDay[day] || 0) + 1;
-  });
-  const diasDeploy = Object.keys(byDay);
-  const countsDeploy = diasDeploy.map(dia => byDay[dia]);
-  el('bia-deploy-freq-badge').textContent = log.length + ' atualizaç' + (log.length !== 1 ? 'ões' : 'ão') + ' · ' + diasDeploy.length + ' dia' + (diasDeploy.length !== 1 ? 's' : '');
-  if (diasDeploy.length > 1) {
-    const hojeCount = countsDeploy[countsDeploy.length - 1] || 0;
-    el('bia-deploy-freq-chart').innerHTML = biaTrendHeroHeader_('Atualizações por dia', fmtInt_(hojeCount), '#704B9B') +
-      '<div style="flex:1;min-height:0"><canvas id="bia-chart-deploys"></canvas></div>';
-    renderBiaBarChart_('bia-chart-deploys', diasDeploy, countsDeploy, '#704B9B', v => fmtInt_(v) + ' atualizaç' + (v !== 1 ? 'ões' : 'ão'));
-  } else {
-    el('bia-deploy-freq-chart').innerHTML = '<div class="feed-empty">Pouco histórico ainda pra mostrar tendência</div>';
+  log.forEach(d => { const k = biaBrtDay_(Number(d.ts)); byDay[k] = (byDay[k] || 0) + 1; });
+  const keys = Object.keys(byDay).sort();
+  const diasDeploy = [];
+  if (keys.length) { for (let k = keys[0]; k <= hoje && diasDeploy.length < 400; k = biaIsoAdd_(k, 1)) diasDeploy.push(k); }
+  const countsDeploy = diasDeploy.map(k => byDay[k] || 0);
+  biaSetTxt_('bia-deploy-freq-badge', log.length + ' atualizaç' + (log.length !== 1 ? 'ões' : 'ão') + ' em ' + keys.length + ' dia' + (keys.length !== 1 ? 's' : '') + ' com mudança');
+  const fq = document.getElementById('bia-deploy-freq-chart');
+  if (fq) {
+    if (diasDeploy.length > 1) {
+      fq.innerHTML = biaTrendHeroHeader_('Atualizações por dia', biaInt_(byDay[hoje] || 0), '#704B9B', 'hoje') +
+        '<div style="flex:1;min-height:0"><canvas id="bia-chart-deploys"></canvas></div>';
+      renderBiaBarChart_('bia-chart-deploys', diasDeploy.map(biaDdmm_), countsDeploy, '#704B9B', v => biaInt_(v) + ' atualizaç' + (v !== 1 ? 'ões' : 'ão'));
+    } else {
+      fq.innerHTML = '<div class="feed-empty">Pouco histórico ainda para mostrar tendência</div>';
+    }
   }
 }
 
@@ -3831,7 +3968,7 @@ function renderBiaSaude_() {
   const s = _biaSaude, it = (s.itens && typeof s.itens === 'object') ? s.itens : {};
   const geral = cls[s.geral] !== undefined ? s.geral : 'desconhecido';
   const rows = [];
-  if (_biaSaudeErr) rows.push(row('Última atualização', 'falhou, mostrando a anterior', 'atencao', String(_biaSaudeErr.message || _biaSaudeErr)));
+  if (_biaSaudeErr) rows.push(row('Leitura de agora', 'falhou, mostrando a anterior', 'atencao', String(_biaSaudeErr.message || _biaSaudeErr)));
   rows.push(row('Situação geral', nome[geral], geral));
   const mot = (Array.isArray(s.motivos) ? s.motivos : []).filter(m => typeof m === 'string').map(nomeItem);
   if (mot.length) rows.push(row('Pontos de atenção', mot.join(', '), geral === 'falha' ? 'falha' : 'atencao', mot.join(' | ')));
@@ -3839,7 +3976,7 @@ function renderBiaSaude_() {
   const sdrs = ((_biaSnap && _biaSnap.sdrCards) || []).filter(c => c && c.nome && c.nome !== '?').map(c => c.nome);
   if (_biaSnap) rows.push(row('SDR cadastrado no Agendor', sdrs.length ? sdrs.join(', ') : 'nenhum', sdrs.length ? 'ok' : 'atencao'));
   box.innerHTML = rows.join('');
-  if (badge) badge.textContent = nome[geral] || '';
+  if (badge) badge.textContent = (nome[geral] || '') + (isFinite(Number(s.ts)) ? ' · ' + biaHhmm_(Number(s.ts)) : '');
   if (badge) badge.style.color = geral === 'falha' ? 'var(--red)' : (geral === 'atencao' ? 'var(--amber)' : (geral === 'ok' ? 'var(--green)' : ''));
 }
 async function loadBiaSaude_() {
@@ -3848,31 +3985,38 @@ async function loadBiaSaude_() {
   if (_biaViewActive) renderBiaSaude_();
 }
 
+let _biaExtra = null, _biaErr = null, _biaReload = false, _biaGatesAt = 0;
 async function loadBiaFresh_() {
-  if (_biaLoading) return;
-  _biaLoading = true;
+  if (_biaLoading) { _biaReload = true; return; }
+  _biaLoading = true; _biaErr = null;
+  biaStartTicks_();
+  if (_biaViewActive) biaRenderStatus_();
   loadBiaSaude_();
   try {
-    const [snap, gatesDaily] = await Promise.all([
-      fetchBiaSnapshot(biaPeriodoFor_(_period) || 'hoje'),
-      fetchBiaGatesDailyRaw().catch((e) => { console.warn('fetchBiaGatesDailyRaw falhou:', e.message); return _biaGatesDailyRaw; })
+    const hoje = todayLocalStr(), ex = biaExtraPeriodo_(_period, biaRange_(), hoje);
+    const velho = !_biaGatesDailyRaw || Date.now() - _biaGatesAt > 300000; // histórico do D1 muda 1x por dia: renova a cada 5 min
+    const [snap, extra, gd] = await Promise.all([
+      fetchBiaSnapshot('hoje'),
+      ex ? fetchBiaSnapshot(ex).catch((e) => { console.warn('retrato extra da Bia falhou:', e.message); return null; }) : Promise.resolve(null),
+      velho ? fetchBiaGatesDailyRaw().then((r) => { _biaGatesAt = Date.now(); return r; }).catch((e) => { console.warn('fetchBiaGatesDailyRaw falhou:', e.message); return _biaGatesDailyRaw; }) : Promise.resolve(_biaGatesDailyRaw)
     ]);
-    _biaSnap = snap;
-    _biaGatesDailyRaw = gatesDaily;
+    _biaSnap = biaNormalize_(snap); _biaExtra = extra ? biaNormalize_(extra) : null; _biaGatesDailyRaw = gd;
     if (_biaViewActive) renderBiaSectionTelao(_biaSnap);
   } catch (e) {
-    console.warn('fetchBiaSnapshot falhou:', e.message);
-    if (_biaViewActive && !_biaSnap) {
-      el('bia-motor-breakdown').innerHTML = '<div class="feed-empty">Erro ao carregar. Tenta de novo em instantes.</div>';
+    console.warn('Bia: falha ao carregar/mostrar:', e && e.message);
+    _biaErr = e;
+    if (_biaViewActive) {
+      biaRenderStatus_();
+      if (!_biaSnap) el('bia-motor-breakdown').innerHTML = '<div class="feed-empty">Erro ao carregar. Use "Tentar de novo" no topo.</div>';
     }
   } finally {
     _biaLoading = false;
+    if (_biaReload) { _biaReload = false; loadBiaFresh_(); }
   }
 }
 function refreshBiaIfActive_() {
   if (_biaViewActive) {
-    if (_biaSnap) renderBiaSectionTelao(_biaSnap);
-    renderBiaSaude_();
+    if (_biaSnap) renderBiaSectionTelao(_biaSnap); else biaRenderStatus_();
     loadBiaFresh_();
   }
 }
