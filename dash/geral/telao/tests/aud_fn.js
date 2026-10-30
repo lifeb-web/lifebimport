@@ -4,7 +4,7 @@
   const sel = e => { let s = e.tagName.toLowerCase(); if (e.id) s += '#' + e.id; else if (e.className && typeof e.className === 'string') s += '.' + e.className.trim().split(/\s+/).slice(0,2).join('.'); return s; };
   const LAB = /(badge|pill|tag|chip|delta|label|lbl|sub|foot|aviso|hint|note|-l2|-kl|-kt|-kd|-ct|-cs|ttl|title|hd)/i;
   const KPI = /(kc-val|hero-val|ac-val|s2-kv|sc-num|rv-hero-val|hero-big)/;
-  const APO = /(funil-n|lb-num|rk-tot|rk-g|orig-i-pc|lb-conv|rk-val)/;
+  const APO = /(funil-n|orig-i-pc|pz-pc)/;
   const z = (() => { let m = 1; try { const pr = window.parent !== window ? window.parent.document.getElementById('palco') : null; if (pr) { const t = (pr.style.transform||'').match(/scale\(([\d.]+)\)/); if (t) m = +t[1]; } } catch (e) {} return m; })();
   const o = { z, vazioCard: [], minLab: 99, minBody: 99, minKpi: 99, minApoio: 99, maxApoio: 0, apoioV: [], grandeV: [], labV: [], bodyV: [], kpiV: [], intV: [], iconV: [], cardV: [], clip: [], over: [], empty: [], bad: [] };
   document.querySelectorAll('body *').forEach(e => {
@@ -15,7 +15,7 @@
     const cls = (typeof e.className === 'string' ? e.className : '') + ' ' + (e.id||'');
     if (KPI.test(cls) && /\d/.test(e.textContent)) { o.minKpi = Math.min(o.minKpi, f); if (f < 21) o.kpiV.push(sel(e) + ' ' + f + ' "' + txt + '"'); return; }
     // 3 niveis de numero: KPI hero (>=21 palco = 28px TV) | apoio (>=12 e <=16.6 palco = 16 a 22px TV) | tabela (14 a 16px TV). Numero que nao e KPI nunca passa de 22px TV.
-    if (!e.closest('header') && /\d/.test(e.textContent) && !KPI.test(cls)) { if (APO.test(cls)) { o.minApoio = Math.min(o.minApoio, f); o.maxApoio = Math.max(o.maxApoio, f); if (f < 12) o.apoioV.push(sel(e) + ' ' + f + ' "' + txt + '"'); } if (f > 16.6) o.grandeV.push(sel(e) + ' ' + f + ' "' + txt + '"'); }
+    if (!e.closest('header,#hero,#ltv-hero,#sdr-hero,#ads-hero,#ga4-hero,#bia-hero') && /\d/.test(e.textContent) && !KPI.test(cls)) { if (APO.test(cls)) { o.minApoio = Math.min(o.minApoio, f); o.maxApoio = Math.max(o.maxApoio, f); if (f < 12) o.apoioV.push(sel(e) + ' ' + f + ' "' + txt + '"'); } if (f > 16.6) o.grandeV.push(sel(e) + ' ' + f + ' "' + txt + '"'); }
     const isLab = cs.textTransform === 'uppercase' || e.tagName === 'TH' || LAB.test(cls) || (parseFloat(cs.letterSpacing) > 0.3);
     if (isLab) { o.minLab = Math.min(o.minLab, f); if (f < 9) o.labV.push(sel(e) + ' ' + f + ' "' + txt + '"'); }
     else { o.minBody = Math.min(o.minBody, f); if (f < 10.5) o.bodyV.push(sel(e) + ' ' + f + ' "' + txt + '"'); }

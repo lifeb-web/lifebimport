@@ -1030,7 +1030,7 @@ body.tv-grande .rv-k-val{font-size:19px}
 }
 </style>
 <!-- Dossiê do SDR (Fase 1): padrão da aba SDR; ?sdr=1 volta à aba antiga -->
-<link rel="stylesheet" href="legivel.css?v=20261030c">
+<link rel="stylesheet" href="legivel.css?v=20261030j">
 <script>if (true) document.write('<script src="../sdr2.js?v=20261030h"><\/script>');</script>
 </head>
 <body>
@@ -1186,29 +1186,10 @@ body.tv-grande .rv-k-val{font-size:19px}
     </div>
 
     <div id="col-center">
-      <div class="card has-expand" id="rep-card"><button class="expand-btn" data-target="lb-rows" data-title="Ranking Representantes">⤢</button>
-        <div class="card-hd">
-          <span class="card-hd-title">Ranking Representantes</span>
-          <span class="badge" id="rep-badge"></span>
-        </div>
-        <div class="lb-header">
-          <div class="rk-grid5">
-            <span></span>
-            <span class="l">Nome</span>
-            <span>Ganhos</span>
-            <span>Conv.</span>
-            <span class="r">Total vendido</span>
-          </div>
-          <div class="rk-nota"><span class="rk-lg"><i class="rk-n"></i>venda nova</span><span class="rk-lg"><i class="rk-r"></i>reposição</span><span id="rk-nota"></span></div>
-        </div>
-        <div class="lb-rows" id="lb-rows"></div>
-      </div>
-    </div>
-
-    <div id="col-right">
+      <div id="pz-slot-vendas" class="pz-slot">
       <div class="card" id="origem-card">
         <div class="card-hd">
-          <span class="card-hd-title">Origem das Vendas</span>
+          <span class="card-hd-title" id="pz-title">Vendas do período</span>
           <div class="orig-hd-right">
             <button class="orig-filtro" id="origem-filtro" type="button" onclick="origemLimparFiltro_()" title="Limpar filtro"></button>
             <div class="orig-tog" title="Alternar entre valor (R$) e número de vendas">
@@ -1217,11 +1198,34 @@ body.tv-grande .rv-k-val{font-size:19px}
             </div>
           </div>
         </div>
+        <div class="pz-vis" id="pz-vis" role="tablist" aria-label="Visão da rosca"></div>
         <div class="orig-body">
           <div class="orig-ring" id="origem-donut"></div>
           <div class="orig-legend" id="origem-legend"></div>
         </div>
         <div class="orig-foot" id="origem-foot"></div>
+      </div>
+      </div>
+    </div>
+
+    <div id="col-right">
+      <div class="card has-expand" id="rep-card"><button class="expand-btn" data-target="lb-rows" data-title="Ranking Representantes">⤢</button>
+        <div class="card-hd">
+          <span class="card-hd-title">Ranking Representantes</span>
+          <span class="badge" id="rep-badge"></span>
+        </div>
+        <div class="lb-header">
+          <div class="rkt-grid rkt-head" role="group" aria-label="Ordenar o ranking por coluna">
+            <span></span>
+            <button type="button" class="l" data-rk-sort="name">Nome<span class="rk-ar"></span></button>
+            <button type="button" data-rk-sort="nova"><i class="rk-n"></i>Venda nova<span class="rk-ar"></span></button>
+            <button type="button" data-rk-sort="repos"><i class="rk-r"></i>Reposição<span class="rk-ar"></span></button>
+            <button type="button" data-rk-sort="total">Total<span class="rk-ar"></span></button>
+            <button type="button" data-rk-sort="ganhos" title="Número de ganhos">Ganhos<span class="rk-ar"></span></button>
+          </div>
+          <div class="rk-nota"><span id="rk-nota"></span></div>
+        </div>
+        <div class="lb-rows" id="lb-rows"></div>
       </div>
     </div>
   </div>
@@ -1408,6 +1412,7 @@ body.tv-grande .rv-k-val{font-size:19px}
     </div>
 
     <div id="ltv-col-center">
+      <div id="pz-slot-ltv" class="pz-slot"></div>
       <div class="card has-expand" id="ltv-rep-card"><button class="expand-btn" data-target="ltv-lb-rows" data-title="Ranking Representantes (Reposição)">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Ranking Representantes (Reposição)</span>
@@ -2616,7 +2621,7 @@ function origemMoneyShort_(v) {
 
 // Canal selecionado = filtro de origem ativo (só Outbound/Inbound existem como
 // filtro de origem; Reposição/Reativação são funis próprios, vistos na aba LTV).
-function origemSel_() { return (_originMode === 'outbound' || _originMode === 'inbound') ? _originMode : null; }
+function origemSel_() { if (pzVis_() !== 'orig') return _pzSel; return (_originMode === 'outbound' || _originMode === 'inbound') ? _originMode : null; }
 
 // SuperAgos é Outbound: com o filtro Outbound ligado as 2 fatias ficam em destaque juntas.
 function origemSelCasa_(sel, key) { return sel === key || (sel === 'outbound' && ehOutEsp_(key)); }
@@ -2631,12 +2636,12 @@ function origemCenter_(bd, mode, hoverKey) {
   if (foc && !hoverKey && sel === 'outbound') { bd.canais.filter(c => ehOutEsp_(c.key)).forEach(sa => { foc = Object.assign({}, foc, { valor: foc.valor + sa.valor, cont: foc.cont + sa.cont }); }); } // filtro Outbound = Outbound + SuperAgos + Recuperação
   if (foc) {
     const v = mode === 'n' ? foc.cont : foc.valor;
-    return [(!hoverKey && sel ? 'Filtro · ' : '') + foc.label,
+    return [(!hoverKey && sel && pzVis_() === 'orig' ? 'Filtro · ' : '') + foc.label,
       mode === 'n' ? (foc.cont + (foc.cont === 1 ? ' venda' : ' vendas')) : origemMoneyShort_(foc.valor),
       tot > 0 ? (Math.round((v / tot) * 1000) / 10).toString().replace('.', ',') + '% do total' : ''];
   }
   if (tot > 0) {
-    return [mode === 'n' ? 'Vendas fechadas' : 'Total ganho',
+    return [mode === 'n' ? (_pzTab === 'ltv' ? 'Recompras' : 'Vendas fechadas') : (_pzTab === 'ltv' ? 'Reposição' : 'Total vendido'),
       mode === 'n' ? String(bd.totalCont) : origemMoneyShort_(bd.totalValor),
       mode === 'n' ? origemMoneyShort_(bd.totalValor) : (bd.totalCont + (bd.totalCont === 1 ? ' venda' : ' vendas'))];
   }
@@ -2664,7 +2669,7 @@ function origemDonutSVG_(bd, mode, hoverKey, animate) {
       const vis = Math.max(len - gap, 0.01);
       const ativo = origemAtivo_(foco, c.key, hoverKey);
       const dim = foco && !ativo ? ' opacity=".3"' : '';
-      const acao = ehFiltro_(c.key)
+      const acao = pzVis_() !== 'orig' ? ('Ver detalhes de ' + c.label) : ehFiltro_(c.key)
         ? (origemSelCasa_(sel, c.key) ? 'Limpar filtro ' + c.label : 'Filtrar painel por ' + (ehOutEsp_(c.key) ? 'Outbound (' + c.label + ' é outbound)' : c.label))
         : 'Abrir aba LTV (' + c.label + ')';
       segs += `<circle class="orig-seg" data-k="${c.key}" tabindex="0" role="button" aria-label="${escHtml(acao)}" cx="100" cy="100" r="${R}" fill="none" stroke="${c.color}" stroke-width="${ativo ? W + 6 : W}" stroke-dasharray="${vis.toFixed(2)} ${(C - vis).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}"${dim}><title>${escHtml(acao)}</title></circle>`;
@@ -2679,7 +2684,7 @@ function origemDonutSVG_(bd, mode, hoverKey, animate) {
   // telão e celular; fatias < 4% ficam sem rótulo (colariam na vizinha) — seguem na
   // legenda e no hover. No celular só o % (nome não cabe em 320px).
   const soPct = window.innerWidth < 520;
-  const conLb = tot > 0 && (window.innerHeight >= 761 || soPct);
+  const conLb = tot > 0 && (soPct || (window.innerHeight >= 761 && !pzTelao_()));
   const VB = conLb ? (soPct ? [-40, -10, 280, 220] : [-74, -10, 348, 220]) : [0, 0, 200, 200];
   let lbHTML = '';
   if (conLb) {
@@ -2705,10 +2710,10 @@ function origemDonutSVG_(bd, mode, hoverKey, animate) {
       });
     });
   }
-  return `<svg viewBox="${VB.join(' ')}" class="orig-svg" style="aspect-ratio:${VB[2]}/${VB[3]}" role="group" aria-label="Origem das vendas por canal">
+  return `<svg viewBox="${VB.join(' ')}" class="orig-svg" style="aspect-ratio:${VB[2]}/${VB[3]}" role="group" aria-label="Vendas do período (rosca)">
     <g class="${animate ? 'orig-anim' : ''}"><g transform="rotate(-90 100 100)">${segs}</g></g>
     <text x="100" y="86" text-anchor="middle" class="orig-t1">${escHtml(l1)}</text>
-    <text x="100" y="108" text-anchor="middle" class="orig-t2" style="font-size:${l2.length > 9 ? 18 : 21}px">${escHtml(l2)}</text>
+    <text x="100" y="108" text-anchor="middle" class="orig-t2" style="font-size:${l2.length > 11 ? 15 : (l2.length > 9 ? 18 : 21)}px">${escHtml(l2)}</text>
     <text x="100" y="126" text-anchor="middle" class="orig-t3">${escHtml(l3)}</text>
     ${lbHTML}
   </svg>`;
@@ -2795,7 +2800,7 @@ function renderOrigem_(d) {
 function origemHover_(key) {
   if (_origemHover === (key || null)) return;
   _origemHover = key || null;
-  if (!_origemData) return;
+  if (!pzAtual_()) return;
   const donut = document.getElementById('origem-donut');
   const svg = donut && donut.querySelector('svg');
   if (!svg) return;
@@ -2806,9 +2811,9 @@ function origemHover_(key) {
     if (foco && !ativo) c.setAttribute('opacity', '.3'); else c.removeAttribute('opacity');
   });
   svg.querySelectorAll('.orig-lb').forEach(g => { if (foco && !origemAtivo_(foco, g.dataset.k, _origemHover)) g.setAttribute('opacity', '.3'); else g.removeAttribute('opacity'); });
-  const [l1, l2, l3] = origemCenter_(_origemData.bd, _origemMode, _origemHover);
+  const [l1, l2, l3] = origemCenter_(pzAtual_(), _origemMode, _origemHover);
   const t = svg.querySelectorAll('text');
-  if (t.length >= 3) { t[0].textContent = l1; t[1].textContent = l2; t[1].style.fontSize = (l2.length > 9 ? 18 : 21) + 'px'; t[2].textContent = l3; }
+  if (t.length >= 3) { t[0].textContent = l1; t[1].textContent = l2; t[1].style.fontSize = (l2.length > 11 ? 15 : (l2.length > 9 ? 18 : 21)) + 'px'; t[2].textContent = l3; }
   document.querySelectorAll('#origem-legend .orig-item').forEach(it => it.classList.toggle('hl', !!_origemHover && it.dataset.k === _origemHover));
 }
 
@@ -2829,17 +2834,24 @@ function origemBindSegs_() {
 }
 
 function paintOrigem_(hoverKey, animate) {
-  if (!_origemData) return;
-  const { bd, prev } = _origemData;
+  const vis = pzVis_();
+  const pz = vis === 'orig' ? null : pzBd_();
+  if (vis === 'orig' ? !_origemData : !pz) return;
+  const bd = pz || _origemData.bd, prev = pz ? null : _origemData.prev;
   const donut = document.getElementById('origem-donut');
   if (!donut) return;
+  if (pz && _pzSel && !pz.canais.some(c => c.key === _pzSel)) _pzSel = null; // a fatia escolhida sumiu com a troca de período/origem
+  const sig = _pzTab + '|' + vis + '|' + bd.canais.map(c => c.valor + ':' + c.cont).join(',');
+  if (animate === 'auto') animate = sig !== _pzSig;
+  _pzSig = sig;
   _origemHover = hoverKey || null;
   const ae = document.activeElement;
   const focoK = ae && ae.dataset && ae.dataset.k && (ae.classList.contains('orig-seg') ? 'seg' : (ae.classList.contains('orig-item') ? 'item' : null)) ? { t: ae.classList.contains('orig-seg') ? 'seg' : 'item', k: ae.dataset.k } : null;
   donut.innerHTML = origemDonutSVG_(bd, _origemMode, _origemHover, !!animate);
   origemBindSegs_();
   const leg = document.getElementById('origem-legend');
-  leg.innerHTML = origemLegendHTML_(bd, prev, _origemMode);
+  leg.classList.toggle('pz-on', !!pz);
+  leg.innerHTML = pz ? pzLegendHTML_(pz, _origemMode) : origemLegendHTML_(bd, prev, _origemMode);
   leg.querySelectorAll('.orig-item').forEach(it => {
     it.addEventListener('mouseenter', () => origemHover_(it.dataset.k));
     it.addEventListener('mouseleave', () => origemHover_(null));
@@ -2847,11 +2859,12 @@ function paintOrigem_(hoverKey, animate) {
     it.addEventListener('keydown', e => { if (e.target === it && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); origemFiltrar_(it.dataset.k); } });
   });
   leg.querySelectorAll('.orig-i-open').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); origemHover_(null); openOrigemModal(b.dataset.open); }));
+  leg.querySelectorAll('.pz-open').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); origemHover_(null); openRepModal(+b.dataset.rep); }));
   if (focoK) { const el2 = document.querySelector(focoK.t === 'seg' ? '#origem-donut .orig-seg[data-k="' + focoK.k + '"]' : '#origem-legend .orig-item[data-k="' + focoK.k + '"]'); if (el2) el2.focus({ preventScroll: true }); }
-  document.getElementById('origem-foot').innerHTML = origemFootHTML_(bd);
+  document.getElementById('origem-foot').innerHTML = pz ? pzFootHTML_(pz) : origemFootHTML_(bd);
   document.querySelectorAll('.orig-tog-btn').forEach(b => b.classList.toggle('on', b.dataset.m === _origemMode));
-  // pílula "Filtrando: X ✕" — mesma origem do toggle Outbound/Inbound/Ambos
-  const sel = origemSel_();
+  // pílula "Filtrando: X ✕" (só na visão por origem) — mesma origem do toggle Outbound/Inbound/Ambos
+  const sel = vis === 'orig' ? origemSel_() : null;
   const pill = document.getElementById('origem-filtro');
   if (pill) {
     pill.classList.toggle('show', !!sel);
@@ -2861,6 +2874,7 @@ function paintOrigem_(hoverKey, animate) {
       pill.style.background = c.tx;
     }
   }
+  pzChrome_();
 }
 
 function setOrigemMode(m) {
@@ -2874,6 +2888,7 @@ function setOrigemMode(m) {
 // funis próprios do Pós-venda, então abrem a aba LTV (onde vivem funil, ranking
 // e motivos de perda deles).
 function origemFiltrar_(key) {
+  if (pzVis_() !== 'orig') { _pzSel = _pzSel === key ? null : key; paintOrigem_(); return; } // visões por representante/venda nova: selecionar a fatia, não filtrar o painel
   if (ehFiltro_(key)) {
     const k2 = ehOutEsp_(key) ? 'outbound' : key; // SuperAgos é outbound: filtra Outbound (as 2 fatias acendem juntas)
     const alvo = (_originMode === k2) ? 'both' : k2;
@@ -2888,6 +2903,154 @@ function origemFiltrar_(key) {
   }
 }
 function origemLimparFiltro_() { const s = origemSel_(); if (s) origemFiltrar_(s); }
+
+// ── PIZZA CENTRAL (30/10/2026) ───────────────────────────────────────────────
+// BLOCO COMPARTILHADO: idêntico byte a byte no mobile e no telão.
+// Pedido do Robert: "o ranking está muito grosseiro; o gráfico de pizza no lugar do ranking, roubando a cena; o ranking onde está o gráfico".
+// A rosca é o elemento CENTRAL da aba Vendas (e aparece também na LTV). Visões:
+//   Vendas: 'rep' (por representante) | 'nv' (Venda nova x Reposição) | 'orig' (por origem: o comportamento de antes, fatia filtra o painel)
+//   LTV:    'rep' (participação por representante no valor de reposição) | 'ciclo' (Reposição #1 / #2 / #3 ou mais, pelo título do negócio)
+// 'rep' e 'nv' usam o MESMO rankingReps_ do ranking (mesmo período e mesma origem, mesma soma), então rosca = ranking sempre.
+// Tocar numa fatia seleciona (valor, %, ganhos, venda nova x reposição); tocar de novo limpa. Só a visão 'orig' filtra o painel.
+let _pzTab = 'vendas';
+let _pzVis = { vendas: 'rep', ltv: 'rep' };
+let _pzSel = null;
+let _pzReps = null;   // saída de rankingReps_ na ordem do total (Vendas)
+let _pzLtv = null;    // dado da aba LTV (computeLtvData)
+let _pzSig = null;
+const PZ_CORES_ = { 976406: '#704B9B', 977487: '#E92085', 977488: '#0e9aa0', 977499: '#eda100', 977506: '#2f7de1', 983372: '#1baf7a', 987866: '#8a5a2b', 993185: '#d9483b', 976405: '#b085d8' };
+const PZ_RESERVA_ = ['#5b6ee1', '#c46a1a', '#3a9d5d', '#a64ca6', '#00829b'];
+function pzVis_() { return _pzVis[_pzTab] || 'rep'; }
+function pzEscuro_(hex) { const n = parseInt(hex.slice(1), 16); return '#' + [n >> 16 & 255, n >> 8 & 255, n & 255].map(v => Math.max(0, Math.round(v * 0.78)).toString(16).padStart(2, '0')).join(''); }
+function pzCor_(id) {
+  if (id === GRANDES_CONTAS_ID) return '#9a96a8';
+  if (PZ_CORES_[id]) return PZ_CORES_[id];
+  let h = 0; String(id).split('').forEach(c => { h = (h * 31 + c.charCodeAt(0)) >>> 0; });
+  return PZ_RESERVA_[h % PZ_RESERVA_.length];
+}
+function pzFecha_(bd) {
+  bd.totalValor = bd.canais.reduce((s, c) => s + c.valor, 0);
+  bd.totalCont = bd.canais.reduce((s, c) => s + c.cont, 0);
+  return bd;
+}
+function pzNum_(v) { return isFinite(v) ? v : 0; }
+// fatias da visão atual; null = sem dado ainda (o esqueleto continua) ou visão 'orig' (usa _origemData)
+function pzBd_() {
+  const vis = pzVis_();
+  if (vis === 'orig') return null;
+  if (_pzTab === 'ltv') {
+    const d = _pzLtv; if (!d) return null;
+    if (vis === 'ciclo') {
+      const g = { c1: { label: 'Reposição #1', color: '#0e9aa0' }, c2: { label: 'Reposição #2', color: '#eda100' }, c3: { label: 'Reposição #3 ou mais', color: '#704B9B' }, c0: { label: 'Sem número do ciclo', color: '#9a96a8' } };
+      const acc = { c1: [0, 0], c2: [0, 0], c3: [0, 0], c0: [0, 0] };
+      (d.recentWon || []).forEach(w => { const m = /Reposi[cç][aã]o\s*#\s*(\d+)/i.exec(w.title || ''); const k = m ? (+m[1] >= 3 ? 'c3' : (+m[1] === 2 ? 'c2' : 'c1')) : 'c0'; acc[k][0] += pzNum_(w.value); acc[k][1]++; });
+      return pzFecha_({ canais: ['c1', 'c2', 'c3', 'c0'].map(k => ({ key: k, label: g[k].label, color: g[k].color, tx: pzEscuro_(g[k].color), sub: '', valor: acc[k][0], cont: acc[k][1] })).filter(c => c.cont > 0) });
+    }
+    const reps = (d.reps || []).filter(r => pzNum_(r.ganhoValor) > 0 || pzNum_(r.ganhoCont) > 0).slice();
+    reps.sort((a, b) => ((a.id === GRANDES_CONTAS_ID) - (b.id === GRANDES_CONTAS_ID)) || (pzNum_(b.ganhoValor) - pzNum_(a.ganhoValor)));
+    return pzFecha_({ canais: reps.map(r => ({ key: 'r' + r.id, repId: r.id, label: r.id === GRANDES_CONTAS_ID ? 'Grandes Contas' : r.name, color: pzCor_(r.id), tx: pzEscuro_(pzCor_(r.id)), sub: '', valor: pzNum_(r.ganhoValor), cont: pzNum_(r.ganhoCont), gc: r.id === GRANDES_CONTAS_ID })) });
+  }
+  const L = _pzReps; if (!L) return null;
+  if (vis === 'nv') {
+    const s = (f) => L.reduce((a, r) => a + pzNum_(r[f]), 0);
+    return pzFecha_({ canais: [
+      { key: 'nova', label: 'Venda nova', color: '#704B9B', tx: '#5a3a80', sub: 'funil Arena', valor: s('novaValor'), cont: s('novaCont') },
+      { key: 'repos', label: 'Reposição', color: '#E92085', tx: '#c2185b', sub: 'Pós-venda e Reativação', valor: s('reposValor'), cont: s('reposCont') }
+    ] });
+  }
+  return pzFecha_({ canais: L.filter(r => r.totalValor > 0 || r.totalCont > 0).map(r => ({ key: 'r' + r.id, repId: r.id, label: r.id === GRANDES_CONTAS_ID ? 'Grandes Contas' : r.name, color: pzCor_(r.id), tx: pzEscuro_(pzCor_(r.id)), sub: '', valor: r.totalValor, cont: r.totalCont, nova: r.novaValor, novaC: r.novaCont, repos: r.reposValor, reposC: r.reposCont, gc: r.id === GRANDES_CONTAS_ID })) });
+}
+// bd da visão atual (rosca, centro, hover)
+function pzAtual_() { return pzVis_() === 'orig' ? (_origemData && _origemData.bd) : pzBd_(); }
+function pzTelao_() { return !!document.getElementById('col-center'); }
+function pzMoney_(v) { return origemMoneyShort_(v); }
+function pzPct_(v, t) { return t > 0 ? (Math.round((v / t) * 1000) / 10).toString().replace('.', ',') + '%' : '0%'; }
+function pzSplitBar_(c) {
+  if (c.nova == null) return '';
+  const n = Math.max(0, c.nova), r = Math.max(0, c.repos), t = Math.max(n + r, 1);
+  return `<div class="pz-split" role="img" aria-label="Venda nova ${escHtml(pzMoney_(n))}, reposição ${escHtml(pzMoney_(r))}" title="Venda nova ${escHtml(pzMoney_(n))} · Reposição ${escHtml(pzMoney_(r))}"><i class="rk-n" style="width:${(n / t * 100).toFixed(2)}%"></i><i class="rk-r" style="width:${(r / t * 100).toFixed(2)}%"></i></div>`;
+}
+function pzLegendHTML_(bd, mode) {
+  const tot = mode === 'n' ? bd.totalCont : bd.totalValor;
+  const sel = origemSel_();
+  const ehRep = pzVis_() === 'rep' && _pzTab === 'vendas';
+  return bd.canais.map(c => {
+    const val = mode === 'n' ? c.cont : c.valor;
+    const pc = tot > 0 ? Math.round((val / tot) * 100) : 0;
+    const v = mode === 'n' ? c.cont + (c.cont === 1 ? ' ganho' : ' ganhos') : pzMoney_(c.valor);
+    const tip = c.label + ': ' + pzMoney_(c.valor) + ' · ' + c.cont + (c.cont === 1 ? ' ganho' : ' ganhos') + (c.nova != null ? ' · venda nova ' + pzMoney_(c.nova) + ' · reposição ' + pzMoney_(c.repos) : '');
+    return `<div class="orig-item pz-item${sel === c.key ? ' sel' : ''}${sel && sel !== c.key ? ' off' : ''}" style="--c:${c.color};--t:${c.tx}" data-k="${c.key}" tabindex="0" role="button" aria-pressed="${sel === c.key ? 'true' : 'false'}" aria-label="${escHtml(tip)}" title="${escHtml(tip)}">
+      <span class="pz-name">${escHtml(c.label)}${c.sub ? '<small>' + escHtml(c.sub) + '</small>' : ''}</span><span class="pz-val">${escHtml(v)}</span><span class="orig-i-pc pz-pc">${pc}%</span>${ehRep && !c.gc && !pzTelao_() ? `<button class="pz-open" type="button" data-rep="${c.repId}" title="Ver os negócios de ${escHtml(c.label)}" aria-label="Ver os negócios de ${escHtml(c.label)}">↗</button>` : ''}
+      ${pzSplitBar_(c)}
+    </div>`;
+  }).join('');
+}
+function pzFootHTML_(bd) {
+  const sel = origemSel_();
+  const c = sel && bd.canais.find(x => x.key === sel);
+  const t = bd.totalValor;
+  if (c) {
+    const a = `<span><b>${escHtml(c.label)}</b> ${pzMoney_(c.valor)} · ${pzPct_(c.valor, t)} do total · ${c.cont} ${c.cont === 1 ? 'ganho' : 'ganhos'}</span>`;
+    const b = c.nova != null ? `<span><i class="rk-n"></i>Venda nova <b>${pzMoney_(c.nova)}</b> (${c.novaC})</span><span><i class="rk-r"></i>Reposição <b>${pzMoney_(c.repos)}</b> (${c.reposC})</span>` : '';
+    return a + b;
+  }
+  if (pzVis_() === 'nv' || (pzVis_() === 'rep' && _pzTab === 'vendas')) {
+    const n = bd.canais.reduce((s, x) => s + (x.nova != null ? x.nova : (x.key === 'nova' ? x.valor : 0)), 0);
+    const r = bd.canais.reduce((s, x) => s + (x.repos != null ? x.repos : (x.key === 'repos' ? x.valor : 0)), 0);
+    return `<span><i class="rk-n"></i>Venda nova <b>${pzMoney_(n)}</b>${t > 0 ? ' (' + Math.round(n / t * 100) + '%)' : ''}</span><span><i class="rk-r"></i>Reposição <b>${pzMoney_(r)}</b>${t > 0 ? ' (' + Math.round(r / t * 100) + '%)' : ''}</span>`;
+  }
+  return `<span>Total <b>${pzMoney_(t)}</b></span><span>${bd.totalCont} ${bd.totalCont === 1 ? 'recompra' : 'recompras'}</span>`;
+}
+// seletor de visão (3 botões grandes) e título
+function pzChrome_() {
+  const box = document.getElementById('pz-vis'); if (!box) return;
+  const opts = _pzTab === 'ltv' ? [['rep', 'Por representante'], ['ciclo', 'Por ciclo (#1, #2, #3+)']] : [['rep', 'Por representante'], ['nv', 'Venda nova × Reposição'], ['orig', 'Por origem']];
+  const vis = pzVis_();
+  box.innerHTML = opts.map(o => `<button type="button" class="pz-vb${o[0] === vis ? ' on' : ''}" data-pz="${o[0]}" role="tab" aria-selected="${o[0] === vis ? 'true' : 'false'}">${o[1]}</button>`).join('');
+  const tt = document.getElementById('pz-title');
+  if (tt) tt.textContent = _pzTab === 'ltv' ? 'Reposição do período' : 'Vendas do período';
+}
+function pzSetVis_(v) {
+  if (pzVis_() === v) return;
+  _pzVis[_pzTab] = v; _pzSel = null; _origemHover = null;
+  paintOrigem_(undefined, true);
+}
+document.addEventListener('click', e => {
+  const b = e.target && e.target.closest ? e.target.closest('.pz-vb') : null;
+  if (b) { e.preventDefault(); pzSetVis_(b.dataset.pz); }
+});
+// a rosca vive num só lugar por aba: troca de aba move o cartão e repinta
+function pzMover_(view) {
+  const tab = view === 'ltv' ? 'ltv' : 'vendas';
+  const card = document.getElementById(pzTelao_() ? 'origem-card' : 'origem-section');
+  const slot = document.getElementById(tab === 'ltv' ? 'pz-slot-ltv' : 'pz-slot-vendas');
+  if (card && slot && card.parentNode !== slot) slot.insertBefore(card, slot.firstChild);
+  if (tab !== _pzTab) { _pzTab = tab; _pzSel = null; _pzSig = null; }
+  try { paintOrigem_(undefined, true); } catch (e) {}
+}
+function pzLtvDado_(d) { _pzLtv = d; if (_pzTab === 'ltv') { try { paintOrigem_(undefined, 'auto'); } catch (e) {} } }
+// ranking: ordenação por coluna (clique no cabeçalho); a rosca sempre fica na ordem do total
+let _rkSort = { k: 'total', dir: -1 };
+let _rkLast = null;
+function rkSort_(k) {
+  _rkSort = _rkSort.k === k ? { k, dir: -_rkSort.dir } : { k, dir: k === 'name' ? 1 : -1 };
+  const fn = window.renderLeaderboard || window.renderReps;
+  if (fn && _rkLast) fn(_rkLast.reps, _rkLast.deals);
+}
+document.addEventListener('click', e => {
+  const b = e.target && e.target.closest ? e.target.closest('[data-rk-sort]') : null;
+  if (b) { e.preventDefault(); e.stopPropagation(); rkSort_(b.dataset.rkSort); }
+}, true);
+function rkSortHead_() {
+  document.querySelectorAll('[data-rk-sort]').forEach(b => {
+    const on = b.dataset.rkSort === _rkSort.k;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-sort', on ? (_rkSort.dir === 1 ? 'ascending' : 'descending') : 'none');
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    const ar = b.querySelector('.rk-ar'); if (ar) ar.textContent = on ? (_rkSort.dir === 1 ? '▲' : '▼') : '';
+  });
+}
+
 
 
 
@@ -5241,6 +5404,7 @@ function setView(btn) {
   el('bia-hero-row').style.display = view === 'bia' ? 'grid' : 'none';
   { const _bs_ = el('bia-status'); if (_bs_) _bs_.style.display = view === 'bia' ? '' : 'none'; } // QA 30/10: faixa da Bia aparecia 'Carregando...' no rodape de TODAS as abas
   el('bia-main').style.display     = view === 'bia' ? 'grid' : 'none';
+  pzMover_(view); // a rosca mora na aba Vendas e na LTV (um cartão só, movido de lugar)
   // achado 02/08 (auditoria): h-title-text (label perto do logo) e o rótulo
   // de fonte do rodapé só eram escritos por setOrigin() — entrar em SDR/Ads
   // sem nunca ter tocado o filtro de origem deixava os dois textos errados
@@ -5331,6 +5495,7 @@ function renderLtvDeltas(k, prev) {
 // continuam clicáveis de verdade pro Agendor (feed-row já é <a href>).
 function renderLtvSectionTelao(d) {
   const k = d.kpis;
+  pzLtvDado_(d);
   el('ltv-hero-val').textContent = fmtMoney(k.ganhoValor);
   el('ltv-hero-sub').textContent = k.ganhoCont + ' negócio' + (k.ganhoCont !== 1 ? 's' : '');
   if (d.period) {
@@ -6311,7 +6476,7 @@ function renderSpendTrendChart_(series, containerId) {
   if (series.length === 1) {
     box.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:3px">
       <div style="font-size:10.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Investimento em ${fmtD(series[0].date)}</div>
-      <div style="font-size:26px;font-weight:800;color:var(--purple)">${fmtMoney(series[0].spend)}</div>
+      <div style="font-size:15px;font-weight:700;color:var(--purple)">${fmtMoney(series[0].spend)}</div>
     </div>`;
     return;
   }
@@ -6870,14 +7035,21 @@ function rankingReps_(salesReps) {
     return Object.assign({}, r, { novaValor: nv, novaCont: nc, reposValor: rv, reposCont: rc, totalValor: nv + rv, totalCont: nc + rc });
   });
   const gc = out.filter(r => r.id === GRANDES_CONTAS_ID);
-  const disputa = out.filter(r => r.id !== GRANDES_CONTAS_ID)
-    .sort((a, b) => (b.totalValor - a.totalValor) || (b.totalCont - a.totalCont) || (b.ativos - a.ativos) || String(a.name).localeCompare(String(b.name), 'pt-BR'));
-  return disputa.concat(gc);
+  const cmpTotal = (a, b) => (b.totalValor - a.totalValor) || (b.totalCont - a.totalCont) || (b.ativos - a.ativos) || String(a.name).localeCompare(String(b.name), 'pt-BR');
+  const disputa = out.filter(r => r.id !== GRANDES_CONTAS_ID).sort(cmpTotal);
+  disputa.forEach((r, i) => { r._pos = i; });
+  gc.forEach(r => { r._pos = -1; });
+  _pzReps = disputa.concat(gc); // a rosca sempre usa a ordem do total
+  if (_rkSort.k === 'total' && _rkSort.dir === -1) return _pzReps.slice();
+  // clique no cabeçalho: ordena a disputa pela coluna escolhida; Grandes Contas continua por último
+  const val = { total: r => r.totalValor, nova: r => r.novaValor, repos: r => r.reposValor, ganhos: r => r.totalCont, name: r => String(r.name) }[_rkSort.k] || (r => r.totalValor);
+  return disputa.slice().sort((a, b) => { const x = val(a), y = val(b); const c = typeof x === 'string' ? x.localeCompare(y, 'pt-BR') : (x - y); return (c * _rkSort.dir) || cmpTotal(a, b); }).concat(gc);
 }
 // medalha só para os 3 primeiros da disputa que de fato venderam; Grandes Contas fica fora da disputa
-function rankingPos_(r, i) {
+function rankingPos_(r) {
   if (r.id === GRANDES_CONTAS_ID) return '💎';
-  if (i < 3 && r.totalValor > 0) return ['🥇', '🥈', '🥉'][i];
+  const i = r._pos;
+  if (i >= 0 && i < 3 && r.totalValor > 0) return ['🥇', '🥈', '🥉'][i];
   return (i + 1) + 'º';
 }
 function rankingBarra_(r, maxTot) {
@@ -6887,32 +7059,35 @@ function rankingBarra_(r, maxTot) {
 }
 
 function renderLeaderboard(reps, deals) {
-  // Ranking limpo (30/10): linha enxuta (posição, nome, ganhos, conversão, TOTAL vendido + barra venda nova x reposição).
-  // Pipeline, ticket, perdidos, leads, ativos e parados ficam em .lb-det, que só aparece no cartão expandido (⤢).
+  // Ranking em tabela (30/10): Representante | Venda nova | Reposição | Total | Ganhos, colunas CLARAS e separadas; clique no cabeçalho ordena.
+  // A rosca (central) mostra a participação; aqui ficam os números. Funil, ticket, pipeline, parados etc. ficam em .lb-det, só no expandido (⤢).
+  _rkLast = { reps, deals };
   const ordenados = rankingReps_(reps);
   const maxTot = Math.max(...ordenados.map(r => r.totalValor), 1);
   el('rep-badge').textContent = reps.length + ' vendedores';
   const nota = el('rk-nota'); if (nota) { nota.textContent = rankingOrigemNota_(true); nota.title = rankingOrigemNota_(); }
+  rkSortHead_();
 
-  el('lb-rows').innerHTML = ordenados.map((r, i) => {
+  el('lb-rows').innerHTML = ordenados.map(r => {
     const ehGC = r.id === GRANDES_CONTAS_ID;
-    const isGold = !ehGC && i === 0 && r.totalValor > 0;
-    const convClass = convClass_(r.conversao, r.leadsNoPeriodo);
+    const isGold = !ehGC && r._pos === 0 && r.totalValor > 0;
     const convText  = r.conversao !== null ? r.conversao + '%' : '—';
     const staleText = r.stale > 0 ? `<span class="lb-stale">⚠${r.stale}</span>` : '';
     return `
       <div class="lb-row ${isGold?'gold':''} ${ehGC?'gc':''}" ${ehGC?'title="Grandes Contas: fora da disputa do ranking"':''} onclick="openRepModal(${r.id})">
-        <div class="rk-top">
-          <span class="lb-rank">${rankingPos_(r, i)}</span>
+        <div class="rk-top rkt-grid">
+          <span class="lb-rank">${rankingPos_(r)}</span>
           <span class="lb-name">${escHtml(r.name)}</span>
-          <span class="lb-num rk-g">${r.totalCont}</span>
-          <span class="lb-conv ${convClass}">${convText}</span>
-          <span class="lb-num rk-tot" title="Venda nova ${escHtml(fmtMoney(r.novaValor))} + reposição ${escHtml(fmtMoney(r.reposValor))}">${fmtMoney(r.totalValor)}</span>
+          <span class="lb-num rk-v rk-nv" title="Venda nova: ${fmtMoney(r.novaValor)} em ${r.novaCont} ganho${r.novaCont !== 1 ? 's' : ''}">${r.novaValor > 0 ? fmtMoney(r.novaValor) : '—'}</span>
+          <span class="lb-num rk-v rk-rp" title="Reposição: ${fmtMoney(r.reposValor)} em ${r.reposCont} ganho${r.reposCont !== 1 ? 's' : ''}">${r.reposValor > 0 ? fmtMoney(r.reposValor) : '—'}</span>
+          <span class="lb-num rk-tot" title="Total ${escHtml(fmtMoney(r.totalValor))} = venda nova ${escHtml(fmtMoney(r.novaValor))} + reposição ${escHtml(fmtMoney(r.reposValor))}">${fmtMoney(r.totalValor)}</span>
+          <span class="lb-num rk-g" title="Ganhos no período (venda nova + reposição)">${r.totalCont}</span>
         </div>
         ${rankingBarra_(r, maxTot)}
         <div class="lb-det">
           <span>Venda nova <b>${fmtMoney(r.novaValor)}</b> <i>${r.novaCont} ganho${r.novaCont !== 1 ? 's' : ''}</i></span>
           <span>Reposição <b>${fmtMoney(r.reposValor)}</b> <i>${r.reposCont} ganho${r.reposCont !== 1 ? 's' : ''}</i></span>
+          <span>Conversão (venda nova) <b>${convText}</b></span>
           <span>Pipeline <b>${r.pipeline > 0 ? fmtMoney(r.pipeline) : '—'}</b></span>
           <span>Ativos <b>${r.ativos}</b>${staleText}</span>
           <span>Ticket médio (venda nova) <b>${r.ticketMedio > 0 ? fmtMoney(r.ticketMedio) : '—'}</b></span>
@@ -6923,6 +7098,7 @@ function renderLeaderboard(reps, deals) {
   }).join('');
 
   try { autoScrollIfNeeded('lb-rows'); } catch (e) {}
+  try { paintOrigem_(undefined, 'auto'); } catch (e) {} // a rosca usa o mesmo ranking: repinta junto
 }
 // compatibilidade: antes escondia a linha de detalhes; agora o detalhe só existe no expandido e a lista rola sozinha se não couber
 function ajustaRankingSemScroll_() {
