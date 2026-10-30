@@ -641,7 +641,8 @@
     '.s2.tv .s2-fl{font-size:9px}',
     '.s2.tv .s2-c{font-size:10.5px;padding:4px 10px}',
     '.s2.tv .s2-sub{font-size:9px}',
-    '.s2.tv .s2-expand,.s2-card .s2-expand{margin-left:6px}'
+    '.s2.tv .s2-chart{flex-shrink:0}',
+    '.s2-card .s2-xp{margin-left:6px}'
   ].join('\n');
 
   function injetaCss() {
@@ -771,7 +772,7 @@
     var cw = Math.max(300, (rw - 16) * 0.43 - 24);
     return 270; // 30/10: altura fixa, a escala do palco já cuida do tamanho na TV
   }
-  function fz(sv, tv) { return tv ? sv.replace(/font-size="9"/g, 'font-size="10"') : sv; } // 30/10: texto de gráfico >= 10 no telão
+  function fz(sv, tv) { return tv ? sv.replace(/font-size="([0-9.]+)"/g, function (m, n) { return parseFloat(n) < 10 ? 'font-size="10"' : m; }) : sv; } // 30/10: texto de gráfico >= 10 no telão
   function svgChart(r, tv) {
     var sr = r.serie, b = sr.baldes;
     if (!b.length) return '<div class="s2-empty">Sem qualificados nem perdas neste período</div>';

@@ -176,12 +176,12 @@
       }
     }
   }
-  /* cartão sem nada além do título nunca aparece (moldura oca): some até ter conteúdo */
+  /* cartão sem nada além do título nunca aparece como moldura oca: ganha uma mensagem ("Carregando…" no começo, depois "Sem dados para mostrar agora") */
   function semConteudo(card) {
     var f = card.children;
     for (var i = 0; i < f.length; i++) {
       var c = f[i];
-      if (c.matches('.card-hd,.s2-ch,.expand-btn,.xp-btn')) continue;
+      if (c.matches('.card-hd,.s2-ch,.expand-btn,.xp-btn,.lb-ph')) continue;
       if ((c.textContent || '').replace(/\s+/g, '').length) return false;
       if (c.querySelector && c.querySelector('svg,canvas,img,table,input,button')) return false;
     }
@@ -189,7 +189,14 @@
   }
   function limpaVazios() {
     var cs = document.querySelectorAll('#body .card,#s2-root .s2-card');
-    for (var i = 0; i < cs.length; i++) cs[i].classList.toggle('lb-vazio', semConteudo(cs[i]));
+    for (var i = 0; i < cs.length; i++) {
+      var c = cs[i], vazio = semConteudo(c), ph = c.querySelector(':scope > .lb-ph');
+      if (vazio && !ph) {
+        ph = document.createElement('div'); ph.className = 'lb-ph feed-empty'; c.appendChild(ph);
+      }
+      if (vazio && ph) { var tx = (performance.now() < 12000) ? 'Carregando…' : 'Sem dados para mostrar agora'; if (ph.textContent !== tx) ph.textContent = tx; }
+      if (!vazio && ph) ph.parentNode.removeChild(ph);
+    }
   }
   function agenda() { if (pend) return; pend = true; (window.requestAnimationFrame || setTimeout)(decora); }
 
