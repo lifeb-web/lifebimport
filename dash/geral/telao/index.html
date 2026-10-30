@@ -16,11 +16,6 @@
     if (window.top !== window.self) return;
     var q = location.search;
     if (/[?&]fit=0\b/.test(q)) return;
-    var on = false;
-    try { on = localStorage.getItem('lifeb_dash_tv_grande') === '1'; } catch (e) {}
-    if (/[?&]tv=1\b/.test(q)) on = true;
-    if (/[?&]tv=0\b/.test(q)) on = false;
-    if (!on) return;
     window.stop();
     var src = location.pathname + location.search + location.hash;
     document.documentElement.innerHTML =
@@ -29,7 +24,10 @@
       '<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f6f5f9}' +
       '#palco{position:fixed;left:0;top:0;border:0;transform-origin:0 0;background:#f6f5f9}</style></head>' +
       '<body><iframe id="palco" allow="fullscreen" allowfullscreen src="' + src.replace(/"/g, '&quot;') + '"></iframe></body>';
-    var REFW = 1800, REFH = 940, ZMAX = 4, ZMIN = 0.4;
+    /* 30/10 (Robert: letras miúdas e cartões espremidos): o palco de referência caiu de 1800x940 para 1440x810.
+       Na TV 1080p a escala vira 1,33 (antes 1,07): rótulo de 9px vira 12px, texto de 10,5px vira 14px, número de 21px vira 28px.
+       O palco vale também no PC (mesma proporção em qualquer tela); ?fit=0 desliga. */
+    var REFW = 1440, REFH = 810, ZMAX = 4, ZMIN = 0.5;
     var f = document.getElementById('palco');
     function ajusta() {
       var vw = window.innerWidth || document.documentElement.clientWidth;
@@ -275,7 +273,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
    não verde. Copiado exato (mesma paleta --purple já usada neste arquivo). */
 #ga4-live-card{background:linear-gradient(135deg,var(--purple) 0%,#9260c8 100%);border:none;box-shadow:0 4px 14px -4px rgba(112,75,155,.55)}
 #ga4-live-card .kc-label{color:rgba(255,255,255,.85)}
-#ga4-live-card .kc-val{color:#fff;font-size:20px}
+#ga4-live-card .kc-val{color:#fff;font-size:21px}
 #ga4-live-card .kc-sub{color:rgba(255,255,255,.8)}
 /* 🔴 FIX 26/08 nº2 (Robert: "o card de ao vivo pode ficar com os dados
    mais centralizados e simples, assim: Ao vivo / 1 / visitantes agora") —
@@ -311,7 +309,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 .ga4-table-card td{padding:7px 6px;font-weight:500;font-size:13px;white-space:normal;word-break:break-word;overflow-wrap:anywhere}
 .ga4-table-card td:not(:first-child){text-align:right;font-weight:700;font-size:14px;color:var(--purple);white-space:nowrap}
 .ga4-pg-legenda{display:block;font-weight:700;font-size:13px;color:var(--text);white-space:normal;word-break:break-word}
-.ga4-pg-path{display:block;font-size:9px;color:var(--muted);font-family:monospace;margin-top:1px;white-space:normal;word-break:break-word}
+.ga4-pg-path{display:block;font-size:10.5px;color:var(--muted);font-family:monospace;margin-top:1px;white-space:normal;word-break:break-word}
 .ga4-td-left{text-align:left!important;font-weight:500!important}
 
 /* BIA (25-26/08, redesenhado 26/08 depois de comparar com a referência real
@@ -418,9 +416,9 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 
 .kchip{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:9px 11px;display:flex;flex-direction:column;justify-content:center;gap:2px;overflow:hidden;box-shadow:0 1px 2px rgba(26,22,38,.04),0 2px 6px -2px rgba(26,22,38,.06)}
 .kchip[onclick]{cursor:pointer}
-.kc-label{font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);white-space:nowrap}
+.kc-label{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);white-space:nowrap}
 .kc-row{display:flex;align-items:baseline;gap:5px}
-.kc-val{font-size:17px;font-weight:800;color:var(--text);white-space:nowrap;font-variant-numeric:proportional-nums}
+.kc-val{font-size:21px;font-weight:800;color:var(--text);white-space:nowrap;font-variant-numeric:proportional-nums}
 .kc-delta{font-size:9px;font-weight:800}
 .kc-delta.flat{color:var(--muted)}
 .kc-delta.up{color:#15803d} .kc-delta.down{color:#b91c1c}
@@ -436,9 +434,9 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 #mkt-row{display:none;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;height:62px;flex-shrink:0}
 #mkt-row.show{display:grid}
 .achip{background:var(--card);border-radius:10px;border:1px solid var(--border);padding:6px 12px;display:flex;flex-direction:column;justify-content:center;gap:1px;box-shadow:0 1px 2px rgba(26,22,38,.04),0 2px 6px -2px rgba(26,22,38,.06)}
-.ac-label{font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ac-tag{display:inline-block;margin-left:3px;padding:1px 4px;border-radius:4px;background:rgba(233,32,133,.14);color:var(--magenta);font-size:7px;font-weight:800;letter-spacing:.2px;vertical-align:middle}
-.ac-val{font-size:15px;font-weight:800;color:var(--purple);font-variant-numeric:proportional-nums}
+.ac-label{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ac-tag{display:inline-block;margin-left:3px;padding:1px 4px;border-radius:4px;background:rgba(233,32,133,.14);color:var(--magenta);font-size:9px;font-weight:800;letter-spacing:.2px;vertical-align:middle}
+.ac-val{font-size:21px;font-weight:800;color:var(--purple);font-variant-numeric:proportional-nums}
 
 #main{flex:1;display:grid;grid-template-columns:22fr 46fr 32fr;gap:8px;overflow:hidden;min-height:0}
 /* SDR (02/08) — mesmas 3 colunas (22fr/46fr/32fr) do #main de Vendas, mesmo
@@ -547,8 +545,8 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 .bar-o2{background:linear-gradient(90deg,var(--o2),var(--purple-l))}
 .bar-o3{background:linear-gradient(90deg,var(--o3),var(--purple))}
 .funil-n{font-size:18px;font-weight:800;color:var(--text);min-width:28px;text-align:right;font-variant-numeric:tabular-nums}
-.funil-v{font-size:10px;font-weight:700;color:var(--muted);text-align:right;min-width:80px;white-space:nowrap;flex-shrink:0}
-.drop-pill{font-size:8px;font-weight:700;padding:2px 5px;background:#fff8e1;color:var(--amber);border-radius:8px;white-space:nowrap;flex-shrink:0}
+.funil-v{font-size:10.5px;font-weight:700;color:var(--muted);text-align:right;min-width:80px;white-space:nowrap;flex-shrink:0}
+.drop-pill{font-size:9px;font-weight:700;padding:2px 5px;background:#fff8e1;color:var(--amber);border-radius:8px;white-space:nowrap;flex-shrink:0}
 
 /* 15/09 — substitui a antiga #saude-band (Em Negociação/Parados/Perdidos,
    redundante com o funil ao lado). Altura FIXA (não cresce com a lista) +
@@ -621,7 +619,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
    no lugar dos antigos cards de lista Ganhos/Perdidos da aba Vendas. */
 #origem-card{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
 .orig-tog{display:flex;background:var(--bg);border-radius:8px;padding:2px;gap:2px}
-.orig-tog-btn{border:none;background:transparent;font-family:var(--font);font-size:10px;font-weight:800;color:var(--muted);padding:3px 9px;border-radius:6px;cursor:pointer}
+.orig-tog-btn{border:none;background:transparent;font-family:var(--font);font-size:10.5px;font-weight:800;color:var(--muted);padding:3px 9px;border-radius:6px;cursor:pointer}
 .orig-tog-btn.on{background:#fff;color:var(--text);box-shadow:0 1px 3px rgba(26,22,38,.15)}
 .orig-body{flex:1;display:flex;align-items:center;gap:12px;padding:8px 12px;min-height:0}
 .orig-ring{flex:0 0 auto;height:100%;aspect-ratio:1/1;max-width:50%;min-height:0}
@@ -629,7 +627,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 .orig-seg{cursor:pointer;transition:opacity .15s}
 .orig-t1{font-size:9.5px;font-weight:800;fill:var(--faint);text-transform:uppercase;letter-spacing:.5px;font-family:var(--font)}
 .orig-t2{font-size:21px;font-weight:800;fill:var(--text);font-family:var(--font)}
-.orig-t3{font-size:10px;font-weight:700;fill:var(--muted);font-family:var(--font)}
+.orig-t3{font-size:10.5px;font-weight:700;fill:var(--muted);font-family:var(--font)}
 .orig-skel-ring{width:100%;height:100%;border-radius:50%;border:24px solid #ede9f5;box-sizing:border-box}
 .orig-lb{cursor:pointer;transition:opacity .15s}
 .orig-lbl{fill:none;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:round}
@@ -649,7 +647,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 .orig-foot{display:flex;justify-content:space-between;gap:8px;padding:6px 14px 8px;border-top:1px dashed var(--border);font-size:10px;font-weight:600;color:var(--muted);flex-shrink:0;white-space:nowrap}
 .orig-foot b{color:var(--text);font-weight:800}
 .orig-hd-right{display:flex;align-items:center;gap:6px;min-width:0}
-.orig-filtro{display:none;align-items:center;font-family:inherit;font-size:9px;font-weight:800;padding:3px 8px;border-radius:12px;border:none;cursor:pointer;color:#fff;background:var(--purple);white-space:nowrap}
+.orig-filtro{display:none;align-items:center;font-family:inherit;font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:12px;border:none;cursor:pointer;color:#fff;background:var(--purple);white-space:nowrap}
 .orig-filtro.show{display:inline-flex}
 .orig-hint{font-weight:700;color:var(--faint);text-transform:none;letter-spacing:0}
 .orig-seg{outline:none}
@@ -664,7 +662,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 .orig-i-pc{color:var(--t,var(--c))}
 .orig-item .delta{white-space:nowrap;flex-shrink:0}
 .orig-i-l2{flex:1 1 auto}
-.orig-i-go{font-size:8px;font-weight:800;color:var(--faint);margin-left:4px;letter-spacing:.2px}
+.orig-i-go{font-size:9px;font-weight:800;color:var(--faint);margin-left:4px;letter-spacing:.2px}
 .orig-i-open{border:none;background:transparent;color:var(--faint);font-size:12px;font-weight:800;cursor:pointer;padding:0 0 0 6px;line-height:1;flex-shrink:0;font-family:inherit}
 .orig-i-open:hover{color:var(--c)}
 .orig-i-bar{height:3px;border-radius:3px;background:rgba(26,22,38,.07);margin-top:4px;overflow:hidden}
@@ -693,35 +691,35 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
   .orig-i-sub{align-items:flex-end}
   .orig-foot,body.tv-grande .orig-foot{font-size:clamp(10px,1.3vh,13px)}
 }
-@media(max-height:860px){ .orig-i-bar{display:none} }
-@media(max-height:940px){
+@media(max-width:0px) /*palco 30/10: regra antiga desligada max-height:860px*/{ .orig-i-bar{display:none} }
+@media(max-width:0px) /*palco 30/10: regra antiga desligada max-height:940px*/{
   body.tv-grande .orig-i-bar{display:none}
   body.tv-grande .orig-i-name{font-size:12.5px}
   body.tv-grande .orig-i-pc{font-size:15px}
   body.tv-grande .orig-i-l2{font-size:9.5px}
   body.tv-grande .orig-i-go{display:none}
 }
-@media(max-height:800px){
+@media(max-width:0px) /*palco 30/10: regra antiga desligada max-height:800px*/{
   body.tv-grande .orig-item{padding:2px 8px}
   body.tv-grande .orig-i-name{font-size:11px}
   body.tv-grande .orig-i-pc{font-size:13px}
-  body.tv-grande .orig-i-l2{font-size:8px}
-  body.tv-grande .orig-item .delta{font-size:8px;padding:0 3px}
+  body.tv-grande .orig-i-l2{font-size:9px}
+  body.tv-grande .orig-item .delta{font-size:9px;padding:0 3px}
 }
-@media(max-height:700px){
+@media(max-width:0px) /*palco 30/10: regra antiga desligada max-height:700px*/{
   body.tv-grande .orig-item .delta{display:none}
   body.tv-grande .orig-item{padding:1px 8px}
 }
 /* telas baixas (notebook 13"/1280x650): legenda compacta pra 4 canais caberem sem cortar */
-@media(max-height:760px){
+@media(max-width:0px) /*palco 30/10: regra antiga desligada max-height:760px*/{
   .orig-legend{gap:2px} /* 06/10: 6 canais (Recuperação) */
   .orig-item{padding:1px 8px}
   .orig-body{padding:4px 10px;gap:8px}
   .orig-item{padding:2px 8px}
   .orig-i-name{font-size:11px}
   .orig-i-pc{font-size:13px}
-  .orig-i-l2{font-size:8.5px}
-  .orig-item .delta{font-size:8.5px;padding:0 4px}
+  .orig-i-l2{font-size:9px}
+  .orig-item .delta{font-size:9px;padding:0 4px}
   .orig-i-bar{margin-top:2px;height:2px}
   .orig-foot{padding:3px 12px 4px;font-size:9px}
 }
@@ -742,7 +740,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 .feed-info{flex:1;min-width:0}
 .feed-co{font-size:12px;font-weight:700;color:var(--text);display:flex;align-items:baseline;min-width:0}
 .og-title-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.feed-rep{font-size:10px;font-weight:600;color:var(--muted)}
+.feed-rep{font-size:10.5px;font-weight:600;color:var(--muted)}
 .feed-right{text-align:right;flex-shrink:0}
 .feed-val{font-size:12px;font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}
 .feed-val.won{color:#15803d} .feed-val.lost{color:var(--red)}
@@ -804,7 +802,7 @@ qualquer badge/contagem nunca mais entrar embaixo do botão. */
 .mdeal-row:hover{background:#f5f3ff}
 .mdeal-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
 .mdeal-title{flex:1;font-size:13px;font-weight:700;color:var(--text);min-width:0;display:flex;align-items:baseline}
-.mdeal-rep{font-size:10px;color:var(--muted);font-weight:600;white-space:nowrap;flex-shrink:0}
+.mdeal-rep{font-size:10.5px;color:var(--muted);font-weight:600;white-space:nowrap;flex-shrink:0}
 .mdeal-val{font-size:13px;font-weight:800;color:var(--purple);white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums}
 .mdeal-stale{font-size:11px;flex-shrink:0}
 .mdeal-open{font-size:11px;color:var(--faint);flex-shrink:0}
@@ -860,7 +858,7 @@ footer strong{color:#fff}
 
 #bia-trend-card{max-height:none;min-height:150px}
 
-@media(max-height:860px){
+@media(max-width:0px) /*palco 30/10: regra antiga desligada max-height:860px*/{
   header{min-height:44px}
   #htime{font-size:15px}
   #body{padding:6px 12px 6px;gap:5px}
@@ -874,7 +872,7 @@ footer strong{color:#fff}
      não tinha orçamento nenhum, sumia cortada pelo overflow:hidden do
      #hero. +34px cobrem as 2 linhas extras com folga (testado ao vivo
      em 1440x800 e 1366x768, telas de notebook comuns). */
-  .hero-repo-row{font-size:10px;flex-shrink:0;line-height:1.15;overflow:visible}
+  .hero-repo-row{font-size:10.5px;flex-shrink:0;line-height:1.15;overflow:visible}
   #hero-row{height:118px} /* QA 30/10: linha Total do hero saia cortada em 1366x768 */
   /* 28/08 (achado real ao investigar sobreposição que Robert viu ao vivo
      na TV): #mkt-row{height:44px} aqui era MENOR que a base (52px), mas
@@ -884,8 +882,8 @@ footer strong{color:#fff}
      tela pequena; removido — herda os 62px da regra base, que já cobrem
      o conteúdo real com folga. */
   .hero-val{font-size:21px}
-  .kc-val{font-size:14px}
-  .sc-num{font-size:20px}
+  .kc-val{font-size:21px}
+  .sc-num{font-size:21px}
   .lb-name{font-size:13px}
   footer{padding:3px}
   /* 28/08 (auditoria pedida por Robert: "roda auditoria de novo... nada
@@ -926,7 +924,7 @@ footer strong{color:#fff}
    folga em qualquer largura que o dash já suporta) em vez de forçar um
    aumento que a caixa não comporta. TV de verdade (1920px+) continua
    ganhando o número grande. */
-@media(min-width:1800px){
+@media(max-width:0px) /*palco 30/10: regra antiga desligada min-width:1800px*/{
   /* 16/09 (Robert, print do modo TV real: "quebrou... tava quase bom",
      pediu pra diminuir só o valor grande no modo TV) — 34px cabia com
      pouquíssima folga (medido ~8px no teste, aparentemente zero na tela
@@ -952,13 +950,13 @@ body.tv-grande #ga4-live-card .kc-val{font-size:34px}
    overflow:hidden do .kchip. Fileira mais apertada do dash (9 colunas vs 5-6
    das outras) — corrigido só aqui (18px), sem mexer no tv-grande global das
    outras abas (já testadas e aprovadas na auditoria de 28/08). */
-body.tv-grande #ads-hero-row .kc-val{font-size:18px}
+body.tv-grande #ads-hero-row .kc-val{font-size:21px}
 body.tv-grande .sc-num{font-size:30px}
 body.tv-grande .funil-n{font-size:22px}
 body.tv-grande .lb-name{font-size:17px}
 body.tv-grande .lb-num{font-size:16px}
 body.tv-grande .lb-conv{font-size:14px}
-body.tv-grande .ac-val{font-size:18px}
+body.tv-grande .ac-val{font-size:21px}
 /* 28/08 (Robert, vendo AO VIVO na TV: "os cards de ads ficaram levemente
    sobrepostos pelo funil/ranking... acho que é pq o header cresceu") —
    não era o header, era isso aqui: #mkt-row tem altura FIXA (52px) que
@@ -999,7 +997,7 @@ body.tv-grande .rv-k-val{font-size:19px}
 #tv-toggle.active{background:var(--purple);color:#fff;border-color:var(--purple)}
 /* QA 30/10: em PC de 1366px o cartao do funil e estreito: a pilula de perdidos saia pela direita (65 a 74px) e nomes longos ficavam cortados */
 .dp-s{display:none}
-@media(max-width:1500px){
+@media(max-width:0px) /*palco 30/10: regra antiga desligada max-width:1500px*/{
   .dp-l{display:none}.dp-s{display:inline}
   #funil-rows .funil-row,#ltv-funil-rows .funil-row{gap:5px}
   #funil-rows .funil-bar-wrap,#ltv-funil-rows .funil-bar-wrap{flex:0 0 0;width:0;min-width:0;margin:0;box-shadow:none}
@@ -1533,7 +1531,7 @@ body.tv-grande .rv-k-val{font-size:19px}
           <span class="card-hd-title">Campanhas &amp; Conjuntos</span>
           <span class="badge" id="ads-campanhas-badge">—</span>
         </div>
-        <div style="padding:0 14px 4px;font-size:9px;color:var(--faint);font-weight:600;display:flex;gap:10px;flex-shrink:0">
+        <div style="padding:0 14px 4px;font-size:10.5px;color:var(--faint);font-weight:600;display:flex;gap:10px;flex-shrink:0">
           <span><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:3px;vertical-align:middle"></span>CTR bem acima da média</span>
           <span><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--red);margin-right:3px;vertical-align:middle"></span>bem abaixo</span>
           <span style="margin-left:auto" id="ads-leads-cobertura"></span>
@@ -1973,7 +1971,7 @@ const TV_GRANDE_KEY = 'lifeb_dash_tv_grande';
   }
   let on = false;
   try { on = localStorage.getItem(TV_GRANDE_KEY) === '1'; } catch (e) {}
-  if (on) document.body.classList.add('tv-grande');
+  /* 30/10: tv-grande aposentado (o palco de 1440x810 já ampliou tudo); a chave fica só por compatibilidade */
 })();
 function toggleTvGrande_() {
   const on = document.body.classList.toggle('tv-grande');
@@ -3369,7 +3367,7 @@ function ga4EventRow_(icon, nome, desc, count, maxCount) {
       <span style="font-size:15px;flex-shrink:0;width:20px;text-align:center">${icon}</span>
       <span class="funil-name" style="display:flex;flex-direction:column;min-width:150px;max-width:170px;white-space:normal;gap:1px">
         <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(nome)}</span>
-        <span style="font-size:9px;font-weight:600;color:var(--faint);white-space:normal">${escHtml(desc)}</span>
+        <span style="font-size:10.5px;font-weight:600;color:var(--faint);white-space:normal">${escHtml(desc)}</span>
       </span>
       <div class="funil-bar-wrap"><div class="funil-bar" style="width:${pct}%;background:linear-gradient(90deg,var(--purple),var(--purple-l))"></div></div>
       <span class="funil-n" style="color:var(--purple);font-size:20px">${fmtInt_(count)}</span>
@@ -3522,7 +3520,7 @@ function renderBiaBarChart_(canvasId, dias, vals, colorHex, fmtVal, opts) {
 function biaTrendHeroHeader_(label, valText, color, suffix) {
   return `<div style="display:flex;justify-content:space-between;align-items:baseline;padding:0 4px 4px;flex-shrink:0">
     <span style="font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">${escHtml(label)}</span>
-    <span style="font-size:16px;font-weight:800;color:${color}">${valText}<span style="font-size:9px;font-weight:700;color:var(--faint);margin-left:3px">${escHtml(suffix || 'hoje')}</span></span>
+    <span style="font-size:16px;font-weight:800;color:${color}">${valText}<span style="font-size:10.5px;font-weight:700;color:var(--faint);margin-left:3px">${escHtml(suffix || 'hoje')}</span></span>
   </div>`;
 }
 function renderBiaTrendChart_(dias, custo, notif, containerId) {
