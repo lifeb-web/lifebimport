@@ -134,8 +134,14 @@ body[data-view="bia"][data-pg="2"] #bia-main{grid-template-columns:1fr 1.25fr 1f
 .expand-btn{width:22px;height:22px;font-size:12px;top:9px;right:10px}
 .xp-btn{flex-shrink:0;width:22px;height:22px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:12px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;margin-left:6px;padding:0}
 .xp-btn:hover{background:var(--bg);color:var(--purple);border-color:var(--purple-l)}
-.expand-overlay{padding:20px}
-.expand-modal{width:min(1280px,95vw);max-height:min(94vh,780px);height:min(94vh,780px)}
+.expand-overlay{padding:20px;box-sizing:border-box;overscroll-behavior:contain}
+/* painel: altura pelo conteúdo, nunca maior que a tela (menos as margens); só o corpo rola, o cabeçalho fica fixo */
+.expand-modal{box-sizing:border-box;width:min(1280px,calc(100vw - 40px));height:auto;max-height:calc(100vh - 40px);max-height:calc(100dvh - 40px);min-height:0}
+@media (max-width:640px){.expand-overlay{padding:8px}.expand-modal{width:calc(100vw - 16px);max-height:calc(100vh - 16px);max-height:calc(100dvh - 16px)}}
+html.xp-open,html.xp-open body{overflow:hidden!important;overscroll-behavior:none}
+.expand-modal-body{overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.xp-hs{overflow-x:auto;max-width:100%}
+.xp-cv{position:relative;width:100%;height:min(54vh,460px);min-height:220px}
 .expand-modal-hd{padding:12px 20px}
 .expand-modal-title{font-size:14px}
 .expand-modal-close{width:28px;height:28px;font-size:14px}
@@ -163,7 +169,7 @@ body[data-view="bia"][data-pg="2"] #bia-main{grid-template-columns:1fr 1.25fr 1f
 .xp .ga4-table-card th{position:static}
 .xp .s2-tb{font-size:12px}.xp .s2-tb td{padding:5px 6px}.xp .s2-tb th{font-size:10px}
 .xp .s2-mr{font-size:12px}.xp .s2-nt,.xp .s2-lg{font-size:11px}
-.xp .s2-chart{max-height:360px;width:100%;margin:0 auto}
+.xp .s2-chart{display:block;margin:0 auto}
 
 /* ---------- Ads: nomes de campanha e anúncio quebram em vez de cortar ---------- */
 #ads-campanhas-rows .funil-name,#ads-campanhas-rows .abar-name-text,#ads-anuncios-rows .og-title-text,.abar-name-text{max-width:none;white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
