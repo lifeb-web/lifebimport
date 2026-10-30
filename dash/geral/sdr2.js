@@ -12,6 +12,8 @@
  * Regras do Robert (28/10/2026):
  *  - "Cadência esgotada" fica FORA da conversão, em cinza (recuperável).
  *  - Conversão: duas visões, a principal sem a cadência esgotada.
+ *  - Motivo de perda "Duplicado" (29/10/2026): fora dos perdidos do SDR e da conversão (principal e geral), não vira cadência esgotada;
+ *    aparece em cinza na linha "Duplicados (fora da conta)". Perdidos + esgotados + duplicados = total de fechados como perdido.
  *  - Data do ganho = data_real_evento, senão end_time (como DATA); nunca won_at.
  *  - Origem = regra do Dash (origem_especial manda; senão origin).
  *  - Vendas não se repetem aqui (já estão na aba Vendas).
@@ -156,6 +158,8 @@
     return ORIGENS;
   }
   function origemLabel(k) { for (var i = 0; i < ORIGENS.length; i++) if (ORIGENS[i].key === k) return ORIGENS[i].label; return rotuloOrigem(k); }
+  // Duplicado (nome exato no Agendor: "Duplicado"; tolera caixa e acento): fora da conta dos perdidos e da conversão
+  function ehDuplicado(motivo) { return String(motivo || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase() === 'duplicado'; }
   function ehSistema(motivo) { return CFG.perdaSistema.indexOf(String(motivo || '').toLowerCase()) >= 0; }
 
   // ---------- Preparação das linhas ----------
@@ -178,7 +182,8 @@
         e.data = d.data_real_evento ? String(d.data_real_evento).slice(0, 10) : dataBRT(d.end_time || d.closed_at);
       } else if (d.status === 'lost') {
         e.data = d.data_real_evento ? String(d.data_real_evento).slice(0, 10) : dataBRT(d.end_time || d.lost_at || d.closed_at);
-        e.sistema = ehSistema(d.lost_reason_name);
+        e.dup = ehDuplicado(d.lost_reason_name);
+        e.sistema = !e.dup && ehSistema(d.lost_reason_name);
       }
       if (e.status === 'won' && e.data) {
         if (e.entradaGS) { e.dias = Math.max(0, diffDays(e.entradaGS, e.data)); e.diasGS = true; }
@@ -205,18 +210,18 @@
   function noPeriodo(d, from, to) { return d.data && d.data >= from && d.data <= to; }
 
   function agrega(rows, from, to) {
-    var won = [], lostM = [], lostS = [], ong = [], fim = [];
+    var won = [], lostM = [], lostS = [], lostD = [], ong = [], fim = [];
     rows.forEach(function (d) {
       if (d.status === 'won' && noPeriodo(d, from, to)) won.push(d);
-      else if (d.status === 'lost' && noPeriodo(d, from, to)) (d.sistema ? lostS : lostM).push(d);
+      else if (d.status === 'lost' && noPeriodo(d, from, to)) (d.dup ? lostD : d.sistema ? lostS : lostM).push(d);
       else if (d.status === 'ongoing' && !d.congelado) (CFG.etapaFim.test(d.etapa) ? fim : ong).push(d);
     });
     var dias = won.filter(function (d) { return d.dias != null; }).map(function (d) { return d.dias; }).sort(function (a, b) { return a - b; });
     var soma = dias.reduce(function (s, x) { return s + x; }, 0);
     var med = dias.length ? (dias.length % 2 ? dias[(dias.length - 1) / 2] : (dias[dias.length / 2 - 1] + dias[dias.length / 2]) / 2) : null;
     return {
-      won: won, lostM: lostM, lostS: lostS, ong: ong, fim: fim,
-      q: won.length, pm: lostM.length, ps: lostS.length,
+      won: won, lostM: lostM, lostS: lostS, lostD: lostD, ong: ong, fim: fim,
+      q: won.length, pm: lostM.length, ps: lostS.length, pd: lostD.length,
       conv: (won.length + lostM.length) > 0 ? won.length / (won.length + lostM.length) : null,
       convGeral: (won.length + lostM.length + lostS.length) > 0 ? won.length / (won.length + lostM.length + lostS.length) : null,
       diasN: dias.length, diasMedia: dias.length ? soma / dias.length : null, diasMed: med,
@@ -228,11 +233,11 @@
   function porEtapa(rows, from, to) {
     var res = {};
     Object.keys(CFG.funis).forEach(function (fid) { res[fid] = {}; });
-    function get(d) { var m = res[d.funil]; return m[d.etapa] || (m[d.etapa] = { nome: d.etapa, ord: ordemEtapa(d.etapa), agora: 0, q: 0, pm: 0, ps: 0 }); }
+    function get(d) { var m = res[d.funil]; return m[d.etapa] || (m[d.etapa] = { nome: d.etapa, ord: ordemEtapa(d.etapa), agora: 0, q: 0, pm: 0, ps: 0, pd: 0 }); }
     rows.forEach(function (d) {
       if (d.status === 'ongoing') { if (!d.congelado) get(d).agora++; }
       else if (d.status === 'won' && noPeriodo(d, from, to)) get(d).q++;
-      else if (d.status === 'lost' && noPeriodo(d, from, to)) { if (d.sistema) get(d).ps++; else get(d).pm++; }
+      else if (d.status === 'lost' && noPeriodo(d, from, to)) { if (d.dup) get(d).pd++; else if (d.sistema) get(d).ps++; else get(d).pm++; }
     });
     var out = {};
     Object.keys(res).forEach(function (fid) {
@@ -261,14 +266,14 @@
     gran = gran || (nDias <= 31 ? 'd' : (nDias <= 150 ? 's' : 'm'));
     function chave(iso) { return gran === 'd' ? iso : (gran === 's' ? mondayOf(iso) : iso.slice(0, 7)); }
     var baldes = [], idx = {};
-    function mk(k) { var b = { k: k, q: 0, pm: 0, ps: 0 }; idx[k] = b; baldes.push(b); return b; }
+    function mk(k) { var b = { k: k, q: 0, pm: 0, ps: 0, pd: 0 }; idx[k] = b; baldes.push(b); return b; }
     if (gran === 'd') { for (var t = de; t <= ate; t = addDays(t, 1)) mk(t); }
     else if (gran === 's') { for (var s = mondayOf(de); s <= ate; s = addDays(s, 7)) mk(s); }
     else { var y = +de.slice(0, 4), mo = +de.slice(5, 7); var fim = ate.slice(0, 7); while (true) { var k = y + '-' + pad(mo); mk(k); if (k >= fim) break; mo++; if (mo > 12) { mo = 1; y++; } } }
     rows.forEach(function (d) {
       if ((d.status !== 'won' && d.status !== 'lost') || !noPeriodo(d, from, to) || d.data < de || d.data > ate) return;
       var b = idx[chave(d.data)]; if (!b) return;
-      if (d.status === 'won') b.q++; else if (d.sistema) b.ps++; else b.pm++;
+      if (d.status === 'won') b.q++; else if (d.dup) b.pd++; else if (d.sistema) b.ps++; else b.pm++;
     });
     return { baldes: baldes, gran: gran, de: de, ate: ate };
   }
@@ -429,6 +434,10 @@
     '.s2-ks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}',
     '.s2-k{background:var(--card,#fff);border:1px solid var(--border,#eae7f2);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0;box-shadow:0 1px 3px rgba(26,22,38,.04),0 4px 14px -6px rgba(26,22,38,.08)}',
     '.s2-k[data-go]{cursor:pointer}',
+    '.s2-dup{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;padding:7px 12px;border-radius:10px;border:1px dashed var(--border,#eae7f2);background:rgba(184,179,200,.12);color:#8a859c;font-size:11px;font-weight:700;line-height:1.3}',
+    '.s2-dup[data-go]{cursor:pointer}',
+    '.s2-dup b{font-size:15px;font-weight:800;color:#6b6484;font-variant-numeric:proportional-nums}',
+    '.s2-dup .s2-dl{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}',
     '.s2-kl{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--faint,#9b93b0)}',
     '.s2-kv{font-size:20px;font-weight:800;line-height:1.15;font-variant-numeric:proportional-nums}',
     '.s2-kd{font-size:10px;font-weight:800;margin-left:6px}',
@@ -601,9 +610,9 @@
     if (a.diasGS) tempoSub += ' · ' + a.diasGS + ' com entrada do GS';
     if (a.migradosGanhos) tempoSub += ' · ' + a.migradosGanhos + ' migrados do GS sem data fora';
     return chip('Qualificados', num(a.q), 'ganhos no funil SDR', { go: 'won', delta: delta(a.q, p ? p.q : null) }) +
-      chip('Perdidos pelo SDR', num(a.pm), 'decisão do SDR (conta na conversão)', { go: 'lostM', delta: delta(a.pm, p ? p.pm : null) }) +
-      chip('Conversão ⓘ', convPct, 'sem cadência esgotada · geral: <b>' + (a.convGeral == null ? 'n/d' : pct(a.q, a.q + a.pm + a.ps)) + '</b>',
-        { tip: 'Principal: qualificados ÷ (qualificados + perdidos pelo SDR). Geral: inclui também a cadência esgotada, que é recuperável e por isso fica fora da principal.', delta: convDelta }) +
+      chip('Perdidos pelo SDR', num(a.pm), 'decisão do SDR (conta na conversão; sem duplicados)', { go: 'lostM', delta: delta(a.pm, p ? p.pm : null) }) +
+      chip('Conversão ⓘ', convPct, 'sem esgotada e duplicados · geral: <b>' + (a.convGeral == null ? 'n/d' : pct(a.q, a.q + a.pm + a.ps)) + '</b>',
+        { tip: 'Principal: qualificados ÷ (qualificados + perdidos pelo SDR). Fora da conta: cadência esgotada (recuperável) e perdidos com motivo Duplicado (não é decisão do SDR). Geral: inclui também a cadência esgotada; duplicados ficam fora das duas.', delta: convDelta }) +
       chip('Cadência esgotada', num(a.ps), 'sistema, recuperável (fora da conversão)', { cinza: true, go: 'lostS' }) +
       chip('Em cadência agora', num(a.ong.length), 'abertos nas etapas D1 a D10', { go: 'ong' }) +
       chip('Fim da cadência', num(a.fim.length), 'aguardando, recuperáveis', { cinza: true, go: 'fim' }) +
@@ -611,6 +620,12 @@
       chipAtividades(r);
   }
 
+  function htmlDuplicados(r) {
+    var a = r.ag, p = r.agAnt;
+    return '<div class="s2-dup" data-go="lostD" title="Perdidos com motivo Duplicado. Não são decisão do SDR: ficam fora dos perdidos e da conversão. Clique para ver a lista.">' +
+      '<span class="s2-dl">Duplicados (fora da conta)</span><b>' + num(a.pd) + '</b>' +
+      '<span>' + (a.pd ? 'perdidos como Duplicado no período · clique para ver a lista' : 'nenhum perdido como Duplicado no período') + (p ? ' · período anterior: ' + num(p.pd) : '') + '</span></div>';
+  }
   function htmlEtapas(r) {
     var h = '';
     Object.keys(CFG.funis).forEach(function (fid) {
@@ -619,16 +634,16 @@
       var max = 1; linhas.forEach(function (l) { if (l.agora > max) max = l.agora; });
       h += '<div class="s2-sub" style="color:' + CFG.funis[fid].cor + '"><i class="s2-dot" style="background:' + CFG.funis[fid].cor + '"></i>' + esc(CFG.funis[fid].nome) + '</div>';
       if (!linhas.length) { h += '<div class="s2-empty">Sem negócios neste funil</div>'; return; }
-      h += '<table class="s2-tb"><thead><tr><th>Etapa</th><th>Agora</th><th>Qualif.</th><th>Perdidos</th><th>Esgot.</th></tr></thead><tbody>';
+      h += '<table class="s2-tb"><thead><tr><th>Etapa</th><th>Agora</th><th>Qualif.</th><th>Perdidos</th><th>Esgot.</th><th title="Duplicados (fora da conta)">Dup.</th></tr></thead><tbody>';
       linhas.forEach(function (l) {
         var fim = CFG.etapaFim.test(l.nome);
         function c(v, cls) { return '<td class="' + (v ? (cls || '') : 'z') + '">' + (v ? num(v) : '·') + '</td>'; }
         h += '<tr' + (fim ? ' class="gr"' : '') + '><td class="s2-etbar" style="--w:' + Math.round(l.agora / max * 100) + '%" title="' + esc(l.nome) + '">' + esc(l.nome) + '</td>' +
-          c(l.agora) + c(l.q, 'qc') + c(l.pm, 'pc') + c(l.ps, 'gc') + '</tr>';
+          c(l.agora) + c(l.q, 'qc') + c(l.pm, 'pc') + c(l.ps, 'gc') + c(l.pd, 'gc') + '</tr>';
       });
       h += '</tbody></table>';
     });
-    h += '<div class="s2-nt s2-xs">Agora = abertos hoje. Qualif., Perdidos e Esgot. = o que aconteceu no período, na etapa em que o negócio estava. ' + (r.etp ? 'A passagem entre etapas está no bloco Movimento entre etapas.' : 'O movimento entre etapas aparece aqui assim que houver histórico (avisos do Agendor).') + '</div>';
+    h += '<div class="s2-nt s2-xs">Agora = abertos hoje. Qualif., Perdidos, Esgot. e Dup. (duplicados, fora da conta) = o que aconteceu no período, na etapa em que o negócio estava. ' + (r.etp ? 'A passagem entre etapas está no bloco Movimento entre etapas.' : 'O movimento entre etapas aparece aqui assim que houver histórico (avisos do Agendor).') + '</div>';
     return h;
   }
 
@@ -658,7 +673,7 @@
       var cx = padL + gw * i + gw / 2;
       var hq = ih * x.q / max, hp = ih * x.pm / max;
       var rot = sr.gran === 'm' ? nomeMes(x.k + '-01') : dm(x.k);
-      var tip = rot + ': ' + x.q + ' qualificados, ' + x.pm + ' perdidos pelo SDR, ' + x.ps + ' cadência esgotada';
+      var tip = rot + ': ' + x.q + ' qualificados, ' + x.pm + ' perdidos pelo SDR, ' + x.ps + ' cadência esgotada, ' + x.pd + ' duplicados (fora da conta)';
       s += '<g><title>' + esc(tip) + '</title>' +
         '<rect x="' + (cx - bw - 1) + '" y="' + (padT + ih - hq) + '" width="' + bw + '" height="' + Math.max(hq, x.q ? 1 : 0) + '" rx="2" fill="' + C_GANHO + '"/>' +
         '<rect x="' + (cx + 1) + '" y="' + (padT + ih - hp) + '" width="' + bw + '" height="' + Math.max(hp, x.pm ? 1 : 0) + '" rx="2" fill="' + C_PERDA + '" opacity=".8"/>';
@@ -701,12 +716,12 @@
       var conv = (a.q + a.pm) ? pct(a.q, a.q + a.pm) : 'n/d';
       function cel(v, cls) { return '<td class="' + (v ? (cls || '') : 'z') + '">' + (v ? num(v) : '·') + '</td>'; }
       return '<tr data-go="' + c.tipo + ':' + c.key + '"><td title="' + esc(c.label) + '"><i class="s2-dot" style="background:' + c.cor + ';margin-right:5px"></i>' + esc(c.label) + '</td>' +
-        cel(a.q, 'qc') + cel(a.pm, 'pc') + cel(a.ps, 'gc') + '<td>' + conv + '</td>' + cel(a.ong.length) + '</tr>';
+        cel(a.q, 'qc') + cel(a.pm, 'pc') + cel(a.ps, 'gc') + cel(a.pd, 'gc') + '<td>' + conv + '</td>' + cel(a.ong.length) + '</tr>';
     }
-    var h = '<table class="s2-tb cr"><thead><tr><th>&nbsp;</th><th>Qualif.</th><th>Perd.</th><th>Esgot.</th><th>Conv.</th><th>Agora</th></tr></thead><tbody>';
+    var h = '<table class="s2-tb cr"><thead><tr><th>&nbsp;</th><th>Qualif.</th><th>Perd.</th><th>Esgot.</th><th title="Duplicados (fora da conta)">Dup.</th><th>Conv.</th><th>Agora</th></tr></thead><tbody>';
     var fun = r.cruz.filter(function (c) { return c.tipo === 'funil'; }), ori = r.cruz.filter(function (c) { return c.tipo === 'origem'; });
-    h += '<tr><td colspan="6" class="s2-sr s2-sub" style="padding:2px 4px 1px;color:var(--faint)">Por funil</td></tr>' + fun.map(linha).join('');
-    h += '<tr><td colspan="6" class="s2-sr s2-sub" style="padding:5px 4px 1px;color:var(--faint)">Por origem</td></tr>' + ori.map(linha).join('');
+    h += '<tr><td colspan="7" class="s2-sr s2-sub" style="padding:2px 4px 1px;color:var(--faint)">Por funil</td></tr>' + fun.map(linha).join('');
+    h += '<tr><td colspan="7" class="s2-sr s2-sub" style="padding:5px 4px 1px;color:var(--faint)">Por origem</td></tr>' + ori.map(linha).join('');
     h += '</tbody></table><div class="s2-nt s2-xs">Origem pela regra do Dash. Clique numa linha para filtrar a aba.</div>';
     return h;
   }
@@ -715,8 +730,9 @@
     var m = r.motivos, a = r.ag;
     var max = 1; m.forEach(function (x) { if (x.n > max) max = x.n; });
     if (a.ps > max) max = Math.max(max, a.ps);
+    if (a.pd > max) max = a.pd;
     var h = '<div class="s2-mot">';
-    if (!m.length && !a.ps) return '<div class="s2-empty">Sem perdas neste período</div>';
+    if (!m.length && !a.ps && !a.pd) return '<div class="s2-empty">Sem perdas neste período</div>';
     h += '<div class="s2-sub" style="color:#b91c1c;padding-top:0">Decididos pelo SDR · ' + num(a.pm) + '</div>';
     if (!m.length) h += '<div class="s2-st">nenhuma perda manual no período</div>';
     m.forEach(function (x, i) {
@@ -724,6 +740,7 @@
     });
     h += '<div class="s2-sub" style="color:#8a859c">Pelo sistema · recuperável</div>';
     h += '<div class="s2-mr gr" data-mot="s" title="Cadência esgotada"><span>Cadência esgotada</span><span>' + num(a.ps) + '</span><i style="width:' + Math.max(3, Math.round(a.ps / max * 100)) + '%"></i></div>';
+    h += '<div class="s2-mr gr" data-mot="d" title="Duplicado (fora da conta)"><span>Duplicado (fora da conta)</span><span>' + num(a.pd) + '</span><i style="width:' + (a.pd ? Math.max(3, Math.round(a.pd / max * 100)) : 0) + '%"></i></div>';
     return h + '</div>';
   }
 
@@ -826,7 +843,7 @@
   }
 
   function htmlNotas() {
-    return '<p><b>Conversão</b> = qualificados ÷ (qualificados + perdidos pelo SDR). A <b>cadência esgotada</b> é fim automático de cadência, recuperável, e fica fora da conta (o valor geral mostra como ficaria com ela).</p>' +
+    return '<p><b>Conversão</b> = qualificados ÷ (qualificados + perdidos pelo SDR). A <b>cadência esgotada</b> é fim automático de cadência, recuperável, e fica fora da conta (o valor geral mostra como ficaria com ela). Negócios perdidos com o motivo <b>Duplicado</b> também ficam fora da conta, tanto dos perdidos quanto da conversão (principal e geral), porque não foram uma decisão do SDR; aparecem em cinza na linha Duplicados (fora da conta). Perdidos + esgotados + duplicados = total de fechados como perdido.</p>' +
       '<p><b>Data do ganho</b> = data real do evento, senão a data de fechamento no Agendor. As <b>vendas</b> geradas ficam na aba Vendas.</p>' +
       '<p><b>Tempo até qualificar</b>: os 363 contatos migrados do GS em 20/10 ficam de fora até a data original ser importada.</p>';
   }
@@ -879,7 +896,7 @@
     var fr = frescor(), cv = coberturaInfo(r);
     var topo = '<div class="s2-hd"><div class="s2-ttl">SDR (<b>' + esc(nomeSdrs(r)) + '</b>) · <b>' + esc(per.label || (dm(per.from) + ' a ' + dm(per.to))) + '</b> <span class="s2-st' + (fr.warn ? ' warn' : '') + '" style="text-transform:none;letter-spacing:0">· ' + esc(fr.txt) + (fr.falha ? '' : (fr.warn ? ' (atrasado)' : '')) + '</span></div>' + htmlFiltros(r) + '</div>' +
       '<div class="s2-cov' + (cv.warn ? ' warn' : '') + '" title="O que esta aba leu e o que ela cobre">' + cv.txt + '</div>';
-    var kpis = '<div class="s2-ks">' + htmlKpis(r) + '</div>';
+    var kpis = '<div class="s2-ks">' + htmlKpis(r) + '</div>' + htmlDuplicados(r);
     var fl = tv ? 'flex:1' : '';
     var cEtapas = card('Etapas da cadência', 'onde estão e onde terminam', htmlEtapas(r), { style: fl });
     var cMov = r.etp ? card('Movimento entre etapas', 'entradas e saídas no período', htmlEtapasMov(r), { style: tv ? 'flex:0 0 auto' : '' }) : '';
@@ -898,6 +915,7 @@
     }
     root.innerHTML = topo + kpis + corpo;
     root.querySelector('.s2-ks').addEventListener('click', onClick);
+    root.querySelector('.s2-dup').addEventListener('click', onClick);
   }
 
   // Telão: garante que tudo cabe sem rolagem. Se algo estoura, sobe o nível de compactação (0 a 4) até caber.
@@ -992,9 +1010,9 @@
   // ---------- Interação ----------
   function lista(kind) {
     var a = S.last.ag;
-    return kind === 'won' ? a.won : kind === 'lostM' ? a.lostM : kind === 'lostS' ? a.lostS : kind === 'ong' ? a.ong : kind === 'fim' ? a.fim : [];
+    return kind === 'won' ? a.won : kind === 'lostM' ? a.lostM : kind === 'lostS' ? a.lostS : kind === 'lostD' ? a.lostD : kind === 'ong' ? a.ong : kind === 'fim' ? a.fim : [];
   }
-  var TIT = { won: 'Qualificados', lostM: 'Perdidos pelo SDR', lostS: 'Cadência esgotada', ong: 'Em cadência agora', fim: 'Fim da cadência (aguardando)' };
+  var TIT = { won: 'Qualificados', lostM: 'Perdidos pelo SDR', lostS: 'Cadência esgotada', lostD: 'Duplicados (fora da conta)', ong: 'Em cadência agora', fim: 'Fim da cadência (aguardando)' };
   function abreLista(titulo, itens, cor) {
     var mt = document.getElementById('modal-title'), mb = document.getElementById('modal-body'), mo = document.getElementById('modal-overlay');
     if (!mt || !mb || !mo) return;
@@ -1033,10 +1051,11 @@
     if (m && S.last) {
       var k = m.getAttribute('data-mot');
       if (k === 's') return abreLista('Cadência esgotada', S.last.ag.lostS, C_CINZA);
+      if (k === 'd') return abreLista('Duplicados (fora da conta)', S.last.ag.lostD, C_CINZA);
       var x = S.last.motivos[+k]; if (x) abreLista(x.motivo, x.lista, C_PERDA);
       return;
     }
-    if (ev.target.closest('.s2-ks')) onClick(ev);
+    if (ev.target.closest('.s2-ks') || ev.target.closest('.s2-dup')) onClick(ev);
   }
 
   // ---------- Dados (somente leitura) ----------
