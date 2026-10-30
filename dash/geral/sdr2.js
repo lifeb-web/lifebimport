@@ -588,7 +588,8 @@
     '.s2-cov.warn{color:var(--amber,#b45309);font-weight:700}',
     '.s2-tb tr.s2-lig td{color:#0e7c82}',
     '.s2-kt button{margin-top:3px}',
-    '.s2-conf>summary{cursor:pointer;font-size:11px;font-weight:800;color:var(--purple,#704B9B)}.s2-tb.cf td:first-child{max-width:none}',
+    '.s2.tv[data-nc="1"] .s2-ini{display:none}',
+    '.s2-conf>summary{cursor:pointer;font-size:11px;font-weight:800;color:var(--purple,#704B9B)}.s2-tb.cf{table-layout:fixed}.s2-tb.cf td:first-child{max-width:none}.s2-tb.cf th{white-space:normal;line-height:1.15;vertical-align:bottom;padding:2px 2px;font-size:8.5px}.s2-tb.cf td{padding:4px 2px;white-space:normal;overflow-wrap:anywhere;font-size:10.5px}.s2-tb.cf th:nth-child(2),.s2-tb.cf th:nth-child(3){width:15%}.s2-tb.cf th:nth-child(4){width:17%}',
     '.s2-tb tr.s2-gsin td{color:#5b5670;background:#ece9f4}',
     '.s2-empty button{font:inherit}',
     /* PC e tablet: colunas que se completam (sem buracos) */
@@ -646,6 +647,7 @@
     '.s2.tv[data-d="4"] .s2-gsnote,.s2.tv[data-d="5"] .s2-gsnote{display:none}',
     '.s2.tv[data-d="5"] .s2-cov,.s2.tv[data-d="5"] .s2-lg,.s2.tv[data-d="5"] .s2-esg,.s2.tv[data-d="5"] .s2-nt,.s2.tv[data-d="5"] .s2-kt{display:none}',
     '.s2.tv[data-d="5"] .s2-k{padding:4px 9px}.s2.tv[data-d="5"] .s2-tb,.s2.tv[data-d="5"] .s2-mr{font-size:9px}.s2.tv[data-d="5"] .s2-tb td{padding:1px 4px}.s2.tv[data-d="5"] .s2-ch{padding:5px 10px 4px}.s2.tv[data-d="5"] .s2-sub{padding:3px 0 0}'
+    ,'.s2.tv[data-d="4"] .s2-k,.s2.tv[data-d="5"] .s2-k{padding:1px 8px;gap:0}.s2.tv[data-d="4"] .s2-kv,.s2.tv[data-d="5"] .s2-kv{font-size:clamp(12px,1.85vh,18px);line-height:1.05}.s2.tv[data-d="4"] .s2-ks,.s2.tv[data-d="5"] .s2-ks{gap:4px}'
   ].join('\n');
 
   function injetaCss() {
@@ -1087,7 +1089,7 @@
     var cGraf = card('Qualificados e perdidos', esc(r.serie.baldes.length ? dm(r.serie.de) + ' a ' + dm(r.serie.ate) : ''), htmlGrafico(r, tv), { style: tv ? 'flex:0 0 auto' : '' });
     var cCruz = card('Funil e origem', 'período selecionado', htmlCruzada(r), { style: fl });
     var cMot = card('Motivos de perda', 'período selecionado', htmlMotivos(r), { style: fl });
-    var cIni = card('Iniciados e finalizados', r.ini ? esc(dm(r.ini.serie.de) + ' a ' + dm(r.ini.serie.ate)) : '', htmlIniFin(r, tv), { style: tv ? 'flex:0 0 auto' : '' });
+    var cIni = card('Iniciados e finalizados', r.ini ? esc(dm(r.ini.serie.de) + ' a ' + dm(r.ini.serie.ate)) : '', htmlIniFin(r, tv), { cls: 's2-ini', style: tv ? 'flex:0 0 auto' : '' });
     var cConf = tv ? '' : '<details class="s2-det s2-card s2-conf"><summary style="padding:9px 12px">Conferência: iniciados e finalizados</summary><div class="s2-cb">' + htmlConferencia(r) + '</div></details>';
     var cAtv = card('Atividades do SDR', r.atv && !r.atv.jn.antes ? 'tarefas concluídas no Agendor' : 'Agendor', htmlAtividades(r, tv), { style: tv ? 'flex:0 0 auto' : '' });
     var cGS = card('Histórico GS Engage', 'mai a 19/10 · congelado', htmlGS(r), { cls: 's2-gs', style: tv ? 'flex:0 0 auto' : '' });
@@ -1185,8 +1187,10 @@
   function render() {
     if (!S.root) return;
     if (S.mode !== 't') { medeLargura(); draw(); if (S.w !== 'p') empacota(); return; }
-    for (var d = 0; d <= 5; d++) {
-      S.dens = d; S.root.setAttribute('data-d', d); S.root.style.setProperty('--tp', TP[d] + 'px');
+    for (var d = 0; d <= 6; d++) {
+      // nível 6 = mesma compactação do 5 sem o gráfico de iniciados (último recurso em telas muito baixas; o número fica nos cartões)
+      var dd = d > 5 ? 5 : d;
+      S.dens = dd; S.root.setAttribute('data-d', dd); S.root.setAttribute('data-nc', d > 5 ? '1' : '0'); S.root.style.setProperty('--tp', TP[dd] + 'px');
       draw();
       if (!S.last || !S.root.querySelector('.s2-body')) break;
       if (empacotaTv() && !estoura()) break;
