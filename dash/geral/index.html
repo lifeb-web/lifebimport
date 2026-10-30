@@ -497,6 +497,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .orig-item .delta{white-space:nowrap;flex-shrink:0}
 .orig-i-l2{flex:1 1 auto}
 .orig-i-go{font-size:8px;font-weight:800;color:var(--faint);margin-left:4px;letter-spacing:.2px}
+.orig-i-l2,.orig-i-cnt,.orig-i-dot,.orig-i-go{font-size:12px}
 .orig-i-open{border:none;background:transparent;color:var(--faint);font-size:12px;font-weight:800;cursor:pointer;padding:0 0 0 6px;line-height:1;flex-shrink:0;font-family:inherit}
 .orig-i-open:hover{color:var(--c)}
 .orig-i-bar{height:3px;border-radius:3px;background:rgba(26,22,38,.07);margin-top:4px;overflow:hidden}
@@ -2357,14 +2358,14 @@ function origemLimparFiltro_() { const s = origemSel_(); if (s) origemFiltrar_(s
 // 'rep' e 'nv' usam o MESMO rankingReps_ do ranking (mesmo período e mesma origem, mesma soma), então rosca = ranking sempre.
 // Tocar numa fatia seleciona (valor, %, ganhos, venda nova x reposição); tocar de novo limpa. Só a visão 'orig' filtra o painel.
 let _pzTab = 'vendas';
-let _pzVis = { vendas: 'rep', ltv: 'rep' };
+let _pzVis = { vendas: 'orig', ltv: 'rep' };
 let _pzSel = null;
 let _pzReps = null;   // saída de rankingReps_ na ordem do total (Vendas)
 let _pzLtv = null;    // dado da aba LTV (computeLtvData)
 let _pzSig = null;
 const PZ_CORES_ = { 976406: '#704B9B', 977487: '#E92085', 977488: '#0e9aa0', 977499: '#eda100', 977506: '#2f7de1', 983372: '#1baf7a', 987866: '#8a5a2b', 993185: '#d9483b', 976405: '#b085d8' };
 const PZ_RESERVA_ = ['#5b6ee1', '#c46a1a', '#3a9d5d', '#a64ca6', '#00829b'];
-function pzVis_() { return _pzVis[_pzTab] || 'rep'; }
+function pzVis_() { return _pzVis[_pzTab] || (_pzTab === 'vendas' ? 'orig' : 'rep'); }
 function pzEscuro_(hex) { const n = parseInt(hex.slice(1), 16); return '#' + [n >> 16 & 255, n >> 8 & 255, n & 255].map(v => Math.max(0, Math.round(v * 0.78)).toString(16).padStart(2, '0')).join(''); }
 function pzCor_(id) {
   if (id === GRANDES_CONTAS_ID) return '#9a96a8';
