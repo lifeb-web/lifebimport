@@ -517,36 +517,36 @@
     '.s2{display:flex;flex-direction:column;gap:8px;font-family:var(--font,Montserrat,sans-serif);color:var(--text,#1a1626)}',
     '.s2 *{box-sizing:border-box}',
     '.s2-hd{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}',
-    '.s2-ttl{font-size:11px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;color:var(--faint,#9b93b0)}',
+    '.s2-ttl{font-size:11px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;color:var(--faint,#766e90)}',
     '.s2-ttl b{color:var(--purple,#704B9B);font-weight:800}',
     '.s2-fil{display:flex;gap:6px;flex-wrap:wrap;align-items:center}',
     '.s2-fg{display:flex;gap:3px;align-items:center;flex-wrap:wrap}',
-    '.s2-fl{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--faint,#9b93b0);margin-right:2px}',
+    '.s2-fl{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--faint,#766e90);margin-right:2px}',
     '.s2-c{border:1px solid var(--border,#eae7f2);background:var(--card,#fff);color:var(--muted,#6b6484);font:inherit;font-size:10.5px;font-weight:700;padding:4px 9px;border-radius:999px;cursor:pointer;line-height:1.2}',
     '.s2-c.on{background:var(--purple,#704B9B);border-color:var(--purple,#704B9B);color:#fff}',
     '.s2-ks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}',
     '.s2-k{background:var(--card,#fff);border:1px solid var(--border,#eae7f2);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0;box-shadow:0 1px 3px rgba(26,22,38,.04),0 4px 14px -6px rgba(26,22,38,.08)}',
     '.s2-k[data-go]{cursor:pointer}',
-    '.s2-dup{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;padding:7px 12px;border-radius:10px;border:1px dashed var(--border,#eae7f2);background:rgba(184,179,200,.12);color:#8a859c;font-size:11px;font-weight:700;line-height:1.3}',
+    '.s2-dup{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;padding:7px 12px;border-radius:10px;border:1px dashed var(--border,#eae7f2);background:rgba(184,179,200,.12);color:#756f8c;font-size:11px;font-weight:700;line-height:1.3}',
     '.s2-dup[data-go]{cursor:pointer}',
     '.s2-dup b{font-size:15px;font-weight:800;color:#6b6484;font-variant-numeric:proportional-nums}',
     '.s2-dup .s2-dl{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}',
-    '.s2-kl{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--faint,#9b93b0)}',
+    '.s2-kl{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--faint,#766e90)}',
     '.s2-kv{font-size:20px;font-weight:800;line-height:1.15;font-variant-numeric:proportional-nums}',
     '.s2-kd{font-size:10px;font-weight:800;margin-left:6px}',
     '.s2-kd.up{color:#15803d}.s2-kd.down{color:#b91c1c}.s2-kd.flat{color:var(--muted,#6b6484)}',
     '.s2-kt{font-size:10px;font-weight:600;color:var(--muted,#6b6484);line-height:1.3}',
     '.s2-k.ap{background:#fffbeb;border-color:#f3d28a}.s2-ap{display:inline-block;margin-left:5px;padding:1px 5px;border-radius:8px;background:#fde7b0;color:#92400e;font-size:9px;font-weight:800;letter-spacing:.2px;vertical-align:middle;white-space:nowrap}.s2-k.ap .s2-kt{color:#92400e}',
     '.s2-ban{background:#fffbeb;border:1px solid #f3d28a;color:#92400e;border-radius:8px;padding:6px 8px;font-size:11px;font-weight:700;margin-bottom:6px}',
-    '.s2-k.gr{background:#f4f3f7}.s2-k.gr .s2-kv{color:#8a859c}',
-    '.s2-k.gr .s2-kl,.s2-k.gr .s2-kt{color:#8a859c}',
+    '.s2-k.gr{background:#f4f3f7}.s2-k.gr .s2-kv{color:#756f8c}',
+    '.s2-k.gr .s2-kl,.s2-k.gr .s2-kt{color:#756f8c}',
     '.s2-card{background:var(--card,#fff);border:1px solid var(--border,#eae7f2);border-radius:14px;overflow:hidden;min-width:0;display:flex;flex-direction:column;box-shadow:0 1px 3px rgba(26,22,38,.04),0 4px 14px -6px rgba(26,22,38,.08)}',
     '.s2-ch{padding:9px 12px 7px;border-bottom:1px solid var(--border,#eae7f2);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0}',
-    '.s2-ct{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--faint,#9b93b0)}',
+    '.s2-ct{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--faint,#766e90)}',
     '.s2-cs{font-size:10px;font-weight:700;color:var(--purple,#704B9B)}',
     '.s2-cb{padding:8px 12px 10px;display:flex;flex-direction:column;gap:6px;min-height:0;flex:1}',
     '.s2-tb{width:100%;border-collapse:collapse;font-size:11px}',
-    '.s2-tb th{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--faint,#9b93b0);text-align:right;padding:2px 4px;white-space:nowrap}',
+    '.s2-tb th{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--faint,#766e90);text-align:right;padding:2px 4px;white-space:nowrap}',
     '.s2-tb th:first-child,.s2-tb td:first-child{text-align:left}',
     '.s2-tb td{padding:4px 4px;text-align:right;font-variant-numeric:tabular-nums;border-top:1px solid #f4f2f8;font-weight:700}',
     '.s2-tb td.s2-sr{max-width:none!important;width:auto!important;white-space:normal!important;border-top:0;text-align:left}',
@@ -554,9 +554,9 @@
     '.s2.m .s2-tb.cr td{padding:4px 2px;font-size:10.5px}',
     '.s2.m .s2-tb.cr td:first-child{width:auto;max-width:27vw;min-width:50px;overflow:hidden;text-overflow:ellipsis}',
     '.s2-tb td:first-child{max-width:0;width:44%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}',
-    '.s2-tb tr.gr td{color:#8a859c;font-weight:600}',
+    '.s2-tb tr.gr td{color:#756f8c;font-weight:600}',
     '.s2-tb td.z{color:#c9c5d6;font-weight:600}',
-    '.s2-tb td.gc{color:#8a859c}',
+    '.s2-tb td.gc{color:#756f8c}',
     '.s2-tb td.qc{color:#15803d}.s2-tb td.pc{color:#b91c1c}',
     '.s2-tb tr[data-go]{cursor:pointer}.s2-tb tr[data-go]:hover td{background:#f8f6fc}',
     '.s2-sub{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;padding:6px 0 1px;display:flex;align-items:center;gap:6px}',
@@ -565,7 +565,7 @@
     '.s2-mr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;align-items:center;cursor:pointer;font-size:11px;font-weight:700}',
     '.s2-mr span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
     '.s2-mr i{grid-column:1/3;height:5px;border-radius:3px;background:var(--red,#dc2626);opacity:.75;display:block;min-width:2px}',
-    '.s2-mr.gr{color:#8a859c;font-weight:600}.s2-mr.gr i{background:' + C_CINZA + ';opacity:1}',
+    '.s2-mr.gr{color:#756f8c;font-weight:600}.s2-mr.gr i{background:' + C_CINZA + ';opacity:1}',
     '.s2-chart{width:100%;display:block}',
     '.s2-lg{display:flex;gap:10px;flex-wrap:wrap;font-size:10px;font-weight:700;color:var(--muted,#6b6484)}',
     '.s2-lg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}',
@@ -573,14 +573,14 @@
     '.s2-nt b{color:var(--text,#1a1626)}',
     '.s2-nt p{margin:0 0 4px}',
     '.s2-gs{background:#f4f3f7;border-color:#e3e0ec;box-shadow:none}',
-    '.s2-gs .s2-ct,.s2-gs .s2-cs{color:#8a859c}',
-    '.s2-gs .s2-tb td{color:#7a7590;border-top-color:#e9e6f1}',
+    '.s2-gs .s2-ct,.s2-gs .s2-cs{color:#756f8c}',
+    '.s2-gs .s2-tb td{color:#6f6a86;border-top-color:#e9e6f1}',
     '.s2-gs .s2-tb th{color:#9b97ac}',
     '.s2-gs .s2-tb td:first-child{width:auto;max-width:none;overflow:visible;text-overflow:clip;white-space:normal}.s2.m .s2-gs .s2-tb th.s2-gsh{font-size:8px;letter-spacing:0;padding-left:1px;padding-right:1px}',
     '.s2-tb th.s2-gsh{white-space:normal;line-height:1.15;vertical-align:bottom;cursor:help}.s2-i{opacity:.65;font-weight:600;text-transform:none}',
     '.s2-st{font-size:10px;font-weight:600;color:var(--muted,#6b6484)}',
     '.s2-st.warn{color:var(--amber,#b45309);font-weight:800}',
-    '.s2-empty{padding:14px 10px;text-align:center;color:var(--faint,#9b93b0);font-size:12px;font-style:italic}',
+    '.s2-empty{padding:14px 10px;text-align:center;color:var(--faint,#766e90);font-size:12px;font-style:italic}',
     '.s2-det summary{cursor:pointer;font-size:11px;font-weight:800;color:var(--purple,#704B9B);padding:2px 0}',
     '.s2-etbar{background:linear-gradient(90deg,rgba(112,75,155,.14) var(--w,0%),transparent var(--w,0%))}',
     '.s2 > details.s2-card{margin-top:0}',
@@ -790,7 +790,7 @@
     [0, 0.5, 1].forEach(function (f) {
       var y = padT + ih - ih * f;
       s += '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + y + '" y2="' + y + '" stroke="#eae7f2" stroke-width="1"/>' +
-        '<text x="' + (padL - 4) + '" y="' + (y + 3) + '" text-anchor="end" font-size="9" fill="#9b93b0">' + Math.round(max * f) + '</text>';
+        '<text x="' + (padL - 4) + '" y="' + (y + 3) + '" text-anchor="end" font-size="9" fill="#766e90">' + Math.round(max * f) + '</text>';
     });
     var passo = Math.ceil(b.length / (tv ? 14 : 7));
     b.forEach(function (x, i) {
@@ -817,7 +817,7 @@
       b.forEach(function (x, i) {
         var cx = padL + gw * i + gw / 2, h2 = ih2 * x.ps / maxS;
         s2 += '<g><title>' + esc((sr.gran === 'm' ? nomeMes(x.k + '-01') : dm(x.k)) + ': ' + x.ps + ' cadência esgotada') + '</title><rect x="' + (cx - bw) + '" y="' + (H2 - h2 - 2) + '" width="' + (bw * 2) + '" height="' + Math.max(h2, x.ps ? 1 : 0) + '" rx="2" fill="' + C_CINZA + '"/>' +
-          (b.length <= (tv ? 16 : 11) && x.ps ? '<text x="' + cx + '" y="' + (H2 - h2 - 4) + '" text-anchor="middle" font-size="8.5" font-weight="700" fill="#8a859c">' + x.ps + '</text>' : '') + '</g>';
+          (b.length <= (tv ? 16 : 11) && x.ps ? '<text x="' + cx + '" y="' + (H2 - h2 - 4) + '" text-anchor="middle" font-size="8.5" font-weight="700" fill="#756f8c">' + x.ps + '</text>' : '') + '</g>';
       });
       s2 += '</svg>';
       s += '<div class="s2-esg"><div class="s2-st" style="margin-top:2px">Cadência esgotada por ' + (sr.gran === 'd' ? 'dia' : sr.gran === 's' ? 'semana' : 'mês') + ' (cinza, escala própria, máx. ' + maxS + ')</div>' + s2 + '</div>';
@@ -843,7 +843,7 @@
     var iw = W - padL - padR, ih = H - padT - padB, gw = iw / b.length, bw = Math.max(2, Math.min(tv ? 22 : 14, gw * 0.36));
     var gl = sr.gran === 'd' ? 'dia' : sr.gran === 's' ? 'semana' : 'mês';
     var s = '<svg class="s2-chart" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Iniciados e finalizados por ' + gl + '">';
-    [0, 0.5, 1].forEach(function (f) { var y = padT + ih - ih * f; s += '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + y + '" y2="' + y + '" stroke="#eae7f2" stroke-width="1"/><text x="' + (padL - 4) + '" y="' + (y + 3) + '" text-anchor="end" font-size="9" fill="#9b93b0">' + num(max * f) + '</text>'; });
+    [0, 0.5, 1].forEach(function (f) { var y = padT + ih - ih * f; s += '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + y + '" y2="' + y + '" stroke="#eae7f2" stroke-width="1"/><text x="' + (padL - 4) + '" y="' + (y + 3) + '" text-anchor="end" font-size="9" fill="#766e90">' + num(max * f) + '</text>'; });
     var passo = Math.ceil(b.length / (tv ? 14 : 7));
     b.forEach(function (x, i) {
       var cx = padL + gw * i + gw / 2, hi = ih * x.i / max, hf = ih * x.f / max, rot = sr.gran === 'm' ? nomeMes(x.k + '-01') : dm(x.k);
@@ -920,9 +920,9 @@
     m.forEach(function (x, i) {
       h += '<div class="s2-mr" data-mot="' + i + '" title="' + esc(x.motivo) + '"><span>' + esc(x.motivo) + '</span><span>' + num(x.n) + ' · ' + pct(x.n, a.pm) + '</span><i style="width:' + Math.max(3, Math.round(x.n / max * 100)) + '%"></i></div>';
     });
-    h += '<div class="s2-sub" style="color:#8a859c">Pelo sistema · recuperável</div>';
+    h += '<div class="s2-sub" style="color:#756f8c">Pelo sistema · recuperável</div>';
     h += '<div class="s2-mr gr" data-mot="s" title="Cadência esgotada"><span>Cadência esgotada</span><span>' + num(a.ps) + '</span><i style="width:' + Math.max(3, Math.round(a.ps / max * 100)) + '%"></i></div>';
-    h += '<div class="s2-sub" style="color:#8a859c">Fora da conta · não é decisão do SDR</div>';
+    h += '<div class="s2-sub" style="color:#756f8c">Fora da conta · não é decisão do SDR</div>';
     h += '<div class="s2-mr gr" data-mot="d" title="Duplicado (fora da conta)"><span>Duplicado (fora da conta)</span><span>' + num(a.pd) + '</span><i style="width:' + (a.pd ? Math.max(3, Math.round(a.pd / max * 100)) : 0) + '%"></i></div>';
     return h + '</div>';
   }
@@ -944,7 +944,7 @@
     if (per && tp.n && tp.n < HIST_GS.length) h += '<tr style="font-weight:800" class="s2-gsin"><td>Meses do período</td><td>' + num(tp.q) + '</td><td>' + num(tp.pm) + '</td><td>' + num(tp.pa) + '</td><td>' + num(tp.at) + '</td></tr>';
     h += '</tbody></table>';
     var nota = !per ? '' : (tp.n ? 'Em destaque: meses que tocam o período (somados inteiros, o GS só tem totais mensais). ' : 'Nenhum mês do GS toca o período escolhido. ');
-    return h + '<div class="s2-nt s2-gsnote" style="color:#8a859c">' + nota + 'Congelado em 19/10, não atualiza e não responde aos filtros de funil, origem e SDR. Sistema anterior: cada passo era um registro (inclusive e-mail e pesquisa), por isso não compare 1:1 com o Agendor. A partir de 20/10 vale o Agendor.<br><b>Como ler:</b> Qualificados = viraram ganho · Perdidos pelo SDR = marcados à mão · Cadência esgotada = perdidos pelo sistema ao fim da cadência · Atividades registradas = passos finalizados no GS (inclui e-mail e pesquisa).</div>';
+    return h + '<div class="s2-nt s2-gsnote" style="color:#756f8c">' + nota + 'Congelado em 19/10, não atualiza e não responde aos filtros de funil, origem e SDR. Sistema anterior: cada passo era um registro (inclusive e-mail e pesquisa), por isso não compare 1:1 com o Agendor. A partir de 20/10 vale o Agendor.<br><b>Como ler:</b> Qualificados = viraram ganho · Perdidos pelo SDR = marcados à mão · Cadência esgotada = perdidos pelo sistema ao fim da cadência · Atividades registradas = passos finalizados no GS (inclui e-mail e pesquisa).</div>';
   }
 
   function svgAtv(r, tv) {
@@ -953,7 +953,7 @@
     var max = 2; b.forEach(function (x) { if (x.a > max) max = x.a; });
     var iw = W - padL - padR, ih = H - padT - padB, gw = iw / b.length, bw = Math.max(2, Math.min(18, gw * 0.62));
     var s = '<svg class="s2-chart" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Atividades feitas por dia"><defs><pattern id="s2hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#fffbeb"/><line x1="0" y1="0" x2="0" y2="5" stroke="#d97706" stroke-width="1.6"/></pattern></defs>';
-    [0, 1].forEach(function (f) { var y = padT + ih - ih * f; s += '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + y + '" y2="' + y + '" stroke="#eae7f2"/><text x="' + (padL - 4) + '" y="' + (y + 3) + '" text-anchor="end" font-size="9" fill="#9b93b0">' + Math.round(max * f) + '</text>'; });
+    [0, 1].forEach(function (f) { var y = padT + ih - ih * f; s += '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + y + '" y2="' + y + '" stroke="#eae7f2"/><text x="' + (padL - 4) + '" y="' + (y + 3) + '" text-anchor="end" font-size="9" fill="#766e90">' + Math.round(max * f) + '</text>'; });
     var passo = Math.ceil(b.length / (tv ? 10 : Math.max(4, Math.floor(iw / 44))));
     b.forEach(function (x, i) {
       var cx = padL + gw * i + gw / 2, hA = ih * (x.a - x.lig) / max, hL = ih * x.lig / max;
