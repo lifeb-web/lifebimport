@@ -1,8 +1,10 @@
 // node tl/scrollall.mjs [W H]  -> roda a rolagem automatica de TODA lista do telao por varios ciclos; falha em qualquer salto
-import { novo, BASE, setV, setP, mocks } from './telao_lib.mjs';
+import { chromium } from 'playwright-core';
+import { EXE, BASE, mocar as mocks, ir as setV, per as setP } from './telao_lib.mjs';
+const novo = async vp => { const b = await chromium.launch({ executablePath: EXE }); const p = await (await b.newContext({ viewport: vp })).newPage(); p.errs = []; p.on('pageerror', e => p.errs.push(e.message)); return { b, p }; };
 import fs from 'node:fs';
 const W = +(process.argv[2] || 1920), H = +(process.argv[3] || 1080), RM = process.argv[4] === 'rm';
-const LISTAS = [['vendas', 1, 'motivos-perda-rows', 'Vendas · Motivos de perda'], ['ltv', 1, 'ltv-motivos-perda-rows', 'LTV · Motivos de perda'], ['ltv', 1, 'ltv-lb-rows', 'LTV · Ranking'], ['ltv', 1, 'ltv-won-rows', 'LTV · Recompras fechadas'], ['ltv', 1, 'ltv-lost-rows', 'LTV · Ciclos perdidos'],
+const LISTAS = [['vendas', 1, 'lb-rows', 'Vendas · Ranking'], ['vendas', 1, 'motivos-perda-rows', 'Vendas · Motivos de perda'], ['ltv', 1, 'ltv-motivos-perda-rows', 'LTV · Motivos de perda'], ['ltv', 1, 'ltv-lb-rows', 'LTV · Ranking'], ['ltv', 1, 'ltv-won-rows', 'LTV · Recompras fechadas'], ['ltv', 1, 'ltv-lost-rows', 'LTV · Ciclos perdidos'],
   ['ads', 1, 'ads-campanhas-rows', 'Ads · Campanhas'], ['ads', 1, 'ads-anuncios-rows', 'Ads · Anúncios'], ['ga4', 2, 'ga4-cities-scroll', 'GA4 · Estado/cidade'], ['ga4', 2, 'ga4-sources-scroll', 'GA4 · Origem do tráfego'], ['ga4', 2, 'ga4-pages-scroll', 'GA4 · Por página'],
   ['bia', 2, 'bia-motor-breakdown', 'Bia · Resumo do motor'], ['bia', 2, 'bia-motor-feed', 'Bia · Eventos recentes']];
 const { b, p } = await novo({ width: W, height: H });
@@ -60,5 +62,4 @@ console.log(`== ROLAGEM AUTOMATICA ${W}x${H}${RM ? ' (reduzir movimento)' : ''}`
 for (const l of linhas) console.log(l.join(' | '));
 console.log('erros JS: ', [...new Set(p.errs)].filter(e => !/Failed to load|ERR_FAILED|HTTP4|net::/.test(e)));
 console.log(falhas ? 'FALHAS: ' + falhas : 'TUDO OK');
-fs.writeFileSync(`tl/scrollall_${W}x${H}${RM ? '_rm' : ''}.txt`, linhas.map(l => l.join(' | ')).join('\n'));
 await b.close(); process.exit(falhas ? 1 : 0);

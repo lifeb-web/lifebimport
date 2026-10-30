@@ -349,6 +349,40 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .rstat-val.green{color:#15803d}
 .rstat-val.red{color:var(--red)}
 
+/* ── Ranking limpo (30/10): cartão enxuto + detalhe no toque ── */
+.rk-note{font-size:12px;font-weight:600;color:var(--muted);line-height:1.35;margin:-2px 2px 0}
+.rk-leg{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;font-weight:700;color:var(--muted);margin:0 2px 2px}
+.rk-leg i,.rk-split i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.rk-n{background:var(--purple)} .rk-r{background:var(--magenta)}
+.rk-card{background:var(--card);border-radius:14px;border:1px solid var(--border);box-shadow:0 1px 3px rgba(26,22,38,.04),0 4px 14px -6px rgba(26,22,38,.08);padding:0 16px 14px;min-width:0;overflow:hidden}
+.rk-card.top{border-color:#d4af37;box-shadow:0 1px 3px rgba(26,22,38,.04),0 6px 18px -6px rgba(212,175,55,.28)}
+.rk-card.gc{background:linear-gradient(90deg,rgba(90,58,128,.06),#fff 60%)}
+.rk-head{all:unset;box-sizing:border-box;width:100%;min-height:44px;display:grid;grid-template-columns:34px minmax(0,1fr) 44px;grid-template-areas:"pos name chev" "tot tot tot";align-items:center;column-gap:6px;padding-top:10px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.rk-head:focus-visible,.rk-open:focus-visible{outline:2px solid var(--purple);outline-offset:2px;border-radius:8px}
+.rk-pos{grid-area:pos;font-size:20px;text-align:center;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums}
+.rk-name{grid-area:name;font-size:16px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.rk-name small{font-size:12px;font-weight:600;color:var(--muted);margin-left:6px}
+.rk-chev{grid-area:chev;justify-self:end;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--faint);transition:transform .2s}
+.rk-card.open .rk-chev{transform:rotate(90deg)}
+.rk-tot{grid-area:tot;font-size:24px;line-height:1.15;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;overflow-wrap:anywhere;padding:0 0 8px 40px}
+.rk-bar{display:flex;height:8px;border-radius:5px;background:#f0ebf8;overflow:hidden}
+.rk-bar i{display:block;height:100%;min-width:0}
+.rk-split{display:flex;flex-wrap:wrap;gap:2px 16px;margin-top:8px;font-size:12px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+.rk-met{display:flex;flex-wrap:wrap;gap:2px 16px;margin-top:6px;font-size:13px;font-weight:600;color:var(--muted)}
+.rk-met b{color:var(--text);font-weight:800;font-variant-numeric:tabular-nums}
+.rk-det{display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.rk-card.open .rk-det{display:block}
+.rk-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 14px}
+.rk-grid>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.rk-grid span{font-size:12px;font-weight:700;color:var(--faint);line-height:1.25}
+.rk-grid b{font-size:15px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.rk-grid b.green{color:#15803d} .rk-grid b.red{color:var(--red)}
+.rk-grid em{font-style:normal;font-size:12px;font-weight:600;color:var(--muted)}
+.rk-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.rk-badges .rep-badge{font-size:12px}
+.rk-open{all:unset;box-sizing:border-box;width:100%;min-height:44px;margin-top:12px;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 12px;border-radius:10px;background:var(--bg);border:1px solid var(--border);font-size:14px;font-weight:800;color:var(--purple);cursor:pointer}
+.rk-open:active{background:#ece7f6}
+
 /* Sub-dashboard por rep dentro do modal (openRepModal) — mesma linguagem
    visual do dash geral (KPI grid, funil, feed), só que escopado a 1 rep via
    computeRepScoped() filtrando _rawDeals por owner_id antes de rodar o MESMO
@@ -688,10 +722,10 @@ footer strong{color:#fff}
       <div class="kc-row"><span class="kc-val" id="k-conv"><span class="skel"></span></span><span class="kc-delta" id="k-conv-delta"></span></div>
       <span class="kc-sub" id="k-conv-base">—</span>
     </div>
-    <div class="kchip">
-      <span class="kc-label">Ticket Médio</span>
+    <div class="kchip" id="k-ticket-chip" onclick="openTicketForaModal('')">
+      <span class="kc-label">Ticket Médio ⓘ</span>
       <div class="kc-row"><span class="kc-val" id="k-ticket"><span class="skel"></span></span></div>
-      <span class="kc-sub">por negócio ganho</span>
+      <span class="kc-sub" id="k-ticket-sub">por ganho</span>
     </div>
     <div class="kchip">
       <span class="kc-label">Prazo Médio</span>
@@ -837,10 +871,10 @@ footer strong{color:#fff}
         <div class="kc-row"><span class="kc-val" id="ltv-k-conv"><span class="skel"></span></span><span class="kc-delta" id="ltv-k-conv-delta"></span></div>
         <span class="kc-sub" id="ltv-k-conv-base">—</span>
       </div>
-      <div class="kchip">
-        <span class="kc-label">Ticket Médio</span>
+      <div class="kchip" id="ltv-k-ticket-chip" onclick="openTicketForaModal('ltv-')">
+        <span class="kc-label">Ticket Médio ⓘ</span>
         <div class="kc-row"><span class="kc-val" id="ltv-k-ticket"><span class="skel"></span></span></div>
-        <span class="kc-sub">por recompra</span>
+        <span class="kc-sub" id="ltv-k-ticket-sub">por recompra</span>
       </div>
       <div class="kchip">
         <span class="kc-label">Prazo Médio</span>
@@ -1532,7 +1566,7 @@ function getPeriodDatesClient(type, from, to, todayStr) {
 
 // Opera sobre deals já filtrados por origem e sem negócio congelado
 // (ongoingAtivo), mais won/lost já filtrados pelo período (por closed_at).
-function aggregateClient(ongoingAtivo, won, lost, period, stagesConfig) {
+function aggregateClient(ongoingAtivo, won, lost, period, stagesConfig, corteExt) {
   stagesConfig = stagesConfig || STAGES;
   const periodFrom = new Date(period.from + 'T00:00:00');
   const periodTo = new Date(period.to + 'T23:59:59');
@@ -1641,8 +1675,9 @@ function aggregateClient(ongoingAtivo, won, lost, period, stagesConfig) {
   recentLost.sort((a, b) => b.closedAt.localeCompare(a.closedAt));
   allDeals.sort((a, b) => (a.stageSeq - b.stageSeq) || (b.value - a.value));
 
-  const _corte = ticketCorte_(_wonVals), _tk = ticketRobusto_(_wonVals, _corte);
-  const ticketMedio = _tk.ticket, ticketMediana = ticketMediana_(_wonVals), ticketForaCont = _tk.fora, ticketCorte = isFinite(_corte) ? Math.round(_corte) : null;
+  const _corte = corteExt || ticketCorte_(_wonVals), _tk = ticketRobusto_(_wonVals, _corte);
+  const _tkFora = ticketForaListas_(recentWon, _corte);
+  const ticketMedio = _tk.ticket, ticketMediana = corteExt ? ticketMediana_(_wonVals.filter(v => v >= TICKET_SIMBOLICO_)) : Math.round(_corte.mediana || 0), ticketForaCont = _tk.fora, ticketCorte = isFinite(_corte.teto) ? Math.round(_corte.teto) : null, ticketPiso = Math.round(_corte.piso || 0);
   const prazoMedio = prazoCount > 0 ? Math.round(totalPrazo / prazoCount) : 0;
   const totalStale = ongoingAtivo.filter(d => d.stale).length;
 
@@ -1665,7 +1700,7 @@ function aggregateClient(ongoingAtivo, won, lost, period, stagesConfig) {
     kpis: {
       ativos: ongoingAtivo.length, pipelineTotal,
       ganhoValor, ganhoCont, perdidoCont,
-      ticketMedio, ticketMediana, ticketForaCont, ticketCorte, prazoMedio, prazoCount,
+      ticketMedio, ticketMediana, ticketForaCont, ticketCorte, ticketPiso, ticketForaBaixas: _tkFora.baixas, ticketForaAltas: _tkFora.altas, prazoMedio, prazoCount,
       staleTotal: totalStale
     },
     funnel: funnelArr,
@@ -1683,24 +1718,103 @@ function aggregateClient(ongoingAtivo, won, lost, period, stagesConfig) {
 // 🆕 07/10 (Robert aprovou "ok ticket"): TICKET MÉDIO sem vendas atípicas. Venda grande isolada (ex.: R$ 55 mil) infla o ticket real.
 // Regra única (Dash, Bia, Painel, relatórios): atípica = valor acima de Q3 + 3 x (Q3 - Q1) dos ganhos do período; precisa de 8+ vendas
 // pra definir o corte (com menos, não há como saber o que é atípico e vale a média simples). Atípicas continuam no faturamento e na contagem de vendas.
+// 🆕 30/10 (Robert): TICKET MÉDIO INTELIGENTE, nos dois lados. Valor muito pequeno também distorce, não só o muito grande.
+// Regra única (BLOCO COMPARTILHADO, idêntico no mobile e no telão), calculada sobre os ganhos do período, venda nova e reposição SEPARADAS:
+//  1) Fora sempre: ganho sem valor (0) ou simbólico (abaixo de R$ 10). Continua contando como venda, só não entra na média.
+//  2) Mediana dos valores restantes (n). Faixa de segurança por razão à mediana: de 10% até 10 vezes a mediana.
+//  3) n de 1 a 2: média simples, sem corte (não há como saber o que é atípico).
+//  4) n de 3 a 7: fora o que estiver abaixo de 10% ou acima de 10x a mediana.
+//  5) n de 8 em diante: corte robusto por quartis (IQR), piso = Q1 - 1,5 x IQR (nunca abaixo de 0) e teto = Q3 + 3 x IQR,
+//     MAS nunca mais apertado que a faixa de 10% a 10x a mediana (quando as vendas são todas parecidas o IQR é quase 0 e
+//     cortaria venda normal). Só sai quem é extremo pelos dois critérios.
+//  6) O corte é do TIME (global): o ticket de cada rep usa o mesmo piso/teto, nunca um corte só dele.
+//  7) Se todas as vendas de um rep ficarem fora do corte, mostra a média real dele em vez de "—".
+// Atípicas e sem valor continuam no faturamento e na contagem de vendas. A média é a aritmética das vendas que ficaram.
+const TICKET_SIMBOLICO_ = 10;
+function ticketQuant_(s, p) { const i = (s.length - 1) * p, lo = Math.floor(i), hi = Math.ceil(i); return s[lo] + (s[hi] - s[lo]) * (i - lo); }
 function ticketCorte_(vals) {
-  if (!vals || vals.length < 8) return Infinity;
-  const s = vals.slice().sort((a, b) => a - b);
-  const q = p => { const i = (s.length - 1) * p, lo = Math.floor(i), hi = Math.ceil(i); return s[lo] + (s[hi] - s[lo]) * (i - lo); };
-  const q1 = q(0.25), q3 = q(0.75);
-  return q3 + 3 * (q3 - q1);
+  const pos = (vals || []).filter(v => isFinite(v) && v >= TICKET_SIMBOLICO_).sort((a, b) => a - b);
+  const n = pos.length;
+  if (n < 3) return { piso: 0, teto: Infinity, n, mediana: n ? ticketQuant_(pos, 0.5) : 0, metodo: 'simples' };
+  const med = ticketQuant_(pos, 0.5);
+  let piso = med * 0.1, teto = med * 10, metodo = 'razao';
+  if (n >= 8) {
+    const q1 = ticketQuant_(pos, 0.25), q3 = ticketQuant_(pos, 0.75), iqr = q3 - q1;
+    piso = Math.min(Math.max(0, q1 - 1.5 * iqr), med * 0.1);
+    teto = Math.max(q3 + 3 * iqr, med * 10);
+    metodo = 'iqr';
+  }
+  return { piso, teto, n, mediana: med, metodo };
 }
 function ticketRobusto_(vals, corte) {
-  const ok = (vals || []).filter(v => v <= corte);
-  if (!ok.length && (vals || []).length) return { ticket: Math.round(vals.reduce((a, b) => a + b, 0) / vals.length), fora: 0 }; // só atípicas: mostra a média real em vez de "—"
-  return { ticket: ok.length ? Math.round(ok.reduce((a, b) => a + b, 0) / ok.length) : 0, fora: (vals || []).length - ok.length };
+  const c = (corte && typeof corte === 'object') ? corte : { piso: 0, teto: (typeof corte === 'number' ? corte : Infinity) };
+  const todos = (vals || []).filter(v => isFinite(v));
+  const pos = todos.filter(v => v >= TICKET_SIMBOLICO_);
+  const ok = pos.filter(v => v >= c.piso && v <= c.teto);
+  const baixas = todos.filter(v => v < TICKET_SIMBOLICO_ || v < c.piso).length;
+  const altas = todos.filter(v => v >= TICKET_SIMBOLICO_ && v > c.teto).length;
+  const media = a => Math.round(a.reduce((x, y) => x + y, 0) / a.length);
+  if (!ok.length) return { ticket: pos.length ? media(pos) : 0, fora: 0, baixas: 0, altas: 0 }; // só atípicas: mostra a média real em vez de "—"
+  return { ticket: media(ok), fora: baixas + altas, baixas, altas };
 }
 function ticketMediana_(vals) {
   if (!vals || !vals.length) return 0;
   const s = vals.slice().sort((a, b) => a - b), m = Math.floor(s.length / 2);
   return Math.round(s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2);
 }
-function computeDashboardData(allRows, originFilter, periodType, customFrom, customTo, todayStr) {
+// ganhos que ficaram fora da média (para o cartão e a lista clicável): { baixas: [...], altas: [...] }, cada item é um ganho de recentWon
+function ticketForaListas_(won, corte) {
+  const out = { baixas: [], altas: [] };
+  const todos = (won || []).filter(w => isFinite(w.value));
+  const pos = todos.filter(w => w.value >= TICKET_SIMBOLICO_ && w.value >= corte.piso && w.value <= corte.teto);
+  if (!pos.length) return out; // nada ficou dentro: mostra a média real, nada "fora"
+  todos.forEach(w => {
+    if (w.value < TICKET_SIMBOLICO_ || w.value < corte.piso) out.baixas.push(w);
+    else if (w.value > corte.teto) out.altas.push(w);
+  });
+  out.baixas.sort((a, b) => a.value - b.value); out.altas.sort((a, b) => b.value - a.value);
+  return out;
+}
+// corte global do time reconstruído a partir dos KPIs já calculados (o ticket do rep usa o mesmo piso/teto do time)
+function ticketCorteDe_(k) {
+  if (!k || k.ticketPiso === undefined) return undefined;
+  return { piso: k.ticketPiso || 0, teto: k.ticketCorte === null || k.ticketCorte === undefined ? Infinity : k.ticketCorte, mediana: k.ticketMediana || 0, n: 0, metodo: 'time' };
+}
+// texto do ⓘ do cartão (igual nos dois lados)
+function ticketExplica_(k) {
+  const n = (k.ticketForaBaixas || []).length, a = (k.ticketForaAltas || []).length;
+  return 'Média das vendas do período sem os extremos: ganho sem valor (ou abaixo de R$ 10), valores muito pequenos e valores muito grandes ficam de fora da média (continuam no faturamento e na contagem). '
+    + 'Corte do time inteiro: com 8+ vendas, quartis (piso Q1 - 1,5 x IQR, teto Q3 + 3 x IQR, nunca mais apertado que 10% a 10x a mediana); de 3 a 7, fora o que for menor que 10% ou maior que 10x a mediana; 1 a 2 vendas, média simples.'
+    + (k.ticketMediana ? ' Mediana ' + fmtMoney(k.ticketMediana) + '.' : '')
+    + (n + a ? ' ' + (n + a) + ' fora da média (' + n + ' muito baixa' + (n !== 1 ? 's' : '') + ', ' + a + ' muito alta' + (a !== 1 ? 's' : '') + '). Clique para ver a lista.' : ' Nenhuma venda ficou fora da média. Clique para ver a regra.');
+}
+// cartão Ticket Médio: valor, tooltip, mediana ao lado e "N vendas fora da média"
+function renderTicketCard_(prefix, k) {
+  const v = el(prefix + 'k-ticket'); if (!v) return;
+  setTextFlash(prefix + 'k-ticket', k.ticketMedio > 0 ? fmtMoney(k.ticketMedio) : '—');
+  v.title = ticketExplica_(k);
+  const fora = (k.ticketForaBaixas || []).length + (k.ticketForaAltas || []).length;
+  const sub = el(prefix + 'k-ticket-sub');
+  if (sub) sub.textContent = (k.ticketMediana ? 'mediana ' + fmtMoney(k.ticketMediana) : 'por ganho') + (fora ? ' · ' + fora + ' venda' + (fora !== 1 ? 's' : '') + ' fora da média' : '');
+  const chip = el(prefix + 'k-ticket-chip'); if (chip) chip.title = ticketExplica_(k);
+}
+function openTicketForaModal(prefix) {
+  const d = prefix === 'ltv-' ? _ltvData : _data; if (!d || !d.kpis) return;
+  const k = d.kpis, bx = k.ticketForaBaixas || [], al = k.ticketForaAltas || [];
+  el('modal-title').textContent = 'Ticket médio ' + fmtMoney(k.ticketMedio) + ' · mediana ' + fmtMoney(k.ticketMediana || 0);
+  const sec = (tit, lista, cor) => lista.length ? `<div class="modal-sec" style="font-size:12px;font-weight:800;color:var(--muted);margin:12px 0 4px;padding:0 14px;text-transform:uppercase;letter-spacing:.4px">${tit} (${lista.length})</div>`
+    + lista.map(w => `<a class="mdeal-row" href="${AGENDOR_DEAL}${w.id}" target="_blank">
+        <div class="mdeal-dot" style="background:${cor}"></div>
+        <span class="mdeal-title"><span class="og-title-text">${escHtml(w.title)}</span>${originBadge(w._origin)}</span>
+        <span class="mdeal-rep">${escHtml(w.rep || '—')} · ${fmtDateDisplay(w.closedAt)}</span>
+        <span class="mdeal-val" style="color:${cor}">${fmtMoney(w.value)}</span>
+        <span class="mdeal-open">↗</span>
+      </a>`).join('') : '';
+  el('modal-body').innerHTML = `<div style="font-size:12.5px;line-height:1.45;color:var(--muted);padding:6px 14px 8px">${escHtml(ticketExplica_(k))}</div>`
+    + (bx.length + al.length ? sec('Muito baixas (fora da média)', bx, 'var(--amber)') + sec('Muito altas (fora da média)', al, 'var(--red)') : '<div class="modal-empty">Nenhuma venda ficou fora da média neste período</div>');
+  el('modal-overlay').classList.add('show');
+}
+function computeDashboardData(allRows, originFilter, periodType, customFrom, customTo, todayStr, corteExt) {
   const period = getPeriodDatesClient(periodType, customFrom, customTo, todayStr);
   const periodFrom = new Date(period.from + 'T00:00:00');
   const periodTo = new Date(period.to + 'T23:59:59');
@@ -1738,7 +1852,7 @@ function computeDashboardData(allRows, originFilter, periodType, customFrom, cus
   // que conta como "ativo" · Pipeline, Ativos, funil, estatística de rep.
   const ongoingAtivo = ongoingAll.filter(d => !d.frozen);
 
-  const result = aggregateClient(ongoingAtivo, periodWon, periodLost, period);
+  const result = aggregateClient(ongoingAtivo, periodWon, periodLost, period, undefined, corteExt);
   result.kpis.leadsNoPeriodo = leadsNoPeriodo;
   result.kpis.conversao = leadsNoPeriodo > 0 ? Math.round((result.kpis.ganhoCont / leadsNoPeriodo) * 1000) / 10 : null;
   result.reps.forEach(r => {
@@ -1765,7 +1879,7 @@ function computeDashboardData(allRows, originFilter, periodType, customFrom, cus
 // _rawDeals já buscado (zero fetch novo), mesma assinatura, mesmo filtro de
 // período/origem/frozen; só troca o conjunto de stage_id e o vocabulário de
 // etapa (LTV_STAGES). Criado 25-26/08 junto do fix de conversão acima.
-function computeLtvData(allRows, originFilter, periodType, customFrom, customTo, todayStr) {
+function computeLtvData(allRows, originFilter, periodType, customFrom, customTo, todayStr, corteExt) {
   const period = getPeriodDatesClient(periodType, customFrom, customTo, todayStr);
   const periodFrom = new Date(period.from + 'T00:00:00');
   const periodTo = new Date(period.to + 'T23:59:59');
@@ -1807,7 +1921,7 @@ function computeLtvData(allRows, originFilter, periodType, customFrom, customTo,
 
   const ongoingAtivo = ongoingAll.filter(d => !d.frozen);
 
-  const result = aggregateClient(ongoingAtivo, periodWon, periodLost, period, LTV_STAGES);
+  const result = aggregateClient(ongoingAtivo, periodWon, periodLost, period, LTV_STAGES, corteExt);
   result.kpis.leadsNoPeriodo = leadsNoPeriodo;
   result.kpis.conversao = leadsNoPeriodo > 0 ? Math.round((result.kpis.ganhoCont / leadsNoPeriodo) * 1000) / 10 : null;
   result.reps.forEach(r => {
@@ -2979,8 +3093,7 @@ function renderLtvSection(d) {
   el('ltv-k-ativos').textContent = withVal + ' precificado' + (withVal !== 1 ? 's' : '') + ' de ' + (k.ativos || 0);
   setTextFlash('ltv-k-conv', k.conversao !== null ? k.conversao + '%' : '—');
   el('ltv-k-conv-base').textContent = 'de ' + (k.leadsNoPeriodo || 0) + ' ciclos';
-  setTextFlash('ltv-k-ticket', k.ticketMedio > 0 ? fmtMoney(k.ticketMedio) : '—');
-  { const e_ = el('ltv-k-ticket'); if (e_) e_.title = 'Ticket médio sem vendas atípicas' + (k.ticketForaCont ? ' (' + k.ticketForaCont + ' acima de ' + fmtMoney(k.ticketCorte) + ' ficou fora)' : '') + ' · mediana ' + fmtMoney(k.ticketMediana || 0); }
+  renderTicketCard_('ltv-', k);
   setTextFlash('ltv-k-prazo', k.prazoMedio ? k.prazoMedio + (k.prazoMedio === 1 ? ' dia' : ' dias') : '—');
   el('ltv-k-prazo-sub').textContent = (k.prazoCount < k.ganhoCont && k.ganhoCont > 0)
     ? ('de ' + k.prazoCount + ' de ' + k.ganhoCont + ' negócios')
@@ -3241,7 +3354,7 @@ function computeLtvRepScoped(repId) {
   const repRows = (_rawDeals || []).filter(d => String(d.owner_id) === String(repId));
   const today = todayLocalStr();
   const effPeriodType = _period === 'month_pick' ? 'custom' : _period;
-  const curr = computeLtvData(repRows, _originMode, effPeriodType, _customFrom, _customTo, today);
+  const curr = computeLtvData(repRows, _originMode, effPeriodType, _customFrom, _customTo, today, ticketCorteDe_(_ltvData && _ltvData.kpis));
   const isTotalPeriod = curr.period.type === 'total';
   const prevRange = isTotalPeriod ? null : prevRangeOf(curr.period);
   const prev = isTotalPeriod ? null : computeLtvData(repRows, _originMode, 'custom', prevRange.from, prevRange.to, today);
@@ -5904,8 +6017,7 @@ function renderKpiStrip(k, deals) {
   el('k-ativos').textContent = withVal + ' precificado' + (withVal !== 1 ? 's' : '') + ' de ' + (k.ativos || 0);
   setTextFlash('k-conv', k.conversao !== null ? k.conversao + '%' : '—');
   el('k-conv-base').textContent = 'de ' + (k.leadsNoPeriodo || 0) + ' leads';
-  setTextFlash('k-ticket', k.ticketMedio > 0 ? fmtMoney(k.ticketMedio) : '—');
-  { const e_ = el('k-ticket'); if (e_) e_.title = 'Ticket médio sem vendas atípicas' + (k.ticketForaCont ? ' (' + k.ticketForaCont + ' acima de ' + fmtMoney(k.ticketCorte) + ' ficou fora)' : '') + ' · mediana ' + fmtMoney(k.ticketMediana || 0); }
+  renderTicketCard_('', k);
   setTextFlash('k-prazo', k.prazoMedio ? k.prazoMedio + (k.prazoMedio === 1 ? ' dia' : ' dias') : '—');
   // achado 15/07 (Robert: "achando esse prazo muito rápido"): negócio importado
   // em lote no Agendor entra no CRM com created_at do dia do IMPORTE, mas
@@ -6115,45 +6227,106 @@ function openStageModal(stageId, stageName) {
 const GRANDES_CONTAS_ID = 973972; // dono "Sistema" no Agendor, exibido como Grandes Contas
 // Grandes Contas fica sempre por ultimo e fora da disputa (sem medalha), igual ao telao; o resto segue a ordem original.
 function gcUltimo_(reps) { return reps.filter(r => r.id !== GRANDES_CONTAS_ID).concat(reps.filter(r => r.id === GRANDES_CONTAS_ID)); }
-function renderReps(reps, deals) {
-  el('reps-list').innerHTML = gcUltimo_(reps).map((r, i) => {
-    const ehGC = r.id === GRANDES_CONTAS_ID;
-    const rank = ehGC ? '—' : (['🥇','🥈','🥉','4️⃣','5️⃣'][i] || (i+1)+'°');
-    const initials = r.name.substring(0,1).toUpperCase();
-    const isTop = i === 0 && !ehGC;
+// ── RANKING = VENDA NOVA + REPOSIÇÃO (30/10/2026) ───────────────────────────
+// BLOCO COMPARTILHADO: idêntico byte a byte no mobile e no telão.
+// Pedido do Robert: "ranking muito poluído" + "quem faz reposição parece vender menos".
+// TOTAL VENDIDO do rep = ganhos da venda nova (Arena, aba Vendas) + ganhos da reposição
+// (Pós-venda 907387 + Reativação +75, a mesma fonte/regra da aba LTV: computeLtvData,
+// data real = data_real_evento, senão end_time; nunca won_at).
+// Sem contar duas vezes: Vendas só olha ACQ_STAGE_IDS e a reposição só POSVENDA_STAGE_IDS
+// (conjuntos disjuntos; cada negócio tem 1 só stage_id) e cada ganho entra 1 vez no dono dele.
+// Filtros: período igual aos dois lados. Origem: a reposição herda a origem da venda original,
+// então sob Outbound/Inbound só entra a reposição dessa origem (sem origem herdada, fica fora).
+function rankingOrigemNota_(curto) {
+  if (typeof _originMode === 'undefined' || _originMode === 'both') return curto ? 'Total = nova + reposição' : 'Total vendido = venda nova + reposição';
+  const o = _originMode === 'outbound' ? 'Outbound' : (_originMode === 'inbound' ? 'Inbound' : String(_originMode));
+  return curto ? 'Só ' + o + ' (reposição herda a origem)' : 'Origem ' + o + ': venda nova e reposição dessa origem (a reposição herda a origem da venda original)';
+}
+function rankingReps_(salesReps) {
+  let repos = [];
+  try {
+    if (typeof _rawDeals !== 'undefined' && _rawDeals) {
+      const eff = _period === 'month_pick' ? 'custom' : _period;
+      repos = computeLtvData(_rawDeals, _originMode, eff, _customFrom, _customTo, todayLocalStr()).reps || [];
+    }
+  } catch (e) { repos = []; }
+  const m = {};
+  repos.forEach(r => { m[String(r.id)] = r; });
+  const num = v => (isFinite(v) ? v : 0);
+  const out = (salesReps || []).map(r => {
+    const p = m[String(r.id)];
+    const nv = num(r.ganhoValor), nc = num(r.ganhoCont), rv = p ? num(p.ganhoValor) : 0, rc = p ? num(p.ganhoCont) : 0;
+    return Object.assign({}, r, { novaValor: nv, novaCont: nc, reposValor: rv, reposCont: rc, totalValor: nv + rv, totalCont: nc + rc });
+  });
+  const gc = out.filter(r => r.id === GRANDES_CONTAS_ID);
+  const disputa = out.filter(r => r.id !== GRANDES_CONTAS_ID)
+    .sort((a, b) => (b.totalValor - a.totalValor) || (b.totalCont - a.totalCont) || (b.ativos - a.ativos) || String(a.name).localeCompare(String(b.name), 'pt-BR'));
+  return disputa.concat(gc);
+}
+// medalha só para os 3 primeiros da disputa que de fato venderam; Grandes Contas fica fora da disputa
+function rankingPos_(r, i) {
+  if (r.id === GRANDES_CONTAS_ID) return '💎';
+  if (i < 3 && r.totalValor > 0) return ['🥇', '🥈', '🥉'][i];
+  return (i + 1) + 'º';
+}
+function rankingBarra_(r, maxTot) {
+  const t = Math.max(maxTot, 1), n = Math.max(0, r.novaValor), p = Math.max(0, r.reposValor);
+  const wn = Math.min(100, n / t * 100), wr = Math.min(100 - wn, p / t * 100);
+  return `<div class="rk-bar" role="img" aria-label="Venda nova ${escHtml(fmtMoney(n))}, reposição ${escHtml(fmtMoney(p))}"><i class="rk-n" style="width:${wn.toFixed(2)}%"></i><i class="rk-r" style="width:${wr.toFixed(2)}%"></i></div>`;
+}
 
+// Ranking limpo (30/10): por vendedor 1 cartão enxuto (posição, nome, TOTAL vendido, barra venda nova x reposição,
+// ganhos e conversão). Tocar abre o detalhe no próprio cartão (funil, parados, ticket, leads, ativos, pipeline);
+// o botão do detalhe abre o modal completo do representante (openRepModal), igual a antes.
+function rkToggle(btn) {
+  const card = btn.closest('.rk-card'); if (!card) return;
+  const open = card.classList.toggle('open');
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+function renderReps(reps, deals) {
+  const lista = rankingReps_(reps);
+  const maxTot = Math.max(...lista.map(r => r.totalValor), 1);
+  const nota = `<div class="rk-note" id="rk-note">${escHtml(rankingOrigemNota_())}</div>
+    <div class="rk-leg"><span><i class="rk-n"></i>Venda nova</span><span><i class="rk-r"></i>Reposição</span></div>`;
+  el('reps-list').innerHTML = nota + lista.map((r, i) => {
+    const ehGC = r.id === GRANDES_CONTAS_ID;
+    const isTop = !ehGC && i === 0 && r.totalValor > 0;
     const ds2 = (r.dealsByStage['3771723'] || 0) + (r.dealsByStage['3771724'] || 0);
     const totalSegs = (r.dealsByStage['3771722'] || 0) + ds2 + (r.dealsByStage['3771725'] || 0);
     const mfSegs = totalSegs > 0 ? `
-      <div class="rep-minifunil">
+      <div class="rep-minifunil" style="padding:6px 0 4px">
         ${r.dealsByStage['3771722'] > 0 ? `<div class="mf-seg mf-o1" style="flex:${r.dealsByStage['3771722']}"></div>` : ''}
         ${ds2 > 0 ? `<div class="mf-seg mf-o2" style="flex:${ds2}"></div>` : ''}
         ${r.dealsByStage['3771725'] > 0 ? `<div class="mf-seg mf-o3" style="flex:${r.dealsByStage['3771725']}"></div>` : ''}
-        ${totalSegs === 0 ? '<div class="mf-empty"></div>' : ''}
-      </div>` : '<div class="rep-minifunil"><div class="mf-empty"></div></div>';
-
+      </div>` : '<div class="rep-minifunil" style="padding:6px 0 4px"><div class="mf-empty"></div></div>';
     const convBadge = convBadgeHTML_(r.conversao, r.leadsNoPeriodo);
-    const staleBadge = r.stale > 0 ? `<span class="rep-badge rb-amber">⚠ ${r.stale} parado${r.stale>1?'s':''}</span>` : '';
-
+    const staleBadge = r.stale > 0 ? `<span class="rep-badge rb-amber">⚠ ${r.stale} parado${r.stale > 1 ? 's' : ''}</span>` : '';
+    const convTxt = r.conversao !== null ? r.conversao + '%' : '—';
     return `
-      <div class="rep-card${isTop?' top-rep':''}" id="rep-${r.id}">
-        <div class="rep-header" onclick="openRepModal(${r.id})">
-          <span class="rep-rank">${rank}</span>
-          <div class="rep-avatar ${isTop?'r0':''}">${initials}</div>
-          <div class="rep-info">
-            <div class="rep-name">${escHtml(r.name)}</div>
-            <div class="rep-sub">${r.ativos} ativo${r.ativos!==1?'s':''} · ${r.leadsNoPeriodo||0} leads recebidos</div>
+      <div class="rk-card${isTop ? ' top' : ''}${ehGC ? ' gc' : ''}" id="rep-${r.id}">
+        <button type="button" class="rk-head" aria-expanded="false" aria-controls="rk-det-${r.id}" onclick="rkToggle(this)">
+          <span class="rk-pos">${rankingPos_(r, i)}</span>
+          <span class="rk-name">${escHtml(r.name)}</span>
+          <span class="rk-chev" aria-hidden="true">›</span>
+          <span class="rk-tot">${fmtMoney(r.totalValor)}</span>
+        </button>
+        ${rankingBarra_(r, maxTot)}
+        <div class="rk-split"><span><i class="rk-n"></i>${fmtMoney(r.novaValor)}</span><span><i class="rk-r"></i>${fmtMoney(r.reposValor)}</span></div>
+        <div class="rk-met"><span><b>${r.totalCont}</b> ganho${r.totalCont !== 1 ? 's' : ''}</span><span><b>${convTxt}</b> conversão</span>${ehGC ? '<span>fora da disputa</span>' : ''}</div>
+        <div class="rk-det" id="rk-det-${r.id}">
+          <div class="rk-grid">
+            <div><span>Venda nova</span><b>${fmtMoney(r.novaValor)}</b><em>${r.novaCont} ganho${r.novaCont !== 1 ? 's' : ''}</em></div>
+            <div><span>Reposição</span><b>${fmtMoney(r.reposValor)}</b><em>${r.reposCont} ganho${r.reposCont !== 1 ? 's' : ''}</em></div>
+            <div><span>Pipeline</span><b>${r.pipeline > 0 ? fmtMoney(r.pipeline) : '—'}</b></div>
+            <div><span>Ativos</span><b>${r.ativos}</b></div>
+            <div><span>Ticket médio (venda nova)</span><b>${r.ticketMedio > 0 ? fmtMoney(r.ticketMedio) : '—'}</b></div>
+            <div><span>Perdidos</span><b>${r.perdidoCont}</b></div>
+            <div><span>Leads recebidos</span><b>${r.leadsNoPeriodo || 0}</b></div>
+            <div><span>Conversão (venda nova)</span><b class="${convValClass_(r.conversao, r.leadsNoPeriodo)}">${convTxt}</b></div>
           </div>
-          <div class="rep-badges">${convBadge}${staleBadge}</div>
-        </div>
-        ${mfSegs}
-        <div class="rep-stats">
-          <div class="rstat"><span class="rstat-label">Pipeline</span><span class="rstat-val">${r.pipeline > 0 ? fmtMoney(r.pipeline) : '—'}</span></div>
-          <div class="rstat"><span class="rstat-label">Ganhos</span><span class="rstat-val green">${fmtMoney(r.ganhoValor)}</span></div>
-          <div class="rstat"><span class="rstat-label">Ticket Médio</span><span class="rstat-val">${r.ticketMedio > 0 ? fmtMoney(r.ticketMedio) : '—'}</span></div>
-          <div class="rstat"><span class="rstat-label">Conversão</span><span class="rstat-val ${convValClass_(r.conversao, r.leadsNoPeriodo)}">${r.conversao !== null ? r.conversao + '%' : '—'}</span></div>
-          <div class="rstat"><span class="rstat-label">Perdidos</span><span class="rstat-val red">${r.perdidoCont}</span></div>
-          <div class="rstat"><span class="rstat-label">Leads</span><span class="rstat-val">${r.leadsNoPeriodo || 0}</span></div>
+          ${mfSegs}
+          <div class="rk-badges">${convBadge}${staleBadge}</div>
+          <button type="button" class="rk-open" onclick="openRepModal(${r.id})">Ver negócios de ${escHtml(r.name)}</button>
         </div>
       </div>`;
   }).join('');
@@ -6169,7 +6342,7 @@ function computeRepScoped(repId) {
   const repRows = (_rawDeals || []).filter(d => String(d.owner_id) === String(repId));
   const today = todayLocalStr();
   const effPeriodType = _period === 'month_pick' ? 'custom' : _period;
-  const curr = computeDashboardData(repRows, _originMode, effPeriodType, _customFrom, _customTo, today);
+  const curr = computeDashboardData(repRows, _originMode, effPeriodType, _customFrom, _customTo, today, ticketCorteDe_(_data && _data.kpis));
   const isTotalPeriod = curr.period.type === 'total';
   const prevRange = isTotalPeriod ? null : prevRangeOf(curr.period);
   const prev = isTotalPeriod ? null : computeDashboardData(repRows, _originMode, 'custom', prevRange.from, prevRange.to, today);
