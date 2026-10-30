@@ -1,0 +1,128 @@
+/* ============================================================================
+ * TELÃO LEGÍVEL (30/10/2026)
+ * Pedido do Robert: "cartões espremidos, achatados; letras miúdas demais; esse dash fica num telão
+ * ou é analisado no PC". Camada carregada DEPOIS do estilo principal do telão.
+ *
+ * Regras de ouro (medidas por tl-teste, falham se quebrar):
+ *   palco de referência 1440x810 (escala 1,33 na TV 1080p, 2,67 no 4K):
+ *   - rótulo       >= 9px  (12px na TV 1080p)
+ *   - texto/corpo  >= 10,5px (14px na TV 1080p)
+ *   - número KPI   >= 21px (28px na TV 1080p)
+ *   - alvo de toque/ícone >= 15px (20px na TV 1080p)
+ *   - cartão nunca achatado, cortado ou sobreposto.
+ * Quando não cabe, NÃO encolhe: vira "página" do telão (troca sozinha, tecla/clique troca, pausa ao
+ * passar o mouse) e o detalhe vai para o cartão expandido (⤢ ou clique no título).
+ * A densidade nunca mexe em fonte, só em espaçamento.
+ * ========================================================================== */
+
+/* ---------- Cabeçalho ---------- */
+header{padding:6px 16px;gap:12px;min-height:0}
+.h-logo{height:34px}
+.h-title{font-size:11px;min-width:0}
+.ochip{font-size:12px;padding:6px 14px}
+.h-center{max-width:560px;margin:0 auto;row-gap:5px;gap:4px}
+.pchip{font-size:10.5px;padding:5px 9px}
+#period-badge{font-size:10.5px;max-width:120px}
+#tv-toggle{width:26px;height:26px;font-size:12px}
+#htime{font-size:18px}
+#body{padding:8px 14px 8px;gap:8px}
+footer{font-size:11px;padding:4px 8px}
+
+/* ---------- Cartões de número (KPI): respiram, nunca achatados ---------- */
+.kchip,.achip{padding:8px 12px;gap:2px;justify-content:center;min-width:0;border-radius:12px}
+.kc-label,.ac-label,.hero-label{font-size:9px;letter-spacing:.4px}
+.kc-val,.ac-val{font-size:21px;line-height:1.15}
+.kc-sub{font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kc-delta{font-size:10.5px}
+.hero-val{font-size:27px}
+.hero-sub{font-size:10.5px}
+.hero-repo-row{font-size:10.5px}
+.delta{font-size:10.5px}
+
+/* ---------- Vendas: 2 faixas de KPI (8 colunas) + 3 colunas de painéis, tudo numa tela ---------- */
+#hero-row{grid-template-columns:repeat(8,minmax(0,1fr));height:124px;gap:8px}
+#hero{grid-column:span 2}
+#mkt-row{grid-template-columns:repeat(8,minmax(0,1fr));height:80px;gap:8px}
+.ac-label{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.2}
+#mkt-row .achip:nth-child(2){grid-column:span 2}
+#main,#ltv-main{grid-template-columns:23fr 45fr 32fr;gap:8px}
+
+/* funil estreito: sem barra, nome quebra, pílula curta (era a regra de 1500px, agora sempre) */
+.dp-l{display:none}.dp-s{display:inline}
+#funil-rows .funil-row,#ltv-funil-rows .funil-row{gap:6px}
+#funil-rows .funil-bar-wrap,#ltv-funil-rows .funil-bar-wrap{flex:0 0 0;width:0;min-width:0;margin:0;box-shadow:none}
+#funil-rows .funil-name,#ltv-funil-rows .funil-name{flex:1 1 0;min-width:0;white-space:normal;overflow:visible;text-overflow:clip;line-height:1.1;overflow-wrap:break-word;font-size:12px}
+#funil-rows .funil-n,#ltv-funil-rows .funil-n{font-size:21px}
+#funil-rows .funil-n,#funil-rows .funil-v,#funil-rows .drop-pill,#ltv-funil-rows .funil-n,#ltv-funil-rows .funil-v,#ltv-funil-rows .drop-pill{flex-shrink:0}
+.funil-v{font-size:10.5px;min-width:0}
+.funil-conn-pct{font-size:11px}
+.drop-pill{font-size:10px}
+#motivos-perda-card,#ltv-motivos-perda-card{height:auto;flex:0 0 36%}
+
+/* ranking */
+.lb-name{font-size:15px}
+.lb-conv{font-size:12px}
+.lb-num{font-size:13px}
+.lb-sub{font-size:10.5px}
+.lb-sub span{overflow:visible;text-overflow:clip}
+.lb-stale{font-size:10.5px}
+#lb-rows .lb-row{padding:3px 14px;gap:1px}
+.feed-co{font-size:12px}
+.feed-rep,.feed-date{font-size:10.5px}
+.feed-val{font-size:12px}
+.hd-total{font-size:11px}
+.card-hd-title{font-size:10.5px}
+.badge{font-size:10px}
+
+/* origem (rosca) */
+.orig-i-name{font-size:12.5px}
+.orig-i-pc{font-size:17px}
+.orig-i-l2{font-size:10.5px}
+.orig-foot{font-size:10.5px}
+
+/* LTV: mesma regra de ranking sem rolagem do Vendas */
+#ltv-hero-row{height:96px;gap:8px}
+#ltv-lb-rows{overflow:hidden;justify-content:stretch}
+#ltv-lb-rows .lb-row{flex:1 1 0;min-height:0;justify-content:center;overflow:hidden;padding:3px 14px;gap:1px}
+
+/* ---------- Páginas do telão ---------- */
+body[data-pg="1"] [data-pg]:not([data-pg~="1"]),
+body[data-pg="2"] [data-pg]:not([data-pg~="2"]),
+body[data-pg="3"] [data-pg]:not([data-pg~="3"]){display:none!important}
+#pager{position:absolute;right:12px;top:0;bottom:0;display:none;align-items:center;gap:3px}
+.pg-b{width:18px;height:18px;border:0;background:rgba(255,255,255,.16);color:#fff;border-radius:5px;font:800 13px/1 var(--font);cursor:pointer;padding:0}
+.pg-b:hover,.pg-dot:hover i{background:#fff;color:var(--text)}
+.pg-dot{width:18px;height:18px;border:0;background:transparent;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center}
+.pg-dot i{display:block;width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.4)}
+.pg-dot.on i{background:#fff;width:16px;border-radius:5px}
+.pg-t{color:rgba(255,255,255,.9);font-size:11px;font-weight:600;margin-left:8px;white-space:nowrap}
+.pg-b:focus-visible,.pg-dot:focus-visible,#tv-toggle:focus-visible{outline:2px solid var(--magenta);outline-offset:1px}
+
+/* colunas antigas viram só agrupadores: os cartões entram direto na grade da página */
+#ga4-col-left,#ga4-col-center,#ga4-col-right,#bia-col-left,#bia-col-center,#bia-col-right{display:contents}
+#ga4-main,#bia-main{gap:8px}
+#ga4-main>*,#bia-main>*{min-height:0;min-width:0}
+
+/* ---------- ADS: uma tela só (dinheiro em cima, entrega logo abaixo, 3 painéis) ---------- */
+#ads-hero-row2{order:1;grid-template-columns:minmax(0,1.5fr) repeat(5,minmax(0,1fr));height:88px;gap:8px}
+#ads-hero-row{order:2;grid-template-columns:repeat(9,minmax(0,1fr));height:88px;gap:8px}
+#ads-main{order:3;grid-template-columns:34fr 36fr 30fr;gap:8px}
+#ads-hero{padding:8px 14px}
+.kchip .kc-row{flex-wrap:nowrap}
+
+/* ---------- GA4: página 1 = conversão e visitantes; página 2 = cidades, origem e páginas ---------- */
+#ga4-hero-row{grid-template-columns:repeat(9,minmax(0,1fr));height:92px;gap:8px}
+body[data-view="ga4"][data-pg="1"] #ga4-main{grid-template-columns:36fr 64fr}
+body[data-view="ga4"][data-pg="2"] #ga4-main{grid-template-columns:1fr 1fr 1fr}
+
+/* ---------- BIA: página 1 = saúde ao vivo; página 2 = motor e custos ---------- */
+#bia-hero-row{height:92px;gap:8px}
+#bia-motor-resumo-card{max-height:none!important;flex:none!important}
+#bia-motor-resumo-card{grid-area:mr}#bia-motor-feed-card{grid-area:mf}#bia-trend-card{grid-area:tr}
+body[data-view="bia"][data-pg="1"] #bia-main{grid-template-columns:1fr 1fr 1fr;grid-template-rows:repeat(10,minmax(0,1fr))}
+body[data-view="bia"][data-pg="1"] #bia-saude-card{grid-area:1/1/11/2}
+body[data-view="bia"][data-pg="1"] #bia-gates-card{grid-area:1/2/8/3}
+body[data-view="bia"][data-pg="1"] #bia-worker-health-card{grid-area:8/2/11/3}
+body[data-view="bia"][data-pg="1"] #bia-deploy-stats-card{grid-area:1/3/4/4}
+body[data-view="bia"][data-pg="1"] #bia-deploy-freq-card{grid-area:4/3/11/4}
+body[data-view="bia"][data-pg="2"] #bia-main{grid-template-columns:1fr 1.25fr 1fr;grid-template-rows:minmax(0,1fr);grid-template-areas:"mr mf tr"}

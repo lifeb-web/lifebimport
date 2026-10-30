@@ -588,7 +588,6 @@
     '.s2-cov.warn{color:var(--amber,#b45309);font-weight:700}',
     '.s2-tb tr.s2-lig td{color:#0e7c82}',
     '.s2-kt button{margin-top:3px}',
-    '.s2.tv[data-nc="1"] .s2-ini{display:none}',
     '.s2-conf>summary{cursor:pointer;font-size:11px;font-weight:800;color:var(--purple,#704B9B)}.s2-tb.cf{table-layout:fixed}.s2-tb.cf td:first-child{max-width:none}.s2-tb.cf th{white-space:normal;line-height:1.15;vertical-align:bottom;padding:2px 2px;font-size:8.5px}.s2-tb.cf td{padding:4px 2px;white-space:normal;overflow-wrap:anywhere;font-size:10.5px}.s2-tb.cf th:nth-child(2),.s2-tb.cf th:nth-child(3){width:15%}.s2-tb.cf th:nth-child(4){width:17%}',
     '.s2-tb tr.s2-gsin td{color:#5b5670;background:#ece9f4}',
     '.s2-empty button{font:inherit}',
@@ -612,44 +611,38 @@
     '.s2-hs{display:none}.s2-tb td.s2-sub{display:table-cell}',
     '@media (max-width:370px){.s2-hl{display:none}.s2-hs{display:inline}.s2.m .s2-tb.cr{table-layout:fixed}.s2.m .s2-tb.cr th:first-child{width:25%}.s2.m .s2-tb.cr th{font-size:7.5px;letter-spacing:0;padding-left:1px;padding-right:1px}.s2.m .s2-tb.cr td{padding-left:1px;padding-right:1px;font-size:10px}.s2.m .s2-tb.cr td:first-child{min-width:0;width:auto;overflow:hidden;text-overflow:ellipsis}.s2.m .s2-gs .s2-tb{table-layout:fixed}.s2.m .s2-gs .s2-tb th:first-child{width:22%}.s2.m .s2-gs .s2-tb th.s2-gsh{font-size:7.5px}.s2.m .s2-gs .s2-tb .s2-i{display:none}}',
     '@media (max-width:370px){.s2.m .s2-tb{font-size:10px}.s2.m .s2-tb td,.s2.m .s2-tb th{padding-left:2px;padding-right:2px}.s2.m .s2-tb.cr td:first-child{width:27%}.s2.m .s2-cb{padding-left:9px;padding-right:9px}}',
-    /* telão: tudo cabe sem rolagem, proporcional à altura */
-    '.s2.tv{flex:1;min-height:0;gap:7px;overflow:hidden}',
+    /* telão (30/10, Robert: letras miúdas e cartões espremidos): nada de encolher fonte.
+       Os KPIs ficam sempre na tela (2 linhas x 5, cartões altos); os blocos viram 3 PÁGINAS que trocam sozinhas
+       (controladas por legivel.js via data-pg). A densidade só mexe em espaçamento. */
+    '.s2.tv{flex:1;min-height:0;gap:8px;overflow:hidden;display:flex;flex-direction:column}',
     '.s2.tv .s2-hd{flex-shrink:0;flex-wrap:nowrap}',
-    '.s2.tv .s2-ks{grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;flex-shrink:0}',
-    '.s2.tv .s2-k{padding:7px 11px;border-radius:11px}',
-    '.s2.tv .s2-kv{font-size:clamp(18px,3.1vh,28px)}',
-    '.s2.tv .s2-kt{font-size:clamp(9px,1.25vh,11px)}',
-    '.s2.tv .s2-kl{font-size:clamp(8.5px,1.2vh,10px)}',
-    '.s2.tv .s2-body{flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:min-content;align-items:start;gap:8px;overflow:hidden}',
-    '.s2.tv .s2-body.pack{align-items:stretch;grid-template-rows:minmax(0,1fr);grid-auto-rows:auto}',
-    '.s2.tv .s2-col{display:flex;flex-direction:column;gap:8px;min-height:0;min-width:0;height:100%;--rp:0px}',
-    '.s2.tv .s2-col>.s2-card{flex:0 0 auto!important}',
-    '.s2.tv .s2-col>.s2-fill{flex:1 1 auto!important}',
-    '.s2.tv .s2-col>.s2-fill>.s2-cb{justify-content:space-between}',
-    '.s2.tv .s2-col .s2-tb td{padding-top:calc(var(--tp,3px) + var(--rp))!important;padding-bottom:calc(var(--tp,3px) + var(--rp))!important}',
-    '.s2.tv .s2-col .s2-mot{gap:calc(4px + var(--rp)*1.6)!important}',
+    '.s2.tv .s2-ks{grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;flex-shrink:0}',
+    '.s2.tv .s2-k{padding:8px 12px;border-radius:12px;justify-content:center;min-height:68px}',
+    '.s2.tv .s2-kv{font-size:22px}',
+    '.s2.tv .s2-kt{font-size:10.5px}',
+    '.s2.tv .s2-kl{font-size:9px}',
+    '.s2.tv .s2-kd{font-size:10.5px}',
+    '.s2.tv .s2-dup{margin-top:0;padding:5px 12px;flex-shrink:0;font-size:10.5px}',
+    '.s2.tv .s2-dup .s2-dl{font-size:9px}',
+    '.s2.tv .s2-body{flex:1;min-height:0;display:block;overflow:hidden}',
+    '.s2.tv .s2-pg{height:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;min-height:0}',
+    '.s2.tv .s2-pg>.s2-card{min-height:0}',
     '.s2.tv .s2-card{min-height:0}',
-    '.s2.tv .s2-cb{overflow:hidden;padding:6px 11px 8px;gap:4px}',
-    '.s2.tv .s2-tb{font-size:clamp(10px,1.45vh,12.5px)}',
-    '.s2.tv .s2-tb td{padding:clamp(2px,.8vh,10px) 4px}',
-    '.s2.tv .s2-mot{gap:clamp(5px,1.1vh,14px)}',
-    '.s2.tv .s2-cb{justify-content:flex-start}',
-    '@media (max-height:820px){.s2.tv .s2-xs{display:none}.s2.tv .s2-tb td{padding:clamp(2px,.45vh,4px) 4px}.s2.tv .s2-mot{gap:4px}.s2.tv{gap:5px}.s2.tv .s2-body{gap:6px}}',
-    '.s2.tv .s2-mr{font-size:clamp(10px,1.45vh,12.5px)}',
-    '.s2.tv .s2-nt{font-size:clamp(9.5px,1.3vh,11.5px)}',
-    '.s2.tv .s2-c{font-size:10px;padding:3px 8px}',
-    '.s2.tv[data-d="1"] .s2-xs,.s2.tv[data-d="2"] .s2-xs,.s2.tv[data-d="3"] .s2-xs,.s2.tv[data-d="4"] .s2-xs{display:none}',
-    '.s2.tv[data-d="1"] .s2-tb td,.s2.tv[data-d="2"] .s2-tb td{padding:3px 4px}',
-    '.s2.tv[data-d="2"] .s2-gsold,.s2.tv[data-d="3"] .s2-gsold,.s2.tv[data-d="4"] .s2-gsold{display:none}',
-    '.s2.tv[data-d="3"] .s2-kt,.s2.tv[data-d="4"] .s2-kt{display:none}',
-    '.s2.tv[data-d="3"] .s2-tb td,.s2.tv[data-d="4"] .s2-tb td{padding:2px 4px}',
-    '.s2.tv[data-d="3"] .s2-mot,.s2.tv[data-d="4"] .s2-mot{gap:3px}',
-    '.s2.tv[data-d="4"] .s2-lg,.s2.tv[data-d="4"] .s2-esg{display:none}',
-    '.s2.tv[data-d="4"] .s2-tb,.s2.tv[data-d="4"] .s2-mr{font-size:9.5px}',
-    '.s2.tv[data-d="4"] .s2-gsnote,.s2.tv[data-d="5"] .s2-gsnote{display:none}',
-    '.s2.tv[data-d="5"] .s2-cov,.s2.tv[data-d="5"] .s2-lg,.s2.tv[data-d="5"] .s2-esg,.s2.tv[data-d="5"] .s2-nt,.s2.tv[data-d="5"] .s2-kt{display:none}',
-    '.s2.tv[data-d="5"] .s2-k{padding:4px 9px}.s2.tv[data-d="5"] .s2-tb,.s2.tv[data-d="5"] .s2-mr{font-size:9px}.s2.tv[data-d="5"] .s2-tb td{padding:1px 4px}.s2.tv[data-d="5"] .s2-ch{padding:5px 10px 4px}.s2.tv[data-d="5"] .s2-sub{padding:3px 0 0}'
-    ,'.s2.tv[data-d="4"] .s2-k,.s2.tv[data-d="5"] .s2-k{padding:1px 8px;gap:0}.s2.tv[data-d="4"] .s2-kv,.s2.tv[data-d="5"] .s2-kv{font-size:clamp(12px,1.85vh,18px);line-height:1.05}.s2.tv[data-d="4"] .s2-ks,.s2.tv[data-d="5"] .s2-ks{gap:4px}'
+    '.s2.tv .s2-ch{padding:8px 12px 6px}',
+    '.s2.tv .s2-ct{font-size:10.5px}',
+    '.s2.tv .s2-cs{font-size:10.5px}',
+    '.s2.tv .s2-cb{overflow:hidden;padding:8px 12px 10px;gap:6px;justify-content:flex-start}',
+    '.s2.tv .s2-tb{font-size:11px}',
+    '.s2.tv .s2-tb td{padding:var(--tp,4px) 4px}',
+    '.s2.tv .s2-tb th{font-size:9px}',
+    '.s2.tv .s2-mot{gap:7px}',
+    '.s2.tv .s2-mr{font-size:11px}',
+    '.s2.tv .s2-nt{font-size:10.5px}',
+    '.s2.tv .s2-lg,.s2.tv .s2-cov,.s2.tv .s2-st{font-size:10.5px}',
+    '.s2.tv .s2-fl{font-size:9px}',
+    '.s2.tv .s2-c{font-size:10.5px;padding:4px 10px}',
+    '.s2.tv .s2-sub{font-size:9px}',
+    '.s2.tv .s2-expand,.s2-card .s2-expand{margin-left:6px}'
   ].join('\n');
 
   function injetaCss() {
@@ -775,13 +768,13 @@
   function alturaGraf() {
     var rw = (S.root && S.root.clientWidth) || 1800;
     var cw = Math.max(300, (rw - 16) * 0.43 - 24);
-    var alvo = (w.innerHeight || 940) * 0.27 * [1, 1, .85, .72, .6, .5][S.dens || 0];
-    return Math.round(Math.max(150, Math.min(340, alvo / (cw / 640))));
+    return 270; // 30/10: altura fixa, a escala do palco já cuida do tamanho na TV
   }
+  function fz(sv, tv) { return tv ? sv.replace(/font-size="9"/g, 'font-size="10"') : sv; } // 30/10: texto de gráfico >= 10 no telão
   function svgChart(r, tv) {
     var sr = r.serie, b = sr.baldes;
     if (!b.length) return '<div class="s2-empty">Sem qualificados nem perdas neste período</div>';
-    var W = tv ? 640 : (S.cw || 340), H = tv ? alturaGraf() : 160, padL = 24, padR = 4, padT = 14, padB = 20;
+    var W = tv ? 440 : (S.cw || 340), H = tv ? alturaGraf() : 160, padL = 24, padR = 4, padT = 14, padB = 20;
     var max = 1; b.forEach(function (x) { if (x.q > max) max = x.q; if (x.pm > max) max = x.pm; });
     max = Math.max(max, 2);
     var iw = W - padL - padR, ih = H - padT - padB, gw = iw / b.length;
@@ -822,7 +815,7 @@
       s2 += '</svg>';
       s += '<div class="s2-esg"><div class="s2-st" style="margin-top:2px">Cadência esgotada por ' + (sr.gran === 'd' ? 'dia' : sr.gran === 's' ? 'semana' : 'mês') + ' (cinza, escala própria, máx. ' + maxS + ')</div>' + s2 + '</div>';
     }
-    return s;
+    return fz(s, tv);
   }
 
   function htmlGrafico(r, tv) {
@@ -838,7 +831,7 @@
   function svgIniFin(r, tv) {
     var sr = r.ini.serie, b = sr.baldes;
     if (!b.length) return '<div class="s2-empty">Sem iniciados nem finalizados neste período</div>';
-    var W = tv ? 640 : (S.cw || 340), H = tv ? Math.round(alturaGraf() * 0.8) : 150, padL = 26, padR = 4, padT = 14, padB = 20;
+    var W = tv ? 440 : (S.cw || 340), H = tv ? Math.round(alturaGraf() * 0.8) : 150, padL = 26, padR = 4, padT = 14, padB = 20;
     var max = 2; b.forEach(function (x) { if (x.i > max) max = x.i; if (x.f > max) max = x.f; });
     var iw = W - padL - padR, ih = H - padT - padB, gw = iw / b.length, bw = Math.max(2, Math.min(tv ? 22 : 14, gw * 0.36));
     var gl = sr.gran === 'd' ? 'dia' : sr.gran === 's' ? 'semana' : 'mês';
@@ -857,7 +850,7 @@
       if (i % passo === 0) s += '<text x="' + cx + '" y="' + (H - 7) + '" text-anchor="middle" font-size="9" fill="#6b6484">' + rot + '</text>';
       s += '</g>';
     });
-    return s + '</svg>';
+    return fz(s + '</svg>', tv);
   }
   function htmlIniFin(r, tv) {
     if (!S.ini) return S.iniErr ? '<div class="s2-empty">Não consegui ler os iniciados agora.<br><button class="s2-c" data-retry="ini" style="margin-top:6px">Tentar de novo</button></div>' : '<div class="s2-empty">Carregando iniciados…</div>';
@@ -949,7 +942,7 @@
 
   function svgAtv(r, tv) {
     var b = r.atv.serie; if (!b.length) return '';
-    var W = tv ? 480 : (S.cw || 340), H = tv ? Math.max(70, Math.min(120, Math.round((w.innerHeight || 940) * 0.11))) : 110, padL = 24, padR = 4, padT = 12, padB = 18;
+    var W = tv ? 440 : (S.cw || 340), H = tv ? 110 : 110, padL = 24, padR = 4, padT = 12, padB = 18;
     var max = 2; b.forEach(function (x) { if (x.a > max) max = x.a; });
     var iw = W - padL - padR, ih = H - padT - padB, gw = iw / b.length, bw = Math.max(2, Math.min(18, gw * 0.62));
     var s = '<svg class="s2-chart" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Atividades feitas por dia"><defs><pattern id="s2hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#fffbeb"/><line x1="0" y1="0" x2="0" y2="5" stroke="#d97706" stroke-width="1.6"/></pattern></defs>';
@@ -966,7 +959,7 @@
       if (i % passo === 0) s += '<text x="' + cx + '" y="' + (H - 5) + '" text-anchor="middle" font-size="9" fill="#6b6484">' + dm(x.k) + '</text>';
       s += '</g>';
     });
-    return s + '</svg><div class="s2-lg"><span><i style="background:' + C_ROXO + ';opacity:.85"></i>Atividades</span><span><i style="background:#0e9aa0"></i>Ligações (parte das atividades)</span>' + (b.some(function (x) { return x.ap; }) ? '<span><i style="background:repeating-linear-gradient(45deg,#fffbeb 0 2px,#d97706 2px 3px);border:1px solid #d97706"></i>Em apuração</span>' : '') + '</div>';
+    return fz(s + '</svg>', tv) + '<div class="s2-lg"><span><i style="background:' + C_ROXO + ';opacity:.85"></i>Atividades</span><span><i style="background:#0e9aa0"></i>Ligações (parte das atividades)</span>' + (b.some(function (x) { return x.ap; }) ? '<span><i style="background:repeating-linear-gradient(45deg,#fffbeb 0 2px,#d97706 2px 3px);border:1px solid #d97706"></i>Em apuração</span>' : '') + '</div>';
   }
   function htmlAtividades(r, tv) {
     if (!S.atv) return S.atvErr ? '<div class="s2-empty">Não consegui ler as atividades agora.<br><button class="s2-c" data-retry="atv" style="margin-top:6px">Tentar de novo</button></div>' : '<div class="s2-empty">Carregando atividades…</div>';
@@ -1099,7 +1092,10 @@
     var cNotas = tv ? '' : '<details class="s2-det s2-card"><summary style="padding:9px 12px">Como ler esta aba</summary><div class="s2-cb s2-nt">' + htmlNotas() + '</div></details>';
     var corpo;
     if (tv) {
-      corpo = '<div class="s2-body">' + cGraf + cIni + cAtv + cEtapas + cMov + cCruz + cMot + cGS + cNotasTv + '</div>';
+      corpo = '<div class="s2-body">' +
+        '<div class="s2-pg" data-pg="1">' + cGraf + cIni + cAtv + '</div>' +
+        '<div class="s2-pg" data-pg="2">' + cEtapas + cMov + cCruz + '</div>' +
+        '<div class="s2-pg" data-pg="3">' + cMot + cGS + cNotasTv + '</div></div>';
     } else {
       corpo = '<div class="s2-body">' + cGraf + cIni + cAtv + cEtapas + cMov + cCruz + cMot + cGS + '</div>' + cConf + cNotas;
     }
@@ -1189,14 +1185,9 @@
   function render() {
     if (!S.root) return;
     if (S.mode !== 't') { medeLargura(); draw(); if (S.w !== 'p') empacota(); return; }
-    for (var d = 0; d <= 6; d++) {
-      // nível 6 = mesma compactação do 5 sem o gráfico de iniciados (último recurso em telas muito baixas; o número fica nos cartões)
-      var dd = d > 5 ? 5 : d;
-      S.dens = dd; S.root.setAttribute('data-d', dd); S.root.setAttribute('data-nc', d > 5 ? '1' : '0'); S.root.style.setProperty('--tp', TP[dd] + 'px');
-      draw();
-      if (!S.last || !S.root.querySelector('.s2-body')) break;
-      if (empacotaTv() && !estoura()) break;
-    }
+    // 30/10: sem laço de compactação. As páginas já cabem; a densidade só ajusta o respiro das linhas (--tp), nunca a fonte.
+    S.dens = 0; S.root.setAttribute('data-d', 0); S.root.setAttribute('data-nc', '0'); S.root.style.setProperty('--tp', '4px');
+    draw();
   }
 
   // ---------- Interação ----------

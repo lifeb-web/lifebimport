@@ -1008,7 +1008,8 @@ body.tv-grande .rv-k-val{font-size:19px}
 }
 </style>
 <!-- Dossiê do SDR (Fase 1): padrão da aba SDR; ?sdr=1 volta à aba antiga -->
-<script>if (true) document.write('<script src="../sdr2.js?v=20261030g"><\/script>');</script>
+<link rel="stylesheet" href="legivel.css?v=20261030a">
+<script>if (true) document.write('<script src="../sdr2.js?v=20261030h"><\/script>');</script>
 </head>
 <body>
 <div id="lb"></div>
@@ -1070,7 +1071,7 @@ body.tv-grande .rv-k-val{font-size:19px}
 
   <div class="h-right">
     <span id="period-badge">90 dias</span>
-    <button id="tv-toggle" onclick="toggleTvGrande_()" title="Números grandes (TV)">TV</button>
+    <button id="tv-toggle" onclick="window.LB_PG&&LB_PG.toggle()" title="Pausar ou retomar a troca automática de páginas (teclas: setas trocam a página, espaço pausa)" aria-label="Pausar ou retomar a troca automática de páginas">⏸</button>
     <span id="htime">--:--</span>
     <div id="rdot"></div>
   </div>
@@ -1124,14 +1125,14 @@ body.tv-grande .rv-k-val{font-size:19px}
       <div class="kc-row"><span class="kc-val" id="k-perdido"><span class="skel"></span></span></div>
       <span class="kc-sub">no período</span>
     </div>
-    <div class="kchip">
+      </div>
+
+  <div id="mkt-row">
+    <div class="kchip" id="kchip-leads-distrib">
       <span class="kc-label">Leads Distrib.</span>
       <div class="kc-row"><span class="kc-val" id="k-leads"><span class="skel"></span></span><span class="kc-delta" id="k-leads-delta"></span></div>
       <span class="kc-sub">no CRM</span>
     </div>
-  </div>
-
-  <div id="mkt-row">
     <div class="achip"><span class="ac-label">Investimento Ads<span class="ac-tag">IN</span> <span id="mkt-updated" style="text-transform:none;font-weight:600"></span></span><span class="ac-val" id="mkt-inv"><span class="skel"></span></span><span class="kc-delta" id="mkt-inv-delta"></span></div>
     <div class="achip"><span class="ac-label">Leads Recebidos<span class="ac-tag">IN</span></span><span class="ac-val" id="mkt-leads"><span class="skel"></span></span><span class="kc-delta" id="mkt-leads-delta"></span></div>
     <!-- 🔴 FIX 26/08 (Robert: "coloque o CAC depois do custo por lead") —
@@ -1430,11 +1431,6 @@ body.tv-grande .rv-k-val{font-size:19px}
        Impressões→Frequência (audiência), Cliques→CTR→CPM (performance),
        Campanhas→Conjuntos→Anúncios (estrutura da conta). -->
   <div id="ads-hero-row">
-    <div id="ads-hero" style="cursor:default">
-      <div class="hero-top"><span class="hero-label">Investimento em Ads</span><span id="ads-hero-spark"></span></div>
-      <div class="hero-val" id="ads-hero-val"><span class="skel" style="width:80px;height:24px"></span></div>
-      <div class="hero-row2"><span class="hero-sub" id="ads-hero-sub">no período</span><span id="ads-hero-delta"></span></div>
-    </div>
     <div class="kchip" title="Soma do alcance diário (aproximado, pode superestimar: mesma pessoa alcançada em dias diferentes conta mais de uma vez).">
       <span class="kc-label">Alcance</span>
       <div class="kc-row"><span class="kc-val" id="ads-k-reach"><span class="skel"></span></span></div>
@@ -1488,6 +1484,11 @@ body.tv-grande .rv-k-val{font-size:19px}
        Ordem: Leads+CPL juntos (custo de aquisição de lead), CAC+ROAS
        juntos (economia do fechamento), ACOS sozinho (visão geral %). -->
   <div id="ads-hero-row2">
+    <div id="ads-hero" style="cursor:default">
+      <div class="hero-top"><span class="hero-label">Investimento em Ads</span><span id="ads-hero-spark"></span></div>
+      <div class="hero-val" id="ads-hero-val"><span class="skel" style="width:80px;height:24px"></span></div>
+      <div class="hero-row2"><span class="hero-sub" id="ads-hero-sub">no período</span><span id="ads-hero-delta"></span></div>
+    </div>
     <div class="kchip">
       <span class="kc-label">Leads Recebidos</span>
       <div class="kc-row"><span class="kc-val" id="ads-k-leads"><span class="skel"></span></span><span class="kc-delta" id="ads-k-leads-delta"></span></div>
@@ -1643,7 +1644,7 @@ body.tv-grande .rv-k-val{font-size:19px}
            posição do funil de Vendas/LTV e da referência real
            (dashboard-telao.html standalone), achado do Robert ("funil tem
            que estar na esquerda como está no dash inteiro"). -->
-      <div class="card" id="ga4-funil-card" style="flex:1;display:flex;flex-direction:column;min-height:0">
+      <div class="card" id="ga4-funil-card" data-pg="1" style="flex:1;display:flex;flex-direction:column;min-height:0">
         <div class="card-hd">
           <span class="card-hd-title">Eventos de Conversão</span>
           <span class="badge" id="ga4-funil-badge">carregando…</span>
@@ -1667,7 +1668,7 @@ body.tv-grande .rv-k-val{font-size:19px}
            tem como o maior/mais importante da tela. Agora o centro é só
            esse gráfico (maior painel, igual a referência), e Fontes/
            Cidades/Páginas viraram uma coluna só empilhada à direita. -->
-      <div class="card" id="ga4-visitors-card" style="flex:1;display:flex;flex-direction:column;min-height:0">
+      <div class="card" id="ga4-visitors-card" data-pg="1" style="flex:1;display:flex;flex-direction:column;min-height:0">
         <div class="card-hd">
           <span class="card-hd-title">Visitantes</span>
           <span class="badge" id="ga4-visitors-badge"></span>
@@ -1682,7 +1683,7 @@ body.tv-grande .rv-k-val{font-size:19px}
          Robert — antes eram barras de progresso tipo funil, ele comparou
          lado a lado e achou "bem mais bonito" o padrão de tabela. -->
     <div id="ga4-col-right">
-      <div class="card ga4-table-card has-expand" id="ga4-cities-card" style="flex:1.1;display:flex;flex-direction:column;min-height:0"><button class="expand-btn" data-target="ga4-cities-scroll" data-title="Estado e Cidade">⤢</button>
+      <div class="card ga4-table-card has-expand" id="ga4-cities-card" data-pg="2" style="flex:1.1;display:flex;flex-direction:column;min-height:0"><button class="expand-btn" data-target="ga4-cities-scroll" data-title="Estado e Cidade">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Estado / Cidade</span>
           <span class="badge" id="ga4-cities-badge"></span>
@@ -1694,7 +1695,7 @@ body.tv-grande .rv-k-val{font-size:19px}
           </table>
         </div>
       </div>
-      <div class="card ga4-table-card has-expand" id="ga4-sources-card" style="flex:1;display:flex;flex-direction:column;min-height:0"><button class="expand-btn" data-target="ga4-sources-scroll" data-title="Origem do Tráfego">⤢</button>
+      <div class="card ga4-table-card has-expand" id="ga4-sources-card" data-pg="2" style="flex:1;display:flex;flex-direction:column;min-height:0"><button class="expand-btn" data-target="ga4-sources-scroll" data-title="Origem do Tráfego">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Origem do Tráfego</span>
           <span class="badge" id="ga4-sources-badge"></span>
@@ -1706,7 +1707,7 @@ body.tv-grande .rv-k-val{font-size:19px}
           </table>
         </div>
       </div>
-      <div class="card ga4-table-card has-expand" id="ga4-pages-card" style="flex:1.2;display:flex;flex-direction:column;min-height:0"><button class="expand-btn" data-target="ga4-pages-scroll" data-title="Por Página">⤢</button>
+      <div class="card ga4-table-card has-expand" id="ga4-pages-card" data-pg="2" style="flex:1.2;display:flex;flex-direction:column;min-height:0"><button class="expand-btn" data-target="ga4-pages-scroll" data-title="Por Página">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Por Página</span>
           <span class="badge" id="ga4-pages-badge">carregando…</span>
@@ -1786,14 +1787,14 @@ body.tv-grande .rv-k-val{font-size:19px}
            rodando ao mesmo tempo, sem nenhuma separação visual — parecia 1
            lista só rolando de forma inconsistente. Virou 2 cards de
            verdade, cada um com seu card-hd/borda/badge próprios. -->
-      <div class="card has-expand" id="bia-motor-resumo-card" style="flex:0 0 auto;max-height:230px"><button class="expand-btn" data-target="bia-motor-breakdown" data-title="Resumo do Motor Proativo">⤢</button>
+      <div class="card has-expand" id="bia-motor-resumo-card" data-pg="2" style="flex:0 0 auto;max-height:230px"><button class="expand-btn" data-target="bia-motor-breakdown" data-title="Resumo do Motor Proativo">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title"><span id="bia-motor-live-dot"></span>Motor Proativo ao Vivo</span>
           <span class="badge" id="bia-motor-badge">carregando…</span>
         </div>
         <div class="funil-body" id="bia-motor-breakdown" style="justify-content:flex-start;gap:2px"></div>
       </div>
-      <div class="card has-expand" id="bia-motor-feed-card" style="flex:1"><button class="expand-btn" data-target="bia-motor-feed" data-title="Eventos Recentes">⤢</button>
+      <div class="card has-expand" id="bia-motor-feed-card" data-pg="2" style="flex:1"><button class="expand-btn" data-target="bia-motor-feed" data-title="Eventos Recentes">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Eventos Recentes</span>
           <span class="badge" id="bia-motor-feed-badge"></span>
@@ -1803,7 +1804,7 @@ body.tv-grande .rv-k-val{font-size:19px}
     </div>
 
     <div id="bia-col-center">
-      <div class="card" id="bia-gates-card">
+      <div class="card" id="bia-gates-card" data-pg="1">
         <div class="card-hd">
           <span class="card-hd-title">Confiança &amp; Saúde</span>
           <span class="badge" id="bia-gates-badge">hoje</span>
@@ -1839,7 +1840,7 @@ body.tv-grande .rv-k-val{font-size:19px}
            era flex:1 (tomava toda sobra da coluna); virou altura fixa
            menor pra abrir espaço pro card de Saúde do Sistema logo abaixo,
            sem precisar cortar nada de Confiança&Saúde nem Estrutura SDR. -->
-      <div class="card" id="bia-trend-card" style="flex:1 1 auto;display:flex;flex-direction:column;min-height:0">
+      <div class="card" id="bia-trend-card" data-pg="2" style="flex:1 1 auto;display:flex;flex-direction:column;min-height:0">
         <div class="card-hd">
           <span class="card-hd-title">Tendência de Custo × Mensagens (14 dias, fixo)</span>
           <span class="badge" id="bia-trend-badge"></span>
@@ -1854,7 +1855,7 @@ body.tv-grande .rv-k-val{font-size:19px}
            fala com o n8n hoje, precisaria de secret novo + rota proxy
            (mesmo porte da historização dos gates feita hoje); avisado ao
            Robert como pendência separada, não fingido aqui com dado falso. -->
-      <div class="card" id="bia-worker-health-card" style="flex:0 0 auto">
+      <div class="card" id="bia-worker-health-card" data-pg="1" style="flex:0 0 auto">
         <div class="card-hd">
           <span class="card-hd-title">Saúde do Sistema</span>
           <span class="badge" id="bia-worker-health-badge"></span>
@@ -1883,14 +1884,14 @@ body.tv-grande .rv-k-val{font-size:19px}
          vez de só listar). Estatísticas ficam num card compacto separado,
          não flex:1 sozinho tomando a coluna inteira. -->
     <div id="bia-col-right">
-      <div class="card" id="bia-saude-card" style="flex:0 0 auto">
+      <div class="card" id="bia-saude-card" data-pg="1" style="flex:0 0 auto">
         <div class="card-hd">
           <span class="card-hd-title">Saúde da Bia (ao vivo)</span>
           <span class="badge" id="bia-saude-badge"></span>
         </div>
         <div style="padding:2px 14px" id="bia-saude-rows"><div class="stat-row"><span class="k">Worker da Bia</span><span class="v">carregando…</span></div></div>
       </div>
-      <div class="card" id="bia-deploy-stats-card">
+      <div class="card" id="bia-deploy-stats-card" data-pg="1">
         <div class="card-hd">
           <span class="card-hd-title">Saúde das Atualizações</span>
           <span class="badge" id="bia-deploy-badge"></span>
@@ -1901,7 +1902,7 @@ body.tv-grande .rv-k-val{font-size:19px}
           <div class="stat-row"><span class="k">Última atualização do sistema</span><span class="v" id="bia-deploy-desde">—</span></div>
         </div>
       </div>
-      <div class="card" id="bia-deploy-freq-card" style="flex:1;display:flex;flex-direction:column;min-height:0">
+      <div class="card" id="bia-deploy-freq-card" data-pg="1" style="flex:1;display:flex;flex-direction:column;min-height:0">
         <div class="card-hd">
           <span class="card-hd-title">Atualizações por Dia</span>
           <span class="badge" id="bia-deploy-freq-badge"></span>
@@ -5185,6 +5186,7 @@ function setView(btn) {
     if (_biaSnap) renderBiaSectionTelao(_biaSnap);
     loadBiaFresh_();
   }
+  try { window.LB_PG && LB_PG.onView(view); } catch (e) {}
   saveUiState_();
 }
 
@@ -7524,5 +7526,6 @@ if (/[?&]debug=1\b/.test(location.search)) {
   document.body.appendChild(box);
 }
 </script>
+<script src="legivel.js?v=20261030a"></script>
 </body>
 </html>
