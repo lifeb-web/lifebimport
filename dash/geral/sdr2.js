@@ -706,13 +706,13 @@
       return chip('Iniciados ⓘ', num(a.n) + '<span class="s2-ap">em apuração</span>', 'ainda lendo os marcadores do Outbound (a Bia termina na próxima rodada) · ' + iniSub(t), { tip: 'EM APURAÇÃO: o valor é parcial e vai subir. ' + tip, apur: true, go: 'ini' });
     }
     var tipFull = tip + (t.parcial ? ' Neste período o Outbound está incompleto: antes de ' + dm(t.desde) + ' o dia do clique não foi guardado.' : '') + ' Saldo no período (iniciados menos finalizados): ' + (a.n - t.fin >= 0 ? '+' : '') + num(a.n - t.fin) + '.';
-    return chip('Iniciados ⓘ', num(a.n), a.n ? iniSub(t) : (t.parcial ? 'nenhum iniciado no período · Outbound só desde ' + dm(t.desde) : 'nenhum lead iniciado no período'), { tip: tipFull, go: 'ini', delta: delta(a.n, t.ant ? t.ant.n : null) });
+    return chip('Iniciados ⓘ', num(a.n), iniSub(t), { tip: tipFull, go: 'ini', delta: delta(a.n, t.ant ? t.ant.n : null) });
   }
   var TIP_FIN = 'Leads que saíram da cadência no período, pela data real do evento (nunca a data de ganho antiga): qualificados (ganho) + perdidos pelo SDR + cadência esgotada + duplicados. O duplicado não é decisão do SDR e fica fora da conversão, mas o lead saiu da cadência, por isso conta aqui. Segue todos os filtros da aba.';
   function chipFinalizados(r) {
     var a = r.ag, p = r.agAnt, tot = finTotal(a);
     var comp = num(a.q) + ' qualif. · ' + num(a.pm) + ' perd. · ' + num(a.ps) + ' esgot. · ' + num(a.pd) + ' dup.';
-    return chip('Finalizados ⓘ', num(tot), tot ? comp : 'nenhum lead finalizado no período', { tip: TIP_FIN + ' Composição: ' + comp + '.', go: 'fin', delta: delta(tot, p ? finTotal(p) : null) });
+    return chip('Finalizados ⓘ', num(tot), comp, { tip: TIP_FIN + ' Composição: ' + comp + '.', go: 'fin', delta: delta(tot, p ? finTotal(p) : null) });
   }
 
   function htmlKpis(r) {
