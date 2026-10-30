@@ -430,6 +430,13 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .orig-i-bar i{display:block;height:100%;background:var(--c);border-radius:3px;transition:width .6s cubic-bezier(.4,0,.2,1)}
 @keyframes origIn{from{opacity:0;transform:rotate(-110deg) scale(.88)}to{opacity:1;transform:rotate(0) scale(1)}}
 .orig-anim{animation:origIn .8s cubic-bezier(.2,.8,.2,1);transform-origin:100px 100px}
+/* QA 30/10: alvo de toque >= 44px no celular sem mudar o desenho (a area clicavel cresce por pseudo-elemento) */
+@media (pointer:coarse){
+  .ochip,.pchip,.modal-close,.btn-refresh{position:relative}
+  .btn-refresh::after{content:'';position:absolute;inset:-9px -7px}
+  .ochip::after,.pchip::after{content:'';position:absolute;left:0;right:0;top:-6px;bottom:-6px}
+  .modal-close::after{content:'';position:absolute;inset:-8px}
+}
 @media(prefers-reduced-motion:reduce){.orig-anim{animation:none}}
 .orig-i-open{padding:10px 4px 10px 12px;margin:-8px -4px -8px 0}
 .orig-hd-right{flex-wrap:wrap;justify-content:flex-end}
@@ -554,7 +561,9 @@ footer strong{color:#fff}
      coluna vizinha. .funil-val também cortava dígito de R$ em silêncio (tinha
      overflow:hidden sem ellipsis). Fix: fonte do contador reduzida + colunas de
      contador/valor alargadas com folga sobre o pior caso medido. */
-  .funil-row{grid-template-columns:10px minmax(64px,96px) minmax(10px,1fr) 28px 64px 42px 12px}
+  .funil-row{grid-template-columns:10px minmax(64px,116px) minmax(6px,1fr) 28px 64px 42px 12px}
+  /* QA 30/10: nome da etapa quebra em 2 linhas em vez de cortar com "..." (3 etapas "Reativacao -..." ficavam iguais) */
+  .funil-stage-name{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.15;font-size:11.5px;overflow-wrap:anywhere}
   .funil-count{font-size:12px}
   .funil-val{font-size:9px}
   .funil-drop{font-size:8px;padding:2px 3px}
@@ -2995,7 +3004,7 @@ function renderLtvFunil_(funnel, kpis, recentLost) {
     const isReativacao = REATIVACAO75_STAGE_IDS.has(String(s.stageId));
     const prevIsReativacao = i > 0 && REATIVACAO75_STAGE_IDS.has(String(nf[i - 1].stageId));
     const reached = isReativacao ? s.count : (s.reached ?? s.count);
-    const pct = Math.max((reached / max) * 100, 2);
+    const pct = Math.min(100, Math.max((reached / max) * 100, 2));
     const ord = LTV_STAGE_ORD[String(s.stageId)] || 'o2';
     // nunca mostra seta de conversão nem ENTRE nem SAINDO da Reativação —
     // é outro funil, não existe "% que avançou" de verdade entre os dois.
@@ -3021,7 +3030,7 @@ function renderLtvFunil_(funnel, kpis, recentLost) {
 
   const outcomeRow = (name, count, value, color, onclick, stageBase) => {
     const pct = stageBase !== undefined ? convFrom(count, stageBase) : null;
-    const barPct = Math.max((count / max) * 100, 2);
+    const barPct = Math.min(100, Math.max((count / max) * 100, 2));
     const connector = (stageBase !== undefined && pct !== null) ? `
       <div class="funil-conn" title="Conversão da etapa anterior">
         <span class="funil-conn-arrow" style="color:#15803d">↓</span><span class="funil-conn-pct" style="color:#15803d">${pct}%</span>
@@ -3226,7 +3235,7 @@ function renderLtvRepFunilRows(funnel) {
   const convFrom = (count, prevCount) => prevCount > 0 ? Math.round((count / prevCount) * 100) : null;
   return nf.map((s, i) => {
     const reached = s.reached ?? s.count;
-    const pct = Math.max((reached / max) * 100, 2);
+    const pct = Math.min(100, Math.max((reached / max) * 100, 2));
     const ord = LTV_STAGE_ORD[String(s.stageId)] || 'o2';
     const lostBadge = s.lost > 0 ? `<span class="funil-drop" style="background:#fee2e2;color:#b91c1c">${s.lost} perd</span>` : '<span></span>';
     const tabKey = 'stage:' + s.stageId;
@@ -5942,7 +5951,7 @@ function renderFunil(funnel, kpis, recentLost) {
 
   const stageRows = nf.map((s, i) => {
     const reached = s.reached ?? s.count;
-    const pct = Math.max((reached / max) * 100, 2);
+    const pct = Math.min(100, Math.max((reached / max) * 100, 2));
     const ord = STAGE_ORD[String(s.stageId)] || 'o2';
     const conv = i === 0 ? null : convFrom(reached, nf[i-1].reached ?? nf[i-1].count);
     // achado 13/07 (Robert: conversão "confusa", pediu seta como o Agendor faz):
@@ -5982,7 +5991,7 @@ function renderFunil(funnel, kpis, recentLost) {
     // pode cair de qualquer uma das 3, já detalhado acima em cada linha), então
     // fica com o badge tradicional (resultado agregado), nunca a seta sequencial.
     const pct = stageBase !== undefined ? convFrom(count, stageBase) : null;
-    const barPct = Math.max((count / max) * 100, 2);
+    const barPct = Math.min(100, Math.max((count / max) * 100, 2));
     const isSequential = stageBase !== undefined;
     const connector = (isSequential && pct !== null) ? `
       <div class="funil-conn" title="Conversão da etapa anterior">
@@ -6155,7 +6164,7 @@ function renderRepFunilRows(funnel) {
   const convFrom = (count, prevCount) => prevCount > 0 ? Math.round((count / prevCount) * 100) : null;
   return nf.map((s, i) => {
     const reached = s.reached ?? s.count;
-    const pct = Math.max((reached / max) * 100, 2);
+    const pct = Math.min(100, Math.max((reached / max) * 100, 2));
     const ord = STAGE_ORD[String(s.stageId)] || 'o2';
     const lostBadge = s.lost > 0 ? `<span class="funil-drop" style="background:#fee2e2;color:#b91c1c">${s.lost} perd</span>` : '<span></span>';
     const tabKey = 'stage:' + s.stageId;
