@@ -512,6 +512,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .abar-name{font-size:13px;font-weight:700;color:var(--text);min-width:0;display:flex;align-items:center;gap:6px}
 .abar-name-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .abar-val{font-size:13px;font-weight:800;color:var(--text);flex-shrink:0;font-variant-numeric:tabular-nums}
+.abar-meta{font-size:10px;font-weight:600;color:var(--muted);margin:-2px 0 4px 15px;line-height:1.2}
 .abar-sub{font-size:10px;font-weight:600;color:var(--muted);flex-shrink:0;margin-left:6px}
 .abar-track{height:9px;background:#f0ebf8;border-radius:5px;overflow:hidden;box-shadow:inset 0 1px 2px rgba(90,58,128,.08)}
 .abar-fill{height:100%;border-radius:5px;min-width:5px;transition:width .6s cubic-bezier(.4,0,.2,1)}
@@ -4215,8 +4216,9 @@ function adsFunilRow_(dotColor, name, spend, maxSpend, subText, onclickAttr, isP
     <div class="abar-row" ${onclickAttr ? 'onclick="' + onclickAttr + '"' : ''}>
       <div class="abar-top">
         <span class="abar-name" title="${escHtml(name)}"><span class="abar-dot" style="background:${dotColor}"></span><span class="abar-name-text">${escHtml(name)}</span>${pausedBadge}</span>
-        <span class="abar-val">${fmtMoney(spend)}${subText ? '<span class="abar-sub"> · ' + escHtml(subText) + '</span>' : ''}</span>
+        <span class="abar-val">${fmtMoney(spend)}</span>
       </div>
+      ${subText ? '<div class="abar-meta">' + escHtml(subText) + '</div>' : ''}
       <div class="abar-track"><div class="abar-fill" style="width:${pct}%;background:${dotColor}"></div></div>
     </div>`;
 }
@@ -4237,7 +4239,7 @@ function adGroupRow_(g) {
       </div>
       <div class="feed-right">
         <div class="feed-val">${fmtMoney(g.spend)}</div>
-        <div class="feed-date">${g.ctr !== null ? g.ctr.toFixed(2) + '% CTR' + (g.cplReal ? ' · ' + fmtMoney(g.cplReal) + '/lead' : '') : '—'}</div>
+        <div class="feed-date">${g.ctr !== null ? g.ctr.toFixed(2) + '% CTR' + (g.cplReal ? ' · ' + fmtMoney(g.cplReal) + '/lead' : (g.clicks > 0 ? ' · ' + fmtMoney(g.spend / g.clicks) + '/clique' : '')) : '—'}</div>
       </div>
     </div>`;
 }
@@ -4377,10 +4379,11 @@ function renderAdsHierarchySection(d, prevD) {
   // 🔴 FIX 27/08 (auditoria — mesma regra do telão): CPL real (leads
   // cruzados via planilha) tem prioridade sobre CTR-só quando existe pra
   // essa entidade nesse período — nunca esconde a cobertura parcial.
-  const subTextComEficiencia_ = (ctr, cplReal, leadsReal) => {
+  const subTextComEficiencia_ = (ctr, cplReal, leadsReal, spend, clicks) => {
     if (ctr === null) return '—';
     let t = ctr.toFixed(2) + '% CTR';
     if (cplReal !== null && cplReal !== undefined) t += ' · ' + fmtMoney(cplReal) + '/lead (' + leadsReal + ')';
+    else if (clicks > 0) t += ' · ' + fmtMoney(spend / clicks) + '/clique'; // QA 30/10: paridade com o telao (custo por clique quando nao ha lead identificado)
     return t;
   };
   el('ads-campanhas-badge').textContent = d.campaignsList.length + ' de ' + d.kpis.totalCampaigns;
@@ -4393,7 +4396,7 @@ function renderAdsHierarchySection(d, prevD) {
     : d.campaignsList.map(c => adsFunilRow_(
         'var(--purple)',
         c.name, c.spend, maxCampSpend,
-        subTextComEficiencia_(c.ctr, c.cplReal, c.leadsReal),
+        subTextComEficiencia_(c.ctr, c.cplReal, c.leadsReal, c.spend, c.clicks),
         "openAdsCampaignModal('" + c.id + "')",
         c.status !== 'ACTIVE'
       )).join('');
@@ -4405,7 +4408,7 @@ function renderAdsHierarchySection(d, prevD) {
     : d.adsetsList.slice(0, 20).map(a => adsFunilRow_(
         'var(--purple)',
         a.name, a.spend, maxAdsetSpend,
-        subTextComEficiencia_(a.ctr, a.cplReal, a.leadsReal),
+        subTextComEficiencia_(a.ctr, a.cplReal, a.leadsReal, a.spend, a.clicks),
         "openAdsAdsetModal('" + a.id + "')",
         a.status !== 'ACTIVE'
       )).join('');
