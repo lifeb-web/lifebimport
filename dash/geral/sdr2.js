@@ -552,7 +552,7 @@
     '.s2-tb td.s2-sr{max-width:none!important;width:auto!important;white-space:normal!important;border-top:0;text-align:left}',
     '.s2.m .s2-tb.cr th{font-size:8.5px;letter-spacing:.1px;padding:2px 2px}',
     '.s2.m .s2-tb.cr td{padding:4px 2px;font-size:10.5px}',
-    '.s2.m .s2-tb.cr td:first-child{width:auto;max-width:none;min-width:70px}',
+    '.s2.m .s2-tb.cr td:first-child{width:auto;max-width:27vw;min-width:50px;overflow:hidden;text-overflow:ellipsis}',
     '.s2-tb td:first-child{max-width:0;width:44%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}',
     '.s2-tb tr.gr td{color:#8a859c;font-weight:600}',
     '.s2-tb td.z{color:#c9c5d6;font-weight:600}',

@@ -144,6 +144,8 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 
 #err-banner{display:none;background:#fef2f2;border:1.5px solid #fecaca;border-radius:10px;padding:10px 14px;font-size:12px;font-weight:600;color:#991b1b}
 #err-banner.show{display:block}
+#err-banner .err-retry{font:inherit;font-weight:800;color:#991b1b;background:#fff;border:1.5px solid #fecaca;border-radius:8px;padding:6px 12px;margin-left:4px;cursor:pointer;min-height:32px;position:relative}
+#err-banner .err-retry::after{content:'';position:absolute;left:0;right:0;top:-6px;bottom:-6px}
 
 .sec-hd{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--faint);padding:0 2px 5px}
 
@@ -430,8 +432,9 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .orig-i-bar i{display:block;height:100%;background:var(--c);border-radius:3px;transition:width .6s cubic-bezier(.4,0,.2,1)}
 @keyframes origIn{from{opacity:0;transform:rotate(-110deg) scale(.88)}to{opacity:1;transform:rotate(0) scale(1)}}
 .orig-anim{animation:origIn .8s cubic-bezier(.2,.8,.2,1);transform-origin:100px 100px}
+.ga4-table-card td:first-child,.ga4-table-card td.ga4-td-left,.ga4-pg-legenda,.ga4-pg-path{overflow-wrap:anywhere}
 /* QA 30/10: tabela Estado/Cidade do GA4 em 320px (UF quebrava letra por letra e a coluna Leads saia do cartao) */
-.ga4-table-card td.ga4-td-left:not(:first-child){white-space:normal;overflow-wrap:break-word}
+.ga4-table-card td.ga4-td-left:not(:first-child){white-space:normal;overflow-wrap:anywhere}
 .ga4-table-card table:has(th.ga4-th-left) td:first-child{white-space:nowrap;overflow-wrap:normal;word-break:normal}
 @media(max-width:370px){.ga4-table-card th,.ga4-table-card td{padding-left:4px;padding-right:4px}.ga4-table-card th:first-child,.ga4-table-card td:first-child{padding-left:10px}.ga4-table-card th:last-child,.ga4-table-card td:last-child{padding-right:10px}.ga4-table-card th{font-size:9px;letter-spacing:.2px}}
 /* QA 30/10: alvo de toque >= 44px no celular sem mudar o desenho (a area clicavel cresce por pseudo-elemento) */
@@ -2546,10 +2549,20 @@ function setOrigin(btn) {
   saveUiState_();
 }
 
+// QA 30/10: rotulo do periodo ("90 dias" fixo no HTML) ficava errado enquanto carrega ou quando da erro; acompanha o chip ativo
+function syncPeriodLabels_() {
+  try {
+    const c = document.querySelector('.pchip.active'); if (!c) return;
+    const t = c.textContent.replace(/📅\s*/, '').trim();
+    ['period-label', 'sdr-period-label', 'ads-period-label', 'period-badge'].forEach(id => { const n = document.getElementById(id); if (n && !(typeof _data !== 'undefined' && _data && _data.period)) n.textContent = t; });
+  } catch (e) {}
+}
+
 function setPeriod(btn) {
   document.querySelectorAll('.pchip').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   _period = btn.dataset.p;
+  syncPeriodLabels_();
   const cd = el('custom-dates');
   const mp = el('month-pick-panel');
   if (_period === 'custom') {
@@ -4916,6 +4929,7 @@ async function loadGa4Fresh_(fromOverride, toOverride) {
   _ga4Loading = true;
   try {
     _ga4Raw = await fetchGa4Raw(from, to);
+    if (_ga4ViewActive) hideErr();
     if (_ga4ViewActive) renderGa4Section(computeGa4Data(_ga4Raw));
     // Realtime é sempre "agora" · não depende do período, busca à parte e
     // não bloqueia o resto do render se falhar/demorar.
@@ -4924,6 +4938,7 @@ async function loadGa4Fresh_(fromOverride, toOverride) {
     }).catch(() => { if (_ga4ViewActive) el('ga4-k-live').textContent = '—'; });
   } catch (e) {
     console.warn('fetchGa4Raw falhou:', e.message);
+    if (_ga4ViewActive && !_ga4Raw) showErr('GA4 ' + e.message); // QA 30/10: erro do GA4 era silencioso (so uma linha no fim da pagina)
     if (_ga4ViewActive && !el('ga4-pages-rows').children.length) {
       el('ga4-pages-rows').innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--faint);padding:14px 6px">Erro ao carregar GA4. Tenta de novo em instantes.</td></tr>';
     }
@@ -6396,7 +6411,17 @@ function escJsAttr_(s) {
 
 function showErr(msg) {
   const b = el('err-banner');
-  b.textContent = '⚠ ' + msg;
+  /* QA 30/10: mensagem em portugues simples + botao Tentar de novo (antes so o texto tecnico "ponte HTTP 500", sem acao) */
+  const m = String(msg || '').replace(/^Erro ao carregar:\s*/i, '');
+  const cod = (m.match(/\b[45]\d\d\b/) || [])[0];
+  b.innerHTML = '';
+  const t = document.createElement('span');
+  t.textContent = '⚠ Não deu para carregar os dados agora' + (cod ? ' (erro ' + cod + ')' : '') + '. ';
+  const bt = document.createElement('button');
+  bt.type = 'button'; bt.className = 'err-retry'; bt.textContent = 'Tentar de novo';
+  bt.onclick = function () { hideErr(); loadData(true); };
+  b.appendChild(t); b.appendChild(bt);
+  b.title = m;
   b.classList.add('show');
 }
 function hideErr() { el('err-banner').classList.remove('show'); }
@@ -6417,6 +6442,7 @@ function friendlyErr(e) {
 // auto-refresh silencioso.
 document.addEventListener('DOMContentLoaded', async () => {
   restoreUiStateBeforeLoad_();
+  syncPeriodLabels_();
   await loadData(false, true);
   applyPendingViewRestore_();
 });

@@ -4450,10 +4450,20 @@ function setOrigin(btn) {
   saveUiState_();
 }
 
+// QA 30/10: rotulo do periodo ("90 dias" fixo no HTML) ficava errado enquanto carrega ou quando da erro; acompanha o chip ativo
+function syncPeriodLabels_() {
+  try {
+    const c = document.querySelector('.pchip.active'); if (!c) return;
+    const t = c.textContent.replace(/📅\s*/, '').trim();
+    ['period-label', 'sdr-period-label', 'ads-period-label', 'period-badge'].forEach(id => { const n = document.getElementById(id); if (n && !(typeof _data !== 'undefined' && _data && _data.period)) n.textContent = t; });
+  } catch (e) {}
+}
+
 function setPeriod(btn) {
   document.querySelectorAll('.pchip').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   _period = btn.dataset.p;
+  syncPeriodLabels_();
   const cp = el('custom-panel');
   const mp = el('month-pick-panel');
   if (_period === 'custom') {
@@ -5264,7 +5274,7 @@ function renderLtvSectionTelao(d) {
     const isReativacao = REATIVACAO75_STAGE_IDS.has(String(s.stageId));
     const prevIsReativacao = i > 0 && REATIVACAO75_STAGE_IDS.has(String(nfLtv[i-1].stageId));
     const reached = isReativacao ? s.count : (s.reached ?? s.count);
-    const pct = Math.max((reached / maxF) * 100, 3);
+    const pct = Math.min(100, Math.max((reached / maxF) * 100, 3));
     const ord = LTV_STAGE_ORD[String(s.stageId)] || 'o2';
     const conv = (i === 0 || isReativacao || prevIsReativacao) ? null : convFromLtv(reached, nfLtv[i-1].reached ?? nfLtv[i-1].count);
     const connector = conv !== null ? `
@@ -5287,7 +5297,7 @@ function renderLtvSectionTelao(d) {
 
   const outcomeRowLtv = (name, count, value, color, onclick, stageBase) => {
     const pct = stageBase !== undefined ? convFromLtv(count, stageBase) : null;
-    const barPct = Math.max((count / maxF) * 100, 3);
+    const barPct = Math.min(100, Math.max((count / maxF) * 100, 3));
     const isSequential = stageBase !== undefined;
     const connector = (isSequential && pct !== null) ? `
       <div class="funil-conn" title="Conversão da etapa anterior">
@@ -7481,6 +7491,7 @@ function escJsAttr_(s) {
 // auto-refresh silencioso.
 document.addEventListener('DOMContentLoaded', async () => {
   restoreUiStateBeforeLoad_();
+  syncPeriodLabels_();
   await loadData(false, true);
   applyPendingViewRestore_();
 });
