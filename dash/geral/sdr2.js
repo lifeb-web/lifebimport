@@ -740,6 +740,7 @@
     });
     h += '<div class="s2-sub" style="color:#8a859c">Pelo sistema · recuperável</div>';
     h += '<div class="s2-mr gr" data-mot="s" title="Cadência esgotada"><span>Cadência esgotada</span><span>' + num(a.ps) + '</span><i style="width:' + Math.max(3, Math.round(a.ps / max * 100)) + '%"></i></div>';
+    h += '<div class="s2-sub" style="color:#8a859c">Fora da conta · não é decisão do SDR</div>';
     h += '<div class="s2-mr gr" data-mot="d" title="Duplicado (fora da conta)"><span>Duplicado (fora da conta)</span><span>' + num(a.pd) + '</span><i style="width:' + (a.pd ? Math.max(3, Math.round(a.pd / max * 100)) : 0) + '%"></i></div>';
     return h + '</div>';
   }
