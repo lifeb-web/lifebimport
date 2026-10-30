@@ -469,6 +469,9 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
    competia com o scroll e espremia linha em vez de rolar. flex-shrink:0
    preventivo aqui desde o início (já sabíamos do bug do SDR). */
 #ads-campanhas-rows .funil-row{flex-shrink:0}
+/* QA 30/10: com poucas campanhas o conteudo ficava colado no fundo de cada faixa; agora a faixa divide a altura e centraliza */
+#ads-campanhas-rows{justify-content:flex-start}
+#ads-campanhas-rows .abar-row{flex:1 1 0;min-height:41px;display:flex;flex-direction:column;justify-content:center}
 .ads-rank-badge{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:rgba(146,96,200,.16);color:var(--purple);font-size:9px;font-weight:800;margin-right:5px;flex-shrink:0}
 /* Anúncio com foto — 1ª vez que o telão mostra imagem de verdade. */
 /* Ads (03/08) — thumbnail bem maior que antes de propósito (o criativo É
@@ -871,7 +874,8 @@ footer strong{color:#fff}
      não tinha orçamento nenhum, sumia cortada pelo overflow:hidden do
      #hero. +34px cobrem as 2 linhas extras com folga (testado ao vivo
      em 1440x800 e 1366x768, telas de notebook comuns). */
-  .hero-repo-row{font-size:10px}
+  .hero-repo-row{font-size:10px;flex-shrink:0;line-height:1.15;overflow:visible}
+  #hero-row{height:118px} /* QA 30/10: linha Total do hero saia cortada em 1366x768 */
   /* 28/08 (achado real ao investigar sobreposição que Robert viu ao vivo
      na TV): #mkt-row{height:44px} aqui era MENOR que a base (52px), mas
      o conteúdo do achip (label+valor+seta de variação, 3 linhas) sempre
@@ -993,9 +997,20 @@ body.tv-grande .rv-hero-val{font-size:38px}
 body.tv-grande .rv-k-val{font-size:19px}
 #tv-toggle{width:26px;height:26px;border-radius:7px;border:1.5px solid var(--border);background:#fff;color:var(--muted);font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 #tv-toggle.active{background:var(--purple);color:#fff;border-color:var(--purple)}
+/* QA 30/10: em PC de 1366px o cartao do funil e estreito: a pilula de perdidos saia pela direita (65 a 74px) e nomes longos ficavam cortados */
+.dp-s{display:none}
+@media(max-width:1500px){
+  .dp-l{display:none}.dp-s{display:inline}
+  #funil-rows .funil-row,#ltv-funil-rows .funil-row{gap:5px}
+  #funil-rows .funil-bar-wrap,#ltv-funil-rows .funil-bar-wrap{flex:0 0 0;width:0;min-width:0;margin:0;box-shadow:none}
+  #funil-rows .funil-name,#ltv-funil-rows .funil-name{flex:1 1 0;min-width:0;white-space:normal;overflow:visible;text-overflow:clip;line-height:1.1;overflow-wrap:break-word}
+  #main,#ltv-main{grid-template-columns:28fr 40fr 32fr}
+  #funil-rows .funil-count,#ltv-funil-rows .funil-count{font-size:20px}
+  #funil-rows .funil-count,#funil-rows .funil-val,#funil-rows .drop-pill,#ltv-funil-rows .funil-count,#ltv-funil-rows .funil-val,#ltv-funil-rows .drop-pill{flex-shrink:0}
+}
 </style>
 <!-- Dossiê do SDR (Fase 1): padrão da aba SDR; ?sdr=1 volta à aba antiga -->
-<script>if (true) document.write('<script src="../sdr2.js?v=20261030d"><\/script>');</script>
+<script>if (true) document.write('<script src="../sdr2.js?v=20261030e"><\/script>');</script>
 </head>
 <body>
 <div id="lb"></div>
@@ -1719,7 +1734,7 @@ body.tv-grande .rv-k-val{font-size:19px}
        período no topo continuava mostrando "Ontem" selecionado — chip e
        dado discordando, sem nenhum aviso explícito. Banner deixa claro
        quando isso acontece, em vez de deixar a inconsistência silenciosa. -->
-  <div id="bia-status" class="bia-status bia-status-load">Carregando os dados da Bia…</div>
+  <div id="bia-status" class="bia-status bia-status-load" style="display:none">Carregando os dados da Bia…</div>
     <div id="bia-periodo-aviso" style="display:none;background:#eef1fb;border:1px solid #c9d0ee;color:#3b4a8a;font-size:11px;font-weight:700;padding:7px 14px;border-radius:8px;margin-bottom:8px;flex-shrink:0"></div>
 
   <!-- BIA (25-26/08, redesenhado 26/08) — lê do worker isolado bia-dash-sync
@@ -5113,6 +5128,7 @@ function setView(btn) {
   el('ga4-hero-row').style.display = view === 'ga4' ? 'grid' : 'none';
   el('ga4-main').style.display     = view === 'ga4' ? 'grid' : 'none';
   el('bia-hero-row').style.display = view === 'bia' ? 'grid' : 'none';
+  { const _bs_ = el('bia-status'); if (_bs_) _bs_.style.display = view === 'bia' ? '' : 'none'; } // QA 30/10: faixa da Bia aparecia 'Carregando...' no rodape de TODAS as abas
   el('bia-main').style.display     = view === 'bia' ? 'grid' : 'none';
   // achado 02/08 (auditoria): h-title-text (label perto do logo) e o rótulo
   // de fonte do rodapé só eram escritos por setOrigin() — entrar em SDR/Ads
@@ -5256,7 +5272,7 @@ function renderLtvSectionTelao(d) {
         <span class="funil-conn-arrow">↓</span><span class="funil-conn-pct">${conv}% avançaram</span>
       </div>` : '';
     const lostPctLtv = s.lost > 0 && reached > 0 ? ` (${Math.round((s.lost / reached) * 100)}%)` : '';
-    const lostPill = s.lost > 0 ? `<span class="drop-pill" style="background:#fee2e2;color:#b91c1c" title="Perdidos nesta etapa, % sobre quem alcançou">${s.lost} perdido${s.lost === 1 ? '' : 's'}${lostPctLtv}</span>` : '';
+    const lostPill = s.lost > 0 ? `<span class="drop-pill" style="background:#fee2e2;color:#b91c1c" title="Perdidos nesta etapa, % sobre quem alcançou">${s.lost} <span class="dp-l">perdido${s.lost === 1 ? '' : 's'}</span><span class="dp-s">perd.</span>${lostPctLtv}</span>` : '';
     return `
       <div class="funil-row" onclick="openLtvStageModal('${s.stageId}','${escJsAttr_(s.name)}')">
         ${connector}
@@ -6646,7 +6662,7 @@ function renderFunil(funnel, kpis, recentLost) {
     // diferentes. Esta versão usa a MESMA base já usada por "reached" (alcançou
     // a etapa, já period-correct) — s.lost/reached nunca mistura recorte de tempo.
     const lostPct = s.lost > 0 && reached > 0 ? ` (${Math.round((s.lost / reached) * 100)}%)` : '';
-    const lostPill = s.lost > 0 ? `<span class="drop-pill" style="background:#fee2e2;color:#b91c1c" title="Perdidos nesta etapa, % sobre quem alcançou">${s.lost} perdido${s.lost === 1 ? '' : 's'}${lostPct}</span>` : '';
+    const lostPill = s.lost > 0 ? `<span class="drop-pill" style="background:#fee2e2;color:#b91c1c" title="Perdidos nesta etapa, % sobre quem alcançou">${s.lost} <span class="dp-l">perdido${s.lost === 1 ? '' : 's'}</span><span class="dp-s">perd.</span>${lostPct}</span>` : '';
     return `
       <div class="funil-row" onclick="openStageModal('${s.stageId}','${s.name}')">
         ${connector}
@@ -6927,7 +6943,7 @@ function renderRepFunilRows(funnel) {
     const reached = s.reached ?? s.count;
     const pct = Math.min(100, Math.max((reached / max) * 100, 3));
     const ord = STAGE_ORD[String(s.stageId)] || 'o2';
-    const lostPill = s.lost > 0 ? `<span class="drop-pill" style="background:#fee2e2;color:#b91c1c">${s.lost} perdido${s.lost === 1 ? '' : 's'}</span>` : '';
+    const lostPill = s.lost > 0 ? `<span class="drop-pill" style="background:#fee2e2;color:#b91c1c">${s.lost} <span class="dp-l">perdido${s.lost === 1 ? '' : 's'}</span><span class="dp-s">perd.</span></span>` : '';
     const tabKey = 'stage:' + s.stageId;
     const isActive = _repViewTab === tabKey;
     const conv = i === 0 ? null : convFrom(reached, nf[i - 1].reached ?? nf[i - 1].count);
@@ -7297,7 +7313,7 @@ function renderLtvRepFunilRows(funnel) {
     const reached = s.reached ?? s.count;
     const pct = Math.min(100, Math.max((reached / max) * 100, 3));
     const ord = LTV_STAGE_ORD[String(s.stageId)] || 'o2';
-    const lostPill = s.lost > 0 ? `<span class="drop-pill" style="background:#fee2e2;color:#b91c1c">${s.lost} perdido${s.lost === 1 ? '' : 's'}</span>` : '';
+    const lostPill = s.lost > 0 ? `<span class="drop-pill" style="background:#fee2e2;color:#b91c1c">${s.lost} <span class="dp-l">perdido${s.lost === 1 ? '' : 's'}</span><span class="dp-s">perd.</span></span>` : '';
     const tabKey = 'stage:' + s.stageId;
     const isActive = _ltvRepViewTab === tabKey;
     const conv = i === 0 ? null : convFrom(reached, nf[i - 1].reached ?? nf[i - 1].count);
