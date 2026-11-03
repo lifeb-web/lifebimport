@@ -274,6 +274,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 
 @keyframes skel{0%{background-position:200% 0}100%{background-position:-200% 0}}
 .skel{display:inline-block;height:.9em;background:linear-gradient(90deg,#e8e4f0 25%,#d0cae6 50%,#e8e4f0 75%);background-size:200% 100%;animation:skel 1.4s linear infinite;border-radius:4px;min-width:60px}
+.ga4-atualizando{opacity:.4;pointer-events:none;transition:opacity .12s}
 
 @keyframes valFlash{0%{background:rgba(112,75,155,.16)}100%{background:transparent}}
 .val-flash{animation:valFlash 900ms ease-out;border-radius:6px}
@@ -5245,13 +5246,21 @@ function renderGa4Section(d) {
 let _ga4ViewActive = false;
 let _ga4Raw = null;
 let _ga4Loading = false;
+let _ga4Seq = 0, _ga4RawKey = '';
+// 03/11 (Robert: "mudei o periodo do GA4 e tive que repetir varias vezes"): o pedido novo era DESCARTADO quando ja havia outro em voo
+// (`if (_ga4Loading) return`), entao o botao ficava no periodo novo e a tela no antigo. Agora o ULTIMO pedido sempre vence: cada pedido
+// recebe um numero, resposta atrasada de pedido antigo e ignorada, e dado de outro periodo nunca fica na tela (ela escurece ate chegar o certo).
+function ga4Atualizando_(on) { ['ga4-hero-row', 'ga4-main'].forEach(id => { const x = document.getElementById(id); if (x) x.classList.toggle('ga4-atualizando', !!on); }); }
 async function loadGa4Fresh_(fromOverride, toOverride) {
   const from = fromOverride || (_data && _data.period && _data.period.from);
   const to = toOverride || (_data && _data.period && _data.period.to);
-  if (_ga4Loading || !from || !to) return;
+  if (!from || !to) return;
+  const meu = ++_ga4Seq, chave = from + '|' + to;
   _ga4Loading = true;
   try {
-    _ga4Raw = await fetchGa4Raw(from, to);
+    const raw = await fetchGa4Raw(from, to);
+    if (meu !== _ga4Seq) return; // resposta de um pedido antigo (o periodo ja mudou): ignora
+    _ga4Raw = raw; _ga4RawKey = chave; ga4Atualizando_(false);
     if (_ga4ViewActive) hideErr();
     if (_ga4ViewActive) renderGa4Section(computeGa4Data(_ga4Raw));
     // Realtime é sempre "agora" · não depende do período, busca à parte e
@@ -5260,13 +5269,15 @@ async function loadGa4Fresh_(fromOverride, toOverride) {
       if (_ga4ViewActive) el('ga4-k-live').textContent = fmtInt_(ga4Val_(rt, 0));
     }).catch(() => { if (_ga4ViewActive) el('ga4-k-live').textContent = '—'; });
   } catch (e) {
+    if (meu !== _ga4Seq) return; // pedido antigo falhou: o novo e que vale
+    ga4Atualizando_(false);
     console.warn('fetchGa4Raw falhou:', e.message);
     if (_ga4ViewActive && !_ga4Raw) showErr('GA4 ' + e.message); // QA 30/10: erro do GA4 era silencioso (so uma linha no fim da pagina)
     if (_ga4ViewActive && !el('ga4-pages-rows').children.length) {
       el('ga4-pages-rows').innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--faint);padding:14px 6px">Erro ao carregar GA4. Tenta de novo em instantes.</td></tr>';
     }
   } finally {
-    _ga4Loading = false;
+    if (meu === _ga4Seq) _ga4Loading = false;
   }
 }
 // Chamado a cada loadData() (troca de período/origem) e pelo poll de fundo —
@@ -5274,7 +5285,9 @@ async function loadGa4Fresh_(fromOverride, toOverride) {
 // refreshAdsHierarchyIfActive_), nunca um timer próprio.
 function refreshGa4IfActive_() {
   if (_ga4ViewActive) {
-    if (_ga4Raw) renderGa4Section(computeGa4Data(_ga4Raw));
+    const _p = _data && _data.period, _k = _p ? _p.from + '|' + _p.to : '';
+    if (_ga4Raw && _ga4RawKey === _k) renderGa4Section(computeGa4Data(_ga4Raw)); // dado do MESMO periodo: mostra na hora
+    else if (_ga4Raw && _p) ga4Atualizando_(true);                             // dado de outro periodo: nao mostra, escurece ate chegar o certo
     loadGa4Fresh_();
   }
 }

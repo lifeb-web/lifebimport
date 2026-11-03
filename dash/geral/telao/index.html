@@ -868,6 +868,7 @@ qualquer badge/contagem nunca mais entrar embaixo do botão. */
 
 @keyframes skel{0%{background-position:200% 0}100%{background-position:-200% 0}}
 .skel{display:inline-block;height:.85em;background:linear-gradient(90deg,#e8e4f0 25%,#d0cae6 50%,#e8e4f0 75%);background-size:200% 100%;animation:skel 1.4s linear infinite;border-radius:4px;min-width:60px}
+.ga4-atualizando{opacity:.4;pointer-events:none;transition:opacity .12s}
 
 /* Flash sutil quando um número visível muda de valor (setTextFlash) — só dispara
    quando o texto realmente muda, nunca à toa nos ciclos automáticos do poll de
@@ -1030,7 +1031,7 @@ body.tv-grande .rv-k-val{font-size:19px}
 }
 </style>
 <!-- Dossiê do SDR (Fase 1): padrão da aba SDR; ?sdr=1 volta à aba antiga -->
-<link rel="stylesheet" href="legivel.css?v=20261030l">
+<link rel="stylesheet" href="legivel.css?v=20261103f">
 <script>if (true) document.write('<script src="../sdr2.js?v=20261030h"><\/script>');</script>
 </head>
 <body>
@@ -2851,6 +2852,7 @@ function paintOrigem_(hoverKey, animate) {
   origemBindSegs_();
   const leg = document.getElementById('origem-legend');
   leg.classList.toggle('pz-on', !!pz);
+  leg.classList.toggle('pz-multi', !!pz && pz.canais.length > 4); // 03/11: 5+ itens: legenda em 2 colunas (cabe sem sobrepor)
   leg.innerHTML = pz ? pzLegendHTML_(pz, _origemMode) : origemLegendHTML_(bd, prev, _origemMode);
   leg.querySelectorAll('.orig-item').forEach(it => {
     it.addEventListener('mouseenter', () => origemHover_(it.dataset.k));
@@ -3643,13 +3645,21 @@ function ga4EventRow_(icon, nome, desc, count, maxCount) {
 let _ga4ViewActive = false;
 let _ga4Raw = null;
 let _ga4Loading = false;
+let _ga4Seq = 0, _ga4RawKey = '';
+// 03/11 (Robert: "mudei o periodo do GA4 e tive que repetir varias vezes"): o pedido novo era DESCARTADO quando ja havia outro em voo
+// (`if (_ga4Loading) return`), entao o botao ficava no periodo novo e a tela no antigo. Agora o ULTIMO pedido sempre vence: cada pedido
+// recebe um numero, resposta atrasada de pedido antigo e ignorada, e dado de outro periodo nunca fica na tela (ela escurece ate chegar o certo).
+function ga4Atualizando_(on) { ['ga4-hero-row', 'ga4-main'].forEach(id => { const x = document.getElementById(id); if (x) x.classList.toggle('ga4-atualizando', !!on); }); }
 async function loadGa4Fresh_(fromOverride, toOverride) {
   const from = fromOverride || (_data && _data.period && _data.period.from);
   const to = toOverride || (_data && _data.period && _data.period.to);
-  if (_ga4Loading || !from || !to) return;
+  if (!from || !to) return;
+  const meu = ++_ga4Seq, chave = from + '|' + to;
   _ga4Loading = true;
   try {
-    _ga4Raw = await fetchGa4Raw(from, to);
+    const raw = await fetchGa4Raw(from, to);
+    if (meu !== _ga4Seq) return; // resposta de um pedido antigo (o periodo ja mudou): ignora
+    _ga4Raw = raw; _ga4RawKey = chave; ga4Atualizando_(false);
     if (_ga4ViewActive) renderGa4SectionTelao(computeGa4Data(_ga4Raw));
     // Realtime é sempre "agora" · não depende do período, busca à parte e
     // não bloqueia o resto do render se falhar/demorar.
@@ -3657,17 +3667,21 @@ async function loadGa4Fresh_(fromOverride, toOverride) {
       if (_ga4ViewActive) el('ga4-k-live').textContent = fmtInt_(ga4Val_(rt, 0));
     }).catch(() => { if (_ga4ViewActive) el('ga4-k-live').textContent = '—'; });
   } catch (e) {
+    if (meu !== _ga4Seq) return; // pedido antigo falhou: o novo e que vale
+    ga4Atualizando_(false);
     console.warn('fetchGa4Raw falhou:', e.message);
     if (_ga4ViewActive && !el('ga4-pages-rows').children.length) {
       el('ga4-pages-rows').innerHTML = '<div class="feed-empty">Erro ao carregar GA4. Tenta de novo em instantes.</div>';
     }
   } finally {
-    _ga4Loading = false;
+    if (meu === _ga4Seq) _ga4Loading = false;
   }
 }
 function refreshGa4IfActive_() {
   if (_ga4ViewActive) {
-    if (_ga4Raw) renderGa4SectionTelao(computeGa4Data(_ga4Raw));
+    const _p = _data && _data.period, _k = _p ? _p.from + '|' + _p.to : '';
+    if (_ga4Raw && _ga4RawKey === _k) renderGa4SectionTelao(computeGa4Data(_ga4Raw)); // dado do MESMO periodo: mostra na hora
+    else if (_ga4Raw && _p) ga4Atualizando_(true);                             // dado de outro periodo: nao mostra, escurece ate chegar o certo
     loadGa4Fresh_();
   }
 }
