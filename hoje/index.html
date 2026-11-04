@@ -46,6 +46,9 @@ input[type=password],input[type=search],select{font-family:var(--font);font-size
 #cab{position:sticky;top:0;z-index:20;background:var(--head);border-bottom:1px solid var(--border);box-shadow:0 2px 10px rgba(60,30,100,.15);padding:8px 20px}
 .cab1{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
 .cab1 img{height:30px}
+.logo-escuro{display:none}
+:root[data-tema="dark"] .logo-claro{display:none}
+:root[data-tema="dark"] .logo-escuro{display:inline-block}
 .titulo{font-size:13px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--purple)}
 .relogio{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}
 .atual{font-size:13px;color:var(--muted)}
@@ -161,6 +164,9 @@ button.recolher{background:transparent;color:var(--muted);border:0;min-height:0;
 .lib-col{border:2px solid var(--purple)} .lib-col .col-h{background:var(--track)}
 .fi .est{display:block}
 .pend{color:var(--amber);font-weight:700}
+.link-falta{background:none;border:0;color:inherit;font:inherit;font-weight:800;text-decoration:underline;cursor:pointer;padding:12px 6px;margin:-12px -2px;min-height:44px;display:inline-block}
+.rodape-falta{margin:0 0 8px;font-size:14px}
+.link-falta:focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:4px}
 .atual.velho{color:#8a8499;font-style:italic}
 .esq{background:linear-gradient(90deg,var(--track),var(--card),var(--track));background-size:200% 100%;animation:brilho 1.2s linear infinite;border-radius:12px;min-height:200px;border:1px solid var(--border)}
 @keyframes brilho{to{background-position:-200% 0}}
@@ -450,7 +456,7 @@ details.sec-empresa>summary,details.dados-opcional>summary{cursor:pointer;font-w
 <section id="s-dia" class="hide">
   <header id="cab">
     <div class="cab1">
-      <img src="/logo-lifeb.png" alt="Life B">
+      <img class="logo-claro" src="/logo-lifeb.png" alt="Life B"><img class="logo-escuro" src="/logo-lifeb-escuro.png" alt="Life B">
       <div><div class="titulo">Hoje do SDR</div><div class="relogio" id="relogio">--:--</div></div>
       <div class="chips" id="chips"></div>
       <span id="seloSaida" class="selo hide" role="status" aria-live="polite"></span>
@@ -666,7 +672,7 @@ function casaBusca(it, q) {
 
 // ---------- chamadas ----------
 // ---------- resiliência: rede com retry, disjuntor, caixa de saída, versão, relógio do servidor, telemetria ----------
-var PAGINA_VERSAO = '2026-10-29.2';
+var PAGINA_VERSAO = '2026-11-03.1';
 var REDE = { escala: 1, falhas: 0, ultima: 0, desvio: 0 };
 function dormir(ms) { return new Promise(function (r) { setTimeout(r, ms * REDE.escala); }); }
 function jitter(ms) { return ms * (0.5 + Math.random() * 0.5); }
@@ -786,7 +792,7 @@ async function processarSaida(opt) {
 }
 function limparBaseSeVazia() { if (S.L && S.L.baseConf && !lerSaida().some(function (x) { return x.dealId === S.L.dealId && x.tipo === 'campos'; })) S.L.baseConf = {}; } // fila esvaziada (aqui ou em outra aba): a próxima edição lê o valor do servidor
 function propagarBase(ok, j) {
-  var nao = (j && Array.isArray(j.naoConfirmados)) ? j.naoConfirmados : []; // o que esta ação gravou passa a ser o valor CONFIRMADO: as próximas da fila (mesmo lead) esperam esse valor como base
+  var nao = ((j && Array.isArray(j.naoConfirmados)) ? j.naoConfirmados : []).map(function (x) { return String(x).split('.').pop(); }); // o servidor devolve 'empresa.endereco.numero'; aqui se compara o último trecho // o que esta ação gravou passa a ser o valor CONFIRMADO: as próximas da fila (mesmo lead) esperam esse valor como base
   if (ok.tipo !== 'campos' || !ok.corpo || !ok.corpo.base) return; var a = lerSaida(), mexeu = false;
   a.forEach(function (x) { if (x.id !== ok.id && x.dealId === ok.dealId && x.tipo === 'campos' && x.corpo && x.corpo.base) Object.keys(ok.corpo.base).forEach(function (campo) { if (nao.indexOf(campo.split('.').pop()) >= 0) return; var v = valorEnviado(ok.corpo, campo); if (v !== undefined && Object.prototype.hasOwnProperty.call(x.corpo.base, campo)) { x.corpo.base[campo] = String(v); mexeu = true; } }); });
   if (mexeu) gravarSaida(a);
@@ -1445,13 +1451,14 @@ var CAMPOS = [
   { k: 'e.disposicao_para_investimento', rot: 'Disposição para investimento', tipo: 'sel', op: 'disposicao_para_investimento', tok: ['disposicao'] },
   { k: 'e.end.cep', rot: 'CEP', tipo: 'cep', tok: ['cep', 'endereco'], par: true },
   { k: 'e.end.rua', rot: 'Rua', tipo: 'texto', tok: ['rua', 'endereco'] },
-  { k: 'e.end.numero', rot: 'Número', tipo: 'texto', tok: ['numero'], par: true },
+  { k: 'e.end.numero', rot: 'Número do endereço', tipo: 'texto', tok: ['numero'], par: true },
+  { k: 'e.end.complemento', rot: 'Complemento (quadra, lote, sala)', tipo: 'texto', tok: ['complemento'], max: 150, par: true },
   { k: 'e.end.bairro', rot: 'Bairro', tipo: 'texto', tok: ['bairro'] },
   { k: 'e.end.cidade', rot: 'Cidade', tipo: 'texto', tok: ['cidade', 'endereco'], par: true },
   { k: 'e.end.uf', rot: 'UF', tipo: 'uf', tok: ['uf', 'endereco'], par: true },
   { k: 'n.observacao_sdr', rot: 'Observação do SDR', tipo: 'area', tok: ['observacao'] }
 ];
-var GANHO_ORDEM = ['e.aprovado_serasa', 'e.quantidade_de_lojas', 'e.faturamento_mensal', 'e.mais_de_2_anos', 'e.disposicao_para_investimento', 'e.segmento', 'n.observacao_sdr', 'e.cnpj', 'e.nome', 'e.razao_social', 'e.end.cep', 'e.end.rua', 'e.end.numero', 'e.end.bairro', 'e.end.cidade', 'e.end.uf'];
+var GANHO_ORDEM = ['e.aprovado_serasa', 'e.quantidade_de_lojas', 'e.faturamento_mensal', 'e.mais_de_2_anos', 'e.disposicao_para_investimento', 'e.segmento', 'n.observacao_sdr', 'e.cnpj', 'e.nome', 'e.razao_social', 'e.end.cep', 'e.end.rua', 'e.end.numero', 'e.end.complemento', 'e.end.bairro', 'e.end.cidade', 'e.end.uf'];
 var OBS_MAX = 150;
 function campoDe(k) { for (var i = 0; i < CAMPOS.length; i++) if (CAMPOS[i].k === k) return CAMPOS[i]; return null; }
 function pessoaPrincipal(lead) { var ps = (lead && lead.pessoas) || []; for (var i = 0; i < ps.length; i++) if (ps[i].principal === true) return ps[i]; return null; } // nunca usa a primeira pessoa como substituta
@@ -1525,7 +1532,7 @@ function reqDe(L, faltando, chaves) { // obrigatórios do GANHO: pelas CHAVES do
   return { req: req, soltos: soltos, vinculo: vinculo };
 }
 function faltaAinda(L) { return Object.keys(L.ganhoReq || {}).filter(function (k) { return (GANHO_ORDEM.indexOf(k) >= 0 || /^p\./.test(k)) && normVal(k, valorAtual(k)) === ''; }); } // só campos que o pop-up realmente desenha
-function enderecoTxt(e) { e = e || {}; var a = [[e.rua, e.numero].filter(Boolean).join(', '), e.bairro, [e.cidade, e.uf].filter(Boolean).join('/'), e.cep ? 'CEP ' + mascCep(e.cep) : ''].filter(Boolean); return a.join(' · '); }
+function enderecoTxt(e) { e = e || {}; var a = [[e.rua, String(e.numero) === '0' ? 'S/N' : e.numero].filter(Boolean).join(', '), e.complemento, [e.cidade, e.uf].filter(Boolean).join('/'), e.cep ? 'CEP ' + mascCep(e.cep) : ''].filter(Boolean); return a.join(' · '); }
 // rascunho local por negócio (nada do que ele digitou se perde)
 function rascKey(id) { return 'sh_rasc_' + id; }
 function lerRascunho(id) { try { var o = JSON.parse(lsGet(rascKey(id)) || 'null'); if (o && o.e && Date.now() - (o.t || 0) < 3 * 86400000) return o.e; } catch (e) {} return {}; }
@@ -1709,9 +1716,16 @@ function campoEl(L, f, pref, req, marcar) {
     inp.addEventListener('input', function () { var antes = inp.value.length; corta(); if (antes <= OBS_MAX && inp.value.length <= OBS_MAX && cortou && inp.value.length < OBS_MAX) cortou = false; atualizaCont(); });
     atualizaCont();
   }
-  inp.addEventListener(f.tipo === 'sel' ? 'change' : 'input', mudou);
+  inp.addEventListener(f.tipo === 'sel' ? 'change' : 'input', mudou); var pos = [];
+  if (f.k === 'e.end.numero') { // 03/11: endereço sem número (quadra/lote, rodovia): no Agendor da Life B vira 0, com a quadra e o lote no complemento
+    var sn = el('label', 'fixo-op'); sn.style.cssText = 'display:flex;gap:8px;align-items:center;min-height:44px;font-weight:600;margin-top:4px'; var ckn = el('input'); ckn.type = 'checkbox'; ckn.style.cssText = 'width:22px;height:22px'; ckn.id = id + '_sn';
+    sn.appendChild(ckn); sn.appendChild(document.createTextNode('Este endereço não tem número (S/N)'));
+    var dicaSn = el('div', 'dica-c', ''); pos = [sn, dicaSn];
+    var aplicaSn = function () { if (ckn.checked) { inp.value = '0'; inp.disabled = true; L.edits[f.k] = '0'; dicaSn.textContent = 'Vai como 0. Coloque quadra, lote ou ponto de referência no campo Complemento.'; } else { inp.disabled = false; if (inp.value === '0') inp.value = ''; L.edits[f.k] = inp.value; dicaSn.textContent = ''; } delete L.origemCampo[f.k]; gravarRascunho(L); if (err.textContent) { marcar = false; mostrarErro(); } atualizarSalvar(L); atualizarGanhoBtn(L); };
+    ckn.onchange = aplicaSn; if (String(atual).trim() === '0') { ckn.checked = true; inp.disabled = true; dicaSn.textContent = 'Vai como 0. Coloque quadra, lote ou ponto de referência no campo Complemento.'; }
+  }
   inp.addEventListener('blur', function () { var m = mostrarErro(); if (f.tipo === 'cnpj' && !m) consultarReceita(L); });
-  wrap.appendChild(inp); wrap.appendChild(err); if (f.tipo === 'cnpj') wrap.appendChild(el('div', 'dica-c', 'Ao sair do campo, eu consulto a Receita e posso preencher o resto.'));
+  wrap.appendChild(inp); wrap.appendChild(err); pos.forEach(function (x) { wrap.appendChild(x); }); if (f.tipo === 'cnpj') wrap.appendChild(el('div', 'dica-c', 'Ao sair do campo, eu consulto a Receita e posso preencher o resto.'));
   if (marcar) mostrarErro();
   return wrap;
 }
@@ -1796,7 +1810,7 @@ async function enviarCampos(L) {
   if (!j._enfileirado) diff.forEach(function (d) { delete L.baseConf[d.k]; }); // resolvido (confirmado ou recusado): a próxima edição lê o valor do servidor de novo
   if (j._enfileirado) { diff.forEach(function (d) { delete L.edits[d.k]; }); gravarRascunho(L); if (S.L === L) { redesenhar(L); setEstado(L, 'salvando', 'Sem conexão. Guardei a alteração neste aparelho e envio sozinho quando a rede voltar.'); } return 'fila'; }
   if (j.ok && j.confirmado !== false) {
-    var nao = Array.isArray(j.naoConfirmados) ? j.naoConfirmados : []; aplicarResposta(L, j);
+    var nao = (Array.isArray(j.naoConfirmados) ? j.naoConfirmados : []).map(function (x) { return String(x).split('.').pop(); }); aplicarResposta(L, j);
     diff.forEach(function (d) { var nome = d.k.split('.').pop(); if (nao.indexOf(nome) >= 0) return; delete L.edits[d.k]; });
     gravarRascunho(L); L.receita = null; L.receitaCnpj = '';
     if (S.L === L) { redesenhar(L); setEstado(L, nao.length ? 'erro' : 'ok', nao.length ? 'Salvei, mas o Agendor não confirmou: ' + nao.join(', ') + '. O que você digitou continua aqui.' : 'Salvo e conferido no Agendor ✓', nao.length ? function () { (L.modalAberto ? confirmarGanho : salvarCampos)(L); } : null); notaAvisos(L, j); }
@@ -1877,10 +1891,10 @@ function blocoContato(L) { // contato principal (quem decide): nome e WhatsApp j
   sec.appendChild(campoEl(L, fN, 'gf_', true, L.ganhoMarcar)); var wW = campoEl(L, fW, 'gf_', true, L.ganhoMarcar); sec.appendChild(wW);
   var rotW = wW.querySelector('label'); var pp = pessoaPrincipal(L.lead) || {}; var tels = pp.telefones || []; var inpWW = wW.querySelector('input'); var dica = el('div', 'sub');
   if (tels.length) { // o contato já tem telefone cadastrado (de qualquer tipo): pode seguir com ele, sem informar WhatsApp. Nada de telefone é enviado nesse caso.
-    var lbl = el('label', 'fixo-op'); lbl.style.cssText = 'display:flex;gap:8px;align-items:center;min-height:44px;font-weight:600'; var ck = el('input'); ck.type = 'checkbox'; ck.checked = !!L.ganhoFixo; ck.style.cssText = 'width:22px;height:22px'; lbl.appendChild(ck); lbl.appendChild(document.createTextNode('Seguir com o telefone fixo já cadastrado')); sec.appendChild(lbl); sec.appendChild(dica);
+    var lbl = el('label', 'fixo-op'); lbl.style.cssText = 'display:flex;gap:8px;align-items:center;min-height:44px;font-weight:600'; var ck = el('input'); ck.type = 'checkbox'; ck.checked = !!L.ganhoFixo; ck.style.cssText = 'width:22px;height:22px'; lbl.appendChild(ck); var telTxt = tels.map(function (t) { return t.bonito || t.e164; }).join(', '); lbl.appendChild(document.createTextNode('Não tenho o WhatsApp: usar o telefone já cadastrado: ' + telTxt)); sec.appendChild(lbl); sec.appendChild(dica); // 04/11 (Robert: "fixo" confundia, quase sempre é celular): mostra o número e diz o que acontece
     var aplicaFixo = function () {
       L.ganhoFixo = ck.checked; dica.textContent = '';
-      if (ck.checked) { delete L.ganhoReq[kW]; delete L.edits[kW]; gravarRascunho(L); inpWW.value = fmtOrig(kW, valorOrig(L.lead, kW)); inpWW.disabled = true; if (rotW && rotW.firstChild) rotW.firstChild.textContent = 'WhatsApp do contato (opcional)'; dica.textContent = 'Vamos seguir com o telefone já cadastrado: ' + tels.map(function (t) { return t.bonito || t.e164; }).join(', ') + '. Nenhum número será alterado.'; }
+      if (ck.checked) { delete L.ganhoReq[kW]; delete L.edits[kW]; gravarRascunho(L); inpWW.value = fmtOrig(kW, valorOrig(L.lead, kW)); inpWW.disabled = true; if (rotW && rotW.firstChild) rotW.firstChild.textContent = 'WhatsApp do contato (opcional)'; dica.textContent = 'O representante vai chamar ' + telTxt + ', o número que já está no cadastro. Nada será alterado. Se tiver o WhatsApp, desmarque e digite acima.'; }
       else { L.ganhoReq[kW] = true; inpWW.disabled = false; if (rotW && rotW.firstChild) rotW.firstChild.textContent = 'WhatsApp do contato *'; }
       atualizarGanhoBtn(L);
     };
@@ -1906,17 +1920,27 @@ function renderGanho(L) {
   ordemG.forEach(function (k) { var f = campoDe(k); if (!f) return; var req = !!(L.ganhoReq || {})[k]; if (f.par) { if (!grade) { grade = el('div', 'grade2'); c.appendChild(grade); } grade.appendChild(campoEl(L, f, 'gf_', req, L.ganhoMarcar && req)); } else { grade = null; c.appendChild(campoEl(L, f, 'gf_', req, L.ganhoMarcar && req)); } });
   c.scrollTop = rol; var rd = $('gRodape'); rd.textContent = '';
   L.refs.estado = el('div', 'estado hide'); L.refs.estado.setAttribute('role', 'status'); L.refs.estado.setAttribute('aria-live', 'polite'); rd.appendChild(L.refs.estado);
+  L.refs.gFaltaRod = el('p', 'pend rodape-falta hide'); rd.appendChild(L.refs.gFaltaRod); // sem role=status: o aviso do topo já é anunciado (evita ler duas vezes por tecla)
   var row = el('div', 'row'); L.refs.ganhoBtn = el('button', 'forte', 'Confirmar ganho'); L.refs.ganhoBtn.type = 'button'; L.refs.ganhoBtn.onclick = function () { confirmarGanho(L); };
   var cn = el('button', 'sec', 'Cancelar'); cn.type = 'button'; cn.onclick = fecharGanho; row.appendChild(L.refs.ganhoBtn); row.appendChild(cn); rd.appendChild(row);
   atualizarGanhoBtn(L);
+}
+function preencherFalta(L, g, falta, compacto) { // 03/11 (Robert: "Falta 1 campo obrigatório. Número *" sem dizer onde): diz QUAIS campos faltam e cada nome leva direto ao campo. No rodapé (celular, teclado aberto) fica compacto: o primeiro campo e quantos mais faltam.
+  if (!g) return; g.classList.toggle('hide', !falta.length); g.textContent = '';
+  if (!falta.length) return;
+  function btn(k) { var f = campoDeK(L.lead, k) || {}; var bt = el('button', 'link-falta', f.rot || k); bt.type = 'button'; bt.onclick = function () { var inp = $('gf_' + k.replace(/\./g, '_')); if (inp) { try { inp.scrollIntoView({ block: 'center', behavior: 'smooth' }); inp.focus({ preventScroll: true }); } catch (e) {} } }; return bt; }
+  if (compacto && falta.length > 2) { g.appendChild(document.createTextNode('Falta: ')); g.appendChild(btn(falta[0])); g.appendChild(document.createTextNode(' e mais ' + (falta.length - 1) + '.')); return; }
+  g.appendChild(document.createTextNode(falta.length === 1 ? 'Falta 1 campo obrigatório: ' : 'Faltam ' + falta.length + ' campos obrigatórios: '));
+  falta.forEach(function (k, i) { g.appendChild(btn(k)); if (i < falta.length - 2) g.appendChild(document.createTextNode(', ')); else if (i === falta.length - 2) g.appendChild(document.createTextNode(' e ')); });
+  g.appendChild(document.createTextNode('.'));
 }
 function atualizarGanhoBtn(L) {
   var b = L.refs && L.refs.ganhoBtn; if (!b || !L.modalAberto || L.rep) return; var falta = faltaAinda(L); var inval = false;
   Object.keys(L.ganhoReq || {}).forEach(function (k) { var f = campoDeK(L.lead, k); if (f && validarCampo(L, f)) inval = true; });
   if (L.ganhoPessoa == null) inval = true; // sem contato cadastrado não dá para qualificar
   if (L.refs.gFalta) L.refs.gFalta.classList.toggle('hide', !falta.length);
-  if (L.refs.gFalta) L.refs.gFalta.textContent = falta.length ? (falta.length === 1 ? 'Falta 1 campo obrigatório.' : 'Faltam ' + falta.length + ' campos obrigatórios.') : '';
-  b.disabled = !!(falta.length || inval || L.ocupado); b.title = falta.length ? 'Falta preencher: ' + falta.map(function (k) { return (campoDeK(L.lead, k) || {}).rot; }).join(', ') : '';
+  preencherFalta(L, L.refs.gFalta, falta, false); preencherFalta(L, L.refs.gFaltaRod, falta, true); // 03/11: o aviso também fica fixo no rodapé (junto do botão), porque o do topo some quando a pessoa rola até o fim
+    b.disabled = !!(falta.length || inval || L.ocupado); b.title = falta.length ? 'Falta preencher: ' + falta.map(function (k) { return (campoDeK(L.lead, k) || {}).rot; }).join(', ') : '';
 }
 function textoAviso(a) { var t = typeof a === 'string' ? a : (a && (a.mensagem || a.campo)) || ''; if (/razao_social/.test(typeof a === 'string' ? a : (a && a.campo) || t)) return 'A razão social não foi gravada agora; o resto foi salvo.'; return t; }
 function notaAvisos(L, j) { var av = (j && Array.isArray(j.avisos) ? j.avisos : []).map(textoAviso).filter(Boolean); var box = L.refs && L.refs.estado; if (!box || !av.length) return; var n = el('div', 'sub aviso-discreto', av.join(' ')); box.appendChild(n); } // aviso discreto, nunca erro
