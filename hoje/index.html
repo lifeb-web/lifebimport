@@ -235,6 +235,15 @@ button.copiar.ok{background:var(--green-bg);color:var(--green);border-color:var(
 .orgfiltro button.of b{margin-left:4px}
 #diaOrigens{margin:0 0 8px;border:1px solid var(--border);border-radius:12px;background:var(--card)}
 @media(max-width:700px){#diaOrigens{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch}#diaOrigens button.of{flex:none;white-space:nowrap}}
+.lig-ov{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:140;display:flex;align-items:center;justify-content:center;padding:14px}
+.lig-cx{background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:14px;padding:16px;max-width:460px;width:100%;max-height:92vh;overflow:auto}
+.lig-cx h3{font-size:18px;font-weight:800;color:var(--purple);margin-bottom:4px}
+.lig-ops{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.lig-op{display:flex;align-items:center;gap:8px;min-height:44px;padding:6px 10px;border:1.5px solid var(--border);border-radius:10px;font-weight:600;cursor:pointer}
+.lig-op input{width:22px;height:22px}
+.lig-cx input[type=text]{min-height:44px;padding:8px 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font-family:inherit;font-size:16px;outline-offset:2px}
+.lig-cx .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.lig-cx button{min-height:44px}
 /* contadores do mês (04/11) */
 .mesbar{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 8px;padding:0 10px}
 .mesbar .mc{flex:1 1 180px;min-width:0;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:8px 14px;display:flex;flex-direction:column;gap:1px}
@@ -1744,7 +1753,7 @@ function proximaAcaoEl(L) { // o que fazer agora, em destaque, com um botão pri
   var ts = (lead.tarefas || []).filter(function (t) { return !t.feita && !t._salvando; }).sort(function (a, b) { return (b.atrasada ? 1 : 0) - (a.atrasada ? 1 : 0) || String(a.venc).localeCompare(String(b.venc)); }); var t = ts[0];
   if (!t) { box.appendChild(el('div', 'proxima-txt', 'Nenhuma tarefa aberta agora.')); return box; }
   box.appendChild(el('div', 'proxima-txt', limpaTarefa(t.texto))); box.appendChild(el('div', 'sub', (t.atrasada ? 'Atrasada, venceu em ' : 'Vence ') + (t.venc === 'amanha' ? 'amanhã' : dataBR(t.venc))));
-  if (pode) { var bc = el('button', 'forte', 'Concluir esta tarefa'); bc.type = 'button'; bc.onclick = function () { acaoTarefa(L, '/tarefa/' + t.id + '/concluir', {}, function (ld) { ld.tarefas.forEach(function (x) { if (x.id === t.id) x.feita = true; }); }); }; box.appendChild(bc); }
+  if (pode) { var bc = el('button', 'forte', 'Concluir esta tarefa'); bc.type = 'button'; bc.onclick = function () { perguntarLigacao(L, t, function (corpo) { acaoTarefa(L, '/tarefa/' + t.id + '/concluir', corpo, function (ld) { ld.tarefas.forEach(function (x) { if (x.id === t.id) x.feita = true; }); }); }); }; box.appendChild(bc); }
   return box;
 }
 function campoEl(L, f, pref, req, marcar) {
@@ -2127,7 +2136,7 @@ function linhaTarefa(L, t, destaque, pode) {
   var topo = el('div', 't2-topo'); topo.appendChild(el('span', 'tt', limpaTarefa(t.texto) || t.texto || 'Tarefa sem texto')); r.appendChild(topo);
   var info = el('div', 'dt'); info.appendChild(document.createTextNode('Prazo ' + prazoTxt(t) + (t._salvando ? ' · salvando...' : ''))); if (t.atrasada) info.appendChild(el('span', 'pill red', 'Atrasada')); r.appendChild(info);
   if (pode && !t._salvando) {
-    var ac = el('div', 'acoes-t'); var bc = el('button', 'forte', 'Concluir'); bc.type = 'button'; bc.onclick = function () { concluirComDesfazer(L, t); }; ac.appendChild(bc);
+    var ac = el('div', 'acoes-t'); var bc = el('button', 'forte', 'Concluir'); bc.type = 'button'; bc.onclick = function () { perguntarLigacao(L, t, function (corpo) { concluirComDesfazer(L, t, corpo); }); }; ac.appendChild(bc);
     var ba = el('button', 'sec', 'Adiar'); ba.type = 'button'; ba.setAttribute('aria-expanded', 'false'); ac.appendChild(ba); r.appendChild(ac);
     var op = el('div', 'adiar-op hide'); opcoesAdiar().forEach(function (o) { var b = el('button', 'sec', o.rot); b.type = 'button'; b.onclick = function () { acaoTarefa(L, '/tarefa/' + t.id + '/adiar', { para: o.v }, function (ld) { ld.tarefas.forEach(function (x) { if (x.id === t.id) { x.venc = o.v; x.atrasada = false; } }); }); }; op.appendChild(b); });
     var bd = el('button', 'sec', 'Escolher data'); bd.type = 'button'; op.appendChild(bd); var ed = el('div', 'adiar-data hide'); var di = el('input'); di.type = 'date'; di.min = addDiasISO(hojeISO(), 1); di.setAttribute('aria-label', 'Adiar para a data'); var ok = el('button', 'forte', 'Adiar para esta data'); ok.type = 'button'; ed.appendChild(di); ed.appendChild(ok);
@@ -2163,11 +2172,37 @@ function guardarAcaoAdiada(def, atrasoMs) {
   var a = lerSaida(); var igual = a.filter(function (x) { return x.dealId === e.dealId && x.caminho === e.caminho && x.tipo === e.tipo; })[0]; if (igual) return igual; // já está na fila (duplo toque)
   a.push(e); gravarSaida(a); setTimeout(function () { processarSaida(); }, atrasoMs + 80); return e;
 }
-function concluirComDesfazer(L, t) {
-  var tid = t.id; var antes = copia(L.lead); L.lead.tarefas.forEach(function (x) { if (x.id === tid) x.feita = true; }); renderLead();
-  var e = guardarAcaoAdiada({ dealId: L.dealId, caminho: '/tarefa/' + tid + '/concluir', corpo: {}, tipo: 'tarefa', meta: { titulo: L.lead.titulo } }, 5000);
+// LIGAÇÃO (04/11, decisão do Robert de 30/10): ao concluir uma tarefa de ligar, o SDR diz se ligou e como foi; "não houve ligação" exclui a tarefa (não conta nas métricas).
+var LIG_RESULTADOS = [['decide', 'Falei com quem decide a compra'], ['outra', 'Falei com outra pessoa da loja'], ['retorno', 'Pediram para ligar depois'], ['nao_atendeu', 'Não atendeu ou caixa postal'], ['numero_errado', 'Número errado ou inexistente']];
+function perguntarLigacao(L, t, cont) {
+  if (!t || !t.ligacao) { cont({}); return; }
+  var ov = el('div', 'lig-ov'); ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Como foi a ligação');
+  var cx = el('div', 'lig-cx'); ov.appendChild(cx);
+  function fechar() { document.removeEventListener('keydown', esc, true); if (ov.parentNode) ov.parentNode.removeChild(ov); }
+  function esc(ev) { if (ev.key === 'Escape') { ev.stopPropagation(); fechar(); } }
+  document.addEventListener('keydown', esc, true); ov.addEventListener('mousedown', function (ev) { if (ev.target === ov) fechar(); });
+  cx.appendChild(el('h3', null, 'Você ligou?')); cx.appendChild(el('p', 'sub', limpaTarefa(t.texto)));
+  var linha = el('div', 'row'); var bSim = el('button', 'forte', 'Sim, liguei'); bSim.type = 'button'; var bNao = el('button', 'sec', 'Não houve ligação'); bNao.type = 'button'; var bCan = el('button', 'link', 'Voltar'); bCan.type = 'button';
+  linha.appendChild(bSim); linha.appendChild(bNao); linha.appendChild(bCan); cx.appendChild(linha); bCan.onclick = fechar;
+  var dica = el('p', 'sub', 'O resultado fica registrado no histórico do lead. "Não houve ligação" exclui a tarefa e ela não conta nas métricas.'); cx.appendChild(dica);
+  var det = el('div', 'hide'); cx.appendChild(det);
+  bNao.onclick = function () { fechar(); cont({ ligacao: { feita: false } }); };
+  bSim.onclick = function () {
+    det.classList.remove('hide'); det.textContent = ''; linha.classList.add('hide'); dica.classList.add('hide');
+    det.appendChild(el('h3', null, 'Como foi a ligação? *')); var sel = ''; var grupo = el('div', 'lig-ops'); grupo.setAttribute('role', 'radiogroup');
+    LIG_RESULTADOS.forEach(function (r) { var l = el('label', 'lig-op'); var rb = el('input'); rb.type = 'radio'; rb.name = 'ligres'; rb.value = r[0]; rb.onchange = function () { sel = r[0]; ok.disabled = false; }; l.appendChild(rb); l.appendChild(document.createTextNode(' ' + r[1])); grupo.appendChild(l); });
+    det.appendChild(grupo); var nt = el('input'); nt.type = 'text'; nt.maxLength = 150; nt.placeholder = 'Observação (opcional, até 150 letras)'; nt.setAttribute('aria-label', 'Observação da ligação'); nt.style.width = '100%'; nt.style.marginTop = '8px'; det.appendChild(nt);
+    var l2 = el('div', 'row'); l2.style.marginTop = '10px'; var ok = el('button', 'forte', 'Concluir a tarefa'); ok.type = 'button'; ok.disabled = true; var vo = el('button', 'link', 'Voltar'); vo.type = 'button'; vo.onclick = function () { det.classList.add('hide'); linha.classList.remove('hide'); dica.classList.remove('hide'); };
+    ok.onclick = function () { if (!sel) return; var c = { ligacao: { feita: true, resultado: sel } }; if (nt.value.trim()) c.ligacao.nota = nt.value.trim(); fechar(); cont(c); }; l2.appendChild(ok); l2.appendChild(vo); det.appendChild(l2);
+    var p0 = grupo.querySelector('input'); if (p0) p0.focus();
+  };
+  document.body.appendChild(ov); bSim.focus();
+}
+function concluirComDesfazer(L, t, corpo) {
+  var tid = t.id; var semLig = !!(corpo && corpo.ligacao && corpo.ligacao.feita === false); var antes = copia(L.lead); L.lead.tarefas.forEach(function (x) { if (x.id === tid) x.feita = true; }); renderLead();
+  var e = guardarAcaoAdiada({ dealId: L.dealId, caminho: '/tarefa/' + tid + '/concluir', corpo: corpo || {}, tipo: 'tarefa', meta: { titulo: L.lead.titulo } }, 5000);
   var fx = function () { faixa('desfazer', ''); }; clearTimeout(S.desfazTimer);
-  faixa('desfazer', 'Tarefa concluída. Dá para desfazer por 5 segundos.', 'ok', { rot: 'Desfazer', acao: function () {
+  faixa('desfazer', (semLig ? 'Tarefa excluída (sem ligação). ' : 'Tarefa concluída. ') + 'Dá para desfazer por 5 segundos.', 'ok', { rot: 'Desfazer', acao: function () {
     var ainda = lerSaida().some(function (x) { return x.id === e.id; }) && !S.emVoo[e.id];
     if (ainda) { gravarSaida(lerSaida().filter(function (x) { return x.id !== e.id; })); if (S.L === L) { L.lead.tarefas.forEach(function (x) { if (x.id === tid) x.feita = false; }); renderLead(); setEstado(L, 'ok', 'Desfeito. A tarefa continua aberta.'); } fx(); }
     else { faixa('desfazer', 'Essa tarefa já foi enviada ao Agendor, não dá mais para desfazer.', 'aviso'); setTimeout(fx, 3000); }
