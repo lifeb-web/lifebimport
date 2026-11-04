@@ -699,7 +699,7 @@ function casaBusca(it, q) {
 
 // ---------- chamadas ----------
 // ---------- resiliência: rede com retry, disjuntor, caixa de saída, versão, relógio do servidor, telemetria ----------
-var PAGINA_VERSAO = '2026-11-03.1';
+var PAGINA_VERSAO = '2026-11-04.1';
 var REDE = { escala: 1, falhas: 0, ultima: 0, desvio: 0 };
 function dormir(ms) { return new Promise(function (r) { setTimeout(r, ms * REDE.escala); }); }
 function jitter(ms) { return ms * (0.5 + Math.random() * 0.5); }
@@ -1369,7 +1369,7 @@ function desenharOrigens() {
   ordem.forEach(function (k) { chip(k, origemRotulo(k), cont[k], k === SEM_ORIGEM ? null : seloOrigem(origemRotulo(k))); });
 }
 function desenharFontes() { // 04/11: lista (arquivo) de onde cada lead veio; chips só aparecem se houver leads de lista na fila
-  var box = $('filaFontes'); box.textContent = ''; var cont = {}, ordem = [];
+  var box = $('filaFontes'); box.textContent = ''; var cont = Object.create(null), ordem = []; // sem protótipo: lista chamada "constructor" não quebra
   S.fila.forEach(function (i) { if (S.ocultos[i.dealId] || !i.fonte) return; if (!cont[i.fonte]) { cont[i.fonte] = 0; ordem.push(i.fonte); } cont[i.fonte]++; });
   if (S.filaFonte && !cont[S.filaFonte]) S.filaFonte = '';
   box.classList.toggle('hide', !ordem.length); if (!ordem.length) return;
@@ -2192,9 +2192,9 @@ function guardarAcaoAdiada(def, atrasoMs) {
 var LIG_RESULTADOS = [['decide', 'Falei com quem decide a compra'], ['outra', 'Falei com outra pessoa da loja'], ['retorno', 'Pediram para ligar depois'], ['nao_atendeu', 'Não atendeu ou caixa postal'], ['numero_errado', 'Número errado ou inexistente']];
 function perguntarLigacao(L, t, cont) {
   if (!t || !t.ligacao) { cont({}); return; }
-  var ov = el('div', 'lig-ov'); ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Como foi a ligação');
+  var abriu = document.activeElement; var ov = el('div', 'lig-ov'); ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Como foi a ligação');
   var cx = el('div', 'lig-cx'); ov.appendChild(cx);
-  function fechar() { document.removeEventListener('keydown', esc, true); if (ov.parentNode) ov.parentNode.removeChild(ov); }
+  function fechar() { document.removeEventListener('keydown', esc, true); if (ov.parentNode) ov.parentNode.removeChild(ov); try { if (abriu && abriu.focus && document.body.contains(abriu)) abriu.focus(); } catch (e) {} }
   function esc(ev) { if (ev.key === 'Escape') { ev.stopPropagation(); fechar(); } }
   document.addEventListener('keydown', esc, true); ov.addEventListener('mousedown', function (ev) { if (ev.target === ov) fechar(); });
   cx.appendChild(el('h3', null, 'Você ligou?')); cx.appendChild(el('p', 'sub', limpaTarefa(t.texto)));
@@ -2311,7 +2311,7 @@ $('fTodos').onclick = function () { setFunil('todos'); }; $('fOut').onclick = fu
 try { $('blocoIniciar').open = lsGet('sh_iniciar_aberto') === '1'; } catch (e) {}
 $('blocoIniciar').addEventListener('toggle', function () { lsSet('sh_iniciar_aberto', $('blocoIniciar').open ? '1' : '0'); });
 document.addEventListener('keydown', function (e) {
-  if (e.key === 'Tab') { var dlg = ['modalGanho', 'painelLead', 'painelAguard', 'painelFila'].map($).filter(function (x) { return !x.classList.contains('hide'); })[0]; if (dlg) { var fs = Array.prototype.filter.call(dlg.querySelectorAll('button,a[href],input,select,textarea,[tabindex]'), function (x) { return !x.disabled && x.getAttribute('tabindex') !== '-1' && !x.closest('.hide'); }); if (fs.length) { var a0 = fs[0], z = fs[fs.length - 1]; if (e.shiftKey && (document.activeElement === a0 || !dlg.contains(document.activeElement))) { e.preventDefault(); z.focus(); } else if (!e.shiftKey && (document.activeElement === z || !dlg.contains(document.activeElement))) { e.preventDefault(); a0.focus(); } } } return; }
+  if (e.key === 'Tab') { var dlg = document.querySelector('.lig-ov .lig-cx') || ['modalGanho', 'painelLead', 'painelAguard', 'painelFila'].map($).filter(function (x) { return !x.classList.contains('hide'); })[0]; /* 04/11: o diálogo da ligação prende o Tab dentro dele */ if (dlg) { var fs = Array.prototype.filter.call(dlg.querySelectorAll('button,a[href],input,select,textarea,[tabindex]'), function (x) { return !x.disabled && x.getAttribute('tabindex') !== '-1' && !x.closest('.hide'); }); if (fs.length) { var a0 = fs[0], z = fs[fs.length - 1]; if (e.shiftKey && (document.activeElement === a0 || !dlg.contains(document.activeElement))) { e.preventDefault(); z.focus(); } else if (!e.shiftKey && (document.activeElement === z || !dlg.contains(document.activeElement))) { e.preventDefault(); a0.focus(); } } } return; }
   if (e.ctrlKey || e.metaKey || e.altKey || $('s-dia').classList.contains('hide')) return;
   var alvo = e.target && e.target.tagName; var digitando = alvo === 'INPUT' || alvo === 'SELECT' || alvo === 'TEXTAREA';
   if (e.key === 'Escape') { if (!$('painelAguard').classList.contains('hide')) { fecharAguardando(); return; } if (!$('modalGanho').classList.contains('hide')) { fecharGanho(); return; } if (!$('painelLead').classList.contains('hide')) { fecharLead(); return; } if (!$('painelFila').classList.contains('hide')) { $('painelFila').classList.add('hide'); return; } $('busca').value = ''; $('busca').blur(); bgFechar(); desenharBlocos(); return; }

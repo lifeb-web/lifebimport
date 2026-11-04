@@ -171,6 +171,7 @@ a{color:var(--purple-d)}
 
   <label class="l" for="fonteLista">Nome da lista (fonte)</label>
   <input type="text" id="fonteLista" maxlength="60" autocomplete="off" placeholder="ex.: morrinhosgo1126">
+  <p class="muted hide" id="fonteGen" style="margin-top:4px;color:var(--amber);font-weight:700">Esse nome é muito comum e pode juntar listas diferentes. Acrescente a cidade e o mês, por exemplo: morrinhosgo1126.</p>
   <p class="muted" style="margin-top:4px">Já vem com o nome do arquivo. Serve para você achar depois, no Hoje, só os leads desta lista e iniciar quantos quiser dela.</p>
 
   <label class="l" for="resp">Responsável (dono da empresa, dos contatos, do negócio e das tarefas)</label>
@@ -825,6 +826,7 @@ $('manLeads').addEventListener('click', function (e) {
   if (ad != null) { S.manual[Number(ad)].contatos.push({ nome: '', cargo: '', tel: '' }); desenharManual(); atualizaBotoes(); }
 });
 $('bMaisLead').onclick = function () { S.manual.push(novoLeadManual()); desenharManual(); atualizaBotoes(); var l = $('manLeads').querySelectorAll('.manual-lead'); if (l.length && l[l.length - 1].scrollIntoView) l[l.length - 1].scrollIntoView(); };
+$('fonteLista').addEventListener('input', function () { var v = this.value.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); $('fonteGen').classList.toggle('hide', !(v && /^(leads?|lista|listas|export|exportacao|planilha|planilha sem titulo|dados|clientes|contatos|empresas|teste|novo|arquivo|sheet\d*|plan\d*|book\d*|documento)( ?\(?\d+\)?)?$/.test(v))); });
 $('bManConferir').onclick = function () { S.nomeArq = 'cadastro-manual'; $('fonteLista').value = ''; S.abas = montarAbasManual(); S.mapa = {}; interpretar(true); };
 $('mapaBox').addEventListener('change', function (e) { if (e.target.classList.contains('mapSel') || e.target.classList.contains('mapEscolhe')) reler(); });
 $('bVoltar1').onclick = function () { mostrar('s-arquivo'); };
