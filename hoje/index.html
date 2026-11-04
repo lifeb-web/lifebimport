@@ -532,6 +532,7 @@ details.sec-empresa>summary,details.dados-opcional>summary{cursor:pointer;font-w
     <span class="status-ctl" id="filaResumo"></span>
   </div>
   <div class="orgfiltro hide" id="filaOrigens" role="group" aria-label="Filtrar por origem"></div>
+  <div class="orgfiltro hide" id="filaFontes" role="group" aria-label="Filtrar por lista (arquivo de onde o lead veio)"></div>
   <div class="corpo" id="filaLista"></div>
   <div class="rodape">
     <div class="msgacao aviso" id="filaAviso" role="status" aria-live="polite"></div>
@@ -565,7 +566,7 @@ details.sec-empresa>summary,details.dados-opcional>summary{cursor:pointer;font-w
 var API = 'https://gs-agendor-worker.robert131196.workers.dev/sdr-hoje';
 var API_LISTA = 'https://gs-agendor-worker.robert131196.workers.dev/sdr-lista'; // só para consultar o CNPJ na Receita (mesma senha)
 var $ = function (id) { return document.getElementById(id); };
-var S = { diaOrigem: '', rotOrigemDia: {}, token: '', timer: null, relogio: null, pollTimer: null, carregando: false, reqSeq: 0, ctrlCarregar: null, tem: false, dados: null, vm: null, ctl: null, fila: [], filaVis: [], filaTotais: {}, filaFunil: 'outbound', sel: {}, idem: null, ocupado: false, funil: 'todos', msgFixa: false, expande: {}, conferindo: false, ocultoDesde: 0, ocultos: {}, filaOrigem: '', L: null, emVoo: {}, saidaMem: null, abaId: 'a' + Math.random().toString(36).slice(2, 10), canal: null, pre: {}, doCache: false, saidaTimer: null, processando: false };
+var S = { filaFonte: '', diaOrigem: '', rotOrigemDia: {}, token: '', timer: null, relogio: null, pollTimer: null, carregando: false, reqSeq: 0, ctrlCarregar: null, tem: false, dados: null, vm: null, ctl: null, fila: [], filaVis: [], filaTotais: {}, filaFunil: 'outbound', sel: {}, idem: null, ocupado: false, funil: 'todos', msgFixa: false, expande: {}, conferindo: false, ocultoDesde: 0, ocultos: {}, filaOrigem: '', L: null, emVoo: {}, saidaMem: null, abaId: 'a' + Math.random().toString(36).slice(2, 10), canal: null, pre: {}, doCache: false, saidaTimer: null, processando: false };
 function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { try { var vel = ['sh_ultimo', 'sh_fila_outbound', 'sh_fila_inbound', 'sh_abriu']; for (var i = 0; i < vel.length; i++) { if (vel[i] !== k && localStorage.getItem(vel[i]) != null) { localStorage.removeItem(vel[i]); try { localStorage.setItem(k, v); return; } catch (e2) {} } } } catch (e3) {} } } // cota cheia: apaga o cache mais velho e tenta de novo (rascunhos e caixa de saída nunca são apagados)
 function lsDel(k) { try { localStorage.removeItem(k); } catch (e) {} }
@@ -1307,7 +1308,7 @@ function avisoPulo() {
   var at = esc.filter(function (i) { return i.atencao; }); if (at.length) box.textContent += (box.textContent ? ' ' : '') + at.length + ' dos escolhidos já têm negócio aberto em outro funil (ex.: com representante na Arena). Abra e confira antes.';
 }
 function podeLiberar() { return !!(S.ctl && S.ctl.janelaAberta && S.ctl.cadenciaLive && (S.filaFunil === 'inbound' || S.ctl.ligada)); }
-function buscando() { return $('filaBusca').value.trim() !== '' || S.filaOrigem !== ''; } // com busca OU origem escolhida, "iniciar todos" vale só para o que está na tela
+function buscando() { return $('filaBusca').value.trim() !== '' || S.filaOrigem !== '' || S.filaFonte !== ''; } // com busca OU origem escolhida, "iniciar todos" vale só para o que está na tela
 var SEM_ORIGEM = '(SEM ORIGEM)';
 function origemDoItem(i) { return i && i.origemNome !== undefined ? i.origemNome : (i ? i.origem : undefined); } // em "Iniciados hoje" o campo `origem` é QUEM iniciou (auto/manual); a origem do lead vem em `origemNome`
 function origemChave(i) { return origemNorm(origemDoItem(i)) || SEM_ORIGEM; }
@@ -1323,12 +1324,22 @@ function desenharOrigens() {
   chip('', 'Todas', total, null);
   ordem.forEach(function (k) { chip(k, origemRotulo(k), cont[k], k === SEM_ORIGEM ? null : seloOrigem(origemRotulo(k))); });
 }
+function desenharFontes() { // 04/11: lista (arquivo) de onde cada lead veio; chips só aparecem se houver leads de lista na fila
+  var box = $('filaFontes'); box.textContent = ''; var cont = {}, ordem = [];
+  S.fila.forEach(function (i) { if (S.ocultos[i.dealId] || !i.fonte) return; if (!cont[i.fonte]) { cont[i.fonte] = 0; ordem.push(i.fonte); } cont[i.fonte]++; });
+  if (S.filaFonte && !cont[S.filaFonte]) S.filaFonte = '';
+  box.classList.toggle('hide', !ordem.length); if (!ordem.length) return;
+  ordem.sort(function (a, b) { return cont[b] - cont[a] || a.localeCompare(b, 'pt-BR'); });
+  box.appendChild(el('span', 'sub', 'Lista:'));
+  function chip(chave, rot, n) { var b = el('button', 'of'); b.type = 'button'; b.setAttribute('aria-pressed', S.filaFonte === chave ? 'true' : 'false'); b.appendChild(document.createTextNode(rot)); b.appendChild(el('b', null, String(n))); b.onclick = function () { S.filaFonte = S.filaFonte === chave ? '' : chave; desenharFila(); }; box.appendChild(b); }
+  chip('', 'Todas', ordem.reduce(function (t, k) { return t + cont[k]; }, 0)); ordem.forEach(function (k) { chip(k, k, cont[k]); });
+}
 function desenharFila() {
   var l = $('filaLista'); l.textContent = '';
-  desenharOrigens();
+  desenharOrigens(); desenharFontes();
   var q = $('filaBusca').value.trim();
-  S.filaVis = S.fila.filter(function (i) { return !S.ocultos[i.dealId] && casaBusca(i, q) && (!S.filaOrigem || origemChave(i) === S.filaOrigem); }); // busca e origem: instantâneas no cliente
-  var filtrando = q || S.filaOrigem;
+  S.filaVis = S.fila.filter(function (i) { return !S.ocultos[i.dealId] && casaBusca(i, q) && (!S.filaOrigem || origemChave(i) === S.filaOrigem) && (!S.filaFonte || i.fonte === S.filaFonte); }); // busca e origem: instantâneas no cliente
+  var filtrando = q || S.filaOrigem || S.filaFonte;
   $('filaResumo').textContent = S.fila.length ? (filtrando ? plural(S.filaVis.length, 'lead', 'leads') + ' de ' + S.fila.length : plural(S.fila.length, 'lead esperando você iniciar', 'leads esperando você iniciar')) + '.' : 'Ninguém esperando você iniciar.';
   if (!S.filaVis.length) l.appendChild(el('p', 'vazio', S.fila.length ? 'Nenhum lead com esse filtro.' : 'Ninguém esperando você iniciar neste funil.'));
   anexarEmBlocos(l, S.filaVis, function (i) {
@@ -1339,7 +1350,7 @@ function desenharFila() {
     var emp = el('div', 'emp'); emp.appendChild(el('span', 'nv n' + i.nivel, '#' + i.posicao + ' ' + (S.filaFunil === 'inbound' ? (i.depoisExpediente ? 'Depois do expediente' : 'Aguardando') : (NIVEL[i.nivel] || 'Comum')))); emp.appendChild(document.createTextNode(i.empresa)); tx.appendChild(emp);
     if (i.pessoa) tx.appendChild(el('div', 'pes', i.pessoa)); var fl = foneLinha(i.fone, 'fone'); if (fl) tx.appendChild(fl);
     tx.appendChild(el('div', 'mot', i.motivo));
-    var meta = [i.cidade, i.entrada ? 'entrou em ' + i.entrada.slice(8, 10) + '/' + i.entrada.slice(5, 7) + '/' + i.entrada.slice(0, 4) : ''].filter(Boolean).join(' · ');
+    var meta = [i.cidade, i.fonte ? 'lista ' + i.fonte : '', i.entrada ? 'entrou em ' + i.entrada.slice(8, 10) + '/' + i.entrada.slice(5, 7) + '/' + i.entrada.slice(0, 4) : ''].filter(Boolean).join(' · ');
     if (meta) tx.appendChild(el('div', 'meta', meta));
     if (i.atencao && i.aviso) tx.appendChild(el('div', 'aviso-linha', 'Atenção: ' + i.aviso));
     row.appendChild(tx);
@@ -1356,13 +1367,14 @@ function atualizaSel() {
   $('bLiberarTodosFunil').disabled = !S.fila.length || S.ocupado || !podeLiberar();
   var total = S.filaTotais[S.filaFunil] != null ? S.filaTotais[S.filaFunil] : S.fila.length; var nome = S.filaFunil === 'inbound' ? 'Inbound' : 'Outbound';
   $('bLiberarTodosFunil').textContent = buscando() ? 'Iniciar estes ' + S.filaVis.length : 'Iniciar TODOS os ' + total + ' do ' + nome;
-  var bo = $('bLiberarOrigem'); bo.classList.toggle('hide', !S.filaOrigem);
-  if (S.filaOrigem) { var el2 = elegiveisOrigem(); bo.textContent = 'Iniciar os ' + el2.length + ' de ' + origemRotulo(S.filaOrigem); bo.disabled = !el2.length || S.ocupado || !podeLiberar(); }
+  var bo = $('bLiberarOrigem'); bo.classList.toggle('hide', !(S.filaOrigem || S.filaFonte));
+  if (S.filaOrigem || S.filaFonte) { var el2 = elegiveisOrigem(); bo.textContent = 'Iniciar os ' + el2.length + ' de ' + rotuloFiltro(); bo.disabled = !el2.length || S.ocupado || !podeLiberar(); }
   avisoPulo();
 }
+function rotuloFiltro() { var a = []; if (S.filaOrigem) a.push(origemRotulo(S.filaOrigem)); if (S.filaFonte) a.push('lista ' + S.filaFonte); return a.join(' · '); }
 function iniciarPorOrigem() {
-  if (!S.filaOrigem) return; var el2 = elegiveisOrigem(); if (!el2.length) return;
-  var fora = S.filaVis.length - el2.length; var rot = origemRotulo(S.filaOrigem);
+  if (!S.filaOrigem && !S.filaFonte) return; var el2 = elegiveisOrigem(); if (!el2.length) return;
+  var fora = S.filaVis.length - el2.length; var rot = rotuloFiltro();
   var pulo = textoPulo(el2);
   var txt = 'Iniciar os ' + el2.length + ' leads de ' + rot + ' agora? As tarefas do 1º contato são criadas na hora.' + (fora ? ' ' + plural(fora, 'lead com negócio aberto em outro funil fica', 'leads com negócio aberto em outro funil ficam') + ' de fora.' : '') + (pulo ? '\n\n' + pulo : '') + avisoTarde();
   if (!window.confirm(txt)) return;
@@ -1370,7 +1382,7 @@ function iniciarPorOrigem() {
 }
 $('bFila').onclick = async function () { $('painelFila').classList.remove('hide'); if (!$('filaFunil').value) { var o = el('option', null, 'SDR · Outbound'); o.value = 'outbound'; $('filaFunil').appendChild(o); } await carregarFila(); $('filaBusca').focus(); };
 $('bFecharFila').onclick = function () { $('painelFila').classList.add('hide'); };
-$('filaFunil').onchange = function () { S.sel = {}; S.filaOrigem = ''; carregarFila(); }; var debFila = null; $('filaBusca').oninput = function () { clearTimeout(debFila); debFila = setTimeout(function () { desenharFila(); }, 150); };
+$('filaFunil').onchange = function () { S.sel = {}; S.filaOrigem = ''; S.filaFonte = ''; carregarFila(); }; var debFila = null; $('filaBusca').oninput = function () { clearTimeout(debFila); debFila = setTimeout(function () { desenharFila(); }, 150); };
 $('bLiberarSel').onclick = function () { var ids = selIds(); if (!ids.length) return; if (!window.confirm('Iniciar ' + plural(ids.length, 'lead marcado', 'leads marcados') + ' agora?' + avisoTarde())) return; liberar({ dealIds: ids, funil: S.filaFunil }).then(function () { S.sel = {}; atualizaSel(); }); };
 $('bLiberarTodosFunil').onclick = function () {
   var nome = S.filaFunil === 'inbound' ? 'Inbound' : 'Outbound';
