@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="robots" content="noindex,nofollow">
-<meta name="color-scheme" content="light">
+<meta name="color-scheme" content="light dark">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src https://gs-agendor-worker.robert131196.workers.dev; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Subir lista | Life B</title>
@@ -96,10 +96,48 @@ a{color:var(--purple-d)}
   .mini3 thead{display:none} .mini3 tr{display:block;border-bottom:2px solid var(--border);padding:6px 0} .mini3 td{display:block;border:0;padding:2px 0}
   button{width:100%} .row>button{flex:1 1 100%}
 }
+
+/* TEMA ESCURO (04/11): mesma chave 'sh_tema' do Hoje, então quem usa escuro no Hoje vê escuro aqui */
+.logo-escuro{display:none}
+:root[data-tema="dark"]{color-scheme:dark;--purple:#c9b3ee;--purple-d:#d8c6f5;--magenta:#ff7bb8;--green:#6fe39b;--green-bg:#12301f;--red:#ff8d8d;--red-bg:#3b1717;--amber:#ffc46b;--amber-bg:#3a2b0e;--text:#f2eefa;--muted:#bdb3d3;--bg:#15111f;--card:#211a31;--border:#3d3357}
+:root[data-tema="dark"] .logo-claro{display:none}
+:root[data-tema="dark"] .logo-escuro{display:inline-block}
+:root[data-tema="dark"] header{background:#1b1529;border-bottom-color:#3d3357;box-shadow:0 2px 12px rgba(0,0,0,.5)}
+:root[data-tema="dark"] input[type=text],:root[data-tema="dark"] input[type=password],:root[data-tema="dark"] select,:root[data-tema="dark"] textarea{background:#1b1529;color:var(--text);border-color:#5a4d78}
+:root[data-tema="dark"] button{background:#7c52b8}
+:root[data-tema="dark"] button.sec,:root[data-tema="dark"] .tabs button{background:transparent;color:var(--purple);border-color:var(--purple)}
+:root[data-tema="dark"] .tabs button.on{background:#7c52b8;color:#fff}
+:root[data-tema="dark"] button.link{background:none;color:var(--purple)}
+:root[data-tema="dark"] button.big{background:#d6407f}
+:root[data-tema="dark"] .drop{background:#1b1529;border-color:#5a4d78}
+:root[data-tema="dark"] .drop.on{background:#3a1630;border-color:var(--magenta)}
+:root[data-tema="dark"] .bar{background:#3a3052}
+:root[data-tema="dark"] .counts div{background:#1b1529}
+:root[data-tema="dark"] .req,:root[data-tema="dark"] .imp,:root[data-tema="dark"] .lead,:root[data-tema="dark"] .manual-lead,:root[data-tema="dark"] .sticky{background:var(--card)}
+:root[data-tema="dark"] .req.ok{background:#12301f;border-color:#2c6b46}
+:root[data-tema="dark"] .req.falta{background:#3b1717;border-color:#7a3030}
+:root[data-tema="dark"] .lead.pular{background:#1b1529}
+:root[data-tema="dark"] .aviso{color:#ffd9a0}
+:root[data-tema="dark"] .duv{border-color:#7a5a1e}
+:root[data-tema="dark"] .item{border-top-color:rgba(255,255,255,.12)}
+:root[data-tema="dark"] .c-verde{border-color:#2c6b46!important}
+:root[data-tema="dark"] .c-amarelo{border-color:#7a5a1e!important}
+:root[data-tema="dark"] .c-vermelho{border-color:#7a3030!important}
+:root[data-tema="dark"] .pill{color:#15111f}
+.tema-bt{margin-left:auto;min-height:44px;width:auto!important;padding:6px 14px;font-size:14px}
 </style>
+<script>
+(function () { // tema: mesma chave do Hoje
+  function lsg() { try { return localStorage.getItem('sh_tema'); } catch (e) { return null; } }
+  function aplicar(t) { document.documentElement.setAttribute('data-tema', t); }
+  var t = lsg(); if (t !== 'dark' && t !== 'light') { try { t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; } catch (e) { t = 'light'; } }
+  aplicar(t);
+  document.addEventListener('DOMContentLoaded', function () { var b = document.getElementById('bTema'); if (b) b.onclick = function () { var n = document.documentElement.getAttribute('data-tema') === 'dark' ? 'light' : 'dark'; aplicar(n); try { localStorage.setItem('sh_tema', n); } catch (e) {} }; });
+})();
+</script>
 </head>
 <body>
-<header><img src="/logo-lifeb.png" alt="Life B"><span class="t">Subir lista</span></header>
+<header><img class="logo-claro" src="/logo-lifeb.png" alt="Life B"><img class="logo-escuro" src="/logo-lifeb-escuro.png" alt="Life B"><span class="t">Subir lista</span><button type="button" id="bTema" class="sec tema-bt" aria-label="Alternar tema claro e escuro">Tema</button></header>
 <main>
 
 <section id="s-login" class="card hide">
