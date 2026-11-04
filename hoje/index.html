@@ -235,6 +235,14 @@ button.copiar.ok{background:var(--green-bg);color:var(--green);border-color:var(
 .orgfiltro button.of b{margin-left:4px}
 #diaOrigens{margin:0 0 8px;border:1px solid var(--border);border-radius:12px;background:var(--card)}
 @media(max-width:700px){#diaOrigens{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch}#diaOrigens button.of{flex:none;white-space:nowrap}}
+/* contadores do mês (04/11) */
+.mesbar{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 8px;padding:0 10px}
+.mesbar .mc{flex:1 1 180px;min-width:0;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:8px 14px;display:flex;flex-direction:column;gap:1px}
+.mesbar .mc .n{font-size:26px;font-weight:800;line-height:1.1;color:var(--purple)}
+.mesbar .mc .r{font-size:12px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+.mesbar .mc .d{font-size:12px;color:var(--muted)}
+.mesbar .mc.ok .n{color:var(--green)}
+@media(max-width:700px){.mesbar{gap:6px}.mesbar .mc{flex:1 1 30%;padding:6px 8px}.mesbar .mc .n{font-size:22px}.mesbar .mc .r{font-size:11px}.mesbar .mc .d{display:none}}
 /* painel do lead */
 #painelLead{z-index:80}
 #painelLead .secao{border:1px solid var(--border);border-radius:10px;background:var(--card);padding:10px 12px}
@@ -520,6 +528,7 @@ details.sec-empresa>summary,details.dados-opcional>summary{cursor:pointer;font-w
     <div class="bg-lista" id="bgLista"></div>
     <div class="bg-msg" id="bgMsg" role="status"></div>
   </section>
+  <div class="mesbar hide" id="mesBar" aria-label="Seu mês"></div>
   <div class="orgfiltro hide" id="diaOrigens" role="group" aria-label="Filtrar o dia por origem"></div>
   <div id="blocos"></div>
 </section>
@@ -1023,8 +1032,18 @@ function desenharOrigensDia(d) { // chips de origem do dia: aparecem sozinhos co
   chip('', 'Todas as origens', ordem.reduce(function (t, k) { return t + cont[k]; }, 0), null);
   ordem.forEach(function (k) { var r = S.rotOrigemDia[k] || (k === SEM_ORIGEM ? 'Sem origem' : k); chip(k, r, cont[k], k === SEM_ORIGEM ? null : seloOrigem(r)); });
 }
+var MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+function desenharMes(d) { // 3 números simples do mês (sem filtro de período, sem gráfico): vêm prontos do servidor
+  var box = $('mesBar'); if (!box) return; var m = d && d.mes; box.textContent = ''; if (!m || typeof m.emCadencia !== 'number') { box.classList.add('hide'); return; }
+  box.classList.remove('hide'); var nomeMes = MESES[Number(String(m.mes).slice(5, 7)) - 1] || 'mês';
+  function card(num, rot, det, cls) { var c = el('div', 'mc' + (cls ? ' ' + cls : '')); c.appendChild(el('span', 'n', String(num))); c.appendChild(el('span', 'r', rot)); if (det) c.appendChild(el('span', 'd', det)); box.appendChild(c); }
+  var auto = m.automaticos ? (m.automaticos.esgotados || 0) + (m.automaticos.duplicados || 0) : 0;
+  card(m.emCadencia, 'Em cadência agora', 'leads sendo trabalhados');
+  card(m.iniciados, 'Iniciados em ' + nomeMes, 'a partir de 26/10 no Outbound');
+  card(m.finalizados, 'Finalizados em ' + nomeMes, m.qualificados + ' qualificados · ' + m.perdidos + ' perdidos' + (auto ? ' (' + auto + ' automáticos fora da conta)' : ''), 'ok');
+}
 function desenharBlocos() {
-  var d = S.dados; if (!d) return; desenharOrigensDia(d);
+  var d = S.dados; if (!d) return; desenharOrigensDia(d); desenharMes(d);
   var bl = $('blocos'); var rolagem = {};
   Array.prototype.forEach.call(bl.querySelectorAll('.lista'), function (l) { rolagem[l.getAttribute('data-bloco')] = l.scrollTop; });
   var busca = $('busca').value.trim(), modo = $('ordem').value, esconder = $('esconder').checked, atrasado = passouDas18();
