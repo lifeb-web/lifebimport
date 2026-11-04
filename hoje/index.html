@@ -699,7 +699,7 @@ function casaBusca(it, q) {
 
 // ---------- chamadas ----------
 // ---------- resiliência: rede com retry, disjuntor, caixa de saída, versão, relógio do servidor, telemetria ----------
-var PAGINA_VERSAO = '2026-11-04.4';
+var PAGINA_VERSAO = '2026-11-04.5';
 var REDE = { escala: 1, falhas: 0, ultima: 0, desvio: 0 };
 function dormir(ms) { return new Promise(function (r) { setTimeout(r, ms * REDE.escala); }); }
 function jitter(ms) { return ms * (0.5 + Math.random() * 0.5); }
@@ -1734,7 +1734,7 @@ function renderLead() {
     if (!(p.telefones || []).length) bx.appendChild(el('div', 'sub', 'Sem telefone.'));
     if (p.principal && ac.campos) { var bt = el('button', 'sec trocar-contato', 'Trocar contato / telefone'); bt.type = 'button'; bt.setAttribute('data-fk', 'trocar-contato'); bt.title = 'Use quando você está falando com o decisor e o cadastro tem o telefone da loja'; bt.onclick = function () { trocarContato(L, p); }; bx.appendChild(bt); }
     s4.appendChild(bx);
-  }); corpo.appendChild(s4);
+  }); if (ac.campos) { var lc = el('div', 'linha-cnpj'); var cj = (lead.empresa || {}).cnpj; lc.appendChild(el('span', 'sub', cj ? 'CNPJ ' + fmtCnpj(cj) : 'Sem CNPJ cadastrado')); var bc = el('button', 'sec trocar-contato', cj ? 'Trocar CNPJ' : 'Adicionar CNPJ'); bc.type = 'button'; bc.setAttribute('data-fk', 'trocar-cnpj'); bc.onclick = function () { trocarCnpj(L); }; lc.appendChild(bc); lc.style.cssText = 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px'; s4.appendChild(lc); } corpo.appendChild(s4);
   var pxa = proximaAcaoEl(L); if (pxa) corpo.appendChild(pxa);
   corpo.appendChild(secaoTarefas(L)); // o que fazer agora vem logo depois de quem ligar
   // 2) empresa
@@ -2192,6 +2192,38 @@ function guardarAcaoAdiada(def, atrasoMs) {
 }
 // LIGAÇÃO (04/11, decisão do Robert de 30/10): ao concluir uma tarefa de ligar, o SDR diz se ligou e como foi; "não houve ligação" exclui a tarefa (não conta nas métricas).
 var LIG_RESULTADOS = [['decide', 'Falei com quem decide a compra'], ['outra', 'Falei com outra pessoa da loja'], ['retorno', 'Pediram para ligar depois'], ['nao_atendeu', 'Não atendeu ou caixa postal'], ['numero_errado', 'Número errado ou inexistente']];
+// 04/11 (Robert): o SDR pode TROCAR ou ADICIONAR o CNPJ da empresa a qualquer momento, sem qualificar. Mesmo caminho de salvar (/campos): o servidor valida os 14 números,
+// recusa CNPJ que já é de OUTRA empresa e confere a gravação no Agendor. A Receita aparece só como conferência (não preenche mais nada, para a tela não virar bagunça).
+function trocarCnpj(L) {
+  if (L.ocupado) return; var atual = soDigitos((L.lead.empresa || {}).cnpj);
+  var abriu = document.activeElement; var ov = el('div', 'lig-ov'); ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', atual ? 'Trocar CNPJ' : 'Adicionar CNPJ');
+  var cx = el('div', 'lig-cx'); ov.appendChild(cx);
+  function fechar() { document.removeEventListener('keydown', esc, true); if (ov.parentNode) ov.parentNode.removeChild(ov); try { if (abriu && abriu.focus && document.body.contains(abriu)) abriu.focus(); } catch (e) {} }
+  function esc(ev) { if (ev.key === 'Escape') { ev.stopPropagation(); fechar(); } }
+  document.addEventListener('keydown', esc, true); ov.addEventListener('mousedown', function (ev) { if (ev.target === ov) fechar(); });
+  cx.appendChild(el('h3', null, atual ? 'Trocar CNPJ da empresa' : 'Adicionar CNPJ da empresa'));
+  if (atual) cx.appendChild(el('p', 'sub', 'CNPJ atual: ' + fmtCnpj(atual) + '. O número antigo some do cadastro; confira antes de salvar.'));
+  var lab = el('label', null, 'CNPJ *'); lab.style.cssText = 'display:block;margin-top:8px;font-weight:600'; var inp = el('input'); inp.type = 'text'; inp.inputMode = 'numeric'; inp.autocomplete = 'off'; inp.placeholder = '00.000.000/0000-00'; inp.style.cssText = 'display:block;width:100%;margin-top:4px;font-size:16px;min-height:44px'; lab.appendChild(inp); cx.appendChild(lab);
+  var rec = el('div', 'sub'); rec.setAttribute('role', 'status'); rec.style.marginTop = '8px'; cx.appendChild(rec);
+  var msg = el('p', 'sub'); msg.style.color = 'var(--erro, #b91c1c)'; msg.setAttribute('role', 'alert'); cx.appendChild(msg);
+  var linha = el('div', 'row'); linha.style.marginTop = '10px'; var ok = el('button', 'forte', 'Salvar CNPJ'); ok.type = 'button'; var ca = el('button', 'link', 'Cancelar'); ca.type = 'button'; ca.onclick = fechar; linha.appendChild(ok); linha.appendChild(ca); cx.appendChild(linha);
+  var ult = '';
+  inp.oninput = async function () {
+    inp.value = mascCnpj(inp.value); msg.textContent = ''; var d = soDigitos(inp.value); rec.textContent = '';
+    if (d.length !== 14) return; if (!cnpjValido(d)) { msg.textContent = 'CNPJ inválido. Confira os 14 números.'; return; }
+    if (d === ult) return; ult = d; rec.textContent = 'Consultando a Receita...';
+    var j; try { j = await api('/cnpj?cnpj=' + d, null, null, API_LISTA); } catch (e) { j = { _status: 0 }; }
+    if (soDigitos(inp.value) !== d) return;
+    if (!j || j.ok === false || !j.encontrado) { rec.textContent = 'Não consegui conferir na Receita agora. Dá para salvar assim mesmo.'; return; }
+    rec.textContent = 'Receita: ' + (j.razao || j.fantasia || '') + (j.cidade ? ' · ' + j.cidade + (j.uf ? '/' + j.uf : '') : '') + (j.situacao && !/ativa/i.test(j.situacao) ? ' (situação: ' + j.situacao + ')' : '');
+  };
+  ok.onclick = async function () {
+    var d = soDigitos(inp.value); if (!cnpjValido(d)) { msg.textContent = 'CNPJ inválido. Confira os 14 números.'; inp.focus(); return; }
+    if (d === atual) { msg.textContent = 'Esse já é o CNPJ cadastrado.'; return; }
+    L.edits = L.edits || {}; L.edits['e.cnpj'] = d; ok.disabled = true; fechar(); await enviarCampos(L);
+  };
+  document.body.appendChild(ov); inp.focus();
+}
 // 04/11 (Robert): o SDR conversa com o decisor, mas o cadastro tem o contato da loja. Troca nome, cargo e WhatsApp do contato principal em 1 passo,
 // SEM qualificar. Usa o mesmo caminho de salvar (/campos): fica na pessoa vinculada à empresa, é conferido no Agendor e deixa nota no histórico.
 function trocarContato(L, p) {
