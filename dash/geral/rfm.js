@@ -1,23 +1,18 @@
 /* ============================================================
- * Aba RFM do Dash Geral (04/11/2026): matriz Recencia x Frequencia x Valor da carteira B2B do Agendor.
- * Compartilhado pelo celular (dash/geral/index.html) e pelo telao (dash/geral/telao/index.html): UM motor e UM desenho,
- * entao os dois nunca divergem (paridade). Mesmo padrao do sdr2.js.
+ * Aba RFM do Dash Geral (04/11/2026): matriz Recencia x Frequencia da carteira B2B do Agendor, no PADRAO da "Matriz RFM Geral Life B" (ERP).
+ * Compartilhado pelo celular (dash/geral/index.html) e pelo telao (dash/geral/telao/index.html): UM motor e UM desenho (paridade).
  *
- * FONTE: a MESMA tabela dash_geral_deals que o dash ja le (cfg.getRows() devolve o _rawDeals do dash). Nenhuma fonte nova, nenhuma escrita.
- * ESCOPO: negocios GANHOS dos funis Arena 890331 (venda nova), Pos-venda 907387 e Reativacao +75 909368 (reposicao).
- *   Fora: SDR (916712, 916713) e qualquer coisa Yanmei/Shopify/Anymarket (nao existe nessa tabela).
- * CLIENTE: a tabela NAO traz empresa/CNPJ (97% dos negocios do Agendor nao tem organizacao). Cliente = cadeia de negocios:
- *   cada Reposicao #N aponta para o "Negocio anterior" na descricao (id), que leva ao negocio Arena de origem; a Reativacao 75+
- *   casa pelo nome (titulo sem o sufixo) quando o nome e unico. Detalhes e limites em RFM-DASH-GERAL.md.
- * DATA do evento = data_real_evento, senao end_time (data BRT); NUNCA won_at. Ganho com valor < R$ 10 nao entra (mesma regra do ticket inteligente).
- *
- * METODO (resumo, regra completa no cartao "Como ler" e no .md):
- *   R = recencia RELATIVA ao ciclo de cada cliente: dias desde a ultima compra / ciclo do cliente (mediana dos intervalos entre
- *       compras dele, limitada a 30..180 dias; quem tem 1 compra usa o ciclo mediano da carteira, padrao 75). Nota 5 a 1 por quintil
- *       da razao (menor razao = nota 5). A recencia crua em dias aparece ao lado em todas as listas.
- *   F = nº de compras (1,2,3,4,5+). Quintil nao funciona aqui: ~85% da carteira tem 1 compra (quintis empatam).
- *   M = valor total comprado, nota 1 a 5 por quintil (empate: posicao media).
- *   FM = arredonda((F+M)/2). Segmento = grade de R (5 a 1) x FM (1 a 5), com 2 excecoes (Novos, Nao pode perder).
+ * FONTE: a MESMA tabela dash_geral_deals que o dash ja le (cfg.getRows() devolve o _rawDeals). Nenhuma fonte nova, nenhuma escrita. SO AGENDOR.
+ * ESCOPO: ganhos dos funis Arena 890331, Pos-venda 907387 e Reativacao +75 909368. Fora: SDR e Yanmei.
+ * CLIENTE: a tabela nao traz empresa/CNPJ. Cliente = cadeia de negocios (Reposicao #N aponta "Negocio anterior" ate o Arena de origem;
+ *   Reativacao 75+ casa pelo nome quando unico).
+ * DATA do evento = data_real_evento, senao end_time (dia BRT); NUNCA won_at. Ganho < R$ 10 nao entra.
+ * COMPRA = dia com pedido ganho para o cliente (varios negocios no mesmo dia contam como UMA compra; os valores somam).
+ * METODO (padrao da matriz do Robert):
+ *   R = faixa FIXA de dias desde a ultima compra: R5 0-60, R4 61-90, R3 91-120, R2 121-150, R1 151+.
+ *   F = nº de compras: 1, 2, 3, 4, 5+ (F5 = 5 ou mais). Dinheiro NAO e eixo: aparece em R$ na celula e nos KPIs.
+ *   Segmento = funcao da celula (F,R), tabela GRADE abaixo. Sem quintil, sem nota de valor.
+ *   O ciclo de recompra do cliente continua so como informacao secundaria (lista e KPI "Ciclo de recompra").
  * ============================================================ */
 (function (w) {
   'use strict';
@@ -26,7 +21,8 @@
     funis: { '890331': 'Arena', '907387': 'Pós-venda', '909368': 'Reativação +75' },
     minValor: 10,                 // ganho < R$ 10 e simbolico: nao entra (mesma regra do ticket inteligente)
     cicloMin: 30, cicloMax: 180, cicloPadrao: 75,
-    ativoRazao: 1.5,              // "ativo" = ultima compra ha no maximo 1,5 ciclo
+    ativoDias: 90,                // "ativo" = ultima compra ha ate 90 dias (R4 e R5)
+    faixas: [60, 90, 120, 150],   // limites dos dias para R5, R4, R3, R2 (acima de 150 = R1)
     movDias: 30,                  // movimento entre segmentos: hoje x 30 dias atras
     provaDias: 90,                // prova: segmentos de 90 dias atras x quem recomprou depois
     atrasoSyncMin: 30,
@@ -38,27 +34,27 @@
 
   // ---------- segmentos (ordem de exibicao) ----------
   var SEGS = [
-    { k: 'campeoes', n: 'Campeões', c: '#1baf7a', regra: 'Recência 4 ou 5 e frequência+valor 4 ou 5: compraram há pouco, compram várias vezes e gastam bem.', acao: 'Agradecer, manter o ritmo e pedir indicação.' },
-    { k: 'leais', n: 'Leais', c: '#0e9aa0', regra: 'Recência 4 ou 5 com frequência+valor 3, ou recência 3 com frequência+valor 4 ou 5: voltam com regularidade.', acao: 'Ofertar mix novo e programa de reposição fixa.' },
-    { k: 'potenciais', n: 'Potenciais', c: '#2f7de1', regra: 'Recência 4 ou 5, mais de uma compra e frequência+valor 1 ou 2: recentes, ainda com pouco volume.', acao: 'Subir o pedido médio com combos.' },
-    { k: 'novos', n: 'Novos', c: '#7aa2f7', regra: 'Uma única compra e recência 4 ou 5: acabaram de fazer a primeira compra.', acao: 'Acompanhar a entrega e garantir a 2ª compra no ciclo.' },
-    { k: 'promissores', n: 'Promissores', c: '#b09bd6', regra: 'Recência 3 e frequência+valor 1: compraram uma vez, há um tempo razoável.', acao: 'Contato de reposição antes de passar do ciclo.' },
-    { k: 'atencao', n: 'Precisam de atenção', c: '#eda100', regra: 'Recência 3 com frequência+valor 2 ou 3, ou recência 2 com frequência+valor 3: o ritmo de compra está esfriando.', acao: 'Ligar e oferecer reposição antes que atrasem mais.' },
-    { k: 'dormir', n: 'Prestes a dormir', c: '#e8793a', regra: 'Recência 2 e frequência+valor 1 ou 2: passaram do ciclo e compraram pouco.', acao: 'Mensagem de reativação leve, com condição especial.' },
-    { k: 'risco', n: 'Em risco', c: '#dc2626', regra: 'Recência 2 com frequência+valor 4 ou 5, ou recência 1 com frequência+valor 3: compravam bem e atrasaram.', acao: 'Ligar hoje: entender o motivo e recuperar o pedido.' },
-    { k: 'naoperder', n: 'Não pode perder', c: '#E92085', regra: 'Recência 1 (os mais atrasados) com frequência+valor 4 ou 5, ou com valor total na faixa mais alta (nota 5): clientes grandes que sumiram.', acao: 'Prioridade máxima: ligação do rep e do gestor.' },
-    { k: 'hibernando', n: 'Hibernando', c: '#8a8aa0', regra: 'Recência 1 e frequência+valor 2: muito atrasados, com pouca história.', acao: 'Campanha de reativação em massa.' },
-    { k: 'perdidos', n: 'Perdidos', c: '#b8b3c8', regra: 'Recência 1 e frequência+valor 1: sumiram e compraram pouco.', acao: 'Só campanhas baratas; não gastar tempo de rep.' }
+    { k: 'campeoes', n: 'Campeões', c: '#2f9e6b', regra: '4 ou 5+ compras e última compra há até 60 dias.', acao: 'Agradecer, manter o ritmo e pedir indicação.' },
+    { k: 'leais', n: 'Leais', c: '#5fae8c', regra: '4 ou 5+ compras e última compra entre 61 e 120 dias.', acao: 'Ofertar mix novo e reposição fixa.' },
+    { k: 'potenciais', n: 'Potenciais leais', c: '#4f93d4', regra: '2 ou 3 compras e última compra há até 90 dias.', acao: 'Subir o pedido médio com combos e firmar o ritmo.' },
+    { k: 'novos', n: 'Novos', c: '#a3a85c', regra: '1 compra, feita há até 60 dias.', acao: 'Acompanhar a entrega e garantir a 2ª compra.' },
+    { k: 'promissores', n: 'Promissores', c: '#b9bf78', regra: '1 compra, feita entre 61 e 90 dias.', acao: 'Contato de reposição antes de esfriar.' },
+    { k: 'atencao', n: 'Precisam de atenção', c: '#dcb25a', regra: '3 compras e última compra entre 91 e 120 dias.', acao: 'Ligar e oferecer reposição antes que atrasem mais.' },
+    { k: 'dormir', n: 'Quase dormindo', c: '#cfa08f', regra: '1 ou 2 compras e última compra entre 91 e 120 dias.', acao: 'Mensagem de reativação leve, com condição especial.' },
+    { k: 'risco', n: 'Em risco', c: '#df6d72', regra: '3 ou 4 compras e última compra há mais de 120 dias.', acao: 'Ligar hoje: entender o motivo e recuperar o pedido.' },
+    { k: 'naoperder', n: 'Não pode perder', c: '#d4485a', regra: '5+ compras e última compra há mais de 120 dias.', acao: 'Prioridade máxima: ligação do rep e do gestor.' },
+    { k: 'hibernando', n: 'Hibernando', c: '#a4aaa8', regra: '1 ou 2 compras e última compra entre 121 e 150 dias.', acao: 'Campanha de reativação em massa.' },
+    { k: 'perdidos', n: 'Perdidos', c: '#7f8c89', regra: '1 ou 2 compras e última compra há mais de 150 dias.', acao: 'Só campanhas baratas; não gastar tempo de rep.' }
   ];
   var SEG = {}; SEGS.forEach(function (s, i) { SEG[s.k] = s; s.i = i; });
   var RISCO = { risco: 1, naoperder: 1 };
-  // grade: GRADE[R][FM-1]
+  // grade do Robert: GRADE[F][R] (F de 5 a 1; R de 1 a 5)
   var GRADE = {
-    5: ['potenciais', 'potenciais', 'leais', 'campeoes', 'campeoes'],
-    4: ['potenciais', 'potenciais', 'leais', 'campeoes', 'campeoes'],
-    3: ['promissores', 'atencao', 'atencao', 'leais', 'leais'],
-    2: ['dormir', 'dormir', 'atencao', 'risco', 'risco'],
-    1: ['perdidos', 'hibernando', 'risco', 'naoperder', 'naoperder']
+    5: { 1: 'naoperder', 2: 'naoperder', 3: 'leais', 4: 'leais', 5: 'campeoes' },
+    4: { 1: 'risco', 2: 'risco', 3: 'leais', 4: 'leais', 5: 'campeoes' },
+    3: { 1: 'risco', 2: 'risco', 3: 'atencao', 4: 'potenciais', 5: 'potenciais' },
+    2: { 1: 'perdidos', 2: 'hibernando', 3: 'dormir', 4: 'potenciais', 5: 'potenciais' },
+    1: { 1: 'perdidos', 2: 'hibernando', 3: 'dormir', 4: 'promissores', 5: 'novos' }
   };
   // ordem "do melhor para o pior" (para dizer se um cliente subiu ou desceu entre dois retratos)
   var ORDEM = { campeoes: 10, leais: 9, potenciais: 8, novos: 8, promissores: 7, atencao: 6, dormir: 5, risco: 4, naoperder: 4, hibernando: 3, perdidos: 2 };
@@ -82,7 +78,14 @@
     if (v >= 1000) return nf(v / 1000, 1) + ' mil';
     return nf(v, 0);
   }
-  function razaoTxt(r) { return nf(r, 1) + '×'; }
+  // "R$ 373 mil", "R$ 79,3 mil", "R$ 2,48 mi" (3 algarismos significativos, como na matriz do Robert)
+  function brlM(v, curto) {
+    var p = curto ? '' : 'R$ ';
+    v = Math.round(v);
+    if (v >= 1000000) { var m = v / 1000000; return p + nf(m, m >= 100 ? 0 : m >= 10 ? 1 : 2) + ' mi'; }
+    if (v >= 1000) { var k = v / 1000; return p + nf(k, k >= 100 ? 0 : k >= 10 ? 1 : 2) + ' mil'; }
+    return p + nf(v, 0);
+  }
   function norm(t) { return String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim(); }
   function mediana(a) { if (!a.length) return null; var s = a.slice().sort(function (x, y) { return x - y; }), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; }
   function hexRgb(h) { var n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
@@ -105,26 +108,9 @@
   function limpaNome(t) { return String(t || '').replace(/\s+[—–-]\s+(Reposição|Reposicao)\s*#\d+\s*$/i, '').replace(/\s+[—–-]\s+(Reativação|Reativacao)\s*75\+?\s*$/i, '').replace(/\s+/g, ' ').trim(); }
   function anteriorDe(d) { var m = /Neg[óo]cio anterior:[^\n]*?id=(\d+)/i.exec(d.description || ''); return m ? m[1] : null; }
 
-  // Nota 1 a 5 por quintil. altoBom=true: valor maior = nota maior. Empate: posicao media do grupo (todos do grupo ficam na mesma nota).
-  function quintil(vals, altoBom) {
-    var n = vals.length, idx = vals.map(function (v, i) { return i; });
-    idx.sort(function (a, b) { return altoBom ? vals[a] - vals[b] : vals[b] - vals[a]; });
-    var out = new Array(n), i = 0;
-    while (i < n) {
-      var j = i; while (j + 1 < n && vals[idx[j + 1]] === vals[idx[i]]) j++;
-      var pos = (i + j) / 2, nota = Math.min(5, Math.max(1, 1 + Math.floor(5 * (pos + 0.5) / n)));
-      for (var k = i; k <= j; k++) out[idx[k]] = nota;
-      i = j + 1;
-    }
-    return out;
-  }
-
-  function segmentoDe(R, F, M, n) {
-    var FM = Math.round((F + M) / 2);
-    if (n === 1 && R >= 4) return 'novos';
-    if (R === 1 && M === 5) return 'naoperder';
-    return GRADE[R][Math.max(1, Math.min(5, FM)) - 1];
-  }
+  // R pela faixa fixa de dias desde a ultima compra
+  function faixaR(dias) { var f = CFG.faixas; return dias <= f[0] ? 5 : dias <= f[1] ? 4 : dias <= f[2] ? 3 : dias <= f[3] ? 2 : 1; }
+  function segmentoDe(F, R) { return GRADE[Math.max(1, Math.min(5, F))][Math.max(1, Math.min(5, R))]; }
 
   // Monta os clientes (cadeias de negocios) e as compras validas ate `asOf` (YYYY-MM-DD).
   function clientes(rows, asOf) {
@@ -156,8 +142,13 @@
     });
     var lista = Object.keys(grupos).map(function (g) {
       var c = grupos[g]; c.compras.sort(function (a, b) { return a.data < b.data ? -1 : a.data > b.data ? 1 : (+a.id) - (+b.id); });
+      c.nNegocios = c.compras.length;
+      // COMPRA = dia com pedido ganho: negocios do mesmo dia viram uma compra so (valores somam; guarda o ultimo id do dia)
+      var dias = [];
+      c.compras.forEach(function (x) { var u = dias[dias.length - 1]; if (u && u.data === x.data) { u.valor += x.valor; u.id = x.id; u.d = x.d; u.negocios++; if (x.funil === '890331') u.funil = x.funil; } else dias.push({ id: x.id, data: x.data, valor: x.valor, funil: x.funil, owner: x.owner, d: x.d, negocios: 1 }); });
+      c.negocios = c.compras; c.compras = dias;
       // cabeca da cadeia: o 1o negocio Arena (mais antigo); sem Arena, a 1a compra
-      var arena = c.compras.filter(function (x) { return x.funil === '890331'; })[0] || c.compras[0];
+      var arena = c.negocios.filter(function (x) { return x.funil === '890331'; })[0] || c.negocios[0];
       var ult = c.compras[c.compras.length - 1];
       c.nome = limpaNome(arena.d.title) || ('Negócio ' + arena.id);
       c.origem = origemDe(arena.d);
@@ -179,19 +170,8 @@
   }
 
   function pontuar(lista) {
-    var faixasR = {};
-    if (!lista.length) return { faixasR: faixasR };
-    var R = quintil(lista.map(function (c) { return c.razao; }), false);
-    var M = quintil(lista.map(function (c) { return c.valor; }), true);
-    lista.forEach(function (c, i) {
-      c.R = R[i]; c.M = M[i]; c.F = Math.min(5, c.n);
-      c.FM = Math.round((c.F + c.M) / 2);
-      c.seg = segmentoDe(c.R, c.F, c.M, c.n);
-      var f = faixasR[c.R] = faixasR[c.R] || { min: Infinity, max: -Infinity };
-      if (c.razao < f.min) f.min = c.razao;
-      if (c.razao > f.max) f.max = c.razao;
-    });
-    return { faixasR: faixasR };
+    lista.forEach(function (c) { c.R = faixaR(c.dias); c.F = Math.min(5, c.n); c.seg = segmentoDe(c.F, c.R); });
+    return {};
   }
 
   // Retrato completo da carteira em `asOf`
@@ -199,7 +179,7 @@
     var cl = clientes(rows, asOf);
     var lista = cl.lista.filter(function (c) { return !origem || origem === 'both' || c.origem === origem; });
     var p = pontuar(lista);
-    return { asOf: asOf, lista: lista, faixasR: p.faixasR, cicloCarteira: cl.cicloCarteira, descartes: cl.descartes };
+    return { asOf: asOf, lista: lista, cicloCarteira: cl.cicloCarteira, descartes: cl.descartes };
   }
 
   // Backtest: pega a carteira em (asOf - dias), agrupa por segmento e conta quem COMPROU DE NOVO depois (ate asOf).
@@ -222,7 +202,7 @@
     opts = opts || {};
     var asOf = opts.asOf || hojeBRT();
     var cur = retrato(rows, asOf, opts.origem);
-    var out = { asOf: asOf, clientes: cur.lista, faixasR: cur.faixasR, cicloCarteira: cur.cicloCarteira, descartes: cur.descartes };
+    var out = { asOf: asOf, clientes: cur.lista, cicloCarteira: cur.cicloCarteira, descartes: cur.descartes };
     // movimento: o mesmo retrato 30 dias atras
     var antes = retrato(rows, addDias(asOf, -CFG.movDias), opts.origem), mapa = {};
     antes.lista.forEach(function (c) { mapa[c.id] = c; });
@@ -248,13 +228,13 @@
     var vals = [], ciclos = [];
     lista.forEach(function (c) {
       a.receita += c.valor;
-      if (c.razao <= CFG.ativoRazao) a.ativos++;
+      if (c.dias <= CFG.ativoDias) a.ativos++;
       var b = a.bySeg[c.seg]; b.n++; b.valor += c.valor; b.lista.push(c);
       if (RISCO[c.seg]) { a.risco.n++; a.risco.valor += c.valor; }
       c.compras.forEach(function (x) { vals.push(x.valor); });
       if (c.cicloProprio != null) ciclos.push(c.cicloProprio);
-      var k = c.R + '|' + c.F, m = a.matriz[k] = a.matriz[k] || { R: c.R, F: c.F, n: 0, valor: 0, lista: [], segs: {} };
-      m.n++; m.valor += c.valor; m.lista.push(c); m.segs[c.seg] = (m.segs[c.seg] || 0) + 1;
+      var k = c.F + '|' + c.R, m = a.matriz[k] = a.matriz[k] || { R: c.R, F: c.F, n: 0, valor: 0, compras: 0, lista: [], seg: c.seg };
+      m.n++; m.valor += c.valor; m.compras += c.n; m.lista.push(c);
     });
     a.ticket = vals.length ? (ticketFn ? ticketFn(vals) : vals.reduce(function (s, v) { return s + v; }, 0) / vals.length) : null;
     a.nCompras = vals.length;
@@ -264,7 +244,7 @@
   }
 
   // ---------- estado e desenho ----------
-  var S = { cfg: null, root: null, mode: 'm', seg: '', rep: '', met: 'n', acaoN: 10, info: {}, repSort: { k: 'camp', dir: -1 }, res: null, sig: '', cache: null, ov: { lista: [], titulo: '', sub: '', q: '', sort: 'valor', dir: -1 }, inited: false, opener: null };
+  var S = { cfg: null, root: null, mode: 'm', mostrar: 'n', seg: '', rep: '', met: 'n', acaoN: 10, info: {}, repSort: { k: 'camp', dir: -1 }, res: null, sig: '', cache: null, ov: { lista: [], titulo: '', sub: '', q: '', sort: 'valor', dir: -1 }, inited: false, opener: null };
 
   function getRows() { return (S.cfg && S.cfg.getRows && S.cfg.getRows()) || null; }
   function origemAtual() { var o = S.cfg && S.cfg.getOrigin ? S.cfg.getOrigin() : 'both'; return o === 'inbound' || o === 'outbound' ? o : 'both'; }
@@ -308,7 +288,7 @@
     '.rf-kt{font-size:11px;font-weight:600;color:var(--muted,#6b6484);line-height:1.3}',
     '.rf-k.alerta{background:#fef2f2;border-color:#f3b4b4}.rf-k.alerta .rf-kv{color:#b91c1c}',
     '.rf-body{display:flex;flex-direction:column;gap:8px;min-width:0}',
-    '.rf-card{background:var(--card,#fff);border:1px solid var(--border,#eae7f2);border-radius:14px;overflow:hidden;min-width:0;display:flex;flex-direction:column;box-shadow:0 1px 3px rgba(26,22,38,.04),0 4px 14px -6px rgba(26,22,38,.08)}',
+    '.rf-card{container-type:inline-size;container-name:rfc;background:var(--card,#fff);border:1px solid var(--border,#eae7f2);border-radius:14px;overflow:hidden;min-width:0;display:flex;flex-direction:column;box-shadow:0 1px 3px rgba(26,22,38,.04),0 4px 14px -6px rgba(26,22,38,.08)}',
     '.rf-ch{padding:9px 12px 7px;border-bottom:1px solid var(--border,#eae7f2);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0;flex-wrap:wrap}',
     '.rf-ct{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--faint,#766e90)}',
     '.rf-cs{font-size:11px;font-weight:700;color:var(--purple,#704B9B)}',
@@ -318,16 +298,25 @@
     '.rf-empty{padding:14px 10px;text-align:center;color:var(--faint,#766e90);font-size:12px;font-style:italic}',
     '.rf-empty button{font:inherit;margin-top:6px}',
     /* matriz */
-    '.rf-mx{display:grid;grid-template-columns:minmax(44px,auto) repeat(5,minmax(0,1fr));gap:3px;align-items:stretch;flex:1;min-height:0}',
-    '.rf-mxh{font-size:10px;font-weight:800;color:var(--faint,#766e90);text-align:center;line-height:1.15;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2px 1px}',
-    '.rf-mxh b{font-size:11px;color:var(--text,#1a1626);font-weight:800}',
-    '.rf-mxr{align-items:flex-start;text-align:left;padding-left:2px}',
-    '.rf-cel{border:1px solid transparent;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-height:46px;padding:3px 2px;cursor:pointer;font:inherit;color:var(--text,#1a1626);min-width:0;background:rgba(184,179,200,.08)}',
+    '.rf-mhd{display:flex;align-items:center;justify-content:space-between;gap:6px 10px;flex-wrap:wrap}',
+    '.rf-msub{font-size:11px;font-weight:700;color:var(--muted,#6b6484);line-height:1.35;flex:1 1 180px}',
+    '.rf-mostrar{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--muted,#6b6484)}',
+    '.rf-mostrar select{font:inherit;font-size:12px;font-weight:700;padding:5px 8px;border:1px solid var(--border,#eae7f2);border-radius:8px;background:var(--card,#fff);color:var(--text,#1a1626);min-height:30px}',
+    '.rf-mx{display:grid;grid-template-columns:minmax(54px,auto) repeat(5,minmax(0,1fr));gap:4px;align-items:stretch;flex:1;min-height:0}',
+    '.rf-mxh{font-size:10px;font-weight:700;color:var(--muted,#6b6484);text-align:center;line-height:1.2;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2px 1px}',
+    '.rf-mxh b{font-size:12px;color:var(--text,#1a1626);font-weight:800}',
+    '.rf-mxc{align-items:flex-start;text-align:left;font-size:10px;justify-content:flex-end;padding-left:2px}',
+    '.rf-mxr{align-items:flex-end;text-align:right;padding-right:4px}',
+    '.rf-hs{display:none}',
+    '.rf-cel{border:1px solid transparent;border-radius:8px;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:1px;min-height:74px;padding:6px 8px;cursor:pointer;font:inherit;color:var(--text,#1a1626);min-width:0;text-align:left}',
     '.rf-cel:hover,.rf-cel:focus-visible{border-color:var(--purple,#704B9B);outline:none}',
-    '.rf-cel b{font-size:16px;font-weight:800;line-height:1.1;font-variant-numeric:proportional-nums}',
-    '.rf-cel i{font-style:normal;font-size:10px;font-weight:700;color:var(--muted,#6b6484);line-height:1.1;white-space:nowrap}',
-    '.rf-cel.vz{cursor:default;color:#b8b3c8}.rf-cel.vz b{font-weight:600;font-size:13px}',
-    '.rf-eixo{font-size:10px;font-weight:700;color:var(--muted,#6b6484);display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap}',
+    '.rf-cn{font-size:11px;font-weight:800;line-height:1.15;color:#2b2540}',
+    '.rf-cel b{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:19px;font-weight:700;line-height:1.15;font-variant-numeric:tabular-nums;margin-top:2px;white-space:nowrap}',
+    '.rf-cel i{font-style:normal;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;font-weight:600;color:#4a4560;line-height:1.15;white-space:nowrap;margin-top:auto}',
+    '.rf-cel.vz{cursor:default;background:rgba(184,179,200,.1);color:#9a95ad}.rf-cel.vz .rf-cn{color:#9a95ad;font-weight:700}.rf-cel.vz b{color:#b3aec4}',
+    '.rf-lgd{display:none;flex-wrap:wrap;gap:4px 10px;font-size:10.5px;font-weight:700;color:var(--muted,#6b6484)}',
+    '.rf-lgd span{display:inline-flex;align-items:center;gap:4px}',
+    '.xp .rf-mostrar{display:none}',
     /* segmentos */
     '.rf-sg{display:flex;flex-direction:column;gap:5px}',
     '.rf-sr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;align-items:center;padding:3px 4px;border-radius:8px}',
@@ -410,8 +399,8 @@
     '.rf.tv .rf-tb{font-size:11.5px}.rf.tv .rf-tb th{font-size:9.5px}',
     '.rf.tv .rf-chip{font-size:10.5px;min-height:22px;padding:3px 10px}',
     '.rf.tv .rf-ttl{font-size:10.5px}',
-    '.rf.tv .rf-cel b{font-size:19px}.rf.tv .rf-cel i{font-size:10.5px}',
-    '.rf.tv .rf-mxh{font-size:10.5px}.rf.tv .rf-mxh b{font-size:11px}.rf.tv .rf-sub{font-size:10.5px}.rf.tv .rf-sv small{font-size:10.5px}',
+    '.rf.tv .rf-cel b{font-size:22px}.rf.tv .rf-cel i{font-size:11px}.rf.tv .rf-cn{font-size:11px}.rf.tv .rf-cel{padding:5px 8px}',
+    '.rf.tv .rf-mxh{font-size:10.5px}.rf.tv .rf-mxh b{font-size:12px}.rf.tv .rf-msub,.rf.tv .rf-mostrar{font-size:10.5px}.rf.tv .rf-mostrar select{font-size:11px;min-height:24px}.rf.tv .rf-sub{font-size:10.5px}.rf.tv .rf-sv small{font-size:10.5px}',
     '.rf.tv .rf-cel{min-height:0}',
     '.rf.tv .rf-sn,.rf.tv .rf-sv{font-size:11.5px}',
     '.rf.tv .rf-nm{font-size:12.5px}.rf.tv .rf-vl{font-size:12.5px}',
@@ -428,7 +417,9 @@
     /* celular / PC: colunas que se completam */
     '@media (min-width:700px){.rf.m .rf-ks{grid-template-columns:repeat(3,minmax(0,1fr))}.rf.m .rf-body{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}}',
     '@media (min-width:1100px){.rf.m .rf-ks{grid-template-columns:repeat(6,minmax(0,1fr))}}',
-    '@media (max-width:370px){.rf-cel b{font-size:14px}.rf-cb{padding-left:9px;padding-right:9px}.rf-kv{font-size:20px}}'
+    '@container rfc (max-width:520px){.rf-hl{display:none}.rf-hs{display:inline}.rf-mx{grid-template-columns:minmax(34px,auto) repeat(5,minmax(0,1fr));gap:3px}.rf-cn{display:none}.rf-lgd{display:flex}.rf-cel{min-height:50px;padding:4px 2px;align-items:center;justify-content:center;text-align:center}.rf-cel b{font-size:14px;margin-top:0}.rf-cel i{font-size:10px;margin-top:0}.rf-mxh b{font-size:11px}.rf-mxh{font-size:10px}}',
+    '@container rfc (max-width:300px){.rf-cel b{font-size:12px}.rf-cel i{font-size:10px}}',
+    '@media (max-width:370px){.rf-cb{padding-left:9px;padding-right:9px}.rf-kv{font-size:20px}}'
   ].join('\n');
 
   function injetaCss() {
@@ -447,8 +438,8 @@
     var k = [];
     var pct = ag.pctAtivos == null ? '—' : nf(ag.pctAtivos * 100, 0) + '%';
     k.push(['all', 'Clientes na carteira', nf(ag.n), 'compraram ao menos 1 vez']);
-    k.push(['ativos', 'Ativos', pct, nf(ag.ativos) + ' compraram há até ' + nf(CFG.ativoRazao, 1) + ' ciclo']);
-    k.push(['all', 'Receita comprada', brl(ag.receita), nf(ag.nCompras) + ' pedidos no total']);
+    k.push(['ativos', 'Ativos', pct, nf(ag.ativos) + ' compraram há até ' + CFG.ativoDias + ' dias']);
+    k.push(['all', 'Receita comprada', brl(ag.receita), nf(ag.nCompras) + ' compras (dias com pedido)']);
     k.push(['risco', 'Receita em risco', brl(ag.risco.valor), nf(ag.risco.n) + ' clientes Em risco ou Não pode perder', ag.risco.n ? 'alerta' : '']);
     k.push(['all', 'Ticket médio', ag.ticket == null ? '—' : brl(ag.ticket), 'por pedido, sem valores atípicos']);
     k.push(['ciclo', 'Ciclo de recompra', ag.ciclo == null ? '—' : nf(Math.round(ag.ciclo)) + ' dias', ag.nCiclo ? 'mediana de ' + nf(ag.nCiclo) + ' que recompraram' : 'ninguém recomprou ainda']);
@@ -457,29 +448,45 @@
     }).join('') + '</div>';
   }
 
-  function rotuloR(res, r) {
-    var f = res.faixasR[r]; if (!f) return '';
-    return r === 1 ? 'acima de ' + razaoTxt(f.min) : 'até ' + razaoTxt(f.max);
+  var RLAB = { 1: ['+151', '+151 dias'], 2: ['121–150', '121–150 dias'], 3: ['91–120', '91–120 dias'], 4: ['61–90', '61–90 dias'], 5: ['0–60', '0–60 dias'] };
+  var FLAB = { 5: ['5+', '5+ compras'], 4: ['4', '4 compras'], 3: ['3', '3 compras'], 2: ['2', '2 compras'], 1: ['1', '1 compra'] };
+  var MOSTRAR = [['n', 'nº de clientes'], ['v', 'receita (R$)'], ['t', 'ticket médio'], ['p', '% da carteira']];
+  function valorCel(m, tot) {
+    return S.mostrar === 'v' ? m.valor : S.mostrar === 't' ? (m.compras ? m.valor / m.compras : 0) : S.mostrar === 'p' ? (tot ? m.n / tot : 0) : m.n;
   }
-  var FROT = { 1: '1', 2: '2', 3: '3', 4: '4', 5: '5+' };
+  function brlC(v) {
+    v = Math.round(v);
+    if (v >= 1000000) { var m = v / 1000000; return nf(m, m >= 100 ? 0 : m >= 10 ? 1 : 2) + 'M'; }
+    if (v >= 1000) { var k = v / 1000; return nf(k, k >= 100 ? 0 : k >= 10 ? 1 : 2) + 'k'; }
+    return nf(v, 0);
+  }
+  // [numero grande longo, numero grande curto, linha de baixo longa, linha de baixo curta]; curto = celula estreita (29,5k = 29,5 mil; 2,48M = 2,48 milhoes)
+  function textoCel(m, tot) {
+    var v = valorCel(m, tot), cl = nf(m.n) + (m.n === 1 ? ' cliente' : ' clientes');
+    if (S.mostrar === 'v' || S.mostrar === 't') return [brlM(v), brlC(v), cl, nf(m.n)];
+    if (S.mostrar === 'p') { var p = nf(v * 100, v * 100 < 10 ? 1 : 0) + '%'; return [p, p, brlM(m.valor), brlC(m.valor)]; }
+    return [nf(m.n), nf(m.n), brlM(m.valor), brlC(m.valor)];
+  }
+  function dataHojeBR(res) { return dmy(res.asOf); }
   function htmlMatriz(res, ag) {
-    var max = 0; Object.keys(ag.matriz).forEach(function (k) { if (ag.matriz[k].n > max) max = ag.matriz[k].n; });
-    var h = '<div class="rf-mx" role="group" aria-label="Matriz de recência por frequência">';
-    h += '<div class="rf-mxh"><span>compras</span></div>';
-    for (var f = 1; f <= 5; f++) h += '<div class="rf-mxh"><b>' + FROT[f] + '</b></div>';
-    for (var r = 5; r >= 1; r--) {
-      h += '<div class="rf-mxh rf-mxr"><b>R' + r + '</b>' + esc(rotuloR(res, r) || 'sem clientes') + '</div>';
+    var max = 0, tot = ag.n; Object.keys(ag.matriz).forEach(function (k) { var v = valorCel(ag.matriz[k], tot); if (v > max) max = v; });
+    var sel = '<label class="rf-mostrar">Mostrar <select data-rf-sel="mostrar" aria-label="Mostrar na matriz">' + MOSTRAR.map(function (o) { return '<option value="' + o[0] + '"' + (S.mostrar === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></label>';
+    var h = '<div class="rf-mhd"><span class="rf-msub">Só Agendor: Arena, Pós-venda e Reativação, sem SDR. Não compare com a matriz do ERP.</span>' + sel + '</div>';
+    h += '<div class="rf-mx" role="group" aria-label="Matriz de frequência por recência">';
+    h += '<div class="rf-mxh rf-mxc"><span>Frequência ↓</span><span>Recência →</span></div>';
+    for (var r = 1; r <= 5; r++) h += '<div class="rf-mxh"><b>R' + r + '</b><span class="rf-hl">' + RLAB[r][1] + '</span><span class="rf-hs">' + RLAB[r][0] + '</span></div>';
+    for (var f = 5; f >= 1; f--) {
+      h += '<div class="rf-mxh rf-mxr"><b>F' + f + '</b><span class="rf-hl">' + FLAB[f][1] + '</span><span class="rf-hs">' + FLAB[f][0] + '</span></div>';
       for (var g = 1; g <= 5; g++) {
-        var m = ag.matriz[r + '|' + g];
-        if (!m) { h += '<div class="rf-cel vz" aria-label="R' + r + ' F' + g + ': vazio"><b>·</b></div>'; continue; }
-        var dom = null, dn = -1; Object.keys(m.segs).forEach(function (s) { if (m.segs[s] > dn) { dn = m.segs[s]; dom = s; } });
-        var al = 0.14 + 0.5 * (m.n / (max || 1));
-        h += '<button type="button" class="rf-cel" data-rf="cel:' + r + ':' + g + '" style="background:' + rgba(SEG[dom].c, al) + '" aria-label="R' + r + ' F' + g + ': ' + m.n + ' clientes, ' + esc(brl(m.valor)) + '"><b>' + nf(m.n) + '</b><i>' + esc(brlK(m.valor)) + '</i></button>';
+        var sg = segmentoDe(f, g), m = ag.matriz[f + '|' + g], nome = SEG[sg].n;
+        if (!m) { h += '<div class="rf-cel vz" aria-label="' + esc(nome) + ', F' + f + ' R' + g + ': nenhum cliente"><span class="rf-cn">' + esc(nome) + '</span><b>–</b></div>'; continue; }
+        var al = 0.16 + 0.46 * (max ? valorCel(m, tot) / max : 0), tx = textoCel(m, tot);
+        h += '<button type="button" class="rf-cel" data-rf="cel:' + f + ':' + g + '" style="background:' + rgba(SEG[sg].c, al) + '" aria-label="' + esc(nome) + ', F' + f + ' R' + g + ': ' + m.n + ' clientes, ' + esc(brl(m.valor)) + '"><span class="rf-cn">' + esc(nome) + '</span><b><span class="rf-hl">' + esc(tx[0]) + '</span><span class="rf-hs">' + esc(tx[1]) + '</span></b><i><span class="rf-hl">' + esc(tx[2]) + '</span><span class="rf-hs">' + esc(tx[3]) + '</span></i></button>';
       }
     }
     h += '</div>';
-    h += '<div class="rf-eixo"><span>R5 = comprou há pouco, no ritmo dele. R1 = mais atrasado.</span><span>Colunas: número de compras</span></div>';
-    h += '<div class="rf-note">Número grande: clientes. Pequeno: R$ comprado. A cor é a do segmento que mais aparece na célula. Clique numa célula para ver os clientes.</div>';
+    h += '<div class="rf-lgd" aria-label="Cores dos segmentos">' + SEGS.map(function (s) { return '<span><i class="rf-dot" style="background:' + s.c + '"></i>' + esc(s.n) + '</span>'; }).join('') + '<span class="rf-lgk">k = mil, M = milhão</span></div>';
+    h += '<div class="rf-note">Compra = dia com pedido ganho para o cliente (vários negócios no mesmo dia contam como uma compra). Dias contados até ' + dataHojeBR(res) + '. Só Agendor. Clique numa célula para ver os clientes.</div>';
     return h;
   }
 
@@ -506,9 +513,9 @@
 
   function linhaCliente(c, i) {
     var meta = [];
-    meta.push('última compra ' + dm(c.ultima) + ' (há ' + nf(c.dias) + ' d, ' + razaoTxt(c.razao) + ' o ciclo)');
+    meta.push('última compra ' + dm(c.ultima) + ' (há ' + nf(c.dias) + ' d)');
     meta.push(nf(c.n) + (c.n === 1 ? ' compra' : ' compras'));
-    meta.push('ciclo ' + (c.cicloProprio != null ? nf(Math.round(c.ciclo)) + ' d' : '~' + nf(Math.round(c.ciclo)) + ' d (da carteira)'));
+    if (c.cicloProprio != null) meta.push('ciclo ' + nf(Math.round(c.ciclo)) + ' d');
     meta.push(nomeRep(c.owner));
     return '<a class="rf-row" href="' + CFG.urlNegocio + c.ultimoId + '" target="_blank" rel="noopener"><span class="rf-pos">' + (i != null ? (i + 1) : '') + '</span><div><div class="rf-nm">' + esc(c.nome) + '</div><div class="rf-mt">' + tag(c.seg) + ' ' + esc(meta.join(' · ')) + '</div></div><span class="rf-vl">' + esc(brl(c.valor)) + '</span></a>';
   }
@@ -523,11 +530,12 @@
   function htmlAcao(lista) {
     var la = listaAcao(lista), top = la.base.slice(0, S.acaoN);
     var h = '<div class="rf-fil" role="group" aria-label="Quantos clientes mostrar">' + [5, 10, 20].map(function (n) { return '<button type="button" class="rf-chip sec' + (S.acaoN === n ? ' on' : '') + '" data-rf="acaoN:' + n + '">' + n + '</button>'; }).join('') + '<button type="button" class="rf-chip" data-rf="acaoTodos">Ver os ' + nf(la.base.length) + '</button></div>';
-    if (!top.length) return h + '<div class="rf-empty">Nenhum cliente nesta situação. Bom sinal.</div>';
+    if (!top.length && S.seg) return h + '<div class="rf-empty">Nenhum cliente neste segmento.</div>';
     h += '<div class="rf-lst">' + top.map(function (c, i) { return linhaCliente(c, i); }).join('') + '</div>';
+    if (!top.length) h += '<div class="rf-empty">Nenhum cliente Em risco ou Não pode perder agora (esses segmentos pedem 3 ou mais compras).</div>';
     if (!S.seg && top.length < S.acaoN) {
-      var viga = lista.filter(function (c) { return c.seg === 'atencao'; }).sort(function (a, b) { return b.valor - a.valor; }).slice(0, S.acaoN - top.length);
-      if (viga.length) h += '<div class="rf-sub2">Para vigiar: precisam de atenção, os maiores</div><div class="rf-lst">' + viga.map(function (c, i) { return linhaCliente(c, top.length + i); }).join('') + '</div>';
+      var viga = lista.filter(function (c) { return c.seg === 'atencao' || c.seg === 'dormir' || c.seg === 'hibernando'; }).sort(function (a, b) { return b.valor - a.valor; }).slice(0, S.acaoN - top.length);
+      if (viga.length) h += '<div class="rf-sub2">Para vigiar: Precisam de atenção, Quase dormindo e Hibernando, os maiores</div><div class="rf-lst">' + viga.map(function (c, i) { return linhaCliente(c, top.length + i); }).join('') + '</div>';
     }
     h += '<div class="rf-note">Maior valor já comprado primeiro. Toque no cliente para abrir o negócio no Agendor.</div>';
     return h;
@@ -602,12 +610,13 @@
     }).join('') + '</div>';
   }
   function htmlMetodo(res) {
-    return '<div class="rf-note"><p style="margin:0 0 5px"><b>Quem é cliente.</b> Empresa com pelo menos um ganho nos funis Arena, Pós-venda ou Reativação +75. As reposições são ligadas ao negócio original pelo elo "negócio anterior". SDR e Yanmei ficam de fora. Só Agendor: o ERP tem mais vendas.</p>' +
-      '<p style="margin:0 0 5px"><b>R, recência.</b> Dias desde a última compra divididos pelo ciclo do próprio cliente (mediana dos intervalos entre as compras dele, de 30 a 180 dias). Quem comprou uma vez usa o ciclo mediano da carteira (' + nf(Math.round(res.cicloCarteira)) + ' dias hoje). Assim um cliente de ciclo longo não vira "perdido" cedo demais. Nota 5 a 1 por quintil; os dias crus aparecem em todas as listas.</p>' +
-      '<p style="margin:0 0 5px"><b>F, frequência.</b> Número de compras (1, 2, 3, 4, 5 ou mais). Quintil não serve: quase toda a carteira tem uma compra só.</p>' +
-      '<p style="margin:0 0 5px"><b>M, valor.</b> Total comprado, nota 1 a 5 por quintil. Ganho abaixo de R$ 10 não conta.</p>' +
-      '<p style="margin:0 0 5px"><b>Segmento.</b> Cruza R com a média de F e M (arredondada). Exceções: uma compra recente é Novo; cliente de valor máximo e muito atrasado é Não pode perder.</p>' +
-      '<p style="margin:0"><b>Filtros.</b> A origem do topo vale (pela origem da primeira compra). O período não se aplica: a matriz é a foto de hoje. Datas pela data real do evento, nunca pela data do ganho.</p></div>';
+    return '<div class="rf-note"><p style="margin:0 0 5px"><b>Só Agendor.</b> Clientes com ganho nos funis Arena, Pós-venda ou Reativação +75, sem SDR e sem Yanmei. A matriz geral do ERP tem mais vendas e números maiores: não compare.</p>' +
+      '<p style="margin:0 0 5px"><b>Quem é cliente.</b> A tabela não tem CNPJ: a reposição é ligada ao negócio original pelo elo "negócio anterior" e a reativação pelo nome.</p>' +
+      '<p style="margin:0 0 5px"><b>Compra</b> = dia com pedido ganho para o cliente. Vários negócios no mesmo dia contam como uma compra.</p>' +
+      '<p style="margin:0 0 5px"><b>Recência (colunas)</b> = dias desde a última compra, em faixas fixas: R5 até 60, R4 61 a 90, R3 91 a 120, R2 121 a 150, R1 151 ou mais.</p>' +
+      '<p style="margin:0 0 5px"><b>Frequência (linhas)</b> = número de compras: F1 uma, F2 duas, F3 três, F4 quatro, F5 cinco ou mais.</p>' +
+      '<p style="margin:0 0 5px"><b>Segmento</b> = cada célula tem o seu (nome no topo da célula). O dinheiro não é eixo: aparece em R$ na célula e nos KPIs.</p>' +
+      '<p style="margin:0"><b>Filtros.</b> A origem do topo vale (pela origem da primeira compra). O período não se aplica: é a foto de hoje (' + dataHojeBR(res) + '). Datas pela data real do evento, nunca pela data do ganho.</p></div>';
   }
 
   function rotuloFiltro() {
@@ -652,7 +661,7 @@
     var topo = htmlTopo(res, ag), kpis = htmlKpis(ag);
     if (!lista.length) { root.innerHTML = topo + kpis + msgEstado('Nenhum cliente neste filtro.<br><button type="button" class="rf-chip" data-rf="limpa">Limpar filtro</button>'); return; }
     var agSeg = agregar(filtrada(res, 'seg'), null);       // barras de segmento ignoram o filtro de segmento
-    var cMx = card('Matriz R × F', 'clique numa célula', htmlMatriz(res, ag), { id: 'rf-c-mx' });
+    var cMx = card('Recência × Frequência · só Agendor', 'clique numa célula', htmlMatriz(res, ag), { id: 'rf-c-mx' });
     var cSg = card('Segmentos', S.met === 'n' ? 'por clientes' : 'por receita', htmlSegmentos(agSeg), { id: 'rf-c-sg' });
     var cAc = S.seg ? card('Clientes: ' + SEG[S.seg].n, 'maior valor primeiro', htmlAcao(lista), { id: 'rf-c-ac' }) : card('Ligar hoje', 'Em risco e Não pode perder', htmlAcao(lista), { id: 'rf-c-ac' });
     var cRp = card('Representantes', 'carteira de cada um', htmlReps(res), { id: 'rf-c-rp' });
@@ -681,10 +690,11 @@
     rows.forEach(function (r) { r.classList.remove('rf-oc'); });
     var nt = cb.querySelector('.rf-trim'); if (nt) nt.parentNode.removeChild(nt);
     var sub = cb.querySelector('.rf-sub2'); if (sub) sub.classList.remove('rf-oc');
-    var oc = 0;
-    for (i = rows.length - 1; i > 0 && cb.scrollHeight > cb.clientHeight + 1; i--) { rows[i].classList.add('rf-oc'); oc++; }
+    var oc = 0, nota = cb.querySelector('.rf-note:not(.rf-trim)'); if (nota) nota.classList.remove('rf-oc');
+    if (nota && cb.scrollHeight > cb.clientHeight + 1) nota.classList.add('rf-oc');
+    for (i = rows.length - 1; i >= 0 && cb.scrollHeight > cb.clientHeight + 1; i--) { rows[i].classList.add('rf-oc'); oc++; }
     if (sub && sub.nextElementSibling && !sub.nextElementSibling.querySelector('a.rf-row:not(.rf-oc)')) sub.classList.add('rf-oc');
-    if (oc) { var n = document.createElement('div'); n.className = 'rf-note rf-trim'; n.textContent = 'Mostrando ' + (rows.length - oc) + ' de ' + rows.length + '. Clique em ⤢ ou em "Ver os" para ver todos.'; cb.appendChild(n); while (cb.scrollHeight > cb.clientHeight + 1 && i > 0) { rows[i].classList.add('rf-oc'); i--; } }
+    if (oc) { var n = document.createElement('div'); n.className = 'rf-note rf-trim'; n.textContent = 'Mostrando ' + (rows.length - oc) + ' de ' + rows.length + '. Clique em ⤢ ou em "Ver os" para ver todos.'; cb.appendChild(n); while (cb.scrollHeight > cb.clientHeight + 1 && i >= 0) { rows[i].classList.add('rf-oc'); i--; } }
   }
 
   // ---------- painel de lista (clicavel) ----------
@@ -703,7 +713,7 @@
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && o.classList.contains('show')) { e.stopPropagation(); fechaOv(); } }, true);
     return o;
   }
-  function valorOrd(c, k) { return k === 'valor' ? c.valor : k === 'ultima' ? utc(c.ultima) : k === 'atraso' ? c.razao : k === 'n' ? c.n : k === 'nome' ? norm(c.nome) : norm(nomeRep(c.owner)); }
+  function valorOrd(c, k) { return k === 'valor' ? c.valor : k === 'ultima' ? utc(c.ultima) : k === 'atraso' ? c.dias : k === 'n' ? c.n : k === 'nome' ? norm(c.nome) : norm(nomeRep(c.owner)); }
   function desenhaOv() {
     var o = ensureOv(), L = S.ov, q = norm(L.q);
     var itens = L.lista.filter(function (c) { return !q || norm(c.nome + ' ' + nomeRep(c.owner) + ' ' + SEG[c.seg].n).indexOf(q) >= 0; });
@@ -747,10 +757,10 @@
     if (k === 'rsort') { if (S.repSort.k === v) S.repSort.dir = -S.repSort.dir; else S.repSort = { k: v, dir: -1 }; return rerender(); }
     if (k === 'cel') {
       var m = agregar(lista, null).matriz[v + '|' + a[2]]; if (!m) return;
-      return abreOv('R' + v + ' e ' + (a[2] === '5' ? '5 ou mais compras' : a[2] + (a[2] === '1' ? ' compra' : ' compras')), 'recência ' + (rotuloR(res, +v) || '') + ' do ciclo' + (S.seg || S.rep ? ' · filtro: ' + rotuloFiltro().join(' · ') : ''), m.lista, 'valor');
+      return abreOv(SEG[segmentoDe(+v, +a[2])].n + ' · F' + v + ' (' + FLAB[v][1] + ') e R' + a[2] + ' (' + RLAB[a[2]][1] + ')', 'só Agendor' + (S.seg || S.rep ? ' · filtro: ' + rotuloFiltro().join(' · ') : ''), m.lista, 'valor');
     }
     if (k === 'kpi') {
-      if (v === 'ativos') return abreOv('Clientes ativos', 'compraram há até ' + nf(CFG.ativoRazao, 1) + ' ciclo', lista.filter(function (c) { return c.razao <= CFG.ativoRazao; }), 'ultima');
+      if (v === 'ativos') return abreOv('Clientes ativos', 'compraram há até ' + CFG.ativoDias + ' dias', lista.filter(function (c) { return c.dias <= CFG.ativoDias; }), 'ultima');
       if (v === 'risco') return abreOv('Receita em risco', 'Em risco e Não pode perder', lista.filter(function (c) { return RISCO[c.seg]; }), 'valor');
       if (v === 'ciclo') return abreOv('Clientes que recompraram', 'base do ciclo de recompra', lista.filter(function (c) { return c.cicloProprio != null; }), 'n');
       return abreOv('Clientes na carteira', 'todos os clientes do filtro', lista, 'valor');
@@ -781,6 +791,7 @@
       S.root.classList.add('rf', S.mode === 't' ? 'tv' : 'm');
       if (!S.inited) {
         S.inited = true; S.root.addEventListener('click', onClick);
+        S.root.addEventListener('change', function (e) { var t = e.target.closest('[data-rf-sel]'); if (t && t.getAttribute('data-rf-sel') === 'mostrar') { S.mostrar = t.value; S.sig = ''; draw(); } });
         var rt; function refit() { clearTimeout(rt); rt = setTimeout(function () { if (S.mode === 't' && S.cfg.isActive && S.cfg.isActive() && S.res) { S.sig = ''; API.render(); } }, 120); }
         document.addEventListener('lbpage', refit); w.addEventListener('resize', refit);
       }
@@ -789,12 +800,12 @@
     render: function () {
       if (!S.root) return;
       var rows = getRows(), err = S.cfg.getErr ? S.cfg.getErr() : null;
-      var sig = (rows ? rows.length + '|' + ultimoSync(rows) : 'x') + '|' + origemAtual() + '|' + S.seg + '|' + S.rep + '|' + S.met + '|' + S.acaoN + '|' + (err || '') + '|' + hojeBRT() + '|' + Object.keys(S.info).filter(function (k) { return S.info[k]; }).join(',') + '|' + S.repSort.k + S.repSort.dir;
+      var sig = (rows ? rows.length + '|' + ultimoSync(rows) : 'x') + '|' + origemAtual() + '|' + S.seg + '|' + S.rep + '|' + S.met + '|' + S.mostrar + '|' + S.acaoN + '|' + (err || '') + '|' + hojeBRT() + '|' + Object.keys(S.info).filter(function (k) { return S.info[k]; }).join(',') + '|' + S.repSort.k + S.repSort.dir;
       if (sig === S.sig) return;
       S.sig = sig; draw();
     },
     _state: S,
-    _core: { computeRfm: computeRfm, retrato: retrato, clientes: clientes, pontuar: pontuar, quintil: quintil, segmentoDe: segmentoDe, dataEvento: dataEvento, agregar: agregar, prova: prova, limpaNome: limpaNome, GRADE: GRADE, SEGS: SEGS, CFG: CFG }
+    _core: { computeRfm: computeRfm, retrato: retrato, clientes: clientes, pontuar: pontuar, faixaR: faixaR, segmentoDe: segmentoDe, dataEvento: dataEvento, agregar: agregar, prova: prova, limpaNome: limpaNome, GRADE: GRADE, SEGS: SEGS, CFG: CFG }
   };
   w.RFM = API;
   if (typeof module !== 'undefined' && module.exports) module.exports = API;

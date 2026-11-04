@@ -85,7 +85,7 @@ const num = s => parseInt(String(s).replace(/\D/g, ''), 10);
 async function contas(f, tag, esperadoClientes) {
   const d = await f.evaluate(() => {
     const res = RFM._state.res, rows = [...document.querySelectorAll('#rf-c-sg .rf-sv')].map(e => parseInt(e.firstChild.textContent.replace(/\D/g, ''), 10));
-    const cels = [...document.querySelectorAll('#rf-root .rf-cel[data-rf]')].map(e => parseInt(e.querySelector('b').textContent.replace(/\D/g, ''), 10));
+    const cels = [...document.querySelectorAll('#rf-root .rf-cel[data-rf]')].map(e => parseInt(e.querySelector('b .rf-hl').textContent.replace(/\D/g, ''), 10));
     const kpi = [...document.querySelectorAll('#rf-root .rf-kv')].map(e => e.textContent);
     return { n: res.clientes.length, seg: rows.reduce((s, x) => s + x, 0), cel: cels.reduce((s, x) => s + x, 0), kpi, receita: res.clientes.reduce((s, c) => s + c.valor, 0), kpiN: parseInt(kpi[0].replace(/\D/g, ''), 10), kpiRec: parseInt(kpi[2].replace(/\D/g, ''), 10) };
   });
@@ -133,13 +133,49 @@ for (const [W, H, tv] of [[390, 844, 0], [1920, 1080, 1], [1366, 768, 0]].filter
   if (tv) await pagina(F, 1);
   // cada celula abre a lista certa
   log('celulas');
-  const cels = await F.evaluate(() => [...document.querySelectorAll('#rf-root .rf-cel[data-rf]')].map(e => ({ k: e.getAttribute('data-rf'), n: parseInt(e.querySelector('b').textContent.replace(/\D/g, ''), 10) })));
+  const cels = await F.evaluate(() => [...document.querySelectorAll('#rf-root .rf-cel[data-rf]')].map(e => ({ k: e.getAttribute('data-rf'), n: parseInt(e.querySelector('b .rf-hl').textContent.replace(/\D/g, ''), 10) })));
   t(cels.length >= 5, tag + ': ha celulas clicaveis (' + cels.length + ')');
+  // ---- matriz no padrao do Robert: eixos, rotulos, nomes de segmento por celula, rodape ----
+  const TAB = { 5: ['Não pode perder', 'Não pode perder', 'Leais', 'Leais', 'Campeões'], 4: ['Em risco', 'Em risco', 'Leais', 'Leais', 'Campeões'], 3: ['Em risco', 'Em risco', 'Precisam de atenção', 'Potenciais leais', 'Potenciais leais'], 2: ['Perdidos', 'Hibernando', 'Quase dormindo', 'Potenciais leais', 'Potenciais leais'], 1: ['Perdidos', 'Hibernando', 'Quase dormindo', 'Promissores', 'Novos'] };
+  if (tv) await pagina(F, 1);
+  const mt = await F.evaluate(() => {
+    const g = document.querySelector('#rf-c-mx .rf-mx'), kids = [...g.children], vis = e => e.offsetParent !== null;
+    const txt = e => [...e.querySelectorAll('span,b')].filter(x => vis(x) && !x.querySelector('span,b')).map(x => x.textContent.trim()).join(' ');
+    return { corner: kids[0].textContent.replace(/\s+/g, ' ').trim(), cols: kids.slice(1, 6).map(txt), rows: [1, 2, 3, 4, 5].map(i => txt(kids[i * 6])), cells: [1, 2, 3, 4, 5].map(i => kids.slice(i * 6 + 1, i * 6 + 6).map(e => ({ nome: (e.querySelector('.rf-cn') || {}).textContent, nomeVisivel: !!e.querySelector('.rf-cn') && e.querySelector('.rf-cn').offsetParent !== null, cor: getComputedStyle(e).backgroundColor }))), leg: (() => { const l = document.querySelector('#rf-c-mx .rf-lgd'); return l ? { vis: l.offsetParent !== null, n: l.children.length } : null; })(), foot: [...document.querySelectorAll('#rf-c-mx .rf-note')].map(e => e.textContent).join(' '), tit: document.querySelector('#rf-c-mx .rf-ct').textContent + ' | ' + document.querySelector('#rf-c-mx .rf-msub').textContent, sel: [...document.querySelectorAll('#rf-c-mx select option')].map(o => o.textContent) };
+  });
+  t(/Frequência ↓/.test(mt.corner) && /Recência →/.test(mt.corner), tag + ': canto "Frequência ↓ / Recência →" (' + mt.corner + ')');
+  const narrow = await F.evaluate(() => document.getElementById('rf-c-mx').clientWidth <= 520);
+  const colEsp = narrow ? ['R1 +151', 'R2 121–150', 'R3 91–120', 'R4 61–90', 'R5 0–60'] : ['R1 +151 dias', 'R2 121–150 dias', 'R3 91–120 dias', 'R4 61–90 dias', 'R5 0–60 dias'];
+  const rowEsp = narrow ? ['F5 5+', 'F4 4', 'F3 3', 'F2 2', 'F1 1'] : ['F5 5+ compras', 'F4 4 compras', 'F3 3 compras', 'F2 2 compras', 'F1 1 compra'];
+  t(mt.cols.join('|') === colEsp.join('|'), tag + ': colunas R1 a R5 da esquerda para a direita (' + mt.cols.join(' | ') + ')');
+  t(mt.rows.join('|') === rowEsp.join('|'), tag + ': linhas F5 no topo ate F1 embaixo (' + mt.rows.join(' | ') + ')');
+  let nomesOk = true; mt.cells.forEach((lin, i) => lin.forEach((c, j) => { if (c.nome !== TAB[5 - i][j]) nomesOk = false; if (!narrow && !c.nomeVisivel) nomesOk = false; if (narrow && c.nomeVisivel) nomesOk = false; }));
+  t(nomesOk, tag + ': cada celula (F,R) traz o segmento da tabela do Robert' + (narrow ? ' (no celular estreito o nome vai para a legenda de cores)' : ' com o nome visivel'));
+  t(narrow ? (mt.leg && mt.leg.vis && mt.leg.n === 12) : true, tag + ': legenda de cores com 11 segmentos quando o nome some da celula');
+  t(/Compra = dia com pedido ganho para o cliente \(vários negócios no mesmo dia contam como uma compra\)\. Dias contados até \d\d\/\d\d\/\d{4}/.test(mt.foot), tag + ': rodape com a definicao de Compra e a data (' + mt.foot.slice(0, 60) + ')');
+  t(/só Agendor/i.test(mt.tit), tag + ': titulo/subtitulo deixa claro que e so Agendor');
+  t(mt.sel.join('|') === 'nº de clientes|receita (R$)|ticket médio|% da carteira', tag + ': seletor Mostrar com as 4 opcoes (' + mt.sel.join(',') + ')');
+  // seletor Mostrar: muda o numero grande e a intensidade da cor
+  const somaN = async () => F.evaluate(() => [...document.querySelectorAll('#rf-c-mx .rf-cel[data-rf] b .rf-hl')].map(e => e.textContent));
+  const aria = async () => F.evaluate(() => [...document.querySelectorAll('#rf-c-mx .rf-cel[data-rf]')].map(e => e.getAttribute('aria-label')));
+  const total = await F.evaluate(() => RFM._state.res.clientes.length), rec = await F.evaluate(() => RFM._state.res.clientes.reduce((s, c) => s + c.valor, 0));
+  const nums = await somaN(); t(nums.reduce((s, x) => s + parseInt(x.replace(/\D/g, ''), 10), 0) === total, tag + ': Mostrar nº de clientes: soma das celulas = ' + total);
+  const cor0 = await F.evaluate(() => [...document.querySelectorAll('#rf-c-mx .rf-cel[data-rf]')].map(e => e.style.background).join('|'));
+  for (const modo of ['v', 't', 'p', 'n']) {
+    await F.selectOption('#rf-c-mx select', modo); await p.waitForTimeout(250);
+    const b = await somaN(), ar = await aria(), cor = await F.evaluate(() => [...document.querySelectorAll('#rf-c-mx .rf-cel[data-rf]')].map(e => e.style.background).join('|'));
+    if (modo === 'v') { t(b.every(x => /^R\$ /.test(x)), tag + ': Mostrar receita: numero grande em R$ (' + b.slice(0, 3) + ')'); const sm = ar.reduce((s, x) => s + parseInt(/R\$ ([\d.]+)/.exec(x)[1].replace(/\./g, ''), 10), 0); t(Math.abs(sm - rec) <= ar.length, tag + ': Mostrar receita: soma (' + sm + ') = receita (' + Math.round(rec) + ')'); }
+    if (modo === 't') t(b.every(x => /^R\$ /.test(x)), tag + ': Mostrar ticket medio: numero grande em R$');
+    if (modo === 'p') { const sm = b.reduce((s, x) => s + parseFloat(x.replace('%', '').replace(',', '.')), 0); t(Math.abs(sm - 100) <= b.length * 0.5 + 0.5, tag + ': Mostrar % da carteira soma ~100% (' + sm.toFixed(1) + ')'); }
+    if (modo === 'n') t(b.reduce((s, x) => s + parseInt(x.replace(/\D/g, ''), 10), 0) === total && cor === cor0, tag + ': voltar a nº de clientes restaura numeros e cores');
+    if (modo === 'p') t(cor === cor0, tag + ': Mostrar % da carteira mantem a proporcao das cores do nº de clientes');
+    if (modo === 'v' || modo === 't') t(cor !== cor0, tag + ': Mostrar ' + modo + ' muda a intensidade das cores');
+  }
   let certas = 0;
   for (const c of cels) {
     await F.evaluate(k => document.querySelector('#rf-root [data-rf="' + k + '"]').click(), c.k);
     const r = await F.evaluate(() => { const o = document.getElementById('rf-ov'); return { show: o.classList.contains('show'), t: o.querySelector('#rf-pt').textContent, rows: o.querySelectorAll('#rf-lb a.rf-row').length, hrefs: [...o.querySelectorAll('#rf-lb a.rf-row')].map(a => a.href), vis: o.querySelector('#rf-lb').getBoundingClientRect().height > 40 }; });
-    const [, R, Fc] = c.k.split(':');
+    const [, Fc, R] = c.k.split(':');
     const esp = await F.evaluate(([R, Fc]) => RFM._state.res.clientes.filter(x => x.R === +R && x.F === +Fc).map(x => x.ultimoId), [R, Fc]);
     const idsLista = r.hrefs.map(h => h.split('id=')[1]);
     if (r.show && r.rows === c.n && esp.length === c.n && idsLista.slice().sort().join() === esp.slice().sort().join() && r.hrefs.every(h => h.includes('web.agendor.com.br/sistema/negocios/historico.php?id='))) certas++; else console.log('  celula ' + c.k + ': lista com ' + r.rows + ' esperado ' + c.n);
@@ -172,7 +208,7 @@ for (const [W, H, tv] of [[390, 844, 0], [1920, 1080, 1], [1366, 768, 0]].filter
     const esp = await F.evaluate(k => RFM._state.res.clientes.filter(c => c.seg === k).length, s);
     if (!esp) continue; tot++;
     await F.evaluate(k => document.querySelector('#rf-root [data-rf="seg:' + k + '"]').click(), s);
-    const r = await F.evaluate(() => ({ kpi: parseInt(document.querySelector('#rf-root .rf-kv').textContent.replace(/\D/g, ''), 10), cel: [...document.querySelectorAll('#rf-root .rf-cel[data-rf]')].reduce((a, e) => a + parseInt(e.querySelector('b').textContent.replace(/\D/g, ''), 10), 0), chip: [...document.querySelectorAll('#rf-root .rf-fil .rf-chip')].map(e => e.textContent).join('|'), on: !!document.querySelector('#rf-c-sg .rf-sr.on') }));
+    const r = await F.evaluate(() => ({ kpi: parseInt(document.querySelector('#rf-root .rf-kv').textContent.replace(/\D/g, ''), 10), cel: [...document.querySelectorAll('#rf-root .rf-cel[data-rf]')].reduce((a, e) => a + parseInt(e.querySelector('b .rf-hl').textContent.replace(/\D/g, ''), 10), 0), chip: [...document.querySelectorAll('#rf-root .rf-fil .rf-chip')].map(e => e.textContent).join('|'), on: !!document.querySelector('#rf-c-sg .rf-sr.on') }));
     if (r.kpi === esp && r.cel === esp && r.on && /Limpar/.test(r.chip)) segOk++; else console.log('  segmento ' + s + ': kpi ' + r.kpi + ' cel ' + r.cel + ' esperado ' + esp);
     await F.evaluate(k => document.querySelector('#rf-root [data-rf="seg:' + k + '"]').click(), s);
   }
@@ -197,7 +233,7 @@ for (const [W, H, tv] of [[390, 844, 0], [1920, 1080, 1], [1366, 768, 0]].filter
   }
   // acao: Em risco / Nao pode perder
   if (tv) await pagina(F, 2);
-  const ac = await F.evaluate(() => { const rows = [...document.querySelectorAll('#rf-c-ac .rf-lst')][0]; const L = [...(rows ? rows.querySelectorAll('a.rf-row') : [])]; const v = L.map(a => parseInt(a.querySelector('.rf-vl').textContent.replace(/\D/g, ''), 10)); const tags = L.map(a => a.querySelector('.rf-tag').textContent); return { v, tags }; });
+  const ac = await F.evaluate(() => { const rows = [...document.querySelectorAll('#rf-c-ac .rf-lst')].filter(l => !(l.previousElementSibling && l.previousElementSibling.classList.contains('rf-sub2')))[0]; const L = [...(rows ? rows.querySelectorAll('a.rf-row') : [])].filter(a => a.querySelector('.rf-tag')); const v = L.map(a => parseInt(a.querySelector('.rf-vl').textContent.replace(/\D/g, ''), 10)); const tags = L.map(a => a.querySelector('.rf-tag').textContent); return { v, tags }; });
   t(ac.tags.every(x => /Em risco|Não pode perder/.test(x)), tag + ': lista de acao so tem Em risco/Nao pode perder');
   t(ac.v.every((x, i) => !i || ac.v[i - 1] >= x), tag + ': lista de acao em ordem de maior valor');
   log('origem');
@@ -245,7 +281,7 @@ if (!REAL) for (const [W, H, tv] of [[390, 844, 0], [1920, 1080, 1]]) {
   rows = fixture({ n: 45, synced: new Date().toISOString() }).deals;
   await F().evaluate(() => { _lastDealsSyncedAt_ = null; _rawDeals = null; return loadData(true); }); await p.waitForTimeout(2500);
   const depois = await F().evaluate(() => parseInt(document.querySelector('#rf-root .rf-kv').textContent.replace(/\D/g, ''), 10));
-  t(antes === 30 && depois === 45, tag + ': a aba atualiza quando os dados mudam (' + antes + ' para ' + depois + ')');
+  t(antes === fixture({ n: 30 }).esperado.clientes && depois === fixture({ n: 45 }).esperado.clientes, tag + ': a aba atualiza quando os dados mudam (' + antes + ' para ' + depois + ')');
   t(!p.errs.length, tag + ': atualizacao sem erro de JS');
   await b.close();
 }

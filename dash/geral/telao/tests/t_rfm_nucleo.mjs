@@ -17,15 +17,14 @@ t(C.dataEvento({ data_real_evento: '2026-05-10', end_time: '2026-06-01T00:00:00.
 t(C.dataEvento({ end_time: '2026-06-01T00:00:00.000Z', won_at: '2026-09-09T10:00:00Z' }) === '2026-06-01', 'end_time sem hora vale como dia');
 t(C.dataEvento({ end_time: '2026-06-02T01:30:00.000Z' }) === '2026-06-01', 'end_time com hora converte para Brasilia (01:30Z = 22:30 do dia anterior)');
 t(C.dataEvento({ won_at: '2026-09-09T10:00:00Z' }) === null, 'won_at NUNCA e usado');
-// ---------- 2) quintis e grade ----------
-const q = C.quintil([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], true); t(q.join() === '1,1,2,2,3,3,4,4,5,5', 'quintil 10 valores: ' + q.join());
-const qe = C.quintil([1, 1, 1, 1, 1], true); t(new Set(qe).size === 1, 'empate total: todos a mesma nota');
-const qr = C.quintil([0.1, 0.5, 1, 2, 3], false); t(qr.join() === '5,4,3,2,1', 'razao menor = nota maior: ' + qr.join());
-for (let r = 1; r <= 5; r++) for (let fm = 1; fm <= 5; fm++) t(C.SEGS.some(s => s.k === C.GRADE[r][fm - 1]), 'grade R' + r + ' FM' + fm + ' aponta segmento existente');
-t(C.SEGS.length === 11, '11 segmentos');
-t(C.segmentoDe(5, 1, 1, 1) === 'novos' && C.segmentoDe(4, 1, 5, 1) === 'novos', 'uma compra recente = Novos');
-t(C.segmentoDe(1, 1, 5, 1) === 'naoperder', 'valor maximo muito atrasado = Nao pode perder');
-t(C.segmentoDe(5, 5, 5, 6) === 'campeoes' && C.segmentoDe(1, 1, 1, 1) === 'perdidos' && C.segmentoDe(1, 5, 3, 5) === 'naoperder', 'extremos da grade');
+// ---------- 2) faixas de dias e tabela de segmentos (copia INDEPENDENTE da tabela do Robert) ----------
+const FX_R = [[0, 5], [60, 5], [61, 4], [90, 4], [91, 3], [120, 3], [121, 2], [150, 2], [151, 1], [999, 1]];
+FX_R.forEach(([d, r]) => t(C.faixaR(d) === r, 'fronteira: ' + d + ' dias = R' + r + ' (deu R' + C.faixaR(d) + ')'));
+const TABELA = { 5: ['Não pode perder', 'Não pode perder', 'Leais', 'Leais', 'Campeões'], 4: ['Em risco', 'Em risco', 'Leais', 'Leais', 'Campeões'], 3: ['Em risco', 'Em risco', 'Precisam de atenção', 'Potenciais leais', 'Potenciais leais'], 2: ['Perdidos', 'Hibernando', 'Quase dormindo', 'Potenciais leais', 'Potenciais leais'], 1: ['Perdidos', 'Hibernando', 'Quase dormindo', 'Promissores', 'Novos'] };
+const nomeDe = k => C.SEGS.find(s => s.k === k).n;
+for (let f = 5; f >= 1; f--) for (let r = 1; r <= 5; r++) t(nomeDe(C.segmentoDe(f, r)) === TABELA[f][r - 1], 'celula F' + f + ' R' + r + ' = ' + TABELA[f][r - 1] + ' (deu ' + nomeDe(C.segmentoDe(f, r)) + ')');
+t(C.SEGS.length === 11 && C.SEGS.map(s => s.n).join('|') === ['Campeões', 'Leais', 'Potenciais leais', 'Novos', 'Promissores', 'Precisam de atenção', 'Quase dormindo', 'Em risco', 'Não pode perder', 'Hibernando', 'Perdidos'].join('|'), '11 segmentos com os nomes do Robert');
+t(C.segmentoDe(9, 5) === 'campeoes', 'F acima de 5 vale F5');
 
 // ---------- 3) invariantes (qualquer base) ----------
 function invariantes(nome, deals, esp) {
@@ -33,22 +32,20 @@ function invariantes(nome, deals, esp) {
   // independente: soma dos ganhos validos nos 3 funis ate hoje, pela data do evento
   let pedidos = 0, receita = 0;
   deals.forEach(d => { if (d.status === 'won' && ['890331', '907387', '909368'].includes(String(d.funnel_id)) && Number(d.value) >= 10) { const dt = C.dataEvento(d); if (dt && dt <= T) { pedidos++; receita += Number(d.value); } } });
-  t(L.reduce((s, c) => s + c.n, 0) === pedidos, nome + ': pedidos da carteira (' + L.reduce((s, c) => s + c.n, 0) + ') = ganhos validos nos negocios (' + pedidos + ')');
+  t(L.reduce((s, c) => s + c.nNegocios, 0) === pedidos, nome + ': negocios ganhos da carteira (' + L.reduce((s, c) => s + c.nNegocios, 0) + ') = ganhos validos (' + pedidos + ')');
+  let diasOk = true; L.forEach(c => { const ds = new Set(c.negocios.map(x => x.data)); if (ds.size !== c.n || c.compras.length !== c.n) diasOk = false; });
+  t(diasOk, nome + ': compra = dia com pedido (nº de compras = dias distintos)');
   t(perto(L.reduce((s, c) => s + c.valor, 0), receita), nome + ': receita da carteira = soma dos ganhos validos (' + receita.toFixed(2) + ')');
   const ag = C.agregar(L, null);
   t(Object.values(ag.bySeg).reduce((s, b) => s + b.n, 0) === L.length, nome + ': soma dos segmentos = clientes (' + L.length + ')');
   t(Object.values(ag.matriz).reduce((s, m) => s + m.n, 0) === L.length, nome + ': soma das celulas da matriz = clientes');
   t(perto(Object.values(ag.matriz).reduce((s, m) => s + m.valor, 0), ag.receita), nome + ': R$ das celulas = receita');
   t(perto(Object.values(ag.bySeg).reduce((s, b) => s + b.valor, 0), ag.receita), nome + ': R$ dos segmentos = receita');
-  t(L.every(c => c.R >= 1 && c.R <= 5 && c.F >= 1 && c.F <= 5 && c.M >= 1 && c.M <= 5 && C.SEGS.some(s => s.k === c.seg)), nome + ': notas 1..5 e segmento valido em todos');
+  t(L.every(c => c.R === C.faixaR(c.dias) && c.F === Math.min(5, c.n) && c.seg === C.segmentoDe(c.F, c.R)), nome + ': R pela faixa de dias, F pelo nº de compras, segmento pela celula (todos)');
+  t(Object.values(ag.matriz).reduce((s, m) => s + m.n, 0) === L.length && Object.keys(ag.matriz).length <= 25, nome + ': cada cliente cai em exatamente 1 das 25 celulas');
   t(L.every(c => c.n >= 1 && c.ultima <= T && c.primeira <= c.ultima && c.dias >= 0 && isFinite(c.razao)), nome + ': datas e razoes coerentes');
   t(L.every(c => c.compras.every(x => x.valor >= 10)), nome + ': nenhuma compra < R$ 10');
-  t(L.every(c => c.ciclo >= 30 && c.ciclo <= 180), nome + ': ciclo sempre entre 30 e 180');
-  // monotonia: razao menor nunca tem nota R menor
-  const ord = L.slice().sort((a, b) => a.razao - b.razao); let mono = true; for (let i = 1; i < ord.length; i++) if (ord[i].R > ord[i - 1].R) mono = false;
-  t(mono, nome + ': R cai (ou fica) conforme a razao sobe');
-  const ord2 = L.slice().sort((a, b) => a.valor - b.valor); mono = true; for (let i = 1; i < ord2.length; i++) if (ord2[i].M < ord2[i - 1].M) mono = false;
-  t(mono, nome + ': M sobe com o valor');
+  t(L.every(c => c.ciclo >= 30 && c.ciclo <= 180), nome + ': ciclo (informacao secundaria) entre 30 e 180');
   t(new Set(L.map(c => c.id)).size === L.length, nome + ': nenhum cliente duplicado');
   // ordem das linhas nao muda o resultado
   const emb = deals.slice().reverse(); const r2 = C.computeRfm(emb, { asOf: T, origem: 'both' });
@@ -71,6 +68,13 @@ function invariantes(nome, deals, esp) {
 }
 const fx = fixture();
 const rs = invariantes('fixture', fx.deals, fx.esperado);
+const celCalc = {}; rs.clientes.forEach(c => { const k = c.F + '|' + c.R; celCalc[k] = celCalc[k] || { n: 0, valor: 0 }; celCalc[k].n++; celCalc[k].valor += c.valor; });
+t(Object.keys(fx.esperado.celulas).length === Object.keys(celCalc).length && Object.keys(fx.esperado.celulas).every(k => celCalc[k] && celCalc[k].n === fx.esperado.celulas[k].n && perto(celCalc[k].valor, fx.esperado.celulas[k].valor)), 'fixture: clientes e R$ por celula = construidos (' + Object.keys(celCalc).length + ' celulas)');
+const segCalc = {}; rs.clientes.forEach(c => segCalc[c.seg] = (segCalc[c.seg] || 0) + 1);
+t(Object.keys(fx.esperado.segs).every(k => segCalc[k] === fx.esperado.segs[k]) && Object.keys(segCalc).length === Object.keys(fx.esperado.segs).length, 'fixture: clientes por segmento = construidos');
+t(rs.clientes.reduce((s, c) => s + c.n, 0) === fx.esperado.compras, 'fixture: compras (dias) = ' + fx.esperado.compras + ' (negocios no mesmo dia contam 1)');
+const borda = {}; rs.clientes.filter(c => /^Borda/.test(c.nome)).forEach(c => borda[c.nome.replace('Borda ', '').replace(' dias', '')] = c.R);
+t(borda[60] === 5 && borda[61] === 4 && borda[90] === 4 && borda[91] === 3 && borda[120] === 3 && borda[121] === 2 && borda[150] === 2 && borda[151] === 1 && borda[0] === 5 && borda[400] === 1, 'fixture: fronteiras 60/61, 90/91, 120/121, 150/151 caem na faixa certa ' + JSON.stringify(borda));
 t(rs.clientes.length === fx.esperado.clientes, 'fixture: clientes = ' + fx.esperado.clientes + ' (construidos): achou ' + rs.clientes.length);
 t(perto(rs.clientes.reduce((s, c) => s + c.valor, 0), fx.esperado.receita), 'fixture: receita = construida (' + fx.esperado.receita.toFixed(2) + ')');
 const rO = C.computeRfm(fx.deals, { asOf: hoje(), origem: 'inbound' }).clientes.length, rB = C.computeRfm(fx.deals, { asOf: hoje(), origem: 'outbound' }).clientes.length;
@@ -94,6 +98,7 @@ if (process.env.DASH_REAL) {
   console.log('  clientes: ' + L.length + ' | pedidos: ' + L.reduce((s, c) => s + c.n, 0) + ' | receita: R$ ' + Math.round(ag.receita) + ' | ciclo da carteira: ' + res.cicloCarteira + ' d | com recompra: ' + ag.nCiclo);
   console.log('  distribuicao: ' + C.SEGS.map(s => s.n + '=' + ag.bySeg[s.k].n).join(' | '));
   console.log('  receita em risco: R$ ' + Math.round(ag.risco.valor) + ' (' + ag.risco.n + ' clientes)');
+  console.log('  por celula F|R (clientes / R$): ' + Object.keys(ag.matriz).sort().reverse().map(k => k + '=' + ag.matriz[k].n + '/' + Math.round(ag.matriz[k].valor)).join(' '));
   const dist = {}; L.forEach(c => dist[c.n] = (dist[c.n] || 0) + 1); console.log('  clientes por nº de compras: ' + JSON.stringify(dist));
   // elos: reposicao/reativacao ligadas?
   const solto = L.filter(c => !c.compras.some(x => x.funil === '890331')).length; console.log('  clientes sem negocio Arena na cadeia: ' + solto);
@@ -109,7 +114,7 @@ if (process.env.DASH_REAL) {
     const r15 = grp(c => c.R >= 4), r12 = grp(c => c.R <= 2);
     console.log('  ' + dias + 'd (retrato ' + p.de + ', ' + p.n + ' clientes, recompraram ' + p.tot.rec + ' = ' + Math.round(p.tot.rec / Math.max(1, p.n) * 100) + '%)');
     console.log('     grupo alto (Campeoes/Leais/Potenciais/Novos): ' + pct(bom) + ' | meio: ' + pct(meio) + ' | baixo (Em risco/Nao pode perder/Hibernando/Perdidos): ' + pct(ruim));
-    console.log('     R relativo: R4-5 ' + pct(r15) + ' x R1-2 ' + pct(r12) + ' | dias crus: ate ' + med + 'd ' + pct(crua1) + ' x acima ' + pct(crua2));
+    console.log('     R4-5 (ate 90 d): ' + pct(r15) + ' x R1-2 (+120 d): ' + pct(r12) + ' | dias crus: ate ' + med + 'd ' + pct(crua1) + ' x acima ' + pct(crua2));
     console.log('     por segmento: ' + C.SEGS.filter(s => p.porSeg[s.k].n).map(s => s.n + ' ' + p.porSeg[s.k].rec + '/' + p.porSeg[s.k].n).join(', '));
   }
 }
