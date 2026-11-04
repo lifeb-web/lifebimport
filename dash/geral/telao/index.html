@@ -1031,8 +1031,9 @@ body.tv-grande .rv-k-val{font-size:19px}
 }
 </style>
 <!-- Dossiê do SDR (Fase 1): padrão da aba SDR; ?sdr=1 volta à aba antiga -->
-<link rel="stylesheet" href="legivel.css?v=20261103j">
+<link rel="stylesheet" href="legivel.css?v=20261104a">
 <script>if (true) document.write('<script src="../sdr2.js?v=20261030h"><\/script>');</script>
+<script>if (true) document.write('<script src="../rfm.js?v=20261104b"><\/script>');</script>
 </head>
 <body>
 <div id="lb"></div>
@@ -1053,6 +1054,7 @@ body.tv-grande .rv-k-val{font-size:19px}
     <div class="oseg">
       <button class="ochip active" data-v="vendas" onclick="setView(this)">Vendas</button>
       <button class="ochip" data-v="ltv" onclick="setView(this)">LTV</button>
+      <button class="ochip" data-v="rfm" onclick="setView(this)">RFM</button>
       <button class="ochip" data-v="sdr" onclick="setView(this)">SDR</button>
       <button class="ochip" data-v="ads" onclick="setView(this)">ADS</button>
       <button class="ochip" data-v="ga4" onclick="setView(this)">GA4</button>
@@ -1277,6 +1279,7 @@ body.tv-grande .rv-k-val{font-size:19px}
   </div>
 
   <div id="s2-root" style="display:none"></div>
+  <div id="rf-root" style="display:none"></div>
 
   <div id="sdr-main">
     <div id="sdr-col-left">
@@ -4481,7 +4484,7 @@ let _originMode = 'both';
 // mês) igual pedido agora.
 const UI_STATE_KEY = 'dash_geral_telao_ui_state_v1';
 function _currentViewName_() {
-  return _ltvViewActive ? 'ltv' : _sdrViewActive ? 'sdr' : _adsViewActive ? 'ads' : _ga4ViewActive ? 'ga4' : _biaViewActive ? 'bia' : 'vendas';
+  return _ltvViewActive ? 'ltv' : _rfmViewActive ? 'rfm' : _sdrViewActive ? 'sdr' : _adsViewActive ? 'ads' : _ga4ViewActive ? 'ga4' : _biaViewActive ? 'bia' : 'vendas';
 }
 function saveUiState_() {
   try {
@@ -4715,7 +4718,7 @@ function setOrigin(btn) {
   // reproduzido ao vivo via CDP). Trocado pra 1 flag "estou em Vendas" em
   // vez de enumerar cada aba não-Vendas — não quebra de novo se uma aba
   // nova aparecer no futuro.
-  const _emVendas = !_ltvViewActive && !_sdrViewActive && !_adsViewActive && !_ga4ViewActive && !_biaViewActive;
+  const _emVendas = !_ltvViewActive && !_rfmViewActive && !_sdrViewActive && !_adsViewActive && !_ga4ViewActive && !_biaViewActive;
   if (_emVendas) {
     el('h-title-text').textContent = label;
     el('footer-mode').textContent = label;
@@ -4885,11 +4888,13 @@ function showErr(msg) {
   // instável) e some sozinha no próximo ciclo do poll de fundo. Só o pontinho de status
   // (já existia pro "dado atualizou") vira âmbar com leve pulso — dá pra ver
   // que algo não está 100%, sem gritar. Mensagem completa fica no title (hover).
+  window.__lbErr = String(msg || 'erro');
   const d = el('rdot');
   d.classList.add('err');
   d.title = msg;
 }
 function hideErr() {
+  window.__lbErr = null;
   const d = el('rdot');
   d.classList.remove('err');
   d.title = '';
@@ -4990,6 +4995,7 @@ async function loadData(force, silent) {
     renderDeltas(_data.kpis, prev && prev.kpis);
     renderLtvIfPossible_();
     refreshSdrIfActive_();
+    refreshRfmIfActive_();
     refreshAdsHierarchyIfActive_();
     refreshGa4IfActive_();
     refreshBiaIfActive_();
@@ -5293,6 +5299,7 @@ function loadAdsSection(periodFrom, periodTo, inboundData, silent, prevPeriodFro
 let _sdrRaw = null;
 let _ltvData = null;
 let _ltvViewActive = false;
+let _rfmViewActive = false;
 let _sdrViewActive = false;
 let _sdrLoading = false;
 let _sdrLastData = null;
@@ -5386,6 +5393,17 @@ function sdr2Activate_() {
   SDR2.activate();
 }
 
+// RFM (04/11/2026): aba da carteira. Lê o MESMO _rawDeals do dash (zero fonte nova, zero escrita); rfm.js desenha.
+function rfmActivate_() {
+  const r = el('rf-root'); if (!r) return;
+  if (!window.RFM) { r.innerHTML = '<div class="feed-empty">Não consegui carregar o módulo do RFM.</div>'; return; }
+  RFM.init({ root: r, mode: 't', getRows: () => _rawDeals, getOrigin: () => _originMode, getErr: () => window.__lbErr || null,
+             isActive: () => _rfmViewActive, reps: REPS, retry: () => loadData(true),
+             ticketFn: (vals) => { try { return ticketRobusto_(vals, ticketCorte_(vals)).ticket; } catch (e) { return vals.reduce((s, v) => s + v, 0) / vals.length; } } });
+  RFM.activate();
+}
+function refreshRfmIfActive_() { if (_rfmViewActive && window.RFM) RFM.render(); }
+
 function setView(btn) {
   const bar = btn.closest('.oseg');
   bar.querySelectorAll('.ochip').forEach(b => b.classList.remove('active'));
@@ -5399,6 +5417,7 @@ function setView(btn) {
     _periodBeforeSpecialTab_ = { period: _period, customFrom: _customFrom, customTo: _customTo, monthPickLabel: _monthPickLabel, mpSelYear: _mpSelYear, mpSelMonth: _mpSelMonth };
   }
   _ltvViewActive = view === 'ltv';
+  _rfmViewActive = view === 'rfm';
   _sdrViewActive = view === 'sdr';
   _adsViewActive = view === 'ads';
   _ga4ViewActive = view === 'ga4';
@@ -5412,6 +5431,7 @@ function setView(btn) {
   el('sdr-hero-row').style.display = view === 'sdr' && !SDR2_ON ? 'grid' : 'none';
   el('sdr-main').style.display     = view === 'sdr' && !SDR2_ON ? 'grid' : 'none';
   el('s2-root').style.display      = view === 'sdr' && SDR2_ON ? 'flex' : 'none';
+  el('rf-root').style.display      = view === 'rfm' ? 'flex' : 'none';
   el('ads-hero-row').style.display  = view === 'ads' ? 'grid' : 'none';
   el('ads-hero-row2').style.display = view === 'ads' ? 'grid' : 'none';
   el('ads-main').style.display      = view === 'ads' ? 'grid' : 'none';
@@ -5426,12 +5446,13 @@ function setView(btn) {
   // sem nunca ter tocado o filtro de origem deixava os dois textos errados
   // ("Painel Geral"/"Dados: Agendor") mesmo com uma aba de fonte diferente
   // claramente ativa.
-  const label = view === 'ltv' ? 'LTV (Pós-venda)' : (view === 'sdr' ? 'SDR (Felipe)' : (view === 'ads' ? 'Meta Ads' : (view === 'ga4' ? 'GA4 Analytics' : (view === 'bia' ? 'Bia (IA)' : ORIGIN_LABELS[_originMode]))));
-  const source = view === 'ltv' ? 'Agendor' : (view === 'sdr' ? (SDR2_ON ? 'Agendor' : 'GS Engage') : (view === 'ads' ? 'Meta Ads' : (view === 'ga4' ? 'Google Analytics' : (view === 'bia' ? 'bia-dash-sync' : 'Agendor'))));
+  const label = view === 'rfm' ? 'RFM' : view === 'ltv' ? 'LTV (Pós-venda)' : (view === 'sdr' ? 'SDR (Felipe)' : (view === 'ads' ? 'Meta Ads' : (view === 'ga4' ? 'GA4 Analytics' : (view === 'bia' ? 'Bia (IA)' : ORIGIN_LABELS[_originMode]))));
+  const source = (view === 'ltv' || view === 'rfm') ? 'Agendor' : (view === 'sdr' ? (SDR2_ON ? 'Agendor' : 'GS Engage') : (view === 'ads' ? 'Meta Ads' : (view === 'ga4' ? 'Google Analytics' : (view === 'bia' ? 'bia-dash-sync' : 'Agendor'))));
   el('footer-mode').textContent = label;
   el('h-title-text').textContent = label;
   el('footer-source').textContent = source;
   if (_ltvViewActive) renderLtvIfPossible_();
+  if (_rfmViewActive) rfmActivate_();
   if (_sdrViewActive && SDR2_ON) {
     sdr2Activate_();
   } else if (_sdrViewActive) {
@@ -7847,6 +7868,6 @@ if (/[?&]debug=1\b/.test(location.search)) {
   document.body.appendChild(box);
 }
 </script>
-<script src="legivel.js?v=20261030b"></script>
+<script src="legivel.js?v=20261104a"></script>
 </body>
 </html>
