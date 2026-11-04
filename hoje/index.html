@@ -233,6 +233,8 @@ button.copiar.ok{background:var(--green-bg);color:var(--green);border-color:var(
 .orgfiltro button.of{min-height:34px;background:var(--card);color:var(--text);border:1.5px solid var(--border);border-radius:999px;font-size:13px;padding:2px 12px}
 .orgfiltro button.of[aria-pressed="true"]{background:var(--purple-bt);color:#fff;border-color:var(--purple-bt)}
 .orgfiltro button.of b{margin-left:4px}
+#diaOrigens{margin:0 0 8px;border:1px solid var(--border);border-radius:12px;background:var(--card)}
+@media(max-width:700px){#diaOrigens{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch}#diaOrigens button.of{flex:none;white-space:nowrap}}
 /* painel do lead */
 #painelLead{z-index:80}
 #painelLead .secao{border:1px solid var(--border);border-radius:10px;background:var(--card);padding:10px 12px}
@@ -518,6 +520,7 @@ details.sec-empresa>summary,details.dados-opcional>summary{cursor:pointer;font-w
     <div class="bg-lista" id="bgLista"></div>
     <div class="bg-msg" id="bgMsg" role="status"></div>
   </section>
+  <div class="orgfiltro hide" id="diaOrigens" role="group" aria-label="Filtrar o dia por origem"></div>
   <div id="blocos"></div>
 </section>
 
@@ -562,7 +565,7 @@ details.sec-empresa>summary,details.dados-opcional>summary{cursor:pointer;font-w
 var API = 'https://gs-agendor-worker.robert131196.workers.dev/sdr-hoje';
 var API_LISTA = 'https://gs-agendor-worker.robert131196.workers.dev/sdr-lista'; // só para consultar o CNPJ na Receita (mesma senha)
 var $ = function (id) { return document.getElementById(id); };
-var S = { token: '', timer: null, relogio: null, pollTimer: null, carregando: false, reqSeq: 0, ctrlCarregar: null, tem: false, dados: null, vm: null, ctl: null, fila: [], filaVis: [], filaTotais: {}, filaFunil: 'outbound', sel: {}, idem: null, ocupado: false, funil: 'todos', msgFixa: false, expande: {}, conferindo: false, ocultoDesde: 0, ocultos: {}, filaOrigem: '', L: null, emVoo: {}, saidaMem: null, abaId: 'a' + Math.random().toString(36).slice(2, 10), canal: null, pre: {}, doCache: false, saidaTimer: null, processando: false };
+var S = { diaOrigem: '', rotOrigemDia: {}, token: '', timer: null, relogio: null, pollTimer: null, carregando: false, reqSeq: 0, ctrlCarregar: null, tem: false, dados: null, vm: null, ctl: null, fila: [], filaVis: [], filaTotais: {}, filaFunil: 'outbound', sel: {}, idem: null, ocupado: false, funil: 'todos', msgFixa: false, expande: {}, conferindo: false, ocultoDesde: 0, ocultos: {}, filaOrigem: '', L: null, emVoo: {}, saidaMem: null, abaId: 'a' + Math.random().toString(36).slice(2, 10), canal: null, pre: {}, doCache: false, saidaTimer: null, processando: false };
 function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { try { var vel = ['sh_ultimo', 'sh_fila_outbound', 'sh_fila_inbound', 'sh_abriu']; for (var i = 0; i < vel.length; i++) { if (vel[i] !== k && localStorage.getItem(vel[i]) != null) { localStorage.removeItem(vel[i]); try { localStorage.setItem(k, v); return; } catch (e2) {} } } } catch (e3) {} } } // cota cheia: apaga o cache mais velho e tenta de novo (rascunhos e caixa de saída nunca são apagados)
 function lsDel(k) { try { localStorage.removeItem(k); } catch (e) {} }
@@ -889,7 +892,8 @@ function haAbertoSemConfirmar() {
 function iniciarPoll() { if (S.pollTimer) return; S.pollTimer = setInterval(function () { if (document.hidden || !S.token || !S.tem) return; if (!haAbertoSemConfirmar()) { clearInterval(S.pollTimer); S.pollTimer = null; return; } var ult = Number(lsGet('sh_ult_poll') || 0); if (Date.now() - ult < 8000) return; lsSet('sh_ult_poll', String(Date.now())); carregar(true, 'tarefas'); }, 10000); } // 10 s, no máximo 3 min, compartilhado entre abas (uma aba por vez)
 
 // ---------- desenho ----------
-function visivel(it) { if (it && it.dealId != null && S.ocultos[it.dealId]) return false; return S.funil === 'todos' || !it.funil || it.funil === S.funil; } // ocultos = marcado como Perdido agora (otimista)
+function visivelFunil(it) { if (it && it.dealId != null && S.ocultos[it.dealId]) return false; return S.funil === 'todos' || !it.funil || it.funil === S.funil; }
+function visivel(it) { if (!visivelFunil(it)) return false; if (S.diaOrigem && it && it.origem !== undefined && origemChave(it) !== S.diaOrigem) return false; return true; } // 04/11: filtro de origem do dia (as origens vêm dos próprios leads, nada fixo no código) // ocultos = marcado como Perdido agora (otimista)
 function ordenar(itens, modo) {
   var a = itens.slice(); var peso = { nao_iniciado: 0, andamento: 1, feito: 2 };
   a.sort(function (x, y) {
@@ -1006,8 +1010,20 @@ function coluna(id, titulo, dica, contTxt, cls, confTs) {
   var l = el('div', 'lista'); l.setAttribute('data-bloco', id); c.appendChild(l);
   return { c: c, l: l };
 }
+function desenharOrigensDia(d) { // chips de origem do dia: aparecem sozinhos conforme os leads que existem hoje (origem nova no Agendor = chip novo)
+  var box = $('diaOrigens'); if (!box) return; box.textContent = ''; var cont = {}, ordem = [];
+  function conta(it) { if (!it || it.origem === undefined || !visivelFunil(it)) return; var k = origemChave(it); if (!cont[k]) { cont[k] = 0; ordem.push(k); } cont[k]++; if (!S.rotOrigemDia[k] && it.origem) S.rotOrigemDia[k] = it.origem; }
+  (d.blocos || []).forEach(function (b) { (b.itens || []).forEach(conta); }); (d.liberadosHoje || []).forEach(conta);
+  if (d.atrasadas) (d.atrasadas.grupos || []).forEach(conta);
+  if (S.diaOrigem && !cont[S.diaOrigem]) S.diaOrigem = '';
+  box.classList.toggle('hide', ordem.length < 2); if (ordem.length < 2) { S.diaOrigem = ''; return; }
+  ordem.sort(function (a, b) { return cont[b] - cont[a]; });
+  function chip(chave, rot, n, selo) { var b = el('button', 'of'); b.type = 'button'; b.setAttribute('aria-pressed', S.diaOrigem === chave ? 'true' : 'false'); if (selo) b.appendChild(selo); else b.appendChild(document.createTextNode(rot)); b.appendChild(el('b', null, String(n))); b.onclick = function () { S.diaOrigem = S.diaOrigem === chave ? '' : chave; desenharBlocos(); }; box.appendChild(b); }
+  chip('', 'Todas as origens', ordem.reduce(function (t, k) { return t + cont[k]; }, 0), null);
+  ordem.forEach(function (k) { var r = S.rotOrigemDia[k] || (k === SEM_ORIGEM ? 'Sem origem' : k); chip(k, r, cont[k], k === SEM_ORIGEM ? null : seloOrigem(r)); });
+}
 function desenharBlocos() {
-  var d = S.dados; if (!d) return;
+  var d = S.dados; if (!d) return; desenharOrigensDia(d);
   var bl = $('blocos'); var rolagem = {};
   Array.prototype.forEach.call(bl.querySelectorAll('.lista'), function (l) { rolagem[l.getAttribute('data-bloco')] = l.scrollTop; });
   var busca = $('busca').value.trim(), modo = $('ordem').value, esconder = $('esconder').checked, atrasado = passouDas18();
