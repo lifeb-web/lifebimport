@@ -699,7 +699,7 @@ function casaBusca(it, q) {
 
 // ---------- chamadas ----------
 // ---------- resiliência: rede com retry, disjuntor, caixa de saída, versão, relógio do servidor, telemetria ----------
-var PAGINA_VERSAO = '2026-11-04.3';
+var PAGINA_VERSAO = '2026-11-04.4';
 var REDE = { escala: 1, falhas: 0, ultima: 0, desvio: 0 };
 function dormir(ms) { return new Promise(function (r) { setTimeout(r, ms * REDE.escala); }); }
 function jitter(ms) { return ms * (0.5 + Math.random() * 0.5); }
@@ -1889,7 +1889,7 @@ function campoApi(k) { var p = k.split('.'); if (p[0] === 'e' && p[1] === 'end')
 function campoDeApi(L, campo) { var p = String(campo).split('.'); if (p[0] === 'empresa' && p[1] === 'endereco') return 'e.end.' + p[2]; if (p[0] === 'empresa') return 'e.' + p[1]; if (p[0] === 'negocio') return 'n.' + p[1]; if (p[0] === 'pessoa') { var pp = pessoaPrincipal(L.lead); return pp ? 'p.' + pp.id + '.' + p[1] : null; } return null; }
 async function enviarCampos(L) {
   var diff = calcDiff(L); if (!diff.length) { return 'nada'; }
-  var corpo = montarCorpo(diff); var antes = copia(L.lead); var edits = {};
+  var corpo = montarCorpo(diff); if (L.confirmaTelefone) corpo.confirmaTelefone = true; var antes = copia(L.lead); var edits = {};
   L.baseConf = L.baseConf || {}; corpo.base = {}; diff.forEach(function (d) { if (!Object.prototype.hasOwnProperty.call(L.baseConf, d.k)) L.baseConf[d.k] = String(valorOrig(L.lead, d.k) == null ? '' : valorOrig(L.lead, d.k)); corpo.base[campoApi(d.k)] = L.baseConf[d.k]; edits[d.k] = L.edits[d.k]; }); // o valor que a página LEU: se mudou no Agendor, o servidor avisa em vez de sobrescrever
   diff.forEach(function (d) { gravarLocal(L.lead, d.k, d.v); }); // aparece na hora
   L.ocupado = true; redesenhar(L); setEstado(L, 'salvando', 'Salvando... já mostrei na tela e estou conferindo no Agendor.');
@@ -1906,6 +1906,7 @@ async function enviarCampos(L) {
   }
   L.lead = antes; // desfaz na tela; o que ele digitou fica nos campos
   if (j._status === 409 && j.erro === 'conflito' && Array.isArray(j.conflitos) && j.conflitos.length) { if (S.L === L) { redesenhar(L); mostrarConflitos(L, j); } return 'erro'; }
+  if (j._status === 409 && j.erro === 'telefone_duplicado') { if (S.L === L) { redesenhar(L); confirmarTelefoneDup(L, j); } return 'erro'; }
   var msg2 = msgErro(j) + (j.link && /^https:\/\//.test(j.link) ? ' ' + j.link : '');
   if (S.L === L) { redesenhar(L); setEstado(L, 'erro', j.ok && j.confirmado === false ? 'O Agendor não confirmou a gravação. Desfiz na tela. ' + (j.mensagem || '') : msg2, function () { (L.modalAberto ? confirmarGanho : salvarCampos)(L); }); }
   return 'erro';
@@ -2217,6 +2218,20 @@ function trocarContato(L, p) {
     if (res === 'ok') { var nf = d; try { todosItens(S.dados || {}, function (i) { if (String(i.dealId) === String(L.dealId)) { i.fone = nf; if (nome) i.pessoa = nome; } }); desenhar(S.dados); } catch (e) {} } // a lista do dia mostra já o número novo
   };
   document.body.appendChild(ov); iW.focus(); try { iW.select(); } catch (e) {}
+}
+// 04/11: o WhatsApp novo já existe em OUTRA pessoa do Agendor. Nada foi salvo; o SDR decide (um dono pode ter várias lojas) ou cancela.
+function confirmarTelefoneDup(L, j) {
+  var abriu = document.activeElement; var ov = el('div', 'lig-ov'); ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Telefone já cadastrado');
+  var cx = el('div', 'lig-cx'); ov.appendChild(cx);
+  function fechar() { document.removeEventListener('keydown', esc, true); if (ov.parentNode) ov.parentNode.removeChild(ov); try { if (abriu && abriu.focus && document.body.contains(abriu)) abriu.focus(); } catch (e) {} }
+  function esc(ev) { if (ev.key === 'Escape') { ev.stopPropagation(); descartar(); } }
+  function descartar() { Object.keys(L.edits || {}).forEach(function (k) { if (/^p\.\d+\.(whatsapp|nome|cargo)$/.test(k)) delete L.edits[k]; }); fechar(); if (S.L === L) { renderLead(); setEstado(L, 'ok', 'Cancelado. Nada foi alterado.'); } }
+  document.addEventListener('keydown', esc, true);
+  cx.appendChild(el('h3', null, 'Esse WhatsApp já está cadastrado')); cx.appendChild(el('p', null, j.mensagem || 'Esse WhatsApp já existe em outra pessoa.'));
+  var ex = j.existente || {}; if (ex.link && /^https:\/\//.test(ex.link)) { var a = el('a', null, 'Ver o cadastro dessa pessoa'); a.href = ex.link; a.target = '_blank'; a.rel = 'noopener noreferrer'; cx.appendChild(a); }
+  var linha = el('div', 'row'); linha.style.marginTop = '12px'; var ok = el('button', 'forte', 'Salvar mesmo assim'); ok.type = 'button'; var no = el('button', 'sec', 'Cancelar'); no.type = 'button';
+  no.onclick = descartar; ok.onclick = async function () { ok.disabled = true; fechar(); L.confirmaTelefone = true; try { await enviarCampos(L); } finally { L.confirmaTelefone = false; } };
+  linha.appendChild(ok); linha.appendChild(no); cx.appendChild(linha); document.body.appendChild(ov); no.focus();
 }
 function perguntarLigacao(L, t, cont) {
   if (!t || !t.ligacao) { cont({}); return; }
