@@ -266,6 +266,11 @@ html.xp-open,html.xp-open body{overflow:hidden!important;overscroll-behavior:non
 #lb-rows .rk-bar{margin-left:29px}
 .lb-header{padding:6px 14px 5px}
 .xp .rkt-grid{column-gap:12px}
+/* 03/11 (Robert: informações sobrepostas nos cartões expandidos): no ranking expandido o Total (21px) transbordava a coluna de 94px e passava por cima de Ganhos e da Reposição. Colunas largas para o modal. */
+.xp .rkt-grid,.xp .rk-top.rkt-grid{grid-template-columns:30px minmax(150px,1fr) 150px 150px 210px 70px}
+.xp .lb-num.rk-v,.xp .lb-num.rk-tot{white-space:nowrap;text-align:right}
+/* detalhes do representante no expandido: colunas que cabem o texto inteiro (antes 5 colunas de 222px quebravam "40 / ganhos") */
+.xp .lb-det{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))!important;column-gap:16px;row-gap:6px}
 .xp .lb-num.rk-v,.xp .lb-num.rk-tot{overflow:visible}
 #pz-slot-ltv .orig-t1,#pz-slot-ltv .orig-t3{font-size:15px}
 /* 30/10: visão "Por origem" (padrão) tem que mostrar TODAS as origens: item de 2 linhas, sem barra, legenda nunca corta */
@@ -277,6 +282,18 @@ html.xp-open,html.xp-open body{overflow:hidden!important;overscroll-behavior:non
 /* 03/11 (Robert: "reposicao por periodo tem sobreposicao na lista por rep ou por ciclo"): a regra acima (com #id) VENCIA .pz-item (grade): nome, valor e % empilhavam e os itens encolhiam (flex:1 1 0) e se sobrepunham. Nao encolhe e volta a grade; com mais de 4 itens a legenda vira 2 colunas. */
 #origem-card .orig-item.pz-item{display:grid;grid-template-columns:minmax(0,1fr) auto 36px;column-gap:6px;flex:0 0 auto;min-height:0;justify-content:normal;align-content:center}
 #origem-card .orig-legend.pz-multi .pz-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px}
+/* 03/11 (Robert: "por representante dá pra ver nem o nome"): na legenda estreita da aba Vendas a coluna do nome sumia (só valor e %). Cada item vira 2 linhas (nome + % em cima, valor embaixo), nome nunca é espremido. */
+#origem-card .orig-legend.pz-multi .orig-item.pz-item{grid-template-columns:minmax(0,1fr) auto;column-gap:6px;row-gap:1px;padding:3px 8px}
+#origem-card .orig-legend.pz-multi .pz-item>.pz-name{grid-column:1;grid-row:1;font-size:12.5px}
+#origem-card .orig-legend.pz-multi .pz-item>.pz-pc{grid-column:2;grid-row:1}
+#origem-card .orig-legend.pz-multi .pz-item>.pz-val{grid-column:1/-1;grid-row:2;font-size:11px}
+#origem-card .orig-legend.pz-multi .pz-item>.pz-split{grid-row:3}
+/* pouco espaço e muitos itens: modo compacto (só nome e %; o valor fica no título do item) */
+#origem-card .orig-legend.pz-multi.pz-dens .pz-item>.pz-val,#origem-card .orig-legend.pz-multi.pz-dens .pz-item>.pz-split{display:none}
+/* rosca um pouco menor quando a legenda tem nomes: dá largura para o nome inteiro (Washington, Grandes Contas) */
+#origem-card.pz-ativa .orig-ring{max-width:42%}
+/* poucos itens (2 a 4): centralizados com respiro, não esticados nas pontas */
+#origem-card .orig-legend.pz-on:not(.pz-multi){justify-content:center;gap:10px}
 #origem-card .orig-legend.pz-multi{display:grid;grid-template-columns:1fr 1fr;align-content:center;gap:4px 8px;overflow:visible}
 #origem-card .orig-i-l2{font-size:12px}#origem-card .orig-i-name{font-size:13px}
 /* 30/10: com as setas de nome (visão Por origem) a rosca ocupa mais largura e a legenda fica mais estreita */

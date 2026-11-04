@@ -1031,7 +1031,7 @@ body.tv-grande .rv-k-val{font-size:19px}
 }
 </style>
 <!-- Dossiê do SDR (Fase 1): padrão da aba SDR; ?sdr=1 volta à aba antiga -->
-<link rel="stylesheet" href="legivel.css?v=20261103f">
+<link rel="stylesheet" href="legivel.css?v=20261103j">
 <script>if (true) document.write('<script src="../sdr2.js?v=20261030h"><\/script>');</script>
 </head>
 <body>
@@ -2852,8 +2852,10 @@ function paintOrigem_(hoverKey, animate) {
   origemBindSegs_();
   const leg = document.getElementById('origem-legend');
   leg.classList.toggle('pz-on', !!pz);
+  { const _oc = document.getElementById('origem-card'); if (_oc) _oc.classList.toggle('pz-ativa', !!pz); }
   leg.classList.toggle('pz-multi', !!pz && pz.canais.length > 4); // 03/11: 5+ itens: legenda em 2 colunas (cabe sem sobrepor)
   leg.innerHTML = pz ? pzLegendHTML_(pz, _origemMode) : origemLegendHTML_(bd, prev, _origemMode);
+  leg.classList.remove('pz-dens'); if (pz && leg.classList.contains('pz-multi') && leg.scrollHeight > leg.clientHeight + 2) leg.classList.add('pz-dens'); // 03/11: não coube em 2 linhas por item: modo compacto (só nome e %)
   leg.querySelectorAll('.orig-item').forEach(it => {
     it.addEventListener('mouseenter', () => origemHover_(it.dataset.k));
     it.addEventListener('mouseleave', () => origemHover_(null));
