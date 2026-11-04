@@ -699,7 +699,7 @@ function casaBusca(it, q) {
 
 // ---------- chamadas ----------
 // ---------- resiliência: rede com retry, disjuntor, caixa de saída, versão, relógio do servidor, telemetria ----------
-var PAGINA_VERSAO = '2026-11-04.2';
+var PAGINA_VERSAO = '2026-11-04.3';
 var REDE = { escala: 1, falhas: 0, ultima: 0, desvio: 0 };
 function dormir(ms) { return new Promise(function (r) { setTimeout(r, ms * REDE.escala); }); }
 function jitter(ms) { return ms * (0.5 + Math.random() * 0.5); }
@@ -2204,7 +2204,7 @@ function trocarContato(L, p) {
   function campo(rot, val, tipo, ph) { var l = el('label', null, rot); l.style.cssText = 'display:block;margin-top:8px;font-weight:600'; var i = el('input'); i.type = tipo || 'text'; i.value = val || ''; i.style.cssText = 'display:block;width:100%;margin-top:4px;font-size:16px;min-height:44px'; if (ph) i.placeholder = ph; l.appendChild(i); cx.appendChild(l); return i; }
   var tipoAtual = (p.telefones || []).filter(function (t) { return t.tipo !== 'fixo'; })[0];
   var iW = campo('WhatsApp do decisor *', mascFone(p.whatsappPrincipal || (tipoAtual && tipoAtual.e164) || ''), 'tel', '(62) 99999-9999'); iW.inputMode = 'tel'; iW.autocomplete = 'off';
-  var iN = campo('Nome do decisor', /^Lead \(/.test(p.nome || '') ? '' : (p.nome || ''), 'text', 'Quem está falando com você'); var iC = campo('Cargo', p.cargo || '', 'text', 'Ex.: Dono, Gerente');
+  var iN = campo('Nome do decisor (opcional)', /^Lead \(/.test(p.nome || '') ? '' : (p.nome || ''), 'text', 'Quem está falando com você'); var iC = campo('Cargo (opcional)', p.cargo || '', 'text', 'Ex.: Dono, Gerente');
   iW.oninput = function () { iW.value = mascFone(iW.value); msg.textContent = ''; }; iN.oninput = iC.oninput = function () { msg.textContent = ''; };
   var msg = el('p', 'sub'); msg.style.color = 'var(--erro, #b91c1c)'; msg.setAttribute('role', 'alert'); cx.appendChild(msg);
   var linha = el('div', 'row'); linha.style.marginTop = '10px'; var ok = el('button', 'forte', 'Salvar contato'); ok.type = 'button'; var ca = el('button', 'link', 'Cancelar'); ca.type = 'button'; ca.onclick = fechar; linha.appendChild(ok); linha.appendChild(ca); cx.appendChild(linha);
@@ -2213,7 +2213,8 @@ function trocarContato(L, p) {
     if (!/^\d{10,11}$/.test(d)) { msg.textContent = 'Confira o WhatsApp: DDD + número (10 ou 11 números).'; iW.focus(); return; }
     var nome = iN.value.trim(); if (nome && nome.length < 2) { msg.textContent = 'O nome está curto demais. Apague ou complete.'; iN.focus(); return; }
     L.edits = L.edits || {}; L.edits['p.' + p.id + '.whatsapp'] = d; if (nome) L.edits['p.' + p.id + '.nome'] = nome; L.edits['p.' + p.id + '.cargo'] = iC.value.trim();
-    ok.disabled = true; fechar(); await enviarCampos(L);
+    ok.disabled = true; fechar(); var res = await enviarCampos(L);
+    if (res === 'ok') { var nf = d; try { todosItens(S.dados || {}, function (i) { if (String(i.dealId) === String(L.dealId)) { i.fone = nf; if (nome) i.pessoa = nome; } }); desenhar(S.dados); } catch (e) {} } // a lista do dia mostra já o número novo
   };
   document.body.appendChild(ov); iW.focus(); try { iW.select(); } catch (e) {}
 }
