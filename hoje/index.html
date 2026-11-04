@@ -699,7 +699,7 @@ function casaBusca(it, q) {
 
 // ---------- chamadas ----------
 // ---------- resiliência: rede com retry, disjuntor, caixa de saída, versão, relógio do servidor, telemetria ----------
-var PAGINA_VERSAO = '2026-11-04.1';
+var PAGINA_VERSAO = '2026-11-04.2';
 var REDE = { escala: 1, falhas: 0, ultima: 0, desvio: 0 };
 function dormir(ms) { return new Promise(function (r) { setTimeout(r, ms * REDE.escala); }); }
 function jitter(ms) { return ms * (0.5 + Math.random() * 0.5); }
@@ -1732,6 +1732,7 @@ function renderLead() {
     var bx = el('div', 'pessoa'); bx.appendChild(el('div', 'emp', (p.nome || 'Sem nome') + (p.principal ? ' (principal)' : ''))); if (p.cargo) bx.appendChild(el('div', 'sub', p.cargo)); if (p.email) bx.appendChild(el('div', 'sub', p.email));
     (p.telefones || []).forEach(function (t) { var l = foneLinha(t.e164 || t.bonito, 'pessoa-tel', t.whatsapp, t.bonito, true); if (l) { if (t.tipo) l.appendChild(el('span', 'sub', t.tipo)); bx.appendChild(l); } });
     if (!(p.telefones || []).length) bx.appendChild(el('div', 'sub', 'Sem telefone.'));
+    if (p.principal && ac.campos) { var bt = el('button', 'sec trocar-contato', 'Trocar contato / telefone'); bt.type = 'button'; bt.setAttribute('data-fk', 'trocar-contato'); bt.title = 'Use quando você está falando com o decisor e o cadastro tem o telefone da loja'; bt.onclick = function () { trocarContato(L, p); }; bx.appendChild(bt); }
     s4.appendChild(bx);
   }); corpo.appendChild(s4);
   var pxa = proximaAcaoEl(L); if (pxa) corpo.appendChild(pxa);
@@ -2190,6 +2191,32 @@ function guardarAcaoAdiada(def, atrasoMs) {
 }
 // LIGAÇÃO (04/11, decisão do Robert de 30/10): ao concluir uma tarefa de ligar, o SDR diz se ligou e como foi; "não houve ligação" exclui a tarefa (não conta nas métricas).
 var LIG_RESULTADOS = [['decide', 'Falei com quem decide a compra'], ['outra', 'Falei com outra pessoa da loja'], ['retorno', 'Pediram para ligar depois'], ['nao_atendeu', 'Não atendeu ou caixa postal'], ['numero_errado', 'Número errado ou inexistente']];
+// 04/11 (Robert): o SDR conversa com o decisor, mas o cadastro tem o contato da loja. Troca nome, cargo e WhatsApp do contato principal em 1 passo,
+// SEM qualificar. Usa o mesmo caminho de salvar (/campos): fica na pessoa vinculada à empresa, é conferido no Agendor e deixa nota no histórico.
+function trocarContato(L, p) {
+  if (!p || L.ocupado) return;
+  var abriu = document.activeElement; var ov = el('div', 'lig-ov'); ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Trocar contato principal');
+  var cx = el('div', 'lig-cx'); ov.appendChild(cx);
+  function fechar() { document.removeEventListener('keydown', esc, true); if (ov.parentNode) ov.parentNode.removeChild(ov); try { if (abriu && abriu.focus && document.body.contains(abriu)) abriu.focus(); } catch (e) {} }
+  function esc(ev) { if (ev.key === 'Escape') { ev.stopPropagation(); fechar(); } }
+  document.addEventListener('keydown', esc, true); ov.addEventListener('mousedown', function (ev) { if (ev.target === ov) fechar(); });
+  cx.appendChild(el('h3', null, 'Trocar contato principal')); cx.appendChild(el('p', 'sub', 'Fica salvo no cadastro da pessoa ligada a esta empresa. O número antigo fica registrado no histórico.'));
+  function campo(rot, val, tipo, ph) { var l = el('label', null, rot); l.style.cssText = 'display:block;margin-top:8px;font-weight:600'; var i = el('input'); i.type = tipo || 'text'; i.value = val || ''; i.style.cssText = 'display:block;width:100%;margin-top:4px;font-size:16px;min-height:44px'; if (ph) i.placeholder = ph; l.appendChild(i); cx.appendChild(l); return i; }
+  var tipoAtual = (p.telefones || []).filter(function (t) { return t.tipo !== 'fixo'; })[0];
+  var iW = campo('WhatsApp do decisor *', mascFone(p.whatsappPrincipal || (tipoAtual && tipoAtual.e164) || ''), 'tel', '(62) 99999-9999'); iW.inputMode = 'tel'; iW.autocomplete = 'off';
+  var iN = campo('Nome do decisor', /^Lead \(/.test(p.nome || '') ? '' : (p.nome || ''), 'text', 'Quem está falando com você'); var iC = campo('Cargo', p.cargo || '', 'text', 'Ex.: Dono, Gerente');
+  iW.oninput = function () { iW.value = mascFone(iW.value); msg.textContent = ''; }; iN.oninput = iC.oninput = function () { msg.textContent = ''; };
+  var msg = el('p', 'sub'); msg.style.color = 'var(--erro, #b91c1c)'; msg.setAttribute('role', 'alert'); cx.appendChild(msg);
+  var linha = el('div', 'row'); linha.style.marginTop = '10px'; var ok = el('button', 'forte', 'Salvar contato'); ok.type = 'button'; var ca = el('button', 'link', 'Cancelar'); ca.type = 'button'; ca.onclick = fechar; linha.appendChild(ok); linha.appendChild(ca); cx.appendChild(linha);
+  ok.onclick = async function () {
+    var d = digFone(iW.value); if (d.length === 12 || d.length === 13) d = d.replace(/^55/, '');
+    if (!/^\d{10,11}$/.test(d)) { msg.textContent = 'Confira o WhatsApp: DDD + número (10 ou 11 números).'; iW.focus(); return; }
+    var nome = iN.value.trim(); if (nome && nome.length < 2) { msg.textContent = 'O nome está curto demais. Apague ou complete.'; iN.focus(); return; }
+    L.edits = L.edits || {}; L.edits['p.' + p.id + '.whatsapp'] = d; if (nome) L.edits['p.' + p.id + '.nome'] = nome; L.edits['p.' + p.id + '.cargo'] = iC.value.trim();
+    ok.disabled = true; fechar(); await enviarCampos(L);
+  };
+  document.body.appendChild(ov); iW.focus(); try { iW.select(); } catch (e) {}
+}
 function perguntarLigacao(L, t, cont) {
   if (!t || !t.ligacao) { cont({}); return; }
   var abriu = document.activeElement; var ov = el('div', 'lig-ov'); ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Como foi a ligação');
