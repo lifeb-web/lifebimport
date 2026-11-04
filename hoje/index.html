@@ -893,7 +893,7 @@ function iniciarPoll() { if (S.pollTimer) return; S.pollTimer = setInterval(func
 
 // ---------- desenho ----------
 function visivelFunil(it) { if (it && it.dealId != null && S.ocultos[it.dealId]) return false; return S.funil === 'todos' || !it.funil || it.funil === S.funil; }
-function visivel(it) { if (!visivelFunil(it)) return false; if (S.diaOrigem && it && it.origem !== undefined && origemChave(it) !== S.diaOrigem) return false; return true; } // 04/11: filtro de origem do dia (as origens vêm dos próprios leads, nada fixo no código) // ocultos = marcado como Perdido agora (otimista)
+function visivel(it) { if (!visivelFunil(it)) return false; if (S.diaOrigem && it && origemDoItem(it) !== undefined && origemChave(it) !== S.diaOrigem) return false; return true; } // 04/11: filtro de origem do dia (as origens vêm dos próprios leads, nada fixo no código) // ocultos = marcado como Perdido agora (otimista)
 function ordenar(itens, modo) {
   var a = itens.slice(); var peso = { nao_iniciado: 0, andamento: 1, feito: 2 };
   a.sort(function (x, y) {
@@ -1012,7 +1012,7 @@ function coluna(id, titulo, dica, contTxt, cls, confTs) {
 }
 function desenharOrigensDia(d) { // chips de origem do dia: aparecem sozinhos conforme os leads que existem hoje (origem nova no Agendor = chip novo)
   var box = $('diaOrigens'); if (!box) return; box.textContent = ''; var cont = {}, ordem = [];
-  function conta(it) { if (!it || it.origem === undefined || !visivelFunil(it)) return; var k = origemChave(it); if (!cont[k]) { cont[k] = 0; ordem.push(k); } cont[k]++; if (!S.rotOrigemDia[k] && it.origem) S.rotOrigemDia[k] = it.origem; }
+  function conta(it) { if (!it || origemDoItem(it) === undefined || !visivelFunil(it)) return; var k = origemChave(it); if (!cont[k]) { cont[k] = 0; ordem.push(k); } cont[k]++; if (!S.rotOrigemDia[k] && origemDoItem(it)) S.rotOrigemDia[k] = origemDoItem(it); }
   (d.blocos || []).forEach(function (b) { (b.itens || []).forEach(conta); }); (d.liberadosHoje || []).forEach(conta);
   if (d.atrasadas) (d.atrasadas.grupos || []).forEach(conta);
   if (S.diaOrigem && !cont[S.diaOrigem]) S.diaOrigem = '';
@@ -1309,7 +1309,8 @@ function avisoPulo() {
 function podeLiberar() { return !!(S.ctl && S.ctl.janelaAberta && S.ctl.cadenciaLive && (S.filaFunil === 'inbound' || S.ctl.ligada)); }
 function buscando() { return $('filaBusca').value.trim() !== '' || S.filaOrigem !== ''; } // com busca OU origem escolhida, "iniciar todos" vale só para o que está na tela
 var SEM_ORIGEM = '(SEM ORIGEM)';
-function origemChave(i) { return origemNorm(i.origem) || SEM_ORIGEM; }
+function origemDoItem(i) { return i && i.origemNome !== undefined ? i.origemNome : (i ? i.origem : undefined); } // em "Iniciados hoje" o campo `origem` é QUEM iniciou (auto/manual); a origem do lead vem em `origemNome`
+function origemChave(i) { return origemNorm(origemDoItem(i)) || SEM_ORIGEM; }
 function origemRotulo(chave) { var r = null; S.fila.forEach(function (i) { if (!r && origemChave(i) === chave && i.origem) r = i.origem; }); return r || (chave === SEM_ORIGEM ? 'Sem origem' : chave); }
 function desenharOrigens() {
   var box = $('filaOrigens'); box.textContent = ''; var cont = {}, ordem = [];
