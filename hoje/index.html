@@ -164,6 +164,9 @@ button.recolher{background:transparent;color:var(--muted);border:0;min-height:0;
 .lib-col{border:2px solid var(--purple)} .lib-col .col-h{background:var(--track)}
 .fi .est{display:block}
 .pend{color:var(--amber);font-weight:700}
+.recup-txt{background:var(--amber-bg);border-left:4px solid var(--amber);padding:6px 10px;border-radius:6px}
+.recup-aviso{background:var(--amber-bg);color:var(--amber);border:1.5px solid var(--amber);border-radius:10px;padding:8px 10px;font-weight:700;font-size:14px;margin-bottom:6px}
+textarea.recup-pend{border:2.5px solid var(--amber)!important;background:var(--amber-bg)}
 .link-falta{background:none;border:0;color:inherit;font:inherit;font-weight:800;text-decoration:underline;cursor:pointer;padding:12px 6px;margin:-12px -2px;min-height:44px;display:inline-block}
 .rodape-falta{margin:0 0 8px;font-size:14px}
 .link-falta:focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:4px}
@@ -1483,7 +1486,13 @@ function mascFone(v) { var d = digFone(v).slice(0, 11); if (d.length > 6) return
 function normVal(k, v) { v = String(v == null ? '' : v).trim(); if (/\.whatsapp$/.test(k)) return digFone(v); if (k === 'e.cnpj' || k === 'e.end.cep') return soDigitos(v); if (k === 'e.end.uf') return v.toUpperCase(); return v; }
 function valorAtual(k) { var L = S.L; return L && Object.prototype.hasOwnProperty.call(L.edits, k) ? L.edits[k] : fmtOrig(k, valorOrig(L && L.lead, k)); }
 function fmtOrig(k, v) { return /\.whatsapp$/.test(k) ? mascFone(v) : k === 'e.cnpj' ? mascCnpj(v) : k === 'e.end.cep' ? mascCep(v) : String(v == null ? '' : v); }
+var RE_RECUP = /^\s*Recupera[cç][aã]o\s*:/i;
+function obsRecuperacaoPendente(L) { // 04/11 (Robert): o texto "Recuperação: perdido 14/10 por ..." é escrito pelo sistema no MESMO campo que vai para o representante. Ao qualificar o SDR tem que trocar ou complementar; se ficar igual, o representante receberia o texto de recuperação.
+  var o = String(valorOrig(L && L.lead, 'n.observacao_sdr') || '').trim(); if (!RE_RECUP.test(o)) return false;
+  return String(valorAtual('n.observacao_sdr') || '').trim() === o;
+}
 function validarCampo(L, f) {
+  if (f.k === 'n.observacao_sdr' && L.modalAberto && obsRecuperacaoPendente(L)) return 'Troque este texto pelo que o representante precisa saber (ou escreva mais embaixo). Ele foi escrito pelo sistema na recuperação.';
   var v = normVal(f.k, valorAtual(f.k)); if (!v) return '';
   if (f.tipo === 'cnpj') return v.length !== 14 ? 'O CNPJ tem 14 números.' : (cnpjValido(v) ? '' : 'Esse CNPJ não é válido. Confira os números.');
   if (f.tipo === 'cep') return v.length === 8 ? '' : 'O CEP tem 8 números.';
@@ -1660,7 +1669,7 @@ function renderLead() {
   if (emp.nome && emp.nome !== lead.titulo) par('Empresa', emp.nome); par('Razão social', emp.razaoSocial); par('CNPJ', fmtCnpj(emp.cnpj)); par('Segmento', emp.segmento); par('Endereço', enderecoTxt(emp.endereco));
   CAMPOS.forEach(function (f) { if (f.op && f.k !== 'e.segmento') par(f.rot, (emp.campos || {})[f.op]); });
   par('Dono do negócio', lead.dono && lead.dono.nome); par('Criado em', dataBR(lead.criadoEm, true)); s3.appendChild(dl); corpo.appendChild(s3);
-  if (lead.observacaoSdr) { var s5 = el('div', 'secao'); s5.appendChild(el('h3', null, 'Observação do SDR')); var ob = el('p', null, lead.observacaoSdr); ob.style.whiteSpace = 'pre-wrap'; ob.style.overflowWrap = 'anywhere'; s5.appendChild(ob); corpo.appendChild(s5); }
+  if (lead.observacaoSdr) { var s5 = el('div', 'secao'); s5.appendChild(el('h3', null, 'Observação do SDR')); var ob = el('p', null, lead.observacaoSdr); ob.style.whiteSpace = 'pre-wrap'; ob.style.overflowWrap = 'anywhere'; s5.appendChild(ob); if (RE_RECUP.test(lead.observacaoSdr)) { ob.classList.add('recup-txt'); s5.appendChild(el('p', 'recup-aviso', 'Texto automático da recuperação. Ao qualificar este lead, troque ou complemente: este mesmo campo vai para o representante.')); } corpo.appendChild(s5); }
   // 4) Dados do lead: edição OPCIONAL (nada é cobrado aqui; quem cobra é o pop-up de Ganho)
   var editavel = ac.campos && lead.status !== 'perdido';
   if (editavel) {
@@ -1709,6 +1718,9 @@ function campoEl(L, f, pref, req, marcar) {
   }
   if (f.k === 'n.observacao_sdr') { // o Agendor guarda 150 letras: contador n/150 e corte avisado
     var cont = el('div', 'dica-c contador'); cont.setAttribute('aria-live', 'polite'); wrap.appendChild(cont);
+    var avR = el('div', 'recup-aviso'); avR.setAttribute('role', 'note'); wrap.insertBefore(avR, wrap.firstChild);
+    var atualizaRecup = function () { var o0 = String(valorOrig(L.lead, 'n.observacao_sdr') || '').trim(); var pend = !!(L.modalAberto && RE_RECUP.test(o0) && inp.value.trim() === o0); avR.classList.toggle('hide', !pend); inp.classList.toggle('recup-pend', !!pend); if (pend) avR.textContent = '⚠ Atenção: este texto foi escrito pelo sistema quando o lead foi recuperado. O representante vai ler este campo. Troque pelo que ele precisa saber (ou complemente).'; };
+    inp.addEventListener('input', atualizaRecup); atualizaRecup();
     var cortou = false;
     var atualizaCont = function () { var n = inp.value.length; cont.textContent = n + '/' + OBS_MAX + (cortou ? ' O campo guarda até ' + OBS_MAX + ' letras: cortei o final.' : ''); cont.classList.toggle('amber', n >= 130 || cortou); };
     var corta = function () { if (inp.value.length > OBS_MAX) { inp.value = inp.value.slice(0, OBS_MAX); cortou = true; } };
@@ -1937,10 +1949,11 @@ function preencherFalta(L, g, falta, compacto) { // 03/11 (Robert: "Falta 1 camp
 function atualizarGanhoBtn(L) {
   var b = L.refs && L.refs.ganhoBtn; if (!b || !L.modalAberto || L.rep) return; var falta = faltaAinda(L); var inval = false;
   Object.keys(L.ganhoReq || {}).forEach(function (k) { var f = campoDeK(L.lead, k); if (f && validarCampo(L, f)) inval = true; });
+  if (obsRecuperacaoPendente(L)) inval = true; // texto automático da recuperação ainda na observação: o representante o leria
   if (L.ganhoPessoa == null) inval = true; // sem contato cadastrado não dá para qualificar
   if (L.refs.gFalta) L.refs.gFalta.classList.toggle('hide', !falta.length);
-  preencherFalta(L, L.refs.gFalta, falta, false); preencherFalta(L, L.refs.gFaltaRod, falta, true); // 03/11: o aviso também fica fixo no rodapé (junto do botão), porque o do topo some quando a pessoa rola até o fim
-    b.disabled = !!(falta.length || inval || L.ocupado); b.title = falta.length ? 'Falta preencher: ' + falta.map(function (k) { return (campoDeK(L.lead, k) || {}).rot; }).join(', ') : '';
+  preencherFalta(L, L.refs.gFalta, falta, false); preencherFalta(L, L.refs.gFaltaRod, falta, true); if (!falta.length && obsRecuperacaoPendente(L)) { [L.refs.gFalta, L.refs.gFaltaRod].forEach(function (g) { if (!g) return; g.classList.remove('hide'); g.textContent = 'Falta trocar o texto de recuperação na '; var bt = el('button', 'link-falta', 'Observação do SDR'); bt.type = 'button'; bt.onclick = function () { var i = $('gf_n_observacao_sdr'); if (i) { try { i.scrollIntoView({ block: 'center', behavior: 'smooth' }); i.focus({ preventScroll: true }); } catch (e) {} } }; g.appendChild(bt); g.appendChild(document.createTextNode('.')); }); } // 03/11: o aviso também fica fixo no rodapé (junto do botão), porque o do topo some quando a pessoa rola até o fim
+    b.disabled = !!(falta.length || inval || L.ocupado); b.title = obsRecuperacaoPendente(L) && !falta.length ? 'Troque o texto de recuperação na Observação do SDR' : falta.length ? 'Falta preencher: ' + falta.map(function (k) { return (campoDeK(L.lead, k) || {}).rot; }).join(', ') : '';
 }
 function textoAviso(a) { var t = typeof a === 'string' ? a : (a && (a.mensagem || a.campo)) || ''; if (/razao_social/.test(typeof a === 'string' ? a : (a && a.campo) || t)) return 'A razão social não foi gravada agora; o resto foi salvo.'; return t; }
 function notaAvisos(L, j) { var av = (j && Array.isArray(j.avisos) ? j.avisos : []).map(textoAviso).filter(Boolean); var box = L.refs && L.refs.estado; if (!box || !av.length) return; var n = el('div', 'sub aviso-discreto', av.join(' ')); box.appendChild(n); } // aviso discreto, nunca erro
