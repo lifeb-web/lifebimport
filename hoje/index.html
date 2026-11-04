@@ -244,14 +244,17 @@ button.copiar.ok{background:var(--green-bg);color:var(--green);border-color:var(
 .lig-cx input[type=text]{min-height:44px;padding:8px 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font-family:inherit;font-size:16px;outline-offset:2px}
 .lig-cx .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
 .lig-cx button{min-height:44px}
-/* contadores do mês (04/11) */
-.mesbar{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 8px;padding:0 10px}
-.mesbar .mc{flex:1 1 180px;min-width:0;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:8px 14px;display:flex;flex-direction:column;gap:1px}
-.mesbar .mc .n{font-size:26px;font-weight:800;line-height:1.1;color:var(--purple)}
-.mesbar .mc .r{font-size:12px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
-.mesbar .mc .d{font-size:12px;color:var(--muted)}
-.mesbar .mc.ok .n{color:var(--green)}
-@media(max-width:700px){.mesbar{gap:6px}.mesbar .mc{flex:1 1 30%;padding:6px 8px}.mesbar .mc .n{font-size:22px}.mesbar .mc .r{font-size:11px}.mesbar .mc .d{display:none}}
+/* números do mês no topo (04/11): chips menores, balão de detalhe por cima */
+.chip.mes{min-width:0;padding:2px 7px;white-space:nowrap;background:transparent;border-style:dashed;cursor:pointer;font-size:12px}
+.chip.mes b{font-size:17px;display:inline;margin-right:5px}
+.chip.mes.ok b{color:var(--green)}
+@media(min-width:701px) and (max-width:1320px){.chip.mes{padding:1px 5px;font-size:11px}.chip.mes b{font-size:15px;margin-right:3px}}
+#cab{position:sticky}
+.mespop{position:absolute;right:14px;top:100%;margin-top:6px;z-index:60;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:12px;padding:12px 14px;max-width:min(420px,calc(100vw - 28px));box-shadow:0 8px 26px rgba(0,0,0,.35)}
+.mespop h3{font-size:15px;font-weight:800;color:var(--purple);margin-bottom:6px}
+.mespop p{font-size:14px;margin:0 0 6px;line-height:1.35}
+.mespop button{min-height:40px;margin-top:4px}
+/* (antiga faixa grande do mês, removida) */
 /* painel do lead */
 #painelLead{z-index:80}
 #painelLead .secao{border:1px solid var(--border);border-radius:10px;background:var(--card);padding:10px 12px}
@@ -537,7 +540,6 @@ details.sec-empresa>summary,details.dados-opcional>summary{cursor:pointer;font-w
     <div class="bg-lista" id="bgLista"></div>
     <div class="bg-msg" id="bgMsg" role="status"></div>
   </section>
-  <div class="mesbar hide" id="mesBar" aria-label="Seu mês"></div>
   <div class="orgfiltro hide" id="diaOrigens" role="group" aria-label="Filtrar o dia por origem"></div>
   <div id="blocos"></div>
 </section>
@@ -945,7 +947,31 @@ function desenharTopo(d) {
   chip(c.empresas, 'empresas para atender hoje (' + plural(c.tarefas, 'tarefa', 'tarefas') + ')', 'forte');
   if (S.funil !== 'inbound') chip(totalOut(d), 'esperando você iniciar (Outbound)', '');
   chip((d.liberadosHoje || []).filter(visivel).length, 'iniciados hoje', 'cl', function () { S.expande.liberados = !S.expande.liberados; desenharBlocos(); });
+  var m = d && d.mes; // 04/11: números do mês NO TOPO, pequenos e na mesma fileira dos outros (não tomam espaço do kanban); clicar abre o detalhe
+  if (m && typeof m.emCadencia === 'number') {
+    var nm = MESES[Number(String(m.mes).slice(5, 7)) - 1] || 'mês'; var abre = function () { mesPop(m, nm); };
+    chip(m.emCadencia, 'em cadência', 'mes', abre).title = 'Leads em cadência agora. Clique para ver o mês.';
+    chip(m.iniciados, 'iniciados', 'mes', abre).title = 'Iniciados em ' + nm + '. Clique para ver o detalhe.';
+    chip(m.finalizados, 'finalizados', 'mes ok', abre).title = 'Finalizados em ' + nm + ' (qualificados + perdidos por você). Clique para ver o detalhe.';
+  }
   tickRelogio(); fadeChips();
+}
+var MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+function mesPop(m, nm) { // detalhe do mês num balão que abre por cima (não empurra o kanban); Esc, clique fora ou no número fecham
+  var ant = $('mesPop'); if (ant) { ant.parentNode.removeChild(ant); return; }
+  var pop = el('div', 'mespop'); pop.id = 'mesPop'; pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-label', 'Seu mês');
+  pop.appendChild(el('h3', null, 'Seu mês: ' + nm));
+  function ln(b, t) { var p = el('p', null); p.appendChild(el('b', null, b + ' ')); p.appendChild(document.createTextNode(t)); pop.appendChild(p); }
+  ln(String(m.emCadencia), 'em cadência agora: leads iniciados que ainda estão sendo trabalhados (fora a fila de espera e o Fim da cadência).');
+  ln(String(m.iniciados), 'iniciados em ' + nm + '. O Outbound só é contado desde 26/10.');
+  ln(String(m.finalizados), 'finalizados em ' + nm + ': ' + m.qualificados + ' qualificados e ' + m.perdidos + ' perdidos por você.');
+  var auto = m.automaticos || {}; if ((auto.esgotados || 0) + (auto.duplicados || 0)) pop.appendChild(el('p', 'sub', 'Fora da conta: ' + (auto.esgotados || 0) + ' encerrados automaticamente (cadência esgotada) e ' + (auto.duplicados || 0) + ' duplicados.'));
+  if (m.parcial) pop.appendChild(el('p', 'sub', 'Atenção: parte dos dados não carregou agora. Os números podem estar um pouco menores.'));
+  var fx = el('button', 'sec', 'Fechar'); fx.type = 'button'; pop.appendChild(fx);
+  function fecha() { document.removeEventListener('keydown', ek, true); document.removeEventListener('mousedown', ec, true); if (pop.parentNode) pop.parentNode.removeChild(pop); }
+  function ek(ev) { if (ev.key === 'Escape') { ev.stopPropagation(); fecha(); } } function ec(ev) { if (!pop.contains(ev.target) && !(ev.target.closest && ev.target.closest('.chip.mes'))) fecha(); }
+  fx.onclick = fecha; document.addEventListener('keydown', ek, true); document.addEventListener('mousedown', ec, true);
+  $('cab').appendChild(pop);
 }
 function desenharControle(d) {
   var c = d.controle || null; S.ctl = c; if (!c) return;
@@ -1041,18 +1067,8 @@ function desenharOrigensDia(d) { // chips de origem do dia: aparecem sozinhos co
   chip('', 'Todas as origens', ordem.reduce(function (t, k) { return t + cont[k]; }, 0), null);
   ordem.forEach(function (k) { var r = S.rotOrigemDia[k] || (k === SEM_ORIGEM ? 'Sem origem' : k); chip(k, r, cont[k], k === SEM_ORIGEM ? null : seloOrigem(r)); });
 }
-var MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
-function desenharMes(d) { // 3 números simples do mês (sem filtro de período, sem gráfico): vêm prontos do servidor
-  var box = $('mesBar'); if (!box) return; var m = d && d.mes; box.textContent = ''; if (!m || typeof m.emCadencia !== 'number') { box.classList.add('hide'); return; }
-  box.classList.remove('hide'); var nomeMes = MESES[Number(String(m.mes).slice(5, 7)) - 1] || 'mês';
-  function card(num, rot, det, cls) { var c = el('div', 'mc' + (cls ? ' ' + cls : '')); c.appendChild(el('span', 'n', String(num))); c.appendChild(el('span', 'r', rot)); if (det) c.appendChild(el('span', 'd', det)); box.appendChild(c); }
-  var auto = m.automaticos ? (m.automaticos.esgotados || 0) + (m.automaticos.duplicados || 0) : 0;
-  card(m.emCadencia, 'Em cadência agora', 'leads sendo trabalhados');
-  card(m.iniciados, 'Iniciados em ' + nomeMes, 'a partir de 26/10 no Outbound');
-  card(m.finalizados, 'Finalizados em ' + nomeMes, m.qualificados + ' qualificados · ' + m.perdidos + ' perdidos' + (auto ? ' (' + auto + ' automáticos fora da conta)' : ''), 'ok');
-}
 function desenharBlocos() {
-  var d = S.dados; if (!d) return; desenharOrigensDia(d); desenharMes(d);
+  var d = S.dados; if (!d) return; desenharOrigensDia(d);
   var bl = $('blocos'); var rolagem = {};
   Array.prototype.forEach.call(bl.querySelectorAll('.lista'), function (l) { rolagem[l.getAttribute('data-bloco')] = l.scrollTop; });
   var busca = $('busca').value.trim(), modo = $('ordem').value, esconder = $('esconder').checked, atrasado = passouDas18();
