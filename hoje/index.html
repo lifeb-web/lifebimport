@@ -1791,6 +1791,7 @@ function renderRodape(L) {
   if (ac.campos && andamento) { L.refs.salvar = el('button', 'forte', 'Salvar'); L.refs.salvar.type = 'button'; L.refs.salvar.onclick = function () { salvarCampos(L); }; row.appendChild(L.refs.salvar); atualizarSalvar(L); }
   if (ac.ganho && andamento) { var bg = el('button', 'sec', 'Marcar como Ganho / Qualificado'); bg.type = 'button'; bg.onclick = function () { abrirGanho(L, L.lead.faltando, false, L.lead.faltandoChaves); }; row.appendChild(bg); }
   if (lead.status === 'ganho' && S.repPend[L.dealId]) { var br = el('button', 'forte', 'Escolher representante'); br.type = 'button'; br.onclick = function () { var pd = S.repPend[L.dealId]; L.rep = { arenaId: pd.arenaId, link: pd.link, responsaveis: pd.responsaveis, mensagem: pd.mensagem, dono: null }; mostrarGanhoModal(L); }; row.appendChild(br); }
+  if (!andamento && lead.acoes && lead.acoes.reabrir && S.repPend[L.dealId] == null) { var bre = el('button', 'forte', lead.status === 'ganho' ? 'Tirar o Ganho e reabrir' : 'Reabrir lead'); bre.type = 'button'; bre.disabled = !!L.ocupado; bre.onclick = function () { reabrirLead(L); }; row.appendChild(bre); var dre = el('p', 'sub', lead.status === 'ganho' ? 'Volta para Em andamento. Só dá se ainda não foi para o time de vendas.' : 'Volta para Em andamento, na mesma etapa da cadência.'); rd.appendChild(dre); }
   if (ac.perdido && andamento) { var bp = el('button', 'sec', 'Marcar como Perdido'); bp.type = 'button'; bp.setAttribute('aria-expanded', L.perdidoAberto ? 'true' : 'false'); bp.onclick = function () { L.perdidoAberto = !L.perdidoAberto; renderRodape(L); }; row.appendChild(bp); }
   if (L.perdidoAberto && ac.perdido && andamento) {
     var f = el('div', 'secao'); f.style.marginTop = '8px'; f.appendChild(el('h3', null, 'Por que perdeu?'));
@@ -1861,6 +1862,15 @@ function mostrarConflitos(L, j) {
     function esc(v) { c.escolha = v; b1.disabled = b2.disabled = true; row.appendChild(el('span', 'sub', v === 'atual' ? ' Vai usar o atual.' : ' Vai manter o seu.')); fim(); }
     b1.onclick = function () { esc('atual'); }; b2.onclick = function () { esc('meu'); }; row.appendChild(b1); row.appendChild(b2); lista.appendChild(row);
   });
+}
+// ---- reabrir (04/11): Perdido ou Ganho voltam para Em andamento sem ir ao Agendor; só confirma depois que o Agendor confirmou ----
+async function reabrirLead(L) {
+  if (L.ocupado || S.L !== L) return; var nome = L.lead.titulo || 'este lead'; var eraGanho = L.lead.status === 'ganho';
+  if (!window.confirm((eraGanho ? 'Tirar o Ganho de "' : 'Reabrir "') + nome + '" e voltar para Em andamento?')) return;
+  L.ocupado = true; setEstado(L, '', 'Reabrindo e conferindo no Agendor...'); renderRodape(L);
+  var j = await chamarLead(L, '/reabrir', {}, null, null); L.ocupado = false; if (!j) return;
+  if (j.ok && j.confirmado !== false) { if (j.lead) L.lead = j.lead; L.estado = null; delete S.ocultos[L.dealId]; msg(nome + ' reaberto e conferido no Agendor ✓', 'ok'); renderLead(); carregar(true, 'tarefas'); }
+  else { var t0 = j.mensagem || msgErro(j); setEstado(L, 'erro', t0, function () { reabrirLead(L); }); renderRodape(L); }
 }
 // ---- perdido (otimista) ----
 async function marcarPerdido(L) {
