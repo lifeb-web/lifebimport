@@ -192,6 +192,9 @@ textarea.recup-pend{border:2.5px solid var(--amber)!important;background:var(--a
 .item .fone{grid-column:1 / -1;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;user-select:all;overflow-wrap:anywhere}
 .item .cid{grid-column:1 / -1;font-size:13px;color:var(--muted);font-style:italic}
 .item .nota{grid-column:1 / -1;font-size:13px;font-weight:600;color:var(--magenta);overflow-wrap:anywhere}
+.item .lig-falta{grid-column:1 / -1;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;font-weight:700;color:var(--amber)}.item .lig-falta button{min-height:28px;padding:2px 10px}
+.item .ctx{grid-column:1 / -1;font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.origem-box{border:1.5px solid var(--purple);background:var(--track);border-radius:10px;padding:8px 10px;margin-bottom:8px;font-size:14px}.origem-box h3{font-size:14px;margin:0 0 4px;color:var(--purple)}.origem-box div{overflow-wrap:anywhere}
 .item.aberto{border-color:var(--amber);border-left-color:var(--amber);background:var(--amber-bg)}
 .item .abriu{grid-column:1 / -1;font-size:13px;font-weight:700;color:var(--amber);overflow-wrap:anywhere}
 .col-h .conf{font-size:13px;color:var(--muted)}
@@ -711,7 +714,7 @@ function casaBusca(it, q) {
 
 // ---------- chamadas ----------
 // ---------- resiliência: rede com retry, disjuntor, caixa de saída, versão, relógio do servidor, telemetria ----------
-var PAGINA_VERSAO = '2026-11-04.6';
+var PAGINA_VERSAO = '2026-11-05.1';
 var REDE = { escala: 1, falhas: 0, ultima: 0, desvio: 0 };
 function dormir(ms) { return new Promise(function (r) { setTimeout(r, ms * REDE.escala); }); }
 function jitter(ms) { return ms * (0.5 + Math.random() * 0.5); }
@@ -1037,6 +1040,8 @@ function cartao(it, opts) {
   if (opts.estado) li.appendChild(el('div', 'est ' + it.estado, estadoTxt(it)));
   if (opts.passo && !it.nota && !it.fechaTxt) li.appendChild(el('div', 'pas', feito ? 'Tudo feito ✓' : (it.passoPendente ? 'Próximo: ' + it.passoPendente : '')));
   if (it.nota) li.appendChild(el('div', 'nota', it.nota));
+  if (it.contexto) li.appendChild(el('div', 'ctx', it.contexto));
+  if (it.ligSemResultado && it.ligSemResultado.length) { var lr = el('div', 'lig-falta'); lr.appendChild(el('span', null, 'Falta o resultado da ligação')); var bl = el('button', 'sec', 'Registrar'); bl.type = 'button'; bl.onclick = function () { registrarResultadoLigacao(it, it.ligSemResultado[0], bl); }; lr.appendChild(bl); li.appendChild(lr); }
   if (it.fechaTxt) li.appendChild(el('div', 'est andamento', it.fechaTxt));
   if (opts.texto) li.appendChild(el('div', 'pas', opts.texto(it)));
   var extra = el('div', 'extra');
@@ -1749,6 +1754,7 @@ function renderLead() {
     s4.appendChild(bx);
   }); if (ac.campos) { var lc = el('div', 'linha-cnpj'); var cj = (lead.empresa || {}).cnpj; lc.appendChild(el('span', 'sub', cj ? 'CNPJ ' + fmtCnpj(cj) : 'Sem CNPJ cadastrado')); var bc = el('button', 'sec trocar-contato', cj ? 'Trocar CNPJ' : 'Adicionar CNPJ'); bc.type = 'button'; bc.setAttribute('data-fk', 'trocar-cnpj'); bc.onclick = function () { trocarCnpj(L); }; lc.appendChild(bc); lc.style.cssText = 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px'; s4.appendChild(lc); } corpo.appendChild(s4);
   var pxa = proximaAcaoEl(L); if (pxa) corpo.appendChild(pxa);
+  var ob = secaoOrigem(L); if (ob) corpo.appendChild(ob);
   corpo.appendChild(secaoTarefas(L)); // o que fazer agora vem logo depois de quem ligar
   // 2) empresa
   var emp = lead.empresa || {}; var s3 = el('details', 'secao sec-empresa'); s3.open = lead.completo === false; s3.appendChild(el('summary', null, 'Empresa e qualificação')); var dl = el('dl');
@@ -1764,6 +1770,7 @@ function renderLead() {
     var sm = el('summary', null, 'Dados do lead (opcional)'); sm.style.cssText = 'cursor:pointer;font-weight:800;color:var(--purple);min-height:32px'; dt.appendChild(sm);
     dt.appendChild(el('p', 'sub', 'Se já souber, pode ir completando. Nada aqui é obrigatório.'));
     L.refs.receita = el('div'); dt.appendChild(L.refs.receita); renderReceita(L);
+    autoReceita(L);
     var grade = null; todosCampos(lead).forEach(function (f) { if (f.par) { if (!grade) { grade = el('div', 'grade2'); dt.appendChild(grade); } grade.appendChild(campoEl(L, f, 'lf_', false)); } else { grade = null; dt.appendChild(campoEl(L, f, 'lf_', false)); } });
     corpo.appendChild(dt);
   }
@@ -1827,6 +1834,14 @@ function campoEl(L, f, pref, req, marcar) {
   wrap.appendChild(inp); wrap.appendChild(err); pos.forEach(function (x) { wrap.appendChild(x); }); if (f.tipo === 'cnpj') wrap.appendChild(el('div', 'dica-c', 'Ao sair do campo, eu consulto a Receita e posso preencher o resto.'));
   if (marcar) mostrarErro();
   return wrap;
+}
+// 04/11 (Robert: "se temos o CNPJ temos tudo isso"): ao abrir o lead/Ganho com CNPJ válido e campos da Receita vazios (rua, número, bairro...), consulta e PREENCHE sozinho (só campos vazios); o SDR só confere e salva
+function autoReceita(L) {
+  if (!L || L.autoReceitaFeita || !acoesDe(L).campos) return;
+  var d = soDigitos(valorAtual('e.cnpj')); if (!cnpjValido(d)) return;
+  var vazios = ['e.end.rua', 'e.end.numero', 'e.end.bairro', 'e.end.cidade', 'e.end.uf', 'e.end.cep', 'e.razao_social', 'e.segmento'].some(function (k) { return campoDeK(L.lead, k) && normVal(k, valorAtual(k)) === ''; });
+  if (!vazios) return; L.autoReceitaFeita = true;
+  consultarReceita(L).then(function () { if (S.L !== L) return; var r = L.receita; if (r && r.propostas && r.propostas.length) aplicarReceita(L); }, function () {});
 }
 async function consultarReceita(L) {
   var d = soDigitos(valorAtual('e.cnpj')); if (!cnpjValido(d) || L.receitaCnpj === d) return; L.receitaCnpj = d; L.receita = { carregando: true }; renderReceita(L);
@@ -2024,6 +2039,7 @@ function renderGanho(L) {
   if (L.ganhoVinculo) c.appendChild(el('p', 'pend', 'Esta empresa não está vinculada. Vincule no Agendor (isso não trava o resto).'));
   if ((L.ganhoSoltos || []).length) c.appendChild(el('p', 'pend', 'Também falta (precisa ser resolvido fora desta tela): ' + L.ganhoSoltos.join('; ') + '.'));
   L.refs.receita = el('div'); c.appendChild(L.refs.receita); renderReceita(L);
+  autoReceita(L);
   var grade = null;
   var ordemG = GANHO_ORDEM.filter(function (k) { return (L.ganhoReq || {})[k]; }).concat(GANHO_ORDEM.filter(function (k) { return !(L.ganhoReq || {})[k]; })); // o que falta vem primeiro
   L.refs.gFalta = el('p', 'pend'); L.refs.gFalta.setAttribute('role', 'status'); c.appendChild(L.refs.gFalta);
@@ -2177,6 +2193,18 @@ function linhaTarefa(L, t, destaque, pode) {
   }
   return r;
 }
+// 04/11: "De onde veio este lead": a nota da Recuperação/Reativação aparece no topo do painel, aberta (o SDR não precisa abrir o Agendor para saber quem perdeu, quando e por quê)
+function secaoOrigem(L) {
+  var ts = (L.lead && L.lead.tarefas) || []; var t = ts.filter(function (x) { return x.feita && /^\s*\[(Recuperacao|Reativacao)/i.test(x.texto || ''); })[0]; if (!t) return null;
+  var linhas = String(t.texto).split('\n').map(function (x) { return x.trim(); }).filter(Boolean); linhas.shift(); if (!linhas.length) return null;
+  var box = el('div', 'origem-box'); box.appendChild(el('h3', null, 'De onde veio este lead'));
+  linhas.slice(0, 4).forEach(function (ln) {
+    var m = ln.match(/^(.*?)(https:\/\/\S+)\s*$/); var d = el('div');
+    if (m && /^https:\/\/(beta|web)\.agendor\.com\.br\//.test(m[2])) { d.appendChild(document.createTextNode(m[1])); var a = el('a', null, 'abrir negócio original'); a.href = m[2]; a.target = '_blank'; a.rel = 'noopener noreferrer'; d.appendChild(a); } else d.textContent = ln;
+    box.appendChild(d);
+  });
+  return box;
+}
 function secaoTarefas(L) {
   var s = el('div', 'secao secao-tarefas'); s.appendChild(el('h3', null, 'Tarefas')); var todas = L.lead.tarefas || []; var pode = !!acoesDe(L).tarefas && L.lead.status === 'andamento';
   var abertas = todas.filter(function (t) { return !t.feita; }).sort(function (a, b) { return (b.atrasada ? 1 : 0) - (a.atrasada ? 1 : 0) || String(a.venc).localeCompare(String(b.venc)); }); var feitas = todas.filter(function (t) { return t.feita; });
@@ -2302,6 +2330,27 @@ function voltarCadencia(it, botao) {
     if (j && j._status === 401) { fechar(); sair('Senha não confere. Entre de novo.'); return; }
     if (j && j.ok) { fechar(); invalidaLead(it.dealId); msg(j.mensagem || 'Lead voltou para a cadência.', 'ok'); carregar(true); return; }
     ok.disabled = false; no.disabled = false; ok.textContent = 'Tentar de novo'; erro.textContent = (j && j.mensagem) || 'Não consegui agora. O lead continua no Fim da cadência. Tente de novo.'; erro.classList.remove('hide');
+  };
+  linha.appendChild(ok); linha.appendChild(no); cx.appendChild(linha); document.body.appendChild(ov); var p0 = grupo.querySelector('input'); if (p0) p0.focus();
+}
+// 04/11: ligação concluída fora da Hoje (Agendor direto) ficava sem resultado: o cartão avisa e o SDR registra com um toque
+function registrarResultadoLigacao(it, taskId, botao) {
+  var abriu = botao || document.activeElement; var ov = el('div', 'lig-ov'); ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Resultado da ligação');
+  var cx = el('div', 'lig-cx'); ov.appendChild(cx);
+  function fechar() { document.removeEventListener('keydown', esc, true); if (ov.parentNode) ov.parentNode.removeChild(ov); try { if (abriu && abriu.focus && document.body.contains(abriu)) abriu.focus(); } catch (e) {} }
+  function esc(ev) { if (ev.key === 'Escape') { ev.stopPropagation(); fechar(); } }
+  document.addEventListener('keydown', esc, true); ov.addEventListener('mousedown', function (ev) { if (ev.target === ov) fechar(); });
+  cx.appendChild(el('h3', null, 'Como foi a ligação? *')); cx.appendChild(el('p', 'sub', it.empresa || ''));
+  var sel = ''; var grupo = el('div', 'lig-ops'); grupo.setAttribute('role', 'radiogroup'); var erro = el('p', 'hide'); erro.style.color = 'var(--red)'; erro.style.fontWeight = '700'; erro.setAttribute('role', 'alert');
+  LIG_RESULTADOS.forEach(function (r) { var l = el('label', 'lig-op'); var rb = el('input'); rb.type = 'radio'; rb.name = 'ligres2'; rb.value = r[0]; rb.onchange = function () { sel = r[0]; ok.disabled = false; }; l.appendChild(rb); l.appendChild(document.createTextNode(' ' + r[1])); grupo.appendChild(l); });
+  cx.appendChild(grupo); var nt = el('input'); nt.type = 'text'; nt.maxLength = 150; nt.placeholder = 'Observação (opcional)'; nt.setAttribute('aria-label', 'Observação da ligação'); nt.style.width = '100%'; nt.style.marginTop = '8px'; cx.appendChild(nt); cx.appendChild(erro);
+  var linha = el('div', 'row'); linha.style.marginTop = '10px'; var ok = el('button', 'forte', 'Registrar resultado'); ok.type = 'button'; ok.disabled = true; var no = el('button', 'sec', 'Cancelar'); no.type = 'button'; no.onclick = fechar;
+  ok.onclick = async function () {
+    if (!sel) return; ok.disabled = true; no.disabled = true; ok.textContent = 'Registrando...'; erro.classList.add('hide'); var corpo = { ligacao: { resultado: sel } }; if (nt.value.trim()) corpo.ligacao.nota = nt.value.trim(); var j;
+    try { j = await api('/lead/' + it.dealId + '/tarefa/' + taskId + '/resultado', corpo, null, null, { idem: novaChave() }); } catch (e) { j = { _status: 0, ok: false }; }
+    if (j && j._status === 401) { fechar(); sair('Senha não confere. Entre de novo.'); return; }
+    if (j && j.ok) { fechar(); invalidaLead(it.dealId); msg(j.mensagem || 'Resultado registrado.', 'ok'); carregar(true); return; }
+    ok.disabled = false; no.disabled = false; ok.textContent = 'Tentar de novo'; erro.textContent = (j && j.mensagem) || 'Não consegui agora. Tente de novo.'; erro.classList.remove('hide');
   };
   linha.appendChild(ok); linha.appendChild(no); cx.appendChild(linha); document.body.appendChild(ov); var p0 = grupo.querySelector('input'); if (p0) p0.focus();
 }
