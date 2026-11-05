@@ -1,0 +1,842 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<title>Ecossistema Life B</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="Vendas, SDR, Bia, motores, dados e regras: como tudo se conecta na Life B Importadora.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap">
+<style>
+:root{
+  --bg:#f4f1f9; --card:#ffffff; --line:#e6e1f0; --fg:#1d1630; --muted:#554d6e; --faint:#7d7596;
+  --purple:#704B9B; --purple-d:#4f3374; --purple-bg:#f0eaf8; --mag:#E92085; --mag-t:#b5136a; --mag-bg:#fde8f2;
+  --green:#22C35D; --green-t:#0f6b33; --green-bg:#e3f4ea; --amber-t:#8a4a00; --amber-bg:#fff1d9; --red-t:#a31515; --red-bg:#fdeaea;
+  --gray-bg:#eeebf4; --link:#4f3374; --onp:#ffffff; --shadow:0 1px 2px rgba(60,40,100,.07),0 8px 24px -16px rgba(60,40,100,.25);
+  --hero1:#4f3374; --hero2:#704B9B; --font:'Montserrat',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#130f1d; --card:#1c1730; --line:#332b50; --fg:#ece9f5; --muted:#b9b2d0; --faint:#8d86a8;
+  --purple:#a587d1; --purple-d:#c9b3ee; --purple-bg:#2a2146; --mag:#ff4fa3; --mag-t:#ff86c0; --mag-bg:#3a1630;
+  --green:#3ddc7e; --green-t:#6fe39b; --green-bg:#12301f; --amber-t:#f2b266; --amber-bg:#3a2a12; --red-t:#ff9a9a; --red-bg:#3b1717;
+  --gray-bg:#262040; --link:#c9b3ee; --onp:#130f1d; --shadow:none; --hero1:#241a3d; --hero2:#3a2766; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#130f1d; --card:#1c1730; --line:#332b50; --fg:#ece9f5; --muted:#b9b2d0; --faint:#8d86a8;
+  --purple:#a587d1; --purple-d:#c9b3ee; --purple-bg:#2a2146; --mag:#ff4fa3; --mag-t:#ff86c0; --mag-bg:#3a1630;
+  --green:#3ddc7e; --green-t:#6fe39b; --green-bg:#12301f; --amber-t:#f2b266; --amber-bg:#3a2a12; --red-t:#ff9a9a; --red-bg:#3b1717;
+  --gray-bg:#262040; --link:#c9b3ee; --onp:#130f1d; --shadow:none; --hero1:#241a3d; --hero2:#3a2766; color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:84px}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:16px;line-height:1.62;-webkit-text-size-adjust:100%}
+a{color:var(--link)}
+h1,h2,h3,h4{line-height:1.25;text-wrap:balance;margin:0}
+p{margin:0 0 .7em}
+.logo-escuro{display:none}
+:root[data-theme="dark"] .logo-claro{display:none}
+:root[data-theme="dark"] .logo-escuro{display:inline-block}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .logo-claro{display:none}:root:not([data-theme="light"]) .logo-escuro{display:inline-block}}
+/* barra de marca */
+.mast{position:sticky;top:0;z-index:30;background:var(--card);border-bottom:1px solid var(--line);box-shadow:var(--shadow)}
+.mast::after{content:"";display:block;height:3px;background:linear-gradient(90deg,var(--purple) 0%,var(--mag) 70%,var(--green) 100%)}
+.mast .in{max-width:1280px;margin:0 auto;display:flex;align-items:center;gap:14px;padding:8px max(16px,env(safe-area-inset-right)) 8px max(16px,env(safe-area-inset-left))}
+.mast img{height:34px;width:auto;display:block}
+.mast .nm{font-weight:800;font-size:15px;color:var(--purple-d);letter-spacing:.2px;white-space:nowrap}
+.mast .nm span{color:var(--mag-t)}
+.grow{flex:1}
+.btn{font:inherit;font-size:13px;font-weight:700;background:var(--card);color:var(--fg);border:1.5px solid var(--line);border-radius:10px;padding:8px 14px;cursor:pointer;min-height:40px}
+.btn:hover{border-color:var(--purple)}
+.btn:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--mag);outline-offset:2px}
+#menuBtn{display:none}
+/* hero */
+.hero{background:linear-gradient(135deg,var(--hero1),var(--hero2));color:#fff;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-60px;top:-60px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(233,32,133,.55),rgba(233,32,133,0) 70%)}
+.hero .in{max-width:1280px;margin:0 auto;padding:44px max(16px,env(safe-area-inset-right)) 40px max(16px,env(safe-area-inset-left));position:relative;z-index:1}
+.hero .eyebrow{display:inline-block;font-size:12px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;background:rgba(255,255,255,.16);border-radius:999px;padding:4px 12px}
+.hero h1{font-size:clamp(30px,5vw,46px);font-weight:800;margin:14px 0 10px;letter-spacing:-.5px;color:#fff}
+.hero p{max-width:70ch;color:rgba(255,255,255,.92);font-size:17px;margin:0}
+.hero .meta{margin-top:18px;display:flex;flex-wrap:wrap;gap:8px;font-size:13px}
+.hero .meta span{background:rgba(255,255,255,.14);border-radius:999px;padding:4px 12px}
+/* layout */
+.shell{max-width:1280px;margin:0 auto;display:grid;grid-template-columns:272px minmax(0,1fr);gap:36px;padding:0 max(16px,env(safe-area-inset-right)) 0 max(16px,env(safe-area-inset-left))}
+nav.side{position:sticky;top:60px;align-self:start;max-height:calc(100vh - 60px);overflow:auto;padding:24px 4px 24px 0}
+.search{width:100%;font:inherit;font-size:14px;padding:10px 12px;border-radius:10px;border:1.5px solid var(--line);background:var(--card);color:var(--fg);margin-bottom:12px}
+nav.side ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:1px;counter-reset:n}
+nav.side a{display:block;text-decoration:none;color:var(--muted);font-size:13.5px;font-weight:600;padding:7px 10px;border-radius:9px;border-left:3px solid transparent}
+nav.side a:hover{background:var(--purple-bg);color:var(--fg)}
+nav.side a.on{background:var(--purple-bg);color:var(--purple-d);border-left-color:var(--mag)}
+nav.side .grp{font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--faint);padding:12px 10px 4px}
+main{min-width:0;padding:30px 0 60px}
+section.sec{margin-bottom:54px}
+.sec>h2{font-size:clamp(22px,3vw,29px);font-weight:800;color:var(--purple-d);display:flex;gap:12px;align-items:center;margin-bottom:8px}
+.sec>h2 .n{flex:0 0 auto;font-size:13px;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--purple),var(--mag));border-radius:999px;padding:3px 11px;letter-spacing:.5px}
+:root[data-theme="dark"] .sec>h2 .n{color:#130f1d}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .sec>h2 .n{color:#130f1d}}
+.lead{color:var(--muted);max-width:74ch;margin-bottom:18px}
+h3{font-size:18px;font-weight:700;margin:28px 0 10px}
+h4{font-size:15.5px;font-weight:700;margin:0 0 6px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;box-shadow:var(--shadow);min-width:0}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.card p:last-child{margin-bottom:0}
+.card ul,.card ol{margin:0;padding-left:1.15em}.card li{margin-bottom:.3em}
+.tag{display:inline-block;font-size:11.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;border-radius:999px;padding:2px 9px;margin-right:6px;vertical-align:middle}
+.t-purple{background:var(--purple-bg);color:var(--purple-d)}.t-green{background:var(--green-bg);color:var(--green-t)}
+.t-mag{background:var(--mag-bg);color:var(--mag-t)}.t-amber{background:var(--amber-bg);color:var(--amber-t)}
+.t-gray{background:var(--gray-bg);color:var(--muted)}.t-red{background:var(--red-bg);color:var(--red-t)}
+.note{border-radius:12px;padding:12px 16px;margin:14px 0;font-size:14.5px;background:var(--purple-bg);border:1px solid var(--line)}
+.note.warn{background:var(--amber-bg)}.note.bad{background:var(--red-bg)}.note.ok{background:var(--green-bg)}
+.note strong:first-child{display:block;margin-bottom:2px}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th,td{padding:10px 14px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+th{background:var(--purple-bg);color:var(--purple-d);font-size:12.5px;letter-spacing:.4px;text-transform:uppercase}
+tr:last-child td{border-bottom:0}
+td.k{font-weight:700}
+.tw table{min-width:560px}
+ol.steps{list-style:none;counter-reset:s;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+ol.steps>li{counter-increment:s;position:relative;padding:12px 16px 12px 56px;background:var(--card);border:1px solid var(--line);border-radius:12px;min-width:0}
+ol.steps>li::before{content:counter(s);position:absolute;left:14px;top:11px;width:30px;height:30px;border-radius:50%;background:var(--purple);color:#fff;font-weight:800;font-size:14px;display:grid;place-items:center}
+:root[data-theme="dark"] ol.steps>li::before{color:#130f1d}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) ol.steps>li::before{color:#130f1d}}
+.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
+.flow .b{flex:1 1 150px;min-width:0;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:14px}
+.flow .b b{display:block;color:var(--purple-d)}.flow .b.m{border-color:var(--mag)}.flow .b.g{border-color:var(--green)}
+.flow .ar{align-self:center;color:var(--mag-t);font-weight:800}
+.stage{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0;padding:0;list-style:none}
+.stage li{background:var(--purple-bg);color:var(--purple-d);font-size:13px;font-weight:600;border-radius:8px;padding:4px 10px;margin:0}
+.stage li.fim{background:var(--gray-bg);color:var(--muted)}
+.auto{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 20px;margin-bottom:12px;min-width:0;box-shadow:var(--shadow)}
+.auto>header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.auto h4{font-size:16.5px;margin:0 auto 0 0;color:var(--purple-d)}
+.auto dl{display:grid;grid-template-columns:150px minmax(0,1fr);gap:7px 14px;margin:0;font-size:14.5px}
+.auto dt{font-weight:800;color:var(--muted);font-size:12px;letter-spacing:.4px;text-transform:uppercase;padding-top:3px}
+.auto dd{margin:0;min-width:0}.auto dd.never{color:var(--red-t)}
+details{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:8px}
+details>summary{cursor:pointer;font-weight:700;padding:13px 16px;list-style:none;display:flex;gap:10px;align-items:center}
+details>summary::before{content:"+";font-weight:800;color:var(--mag-t);width:18px}
+details[open]>summary::before{content:"\2212"}
+details>div{padding:0 16px 14px 44px}
+summary::-webkit-details-marker{display:none}
+.svgw{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
+.svgw svg{display:block;min-width:700px;width:100%;height:auto}
+.svgw text{font-family:var(--font)}
+.hide{display:none!important}
+.count{font-size:12.5px;color:var(--muted);margin:0 0 10px;min-height:1em}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.86em;background:var(--gray-bg);padding:1px 6px;border-radius:6px;overflow-wrap:anywhere}
+footer.foot{background:var(--card);border-top:1px solid var(--line)}
+footer.foot .in{max-width:1280px;margin:0 auto;padding:26px max(16px,env(safe-area-inset-right)) 34px max(16px,env(safe-area-inset-left));display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;color:var(--muted);font-size:14px}
+footer.foot img{height:38px}
+footer.foot p{margin:0 0 4px}
+@media (max-width:1020px){
+  .shell{grid-template-columns:minmax(0,1fr);gap:0}
+  nav.side{position:fixed;inset:0;z-index:40;background:var(--bg);max-height:none;padding:calc(18px + env(safe-area-inset-top)) max(16px,env(safe-area-inset-left)) 24px;display:none}
+  nav.side.open{display:block}
+  #menuBtn{display:inline-block}
+  .g3{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:640px){
+  .g2,.g3{grid-template-columns:minmax(0,1fr)}
+  .auto dl{grid-template-columns:minmax(0,1fr)}.auto dt{padding-top:6px}
+  th,td{padding:8px 10px}.mast .nm{font-size:13px}.hero .in{padding-top:30px;padding-bottom:28px}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+@media (max-width:640px){.mast .in{gap:8px}.mast img{height:24px;flex:0 0 auto}.mast .nm{font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis}.mast .btn{padding:6px 9px;font-size:12px;flex:0 0 auto}}
+@media (max-width:400px){.mast .nm span{display:none}}
+.dica-svg{display:none}
+@media (max-width:640px){.dica-svg{display:block;margin:6px 2px 0;font-size:12.5px;color:var(--muted);text-align:center}}
+@media print{.mast,nav.side{display:none}.shell{display:block}}
+</style>
+</head>
+<body>
+
+<header class="mast"><div class="in">
+  <button class="btn" id="menuBtn" aria-expanded="false" aria-controls="menu">Índice</button>
+  <img class="logo-claro" src="/logo-lifeb.png" alt="Life B">
+  <img class="logo-escuro" src="/logo-lifeb-escuro.png" alt="Life B">
+  <span class="nm">Ecossistema <span>Life B</span></span>
+  <span class="grow"></span>
+  <button class="btn" data-toggle-theme aria-label="Alternar entre tema claro e escuro">Tema</button>
+</div></header>
+
+<div class="hero"><div class="in">
+  <span class="eyebrow">Guia do projeto</span>
+  <h1>Ecossistema Life B</h1>
+  <p>Vendas, SDR, Bia, motores, dados e regras: como tudo se conecta. Cada termo técnico vem com a explicação em linguagem simples ao lado.</p>
+  <div class="meta"><span>Atualizado em 05/11/2026</span></div>
+</div></div>
+
+<div class="shell">
+<nav class="side" id="menu" aria-label="Índice do guia">
+  <input class="search" id="q" type="search" placeholder="Buscar neste guia" aria-label="Buscar neste guia">
+  <div class="count" id="count" aria-live="polite"></div>
+  <ol id="toc">
+    <li class="grp">Visão geral</li>
+    <li><a href="#visao">1. O ecossistema</a></li>
+    <li><a href="#entrada">2. Captação e entrada de leads</a></li>
+    <li class="grp">Comercial</li>
+    <li><a href="#funis">3. Funis do Agendor</a></li>
+    <li><a href="#cadencia">4. Cadência do SDR</a></li>
+    <li><a href="#hoje">5. Páginas Hoje e Lista</a></li>
+    <li><a href="#voltas">6. Três famílias de volta</a></li>
+    <li class="grp">Bia e automações</li>
+    <li><a href="#motores">7. Motores e automações</a></li>
+    <li><a href="#tarefas">8. Nunca negócio sem tarefa</a></li>
+    <li><a href="#recebe">9. O que cada papel recebe</a></li>
+    <li><a href="#manual">10. Proteções contra ação manual</a></li>
+    <li class="grp">Dados e demais sistemas</li>
+    <li><a href="#dash">11. Dash Geral</a></li>
+    <li><a href="#painelrep">12. Painel do Representante</a></li>
+    <li><a href="#outros">13. Demais componentes</a></li>
+    <li class="grp">Regras e referência</li>
+    <li><a href="#regras">14. Regras de ouro</a></li>
+    <li><a href="#seguranca">15. Segurança e confiabilidade</a></li>
+    <li><a href="#estado">16. Estado atual dos interruptores</a></li>
+    <li><a href="#glossario">17. Glossário e dúvidas</a></li>
+  </ol>
+  <button class="btn" style="width:100%;margin-top:14px" data-toggle-theme>Alternar tema claro/escuro</button>
+</nav>
+
+<main id="conteudo">
+
+<!-- 1 -->
+<section class="sec" id="visao">
+<h2><span class="n">1</span>O ecossistema</h2>
+<p class="lead">A Life B Importadora vende para drogarias e supermercados por meio de representantes de campo. Em volta dessa venda existe um conjunto de sistemas: o CRM (Agendor) como fonte da verdade, a assistente Bia, páginas de trabalho, painéis de números e aplicativos de apoio. Esta seção mostra o conjunto; as seguintes explicam cada peça.</p>
+
+<div class="svgw item" role="img" aria-label="Diagrama do ecossistema: captação alimenta o Worker da Bia e o Agendor; Bia fala com a equipe por WhatsApp; páginas Hoje, Lista e Painel do Representante usam o Worker e o Agendor; dados alimentam o Dash Geral; ERP, Solicita e e-commerce são sistemas ao lado">
+<svg viewBox="0 0 960 560" xmlns="http://www.w3.org/2000/svg" font-size="12.5">
+  <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--mag)"/></marker></defs>
+  <!-- colunas -->
+  <text x="20" y="22" font-weight="800" fill="var(--faint)" font-size="11" letter-spacing="1">ENTRADA</text>
+  <text x="300" y="22" font-weight="800" fill="var(--faint)" font-size="11" letter-spacing="1">NÚCLEO</text>
+  <text x="640" y="22" font-weight="800" fill="var(--faint)" font-size="11" letter-spacing="1">PESSOAS E TELAS</text>
+  <!-- entrada -->
+  <g><rect x="20" y="34" width="210" height="62" rx="12" fill="var(--card)" stroke="var(--line)"/><text x="34" y="58" font-weight="800" fill="var(--purple-d)">Páginas e anúncios</text><text x="34" y="77" fill="var(--muted)">LPs, formulários, Meta Ads</text></g>
+  <g><rect x="20" y="112" width="210" height="62" rx="12" fill="var(--card)" stroke="var(--line)"/><text x="34" y="136" font-weight="800" fill="var(--purple-d)">Listas de empresas</text><text x="34" y="155" fill="var(--muted)">Planilha subida pela Lista</text></g>
+  <g><rect x="20" y="190" width="210" height="62" rx="12" fill="var(--card)" stroke="var(--line)" stroke-dasharray="5 4"/><text x="34" y="214" font-weight="800" fill="var(--muted)">GS Engage (legado)</text><text x="34" y="233" fill="var(--muted)">Parado em 19/10, só histórico</text></g>
+  <!-- nucleo -->
+  <g><rect x="300" y="34" width="280" height="86" rx="14" fill="var(--purple-bg)" stroke="var(--purple)"/><text x="318" y="60" font-weight="800" fill="var(--purple-d)" font-size="14">Worker da Bia</text><text x="318" y="80" fill="var(--fg)">Regras, rotinas por horário, avisos,</text><text x="318" y="98" fill="var(--fg)">repasse SDR → Arena, motores</text></g>
+  <g><rect x="300" y="150" width="280" height="86" rx="14" fill="var(--card)" stroke="var(--mag)" stroke-width="2"/><text x="318" y="176" font-weight="800" fill="var(--mag-t)" font-size="14">Agendor (CRM)</text><text x="318" y="196" fill="var(--fg)">Empresas, pessoas, negócios, tarefas.</text><text x="318" y="214" fill="var(--fg)">Fonte da verdade</text></g>
+  <g><rect x="300" y="266" width="280" height="62" rx="14" fill="var(--card)" stroke="var(--line)"/><text x="318" y="292" font-weight="800" fill="var(--purple-d)">n8n (conversa da Bia)</text><text x="318" y="311" fill="var(--muted)">Entende a mensagem e chama o Worker</text></g>
+  <g><rect x="300" y="358" width="280" height="62" rx="14" fill="var(--card)" stroke="var(--line)"/><text x="318" y="384" font-weight="800" fill="var(--purple-d)">Banco de dados (D1)</text><text x="318" y="403" fill="var(--muted)">Cópia dos negócios para os painéis</text></g>
+  <!-- saida -->
+  <g><rect x="640" y="34" width="300" height="62" rx="12" fill="var(--card)" stroke="var(--line)"/><text x="654" y="58" font-weight="800" fill="var(--purple-d)">SDR: páginas Hoje e Lista</text><text x="654" y="77" fill="var(--muted)">Cadência, qualificação, repasse</text></g>
+  <g><rect x="640" y="108" width="300" height="62" rx="12" fill="var(--card)" stroke="var(--line)"/><text x="654" y="132" font-weight="800" fill="var(--purple-d)">Representantes (WhatsApp)</text><text x="654" y="151" fill="var(--muted)">Cards, cobranças, Painel do Representante</text></g>
+  <g><rect x="640" y="182" width="300" height="62" rx="12" fill="var(--card)" stroke="var(--line)"/><text x="654" y="206" font-weight="800" fill="var(--purple-d)">Gestão (WhatsApp)</text><text x="654" y="225" fill="var(--muted)">Aprova cards, recebe alertas e cópias</text></g>
+  <g><rect x="640" y="358" width="300" height="62" rx="12" fill="var(--card)" stroke="var(--line)"/><text x="654" y="382" font-weight="800" fill="var(--purple-d)">Dash Geral e telão</text><text x="654" y="401" fill="var(--muted)">Vendas, LTV, RFM, SDR, Ads, GA4, Bia</text></g>
+  <!-- ao lado -->
+  <text x="20" y="462" font-weight="800" fill="var(--faint)" font-size="11" letter-spacing="1">SISTEMAS AO LADO (independentes da Bia)</text>
+  <g><rect x="20" y="474" width="215" height="62" rx="12" fill="var(--card)" stroke="var(--line)"/><text x="34" y="498" font-weight="800" fill="var(--purple-d)">ERP Winthor</text><text x="34" y="517" fill="var(--muted)">Análise mensal x Agendor</text></g>
+  <g><rect x="250" y="474" width="215" height="62" rx="12" fill="var(--card)" stroke="var(--line)"/><text x="264" y="498" font-weight="800" fill="var(--purple-d)">Life B Solicita</text><text x="264" y="517" fill="var(--muted)">Material, comodato, promotoria</text></g>
+  <g><rect x="480" y="474" width="215" height="62" rx="12" fill="var(--card)" stroke="var(--line)"/><text x="494" y="498" font-weight="800" fill="var(--purple-d)">E-commerce Yanmei</text><text x="494" y="517" fill="var(--muted)">Catálogo e vendas online</text></g>
+  <g><rect x="710" y="474" width="230" height="62" rx="12" fill="var(--card)" stroke="var(--line)"/><text x="724" y="498" font-weight="800" fill="var(--purple-d)">SuperAgos e kits</text><text x="724" y="517" fill="var(--muted)">Feira, treinamento, apresentações</text></g>
+  <!-- setas -->
+  <g stroke="var(--mag)" stroke-width="2" fill="none" marker-end="url(#ah)">
+    <path d="M230 65 H300"/><path d="M230 143 H262 V100 H300"/>
+    <path d="M440 120 V150"/><path d="M440 236 V266" marker-start="url(#ah)"/>
+    <path d="M580 77 H640"/><path d="M580 190 H610 V139 H640"/><path d="M580 200 H640"/>
+    <path d="M440 328 V358" stroke-dasharray="1 0"/><path d="M580 389 H640"/>
+  </g>
+  <g stroke="var(--faint)" stroke-width="1.5" fill="none" stroke-dasharray="5 4"><path d="M230 221 H262 V105 H300"/></g>
+  <text x="248" y="312" font-size="11" fill="var(--faint)" transform="rotate(-90 248 312)"></text>
+</svg></div>
+<p class="dica-svg">Deslize o diagrama para o lado para ver tudo.</p>
+<p class="count" style="margin-top:8px">Setas cheias: fluxo de dados e avisos. Tracejado: legado, só histórico.</p>
+
+<h3>Componentes, onde vivem e quem usa</h3>
+<div class="tw item"><table>
+<tr><th>Componente</th><th>O que é</th><th>Onde vive</th><th>Quem usa</th></tr>
+<tr><td class="k">Agendor</td><td>CRM: empresas, pessoas, negócios, tarefas, funis. Fonte da verdade.</td><td>Agendor (agendor.com.br)</td><td>SDR, Representantes, Gestão</td></tr>
+<tr><td class="k">Worker da Bia (<code>gs-agendor-worker</code>)</td><td>Programa que roda 24 horas na nuvem: regras, rotinas por horário, avisos, repasses.</td><td>Cloudflare Workers, com memória em KV</td><td>Ninguém abre direto; todos recebem o resultado</td></tr>
+<tr><td class="k">n8n + WhatsApp</td><td>Cérebro de conversa da Bia: entende a mensagem e escolhe a ação.</td><td>n8n, ligado ao WhatsApp</td><td>Representantes, SDR e Gestão por WhatsApp</td></tr>
+<tr><td class="k">Página Hoje</td><td>Mesa de trabalho do SDR.</td><td><code>projetojlbv.com.br/hoje/</code></td><td>SDR</td></tr>
+<tr><td class="k">Página Lista</td><td>Subir planilha de leads.</td><td><code>projetojlbv.com.br/lista/</code></td><td>SDR</td></tr>
+<tr><td class="k">Painel do Representante</td><td>Carteira ao vivo de cada representante.</td><td><code>projetojlbv.com.br/rep/dash/</code></td><td>Representantes</td></tr>
+<tr><td class="k">Dash Geral e telão</td><td>Números da empresa.</td><td><code>projetojlbv.com.br/dash/geral/</code></td><td>Gestão, equipe comercial</td></tr>
+<tr><td class="k">Páginas de captação</td><td>LPs e formulários que geram leads Inbound.</td><td><code>projetojlbv.com.br</code> (várias rotas)</td><td>Público externo</td></tr>
+<tr><td class="k">GS Engage</td><td>Ferramenta antiga de prospecção. Parada em 19/10/2026.</td><td>Serviço externo, só histórico</td><td>Ninguém (legado)</td></tr>
+<tr><td class="k">Demais componentes</td><td>ERP, Solicita, e-commerce, SuperAgos, kits e apresentações.</td><td>Descritos na seção 13</td><td>Descritos na seção 13</td></tr>
+</table></div>
+
+<h3>Como o lead anda pelo sistema</h3>
+<div class="flow item">
+  <div class="b"><b>Entrada</b>Formulário da página, lista subida ou indicação</div><span class="ar">→</span>
+  <div class="b"><b>SDR</b>Cadência de contatos no Outbound ou no Inbound</div><span class="ar">→</span>
+  <div class="b g"><b>Qualificado</b>Ganho no SDR. A Bia confere e cria o negócio no Arena</div><span class="ar">→</span>
+  <div class="b m"><b>Arena</b>Representante vende. Ganho aqui é venda</div><span class="ar">→</span>
+  <div class="b"><b>Pós-venda</b>Ciclos de reposição</div><span class="ar">→</span>
+  <div class="b"><b>Volta</b>Quem parou de repor volta ao SDR</div>
+</div>
+
+<h3>Quem usa o quê, por papel</h3>
+<div class="tw item"><table>
+<tr><th>Papel</th><th>Função</th><th>O que usa</th></tr>
+<tr><td class="k">Gestão / Administrador</td><td>Decide o que liga e o que pausa; aprova os cards dos motores; vê todos os números. Administradores têm visão completa do pipeline de todos os representantes e podem agir em qualquer lead do time.</td><td>WhatsApp com a Bia (comandos de status e pausa, aprovações, alertas), Dash Geral, Agendor.</td></tr>
+<tr><td class="k">SDR</td><td>Faz o primeiro contato e qualifica o lead antes de passar ao representante.</td><td>Páginas Hoje e Lista; WhatsApp com a Bia. Trabalha tudo na Hoje, sem precisar abrir o Agendor.</td></tr>
+<tr><td class="k">Representante</td><td>Vende no Arena e cuida do Pós-venda e da Reativação.</td><td>WhatsApp com a Bia (cobranças, resumo do dia, registrar atividade), Painel do Representante, Agendor.</td></tr>
+<tr><td class="k">Equipe comercial</td><td>Quem acompanha resultado e campanhas.</td><td>Dash Geral e telão.</td></tr>
+<tr><td class="k">Conta "Sistema"</td><td>Conta técnica do Agendor usada pelas automações e dona dos negócios de Grandes Contas.</td><td>Nenhuma pessoa a usa; tarefas finalizadas por ela não contam como trabalho do SDR.</td></tr>
+</table></div>
+</section>
+
+<!-- 2 -->
+<section class="sec" id="entrada">
+<h2><span class="n">2</span>Captação e entrada de leads</h2>
+<p class="lead">Lead é a empresa que demonstrou interesse. Os caminhos de entrada são: formulário das páginas (Inbound), lista subida pelo SDR (Outbound) e as voltas de clientes (seção 6). O GS Engage, que antes recebia tudo, está encerrado.</p>
+<div class="grid g2">
+ <div class="card item"><span class="tag t-purple">Inbound</span><h4>Páginas de captação</h4>
+  <p>As páginas de anúncio ficam em <code>projetojlbv.com.br</code>: <code>/video1/</code>, <code>/video2/</code>, <code>/rmk/</code>, <code>/lifeb/</code>, <code>/redefarma/</code>, <code>/redesuper/</code>, <code>/direto/</code> e <code>/contato/</code>, além da página inicial.</p>
+  <p>O formulário entrega o lead ao Worker, que cria empresa, pessoa e negócio no funil SDR Inbound, etapa D0, sem duplicar. Destino do Inbound: <code>INBOUND_DESTINO=agendor</code>.</p></div>
+ <div class="card item"><span class="tag t-purple">Anúncios</span><h4>Campanha, conjunto e anúncio</h4>
+  <p>O aviso do Inbound mostra o anúncio quando ele vem no formulário. Quando o Meta envia a macro sem substituir (por exemplo <code>{{campaign.name}}</code>, link aberto fora do clique real), o valor é descartado e o aviso mostra "campanha não identificada" (<code>src/sdr_inbound.js</code>).</p>
+  <p>Gasto, leads e custo por lead aparecem na aba Meta Ads do Dash Geral.</p></div>
+ <div class="card item"><span class="tag t-purple">Outbound</span><h4>Listas subidas pelo SDR</h4>
+  <p>A página Lista recebe a planilha e cria os negócios no funil certo pela origem. Cada lead guarda a fonte da lista. Detalhes na seção 5.</p></div>
+ <div class="card item"><span class="tag t-gray">Legado</span><h4>GS Engage</h4>
+  <p>Plano vencido: as rotinas pararam em 19/10/2026 (o código usa a marca de 19/10/2026 às 00h, horário de Brasília, como congelamento: <code>SDRDEST_CONGELAMENTO_GS_MS</code> em <code>src/sdr_destino.js</code>). As automações atuais criam negócios no Agendor, não no GS Engage. O histórico até a data aparece no Dash.</p></div>
+</div>
+<div class="note item"><strong>Aviso do Inbound ao SDR</strong>O aviso de lead Inbound novo sai em blocos (contato, empresa, anúncio, origem e prazo). Em dia útil das 8h às 18h o prazo é "Responder em até 15 min". Fora desse horário (noite, fim de semana ou feriado) o aviso diz que o lead já está na página Hoje para o próximo dia útil às 8h (<code>src/sdr_inbound.js</code>).</div>
+</section>
+
+<!-- 3 -->
+<section class="sec" id="funis">
+<h2><span class="n">3</span>Funis do Agendor</h2>
+<p class="lead">Funil é uma sequência de etapas pela qual o negócio caminha. A Life B usa cinco. Cada um tem um número de identificação (id) que as automações usam para nunca confundir um com outro.</p>
+<div class="grid g2">
+  <div class="card item"><span class="tag t-purple">SDR</span><h4>SDR Outbound <code>916712</code></h4>
+    <p>Lead que a Life B vai buscar (lista de empresas). O SDR chama primeiro. A etapa D1 tem o id <code>3910405</code>.</p>
+    <ul class="stage"><li>D1 Abertura</li><li>D3 Follow-up</li><li>D5 Ligação e follow-up 2</li><li>D8 Follow-up 3</li><li>D10 Deal breaker</li><li class="fim">Fim da cadência</li></ul></div>
+  <div class="card item"><span class="tag t-purple">SDR</span><h4>SDR Inbound <code>916713</code></h4>
+    <p>Lead que chegou sozinho pelo formulário. É lead quente: atender primeiro.</p>
+    <ul class="stage"><li>D0 Novo lead</li><li>D1 Abertura e ligação</li><li>D2 Follow-up</li><li>D3 Follow-up 2</li><li>D4 Deal breaker</li><li class="fim">Fim da cadência</li></ul></div>
+  <div class="card item"><span class="tag t-mag">Vendas</span><h4>Arena <code>890331</code></h4>
+    <p>O representante vende aqui. É o único funil onde existe "lead" nos números da empresa. O repasse cria o negócio na etapa Conexão.</p></div>
+  <div class="card item"><span class="tag t-green">Reposição</span><h4>Pós-venda <code>907387</code></h4>
+    <p>Cliente que já comprou. Cada compra seguinte é um novo ciclo ("Reposição #2", "#3"). Etapas: Ciclo Ativo, Contato de Reposição e Negociação de Reposição (esta última só por decisão manual do representante).</p></div>
+  <div class="card item"><span class="tag t-gray">Retorno</span><h4>Reativação <code>909368</code></h4>
+    <p>Recebe o cliente de volta quando o SDR qualifica uma Reativação, com o representante original (seção 6). Etapa de entrada <code>3872291</code>.</p></div>
+</div>
+<div class="grid g2" style="margin-top:14px">
+ <div class="card item"><h4>Campo "origem do negócio" (<code>origem_deal</code>)</h4>
+  <p>Opções e ids: INBOUND <code>85460</code>, OUTBOUND <code>85461</code>, RECUPERAÇÃO <code>85462</code>, REATIVAÇÃO <code>91006</code>, RECUPERAÇÃO SDR <code>92751</code>, SUPERAGOS <code>90361</code>. A origem da empresa (Inbound ou Outbound) nunca muda; a origem do negócio é do negócio.</p></div>
+ <div class="card item"><h4>Quem cria negócio onde</h4>
+  <p>O negócio do Arena é criado pela Bia no repasse; o da Reativação, também. Id do SDR no Agendor: <code>976405</code>; da conta Sistema: <code>973972</code>.</p></div>
+</div>
+<div class="note item"><strong>O que é "lead"</strong>Lead é somente negócio do <b>Arena</b>. Quem está nos funis do SDR é "negócio do SDR". Ganho no SDR não é venda, é qualificação.</div>
+</section>
+
+<!-- 4 -->
+<section class="sec" id="cadencia">
+<h2><span class="n">4</span>Cadência do SDR, passo a passo</h2>
+<p class="lead">Cadência é a sequência de contatos do SDR com um lead em dias combinados. Os dias são sempre <b>dias úteis</b> (segunda a sexta, sem feriado).</p>
+<h3>Como o lead entra</h3>
+<ol class="steps item">
+ <li><b>Fila de espera (Outbound).</b> O lead da lista chega na etapa D1 sem nenhuma tarefa. Nada começa sozinho (marcador <code>sdrcad_fila_&lt;id&gt;</code>).</li>
+ <li><b>Botão Iniciar.</b> O SDR escolhe quais leads começar, na página Hoje, em "Começar leads novos". Ao clicar, a Bia cria as tarefas do primeiro dia.</li>
+ <li><b>Cota diária: 100% manual.</b> <code>SDR_COTA_AUTO=0</code> (nenhuma liberação automática) e <code>SDR_FILA_MODO</code> ausente (fila manual ligada). Não há teto (<code>SDR_COTA_TETO</code> ausente). Existe a chave antiga <code>SDR_COTA_DIA=40</code>, mas o código informa que ela não é mais lida: a meta de 40 por dia não é aplicada pelo sistema.</li>
+ <li><b>Contagem dos dias.</b> O "Dia 1" é o primeiro dia útil em que a cadência pode começar. Lead que entra depois das 17h30 começa no próximo dia útil.</li>
+</ol>
+
+<h3>A escada de dias</h3>
+<div class="svgw item" role="img" aria-label="Linha do tempo: Outbound com contatos nos dias úteis 1, 3, 5, 8 e 10; Inbound nos dias 0 a 4">
+<svg viewBox="0 0 760 250" xmlns="http://www.w3.org/2000/svg">
+  <text x="10" y="22" font-size="13" font-weight="700" fill="var(--purple-d)">Outbound (dias úteis)</text>
+  <line x1="40" y1="70" x2="720" y2="70" stroke="var(--line)" stroke-width="3"/>
+  <g font-size="12" text-anchor="middle" fill="var(--muted)">
+    <g><circle cx="108" cy="70" r="5" fill="var(--gray-bg)" stroke="var(--faint)"/><text x="108" y="94">2</text></g>
+    <g><circle cx="244" cy="70" r="5" fill="var(--gray-bg)" stroke="var(--faint)"/><text x="244" y="94">4</text></g>
+    <g><circle cx="380" cy="70" r="5" fill="var(--gray-bg)" stroke="var(--faint)"/><text x="380" y="94">6</text></g>
+    <g><circle cx="448" cy="70" r="5" fill="var(--gray-bg)" stroke="var(--faint)"/><text x="448" y="94">7</text></g>
+    <g><circle cx="584" cy="70" r="5" fill="var(--gray-bg)" stroke="var(--faint)"/><text x="584" y="94">9</text></g>
+  </g>
+  <g font-size="12" font-weight="700" text-anchor="middle">
+    <circle cx="40" cy="70" r="11" fill="var(--purple)"/><text x="40" y="74" fill="var(--onp)">D1</text>
+    <circle cx="176" cy="70" r="11" fill="var(--purple)"/><text x="176" y="74" fill="var(--onp)">D3</text>
+    <circle cx="312" cy="70" r="11" fill="var(--purple)"/><text x="312" y="74" fill="var(--onp)">D5</text>
+    <circle cx="516" cy="70" r="11" fill="var(--purple)"/><text x="516" y="74" fill="var(--onp)">D8</text>
+    <circle cx="652" cy="70" r="11" fill="var(--mag)"/><text x="652" y="74" fill="var(--onp)">D10</text>
+  </g>
+  <g font-size="11.5" fill="var(--fg)" text-anchor="middle">
+    <text x="40" y="118">Pesquisar</text><text x="40" y="132">WhatsApp</text><text x="40" y="146">Ligar</text>
+    <text x="176" y="118">WhatsApp</text><text x="176" y="132">+ novidade</text>
+    <text x="312" y="118">Ligar</text><text x="312" y="132">WhatsApp</text>
+    <text x="516" y="118">Ligar</text><text x="516" y="132">WhatsApp</text><text x="516" y="146">com exemplo</text>
+    <text x="652" y="118">Ligar</text><text x="652" y="132">Última</text><text x="652" y="146">tentativa</text>
+  </g>
+  <rect x="690" y="52" width="60" height="36" rx="8" fill="var(--gray-bg)"/><text x="720" y="74" font-size="11.5" font-weight="700" text-anchor="middle" fill="var(--muted)">Fim</text>
+  <text x="10" y="184" font-size="13" font-weight="700" fill="var(--purple-d)">Inbound</text>
+  <line x1="40" y1="215" x2="720" y2="215" stroke="var(--line)" stroke-width="3"/>
+  <g font-size="12" font-weight="700" text-anchor="middle">
+    <circle cx="40" cy="215" r="11" fill="var(--green)"/><text x="40" y="219" fill="var(--onp)">D0</text>
+    <circle cx="176" cy="215" r="11" fill="var(--purple)"/><text x="176" y="219" fill="var(--onp)">D1</text>
+    <circle cx="312" cy="215" r="11" fill="var(--purple)"/><text x="312" y="219" fill="var(--onp)">D2</text>
+    <circle cx="448" cy="215" r="11" fill="var(--purple)"/><text x="448" y="219" fill="var(--onp)">D3</text>
+    <circle cx="584" cy="215" r="11" fill="var(--mag)"/><text x="584" y="219" fill="var(--onp)">D4</text>
+  </g>
+  <g font-size="11.5" fill="var(--fg)" text-anchor="middle">
+    <text x="40" y="240">Lead chega</text><text x="176" y="240">1ª mensagem</text><text x="312" y="240">Novo contato</text><text x="448" y="240">Novo contato</text><text x="584" y="240">Última tentativa</text>
+  </g>
+  <rect x="690" y="197" width="60" height="36" rx="8" fill="var(--gray-bg)"/><text x="720" y="219" font-size="11.5" font-weight="700" text-anchor="middle" fill="var(--muted)">Fim</text>
+</svg></div>
+
+<h3>O que a Bia cria em cada dia</h3>
+<div class="grid g2">
+ <div class="card item"><h4>Outbound</h4><div class="tw" style="border:0"><table>
+  <tr><th>Dia</th><th>Tarefas automáticas</th></tr>
+  <tr><td class="k">D1</td><td>Pesquisar a empresa (Google, Instagram, CNPJ) · WhatsApp: primeira mensagem · Ligar para quem decide a compra</td></tr>
+  <tr><td class="k">D3</td><td>WhatsApp: novo contato · WhatsApp: novidade, sem pedir nada</td></tr>
+  <tr><td class="k">D5</td><td>Ligar · WhatsApp: novo contato</td></tr>
+  <tr><td class="k">D8</td><td>Ligar · WhatsApp com novidade ou exemplo de loja parecida</td></tr>
+  <tr><td class="k">D10</td><td>Ligar · WhatsApp: última tentativa, avisando que vai encerrar</td></tr></table></div></div>
+ <div class="card item"><h4>Inbound</h4><div class="tw" style="border:0"><table>
+  <tr><th>Dia</th><th>Tarefas automáticas</th></tr>
+  <tr><td class="k">D0 / D1</td><td>O lead chega em D0. No D1 a tarefa é "WhatsApp: primeira mensagem".</td></tr>
+  <tr><td class="k">D2</td><td>WhatsApp: novo contato</td></tr>
+  <tr><td class="k">D3</td><td>WhatsApp: novo contato</td></tr>
+  <tr><td class="k">D4</td><td>WhatsApp: última tentativa</td></tr></table></div>
+  <p style="margin-top:10px;font-size:14px;color:var(--muted)">A conversa do Inbound é toda por WhatsApp, sem ligação (decisão de 26/10).</p></div>
+</div>
+<div class="grid g2" style="margin-top:14px">
+ <div class="card item"><h4>Horário e formato das tarefas</h4><p>Toda tarefa da cadência vence às <b>18h</b> (Brasília), em dia útil. O texto começa com a etapa, por exemplo "[OUT D3]" ou "[IN D1]", e termina com o nome da loja. A cadência avança pelo calendário, com um passo de verificação a cada 10 minutos (<code>SDR_CADENCIA_MODE=live</code>).</p></div>
+ <div class="card item"><h4>Uma tarefa por vez</h4><p>Existe uma variante que libera só uma tarefa de cadência aberta por negócio (<code>SDR_SEQUENCIA_MODE</code>). <b>shadow</b> (simulação). Preparada, mas não valendo: a cadência segue o calendário.</p></div>
+</div>
+
+<h3>O fim da cadência</h3>
+<ol class="steps item">
+ <li><b>Fim da cadência.</b> Passou o último dia (D10 no Outbound, D4 no Inbound) sem resposta: o lead vai para "Fim da cadência". Na Hoje a coluna se chama "Tentativas acabaram".</li>
+ <li><b>Sala de espera de 3 dias úteis.</b> O SDR pode marcar Ganho (respondeu e qualifica), Perdido (respondeu e não serve) ou <b>Voltar para a cadência</b>.</li>
+ <li><b>Fechamento automático.</b> Sem ação em 3 dias úteis completos, a Bia fecha como Perdido com o motivo <b>Cadência esgotada</b>.</li>
+ <li><b>Voltar para a cadência.</b> O SDR escolhe a etapa de onde recomeçar e a cadência segue dali. A regra das 17h30 vale: depois desse horário o dia 1 conta a partir do próximo dia útil.</li>
+</ol>
+<div class="note item"><strong>Cadência esgotada não é rejeição</strong>Quer dizer que o lead nunca respondeu. É recuperável, mas só pela Recuperação SDR (seção 6).</div>
+
+<h3>Ligação com resultado obrigatório</h3>
+<div class="card item"><p>Ao concluir uma tarefa de ligar, a página pergunta <b>"Você ligou?"</b>.</p><ul>
+ <li><b>Sim:</b> o resultado é obrigatório (por exemplo "Falei com quem decide a compra", "Falei com outra pessoa da loja", "Pediram para ligar depois", "Não atendeu"). Vira uma tarefa finalizada no negócio com o texto "[Hoje] Resultado da ligação: ..." (<code>src/sdr_hoje_lead.js</code>).</li>
+ <li>Se a ligação foi concluída direto no Agendor, o cartão mostra "Falta o resultado da ligação" até o SDR informar.</li></ul></div>
+
+<h3>Repasse para o Arena (quando ganha)</h3>
+<ol class="steps item">
+ <li><b>SDR marca Ganho.</b> No SDR, ganho quer dizer "lead qualificado", não venda.</li>
+ <li><b>A Bia confere se está completo.</b> Faltando algo, reabre o negócio e avisa o SDR (<code>src/sdr_repasse.js</code>).</li>
+ <li><b>Cria o negócio no Arena</b>, etapa Conexão, uma única vez. Empresa, pessoa e negócio passam ao representante; o SDR mantém acesso.</li>
+ <li><b>Pede a distribuição.</b> O SDR recebe uma lista de representantes ativos para escolher ("Escolher rep").</li>
+ <li><b>Rede de segurança.</b> Uma varredura a cada minuto confere ganhos sem repasse (<code>SDR_REPASSE_MODE=live</code>), com novas tentativas em 1, 2, 4, 8 e 15 minutos.</li>
+</ol>
+
+<h3>Motivos de perda</h3>
+<div class="grid g2">
+ <div class="card item"><span class="tag t-green">Recuperáveis</span><p style="margin-top:8px">Podem voltar ao SDR depois do prazo: <b>Desistência, Prazo, Preço, Sem interesse, Sem retorno.</b> <b>Cadência esgotada</b> também, mas só pela Recuperação SDR.</p></div>
+ <div class="card item"><span class="tag t-red">Nunca voltam</span><p style="margin-top:8px"><b>Fora do perfil ICP, Restrição de pagamento, Já está sendo atendido(a)/cliente, Duplicado, Erro na construção da lista</b> e o pedido de não contato (motivo "LPGPD - Não contactar"). Fonte: <code>RECUPERACAO_AGENDOR_MOTIVOS_NAO_RECUPERAVEIS</code> e <code>_motivoNuncaRecuperavelPorNome</code>, <code>src/index.js</code>.</p></div>
+</div>
+<div class="note item"><strong>Motivo exclusivo do Pós-venda</strong>"Sem reposição dentro do prazo" é motivo do fechamento do Pós-venda pelo sistema; no Arena nunca conta como recuperável (<code>src/index.js</code>).</div>
+</section>
+
+<!-- 5 -->
+<section class="sec" id="hoje">
+<h2><span class="n">5</span>Páginas Hoje e Lista</h2>
+<p class="lead">A Hoje (<code>projetojlbv.com.br/hoje/</code>) é a mesa de trabalho do SDR: vê o lead inteiro, completa dados, liga, marca Perdido ou Ganho, escolhe o representante e trata tarefas sem abrir o Agendor. Ligada por <code>SDR_HOJE_MODE=on</code>.</p>
+<div class="grid g2">
+ <div class="card item"><h4>Topo</h4><ul>
+  <li>Relógio, botão <b>Subir lista</b> e ações na mesma linha.</li>
+  <li>Números do dia e do mês no topo da página.</li>
+  <li><b>Busca geral</b>: acha lead dos dois funis do SDR (na fila, em cadência, no Fim, perdido ou ganho recente) por nome da loja ou da pessoa, CNPJ, telefone, título, número do negócio ou cidade (<code>src/sdr_busca.js</code>).</li></ul></div>
+ <div class="card item"><h4>Filtros</h4><ul>
+  <li>Filtro por origem do dia, com a opção "Todas as origens".</li>
+  <li>Opção de esconder o que já foi feito.</li>
+  <li>Na fila, botões "Iniciar os primeiros da lista" e "Iniciar por origem".</li></ul></div>
+</div>
+<h3>As colunas</h3>
+<div class="tw item"><table>
+<tr><th>Coluna</th><th>O que mostra</th></tr>
+<tr><td class="k">Inbound novo</td><td>Lead quente que acabou de chegar.</td></tr>
+<tr><td class="k">Follow-ups do Inbound</td><td>Contatos seguintes do Inbound (só aparece se houver).</td></tr>
+<tr><td class="k">Aberturas novas</td><td>Primeiro contato dos leads iniciados.</td></tr>
+<tr><td class="k">2º contato (dia 3), 3º (dia 5), 4º (dia 8)</td><td>Contatos seguintes do Outbound, em dias úteis.</td></tr>
+<tr><td class="k">Última tentativa (dia 10)</td><td>Último contato do Outbound.</td></tr>
+<tr><td class="k">Tentativas acabaram</td><td>Leads no Fim da cadência: Ganho, Perdido ou Voltar para a cadência.</td></tr>
+<tr><td class="k">Atrasadas</td><td>Tarefas atrasadas.</td></tr>
+<tr><td class="k">Iniciados hoje</td><td>Quem foi iniciado hoje.</td></tr>
+<tr><td class="k">Começar leads novos</td><td>A fila de espera, com os botões Iniciar.</td></tr>
+</table></div>
+<h3>O cartão e o painel do lead</h3>
+<div class="grid g2">
+ <div class="card item"><h4>No cartão</h4><ul>
+  <li>Empresa, origem do negócio em destaque, etapa e próxima tarefa.</li>
+  <li>Etiqueta quando o lead voltou ao SDR: <b>Recuperação</b>, <b>Reativação</b> ou <b>Recuperação SDR</b>, com uma linha de onde veio.</li>
+  <li>Selo <b>Atrasado</b> e aviso <b>Falta o resultado da ligação</b> (ambos existem na página).</li><li>WhatsApp clicável e copiável.</li></ul></div>
+ <div class="card item"><h4>Ao abrir o lead</h4><ul>
+  <li>Campos da empresa (CNPJ, segmento, lojas, faturamento, endereço) e observação do SDR.</li>
+  <li><b>Pessoas e telefones</b>, com <b>Trocar contato principal</b>. Se o WhatsApp novo já existe em outra pessoa do Agendor, nada é salvo e o SDR decide.</li>
+  <li><b>Trocar CNPJ</b> ou <b>Adicionar CNPJ</b>.</li>
+  <li>Caixa <b>De onde veio este lead</b>.</li>
+  <li>Ações: concluir tarefas, <b>Perdido</b> (com motivo), <b>Ganho</b>, <b>Escolher representante</b>, <b>Reabrir lead</b> e "Tirar o Ganho e reabrir" (enquanto não foi para o Arena).</li></ul></div>
+</div>
+<div class="card item" style="margin-top:14px"><h4>Nota livre do SDR</h4>
+ <p>O SDR escreve uma nota a qualquer hora, em qualquer lead dos dois funis do SDR (mesmo depois de Ganho ou Perdido). Vira uma tarefa <b>já finalizada</b> no Agendor com o texto "[Hoje] Nota do SDR dd/mm HH:MM: texto", autoria da conta Sistema. <b>Não gera tarefa aberta</b>, não muda etapa nem campo e não dispara cadência, Motor nem garantia. Não conta como atividade do SDR no Dash. Limites: 500 caracteres, 20 notas por negócio por dia, 200 por dia no total (<code>src/sdr_hoje_lead.js</code>). Não existe em Arena, Pós-venda ou Reativação.</p></div>
+
+<h3>Subir lista</h3>
+<div class="card item"><p>A página <code>/lista/</code> (<code>SDR_LISTA_MODE=on</code>) recebe a planilha. O SDR informa o <b>Nome da lista (fonte)</b>; a Bia cria os negócios no funil certo pela origem: Inbound no D0 e Outbound na fila de espera (<code>src/sdr_lista.js</code>). Cada lead guarda a fonte da lista.</p></div>
+<h3>CNPJ e endereço</h3>
+<div class="card item"><p>Ao informar ou trocar o CNPJ, a empresa é enfileirada para enriquecimento (seção 7). Endereço sem número tem a caixinha <b>S/N</b> na página.</p></div>
+</section>
+
+<!-- 6 -->
+<section class="sec" id="voltas">
+<h2><span class="n">6</span>As três famílias de volta ao SDR</h2>
+<p class="lead">Três rotinas devolvem negócio ao SDR. Cada uma tem nome, regra e origem próprios, para o SDR nunca ficar em dúvida de onde veio o lead.</p>
+<div class="tw item"><table>
+<tr><th></th><th>Recuperação SDR</th><th>Recuperação</th><th>Reativação</th></tr>
+<tr><td class="k">Quem volta</td><td>Lead do próprio SDR perdido que <b>nunca foi para representante</b></td><td>Negócio que um <b>representante perdeu</b> no Arena</td><td>Cliente do Pós-venda que <b>não repôs</b> no prazo</td></tr>
+<tr><td class="k">Prazo</td><td><b>14 dias</b> depois do Perdido, para todos os motivos (<code>SDRDEST_RECSDR_DIAS_MIN</code>)</td><td><b>Por motivo</b>: Sem retorno 14 dias, Prazo 21, Preço 30, Sem interesse 60, Desistência 60; qualquer outro recuperável 10 (<code>RECUPERACAO_AGENDOR_DIAS_POR_MOTIVO</code>)</td><td><b>75 dias</b> sem repor (drogarias, ciclo 60 + 15 de janela). Supermercado: 45 dias (30 + 15), hoje desligado</td></tr>
+<tr><td class="k">Motivos aceitos</td><td>Recuperáveis e também Cadência esgotada</td><td>Só os recuperáveis</td><td>Não depende de motivo</td></tr>
+<tr><td class="k">Origem do negócio</td><td>RECUPERAÇÃO SDR</td><td>RECUPERAÇÃO</td><td>REATIVAÇÃO</td></tr>
+<tr><td class="k">Título do novo negócio</td><td>Termina com "(recuperação SDR)"</td><td>Termina com "(recuperação)"</td><td>Termina com "Reativação 75+" (drogaria) ou "Reativação 45+" (supermercado), de <code>src/reativacao_rotulo.js</code></td></tr>
+<tr><td class="k">Tarefas</td><td>[RSDR]</td><td>[REC]</td><td>[REAT]</td></tr>
+<tr><td class="k">Teto por dia</td><td>15, contador próprio (a chave só abaixa; 0 pausa)</td><td colspan="2">Padrão 2 por rodada, 5 por dia por família e 5 no total das famílias; chave só ajusta até 10 por rodada e 20 por dia</td></tr>
+<tr><td class="k">Modo hoje</td><td><span class="tag t-green">live</span> <code>SDRDEST_RECUPERACAO_SDR_MODE</code></td><td><span class="tag t-green">live</span> <code>SDRDEST_RECUPERACAO_MODE</code></td><td><span class="tag t-green">live</span> drogaria <code>SDRDEST_REPOSICAO_MODE</code>; supermercado <span class="tag t-gray">ausente = desligado</span></td></tr>
+</table></div>
+<div class="note item"><strong>Outras chaves lidas</strong>Cadência de retorno <code>SDR_CAD_RECUPERACAO_MODE=live</code> para os tipos <code>recuperacao,reativacao,recuperacao_sdr</code>. A "segunda onda" de Recuperação (<code>SDRDEST_REATIVACAO2_MODE</code>) está ausente, ou seja, desligada. Sem chave por tipo, o padrão é desligado.</div>
+
+<h3>O que é igual nas três</h3>
+<div class="grid g2">
+ <div class="card item"><ul>
+  <li>O lead volta como <b>negócio novo</b> no SDR Outbound, etapa D1, <b>na fila de espera</b>, com o SDR como responsável. Nada começa sozinho: o SDR clica Iniciar.</li>
+  <li>A <b>origem da empresa nunca muda</b>; só o negócio novo recebe a origem de volta.</li>
+  <li>Cadência curta, <b>só WhatsApp</b>: D1 retomar a conversa, D3 novo contato, D5 última tentativa, depois Fim da cadência.</li>
+  <li>A nota do negócio conta de onde veio: quem perdeu, quando, o motivo e o link do negócio antigo. O negócio antigo nunca é reaberto.</li></ul></div>
+ <div class="card item"><ul>
+  <li><b>180 dias por empresa:</b> uma empresa não recebe outra volta por 180 dias (também vale para empresa com o mesmo CNPJ em outro cadastro).</li>
+  <li><b>Nunca duas voltas do mesmo negócio.</b></li>
+  <li>Não volta quem tem negócio aberto, quem comprou depois (cliente ativo em Arena, Pós-venda ou Reativação) ou quem já recebeu volta recentemente.</li>
+  <li><b>Uma criação por vez no sistema inteiro</b> (trava global), então o teto do dia nunca estoura por corrida.</li>
+  <li>Aviso ao SDR só em modo real, agrupado, em dia útil das 8h às 18h; falhas vão só à Gestão.</li></ul></div>
+</div>
+<div class="note item"><strong>Contato sem empresa (Recuperação SDR)</strong>Lead Inbound perdido que só tem a pessoa: a Bia procura pelo telefone (últimos 8 dígitos) outra pessoa com empresa e vincula. Se achar empresas diferentes, bloqueia por 3 dias para conferência humana. Se não achar, cria a empresa provisória com o nome do contato, até 5 por dia.</div>
+
+<h3>Como a Reativação nasce</h3>
+<ol class="steps item">
+ <li>O Pós-venda mede os dias desde a última compra: drogaria 60 de contato mais 15 de janela (75); supermercado 30 mais 15 (45).</li>
+ <li>Passou do prazo sem reposição: a Bia cria o negócio novo no SDR Outbound, D1, na fila, com "Reativação 75+" no título.</li>
+ <li>Se o SDR qualificar, o negócio vai ao funil Reativação com o <b>representante original</b> (se ele ainda faz parte do time; senão segue a distribuição normal). O Pós-venda aberto é fechado.</li>
+ <li><b>Novidade de 05/11:</b> nesse momento o representante também é avisado. A Bia cria a <b>tarefa de primeiro contato no nome dele</b> (WhatsApp, data calculada pelo mesmo cálculo da distribuição) e envia o <b>card de lead novo</b>, pela mesma fila do lead novo (só em horário comercial, dia útil). Função <code>_sdrRepasseAvisarRepReativacao</code>, <code>src/index.js</code>. Se o aviso falhar, a Gestão recebe alerta para avisar à mão.</li>
+</ol>
+</section>
+
+<!-- 7 -->
+<section class="sec" id="motores">
+<h2><span class="n">7</span>Motores e automações da Bia</h2>
+<p class="lead">Cada automação: o que faz, quando roda, o que escreve no Agendor, o que nunca faz e como pausar. Etiquetas: <span class="tag t-green">No ar</span> <span class="tag t-purple">Com aprovação</span> <span class="tag t-gray">Simulação</span>. "Simulação" (shadow) é quando só observa e relata, sem escrever.</p>
+<div class="note item"><strong>Regra comum</strong>Cada automação tem chave de modo (off, shadow ou live). Em shadow não há escrita no Agendor nem WhatsApp. Falha de automação vai somente à Gestão. Horários dos crons estão em UTC no <code>wrangler.toml</code> (Brasília = UTC menos 3). Nos crons da Cloudflare o dia 1 é domingo: "2-6" é segunda a sexta.</div>
+
+<article class="auto item"><header><h4>Motor Proativo (cobranças ao representante)</h4><span class="tag t-purple">Com aprovação</span></header><dl>
+<dt>O que faz</dt><dd>Cobra tarefa por tarefa. Quando uma tarefa vence, o representante recebe um card no WhatsApp com botões, entre eles "Já concluí" e a lista "Mais opções". Há estágios de aviso de visita 40 minutos antes e cobrança 40 minutos depois (<code>pre_visita_40min</code>, <code>pos_visita_40min</code>). Três famílias: Arena, Reposição e Reativação.</dd>
+<dt>Quando roda</dt><dd>Só em dia útil. Mensagem proativa a representante: das 8h às 18h; cards de cobrança a partir das 9h (<code>dentroDoHorarioProativo</code> e <code>dentroDoHorarioCobranca</code>, <code>src/index.js</code>). Entrega no máximo 1 card por representante por rodada, com intervalo mínimo de <b>20 minutos</b> (<code>MOTOR_FILA_INTERVALO_MIN</code> ausente, padrão <code>src/motor_fila.js</code>); entre pedidos da Arena, <b>60 minutos</b> (<code>MOTOR_PROATIVO_INTERVALO_MIN_REP_MIN</code> ausente, padrão <code>src/index.js</code>).</dd>
+<dt>Aprovação</dt><dd>Os três modos estão em <b>approval</b> (aprovação pela Gestão antes do card).</dd>
+<dt>Escreve no Agendor</dt><dd>Só quando o representante age por um botão (concluir, reagendar). O clique é consumido uma única vez, com trava atômica em Durable Object (<code>MotorProativoClaimDO</code>).</dd>
+<dt>Como pausar</dt><dd>Interruptor geral <code>MOTOR_PROATIVO_OFF</code> e um por família: <code>MOTOR_OFF_ARENA</code>, <code>MOTOR_OFF_REPOSICAO</code>, <code>MOTOR_OFF_REATIVACAO75</code>. Valor "1" pausa.</dd>
+<dt>Estado</dt><dd><code>MOTOR_PROATIVO_MODE</code>, <code>MOTOR_PROATIVO_REPOSICAO_MODE</code> e <code>MOTOR_PROATIVO_REATIVACAO75_MODE</code> = approval. Os interruptores de pausa estão ausentes (nada pausado).</dd></dl></article>
+
+<article class="auto item"><header><h4>Motor Proativo v2 (melhorias de 05/11)</h4><span class="tag t-gray">Preparado, aguardando liberação</span></header><dl>
+<dt>O que traz</dt><dd>Opções <b>Perdi</b> e <b>Ganhei</b> em "Mais opções" (só Arena); remoção de "Não é meu" da lista; "Congelar" vira "Pedir pausa"; primeiro nome e "bom dia" só de manhã; escada de 3 degraus, com 1 card por negócio por dia e resumo em lista quando há 3 ou mais pendências; relatório "Movimento real dos reps" sem contar tarefa criada pelo próprio Motor; <b>aviso diário ao SDR</b> de negócio do Arena há 5 dias úteis sem resposta à cobrança (1 vez por negócio).</dd>
+<dt>Chaves (todas ausentes)</dt><dd><code>MOTOR_UX_V2</code>, <code>MOTOR_MOV_SEM_MOTOR</code>, <code>MOTOR_AVISO_FELIPE_5DU</code>, <code>MOTOR_BTN_PERDI</code>, <code>MOTOR_BTN_GANHEI</code>, <code>MOTOR_ESCADA_V2</code>. Com a chave ausente o comportamento é o antigo. Valor "1" liga para todos; lista de telefones liga só para eles.</dd>
+<dt>Onde</dt><dd><code>src/motor_v2.js</code>.</dd></dl></article>
+
+<article class="auto item"><header><h4>Pós-venda: ciclos de Reposição #n</h4><span class="tag t-green">No ar</span></header><dl>
+<dt>O que faz</dt><dd>Mantém o funil Pós-venda (<code>907387</code>) com um negócio por ciclo ("Reposição #1", "#2"...). O primeiro contato do 1º ciclo é marcado para 75 dias depois do gatilho e o dos ciclos seguintes para 65 dias (<code>posvenda_threshold_&lt;id&gt;</code>, <code>src/index.js</code>). Supermercado usa 30 dias de contato (<code>POSVENDA_THRESHOLD_SUPERMERCADO_DIAS</code>, <code>src/index.js</code>) e drogaria 60 (<code>POSVENDA_CONTATO_THRESHOLD_DIAS</code>, <code>src/index.js</code>), mais a janela de 15 dias que forma o prazo da Reativação.</dd>
+<dt>Nunca faz</dt><dd class="never">Não desfaz data ou tarefa que alguém mexeu à mão (<code>src/posvenda_blindagem.js</code>).</dd></dl></article>
+
+<article class="auto item"><header><h4>Recuperações e Reativação 75+</h4><span class="tag t-green">No ar</span></header><dl>
+<dt>O que faz</dt><dd>Descritas na seção 6: criam o negócio novo no SDR Outbound, com nota de origem.</dd>
+<dt>Quando roda</dt><dd>Reativação: rodada na cadeia de 30 minutos (cron <code>5,35 * * * *</code>), com teto baixo por rodada (<code>src/index.js</code>). Recuperação SDR: rodada no horário comercial (<code>src/index.js</code>), com a lista de perdidos lida uma vez por dia.</dd>
+<dt>Escreve no Agendor</dt><dd>Negócio novo no SDR Outbound D1, com o SDR como responsável, e a nota de origem. Na Reativação, fecha o Pós-venda aberto que a originou.</dd>
+<dt>Nunca faz</dt><dd class="never">Não altera dono nem origem da empresa e não ressuscita o negócio antigo (<code>src/sdr_destino.js</code> a <code>12</code>).</dd>
+<dt>Como pausar</dt><dd>Chave de modo por tipo, tetos por rodada e dia e <code>SDRDEST_OFF</code> (geral, ausente hoje).</dd></dl></article>
+
+<article class="auto item"><header><h4>Repasse SDR para Arena</h4><span class="tag t-green">No ar</span></header><dl>
+<dt>O que faz</dt><dd>Seção 4. Ganho completo vira negócio no Arena; incompleto é reaberto com aviso do que falta.</dd>
+<dt>Quando roda</dt><dd>Varredura a cada minuto (cron <code>* * * * *</code>) e novas tentativas após 1, 2, 4, 8 e 15 minutos (<code>REPASSE_BACKOFF_MIN</code>, <code>src/sdr_repasse.js</code>).</dd>
+<dt>Como pausar</dt><dd><code>SDR_REPASSE_MODE</code> (hoje live).</dd></dl></article>
+
+<article class="auto item"><header><h4>Fechamento universal de tarefas</h4><span class="tag t-green">No ar</span></header><dl>
+<dt>O que faz</dt><dd>Toda tarefa aberta de negócio ganho ou perdido, em qualquer funil, é fechada. A varredura das tarefas de negócios ganhos e perdidos foi zerada em 05/11. O fechamento usa a conta Sistema, que não conta como trabalho do SDR.</dd>
+<dt>Quando roda</dt><dd>Quando o Agendor avisa um ganho ou perdido, com espera de 3 minutos (<code>CARENCIA_FILA_MS</code>, <code>src/fecha_tarefas.js</code>), e em varredura de segurança.</dd>
+<dt>Nunca faz</dt><dd class="never">Ganho do SDR espera o repasse completar; passando de 48 horas sem repasse, fecha mesmo assim (<code>REPASSE_ESPERA_MAX_MS</code>, <code>src/fecha_tarefas.js</code>).</dd>
+<dt>Como pausar</dt><dd><code>FECHA_TAREFAS_MODE</code> (off, shadow ou live; ausente vale shadow). <b>live.</b> Para os funis do SDR há também <code>SDR_ENCERRA_TAREFAS_MODE</code> (live).</dd></dl></article>
+
+<article class="auto item"><header><h4>Enriquecimento por CNPJ (novo e troca)</h4><span class="tag t-green">No ar</span></header><dl>
+<dt>O que faz</dt><dd>Completa os dados da empresa pelo CNPJ, quando o CNPJ é adicionado ou trocado. Grava a nota "Dados CNPJ"; na troca, a nota inclui "CNPJ ALTERADO: antes ..., agora ..." (<code>src/sdr_enriquecer.js</code>).</dd>
+<dt>Quando roda</dt><dd>Na hora da mudança e em varredura diária com teto de 120 empresas por dia (<code>src/index.js</code>). Negócios criados pelas voltas também entram.</dd>
+<dt>Como pausar</dt><dd><code>SDR_ENRIQUECER_MODE</code> (hoje live).</dd></dl></article>
+
+<article class="auto item"><header><h4>Inbound: entrada, conciliação e telefone</h4><span class="tag t-green">No ar</span></header><dl>
+<dt>O que faz</dt><dd><b>Entrada:</b> cria empresa, pessoa e negócio no D0. <b>Conciliação:</b> confere o que entrou e recoloca na fila o que faltou. <b>Telefone:</b> uma regra única para todo o Worker (<code>src/inbound_fone.js</code>): celular digitado com 10 dígitos ganha o 9; fixo (começa em 2 a 5) continua fixo; zero na frente e código de operadora são removidos; só vale telefone com 10 ou 11 dígitos nacionais.</dd>
+<dt>Limite</dt><dd>Só completa negócio com menos de 2 horas de vida (<code>SDRIN_COMPLETAR_MAX_MS</code>, <code>src/sdr_inbound.js</code>). Telefone que aparece em negócio aberto de outra empresa não é juntado: o negócio é criado separado e o aviso informa.</dd>
+<dt>Como pausar</dt><dd><code>INBOUND_DESTINO</code> (hoje agendor).</dd></dl></article>
+
+<article class="auto item"><header><h4>Vigias e backups</h4><span class="tag t-green">No ar</span></header><dl>
+<dt>Negócio sem tarefa</dt><dd>Seção 8.</dd>
+<dt>Avisos do Agendor (webhook)</dt><dd>Registra se cada ganho, perdido ou criação foi avisado pelo webhook ou só achado pela varredura de segurança. Se o webhook degrada, a Gestão é avisada e a varredura rápida passa a rodar a cada 2 minutos (<code>src/webhook_vigia.js</code>).</dd>
+<dt>Backup diário</dt><dd>Na rotina das 8h (cron <code>0 11 * * *</code>) a função <code>runBackup</code> confere o Supabase e guarda um retrato das chaves do KV (sem as de log); um vigia confere que ele rodou (<code>backupWatch</code>).</dd>
+<dt>Backup a cada deploy</dt><dd>O <code>deploy.sh</code> copia <code>src/index.js</code> datado para o Dropbox antes de publicar e depois envia o código ao GitHub.</dd>
+<dt>Auditor de fingimento</dt><dd>Lê as últimas 120 mensagens novas da Bia, procura frases que afirmam uma escrita concreta (por exemplo marcar como ganho) e confere no Agendor se ela aconteceu; alerta a Gestão quando não aconteceu (<code>auditorClaims</code>, <code>src/index.js</code>). Roda no ciclo comercial de segunda a sexta, das 8h às 18h, e uma vez no cron diário fora desse horário.</dd>
+<dt>Monitor externo</dt><dd>Cada cron pinga um monitor externo (healthchecks), quando a URL está configurada (<code>src/index.js</code>).</dd>
+<dt>Nunca faz</dt><dd class="never">Vigia não corrige sozinho o que não pode provar.</dd></dl></article>
+
+<article class="auto item"><header><h4>Avisos, cópias e portões</h4><span class="tag t-green">No ar</span></header><dl>
+<dt>Cópia dos avisos ao SDR</dt><dd>Todo envio da Bia ao SDR vai em cópia à Gestão, com a mesma mensagem, precedido de "Cópia do aviso enviado". Variável do deploy <code>COPIA_FELIPE_ROBERT = "1"</code> em <code>wrangler.toml</code> (desligar = apagar a linha e publicar). Deduplicação de 10 minutos por conteúdo; a cópia nunca atrasa nem derruba o envio original (<code>src/index.js</code>).</dd>
+<dt>Convite do Painel do Representante</dt><dd>Seção 12.</dd>
+<dt>Relatórios</dt><dd>O relatório de 19h e o relatório de status estão desligados (<code>RELATORIO_19H_OFF=1</code>, <code>STATUS_REPORT_OFF=1</code>).</dd>
+<dt>Pausas gerais</dt><dd><code>BIA_KILL</code> e <code>NOTIF_PAUSE</code> (ambas ausentes hoje).</dd></dl></article>
+</section>
+
+<!-- 8 -->
+<section class="sec" id="tarefas">
+<h2><span class="n">8</span>Nunca deixar negócio aberto sem tarefa</h2>
+<p class="lead">A regra vale para Arena, Pós-venda e Reativação; nos funis do SDR a cadência cria as tarefas. Hoje ela é garantida por camadas, e uma delas ainda está em simulação.</p>
+<div class="tw item"><table>
+<tr><th>Camada</th><th>O que faz</th><th>Quando</th><th>Estado hoje</th></tr>
+<tr><td class="k">1. Vigia de negócio sem tarefa (<code>vigiaSemTarefa</code>, <code>src/index.js</code>)</td><td>Acha negócio aberto da <b>Arena</b> sem tarefa aberta e a Bia <b>cria a próxima tarefa</b>. Relê o Agendor antes de criar, ignora negócio congelado e cria no máximo 15 por rodada (<code>VIGIA_AUTO_MAX_POR_RODADA</code>). Se a leitura falha, a rodada é liberada para tentar de novo.</td><td>Dia útil, às 10h de Brasília, uma vez por dia</td><td><span class="tag t-green">Ligado</span>. <code>VIGIA_SEM_TAREFA_OFF</code>, <code>MOTOR_PROATIVO_OFF</code> e <code>MOTOR_OFF_ARENA</code> ausentes.</td></tr>
+<tr><td class="k">2. Próxima tarefa ao concluir ou anotar</td><td>Quando a Bia conclui ou anota uma tarefa a pedido do representante, ela garante a próxima tarefa do negócio. Se a criação falha, alerta a Gestão (<code>src/index.js</code>, <code>9054</code>).</td><td>No momento da ação</td><td><span class="tag t-green">Ligado</span></td></tr>
+<tr><td class="k">3. Primeiro contato na distribuição</td><td>Quando o lead é atribuído a um representante, a Bia cria a tarefa de primeiro contato no nome dele (<code>garantirPrimeiroContato</code>, <code>src/index.js</code>). A Reativação qualificada faz o mesmo (seção 6).</td><td>Na atribuição</td><td><span class="tag t-green">Ligado</span> (<code>PRIMEIRA_TAREFA_AUTO_ENABLED=1</code>)</td></tr>
+<tr><td class="k">4. Garantia de tarefa (<code>src/garantia_tarefa.js</code>)</td><td>Varredura dos funis fora do SDR (Arena, Pós-venda, Reativação): negócio aberto sem tarefa recebe uma tarefa de próxima ação coerente com o funil e a etapa; tarefa com responsável diferente do dono do negócio passa para o dono. Não troca o dono do negócio e não envia mensagem ao representante.</td><td>Entre 11h e 18h, em slot próprio nos minutos :17 e :47, com estado retomável</td><td><span class="tag t-gray">Simulação</span>: <code>GARANTIA_TAREFA_MODE</code> ausente vale shadow. Hoje <b>só relata</b> o que faria. Tetos previstos: 4 criações e 8 alinhamentos por rodada e 30 escritas por dia.</td></tr>
+</table></div>
+<div class="note warn item"><strong>O que ainda não é garantido</strong>Enquanto a camada 4 estiver em simulação: (a) negócio do Pós-venda cuja tarefa do ciclo foi finalizada pelo representante direto na tela do Agendor não recebe uma nova tarefa; (b) negócio da Arena que está com a conta Sistema como dono, aguardando distribuição, não entra no vigia da camada 1, que só trata negócios de representantes de campo; (c) a verificação ampla de tarefa com responsável diferente do dono só relata e não corrige. Ligar o modo real da camada 4 depende de decisão da Gestão.</div>
+</section>
+
+<!-- 9 -->
+<section class="sec" id="recebe">
+<h2><span class="n">9</span>O que cada papel recebe</h2>
+<p class="lead">Matriz de avisos por WhatsApp, conferida no código em 05/11. Mensagem proativa a representante só sai em dia útil das 8h às 18h (cobranças do Motor a partir das 9h); a administradores e ao SDR, das 6h às 21h (<code>src/index.js</code>). Todo aviso enviado ao SDR também chega à Gestão em cópia.</p>
+<div class="tw item"><table>
+<tr><th>Evento</th><th>SDR</th><th>Representante</th><th>Gestão</th></tr>
+<tr><td class="k">Lead Inbound novo</td><td>Aviso em blocos: contato, empresa, anúncio, origem e prazo (15 minutos em dia útil das 8h às 18h)</td><td>Nada</td><td>Cópia do aviso</td></tr>
+<tr><td class="k">Lead qualificado (Ganho no SDR, repasse feito)</td><td>"Novo lead pra distribuir", com a lista "Escolher rep" (<code>src/sdr_repasse.js</code>)</td><td>Card de lead novo quando é atribuído, e tarefa de primeiro contato criada</td><td>Cópia do aviso do SDR</td></tr>
+<tr><td class="k">Reativação qualificada</td><td>Aviso de devolução ao representante original (<code>avisarReativacaoDevolvida</code>)</td><td>Tarefa de primeiro contato e card de lead novo </td><td>Cópia; alerta se o representante não pôde ser avisado</td></tr>
+<tr><td class="k">Entrada de Recuperação, Reativação ou Recuperação SDR</td><td>Um resumo agrupado por rodada, só em modo live, em dia útil das 8h às 18h</td><td>Nada</td><td>Cópia; falhas só para a Gestão</td></tr>
+<tr><td class="k">Tarefa vencida (Arena, Reposição, Reativação)</td><td>Nada</td><td>Card do Motor, após aprovação, com intervalo mínimo entre cards</td><td>Aprovação dos cards (modo approval)</td></tr>
+<tr><td class="k">Negócio do Arena há 5 dias úteis sem resposta à cobrança</td><td>Aviso diário, 1 vez por negócio. <span class="tag t-gray">Preparado, aguardando liberação</span> (<code>MOTOR_AVISO_FELIPE_5DU</code> ausente)</td><td>Nada novo</td><td>Cópia, quando for ligado</td></tr>
+<tr><td class="k">Perdido marcado pelo SDR</td><td>Nada</td><td>Nada</td><td>Aviso (<code>SDR_AVISO_PERDIDO_MODE=live</code>)</td></tr>
+<tr><td class="k">Falha de automação</td><td>Nada</td><td>Nada</td><td>Alerta</td></tr>
+<tr><td class="k">Convite do Painel do Representante</td><td>Nada</td><td>Mensagem de bom dia com o botão "Abrir carteira", às 8h em dia útil</td><td>Resumo consolidado do envio do dia</td></tr>
+<tr><td class="k">Relatório de 19h e de status</td><td colspan="3">Desligados hoje (<code>RELATORIO_19H_OFF=1</code>, <code>STATUS_REPORT_OFF=1</code>)</td></tr>
+</table></div>
+</section>
+
+<!-- 10 -->
+<section class="sec" id="manual">
+<h2><span class="n">10</span>Proteções contra ação manual</h2>
+<p class="lead">Pessoas alteram o CRM à mão o tempo todo. O que o código faz para as automações não brigarem com isso:</p>
+<div class="grid g2">
+ <div class="card item"><h4>Carimbo de autoria (<code>bia_write_</code>)</h4><p>Toda escrita do Worker no Agendor grava um carimbo de 15 minutos por negócio (<code>bia_write_&lt;id&gt;</code>, 900 segundos; para troca de responsável, também <code>bia_write_owner_&lt;id&gt;</code>). Ao detectar uma mudança, o Worker consulta o carimbo para saber se foi ele ou uma pessoa; assim o aviso de troca de responsável só diz "via Bia" quando o Worker escreveu o responsável (<code>src/index.js</code> e <code>26671</code>).</p></div>
+ <div class="card item"><h4>Releitura antes de agir</h4><p>O vigia de negócio sem tarefa relê o Agendor imediatamente antes de criar, porque o representante pode ter criado a tarefa nos minutos desde a leitura anterior (<code>src/index.js</code>). A conciliação do Inbound e o repasse também conferem o estado no Agendor antes de escrever.</p></div>
+ <div class="card item"><h4>Na dúvida, não mexe</h4><p>O Pós-venda só ajusta data ou tarefa quando ninguém mexeu à mão: filho aberto em Ciclo Ativo ou Contato de Reposição e tarefa ainda na data que a própria Bia pôs (<code>src/posvenda_blindagem.js</code>).</p></div>
+ <div class="card item"><h4>Marcar antes, conferir depois</h4><p>Os marcadores são gravados <b>antes</b> da ação: o pior caso é "não fez hoje", nunca "fez duas vezes" (por exemplo <code>vigia_sem_tarefa_&lt;dia&gt;</code> e <code>garantia_criada_&lt;id&gt;_&lt;dia&gt;</code>). Depois da escrita, a criação é conferida por releitura. Ganho já repassado grava <code>sdr_repasse_feito_&lt;id&gt;</code> e não é repassado de novo.</p></div>
+ <div class="card item"><h4>Respeito ao que a pessoa definiu</h4><p>A garantia de tarefa nunca troca o dono do negócio (<code>src/garantia_tarefa.js</code>). Negócio congelado de propósito não gera cobrança do vigia (<code>src/index.js</code>).</p></div>
+ <div class="card item"><h4>Mudança feita direto no Agendor</h4><p>O Worker detecta atribuições e trocas de responsável feitas no Agendor com a rotina de sync de responsáveis, a cada 5 minutos em dias úteis, das 8h às 17h55 (cron <code>*/5 11-20 * * 2-6</code>), e reflete a mudança sem apagar o que a pessoa fez.</p></div>
+</div>
+<div class="note item"><strong>Limite conhecido</strong>Tarefa aberta e vencida há mais de 31 dias não aparece nos filtros da API do Agendor. O vigia de negócio sem tarefa e a detecção de tarefas duplicadas herdam esse limite (<code>src/index.js</code>, comentário).</div>
+</section>
+
+<!-- 11 -->
+<section class="sec" id="dash">
+<h2><span class="n">11</span>Dash Geral</h2>
+<p class="lead">Painel com os números da empresa, em versão celular (<code>projetojlbv.com.br/dash/geral/</code>) e versão telão para TV (<code>/dash/geral/telao/</code>). Usado pela Gestão e pela equipe comercial.</p>
+<div class="grid g2">
+ <div class="card item"><h4>Abas</h4><ul><li><b>Vendas</b>: ganhos, ranking e a rosca "Origem das Vendas" (padrão "Por origem").</li><li><b>LTV</b>: reposição; a rosca abre em "Por representante".</li><li><b>RFM</b>: recência, frequência e valor.</li><li><b>SDR</b>: trabalho do SDR.</li><li><b>Meta Ads</b>: anúncios.</li><li><b>GA4</b>: tráfego das páginas.</li><li><b>Bia</b>: saúde das rotinas da Bia.</li></ul></div>
+ <div class="card item"><h4>De onde vêm os dados</h4><ul><li>Banco D1 <code>dash-geral-db</code>, na Cloudflare, atrás do worker <code>dash-geral-bridge</code>.</li><li>O mesmo banco alimenta o Painel do Representante (valor vendido e ganhos do mês).</li><li>As páginas leem o banco pelo endereço do worker.</li></ul></div>
+</div>
+<div class="card item" style="margin-top:14px"><h4>Regras que não se quebram</h4><ul>
+ <li><b>Data do ganho</b> = data real do evento; se vazia, a data de término do negócio. Nunca a data de importação.</li>
+ <li><b>Lead</b> = negócio do Arena. Ganho do SDR é qualificação e não entra em vendas.</li>
+ <li><b>Origem</b>: duas camadas, a da empresa e a do negócio; o Dash colapsa em Inbound e Outbound (Outbound inclui SuperAgos, Recuperação e Reativação), mais as origens especiais. A lista vem dos dados, e origem nova aparece sozinha.</li>
+ <li><b>Ticket médio</b>: mediana dos ganhos sem os extremos; ganho sem valor ou simbólico (abaixo de R$ 10) fica fora.</li>
+ <li><b>Grandes Contas</b> (negócios da conta Sistema) aparecem por último no ranking, sem medalha, mas entram em todas as métricas.</li>
+ <li>O número do ERP inteiro e o número só do Agendor nunca se misturam: sempre rotulados.</li></ul></div>
+</section>
+
+<!-- 12 -->
+<section class="sec" id="painelrep">
+<h2><span class="n">12</span>Painel do Representante</h2>
+<p class="lead">Página individual de cada representante, ligada ao Agendor ao vivo. Endereço: <code>projetojlbv.com.br/rep/dash/&lt;nome do representante&gt;/</code>.</p>
+<div class="grid g2">
+ <div class="card item"><h4>O que mostra</h4><ul><li>Carteira de negócios em andamento do representante (<code>/leads</code>), buscada no Agendor.</li><li>Valor vendido e ganhos do mês (<code>/metrics</code>), lidos do banco do Dash.</li><li>Cada negócio cai em um grupo: <b>Negociação</b> (etapa Negociação), <b>Aguardando</b> (sem tarefa aberta, tarefa sem data ou tarefa vencida ou de hoje) ou <b>Contato</b> (tarefa aberta com data futura) (<code>bucketFor</code>, <code>lifeb-rep-painel/src/index.js</code>).</li></ul></div>
+ <div class="card item"><h4>Como funciona por baixo</h4><ul><li>Worker isolado <code>lifeb-rep-painel</code>, separado do Worker da Bia.</li><li>O representante também age pela página: criar, concluir e reagendar tarefa e gravar observação (<code>/task/create</code>, <code>/task/finish</code>, <code>/task/reschedule</code>, <code>/obs</code>).</li><li>Usa o mesmo freio de pedidos ao Agendor do Worker da Bia (<code>AG_THROTTLE_DO</code>).</li></ul></div>
+</div>
+<div class="card item" style="margin-top:14px"><h4>Convite das 8h</h4><p>Na rotina das 8h em dia útil (cron <code>0 11 * * *</code>, dentro de <code>_horarioComercialBrasilia</code>), a Bia envia a cada representante com painel configurado uma mensagem que começa com "Bom dia, &lt;primeiro nome&gt;!" e convida a abrir a carteira completa de leads, com o botão <b>Abrir carteira</b>. Não envia duas vezes no mesmo dia para o mesmo representante (<code>painel_nudge_&lt;id&gt;_&lt;dia&gt;</code>), grava o status real do envio (<code>painel_convite_&lt;id&gt;_&lt;dia&gt;</code>, 90 dias) e manda à Gestão um resumo consolidado do dia (<code>_painelRepNudgeDiario</code>, <code>src/index.js</code>).</p></div>
+</section>
+
+<!-- 13 -->
+<section class="sec" id="outros">
+<h2><span class="n">13</span>Demais componentes do ecossistema</h2>
+<p class="lead">Sistemas e frentes que convivem com o núcleo comercial, descritos pelo que consta nos próprios repositórios e pastas de documentação.</p>
+<div class="grid g2">
+ <div class="card item"><span class="tag t-purple">ERP</span><h4>Análise mensal ERP x Agendor</h4>
+  <p>Rotina de análise de vendas que cruza a planilha do ERP do mês com os negócios do Agendor. É feita com scripts de leitura (<code>pull_agendor.py</code>, <code>build_vendas.py</code>, <code>assemble_html.py</code>) guardados em <code>Bia/auditorias/scripts-vendas-erp-crm/</code> e gera uma página de análise. Os scripts só leem; nada é escrito no Agendor. O ERP não é integrado ao Agendor.</p></div>
+ <div class="card item"><span class="tag t-purple">Aplicativo</span><h4>Life B Solicita</h4>
+  <p>Aplicativo de pedidos de <b>material</b> (expositores), <b>comodato</b> e <b>promotoria</b>, que substitui formulários colados em grupos de WhatsApp. Tem telas de Representante, Administração, Financeiro e Promotora, além de logística e motorista. Roda na Cloudflare (Worker, banco D1 e armazenamento R2), com ambientes <code>lifeb-solicita-staging</code> e <code>lifeb-solicita</code> no <code>wrangler.toml</code> do app. É independente da Bia: não há integração; os avisos ficam dentro do app.</p></div>
+ <div class="card item"><span class="tag t-purple">E-commerce</span><h4>Yanmei</h4>
+  <p>Frente de e-commerce com catálogo (Anymarket, Shopify, Bling, Mercado Livre), dashboard próprio de vendas online (código em <code>~/Desktop/yanmei-dashboard</code>) e funil de Meta Ads. Tem documentação própria em <code>~/Dropbox/Yanmei/</code>. Não usa o Agendor nem a Bia.</p></div>
+ <div class="card item"><span class="tag t-purple">Campanha</span><h4>SuperAgos (feira)</h4>
+  <p>Origem de negócio <code>SUPERAGOS</code> (id <code>90361</code>) no Agendor. O repasse do SDR para o Arena marca o negócio quando a origem é SuperAgos (<code>src/sdr_repasse.js</code>). No Dash, conta como Outbound. Tem painel próprio em <code>projetojlbv.com.br/dash/superagos/</code>.</p></div>
+ <div class="card item"><span class="tag t-purple">Treinamento</span><h4>Kits e apresentações</h4>
+  <p>Páginas em <code>projetojlbv.com.br</code>: <code>/kit/closer/</code>, <code>/kit/sdr/</code> e <code>/kit/arena/</code> (kits de apoio à equipe) e <code>/apresentacao-farma/</code> e <code>/apresentacao-super/</code> (apresentações comerciais).</p></div>
+ <div class="card item"><span class="tag t-gray">Legado</span><h4>GS Engage</h4>
+  <p>Antiga ferramenta de prospecção. Rotinas encerradas em 19/10/2026 (seção 2). Nenhuma automação atual cria lead nele.</p></div>
+</div>
+</section>
+
+<!-- 14 -->
+<section class="sec" id="regras">
+<h2><span class="n">14</span>Regras de ouro</h2>
+<p class="lead">Regras que o código aplica ou que constam como regra nos módulos. Se uma ideia quebra uma delas, ela não entra.</p>
+<div class="grid g2">
+ <div class="card item"><h4>Tarefas</h4><ol><li>Tarefa de negócio sempre com o dono do negócio como responsável (<code>src/garantia_tarefa.js</code>).</li><li>Tarefa da cadência do SDR vence às 18h, em dia útil (<code>src/index.js</code>).</li><li>Negócio aberto fora do SDR não fica sem tarefa (seção 8 mostra o que já é aplicado).</li><li>Tarefa de negócio ganho ou perdido é fechada.</li></ol></div>
+ <div class="card item"><h4>SDR</h4><ol><li>Ganho do SDR é qualificação, não venda.</li><li>No Outbound nada começa sozinho: só o botão Iniciar (fila manual).</li><li>O lead só é atribuído a representante de campo.</li><li>Motivos como "Já está sendo atendido(a)/cliente" nunca voltam ao SDR.</li></ol></div>
+ <div class="card item"><h4>Origem e números</h4><ol><li>A origem da empresa nunca muda nas voltas; só o negócio novo recebe a origem de volta.</li><li>Lead é só negócio do Arena.</li><li>Datas dd/mm, em horário de Brasília.</li></ol></div>
+ <div class="card item"><h4>Automação</h4><ol><li>Escreveu? Releia. Só se diz "confirmado" quando a leitura bate.</li><li>Em shadow não há escrita nem WhatsApp.</li><li>Cada tipo liga separado, com teto pequeno por padrão.</li><li>Se a leitura falhou, a automação não age (falha fechada).</li></ol></div>
+</div>
+</section>
+
+<!-- 15 -->
+<section class="sec" id="seguranca">
+<h2><span class="n">15</span>Segurança e confiabilidade</h2>
+<p class="lead">O sistema foi feito para errar pouco e, quando errar, não piorar. Nenhuma chave ou senha aparece neste guia.</p>
+<div class="grid g3">
+ <div class="card item"><h4>Travas</h4><p>Antes de criar, a Bia pega uma trava atômica em Durable Object (por exemplo a trava global de criação das voltas e a trava por empresa), para duas rotinas não agirem ao mesmo tempo.</p></div>
+ <div class="card item"><h4>Criação sem resposta</h4><p>Se a criação de uma empresa ou negócio não responde, a Bia procura se o item já foi criado antes de tentar de novo, para não duplicar (<code>src/sdr_destino.js</code>).</p></div>
+ <div class="card item"><h4>Freio do Agendor</h4><p>As chamadas ao Agendor passam por uma fila com freio (<code>AG_THROTTLE_DO</code>), compartilhada com o Painel do Representante; clique de pessoa tem prioridade sobre rotina.</p></div>
+ <div class="card item"><h4>Tetos e shadow</h4><p>Automação nova nasce em shadow. Tetos padrão pequenos; valor de chave acima do teto absoluto é cortado (por exemplo 10 por rodada e 20 por dia nas voltas).</p></div>
+ <div class="card item"><h4>Identidade e portões</h4><p><code>ENFORCE_IDENTITY=1</code>, <code>NOTIF_GATE=1</code> e <code>GATE_NOTIF_REP=1</code>. Chamadas internas ao Worker levam chave de serviço em cabeçalho.</p></div>
+ <div class="card item"><h4>Backups</h4><p>Retrato diário das chaves do KV e cópia do código a cada deploy, no Dropbox e no GitHub (seção 7).</p></div>
+</div>
+</section>
+
+<!-- 16 -->
+<section class="sec" id="estado">
+<h2><span class="n">16</span>Estado atual dos interruptores</h2>
+<p class="lead">Leitura ao vivo do KV de produção em 05/11/2026 (somente leitura). "Ausente" significa que a chave não existe e vale o padrão descrito. Valores podem mudar; o estado vivo (aba Bia e Agendor) prevalece sobre esta tabela.</p>
+<div class="tw item"><table>
+<tr><th>Automação</th><th>Chave</th><th>Lido em 05/11</th><th>Significado</th></tr>
+<tr><td class="k">Motor Proativo, Arena</td><td><code>MOTOR_PROATIVO_MODE</code></td><td>approval</td><td>Ligado, com aprovação da Gestão</td></tr>
+<tr><td class="k">Motor Proativo, Reposição</td><td><code>MOTOR_PROATIVO_REPOSICAO_MODE</code></td><td>approval</td><td>Ligado, com aprovação</td></tr>
+<tr><td class="k">Motor Proativo, Reativação</td><td><code>MOTOR_PROATIVO_REATIVACAO75_MODE</code></td><td>approval</td><td>Ligado, com aprovação</td></tr>
+<tr><td class="k">Motor v2 (6 chaves)</td><td><code>MOTOR_UX_V2</code> e outras 5</td><td>ausentes</td><td>Desligadas: preparado, aguardando liberação</td></tr>
+<tr><td class="k">Recuperação</td><td><code>SDRDEST_RECUPERACAO_MODE</code></td><td>live</td><td>Cria negócio de verdade (tetos pequenos)</td></tr>
+<tr><td class="k">Recuperação SDR</td><td><code>SDRDEST_RECUPERACAO_SDR_MODE</code></td><td>live</td><td>Idem, 14 dias, até 15 por dia</td></tr>
+<tr><td class="k">Reativação 75+ (drogaria)</td><td><code>SDRDEST_REPOSICAO_MODE</code></td><td>live</td><td>Idem</td></tr>
+<tr><td class="k">Reativação 45+ (supermercado)</td><td><code>SDRDEST_REPOSICAO_SUPERMERCADO_MODE</code></td><td>ausente</td><td>Desligada</td></tr>
+<tr><td class="k">Segunda onda de Recuperação</td><td><code>SDRDEST_REATIVACAO2_MODE</code></td><td>ausente</td><td>Desligada</td></tr>
+<tr><td class="k">Cadência de retorno</td><td><code>SDR_CAD_RECUPERACAO_MODE</code></td><td>live (3 tipos)</td><td>Cadência curta das voltas ligada</td></tr>
+<tr><td class="k">Cadência do SDR</td><td><code>SDR_CADENCIA_MODE</code></td><td>live</td><td>Tarefas pelo calendário</td></tr>
+<tr><td class="k">Uma tarefa por vez</td><td><code>SDR_SEQUENCIA_MODE</code></td><td>shadow</td><td>Simulação</td></tr>
+<tr><td class="k">Repasse SDR para Arena</td><td><code>SDR_REPASSE_MODE</code></td><td>live</td><td>No ar</td></tr>
+<tr><td class="k">Enriquecimento por CNPJ</td><td><code>SDR_ENRIQUECER_MODE</code></td><td>live</td><td>No ar</td></tr>
+<tr><td class="k">Fechamento de tarefas (universal)</td><td><code>FECHA_TAREFAS_MODE</code></td><td>live</td><td>No ar</td></tr>
+<tr><td class="k">Encerra tarefas do SDR; aviso de perdido</td><td><code>SDR_ENCERRA_TAREFAS_MODE</code>, <code>SDR_AVISO_PERDIDO_MODE</code></td><td>live, live</td><td>No ar</td></tr>
+<tr><td class="k">Garantia de tarefa</td><td><code>GARANTIA_TAREFA_MODE</code></td><td>ausente</td><td>Simulação (padrão shadow)</td></tr>
+<tr><td class="k">Primeira tarefa automática</td><td><code>PRIMEIRA_TAREFA_AUTO_ENABLED</code></td><td>1</td><td>Ligada</td></tr>
+<tr><td class="k">Hoje, Lista, Retomada</td><td><code>SDR_HOJE_MODE</code>, <code>SDR_LISTA_MODE</code>, <code>SDR_RETOMADA_MODE</code></td><td>on, on, live</td><td>No ar</td></tr>
+<tr><td class="k">Destino do Inbound</td><td><code>INBOUND_DESTINO</code></td><td>agendor</td><td>Entra direto no Agendor</td></tr>
+<tr><td class="k">Cota do Outbound</td><td><code>SDR_COTA_AUTO</code> / <code>SDR_FILA_MODO</code></td><td>0 / ausente</td><td>Fila 100% manual</td></tr>
+<tr><td class="k">Portões de envio</td><td><code>NOTIF_GATE</code>, <code>GATE_NOTIF_REP</code>, <code>ENFORCE_IDENTITY</code></td><td>1, 1, 1</td><td>Portões de envio e verificação de identidade ligados</td></tr>
+<tr><td class="k">Pausas gerais</td><td><code>BIA_KILL</code>, <code>NOTIF_PAUSE</code>, <code>MOTOR_PROATIVO_OFF</code></td><td>ausentes</td><td>Nada pausado</td></tr>
+<tr><td class="k">Relatórios 19h e de status</td><td><code>RELATORIO_19H_OFF</code>, <code>STATUS_REPORT_OFF</code></td><td>1, 1</td><td>Desligados</td></tr>
+<tr><td class="k">Segundo SDR</td><td>chave de ativação</td><td>0</td><td>Preparado e desligado</td></tr>
+<tr><td class="k">Cópia dos avisos do SDR à Gestão</td><td><code>COPIA_FELIPE_ROBERT</code></td><td>"1" no <code>wrangler.toml</code></td><td>Ligada (variável do deploy, não é chave do KV)</td></tr>
+</table></div>
+</section>
+
+
+<!-- 18 -->
+<section class="sec" id="glossario">
+<h2><span class="n">17</span>Glossário e perguntas frequentes</h2>
+<h3>Perguntas frequentes</h3>
+<div id="faqlist">
+<details class="item"><summary>Por que meu lead não apareceu na Hoje?</summary><div><ol>
+ <li>Use a busca geral no topo da página: ela procura nos dois funis do SDR por nome, pessoa, CNPJ, telefone, título, número do negócio ou cidade.</li>
+ <li>Na fila de espera o lead só aparece em "Começar leads novos".</li>
+ <li>Lead que entrou depois das 17h30 só começa no próximo dia útil.</li>
+ <li>Se ele não está em funil do SDR, a Hoje não o mostra.</li></ol></div></details>
+<details class="item"><summary>Posso reabrir um lead que ganhei por engano?</summary><div>A página tem as ações "Reabrir lead" e "Tirar o Ganho e reabrir". O repasse já feito para o Arena não é desfeito pelo repasse (<code>sdr_repasse_feito_&lt;id&gt;</code>).</div></details>
+<details class="item"><summary>Por que um lead perdido voltou para a fila?</summary><div>É uma das três famílias de volta (seção 6). A etiqueta no cartão e a caixa "De onde veio este lead" explicam a origem. Ele entra na fila e só começa quando o SDR clica Iniciar.</div></details>
+<details class="item"><summary>Por que não chegou a cobrança ao representante?</summary><div>O card precisa passar pela aprovação (modo approval), respeita o intervalo mínimo entre cards (20 minutos), só sai em dia útil e as cobranças começam às 9h.</div></details>
+</div>
+<h3>Glossário</h3>
+<div class="tw item"><table>
+<tr><th>Termo</th><th>Quer dizer</th></tr>
+<tr><td class="k">Agendor</td><td>O CRM: clientes, negócios, tarefas e funis.</td></tr>
+<tr><td class="k">Worker</td><td>O programa que roda 24 horas na nuvem (Cloudflare) e executa as regras e rotinas da Bia.</td></tr>
+<tr><td class="k">KV</td><td>Memória de anotações e chaves de liga e desliga do Worker. Nunca é o Agendor.</td></tr>
+<tr><td class="k">Cron</td><td>Rotina que dispara por horário. No arquivo os horários estão em UTC; Brasília é UTC menos 3.</td></tr>
+<tr><td class="k">Durable Object</td><td>Recurso da Cloudflare usado como trava atômica: só um processo por vez.</td></tr>
+<tr><td class="k">D1</td><td>Banco de dados da Cloudflare usado pelo Dash e pelo Painel do Representante.</td></tr>
+<tr><td class="k">n8n</td><td>Sistema de conversa da Bia no WhatsApp.</td></tr>
+<tr><td class="k">Webhook</td><td>Aviso que o Agendor envia ao Worker quando algo muda.</td></tr>
+<tr><td class="k">SDR</td><td>Quem faz o primeiro contato e qualifica o lead.</td></tr>
+<tr><td class="k">Representante</td><td>Vendedor de campo que atende a carteira. Diferente do representante legal da loja.</td></tr>
+<tr><td class="k">Gestão / Administrador</td><td>Quem aprova, pausa e acompanha o conjunto.</td></tr>
+<tr><td class="k">Cadência</td><td>Sequência de contatos em dias úteis combinados.</td></tr>
+<tr><td class="k">Dia útil</td><td>Segunda a sexta, sem feriado.</td></tr>
+<tr><td class="k">Qualificado</td><td>Lead aprovado pelo SDR e repassado ao Arena (Ganho no SDR).</td></tr>
+<tr><td class="k">Lead</td><td>Negócio do Arena.</td></tr>
+<tr><td class="k">Fila de espera</td><td>Leads do Outbound sem tarefa, esperando o Iniciar.</td></tr>
+<tr><td class="k">Fim da cadência</td><td>Etapa depois da última tentativa; 3 dias úteis antes do fechamento automático.</td></tr>
+<tr><td class="k">Cadência esgotada</td><td>Motivo de perda de quem nunca respondeu.</td></tr>
+<tr><td class="k">Simulação (shadow)</td><td>A automação só observa e relata.</td></tr>
+<tr><td class="k">live / approval</td><td>Escreve de verdade / escreve só após aprovação da Gestão.</td></tr>
+<tr><td class="k">Falha fechada</td><td>Se a leitura falhou, a automação não age.</td></tr>
+<tr><td class="k">Grandes Contas</td><td>Negócios da conta Sistema: entram nos números, ficam fora da disputa do ranking.</td></tr>
+<tr><td class="k">RFM</td><td>Recência, frequência e valor de compra do cliente.</td></tr>
+<tr><td class="k">LTV</td><td>Valor do cliente ao longo do tempo.</td></tr>
+<tr><td class="k">UTM / macro</td><td>Parâmetros do link do anúncio; macro é o texto entre chaves que o Meta substitui.</td></tr>
+<tr><td class="k">ICP</td><td>Perfil de cliente ideal.</td></tr>
+<tr><td class="k">CNPJ</td><td>Número da empresa na Receita Federal.</td></tr>
+<tr><td class="k">ERP</td><td>Sistema de faturamento e pedidos da empresa.</td></tr>
+<tr><td class="k">Comodato</td><td>Empréstimo de material ao cliente, tratado no Solicita.</td></tr>
+<tr><td class="k">Promotoria</td><td>Serviço de promotoras em loja, solicitado pelo Solicita.</td></tr>
+</table></div>
+</section>
+</main>
+</div>
+
+<footer class="foot"><div class="in">
+  <img class="logo-claro" src="/logo-lifeb.png" alt="Life B">
+  <img class="logo-escuro" src="/logo-lifeb-escuro.png" alt="Life B">
+  <div><p><b>Ecossistema Life B</b> · Última atualização: 05/11/2026</p>
+  <p>Este documento reflete o sistema nessa data. Regras, prazos e modos de cada automação podem mudar depois. Em caso de dúvida, o estado ao vivo (aba Bia do Dash e Agendor) vale mais do que este texto.</p></div>
+</div></footer>
+
+<script>
+(function(){
+  var root=document.documentElement;
+  try{var t=localStorage.getItem('lb_tema'); if(t==='dark'||t==='light') root.setAttribute('data-theme',t);}catch(e){}
+  function dark(){var a=root.getAttribute('data-theme'); if(a) return a==='dark'; return window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;}
+  Array.prototype.forEach.call(document.querySelectorAll('[data-toggle-theme]'),function(b){
+    b.addEventListener('click',function(){var n=dark()?'light':'dark'; root.setAttribute('data-theme',n); try{localStorage.setItem('lb_tema',n);}catch(e){}});
+  });
+  var menu=document.getElementById('menu'), mb=document.getElementById('menuBtn');
+  mb.addEventListener('click',function(){var o=menu.classList.toggle('open'); mb.setAttribute('aria-expanded',o);});
+  Array.prototype.forEach.call(menu.querySelectorAll('#toc a'),function(a){a.addEventListener('click',function(){menu.classList.remove('open');mb.setAttribute('aria-expanded','false');});});
+  var links={}, secs=Array.prototype.slice.call(document.querySelectorAll('section.sec'));
+  Array.prototype.forEach.call(document.querySelectorAll('#toc a'),function(a){links[a.getAttribute('href').slice(1)]=a;});
+  function spy(){var y=window.scrollY+130, cur=secs[0]; secs.forEach(function(s){if(s.offsetTop<=y) cur=s;});
+    Object.keys(links).forEach(function(k){links[k].classList.toggle('on',cur&&k===cur.id);});}
+  window.addEventListener('scroll',spy,{passive:true}); spy();
+  var q=document.getElementById('q'), cnt=document.getElementById('count');
+  var items=Array.prototype.slice.call(document.querySelectorAll('main .item'));
+  function norm(s){return (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');}
+  var txt=items.map(function(e){return norm(e.textContent);});
+  q.addEventListener('input',function(){
+    var v=norm(q.value.trim()), n=0;
+    items.forEach(function(e,i){var ok=!v||txt[i].indexOf(v)>-1; e.classList.toggle('hide',!ok); if(ok&&v) n++; if(v&&ok&&e.tagName==='DETAILS') e.open=true;});
+    secs.forEach(function(s){var vis=!v||s.querySelector('.item:not(.hide)'); s.classList.toggle('hide',!vis);});
+    cnt.textContent=v?(n? n+' trecho(s) encontrado(s)':'Nada encontrado para essa busca.'):'';
+  });
+})();
+</script>
+
+</body>
+</html>
