@@ -138,6 +138,17 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .col.colapsada button.faixa{background:transparent;color:var(--text);border:0;min-height:0;width:100%;height:100%;padding:4px 0;writing-mode:vertical-rl;text-orientation:mixed;font-size:13px;font-weight:700;white-space:nowrap}
 .col.colapsada .cont{font-size:13px}
 button.recolher{background:transparent;color:var(--muted);border:0;min-height:0;padding:0 2px;font-size:13px;text-decoration:underline;font-weight:600}
+
+/* 04/11 noite: cabeçalho enxuto + kanban que não estica nem esconde texto */
+@media(min-width:1000px){
+  .cab1{gap:6px 16px} .cab1>div:last-child{display:flex;align-items:center;gap:10px;text-align:right} .cab1>div:last-child .row{margin-top:0!important}
+  .chips{order:5;flex-basis:100%;gap:5px} .chip{min-width:0;padding:2px 8px;white-space:nowrap;font-size:13px} .chip b{display:inline;font-size:16px;margin-right:5px}
+  .chip.mes{padding:2px 8px} .chip.mes b{font-size:16px}
+  .cab2{margin-top:6px} .iniciar-faixa{margin-top:6px} .iniciar-faixa>summary{padding:5px 2px}
+  .col{align-self:start;max-height:100%}
+  .col.colapsada{align-self:start;min-height:120px}
+  #blocos:has(.vazio-dia){grid-template-rows:auto minmax(0,1fr)} #blocos:has(.vazio-dia)>.vazio-dia{grid-row:1} #blocos:has(.vazio-dia)>.col{grid-row:2}
+}
 @media(max-width:1499px){ /* notebooks: topo compacto para sobrar altura às colunas */
   .atalhos,.col-h .dica{display:none} .chips{gap:6px} .chip{min-width:0;padding:2px 8px} .chip b{font-size:18px} .relogio{font-size:20px} #cab{padding:5px 10px} .cab1{gap:10px} .cab2{margin-top:4px;gap:8px} .ctl{margin-top:5px;padding-top:5px;gap:10px} .histo,.msgacao{margin-top:2px;font-size:13px} .atual{font-size:13px} button{font-size:13px;min-height:32px;padding:3px 10px} .cab2 input[type=search]{width:200px} .cab1 img{height:24px}
 }
@@ -245,10 +256,10 @@ button.copiar.ok{background:var(--green-bg);color:var(--green);border-color:var(
 .lig-cx .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
 .lig-cx button{min-height:44px}
 /* números do mês no topo (04/11): chips menores, balão de detalhe por cima */
-.chip.mes{min-width:0;padding:2px 7px;white-space:nowrap;background:transparent;border-style:dashed;cursor:pointer;font-size:12px}
+.chip.mes{min-width:0;padding:2px 7px;white-space:nowrap;background:transparent;border-style:dashed;cursor:pointer;font-size:13px}
 .chip.mes b{font-size:17px;display:inline;margin-right:5px}
 .chip.mes.ok b{color:var(--green)}
-@media(min-width:701px) and (max-width:1320px){.chip.mes{padding:1px 5px;font-size:11px}.chip.mes b{font-size:15px;margin-right:3px}}
+@media(min-width:701px) and (max-width:1320px){.chip.mes{padding:1px 5px;font-size:13px}.chip.mes b{font-size:15px;margin-right:3px}}
 #cab{position:sticky}
 .mespop{position:absolute;right:14px;top:100%;margin-top:6px;z-index:60;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:12px;padding:12px 14px;max-width:min(420px,calc(100vw - 28px));box-shadow:0 8px 26px rgba(0,0,0,.35)}
 .mespop h3{font-size:15px;font-weight:800;color:var(--purple);margin-bottom:6px}
@@ -445,6 +456,7 @@ details.sec-empresa>summary,details.dados-opcional>summary{cursor:pointer;font-w
 #painelLead .tarefa.feita .tt{text-decoration:line-through;color:var(--muted);font-weight:600}
 .aviso-discreto{color:var(--muted);font-size:13px}
 .bia-padrao{width:100%;min-height:52px;font-size:17px}
+@media(max-width:700px){ /* 04/11: no celular os números do topo quebram em linhas, nada fica escondido fora da tela */ .chips{flex-wrap:wrap;overflow-x:visible} .chip{white-space:normal} }
 </style>
 </head>
 <body>
@@ -524,9 +536,9 @@ details.sec-empresa>summary,details.dados-opcional>summary{cursor:pointer;font-w
         </div>
         <div class="grupo status-ctl" id="statusCtl"></div>
       </div>
+      <div class="histo" id="historico"></div>
     </details>
     <div class="msgacao" id="msgAcao" role="status" aria-live="polite"></div>
-    <div class="histo" id="historico"></div>
     <details id="detLiberados" class="hide"><summary id="detResumo">Quem foi iniciado agora</summary><ul id="listaLiberados"></ul></details>
   </header>
   <div id="avisos"></div>
@@ -699,7 +711,7 @@ function casaBusca(it, q) {
 
 // ---------- chamadas ----------
 // ---------- resiliência: rede com retry, disjuntor, caixa de saída, versão, relógio do servidor, telemetria ----------
-var PAGINA_VERSAO = '2026-11-04.5';
+var PAGINA_VERSAO = '2026-11-04.6';
 var REDE = { escala: 1, falhas: 0, ultima: 0, desvio: 0 };
 function dormir(ms) { return new Promise(function (r) { setTimeout(r, ms * REDE.escala); }); }
 function jitter(ms) { return ms * (0.5 + Math.random() * 0.5); }
@@ -1023,7 +1035,7 @@ function cartao(it, opts) {
   empClicavel(li, it.empresa, it.dealId, it); if (S.qualif[it.dealId]) li.appendChild(el('div', 'est andamento', 'Qualificando... (enviando ao time de vendas)')); else if (S.repPend[it.dealId]) li.appendChild(el('div', 'est andamento', 'Qualificado: falta escolher o representante')); linhaContato(li, it);
   if (it.subtitulo) li.appendChild(el('div', 'pas', it.subtitulo));
   if (opts.estado) li.appendChild(el('div', 'est ' + it.estado, estadoTxt(it)));
-  if (opts.passo && !it.nota) li.appendChild(el('div', 'pas', feito ? 'Tudo feito ✓' : (it.passoPendente ? 'Próximo: ' + it.passoPendente : '')));
+  if (opts.passo && !it.nota && !it.fechaTxt) li.appendChild(el('div', 'pas', feito ? 'Tudo feito ✓' : (it.passoPendente ? 'Próximo: ' + it.passoPendente : '')));
   if (it.nota) li.appendChild(el('div', 'nota', it.nota));
   if (it.fechaTxt) li.appendChild(el('div', 'est andamento', it.fechaTxt));
   if (opts.texto) li.appendChild(el('div', 'pas', opts.texto(it)));
@@ -1033,6 +1045,7 @@ function cartao(it, opts) {
   li.appendChild(extra);
   if (abriu && !feito) li.appendChild(el('div', 'abriu', 'Você abriu às ' + horaClique(abriu) + '. Quando finalizar no Agendor, fica verde aqui em poucos segundos.'));
   acoesCartao(li, it.dealId, it.link, function () { if (!feito) { gravarAbriu(it.dealId); setTimeout(function () { if (S.dados) desenharBlocos(); }, 50); } }, it);
+  if (opts.fim && !feito && it.dealId != null) { var bv = el('button', 'sec voltar-cad', 'Voltar para a cadência'); bv.type = 'button'; bv.title = 'Escolher a etapa e recomeçar a cadência deste lead, sem abrir o Agendor'; bv.onclick = function () { voltarCadencia(it, bv); }; li.appendChild(bv); }
   return li;
 }
 function cartaoAtrasado(g) {
@@ -1088,7 +1101,7 @@ function desenharBlocos() {
     var lista = ordenar(itens, modo === 'hora' ? 'pend' : modo).filter(function (it) { return passa(it) && !(esconder && it.feito); });
     if (!itens.length) k2.l.appendChild(el('p', 'vazio', 'Nada para hoje aqui.'));
     else if (!lista.length) k2.l.appendChild(el('p', 'vazio', busca ? 'Nenhum resultado para essa busca aqui.' : 'Tudo certo por aqui.'));
-    anexarEmBlocos(k2.l, lista, function (it) { return cartao(it, { atras: atrasado && b.progresso && !it.feito, inb: inb, estado: b.progresso, passo: true }); });
+    anexarEmBlocos(k2.l, lista, function (it) { return cartao(it, { atras: atrasado && b.progresso && !it.feito && !it.semTarefas, inb: inb, estado: b.progresso, passo: true, fim: b.id === 'fim' }); });
     k2.vazio = itens.length === 0; k2.id = b.id; k2.titulo = b.titulo; k2.n = itens.length; cols.push(k2);
   }
   colBloco(porId.inbound_novo);
@@ -1115,7 +1128,7 @@ function desenharBlocos() {
     return { c: f, l: el('div'), vazio: true, colapsada: true, id: k.id };
   });
   var n = cols.length; var per2 = Math.max(1, Math.ceil(n / 2));
-  bl.style.setProperty('--tpl1', cols.map(function (k) { return k.colapsada ? '34px' : 'minmax(0,1fr)'; }).join(' '));
+  bl.style.setProperty('--tpl1', cols.map(function (k) { return k.colapsada ? '34px' : 'minmax(0,560px)'; }).join(' '));
   bl.style.setProperty('--tpl2', 'repeat(' + per2 + ',minmax(0,1fr))');
   cols.forEach(function (k) { bl.appendChild(k.c); var id = k.c.getAttribute('data-col'); if (rolagem[id]) k.l.scrollTop = rolagem[id]; });
 }
@@ -2264,6 +2277,33 @@ function confirmarTelefoneDup(L, j) {
   var linha = el('div', 'row'); linha.style.marginTop = '12px'; var ok = el('button', 'forte', 'Salvar mesmo assim'); ok.type = 'button'; var no = el('button', 'sec', 'Cancelar'); no.type = 'button';
   no.onclick = descartar; ok.onclick = async function () { ok.disabled = true; fechar(); L.confirmaTelefone = true; try { await enviarCampos(L); } finally { L.confirmaTelefone = false; } };
   linha.appendChild(ok); linha.appendChild(no); cx.appendChild(linha); document.body.appendChild(ov); no.focus();
+}
+
+// ---- Fim da cadência: voltar o lead para qualquer etapa, sem abrir o Agendor (04/11) ----
+var RETOMAR_ETAPAS = { outbound: [[1, 'Abertura (dia 1)'], [2, '2º contato (dia 3)'], [3, '3º contato (dia 5)'], [4, '4º contato (dia 8)'], [5, 'Última tentativa (dia 10)']], inbound: [[2, 'Abertura (dia 1)'], [3, 'Follow-up (dia 2)'], [4, 'Follow-up 2 (dia 3)'], [5, 'Última tentativa (dia 4)']] };
+function voltarCadencia(it, botao) {
+  var abriu = botao || document.activeElement; var ov = el('div', 'lig-ov'); ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Voltar para a cadência');
+  var cx = el('div', 'lig-cx'); ov.appendChild(cx);
+  function fechar() { document.removeEventListener('keydown', esc, true); if (ov.parentNode) ov.parentNode.removeChild(ov); try { if (abriu && abriu.focus && document.body.contains(abriu)) abriu.focus(); } catch (e) {} }
+  function esc(ev) { if (ev.key === 'Escape') { ev.stopPropagation(); fechar(); } }
+  document.addEventListener('keydown', esc, true); ov.addEventListener('mousedown', function (ev) { if (ev.target === ov) fechar(); });
+  cx.appendChild(el('h3', null, 'Voltar para a cadência')); cx.appendChild(el('p', 'sub', it.empresa || 'Este lead'));
+  cx.appendChild(el('p', null, 'Escolha a etapa em que o lead recomeça. A Bia refaz a contagem a partir dela e cria as tarefas.'));
+  var sel = 0; var grupo = el('div', 'lig-ops'); grupo.setAttribute('role', 'radiogroup');
+  var lista = RETOMAR_ETAPAS[it.funil === 'inbound' ? 'inbound' : 'outbound'];
+  var erro = el('p', 'estado erro hide'); erro.setAttribute('role', 'alert'); erro.style.color = 'var(--red)'; erro.style.fontWeight = '700';
+  lista.forEach(function (r) { var l = el('label', 'lig-op'); var rb = el('input'); rb.type = 'radio'; rb.name = 'retetapa'; rb.value = String(r[0]); rb.onchange = function () { sel = r[0]; ok.disabled = false; erro.classList.add('hide'); }; l.appendChild(rb); l.appendChild(document.createTextNode(' ' + r[1])); grupo.appendChild(l); });
+  cx.appendChild(grupo); cx.appendChild(erro);
+  var linha = el('div', 'row'); linha.style.marginTop = '12px'; var ok = el('button', 'forte', 'Voltar para a cadência'); ok.type = 'button'; ok.disabled = true; var no = el('button', 'sec', 'Cancelar'); no.type = 'button';
+  no.onclick = fechar;
+  ok.onclick = async function () {
+    if (!sel) return; ok.disabled = true; no.disabled = true; ok.textContent = 'Voltando...'; erro.classList.add('hide'); var j;
+    try { j = await api('/lead/' + it.dealId + '/retomar', { etapa: sel }, null, null, { idem: novaChave() }); } catch (e) { j = { _status: 0, ok: false }; }
+    if (j && j._status === 401) { fechar(); sair('Senha não confere. Entre de novo.'); return; }
+    if (j && j.ok) { fechar(); invalidaLead(it.dealId); msg(j.mensagem || 'Lead voltou para a cadência.', 'ok'); carregar(true); return; }
+    ok.disabled = false; no.disabled = false; ok.textContent = 'Tentar de novo'; erro.textContent = (j && j.mensagem) || 'Não consegui agora. O lead continua no Fim da cadência. Tente de novo.'; erro.classList.remove('hide');
+  };
+  linha.appendChild(ok); linha.appendChild(no); cx.appendChild(linha); document.body.appendChild(ov); var p0 = grupo.querySelector('input'); if (p0) p0.focus();
 }
 function perguntarLigacao(L, t, cont) {
   if (!t || !t.ligacao) { cont({}); return; }
