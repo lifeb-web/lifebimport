@@ -714,7 +714,7 @@ function casaBusca(it, q) {
 
 // ---------- chamadas ----------
 // ---------- resiliência: rede com retry, disjuntor, caixa de saída, versão, relógio do servidor, telemetria ----------
-var PAGINA_VERSAO = '2026-11-05.1';
+var PAGINA_VERSAO = '2026-11-05.2';
 var REDE = { escala: 1, falhas: 0, ultima: 0, desvio: 0 };
 function dormir(ms) { return new Promise(function (r) { setTimeout(r, ms * REDE.escala); }); }
 function jitter(ms) { return ms * (0.5 + Math.random() * 0.5); }
@@ -2196,7 +2196,7 @@ function linhaTarefa(L, t, destaque, pode) {
 // 04/11: "De onde veio este lead": a nota da Recuperação/Reativação aparece no topo do painel, aberta (o SDR não precisa abrir o Agendor para saber quem perdeu, quando e por quê)
 function secaoOrigem(L) {
   var ts = (L.lead && L.lead.tarefas) || []; var t = ts.filter(function (x) { return x.feita && /^\s*\[(Recuperacao|Reativacao)/i.test(x.texto || ''); })[0]; if (!t) return null;
-  var linhas = String(t.texto).split('\n').map(function (x) { return x.trim(); }).filter(Boolean); linhas.shift(); if (!linhas.length) return null;
+  var linhas = String(t.texto).split('\n').map(function (x) { return x.trim(); }).filter(Boolean); linhas.shift(); if (!linhas.length) return null; linhas[0] = linhas[0].replace(/^De onde veio:\s*/i, ''); // o título da caixa já diz "De onde veio"
   var box = el('div', 'origem-box'); box.appendChild(el('h3', null, 'De onde veio este lead'));
   linhas.slice(0, 4).forEach(function (ln) {
     var m = ln.match(/^(.*?)(https:\/\/\S+)\s*$/); var d = el('div');
