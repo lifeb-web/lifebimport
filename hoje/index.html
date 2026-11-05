@@ -455,6 +455,12 @@ details.sec-empresa>summary,details.dados-opcional>summary{cursor:pointer;font-w
 #painelLead .adiar-op{display:flex;gap:6px;flex-wrap:wrap} #painelLead .adiar-op button{flex:1 1 90px;min-height:44px}
 #painelLead .adiar-data{display:flex;gap:6px;flex-wrap:wrap} #painelLead .adiar-data input{flex:1 1 150px}
 #painelLead details.concluidas>summary,#painelLead details.nova-tarefa>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:700;color:var(--purple)}
+#painelLead .secao-nota textarea{width:100%;min-height:72px;margin-bottom:6px}
+#painelLead .nota-rod{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#painelLead .nota-cont{font-size:13px;font-variant-numeric:tabular-nums}#painelLead .nota-cont.estouro{color:var(--red);font-weight:700}
+#painelLead .nota-estado{margin-top:6px;font-size:14px}
+#painelLead .nota-lista{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:4px}
+#painelLead .nota-lista li{font-size:14px;overflow-wrap:anywhere;border-top:1px solid var(--border);padding-top:4px}#painelLead .nota-lista .nq{color:var(--muted);font-size:13px;margin-right:6px}
 #painelLead .nova-corpo{display:flex;flex-direction:column;gap:8px} #painelLead .nova-corpo input[type=text]{width:100%;font-family:var(--font);font-size:16px;min-height:44px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--card);color:var(--text)}
 #painelLead .tarefa.feita .tt{text-decoration:line-through;color:var(--muted);font-weight:600}
 .aviso-discreto{color:var(--muted);font-size:13px}
@@ -714,7 +720,7 @@ function casaBusca(it, q) {
 
 // ---------- chamadas ----------
 // ---------- resiliência: rede com retry, disjuntor, caixa de saída, versão, relógio do servidor, telemetria ----------
-var PAGINA_VERSAO = '2026-11-05.2';
+var PAGINA_VERSAO = '2026-11-05.3';
 var REDE = { escala: 1, falhas: 0, ultima: 0, desvio: 0 };
 function dormir(ms) { return new Promise(function (r) { setTimeout(r, ms * REDE.escala); }); }
 function jitter(ms) { return ms * (0.5 + Math.random() * 0.5); }
@@ -1756,6 +1762,7 @@ function renderLead() {
   var pxa = proximaAcaoEl(L); if (pxa) corpo.appendChild(pxa);
   var ob = secaoOrigem(L); if (ob) corpo.appendChild(ob);
   corpo.appendChild(secaoTarefas(L)); // o que fazer agora vem logo depois de quem ligar
+  var sn = secaoNota(L); if (sn) corpo.appendChild(sn); // 05/11: Anotar (nota livre, não cria tarefa)
   // 2) empresa
   var emp = lead.empresa || {}; var s3 = el('details', 'secao sec-empresa'); s3.open = lead.completo === false; s3.appendChild(el('summary', null, 'Empresa e qualificação')); var dl = el('dl');
   function par(t, v) { if (!v) return; dl.appendChild(el('dt', null, t)); dl.appendChild(el('dd', null, v)); }
@@ -2207,7 +2214,7 @@ function secaoOrigem(L) {
 }
 function secaoTarefas(L) {
   var s = el('div', 'secao secao-tarefas'); s.appendChild(el('h3', null, 'Tarefas')); var todas = L.lead.tarefas || []; var pode = !!acoesDe(L).tarefas && L.lead.status === 'andamento';
-  var abertas = todas.filter(function (t) { return !t.feita; }).sort(function (a, b) { return (b.atrasada ? 1 : 0) - (a.atrasada ? 1 : 0) || String(a.venc).localeCompare(String(b.venc)); }); var feitas = todas.filter(function (t) { return t.feita; });
+  var abertas = todas.filter(function (t) { return !t.feita; }).sort(function (a, b) { return (b.atrasada ? 1 : 0) - (a.atrasada ? 1 : 0) || String(a.venc).localeCompare(String(b.venc)); }); var feitas = todas.filter(function (t) { return t.feita && !RE_NOTA_SDR.test(t.texto || ''); }); // as notas do SDR aparecem em "Anotar", não aqui
   var emFila = L.ctx && L.ctx.fila;
   if (!abertas.length) s.appendChild(el('p', 'sub', 'Nenhuma tarefa aberta.'));
   abertas.forEach(function (t, i) { s.appendChild(linhaTarefa(L, t, i === 0 && !emFila, pode)); });
@@ -2224,6 +2231,39 @@ function secaoTarefas(L) {
     n.appendChild(lb); n.appendChild(tx); n.appendChild(qd); n.appendChild(dv); n.appendChild(cr); dn.appendChild(n); s.appendChild(dn);
   }
   return s;
+}
+// 05/11 (Robert: "deixar o CRM o mais vivo possível"): ANOTAR. Nota livre do SDR no lead, a qualquer hora. Vira uma linha de histórico no Agendor; NÃO cria tarefa, NÃO muda etapa, NÃO mexe em campo.
+var NOTA_MAX = 500; var RE_NOTA_SDR = /^\s*\[Hoje\]\s*Nota do SDR/i;
+function contaNota(L, cont, bt, ta) { var n = String(ta.value || '').length; cont.textContent = n + '/' + NOTA_MAX; cont.classList.toggle('estouro', n > NOTA_MAX); bt.disabled = !!L.notaOcupada || !String(ta.value || '').trim() || n > NOTA_MAX; }
+function setNota(L, tipo, texto, retry) { L.notaEst = texto ? { tipo: tipo, texto: texto, retry: retry || null } : null; var b = L.refs && L.refs.notaEstado; if (!b || S.L !== L) return; b.textContent = ''; b.className = 'estado nota-estado' + (tipo ? ' ' + tipo : ''); if (!texto) { b.classList.add('hide'); return; } b.appendChild(el('span', null, texto)); if (retry) { var r = el('button', 'sec', 'Tentar de novo'); r.type = 'button'; r.style.marginLeft = '8px'; r.onclick = retry; b.appendChild(r); } }
+function secaoNota(L) {
+  var ac = (L.lead && L.lead.acoes) || {}; if (!ac.nota) return null; // o servidor liga (funis do SDR, escrita ligada); vale também para lead Ganho ou Perdido
+  var s = el('div', 'secao secao-nota'); s.appendChild(el('h3', null, 'Anotar'));
+  var ta = el('textarea'); ta.id = 'nt_nota'; ta.rows = 3; ta.setAttribute('aria-label', 'Nota sobre este lead'); ta.placeholder = 'Escreva uma nota para o histórico deste lead'; ta.value = L.notaTexto || '';
+  var rod = el('div', 'nota-rod'); var cont = el('span', 'sub nota-cont'); var bt = el('button', 'forte', L.notaOcupada ? 'Salvando...' : 'Salvar nota'); bt.type = 'button'; bt.setAttribute('data-fk', 'salvar-nota');
+  ta.oninput = function () { L.notaTexto = ta.value; if (L.notaEst && L.notaEst.tipo !== 'salvando') setNota(L, '', ''); contaNota(L, cont, bt, ta); };
+  ta.onkeydown = function (ev) { if ((ev.ctrlKey || ev.metaKey) && ev.key === 'Enter') { ev.preventDefault(); if (!bt.disabled) salvarNota(L); } };
+  bt.onclick = function () { salvarNota(L); };
+  rod.appendChild(cont); rod.appendChild(bt); s.appendChild(ta); s.appendChild(rod); contaNota(L, cont, bt, ta);
+  L.refs.notaEstado = el('div', 'estado nota-estado hide'); L.refs.notaEstado.setAttribute('role', 'status'); L.refs.notaEstado.setAttribute('aria-live', 'polite'); s.appendChild(L.refs.notaEstado);
+  if (L.notaEst) setNota(L, L.notaEst.tipo, L.notaEst.texto, L.notaEst.retry);
+  var ns = (L.lead.notas || []).slice(0, 3);
+  if (ns.length) { var ul = el('ul', 'nota-lista'); ns.forEach(function (n) { var li = el('li'); li.appendChild(el('span', 'nq', n.quando || '')); li.appendChild(document.createTextNode(String(n.texto || '').slice(0, 200))); ul.appendChild(li); }); s.appendChild(ul); }
+  else s.appendChild(el('p', 'sub', 'Nenhuma nota ainda.'));
+  return s;
+}
+async function salvarNota(L) {
+  if (L.notaOcupada) return; var tx = String(L.notaTexto || '').trim();
+  if (!tx) { setNota(L, 'erro', 'Escreva a nota.'); return; } if (tx.length > NOTA_MAX) { setNota(L, 'erro', 'A nota passou de ' + NOTA_MAX + ' caracteres.'); return; }
+  L.notaOcupada = true; if (S.L === L) renderLead(); setNota(L, 'salvando', 'Salvando...');
+  var j; try { j = await chamarLead(L, '/nota', { texto: tx }); } catch (e) { j = { _status: 0, ok: false }; }
+  L.notaOcupada = false; if (!j) { if (S.L === L) renderLead(); return; } // 401: já saiu para o login, o texto fica guardado
+  if (j.ok !== false && j._status < 300 && j.confirmado !== false) {
+    if (L.notaTexto === tx || !String(L.notaTexto || '').trim()) L.notaTexto = ''; // se ele já começou outra nota, não apaga
+    if (j.lead) L.lead = j.lead; else { var q = new Date(); L.lead.notas = [{ id: 'novo', quando: ('0' + q.getDate()).slice(-2) + '/' + ('0' + (q.getMonth() + 1)).slice(-2) + ' ' + ('0' + q.getHours()).slice(-2) + ':' + ('0' + q.getMinutes()).slice(-2), texto: tx.slice(0, 200) }].concat(L.lead.notas || []).slice(0, 3); }
+    L.notaEst = { tipo: 'ok', texto: j.jaEstava ? 'Essa nota já estava salva.' : 'Nota salva.', retry: null }; if (S.L === L) renderLead();
+    setTimeout(function () { if (L.notaEst && L.notaEst.tipo === 'ok') setNota(L, '', ''); }, 4000);
+  } else { L.notaEst = { tipo: 'erro', texto: msgErro(j), retry: function () { salvarNota(L); } }; if (S.L === L) renderLead(); }
 }
 // concluir: aparece feita na hora; a ação fica guardada na caixa de saída e só sai depois de 5 s (dá tempo de desfazer); se a aba fechar, ela sai mesmo assim
 function guardarAcaoAdiada(def, atrasoMs) {
@@ -2493,7 +2533,7 @@ document.addEventListener('keydown', function (e) {
 desenharTopo = seguro('desenharTopo', desenharTopo); desenharControle = seguro('desenharControle', desenharControle); desenharBlocos = seguro('desenharBlocos', desenharBlocos); desenharFila = seguro('desenharFila', desenharFila); desenharAguardando = seguro('desenharAguardando', desenharAguardando); renderLead = seguro('renderLead', renderLead); renderGanho = seguro('renderGanho', renderGanho);
 cartao = seguro('cartao', cartao, function (it) { var f = el('div', 'item'); f.appendChild(el('div', 'emp', (it && it.empresa) || 'Item')); f.appendChild(el('div', 'pas', 'Não consegui mostrar os detalhes deste item.')); return f; });
 cartaoAtrasado = seguro('cartaoAtrasado', cartaoAtrasado, function (g) { var f = el('div', 'item'); f.appendChild(el('div', 'emp', (g && g.empresa) || 'Item')); return f; });
-window.__shTeste = { buscarGeral: buscarGeral, bgValida: bgValida, opcoesAdiar: opcoesAdiar, enviarAcao: enviarAcao, versaoMaisNova: versaoMaisNova, iniciarContinuar: iniciarContinuar, continuarLaco: continuarLaco, fmtCampo: fmtCampo, fadeChips: fadeChips, REDE: REDE, lerSaida: lerSaida, processarSaida: processarSaida, reportarErro: reportarErro, aplicarStatus: aplicarStatus, hooks: { recarregar: null }, falhaDePagina: falhaDePagina, verificarVersao: verificarVersao, agoraMs: agoraMs, PAGINA_VERSAO: PAGINA_VERSAO, carregarAguardando: carregarAguardando, S: S, desenhar: desenhar, carregar: carregar, casaBusca: casaBusca, foneFmt: foneFmt, aceitar: aceitar, abrirLead: abrirLead, abrirGanho: abrirGanho, cnpjValido: cnpjValido, desenharFila: desenharFila, carregarFila: carregarFila, origemClasse: origemClasse, mascCnpj: mascCnpj };
+window.__shTeste = { buscarGeral: buscarGeral, bgValida: bgValida, opcoesAdiar: opcoesAdiar, enviarAcao: enviarAcao, versaoMaisNova: versaoMaisNova, iniciarContinuar: iniciarContinuar, continuarLaco: continuarLaco, fmtCampo: fmtCampo, fadeChips: fadeChips, REDE: REDE, lerSaida: lerSaida, processarSaida: processarSaida, reportarErro: reportarErro, aplicarStatus: aplicarStatus, hooks: { recarregar: null }, falhaDePagina: falhaDePagina, verificarVersao: verificarVersao, agoraMs: agoraMs, PAGINA_VERSAO: PAGINA_VERSAO, carregarAguardando: carregarAguardando, S: S, desenhar: desenhar, carregar: carregar, casaBusca: casaBusca, foneFmt: foneFmt, aceitar: aceitar, abrirLead: abrirLead, abrirGanho: abrirGanho, cnpjValido: cnpjValido, desenharFila: desenharFila, carregarFila: carregarFila, origemClasse: origemClasse, mascCnpj: mascCnpj, renderLead: renderLead, carregarLead: carregarLead };
 (async function () {
   var t = lsGet('sh_tok');
   if (t) { var ok = await entrar(t, true); if (ok) return; }
