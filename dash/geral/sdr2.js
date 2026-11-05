@@ -213,17 +213,22 @@
   function noPeriodo(d, from, to) { return d.data && d.data >= from && d.data <= to; }
 
   function agrega(rows, from, to) {
-    var won = [], lostM = [], lostS = [], lostD = [], ong = [], fim = [];
+    var won = [], lostM = [], lostS = [], lostD = [], ong = [], fim = [], fila = [];
+    var iniMap = S && S.ini && S.ini.map && !S.ini.parcial ? S.ini.map : null; // 04/11: sem a leitura dos marcadores não dá para separar a fila de espera: mantém o comportamento antigo
     rows.forEach(function (d) {
       if (d.status === 'won' && noPeriodo(d, from, to)) won.push(d);
       else if (d.status === 'lost' && noPeriodo(d, from, to)) (d.dup ? lostD : d.sistema ? lostS : lostM).push(d);
-      else if (d.status === 'ongoing' && !d.congelado) (CFG.etapaFim.test(d.etapa) ? fim : ong).push(d);
+      else if (d.status === 'ongoing' && !d.congelado) {
+        if (CFG.etapaFim.test(d.etapa)) fim.push(d);
+        else if (iniMap && d.funil !== CFG.funilInbound && !iniMap[d.id]) fila.push(d); // Outbound que o SDR ainda NÃO iniciou: fila de espera, não está em cadência (mesma regra da página Hoje)
+        else ong.push(d);
+      }
     });
     var dias = won.filter(function (d) { return d.dias != null; }).map(function (d) { return d.dias; }).sort(function (a, b) { return a - b; });
     var soma = dias.reduce(function (s, x) { return s + x; }, 0);
     var med = dias.length ? (dias.length % 2 ? dias[(dias.length - 1) / 2] : (dias[dias.length / 2 - 1] + dias[dias.length / 2]) / 2) : null;
     return {
-      won: won, lostM: lostM, lostS: lostS, lostD: lostD, ong: ong, fim: fim,
+      won: won, lostM: lostM, lostS: lostS, lostD: lostD, ong: ong, fim: fim, fila: fila,
       q: won.length, pm: lostM.length, ps: lostS.length, pd: lostD.length,
       conv: (won.length + lostM.length) > 0 ? won.length / (won.length + lostM.length) : null,
       convGeral: (won.length + lostM.length + lostS.length) > 0 ? won.length / (won.length + lostM.length + lostS.length) : null,
@@ -733,7 +738,7 @@
       chip('Conversão ⓘ', convPct, 'sem esgotada e duplicados · geral: <b>' + (a.convGeral == null ? 'n/d' : pct(a.q, a.q + a.pm + a.ps)) + '</b>',
         { tip: 'Principal: qualificados ÷ (qualificados + perdidos pelo SDR). Fora da conta: cadência esgotada (recuperável) e perdidos com motivo Duplicado (não é decisão do SDR). Geral: inclui também a cadência esgotada; duplicados ficam fora das duas.', delta: convDelta }) +
       chip('Cadência esgotada', num(a.ps), 'sistema, recuperável (fora da conversão)', { cinza: true, go: 'lostS' }) +
-      chip('Em cadência agora', num(a.ong.length), 'abertos nas etapas D1 a D10', { go: 'ong' }) +
+      chip('Em cadência agora', num(a.ong.length), 'iniciados, nas etapas D1 a D10' + (a.fila && a.fila.length ? ' · fora ' + num(a.fila.length) + ' na fila de espera' : ''), { go: 'ong' }) +
       chip('Fim da cadência', num(a.fim.length), 'aguardando, recuperáveis', { cinza: true, go: 'fim' }) +
       chip('Tempo até qualificar ⓘ', tempo, tempoSub, { tip: 'Da entrada do contato até o ganho. Contatos migrados do GS usam a data em que entraram na cadência do GS (tabela de carga); os demais, a criação do negócio no Agendor.' }) +
       chipAtividades(r);
@@ -1371,7 +1376,7 @@
     },
     render: render,
     // núcleo puro, exposto para teste
-    _core: { prep: prep, calcular: calcular, dataBRT: dataBRT, origemKey: origemKey, origensDe: origensDe, rotuloOrigem: rotuloOrigem, corOrigem: corOrigem, agrega: agrega, serie: serie, periodoAnterior: periodoAnterior, atvLinhas: atvLinhas, iniDia: iniDia, iniMapa: iniMapa, agregaIni: agregaIni, serieIniFin: serieIniFin, conferir: conferir, agregaAtv: agregaAtv, janelaAtv: janelaAtv, agregaEtp: agregaEtp, etpLinhas: etpLinhas }
+    _core: { setIni: function (x) { S.ini = x; }, prep: prep, calcular: calcular, dataBRT: dataBRT, origemKey: origemKey, origensDe: origensDe, rotuloOrigem: rotuloOrigem, corOrigem: corOrigem, agrega: agrega, serie: serie, periodoAnterior: periodoAnterior, atvLinhas: atvLinhas, iniDia: iniDia, iniMapa: iniMapa, agregaIni: agregaIni, serieIniFin: serieIniFin, conferir: conferir, agregaAtv: agregaAtv, janelaAtv: janelaAtv, agregaEtp: agregaEtp, etpLinhas: etpLinhas }
   };
   w.SDR2 = API;
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
