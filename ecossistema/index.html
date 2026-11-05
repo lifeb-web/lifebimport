@@ -5,6 +5,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex,nofollow,noarchive">
 <meta name="description" content="Vendas, SDR, Bia, motores, dados e regras: como tudo se conecta na Life B Importadora.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -192,8 +193,7 @@ footer.foot p{margin:0 0 4px}
     <li class="grp">Regras e referência</li>
     <li><a href="#regras">14. Regras de ouro</a></li>
     <li><a href="#seguranca">15. Segurança e confiabilidade</a></li>
-    <li><a href="#estado">16. Estado atual dos interruptores</a></li>
-    <li><a href="#glossario">17. Glossário e dúvidas</a></li>
+    <li><a href="#glossario">16. Glossário e dúvidas</a></li>
   </ol>
   <button class="btn" style="width:100%;margin-top:14px" data-toggle-theme>Alternar tema claro/escuro</button>
 </nav>
@@ -249,7 +249,7 @@ footer.foot p{margin:0 0 4px}
 <div class="tw item"><table>
 <tr><th>Componente</th><th>O que é</th><th>Onde vive</th><th>Quem usa</th></tr>
 <tr><td class="k">Agendor</td><td>CRM: empresas, pessoas, negócios, tarefas, funis. Fonte da verdade.</td><td>Agendor (agendor.com.br)</td><td>SDR, Representantes, Gestão</td></tr>
-<tr><td class="k">Worker da Bia (<code>gs-agendor-worker</code>)</td><td>Programa que roda 24 horas na nuvem: regras, rotinas por horário, avisos, repasses.</td><td>Cloudflare Workers, com memória em KV</td><td>Ninguém abre direto; todos recebem o resultado</td></tr>
+<tr><td class="k">Worker da Bia (<code>gs-agendor-worker</code>)</td><td>Programa que roda 24 horas na nuvem: regras, rotinas por horário, avisos, repasses.</td><td>Cloudflare Workers, com memória própria</td><td>Ninguém abre direto; todos recebem o resultado</td></tr>
 <tr><td class="k">n8n + WhatsApp</td><td>Cérebro de conversa da Bia: entende a mensagem e escolhe a ação.</td><td>n8n, ligado ao WhatsApp</td><td>Representantes, SDR e Gestão por WhatsApp</td></tr>
 <tr><td class="k">Página Hoje</td><td>Mesa de trabalho do SDR.</td><td><code>projetojlbv.com.br/hoje/</code></td><td>SDR</td></tr>
 <tr><td class="k">Página Lista</td><td>Subir planilha de leads.</td><td><code>projetojlbv.com.br/lista/</code></td><td>SDR</td></tr>
@@ -322,7 +322,7 @@ footer.foot p{margin:0 0 4px}
  <div class="card item"><h4>Campo "origem do negócio" (<code>origem_deal</code>)</h4>
   <p>Opções e ids: INBOUND <code>85460</code>, OUTBOUND <code>85461</code>, RECUPERAÇÃO <code>85462</code>, REATIVAÇÃO <code>91006</code>, RECUPERAÇÃO SDR <code>92751</code>, SUPERAGOS <code>90361</code>. A origem da empresa (Inbound ou Outbound) nunca muda; a origem do negócio é do negócio.</p></div>
  <div class="card item"><h4>Quem cria negócio onde</h4>
-  <p>O negócio do Arena é criado pela Bia no repasse; o da Reativação, também. Id do SDR no Agendor: <code>976405</code>; da conta Sistema: <code>973972</code>.</p></div>
+  <p>O negócio do Arena é criado pela Bia no repasse; o da Reativação, também.</p></div>
 </div>
 <div class="note item"><strong>O que é "lead"</strong>Lead é somente negócio do <b>Arena</b>. Quem está nos funis do SDR é "negócio do SDR". Ganho no SDR não é venda, é qualificação.</div>
 </section>
@@ -535,8 +535,8 @@ footer.foot p{margin:0 0 4px}
 <dt>O que faz</dt><dd>Cobra tarefa por tarefa. Quando uma tarefa vence, o representante recebe um card no WhatsApp com botões, entre eles "Já concluí" e a lista "Mais opções". Há estágios de aviso de visita 40 minutos antes e cobrança 40 minutos depois (<code>pre_visita_40min</code>, <code>pos_visita_40min</code>). Três famílias: Arena, Reposição e Reativação.</dd>
 <dt>Quando roda</dt><dd>Só em dia útil. Mensagem proativa a representante: das 8h às 18h; cards de cobrança a partir das 9h (<code>dentroDoHorarioProativo</code> e <code>dentroDoHorarioCobranca</code>, <code>src/index.js</code>). Entrega no máximo 1 card por representante por rodada, com intervalo mínimo de <b>20 minutos</b> (<code>MOTOR_FILA_INTERVALO_MIN</code> ausente, padrão <code>src/motor_fila.js</code>); entre pedidos da Arena, <b>60 minutos</b> (<code>MOTOR_PROATIVO_INTERVALO_MIN_REP_MIN</code> ausente, padrão <code>src/index.js</code>).</dd>
 <dt>Aprovação</dt><dd>Os três modos estão em <b>approval</b> (aprovação pela Gestão antes do card).</dd>
-<dt>Escreve no Agendor</dt><dd>Só quando o representante age por um botão (concluir, reagendar). O clique é consumido uma única vez, com trava atômica em Durable Object (<code>MotorProativoClaimDO</code>).</dd>
-<dt>Como pausar</dt><dd>Interruptor geral <code>MOTOR_PROATIVO_OFF</code> e um por família: <code>MOTOR_OFF_ARENA</code>, <code>MOTOR_OFF_REPOSICAO</code>, <code>MOTOR_OFF_REATIVACAO75</code>. Valor "1" pausa.</dd>
+<dt>Escreve no Agendor</dt><dd>Só quando o representante age por um botão (concluir, reagendar). O clique é consumido uma única vez, com trava atômica em Durable Object.</dd>
+<dt>Como pausar</dt><dd>Há um interruptor geral e um por família (Arena, Reposição e Reativação), operados pela Gestão.</dd>
 <dt>Estado</dt><dd><code>MOTOR_PROATIVO_MODE</code>, <code>MOTOR_PROATIVO_REPOSICAO_MODE</code> e <code>MOTOR_PROATIVO_REATIVACAO75_MODE</code> = approval. Os interruptores de pausa estão ausentes (nada pausado).</dd></dl></article>
 
 <article class="auto item"><header><h4>Motor Proativo v2 (melhorias de 05/11)</h4><span class="tag t-gray">Preparado, aguardando liberação</span></header><dl>
@@ -553,7 +553,7 @@ footer.foot p{margin:0 0 4px}
 <dt>Quando roda</dt><dd>Reativação: rodada na cadeia de 30 minutos (cron <code>5,35 * * * *</code>), com teto baixo por rodada (<code>src/index.js</code>). Recuperação SDR: rodada no horário comercial (<code>src/index.js</code>), com a lista de perdidos lida uma vez por dia.</dd>
 <dt>Escreve no Agendor</dt><dd>Negócio novo no SDR Outbound D1, com o SDR como responsável, e a nota de origem. Na Reativação, fecha o Pós-venda aberto que a originou.</dd>
 <dt>Nunca faz</dt><dd class="never">Não altera dono nem origem da empresa e não ressuscita o negócio antigo (<code>src/sdr_destino.js</code> a <code>12</code>).</dd>
-<dt>Como pausar</dt><dd>Chave de modo por tipo, tetos por rodada e dia e <code>SDRDEST_OFF</code> (geral, ausente hoje).</dd></dl></article>
+<dt>Como pausar</dt><dd>Chave de modo por tipo, tetos por rodada e dia e um interruptor geral, operados pela Gestão.</dd></dl></article>
 
 <article class="auto item"><header><h4>Repasse SDR para Arena</h4><span class="tag t-green">No ar</span></header><dl>
 <dt>O que faz</dt><dd>Seção 4. Ganho completo vira negócio no Arena; incompleto é reaberto com aviso do que falta.</dd>
@@ -582,14 +582,14 @@ footer.foot p{margin:0 0 4px}
 <dt>Backup diário</dt><dd>Na rotina das 8h (cron <code>0 11 * * *</code>) a função <code>runBackup</code> confere o Supabase e guarda um retrato das chaves do KV (sem as de log); um vigia confere que ele rodou (<code>backupWatch</code>).</dd>
 <dt>Backup a cada deploy</dt><dd>O <code>deploy.sh</code> copia <code>src/index.js</code> datado para o Dropbox antes de publicar e depois envia o código ao GitHub.</dd>
 <dt>Auditor de fingimento</dt><dd>Lê as últimas 120 mensagens novas da Bia, procura frases que afirmam uma escrita concreta (por exemplo marcar como ganho) e confere no Agendor se ela aconteceu; alerta a Gestão quando não aconteceu (<code>auditorClaims</code>, <code>src/index.js</code>). Roda no ciclo comercial de segunda a sexta, das 8h às 18h, e uma vez no cron diário fora desse horário.</dd>
-<dt>Monitor externo</dt><dd>Cada cron pinga um monitor externo (healthchecks), quando a URL está configurada (<code>src/index.js</code>).</dd>
+<dt>Monitor externo</dt><dd>Cada rotina agendada avisa um monitor externo de disponibilidade.</dd>
 <dt>Nunca faz</dt><dd class="never">Vigia não corrige sozinho o que não pode provar.</dd></dl></article>
 
 <article class="auto item"><header><h4>Avisos, cópias e portões</h4><span class="tag t-green">No ar</span></header><dl>
 <dt>Cópia dos avisos ao SDR</dt><dd>Todo envio da Bia ao SDR vai em cópia à Gestão, com a mesma mensagem, precedido de "Cópia do aviso enviado". Variável do deploy <code>COPIA_FELIPE_ROBERT = "1"</code> em <code>wrangler.toml</code> (desligar = apagar a linha e publicar). Deduplicação de 10 minutos por conteúdo; a cópia nunca atrasa nem derruba o envio original (<code>src/index.js</code>).</dd>
 <dt>Convite do Painel do Representante</dt><dd>Seção 12.</dd>
 <dt>Relatórios</dt><dd>O relatório de 19h e o relatório de status estão desligados (<code>RELATORIO_19H_OFF=1</code>, <code>STATUS_REPORT_OFF=1</code>).</dd>
-<dt>Pausas gerais</dt><dd><code>BIA_KILL</code> e <code>NOTIF_PAUSE</code> (ambas ausentes hoje).</dd></dl></article>
+<dt>Pausas gerais</dt><dd>A Gestão dispõe de pausas gerais para interromper a Bia ou só os avisos.</dd></dl></article>
 </section>
 
 <!-- 8 -->
@@ -598,7 +598,7 @@ footer.foot p{margin:0 0 4px}
 <p class="lead">A regra vale para Arena, Pós-venda e Reativação; nos funis do SDR a cadência cria as tarefas. Hoje ela é garantida por camadas, e uma delas ainda está em simulação.</p>
 <div class="tw item"><table>
 <tr><th>Camada</th><th>O que faz</th><th>Quando</th><th>Estado hoje</th></tr>
-<tr><td class="k">1. Vigia de negócio sem tarefa (<code>vigiaSemTarefa</code>, <code>src/index.js</code>)</td><td>Acha negócio aberto da <b>Arena</b> sem tarefa aberta e a Bia <b>cria a próxima tarefa</b>. Relê o Agendor antes de criar, ignora negócio congelado e cria no máximo 15 por rodada (<code>VIGIA_AUTO_MAX_POR_RODADA</code>). Se a leitura falha, a rodada é liberada para tentar de novo.</td><td>Dia útil, às 10h de Brasília, uma vez por dia</td><td><span class="tag t-green">Ligado</span>. <code>VIGIA_SEM_TAREFA_OFF</code>, <code>MOTOR_PROATIVO_OFF</code> e <code>MOTOR_OFF_ARENA</code> ausentes.</td></tr>
+<tr><td class="k">1. Vigia de negócio sem tarefa (<code>vigiaSemTarefa</code>, <code>src/index.js</code>)</td><td>Acha negócio aberto da <b>Arena</b> sem tarefa aberta e a Bia <b>cria a próxima tarefa</b>. Relê o Agendor antes de criar, ignora negócio congelado e cria no máximo 15 por rodada (<code>VIGIA_AUTO_MAX_POR_RODADA</code>). Se a leitura falha, a rodada é liberada para tentar de novo.</td><td>Dia útil, às 10h de Brasília, uma vez por dia</td><td><span class="tag t-green">Ligado</span></td></tr>
 <tr><td class="k">2. Próxima tarefa ao concluir ou anotar</td><td>Quando a Bia conclui ou anota uma tarefa a pedido do representante, ela garante a próxima tarefa do negócio. Se a criação falha, alerta a Gestão (<code>src/index.js</code>, <code>9054</code>).</td><td>No momento da ação</td><td><span class="tag t-green">Ligado</span></td></tr>
 <tr><td class="k">3. Primeiro contato na distribuição</td><td>Quando o lead é atribuído a um representante, a Bia cria a tarefa de primeiro contato no nome dele (<code>garantirPrimeiroContato</code>, <code>src/index.js</code>). A Reativação qualificada faz o mesmo (seção 6).</td><td>Na atribuição</td><td><span class="tag t-green">Ligado</span> (<code>PRIMEIRA_TAREFA_AUTO_ENABLED=1</code>)</td></tr>
 <tr><td class="k">4. Garantia de tarefa (<code>src/garantia_tarefa.js</code>)</td><td>Varredura dos funis fora do SDR (Arena, Pós-venda, Reativação): negócio aberto sem tarefa recebe uma tarefa de próxima ação coerente com o funil e a etapa; tarefa com responsável diferente do dono do negócio passa para o dono. Não troca o dono do negócio e não envia mensagem ao representante.</td><td>Entre 11h e 18h, em slot próprio nos minutos :17 e :47, com estado retomável</td><td><span class="tag t-gray">Simulação</span>: <code>GARANTIA_TAREFA_MODE</code> ausente vale shadow. Hoje <b>só relata</b> o que faria. Tetos previstos: 4 criações e 8 alinhamentos por rodada e 30 escritas por dia.</td></tr>
@@ -663,7 +663,7 @@ footer.foot p{margin:0 0 4px}
 <p class="lead">Página individual de cada representante, ligada ao Agendor ao vivo. Endereço: <code>projetojlbv.com.br/rep/dash/&lt;nome do representante&gt;/</code>.</p>
 <div class="grid g2">
  <div class="card item"><h4>O que mostra</h4><ul><li>Carteira de negócios em andamento do representante (<code>/leads</code>), buscada no Agendor.</li><li>Valor vendido e ganhos do mês (<code>/metrics</code>), lidos do banco do Dash.</li><li>Cada negócio cai em um grupo: <b>Negociação</b> (etapa Negociação), <b>Aguardando</b> (sem tarefa aberta, tarefa sem data ou tarefa vencida ou de hoje) ou <b>Contato</b> (tarefa aberta com data futura) (<code>bucketFor</code>, <code>lifeb-rep-painel/src/index.js</code>).</li></ul></div>
- <div class="card item"><h4>Como funciona por baixo</h4><ul><li>Worker isolado <code>lifeb-rep-painel</code>, separado do Worker da Bia.</li><li>O representante também age pela página: criar, concluir e reagendar tarefa e gravar observação (<code>/task/create</code>, <code>/task/finish</code>, <code>/task/reschedule</code>, <code>/obs</code>).</li><li>Usa o mesmo freio de pedidos ao Agendor do Worker da Bia (<code>AG_THROTTLE_DO</code>).</li></ul></div>
+ <div class="card item"><h4>Como funciona por baixo</h4><ul><li>Worker próprio, separado do Worker da Bia.</li><li>O representante também age pela página: criar, concluir e reagendar tarefa e gravar observação.</li><li>Usa o mesmo freio de pedidos ao Agendor do Worker da Bia.</li></ul></div>
 </div>
 <div class="card item" style="margin-top:14px"><h4>Convite das 8h</h4><p>Na rotina das 8h em dia útil (cron <code>0 11 * * *</code>, dentro de <code>_horarioComercialBrasilia</code>), a Bia envia a cada representante com painel configurado uma mensagem que começa com "Bom dia, &lt;primeiro nome&gt;!" e convida a abrir a carteira completa de leads, com o botão <b>Abrir carteira</b>. Não envia duas vezes no mesmo dia para o mesmo representante (<code>painel_nudge_&lt;id&gt;_&lt;dia&gt;</code>), grava o status real do envio (<code>painel_convite_&lt;id&gt;_&lt;dia&gt;</code>, 90 dias) e manda à Gestão um resumo consolidado do dia (<code>_painelRepNudgeDiario</code>, <code>src/index.js</code>).</p></div>
 </section>
@@ -674,11 +674,11 @@ footer.foot p{margin:0 0 4px}
 <p class="lead">Sistemas e frentes que convivem com o núcleo comercial, descritos pelo que consta nos próprios repositórios e pastas de documentação.</p>
 <div class="grid g2">
  <div class="card item"><span class="tag t-purple">ERP</span><h4>Análise mensal ERP x Agendor</h4>
-  <p>Rotina de análise de vendas que cruza a planilha do ERP do mês com os negócios do Agendor. É feita com scripts de leitura (<code>pull_agendor.py</code>, <code>build_vendas.py</code>, <code>assemble_html.py</code>) guardados em <code>Bia/auditorias/scripts-vendas-erp-crm/</code> e gera uma página de análise. Os scripts só leem; nada é escrito no Agendor. O ERP não é integrado ao Agendor.</p></div>
+  <p>Rotina de análise de vendas que cruza a planilha do ERP do mês com os negócios do Agendor. É feita com scripts de leitura (<code>pull_agendor.py</code>, <code>build_vendas.py</code>, <code>assemble_html.py</code>) guardados em <code>a pasta de scripts de análise</code> e gera uma página de análise. Os scripts só leem; nada é escrito no Agendor. O ERP não é integrado ao Agendor.</p></div>
  <div class="card item"><span class="tag t-purple">Aplicativo</span><h4>Life B Solicita</h4>
-  <p>Aplicativo de pedidos de <b>material</b> (expositores), <b>comodato</b> e <b>promotoria</b>, que substitui formulários colados em grupos de WhatsApp. Tem telas de Representante, Administração, Financeiro e Promotora, além de logística e motorista. Roda na Cloudflare (Worker, banco D1 e armazenamento R2), com ambientes <code>lifeb-solicita-staging</code> e <code>lifeb-solicita</code> no <code>wrangler.toml</code> do app. É independente da Bia: não há integração; os avisos ficam dentro do app.</p></div>
+  <p>Aplicativo de pedidos de <b>material</b> (expositores), <b>comodato</b> e <b>promotoria</b>, que substitui formulários colados em grupos de WhatsApp. Tem telas de Representante, Administração, Financeiro e Promotora, além de logística e motorista. Roda na Cloudflare (Worker, banco D1 e armazenamento R2),, com ambiente de testes e ambiente de produção. É independente da Bia: não há integração; os avisos ficam dentro do app.</p></div>
  <div class="card item"><span class="tag t-purple">E-commerce</span><h4>Yanmei</h4>
-  <p>Frente de e-commerce com catálogo (Anymarket, Shopify, Bling, Mercado Livre), dashboard próprio de vendas online (código em <code>~/Desktop/yanmei-dashboard</code>) e funil de Meta Ads. Tem documentação própria em <code>~/Dropbox/Yanmei/</code>. Não usa o Agendor nem a Bia.</p></div>
+  <p>Frente de e-commerce com catálogo (Anymarket, Shopify, Bling, Mercado Livre), dashboard próprio de vendas online e funil de Meta Ads. Tem documentação própria. Não usa o Agendor nem a Bia.</p></div>
  <div class="card item"><span class="tag t-purple">Campanha</span><h4>SuperAgos (feira)</h4>
   <p>Origem de negócio <code>SUPERAGOS</code> (id <code>90361</code>) no Agendor. O repasse do SDR para o Arena marca o negócio quando a origem é SuperAgos (<code>src/sdr_repasse.js</code>). No Dash, conta como Outbound. Tem painel próprio em <code>projetojlbv.com.br/dash/superagos/</code>.</p></div>
  <div class="card item"><span class="tag t-purple">Treinamento</span><h4>Kits e apresentações</h4>
@@ -707,52 +707,20 @@ footer.foot p{margin:0 0 4px}
 <div class="grid g3">
  <div class="card item"><h4>Travas</h4><p>Antes de criar, a Bia pega uma trava atômica em Durable Object (por exemplo a trava global de criação das voltas e a trava por empresa), para duas rotinas não agirem ao mesmo tempo.</p></div>
  <div class="card item"><h4>Criação sem resposta</h4><p>Se a criação de uma empresa ou negócio não responde, a Bia procura se o item já foi criado antes de tentar de novo, para não duplicar (<code>src/sdr_destino.js</code>).</p></div>
- <div class="card item"><h4>Freio do Agendor</h4><p>As chamadas ao Agendor passam por uma fila com freio (<code>AG_THROTTLE_DO</code>), compartilhada com o Painel do Representante; clique de pessoa tem prioridade sobre rotina.</p></div>
+ <div class="card item"><h4>Freio do Agendor</h4><p>As chamadas ao Agendor passam por uma fila com freio (freio de pedidos), compartilhada com o Painel do Representante; clique de pessoa tem prioridade sobre rotina.</p></div>
  <div class="card item"><h4>Tetos e shadow</h4><p>Automação nova nasce em shadow. Tetos padrão pequenos; valor de chave acima do teto absoluto é cortado (por exemplo 10 por rodada e 20 por dia nas voltas).</p></div>
- <div class="card item"><h4>Identidade e portões</h4><p><code>ENFORCE_IDENTITY=1</code>, <code>NOTIF_GATE=1</code> e <code>GATE_NOTIF_REP=1</code>. Chamadas internas ao Worker levam chave de serviço em cabeçalho.</p></div>
+ <div class="card item"><h4>Identidade e portões</h4><p>Os envios a representantes passam por portões de aprovação e a identidade de quem pede cada ação é verificada. Chamadas internas ao Worker exigem credencial.</p></div>
  <div class="card item"><h4>Backups</h4><p>Retrato diário das chaves do KV e cópia do código a cada deploy, no Dropbox e no GitHub (seção 7).</p></div>
 </div>
 </section>
 
 <!-- 16 -->
-<section class="sec" id="estado">
-<h2><span class="n">16</span>Estado atual dos interruptores</h2>
-<p class="lead">Leitura ao vivo do KV de produção em 05/11/2026 (somente leitura). "Ausente" significa que a chave não existe e vale o padrão descrito. Valores podem mudar; o estado vivo (aba Bia e Agendor) prevalece sobre esta tabela.</p>
-<div class="tw item"><table>
-<tr><th>Automação</th><th>Chave</th><th>Lido em 05/11</th><th>Significado</th></tr>
-<tr><td class="k">Motor Proativo, Arena</td><td><code>MOTOR_PROATIVO_MODE</code></td><td>approval</td><td>Ligado, com aprovação da Gestão</td></tr>
-<tr><td class="k">Motor Proativo, Reposição</td><td><code>MOTOR_PROATIVO_REPOSICAO_MODE</code></td><td>approval</td><td>Ligado, com aprovação</td></tr>
-<tr><td class="k">Motor Proativo, Reativação</td><td><code>MOTOR_PROATIVO_REATIVACAO75_MODE</code></td><td>approval</td><td>Ligado, com aprovação</td></tr>
-<tr><td class="k">Motor v2 (6 chaves)</td><td><code>MOTOR_UX_V2</code> e outras 5</td><td>ausentes</td><td>Desligadas: preparado, aguardando liberação</td></tr>
-<tr><td class="k">Recuperação</td><td><code>SDRDEST_RECUPERACAO_MODE</code></td><td>live</td><td>Cria negócio de verdade (tetos pequenos)</td></tr>
-<tr><td class="k">Recuperação SDR</td><td><code>SDRDEST_RECUPERACAO_SDR_MODE</code></td><td>live</td><td>Idem, 14 dias, até 15 por dia</td></tr>
-<tr><td class="k">Reativação 75+ (drogaria)</td><td><code>SDRDEST_REPOSICAO_MODE</code></td><td>live</td><td>Idem</td></tr>
-<tr><td class="k">Reativação 45+ (supermercado)</td><td><code>SDRDEST_REPOSICAO_SUPERMERCADO_MODE</code></td><td>ausente</td><td>Desligada</td></tr>
-<tr><td class="k">Segunda onda de Recuperação</td><td><code>SDRDEST_REATIVACAO2_MODE</code></td><td>ausente</td><td>Desligada</td></tr>
-<tr><td class="k">Cadência de retorno</td><td><code>SDR_CAD_RECUPERACAO_MODE</code></td><td>live (3 tipos)</td><td>Cadência curta das voltas ligada</td></tr>
-<tr><td class="k">Cadência do SDR</td><td><code>SDR_CADENCIA_MODE</code></td><td>live</td><td>Tarefas pelo calendário</td></tr>
-<tr><td class="k">Uma tarefa por vez</td><td><code>SDR_SEQUENCIA_MODE</code></td><td>shadow</td><td>Simulação</td></tr>
-<tr><td class="k">Repasse SDR para Arena</td><td><code>SDR_REPASSE_MODE</code></td><td>live</td><td>No ar</td></tr>
-<tr><td class="k">Enriquecimento por CNPJ</td><td><code>SDR_ENRIQUECER_MODE</code></td><td>live</td><td>No ar</td></tr>
-<tr><td class="k">Fechamento de tarefas (universal)</td><td><code>FECHA_TAREFAS_MODE</code></td><td>live</td><td>No ar</td></tr>
-<tr><td class="k">Encerra tarefas do SDR; aviso de perdido</td><td><code>SDR_ENCERRA_TAREFAS_MODE</code>, <code>SDR_AVISO_PERDIDO_MODE</code></td><td>live, live</td><td>No ar</td></tr>
-<tr><td class="k">Garantia de tarefa</td><td><code>GARANTIA_TAREFA_MODE</code></td><td>ausente</td><td>Simulação (padrão shadow)</td></tr>
-<tr><td class="k">Primeira tarefa automática</td><td><code>PRIMEIRA_TAREFA_AUTO_ENABLED</code></td><td>1</td><td>Ligada</td></tr>
-<tr><td class="k">Hoje, Lista, Retomada</td><td><code>SDR_HOJE_MODE</code>, <code>SDR_LISTA_MODE</code>, <code>SDR_RETOMADA_MODE</code></td><td>on, on, live</td><td>No ar</td></tr>
-<tr><td class="k">Destino do Inbound</td><td><code>INBOUND_DESTINO</code></td><td>agendor</td><td>Entra direto no Agendor</td></tr>
-<tr><td class="k">Cota do Outbound</td><td><code>SDR_COTA_AUTO</code> / <code>SDR_FILA_MODO</code></td><td>0 / ausente</td><td>Fila 100% manual</td></tr>
-<tr><td class="k">Portões de envio</td><td><code>NOTIF_GATE</code>, <code>GATE_NOTIF_REP</code>, <code>ENFORCE_IDENTITY</code></td><td>1, 1, 1</td><td>Portões de envio e verificação de identidade ligados</td></tr>
-<tr><td class="k">Pausas gerais</td><td><code>BIA_KILL</code>, <code>NOTIF_PAUSE</code>, <code>MOTOR_PROATIVO_OFF</code></td><td>ausentes</td><td>Nada pausado</td></tr>
-<tr><td class="k">Relatórios 19h e de status</td><td><code>RELATORIO_19H_OFF</code>, <code>STATUS_REPORT_OFF</code></td><td>1, 1</td><td>Desligados</td></tr>
-<tr><td class="k">Segundo SDR</td><td>chave de ativação</td><td>0</td><td>Preparado e desligado</td></tr>
-<tr><td class="k">Cópia dos avisos do SDR à Gestão</td><td><code>COPIA_FELIPE_ROBERT</code></td><td>"1" no <code>wrangler.toml</code></td><td>Ligada (variável do deploy, não é chave do KV)</td></tr>
-</table></div>
-</section>
+
 
 
 <!-- 18 -->
 <section class="sec" id="glossario">
-<h2><span class="n">17</span>Glossário e perguntas frequentes</h2>
+<h2><span class="n">16</span>Glossário e perguntas frequentes</h2>
 <h3>Perguntas frequentes</h3>
 <div id="faqlist">
 <details class="item"><summary>Por que meu lead não apareceu na Hoje?</summary><div><ol>
