@@ -145,7 +145,7 @@ footer.foot p{margin:0 0 4px}
   <span class="eyebrow">Guia do projeto</span>
   <h1>Ecossistema Life B</h1>
   <p>Vendas, SDR, Bia, motores, dados e regras: como tudo se conecta. Cada termo técnico vem com a explicação em linguagem simples ao lado.</p>
-  <div class="meta"><span>Atualizado em 05/11/2026</span></div>
+  <div class="meta"><span>Atualizado em 06/11/2026</span></div>
 </div></div>
 
 <div class="shell">
@@ -538,17 +538,17 @@ footer.foot p{margin:0 0 4px}
 <div class="grid g3" style="margin-top:14px">
  <div class="card item"><span class="tag t-green">Final 1</span><h4>Vira cliente</h4><p>A venda no Arena leva ao Pós-venda. Cada reposição abre um novo ciclo; sem reposição no prazo, o cliente passa pela Reativação e volta ao SDR.</p></div>
  <div class="card item"><span class="tag t-gray">Final 2</span><h4>Perdido sem volta</h4><p>Motivo nunca recuperável (Duplicado, Erro na construção da lista, Fora do perfil ICP, Já está sendo atendido(a)/cliente, LPGPD, Restrição de pagamento). O caminho termina ali.</p></div>
- <div class="card item"><span class="tag t-purple">Em andamento</span><h4>Aguarda a volta</h4><p>Motivo recuperável: depois do prazo (Recuperação SDR, 14 dias; Recuperação, de 10 a 60 dias conforme o motivo) nasce um negócio novo no SDR e a cadência recomeça. Se for perdido de novo em motivo recuperável, pode voltar outra vez, com intervalo mínimo de 180 dias.</p></div>
+ <div class="card item"><span class="tag t-purple">Em andamento</span><h4>Aguarda a volta</h4><p>Motivo recuperável: depois do prazo (Recuperação SDR, 14 dias; Recuperação, de 10 a 60 dias conforme o motivo) nasce um negócio novo no SDR e a cadência recomeça. Se for perdido de novo em motivo recuperável, pode voltar outra vez: a espera é de 60 dias (respondeu ou 1 volta sem resposta), 90 dias (2 seguidas sem resposta) ou 180 dias (3 ou mais seguidas sem resposta), sempre contada da perda da volta anterior.</p></div>
 </div>
 <h3>Os ciclos de volta, passo a passo</h3>
 <div class="tw item"><table>
 <tr><th>Volta</th><th>Quando pode acontecer</th><th>O que a Bia confere antes</th></tr>
 <tr><td class="k">1ª volta</td><td>Depois do prazo da perda: Recuperação SDR em 14 dias; Recuperação do Arena de 10 a 60 dias conforme o motivo.</td><td>Motivo recuperável, empresa sem negócio aberto, sem compra posterior, sem volta nos últimos 180 dias.</td></tr>
-<tr><td class="k">2ª volta</td><td>Se o negócio da 1ª volta for perdido de novo em motivo recuperável: no mínimo 180 dias depois da criação da volta anterior.</td><td>Todas as regras da 1ª volta, mais a leitura do histórico da cadeia no Agendor.</td></tr>
-<tr><td class="k">3ª volta e seguintes</td><td>Mesmo critério: sempre 180 dias de piso entre duas voltas da mesma empresa.</td><td>Se o lead respondeu em alguma volta (motivo Preço, Prazo, Desistência ou Sem interesse), a contagem de "sem resposta" volta a zero.</td></tr>
-<tr><td class="k">Empresa dormente</td><td>Depois de 3 voltas seguidas sem resposta (motivo Sem retorno ou Cadência esgotada), a volta seguinte só ocorre 365 dias depois da anterior.</td><td>Nunca é esquecida: só espaçada. Continua valendo até virar cliente ou ser perdida em motivo que nunca volta.</td></tr>
+<tr><td class="k">2ª volta</td><td>Se o negócio da 1ª volta for perdido de novo em motivo recuperável: 60 dias depois dessa perda.</td><td>Todas as regras da 1ª volta, mais a leitura do histórico da cadeia no Agendor.</td></tr>
+<tr><td class="k">3ª volta</td><td>90 dias depois da perda anterior, se as duas voltas anteriores terminaram sem resposta (motivo Sem retorno ou Cadência esgotada). Se o lead respondeu em alguma volta (motivo Preço, Prazo, Desistência ou Sem interesse), a contagem volta a zero e a espera volta a 60 dias.</td><td>As mesmas regras, em cada volta.</td></tr>
+<tr><td class="k">Empresa dormente (4ª volta em diante)</td><td>Depois de 3 voltas seguidas sem resposta, a espera passa a 180 dias, contados da perda anterior.</td><td>Nunca é esquecida: só espaçada. Continua até virar cliente ou ser perdida em motivo que nunca volta.</td></tr>
 </table></div>
-<div class="note ok item"><strong>Voltas encadeadas: preparado, aguardando liberação</strong>O código está publicado atrás de uma chave desligada. Enquanto ela estiver desligada, cada negócio volta uma vez: o negócio que já nasceu de uma volta não gera outra. Com a chave ligada em simulação, a Bia só relata quais leads voltariam e quando, sem escrever nada. Em qualquer modo, falha de leitura do histórico, ciclo na cadeia ou cadeia com mais de 10 voltas não criam nada, e a segunda tentativa nunca duplica.</div>
+<div class="note ok item"><strong>Voltas encadeadas: no ar</strong>Cada volta passa por todas as regras da 1ª (motivo que nunca volta, cliente que comprou depois, negócio aberto, trava de 180 dias por empresa entre automações diferentes, teto de 15 por dia). Nada começa sozinho: o negócio entra na fila e o SDR clica Iniciar. Falha de leitura do histórico, ciclo na cadeia ou cadeia com mais de 10 voltas não criam nada, e a segunda tentativa nunca duplica. O aviso ao SDR indica "2a volta", "3a volta" e assim por diante.</div>
 </section>
 
 <!-- 7 -->
@@ -565,9 +565,9 @@ footer.foot p{margin:0 0 4px}
 <dt>Como pausar</dt><dd>Há um interruptor geral e um por família (Arena, Reposição e Reativação), operados pela Gestão.</dd>
 <dt>Estado</dt><dd><code>MOTOR_PROATIVO_MODE</code>, <code>MOTOR_PROATIVO_REPOSICAO_MODE</code> e <code>MOTOR_PROATIVO_REATIVACAO75_MODE</code> = approval. Os interruptores de pausa estão ausentes (nada pausado).</dd></dl></article>
 
-<article class="auto item"><header><h4>Motor Proativo v2 (melhorias de 05/11)</h4><span class="tag t-gray">Preparado, aguardando liberação</span></header><dl>
+<article class="auto item"><header><h4>Motor Proativo v2 (melhorias de 05/11)</h4><span class="tag t-green">No ar</span></header><dl>
 <dt>O que traz</dt><dd>Opções <b>Perdi</b> e <b>Ganhei</b> em "Mais opções" (só Arena); remoção de "Não é meu" da lista; "Congelar" vira "Pedir pausa"; primeiro nome e "bom dia" só de manhã; escada de 3 degraus, com 1 card por negócio por dia e resumo em lista quando há 3 ou mais pendências; relatório "Movimento real dos reps" sem contar tarefa criada pelo próprio Motor; <b>aviso diário ao SDR</b> de negócio do Arena há 5 dias úteis sem resposta à cobrança (1 vez por negócio).</dd>
-<dt>Chaves (todas ausentes)</dt><dd><code>MOTOR_UX_V2</code>, <code>MOTOR_MOV_SEM_MOTOR</code>, <code>MOTOR_BTN_PERDI</code>, <code>MOTOR_BTN_GANHEI</code>, <code>MOTOR_ESCADA_V2</code> e a chave do aviso diário ao SDR. Com a chave ausente o comportamento é o antigo. Valor "1" liga para todos; lista de telefones liga só para eles.</dd>
+<dt>Chaves</dt><dd><code>MOTOR_UX_V2</code>, <code>MOTOR_MOV_SEM_MOTOR</code>, <code>MOTOR_BTN_PERDI</code>, <code>MOTOR_BTN_GANHEI</code>, <code>MOTOR_ESCADA_V2</code> e a chave do aviso diário ao SDR, todas ligadas para todos os representantes. Valor "1" liga para todos; uma lista de telefones liga só para eles; ausente volta ao comportamento antigo.</dd>
 <dt>Onde</dt><dd><code>src/motor_v2.js</code>.</dd></dl></article>
 
 <article class="auto item"><header><h4>Pós-venda: ciclos de Reposição #n</h4><span class="tag t-green">No ar</span></header><dl>
@@ -628,15 +628,15 @@ footer.foot p{margin:0 0 4px}
 <!-- 8 -->
 <section class="sec" id="tarefas">
 <h2><span class="n">8</span>Nunca deixar negócio aberto sem tarefa</h2>
-<p class="lead">A regra vale para Arena, Pós-venda e Reativação; nos funis do SDR a cadência cria as tarefas. Hoje ela é garantida por camadas, e uma delas ainda está em simulação.</p>
+<p class="lead">A regra vale para Arena, Pós-venda e Reativação; nos funis do SDR a cadência cria as tarefas. Hoje ela é garantida por quatro camadas, todas ligadas.</p>
 <div class="tw item"><table>
 <tr><th>Camada</th><th>O que faz</th><th>Quando</th><th>Estado hoje</th></tr>
 <tr><td class="k">1. Vigia de negócio sem tarefa (<code>vigiaSemTarefa</code>, <code>src/index.js</code>)</td><td>Acha negócio aberto da <b>Arena</b> sem tarefa aberta e a Bia <b>cria a próxima tarefa</b>. Relê o Agendor antes de criar, ignora negócio congelado e cria no máximo 15 por rodada (<code>VIGIA_AUTO_MAX_POR_RODADA</code>). Se a leitura falha, a rodada é liberada para tentar de novo.</td><td>Dia útil, às 10h de Brasília, uma vez por dia</td><td><span class="tag t-green">Ligado</span></td></tr>
 <tr><td class="k">2. Próxima tarefa ao concluir ou anotar</td><td>Quando a Bia conclui ou anota uma tarefa a pedido do representante, ela garante a próxima tarefa do negócio. Se a criação falha, alerta a Gestão.</td><td>No momento da ação</td><td><span class="tag t-green">Ligado</span></td></tr>
 <tr><td class="k">3. Primeiro contato na distribuição</td><td>Quando o lead é atribuído a um representante, a Bia cria a tarefa de primeiro contato no nome dele quando o negócio não tem nenhuma tarefa aberta e quem atribuiu não informou data; se já houver tarefa, ela é respeitada (<code>garantirPrimeiroContato</code>, <code>src/index.js</code>). A Reativação qualificada faz o mesmo (seção 6).</td><td>Na atribuição</td><td><span class="tag t-green">Ligado</span> (<code>PRIMEIRA_TAREFA_AUTO_ENABLED=1</code>)</td></tr>
-<tr><td class="k">4. Garantia de tarefa (<code>src/garantia_tarefa.js</code>)</td><td>Varredura dos funis fora do SDR (Arena, Pós-venda, Reativação): negócio aberto sem tarefa recebe uma tarefa de próxima ação coerente com o funil e a etapa; tarefa com responsável diferente do dono do negócio passa para o dono. Não troca o dono do negócio e não envia mensagem ao representante.</td><td>Entre 11h e 18h, em slot próprio nos minutos :17 e :47, com estado retomável</td><td><span class="tag t-gray">Simulação</span>: <code>GARANTIA_TAREFA_MODE</code> ausente vale shadow. Hoje <b>só relata</b> o que faria. Tetos previstos: 4 criações e 8 alinhamentos por rodada e 30 escritas por dia.</td></tr>
+<tr><td class="k">4. Garantia de tarefa (<code>src/garantia_tarefa.js</code>)</td><td>Varredura dos funis fora do SDR (Arena, Pós-venda, Reativação): negócio aberto sem tarefa recebe uma tarefa de próxima ação coerente com o funil e a etapa; tarefa com responsável diferente do dono do negócio passa para o dono. Não troca o dono do negócio e não envia mensagem ao representante.</td><td>Entre 11h e 18h, em slot próprio nos minutos :17 e :47, com estado retomável</td><td><span class="tag t-green">Ligado</span> (<code>GARANTIA_TAREFA_MODE=live</code>). Tetos de segurança: 4 criações e 8 alinhamentos por rodada e 30 escritas por dia.</td></tr>
 </table></div>
-<div class="note warn item"><strong>O que ainda não é garantido</strong>Enquanto a camada 4 estiver em simulação: (a) negócio do Pós-venda cuja tarefa do ciclo foi finalizada pelo representante direto na tela do Agendor não recebe uma nova tarefa; (b) negócio da Arena que está com a conta Sistema como dono, aguardando distribuição, não entra no vigia da camada 1, que só trata negócios de representantes de campo (esse caso tem um lembrete próprio ao SDR de lead sem distribuir há mais de 2 horas; e, quando a camada 4 estiver ligada, a tarefa nasce no nome da própria conta Sistema); (c) a verificação ampla de tarefa com responsável diferente do dono só relata e não corrige. Ligar o modo real da camada 4 depende de decisão da Gestão.</div>
+<div class="note ok item"><strong>O que a garantia cobre</strong>Negócio aberto do Pós-venda cuja tarefa do ciclo foi finalizada pelo representante direto no Agendor recebe nova tarefa. Negócio da Arena com a conta Sistema como dono, aguardando distribuição, recebe a tarefa no nome da própria conta Sistema (e o SDR ainda recebe o lembrete de lead sem distribuir há mais de 2 horas). Tarefa com responsável diferente do dono do negócio passa para o dono. A garantia só cria de dia útil, entre 11h e 18h, respeitando os tetos por rodada e por dia; se o teto do dia for atingido, o restante segue no dia seguinte.</div>
 </section>
 
 <!-- 9 -->
@@ -650,7 +650,7 @@ footer.foot p{margin:0 0 4px}
 <tr><td class="k">Reativação qualificada</td><td>Aviso de devolução ao representante original (<code>avisarReativacaoDevolvida</code>)</td><td>Tarefa de primeiro contato e card de lead novo (o card depende da aprovação da Gestão)</td><td>Cópia e aprovação do card; alerta se o representante não pôde ser avisado</td></tr>
 <tr><td class="k">Entrada de Recuperação, Reativação ou Recuperação SDR</td><td>Um resumo agrupado por rodada, só em modo live, em dia útil das 8h às 18h</td><td>Nada</td><td>Cópia; falhas só para a Gestão</td></tr>
 <tr><td class="k">Tarefa vencida (Arena, Reposição, Reativação)</td><td>Nada</td><td>Card do Motor, após aprovação, com intervalo mínimo entre cards</td><td>Aprovação dos cards (modo approval)</td></tr>
-<tr><td class="k">Negócio do Arena há 5 dias úteis sem resposta à cobrança</td><td>Aviso diário, 1 vez por negócio. <span class="tag t-gray">Preparado, aguardando liberação</span> (chave do aviso ausente)</td><td>Nada novo</td><td>Cópia, quando for ligado</td></tr>
+<tr><td class="k">Negócio do Arena há 5 dias úteis sem resposta à cobrança</td><td>Aviso diário, 1 vez por negócio. <span class="tag t-green">No ar</span></td><td>Nada novo</td><td>Cópia do aviso</td></tr>
 <tr><td class="k">Perdido marcado pelo SDR</td><td>Nada</td><td>Nada</td><td>Aviso em segundos (<code>SDR_AVISO_PERDIDO_MODE=live</code>). O fechamento automático por Cadência esgotada não gera aviso individual</td></tr>
 <tr><td class="k">Falha de automação</td><td>Nada</td><td>Nada</td><td>Alerta</td></tr>
 <tr><td class="k">Convite do Painel do Representante</td><td>Nada</td><td>Mensagem de bom dia com o botão "Abrir carteira", às 8h em dia útil</td><td>Resumo consolidado do envio do dia</td></tr>
@@ -675,6 +675,7 @@ footer.foot p{margin:0 0 4px}
  <div class="card item"><h4>Na dúvida, não mexe</h4><p>O Pós-venda só ajusta data ou tarefa quando ninguém mexeu à mão: filho aberto em Ciclo Ativo ou Contato de Reposição e tarefa ainda na data que a própria Bia pôs (<code>src/posvenda_blindagem.js</code>).</p></div>
  <div class="card item"><h4>Marcar antes, conferir depois</h4><p>Os marcadores são gravados <b>antes</b> da ação: o pior caso é "não fez hoje", nunca "fez duas vezes" (por exemplo <code>vigia_sem_tarefa_&lt;dia&gt;</code> e <code>garantia_criada_&lt;id&gt;_&lt;dia&gt;</code>). Depois da escrita, a criação é conferida por releitura. Ganho já repassado grava <code>sdr_repasse_feito_&lt;id&gt;</code> e não é repassado de novo.</p></div>
  <div class="card item"><h4>Respeito ao que a pessoa definiu</h4><p>A garantia de tarefa nunca troca o dono do negócio (<code>src/garantia_tarefa.js</code>). Negócio congelado de propósito não gera cobrança do vigia (<code>src/index.js</code>).</p></div>
+ <div class="card item"><h4>Ganho com valor: valor primeiro</h4><p>Quando o valor vem junto no pedido de ganho, a Bia grava e confere o valor no Agendor antes de marcar o ganho. Assim o Dash, os avisos e os relatórios nunca enxergam um ganho sem valor. Se a conferência falhar, o ganho segue e a Bia regrava o valor e escala o caso.</p></div>
  <div class="card item"><h4>Mudança feita direto no Agendor</h4><p>O Worker detecta atribuições e trocas de responsável feitas no Agendor com a rotina de sync de responsáveis, a cada 5 minutos em dias úteis, das 8h às 17h55 (cron <code>*/5 11-20 * * 2-6</code>), e reflete a mudança sem apagar o que a pessoa fez.</p></div>
 </div>
 <div class="note item"><strong>Limite conhecido</strong>Tarefa aberta e vencida há mais de 31 dias não aparece nos filtros da API do Agendor. O vigia de negócio sem tarefa e a detecção de tarefas duplicadas herdam esse limite (<code>src/index.js</code>, comentário).</div>
