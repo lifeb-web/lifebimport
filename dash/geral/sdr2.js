@@ -336,10 +336,10 @@
   function somaObj(o) { var n = 0; Object.keys(o || {}).forEach(function (k) { n += Number(o[k]) || 0; }); return n; }
   function janelaAtv(per, docs, semDado, ultima) {
     var hoje = hojeBRT(), de = per.from < CFG.atvInicio ? CFG.atvInicio : per.from, ate = per.to > hoje ? hoje : per.to;
-    var vazio = { lidas: 0, sdr: 0, junto: 0, nc: 0, man: 0, fora: 0, sis: 0, out: 0, pend: 0 };
+    var vazio = { lidas: 0, sdr: 0, junto: 0, nc: 0, fora: 0, sis: 0, out: 0, pend: 0 };
     if (ate < de) return { antes: per.to < CFG.atvInicio, de: de, ate: ate, dias: 0, comDado: 0, sem: [], parcial: 0, apur: { ativo: false, dias: [], pend: 0, falha: false }, bruto: vazio };
     var known = {}; (docs || []).forEach(function (d) { known[d.dia] = d; });
-    var sem = [], n = 0, com = 0, parcial = 0, apDias = [], pendTot = 0, br = { lidas: 0, sdr: 0, junto: 0, nc: 0, man: 0, fora: 0, sis: 0, out: 0, pend: 0 };
+    var sem = [], n = 0, com = 0, parcial = 0, apDias = [], pendTot = 0, br = { lidas: 0, sdr: 0, junto: 0, nc: 0, fora: 0, sis: 0, out: 0, pend: 0 };
     for (var t = de; t <= ate; t = addDays(t, 1)) {
       n++;
       var d = known[t];
@@ -349,9 +349,9 @@
       if (d.incompleto || d.pendente) parcial++;
       if (pd > 0 || d.pendente || d.incompleto) { apDias.push(t); pendTot += pd; }
       Object.keys(d.sdr || {}).forEach(function (q) { (d.sdr[q] || []).forEach(function (l) { br.sdr += somaObj(l.a); br.junto += somaObj(l.j); }); });
-      var man = Number(d.nc && d.nc.manual) || 0; br.nc += somaObj(d.nc) - man; br.man += man; br.fora += Number(d.fora) || 0; br.sis += Number(d.sis) || 0; br.out += Number(d.out) || 0; br.pend += pd;
+      br.nc += somaObj(d.nc); br.fora += Number(d.fora) || 0; br.sis += Number(d.sis) || 0; br.out += Number(d.out) || 0; br.pend += pd;
     }
-    br.lidas = br.sdr + br.junto + br.nc + br.man + br.fora + br.sis + br.out + br.pend;
+    br.lidas = br.sdr + br.junto + br.nc + br.fora + br.sis + br.out + br.pend;
     var falha = !!(ultima && ultima.ok === false);
     return { antes: false, de: de, ate: ate, dias: n, comDado: com, sem: sem, parcial: parcial, apur: { ativo: apDias.length > 0 || falha, dias: apDias, pend: pendTot, falha: falha }, bruto: br };
   }
@@ -981,7 +981,7 @@
     h += '<tr style="font-weight:800"><td>' + (ap.ativo ? 'Total parcial' : 'Total') + '</td><td>' + num(a.feitas) + '</td><td class="gc">' + num(a.junto) + '</td></tr></tbody></table>';
     h += svgAtv(r, tv);
     var bq = t.jn.bruto;
-    h += '<div class="s2-nt' + (tv ? ' s2-xs' : '') + '" title="' + esc(TIP_LIDAS) + '"><b>Lidas no Agendor: ' + num(bq.lidas) + ' tarefas</b> <span class="s2-i">ⓘ</span> (sem filtros) = ' + num(bq.sdr) + ' feitas pelo SDR · ' + num(bq.junto) + ' fechadas junto · ' + num(bq.nc) + ' notas/migração GS · ' + num(bq.man) + ' tarefas manuais (fora da cadência, não contam) · ' + num(bq.out) + ' de outras pessoas · ' + num(bq.sis) + ' do Sistema · ' + num(bq.fora) + ' fora dos funis SDR · ' + num(bq.pend) + ' a atribuir. Só as feitas pelo SDR contam como atividade; o restante não é trabalho do SDR.</div>';
+    h += '<div class="s2-nt' + (tv ? ' s2-xs' : '') + '" title="' + esc(TIP_LIDAS) + '"><b>Lidas no Agendor: ' + num(bq.lidas) + ' tarefas</b> <span class="s2-i">ⓘ</span> (sem filtros) = ' + num(bq.sdr) + ' feitas pelo SDR · ' + num(bq.junto) + ' fechadas junto · ' + num(bq.nc) + ' notas/migração GS · ' + num(bq.out) + ' de outras pessoas · ' + num(bq.sis) + ' do Sistema · ' + num(bq.fora) + ' fora dos funis SDR · ' + num(bq.pend) + ' a atribuir. Só as feitas pelo SDR contam como atividade; o restante não é trabalho do SDR.</div>';
     h += '<div class="s2-nt' + (tv ? ' s2-xs' : '') + '">' + (a.media != null && !ap.ativo ? '<b>' + dec1(a.media) + '</b> por dia com atividade (' + a.diasAtivos + (a.diasAtivos === 1 ? ' dia' : ' dias') + '). ' : '') + '<b>Fechadas junto</b> = tarefas encerradas no mesmo instante em que o negócio foi ganho ou perdido; não são trabalho do dia. <b>Ligação</b> conta como tarefa normal, igual às demais (WhatsApp, e-mail, pesquisa, outras).</div>';
     return h;
   }
