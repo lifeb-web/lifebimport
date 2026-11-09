@@ -27,6 +27,7 @@
     provaDias: 90,                // prova: segmentos de 90 dias atras x quem recomprou depois
     atrasoSyncMin: 30,
     urlNegocio: 'https://web.agendor.com.br/sistema/negocios/historico.php?id=',
+    motivoRestricao: /restri[cç][aã]o/,   // motivo de perda "Restrição de pagamento" (tolera caixa e acento): cliente que deve a empresa sai da analise
     campo: ['976406', '977487', '977488', '977499', '977506', '983372', '987866', '993185'],
     nomes: { '976406': 'Iramar', '977487': 'Natanael', '977488': 'Janeth', '977499': 'Sâmilla', '977506': 'Washington', '983372': 'Flávia', '987866': 'Anderson', '993185': 'Edgard', '976405': 'Felipe', '973972': 'Grandes Contas' },
     grandes: '973972'
@@ -99,13 +100,20 @@
     var t = Date.parse(e); if (isNaN(t)) return e.slice(0, 10);
     return new Date(t - 3 * 3600000).toISOString().slice(0, 10);          // instante: converte para o dia em Brasilia
   }
+  // data em que o negocio foi perdido (dia em Brasilia): mesma ordem da data do evento, com lost_at/closed_at como reserva
+  function dataPerda(d) {
+    var x = dataEvento(d); if (x) return x;
+    var e = d.lost_at || d.closed_at; if (!e) return null; e = String(e);
+    var t = Date.parse(e); if (isNaN(t)) return e.slice(0, 10);
+    return new Date(t - 3 * 3600000).toISOString().slice(0, 10);
+  }
   function funilDe(d) { return String(d.funnel_id == null ? '' : d.funnel_id); }
   function origemDe(d) {
     var e = String(d.origem_especial || '').toLowerCase();
     if (e === 'superagos' || e === 'recuperacao') return 'outbound';
     return d.origin === 'inbound' ? 'inbound' : 'outbound';
   }
-  function limpaNome(t) { return String(t || '').replace(/\s+[—–-]\s+(Reposição|Reposicao)\s*#\d+\s*$/i, '').replace(/\s+[—–-]\s+(Reativação|Reativacao)\s*75\+?\s*$/i, '').replace(/\s+/g, ' ').trim(); }
+  function limpaNome(t) { return String(t || '').replace(/\s+[—–-]\s+(Reposição|Reposicao)\s*#\d+\s*$/i, '').replace(/\s+[—–-]\s+(Reativação|Reativacao)\s*75\+?\s*$/i, '').replace(/\s*\((recupera[cç][aã]o|reativa[cç][aã]o)[^)]*\)\s*$/i, '').replace(/\s+/g, ' ').trim(); }
   function anteriorDe(d) { var m = /Neg[óo]cio anterior:[^\n]*?id=(\d+)/i.exec(d.description || ''); return m ? m[1] : null; }
 
   // R pela faixa fixa de dias desde a ultima compra
@@ -159,6 +167,27 @@
       c.cicloProprio = ints.length ? Math.min(CFG.cicloMax, Math.max(CFG.cicloMin, mediana(ints))) : null;
       return c;
     });
+    // RESTRICAO DE PAGAMENTO (09/11/2026): cliente que, DEPOIS da 1a compra, teve negocio perdido com motivo "Restricao de pagamento"
+    // deve a empresa: sai da matriz, dos KPIs e das listas de acao, e aparece destacado a parte (c.restricao).
+    // Ligacao do negocio perdido ao cliente: (1) pela cadeia ("Negocio anterior"); (2) pelo nome, SO se um unico cliente tem esse nome.
+    var porNome = {}; lista.forEach(function (c) { (porNome[norm(c.nome)] = porNome[norm(c.nome)] || []).push(c); });
+    var porGrupo = {}; lista.forEach(function (c) { porGrupo[c.id] = c; });
+    var ambiguos = [];
+    deals.forEach(function (d) {
+      if (d.status !== 'lost' || !CFG.motivoRestricao.test(norm(d.lost_reason_name))) return;
+      var data = dataPerda(d); if (!data) return;
+      var c = porGrupo[ach(String(d.id))], via = 'cadeia';
+      if (!c) {
+        var cs = porNome[norm(limpaNome(d.title))] || [];
+        if (cs.length > 1) { ambiguos.push({ id: String(d.id), nome: limpaNome(d.title), n: cs.length }); return; }
+        c = cs[0]; via = 'nome';
+      }
+      if (!c || data < c.primeira) return;              // perdido ANTES da 1a compra: nao e cliente devedor
+      var r = c.restricao;
+      if (!r) r = c.restricao = { id: String(d.id), data: data, valor: Number(d.value) || 0, via: via, n: 0 };
+      r.n++;
+      if (data > r.data) { r.id = String(d.id); r.data = data; r.valor = Number(d.value) || 0; r.via = via; }
+    });
     var proprios = lista.filter(function (c) { return c.cicloProprio != null; }).map(function (c) { return c.cicloProprio; });
     var cicloCarteira = proprios.length ? mediana(proprios) : CFG.cicloPadrao;
     lista.forEach(function (c) {
@@ -166,7 +195,7 @@
       c.dias = Math.max(0, diasEntre(c.ultima, asOf));
       c.razao = c.dias / c.ciclo;
     });
-    return { lista: lista, cicloCarteira: cicloCarteira, descartes: no };
+    return { lista: lista, cicloCarteira: cicloCarteira, descartes: no, ambiguos: ambiguos };
   }
 
   function pontuar(lista) {
@@ -177,9 +206,11 @@
   // Retrato completo da carteira em `asOf`
   function retrato(rows, asOf, origem) {
     var cl = clientes(rows, asOf);
-    var lista = cl.lista.filter(function (c) { return !origem || origem === 'both' || c.origem === origem; });
-    var p = pontuar(lista);
-    return { asOf: asOf, lista: lista, cicloCarteira: cl.cicloCarteira, descartes: cl.descartes };
+    var todos = cl.lista.filter(function (c) { return !origem || origem === 'both' || c.origem === origem; });
+    var lista = todos.filter(function (c) { return !c.restricao; });
+    var bloq = todos.filter(function (c) { return !!c.restricao; });
+    pontuar(lista); pontuar(bloq);
+    return { asOf: asOf, lista: lista, bloq: bloq, ambiguos: cl.ambiguos, cicloCarteira: cl.cicloCarteira, descartes: cl.descartes };
   }
 
   // Backtest: pega a carteira em (asOf - dias), agrupa por segmento e conta quem COMPROU DE NOVO depois (ate asOf).
@@ -202,7 +233,7 @@
     opts = opts || {};
     var asOf = opts.asOf || hojeBRT();
     var cur = retrato(rows, asOf, opts.origem);
-    var out = { asOf: asOf, clientes: cur.lista, cicloCarteira: cur.cicloCarteira, descartes: cur.descartes };
+    var out = { asOf: asOf, clientes: cur.lista, restricao: cur.bloq, ambiguos: cur.ambiguos, cicloCarteira: cur.cicloCarteira, descartes: cur.descartes };
     // movimento: o mesmo retrato 30 dias atras
     var antes = retrato(rows, addDias(asOf, -CFG.movDias), opts.origem), mapa = {};
     antes.lista.forEach(function (c) { mapa[c.id] = c; });
@@ -317,6 +348,16 @@
     '.rf-lgd{display:none;flex-wrap:wrap;gap:4px 10px;font-size:10.5px;font-weight:700;color:var(--muted,#6b6484)}',
     '.rf-lgd span{display:inline-flex;align-items:center;gap:4px}',
     '.xp .rf-mostrar{display:none}',
+    /* restricao de pagamento */
+    '.rf-rx{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fef2f2;border:1px solid #f3b4b4;border-left:5px solid #b91c1c;border-radius:12px;padding:8px 12px;cursor:pointer;text-align:left;font:inherit;color:#7f1d1d;width:100%}',
+    '.rf-rx:hover{border-color:#b91c1c}',
+    '.rf-rx b{font-size:13px;font-weight:800;color:#b91c1c}',
+    '.rf-rx span{font-size:11.5px;font-weight:600;line-height:1.35;flex:1 1 200px}',
+    '.rf-rx u{font-size:11px;font-weight:800;text-decoration:none;color:#b91c1c;white-space:nowrap}',
+    '.rf-rxchip{display:inline-flex;vertical-align:top;margin:0 0 0 8px;width:auto;height:1.4em;padding:0 9px;border:0;border-radius:999px;gap:6px;flex-wrap:nowrap;align-items:center;line-height:1.4}',
+    '.rf-rxchip b{font-size:11px;white-space:nowrap;line-height:1.4}',
+    '.rf-rxchip u{font-size:11px;line-height:1.4}',
+    '.rf-tag.rs{background:#b91c1c}',
     /* segmentos */
     '.rf-sg{display:flex;flex-direction:column;gap:5px}',
     '.rf-sr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;align-items:center;padding:3px 4px;border-radius:8px}',
@@ -520,6 +561,20 @@
     return '<a class="rf-row" href="' + CFG.urlNegocio + c.ultimoId + '" target="_blank" rel="noopener"><span class="rf-pos">' + (i != null ? (i + 1) : '') + '</span><div><div class="rf-nm">' + esc(c.nome) + '</div><div class="rf-mt">' + tag(c.seg) + ' ' + esc(meta.join(' · ')) + '</div></div><span class="rf-vl">' + esc(brl(c.valor)) + '</span></a>';
   }
 
+  function linhaInad(c, i) {
+    var r = c.restricao, meta = ['restrição em ' + dmy(r.data), 'última compra ' + dm(c.ultima), nf(c.n) + (c.n === 1 ? ' compra' : ' compras'), nomeRep(c.owner)];
+    if (r.via === 'nome') meta.push('ligado pelo nome: conferir');
+    return '<a class="rf-row" href="' + CFG.urlNegocio + r.id + '" target="_blank" rel="noopener"><span class="rf-pos">' + (i != null ? (i + 1) : '') + '</span><div><div class="rf-nm">' + esc(c.nome) + '</div><div class="rf-mt"><span class="rf-tag rs">Restrição de pagamento</span> ' + esc(meta.join(' · ')) + '</div></div><span class="rf-vl">' + esc(brl(c.valor)) + '</span></a>';
+  }
+  function filtradaRestricao(res) { return (res.restricao || []).filter(function (c) { return !S.rep || c.owner === S.rep; }); }
+  function htmlRestricao(res, chip) {
+    var l = filtradaRestricao(res); if (!l.length) return '';
+    var v = l.reduce(function (s, c) { return s + c.valor; }, 0);
+    // telao nao rola: o aviso vira uma etiqueta no cabecalho (sem linha extra); no celular/PC e uma faixa
+    if (chip) return '<button type="button" class="rf-rx rf-rxchip" data-rf="restricao" title="Fora da matriz e das listas de ligação: ' + esc(brl(v)) + ' já comprados. Passar ao financeiro."><b>⚠ ' + nf(l.length) + ' com restrição de pagamento</b><u>ver ›</u></button>';
+    return '<button type="button" class="rf-rx" data-rf="restricao" aria-label="Clientes com restrição de pagamento, fora da análise"><b>⚠ ' + nf(l.length) + (l.length === 1 ? ' cliente' : ' clientes') + ' com restrição de pagamento</b><span>Fora da matriz e das listas de ligação (' + brl(v) + ' já comprados). Não oferecer prazo nem reposição: passar ao financeiro.</span><u>Ver lista ›</u></button>';
+  }
+
   function listaAcao(lista) {
     var base, titulo;
     if (S.seg) { base = lista.slice(); titulo = SEG[S.seg].n; }
@@ -612,6 +667,7 @@
   function htmlMetodo(res) {
     return '<div class="rf-note"><p style="margin:0 0 5px"><b>Só Agendor.</b> Clientes com ganho nos funis Arena, Pós-venda ou Reativação +75, sem SDR e sem Yanmei. A matriz geral do ERP tem mais vendas e números maiores: não compare.</p>' +
       '<p style="margin:0 0 5px"><b>Quem é cliente.</b> A tabela não tem CNPJ: a reposição é ligada ao negócio original pelo elo "negócio anterior" e a reativação pelo nome.</p>' +
+      '<p style="margin:0 0 5px"><b>Restrição de pagamento.</b> Cliente que, depois da primeira compra, teve negócio perdido com esse motivo deve à empresa: fica fora da matriz, dos KPIs e das listas, e aparece no aviso vermelho. Ligação pela cadeia de reposição ou, se não houver, pelo nome (só quando único).</p>' +
       '<p style="margin:0 0 5px"><b>Compra</b> = dia com pedido ganho para o cliente. Vários negócios no mesmo dia contam como uma compra.</p>' +
       '<p style="margin:0 0 5px"><b>Recência (colunas)</b> = dias desde a última compra, em faixas fixas: R5 até 60, R4 61 a 90, R3 91 a 120, R2 121 a 150, R1 151 ou mais.</p>' +
       '<p style="margin:0 0 5px"><b>Frequência (linhas)</b> = número de compras: F1 uma, F2 duas, F3 três, F4 quatro, F5 cinco ou mais.</p>' +
@@ -634,7 +690,7 @@
     var fil = rotuloFiltro();
     var h = '<div class="rf-hd"><div class="rf-ttl">RFM · carteira de clientes · <b>só Agendor</b> <span class="rf-st' + (atraso > CFG.atrasoSyncMin || errMsg ? ' warn' : '') + '">· ' + esc(st) + (errMsg ? ' · última atualização falhou' : '') + '</span></div>' +
       '<div class="rf-fil">' + fil.map(function (t) { return '<span class="rf-chip">' + esc(t) + '</span>'; }).join('') + (fil.length ? '<button type="button" class="rf-chip sec" data-rf="limpa">Limpar filtro ✕</button>' : '') + '</div></div>';
-    h += '<div class="rf-nota">' + (tv ? 'Foto de hoje' : 'Foto da carteira de hoje (o período do topo não se aplica)') + ' · origem: ' + esc({ both: 'Ambos', inbound: 'Inbound', outbound: 'Outbound' }[origemAtual()]) + ' · Arena, Pós-venda e Reativação +75, sem SDR · ' + nf(res.clientes.length) + ' clientes' + (fil.length ? ', ' + nf(ag.n) + ' no filtro' : '') + '</div>';
+    h += '<div class="rf-nota">' + (tv ? 'Foto de hoje' : 'Foto da carteira de hoje (o período do topo não se aplica)') + ' · origem: ' + esc({ both: 'Ambos', inbound: 'Inbound', outbound: 'Outbound' }[origemAtual()]) + ' · Arena, Pós-venda e Reativação +75, sem SDR · ' + nf(res.clientes.length) + ' clientes' + (fil.length ? ', ' + nf(ag.n) + ' no filtro' : '') + (tv ? ' ' + htmlRestricao(res, true) : '') + '</div>';
     return h;
   }
 
@@ -655,10 +711,10 @@
     var tv = S.mode === 't';
     var lista = filtrada(res), ag = agregar(lista, ticketFn());
     if (!res.clientes.length) {
-      root.innerHTML = htmlTopo(res, ag) + msgEstado('Nenhum cliente com compra na origem escolhida.');
+      root.innerHTML = htmlTopo(res, ag) + (tv ? '' : htmlRestricao(res)) + msgEstado('Nenhum cliente com compra na origem escolhida.');
       return;
     }
-    var topo = htmlTopo(res, ag), kpis = htmlKpis(ag);
+    var topo = htmlTopo(res, ag), kpis = htmlKpis(ag) + (tv ? '' : htmlRestricao(res));
     if (!lista.length) { root.innerHTML = topo + kpis + msgEstado('Nenhum cliente neste filtro.<br><button type="button" class="rf-chip" data-rf="limpa">Limpar filtro</button>'); return; }
     var agSeg = agregar(filtrada(res, 'seg'), null);       // barras de segmento ignoram o filtro de segmento
     var cMx = card('Recência × Frequência · só Agendor', 'clique numa célula', htmlMatriz(res, ag), { id: 'rf-c-mx' });
@@ -716,17 +772,17 @@
   function valorOrd(c, k) { return k === 'valor' ? c.valor : k === 'ultima' ? utc(c.ultima) : k === 'atraso' ? c.dias : k === 'n' ? c.n : k === 'nome' ? norm(c.nome) : norm(nomeRep(c.owner)); }
   function desenhaOv() {
     var o = ensureOv(), L = S.ov, q = norm(L.q);
-    var itens = L.lista.filter(function (c) { return !q || norm(c.nome + ' ' + nomeRep(c.owner) + ' ' + SEG[c.seg].n).indexOf(q) >= 0; });
+    var itens = L.lista.filter(function (c) { return !q || norm(c.nome + ' ' + nomeRep(c.owner) + ' ' + (L.tipo === 'inad' ? 'restricao pagamento' : SEG[c.seg].n)).indexOf(q) >= 0; });
     itens.sort(function (a, b) { var x = valorOrd(a, L.sort), y = valorOrd(b, L.sort); return (x < y ? -1 : x > y ? 1 : 0) * L.dir; });
     o.querySelector('#rf-pt').textContent = L.titulo + ' · ' + nf(itens.length) + (q ? ' de ' + nf(L.lista.length) : '');
     var tot = itens.reduce(function (s, c) { return s + c.valor; }, 0);
     o.querySelector('#rf-ps').textContent = L.sub + (itens.length ? ' · ' + brl(tot) + ' comprados no total' : '');
     o.querySelector('#rf-ord').innerHTML = '<span>Ordenar:</span>' + ORDS.map(function (x) { return '<button type="button" class="rf-chip sec' + (L.sort === x[0] ? ' on' : '') + '" data-rfo="' + x[0] + '">' + x[1] + (L.sort === x[0] ? (L.dir === -1 ? ' ▼' : ' ▲') : '') + '</button>'; }).join('');
-    o.querySelector('#rf-lb').innerHTML = itens.length ? '<div class="rf-lst">' + itens.map(function (c) { return linhaCliente(c, null); }).join('') + '</div>' : '<div class="rf-empty">Nenhum cliente encontrado.</div>';
+    o.querySelector('#rf-lb').innerHTML = itens.length ? '<div class="rf-lst">' + itens.map(function (c) { return L.tipo === 'inad' ? linhaInad(c, null) : linhaCliente(c, null); }).join('') + '</div>' : '<div class="rf-empty">Nenhum cliente encontrado.</div>';
   }
-  function abreOv(titulo, sub, lista, sort) {
+  function abreOv(titulo, sub, lista, sort, tipo) {
     var o = ensureOv();
-    S.ov = { lista: lista.slice(), titulo: titulo, sub: sub || '', q: '', sort: sort || 'valor', dir: -1 };
+    S.ov = { lista: lista.slice(), titulo: titulo, sub: sub || '', q: '', sort: sort || 'valor', dir: -1, tipo: tipo || '' };
     o.querySelector('#rf-q').value = '';
     desenhaOv();
     S.opener = document.activeElement;
@@ -753,6 +809,7 @@
     if (k === 'met') { S.met = v; return rerender(); }
     if (k === 'info') { S.info[v] = !S.info[v]; return rerender(); }
     if (k === 'acaoN') { S.acaoN = +v; return rerender(); }
+    if (k === 'restricao') return abreOv('Restrição de pagamento · fora da análise', 'perdidos com esse motivo depois da compra; o link abre o negócio perdido', filtradaRestricao(res), 'valor', 'inad');
     if (k === 'acaoTodos') { var la = listaAcao(lista); return abreOv(la.titulo, 'maior valor já comprado primeiro', la.base, 'valor'); }
     if (k === 'rsort') { if (S.repSort.k === v) S.repSort.dir = -S.repSort.dir; else S.repSort = { k: v, dir: -1 }; return rerender(); }
     if (k === 'cel') {

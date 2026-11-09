@@ -26,16 +26,44 @@ for (let f = 5; f >= 1; f--) for (let r = 1; r <= 5; r++) t(nomeDe(C.segmentoDe(
 t(C.SEGS.length === 11 && C.SEGS.map(s => s.n).join('|') === ['Campeões', 'Leais', 'Potenciais leais', 'Novos', 'Promissores', 'Precisam de atenção', 'Quase dormindo', 'Em risco', 'Não pode perder', 'Hibernando', 'Perdidos'].join('|'), '11 segmentos com os nomes do Robert');
 t(C.segmentoDe(9, 5) === 'campeoes', 'F acima de 5 vale F5');
 
+// ---------- 2b) RESTRICAO DE PAGAMENTO (09/11): cliente que deve sai da analise ----------
+{
+  const T = '2026-11-09';
+  const g = (id, tit, data, extra) => Object.assign({ id, title: tit, funnel_id: '890331', status: 'won', value: 1000, data_real_evento: data, owner_id: '977487', origin: 'outbound' }, extra || {});
+  const rp = (id, tit, data, extra) => Object.assign({ id, title: tit, funnel_id: '907387', status: 'lost', value: 0, lost_reason_name: 'Restrição de pagamento', data_real_evento: data, owner_id: '977487', description: 'Negócio anterior: https://web.agendor.com.br/x?id=1' }, extra || {});
+  const base = [g(1, 'Loja A', '2026-08-01'), g(2, 'Loja B', '2026-08-02'), g(3, 'Loja C', '2026-08-03')];
+  let r = C.computeRfm(base.concat([rp(10, 'Loja A — Reposição #1', '2026-09-01')]), { asOf: T, origem: 'both' });
+  t(r.clientes.length === 2 && r.restricao.length === 1 && r.restricao[0].nome === 'Loja A', 'restricao via cadeia: cliente sai da matriz e vai para o aviso');
+  t(r.restricao[0].restricao.via === 'cadeia' && r.restricao[0].restricao.id === '10', 'restricao guarda o negocio perdido e a ligacao (cadeia)');
+  t(!r.clientes.some(c => c.nome === 'Loja A') && C.agregar(r.clientes, null).n === 2, 'cliente com restricao nao entra em KPIs nem matriz');
+  r = C.computeRfm(base.concat([rp(11, 'Loja B', '2026-09-01', { funnel_id: '890331', description: '' })]), { asOf: T, origem: 'both' });
+  t(r.restricao.length === 1 && r.restricao[0].restricao.via === 'nome', 'restricao via nome quando o nome e unico');
+  r = C.computeRfm(base.concat([g(4, 'Loja B', '2026-08-20'), rp(12, 'Loja B', '2026-09-01', { funnel_id: '890331', description: '' })]), { asOf: T, origem: 'both' });
+  t(r.restricao.length === 0 && r.ambiguos.length === 1, 'nome repetido em 2 clientes: nao marca ninguem, avisa como ambiguo');
+  r = C.computeRfm(base.concat([rp(13, 'Loja C', '2026-07-01', { funnel_id: '890331', description: '' })]), { asOf: T, origem: 'both' });
+  t(r.restricao.length === 0, 'perdido por restricao ANTES da 1a compra nao conta');
+  r = C.computeRfm(base.concat([rp(14, 'Loja A — Reposição #1', '2026-09-01', { lost_reason_name: 'Preço' })]), { asOf: T, origem: 'both' });
+  t(r.restricao.length === 0 && r.clientes.length === 3, 'outro motivo de perda nao tira ninguem');
+  r = C.computeRfm(base.concat([rp(15, 'Loja A — Reposição #1', '2026-09-01', { lost_reason_name: 'RESTRICAO DE PAGAMENTO' })]), { asOf: T, origem: 'both' });
+  t(r.restricao.length === 1, 'motivo tolera caixa e acento');
+  r = C.computeRfm(base.concat([rp(16, 'Loja A — Reposição #1', '2026-09-01', { funnel_id: '916712' })]), { asOf: T, origem: 'both' });
+  t(r.restricao.length === 0, 'perdido de funil SDR (lead) nao conta');
+  r = C.computeRfm(base.concat([rp(17, 'Loja A — Reposição #1', '2026-09-01'), rp(18, 'Loja A — Reposição #2', '2026-10-01')]), { asOf: T, origem: 'both' });
+  t(r.restricao.length === 1 && r.restricao[0].restricao.n === 2 && r.restricao[0].restricao.data === '2026-10-01', 'varias restricoes: 1 cliente, vale a mais recente');
+  t(C.limpaNome('Drogaria X (recuperação 27/08/2026)') === 'Drogaria X', 'nome sem sufixo (recuperação dd/mm/aaaa)');
+}
+
 // ---------- 3) invariantes (qualquer base) ----------
 function invariantes(nome, deals, esp) {
   const T = hoje(), res = C.computeRfm(deals, { asOf: T, origem: 'both' }), L = res.clientes;
   // independente: soma dos ganhos validos nos 3 funis ate hoje, pela data do evento
   let pedidos = 0, receita = 0;
   deals.forEach(d => { if (d.status === 'won' && ['890331', '907387', '909368'].includes(String(d.funnel_id)) && Number(d.value) >= 10) { const dt = C.dataEvento(d); if (dt && dt <= T) { pedidos++; receita += Number(d.value); } } });
-  t(L.reduce((s, c) => s + c.nNegocios, 0) === pedidos, nome + ': negocios ganhos da carteira (' + L.reduce((s, c) => s + c.nNegocios, 0) + ') = ganhos validos (' + pedidos + ')');
-  let diasOk = true; L.forEach(c => { const ds = new Set(c.negocios.map(x => x.data)); if (ds.size !== c.n || c.compras.length !== c.n) diasOk = false; });
+  const LT = L.concat(res.restricao || []);   // clientes com restricao de pagamento saem da analise, mas continuam na contagem total
+  t(LT.reduce((s, c) => s + c.nNegocios, 0) === pedidos, nome + ': negocios ganhos da carteira (' + LT.reduce((s, c) => s + c.nNegocios, 0) + ') = ganhos validos (' + pedidos + ')');
+  let diasOk = true; LT.forEach(c => { const ds = new Set(c.negocios.map(x => x.data)); if (ds.size !== c.n || c.compras.length !== c.n) diasOk = false; });
   t(diasOk, nome + ': compra = dia com pedido (nº de compras = dias distintos)');
-  t(perto(L.reduce((s, c) => s + c.valor, 0), receita), nome + ': receita da carteira = soma dos ganhos validos (' + receita.toFixed(2) + ')');
+  t(perto(LT.reduce((s, c) => s + c.valor, 0), receita), nome + ': receita da carteira = soma dos ganhos validos (' + receita.toFixed(2) + ')');
   const ag = C.agregar(L, null);
   t(Object.values(ag.bySeg).reduce((s, b) => s + b.n, 0) === L.length, nome + ': soma dos segmentos = clientes (' + L.length + ')');
   t(Object.values(ag.matriz).reduce((s, m) => s + m.n, 0) === L.length, nome + ': soma das celulas da matriz = clientes');
@@ -49,7 +77,7 @@ function invariantes(nome, deals, esp) {
   t(new Set(L.map(c => c.id)).size === L.length, nome + ': nenhum cliente duplicado');
   // ordem das linhas nao muda o resultado
   const emb = deals.slice().reverse(); const r2 = C.computeRfm(emb, { asOf: T, origem: 'both' });
-  t(r2.clientes.length === L.length && perto(r2.clientes.reduce((s, c) => s + c.valor, 0), receita), nome + ': ordem das linhas nao muda a conta');
+  t(r2.clientes.length === L.length && r2.restricao.length === (res.restricao || []).length && perto(r2.clientes.concat(r2.restricao).reduce((s, c) => s + c.valor, 0), receita), nome + ': ordem das linhas nao muda a conta');
   const mp = {}; L.forEach(c => mp[c.id] = c.seg); t(r2.clientes.every(c => mp[c.id] === c.seg), nome + ': segmentos iguais com linhas embaralhadas');
   // filtros de origem fecham
   const ob = C.computeRfm(deals, { asOf: T, origem: 'outbound' }).clientes.length, ib = C.computeRfm(deals, { asOf: T, origem: 'inbound' }).clientes.length;
