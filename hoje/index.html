@@ -175,6 +175,7 @@ button.recolher{background:transparent;color:var(--muted);border:0;min-height:0;
 .lib-col{border:2px solid var(--purple)} .lib-col .col-h{background:var(--track)}
 .fi .est{display:block}
 .pend{color:var(--amber);font-weight:700}
+.pcx{border:2px solid var(--red);background:var(--red-bg,rgba(220,38,38,.08));border-radius:12px;padding:10px 12px;margin:8px 0}.pcx h3{margin:0 0 4px;color:var(--red);font-size:15px}.pcx .fi2{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:6px 0;border-top:1px solid rgba(220,38,38,.25)}.pcx .fi2 .tt{font-weight:600;font-size:14px;min-width:0;overflow-wrap:anywhere}.pcx .fi2 .mm{font-size:13px;opacity:.85}.pcx-form{border:2px solid var(--red);border-radius:10px;padding:8px;margin:8px 0}
 .recup-txt{background:var(--amber-bg);border-left:4px solid var(--amber);padding:6px 10px;border-radius:6px}
 .recup-aviso{background:var(--amber-bg);color:var(--amber);border:1.5px solid var(--amber);border-radius:10px;padding:8px 10px;font-weight:700;font-size:14px;margin-bottom:6px}
 textarea.recup-pend{border:2.5px solid var(--amber)!important;background:var(--amber-bg)}
@@ -524,6 +525,7 @@ details.sec-empresa>summary,details.dados-opcional>summary{cursor:pointer;font-w
         </div>
       </div>
     </div>
+    <div id="perdasCtx" class="pcx hide" role="alert"></div>
     <div class="ajuda-box hide" id="ajudaBox" role="note"><kbd>/</kbd> buscar &nbsp; <kbd>R</kbd> atualizar &nbsp; <kbd>H</kbd> esconder feitos &nbsp; <kbd>T</kbd> tema &nbsp; <kbd>F</kbd> fila de espera &nbsp; <kbd>Esc</kbd> limpar a busca ou fechar</div>
     <div class="cab2">
       <input type="search" id="busca" placeholder="Buscar em todos os leads: loja, pessoa, telefone, CNPJ..." aria-label="Buscar em todos os leads por loja, pessoa, telefone, CNPJ, número do negócio ou cidade" autocomplete="off">
@@ -868,7 +870,7 @@ function saidaOk(e, j) {
     var olhando = Lg && !$('painelLead').classList.contains('hide') && $('modalGanho').classList.contains('hide') && !tocandoCampo();
     if (olhando) resolverGanho(Lg, j);
     else { if (Lg) { aplicarResposta(Lg, j); renderLead(); } avisar(titulo + ' qualificado.' + (j.mensagem ? ' ' + j.mensagem : ''), 'ok', tinha ? { rot: 'Escolher representante', f: function () { abrirEscolhaRep(e.dealId); } } : null); }
-    carregarAguardando(true); carregar(true, 'tarefas'); return;
+    carregarAguardando(true); carregarPerdasCtx(); carregar(true, 'tarefas'); return;
   }
   var L = S.L; if (L && L.dealId === e.dealId && L.lead) { if (j.lead) { aplicarResposta(L, j); limparEditsIguais(L); redesenhar(L); setEstado(L, 'ok', e.tipo === 'tarefa' ? 'Tarefa concluída e conferida no Agendor ✓' : 'Salvo e conferido no Agendor ✓ (enviado quando a conexão voltou)'); } else carregarLead(L, true); }
   if (e.tipo === 'perdido') avisar((e.meta.titulo || 'Lead') + ': marcado como Perdido e conferido no Agendor ✓', 'ok');
@@ -1250,7 +1252,7 @@ async function entrar(token, silencioso) {
   var ult = null; try { ult = JSON.parse(lsGet('sh_ultimo') || 'null'); } catch (e) { ult = null; }
   if (ult && ult.ok && ult._fmt === 2) { S.doCache = true; S.vm = ult.versao ? { negocios: ult.versao.negocios, atrasadas: ult.versao.atrasadas, tarefas: ult.versao.tarefas } : null; desenhar(ult); S.tem = true; mostrar('s-dia'); $('atualizado').classList.add('velho'); } // mostra o último dado conhecido NA HORA (cinza) e troca sozinho quando o novo chegar
   else { S.tem = false; var bl = $('blocos'); bl.textContent = ''; bl.appendChild(el('div', 'carregando-msg', 'Carregando o seu dia... a primeira leitura pode levar alguns segundos.')); for (var q = 0; q < 4; q++) bl.appendChild(el('div', 'esq')); mostrar('s-dia'); }
-  await carregar(false, false); carregarAguardando(true); processarSaida({ agora: true }); aoMudarHash();
+  await carregar(false, false); carregarAguardando(true); carregarPerdasCtx(); processarSaida({ agora: true }); aoMudarHash();
   if (haAbertoSemConfirmar()) iniciarPoll();
   return true;
 }
@@ -1908,11 +1910,14 @@ function renderRodape(L) {
   if (L.perdidoAberto && ac.perdido && andamento) {
     var f = el('div', 'secao'); f.style.marginTop = '8px'; f.appendChild(el('h3', null, 'Por que perdeu?'));
     var sm = el('select'); sm.setAttribute('aria-label', 'Motivo da perda'); var o0 = el('option', null, 'Escolha o motivo...'); o0.value = ''; sm.appendChild(o0);
-    (L.motivos || []).forEach(function (m) { var o = el('option', null, m.nome); o.value = String(m.id); sm.appendChild(o); }); sm.value = L.motivoSel || ''; sm.onchange = function () { L.motivoSel = sm.value; };
-    var nota = el('textarea'); nota.setAttribute('aria-label', 'Nota (opcional)'); nota.placeholder = 'Nota (opcional)'; nota.value = L.notaPerda || ''; nota.oninput = function () { L.notaPerda = nota.value; }; nota.style.marginTop = '6px';
+    (L.motivos || []).filter(function (m) { return !/cad[eê]ncia\s+esgotada/i.test(m.nome); }).forEach(function (m) { var o = el('option', null, m.nome); o.value = String(m.id); sm.appendChild(o); }); sm.value = L.motivoSel || ''; sm.onchange = function () { L.motivoSel = sm.value; };
+    var nota = el('textarea'); nota.setAttribute('aria-label', 'O que aconteceu (obrigatório)'); nota.placeholder = 'O que aconteceu? Com quem você falou e o que a pessoa disse. Obrigatório, mínimo 20 letras.'; nota.value = L.notaPerda || ''; nota.style.marginTop = '6px';
+    var cont = el('p', 'sub'); cont.style.margin = '2px 0 0'; var atualizaCont = function () { var n = contaLetras(nota.value); cont.textContent = n >= 20 ? 'Ok ✓' : 'Faltam ' + (20 - n) + ' letras. Conte o que aconteceu com este lead.'; };
+    nota.oninput = function () { L.notaPerda = nota.value; atualizaCont(); }; atualizaCont();
     var bc = el('button', 'perigo', 'Confirmar Perdido'); bc.type = 'button'; bc.style.marginTop = '6px'; bc.onclick = function () { marcarPerdido(L); };
-    f.appendChild(sm); f.appendChild(nota); f.appendChild(bc); rd.appendChild(f);
+    f.appendChild(sm); f.appendChild(nota); f.appendChild(cont); f.appendChild(bc); rd.appendChild(f);
   }
+  if (lead.status === 'perdido' && perdaSemCtx(L.dealId)) formContextoPerda(L, rd);
   rd.appendChild(row);
 }
 // ---- salvar campos (otimista) ----
@@ -1990,6 +1995,8 @@ async function marcarPerdido(L) {
   if (L.ocupado || S.L !== L) return; var mid = Number(L.motivoSel);
   if (!mid) { setEstado(L, 'erro', 'Escolha o motivo da perda.'); return; }
   var mot = (L.motivos || []).filter(function (m) { return Number(m.id) === mid; })[0]; var nome = L.lead.titulo || 'este lead';
+  // 09/11: contar o que aconteceu é obrigatório (o servidor confere de novo; "Cadência esgotada" é isenta)
+  if (contaLetras(L.notaPerda) < 20) { setEstado(L, 'erro', 'Conte o que aconteceu com este lead (pelo menos 20 letras) antes de confirmar.'); return; }
   if (!window.confirm('Marcar "' + nome + '" como PERDIDO (' + (mot ? mot.nome : 'motivo') + ')? As tarefas abertas da cadência serão encerradas.')) return;
   var corpo = { motivoId: mid }; if (String(L.notaPerda || '').trim()) corpo.nota = String(L.notaPerda).trim();
   L.ocupado = true; S.ocultos[L.dealId] = true; redesenharTudo(); fecharLead(); msg(nome + ': marcando como Perdido... (já saiu da tela, estou conferindo no Agendor)', 'aviso');
@@ -2443,6 +2450,41 @@ async function acaoTarefa(L, caminho, corpo, otimista) { // aparece na hora; se 
 }
 $('bFecharLead').onclick = fecharLead; $('bFecharGanho').onclick = fecharGanho;
 
+
+
+// ---------- Perdas sem contexto (09/11): lead perdido direto no Agendor sem contar o que houve. Fica em vermelho no topo até o SDR contar (nunca reabre o lead) ----------
+S.pcx = { itens: [] };
+async function carregarPerdasCtx() {
+  if (!S.token) return; var j; try { j = await api('/perdas-sem-contexto'); } catch (e) { return; }
+  if (!j || j.ok === false || j._status >= 400 || j._status === 0) return; S.pcx.itens = j.itens || []; desenharPerdasCtx();
+  if (S.L && S.L.lead && S.L.lead.status === 'perdido') renderRodape(S.L);
+}
+function contaLetras(v) { try { return String(v == null ? '' : v).replace(/[^\p{L}\p{N}]/gu, '').length; } catch (e) { return String(v || '').replace(/\W/g, '').length; } } // só letras e números contam (emoji, espaço e caractere invisível não)
+window.__carregarPerdasCtx = carregarPerdasCtx; // gancho para teste automatizado
+function perdaSemCtx(dealId) { return (S.pcx.itens || []).filter(function (i) { return String(i.dealId) === String(dealId); })[0] || null; }
+function desenharPerdasCtx() {
+  var b = $('perdasCtx'); b.textContent = ''; var it = S.pcx.itens || []; if (!it.length) { b.classList.add('hide'); return; } b.classList.remove('hide');
+  b.appendChild(el('h3', null, '🔴 ' + plural(it.length, 'lead perdido sem explicação', 'leads perdidos sem explicação')));
+  b.appendChild(el('p', 'sub', 'Todo lead perdido precisa de uma frase dizendo o que aconteceu. Toque e conte (mínimo 20 letras).'));
+  it.slice(0, 8).forEach(function (i) {
+    var row = el('div', 'fi2'); var tx = el('div'); tx.appendChild(el('div', 'tt', i.titulo || ('Negócio ' + i.dealId))); tx.appendChild(el('div', 'mm', [i.motivo, i.horas != null ? 'há ' + (i.horas < 1 ? 'menos de 1 hora' : i.horas + ' h') : ''].filter(Boolean).join(' · '))); row.appendChild(tx);
+    var bt = el('button', 'perigo', 'Contar o que houve'); bt.type = 'button'; bt.onclick = function () { abrirLead(i.dealId, null); }; row.appendChild(bt); b.appendChild(row);
+  });
+  if (it.length > 8) b.appendChild(el('p', 'sub', 'E mais ' + (it.length - 8) + '.'));
+}
+function formContextoPerda(L, rd) {
+  var f = el('div', 'pcx-form'); f.appendChild(el('strong', null, '🔴 Este lead foi perdido sem explicação. O que aconteceu?'));
+  var nota = el('textarea'); nota.setAttribute('aria-label', 'O que aconteceu (obrigatório)'); nota.placeholder = 'Com quem você falou e o que a pessoa disse. Mínimo 20 letras.'; nota.value = L.notaCtx || ''; nota.style.marginTop = '6px';
+  var cont = el('p', 'sub'); cont.style.margin = '2px 0 0'; var at = function () { var n = contaLetras(nota.value); cont.textContent = n >= 20 ? 'Ok ✓' : 'Faltam ' + (20 - n) + ' letras.'; }; nota.oninput = function () { L.notaCtx = nota.value; at(); }; at();
+  var bt = el('button', 'forte', 'Registrar'); bt.type = 'button'; bt.style.marginTop = '6px'; bt.disabled = !!L.ocupado; bt.onclick = function () { enviarContextoPerda(L); };
+  f.appendChild(nota); f.appendChild(cont); f.appendChild(bt); rd.appendChild(f);
+}
+async function enviarContextoPerda(L) {
+  if (L.ocupado || S.L !== L) return; var tx = String(L.notaCtx || '').trim(); if (contaLetras(tx) < 20) { setEstado(L, 'erro', 'Conte o que aconteceu (pelo menos 20 letras).'); return; }
+  L.ocupado = true; renderRodape(L); var j = await chamarLead(L, '/contexto-perda', { nota: tx }, null, null); L.ocupado = false; if (!j) { renderRodape(L); return; }
+  if (j.ok !== false && j._status < 300 && j.confirmado !== false) { S.pcx.itens = (S.pcx.itens || []).filter(function (i) { return String(i.dealId) !== String(L.dealId); }); L.notaCtx = ''; desenharPerdasCtx(); renderRodape(L); msg((L.lead.titulo || 'Lead') + ': contexto da perda registrado ✓', 'ok'); }
+  else { renderRodape(L); setEstado(L, 'erro', msgErro(j)); }
+}
 
 // ---------- Aguardando representante (leads que o Felipe qualificou e ainda estão com o Sistema ou com ele) ----------
 S.ag = { itens: [], total: 0, responsaveis: [], ocultos: {}, timer: null, aberto: false, seq: 0 };
