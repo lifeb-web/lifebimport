@@ -1766,8 +1766,9 @@ function renderLead() {
     (p.telefones || []).forEach(function (t) { var l = foneLinha(t.e164 || t.bonito, 'pessoa-tel', t.whatsapp, t.bonito, true); if (l) { if (t.tipo) l.appendChild(el('span', 'sub', t.tipo)); bx.appendChild(l); } });
     if (!(p.telefones || []).length) bx.appendChild(el('div', 'sub', 'Sem telefone.'));
     if (p.principal && ac.campos) { var bt = el('button', 'sec trocar-contato', 'Trocar contato / telefone'); bt.type = 'button'; bt.setAttribute('data-fk', 'trocar-contato'); bt.title = 'Use quando você está falando com o decisor e o cadastro tem o telefone da loja'; bt.onclick = function () { trocarContato(L, p); }; bx.appendChild(bt); }
+    if (!p.principal && ac.campos) { var br = el('button', 'sec trocar-contato', 'Retirar este contato'); br.type = 'button'; br.setAttribute('data-fk', 'retirar-contato'); br.onclick = function () { retirarContato(L, p); }; bx.appendChild(br); }
     s4.appendChild(bx);
-  }); if (ac.campos) { var lc = el('div', 'linha-cnpj'); var cj = (lead.empresa || {}).cnpj; lc.appendChild(el('span', 'sub', cj ? 'CNPJ ' + fmtCnpj(cj) : 'Sem CNPJ cadastrado')); var bc = el('button', 'sec trocar-contato', cj ? 'Trocar CNPJ' : 'Adicionar CNPJ'); bc.type = 'button'; bc.setAttribute('data-fk', 'trocar-cnpj'); bc.onclick = function () { trocarCnpj(L); }; lc.appendChild(bc); lc.style.cssText = 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px'; s4.appendChild(lc); } corpo.appendChild(s4);
+  }); if (ac.campos) { var ba = el('button', 'sec trocar-contato', '+ Adicionar contato'); ba.type = 'button'; ba.setAttribute('data-fk', 'adicionar-contato'); ba.onclick = function () { adicionarContato(L, s4, ba); }; s4.appendChild(ba); } if (ac.campos) { var lc = el('div', 'linha-cnpj'); var cj = (lead.empresa || {}).cnpj; lc.appendChild(el('span', 'sub', cj ? 'CNPJ ' + fmtCnpj(cj) : 'Sem CNPJ cadastrado')); var bc = el('button', 'sec trocar-contato', cj ? 'Trocar CNPJ' : 'Adicionar CNPJ'); bc.type = 'button'; bc.setAttribute('data-fk', 'trocar-cnpj'); bc.onclick = function () { trocarCnpj(L); }; lc.appendChild(bc); lc.style.cssText = 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px'; s4.appendChild(lc); } corpo.appendChild(s4);
   var pxa = proximaAcaoEl(L); if (pxa) corpo.appendChild(pxa);
   var ob = secaoOrigem(L); if (ob) corpo.appendChild(ob);
   corpo.appendChild(secaoTarefas(L)); // o que fazer agora vem logo depois de quem ligar
@@ -2321,6 +2322,38 @@ function trocarCnpj(L) {
 }
 // 04/11 (Robert): o SDR conversa com o decisor, mas o cadastro tem o contato da loja. Troca nome, cargo e WhatsApp do contato principal em 1 passo,
 // SEM qualificar. Usa o mesmo caminho de salvar (/campos): fica na pessoa vinculada à empresa, é conferido no Agendor e deixa nota no histórico.
+// ---- contatos da empresa (09/11): adicionar e retirar, na própria Hoje ----
+async function retirarContato(L, p) {
+  if (L.ocupado || S.L !== L) return; if (!window.confirm('Retirar ' + (p.nome || 'este contato') + ' da empresa? Isso apaga o contato no Agendor.')) return;
+  L.ocupado = true; setEstado(L, 'salvando', 'Retirando o contato... estou conferindo no Agendor.');
+  var j = await chamarLead(L, '/pessoa-remover', { pessoaId: p.id }, null, null); L.ocupado = false; if (!j) return;
+  if (j.ok !== false && j._status < 300 && j.confirmado !== false) { aplicarResposta(L, j); if (S.L === L) { renderLead(); setEstado(L, 'ok', j.mensagem || 'Contato retirado ✓'); } }
+  else if (S.L === L) { renderLead(); setEstado(L, 'erro', msgErro(j)); }
+}
+function adicionarContato(L, caixa, botao) {
+  if (L.ocupado || S.L !== L) return; if (caixa.querySelector('.form-contato')) return; botao.style.display = 'none';
+  var f = el('div', 'form-contato secao'); f.style.marginTop = '8px';
+  var nome = el('input'); nome.type = 'text'; nome.placeholder = 'Nome do contato'; nome.maxLength = 100; nome.setAttribute('aria-label', 'Nome do contato');
+  var cargo = el('input'); cargo.type = 'text'; cargo.placeholder = 'Cargo (opcional)'; cargo.maxLength = 80; cargo.setAttribute('aria-label', 'Cargo'); cargo.style.marginTop = '6px';
+  var fone = el('input'); fone.type = 'tel'; fone.placeholder = 'WhatsApp com DDD (opcional)'; fone.maxLength = 20; fone.setAttribute('aria-label', 'WhatsApp'); fone.style.marginTop = '6px'; fone.oninput = function () { try { fone.value = mascFone(fone.value); } catch (e) {} };
+  var msgBx = el('p', 'hide'); msgBx.style.color = 'var(--red)'; msgBx.style.fontWeight = '700'; msgBx.setAttribute('role', 'alert');
+  var lin = el('div', 'row'); lin.style.marginTop = '8px'; var ok = el('button', 'forte', 'Salvar contato'); ok.type = 'button'; var cx = el('button', 'sec', 'Cancelar'); cx.type = 'button';
+  function fecha() { if (f.parentNode) f.parentNode.removeChild(f); botao.style.display = ''; }
+  cx.onclick = fecha;
+  async function enviar(confirma) {
+    var n = nome.value.trim(); if (n.length < 2) { msgBx.textContent = 'Escreva o nome do contato.'; msgBx.classList.remove('hide'); nome.focus(); return; }
+    ok.disabled = true; cx.disabled = true; ok.textContent = 'Salvando...'; msgBx.classList.add('hide');
+    var corpo = { nome: n }; if (cargo.value.trim()) corpo.cargo = cargo.value.trim(); if (fone.value.trim()) corpo.whatsapp = fone.value.trim(); if (confirma) corpo.confirmaTelefone = true;
+    L.ocupado = true; var j = await chamarLead(L, '/pessoa-add', corpo, null, null); L.ocupado = false; if (!j) return;
+    if (j.ok !== false && j._status < 300 && j.confirmado !== false) { aplicarResposta(L, j); if (S.L === L) { renderLead(); setEstado(L, 'ok', j.mensagem || 'Contato adicionado ✓'); } return; }
+    ok.disabled = false; cx.disabled = false; ok.textContent = 'Salvar contato';
+    if (j.precisaConfirmarTelefone && window.confirm((j.mensagem || 'Esse WhatsApp já existe em outro contato.') + ' Adicionar mesmo assim?')) { enviar(true); return; }
+    msgBx.textContent = msgErro(j); msgBx.classList.remove('hide');
+  }
+  ok.onclick = function () { enviar(false); };
+  lin.appendChild(ok); lin.appendChild(cx); f.appendChild(nome); f.appendChild(cargo); f.appendChild(fone); f.appendChild(msgBx); f.appendChild(lin); caixa.appendChild(f); nome.focus();
+}
+
 function trocarContato(L, p) {
   if (!p || L.ocupado) return;
   var abriu = document.activeElement; var ov = el('div', 'lig-ov'); ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Trocar contato principal');
