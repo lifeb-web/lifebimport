@@ -2400,11 +2400,13 @@ function registrarResultadoLigacao(it, taskId, botao) {
   cx.appendChild(grupo); var nt = el('input'); nt.type = 'text'; nt.maxLength = 150; nt.placeholder = 'Observação (opcional)'; nt.setAttribute('aria-label', 'Observação da ligação'); nt.style.width = '100%'; nt.style.marginTop = '8px'; cx.appendChild(nt); cx.appendChild(erro);
   var linha = el('div', 'row'); linha.style.marginTop = '10px'; var ok = el('button', 'forte', 'Registrar resultado'); ok.type = 'button'; ok.disabled = true; var no = el('button', 'sec', 'Cancelar'); no.type = 'button'; no.onclick = fechar;
   ok.onclick = async function () {
-    if (!sel) return; ok.disabled = true; no.disabled = true; ok.textContent = 'Registrando...'; erro.classList.add('hide'); var corpo = { ligacao: { resultado: sel } }; if (nt.value.trim()) corpo.ligacao.nota = nt.value.trim(); var j;
+    // 09/11 (Robert: "registrar rápido, atualização otimista"): a janela fecha NA HORA e o resultado segue em segundo plano; só volta a incomodar se o servidor não confirmar.
+    if (!sel) return; var corpo = { ligacao: { resultado: sel } }; if (nt.value.trim()) corpo.ligacao.nota = nt.value.trim(); var j; var emp = it.empresa || 'a ligação';
+    fechar(); msg(emp + ': registrando o resultado... (pode seguir, eu confiro no Agendor)', 'aviso');
     try { j = await api('/lead/' + it.dealId + '/tarefa/' + taskId + '/resultado', corpo, null, null, { idem: novaChave() }); } catch (e) { j = { _status: 0, ok: false }; }
-    if (j && j._status === 401) { fechar(); sair('Senha não confere. Entre de novo.'); return; }
-    if (j && j.ok) { fechar(); invalidaLead(it.dealId); msg(j.mensagem || 'Resultado registrado.', 'ok'); carregar(true); return; }
-    ok.disabled = false; no.disabled = false; ok.textContent = 'Tentar de novo'; erro.textContent = (j && j.mensagem) || 'Não consegui agora. Tente de novo.'; erro.classList.remove('hide');
+    if (j && j._status === 401) { sair('Senha não confere. Entre de novo.'); return; }
+    if (j && j.ok) { invalidaLead(it.dealId); msg(emp + ': resultado registrado ✓', 'ok'); carregar(true); return; }
+    msg(emp + ': não consegui registrar o resultado (' + ((j && j.mensagem) || 'sem conexão') + '). Toque em "Falta o resultado da ligação" para tentar de novo.', 'erro');
   };
   linha.appendChild(ok); linha.appendChild(no); cx.appendChild(linha); document.body.appendChild(ov); var p0 = grupo.querySelector('input'); if (p0) p0.focus();
 }
