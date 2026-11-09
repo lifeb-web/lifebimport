@@ -250,6 +250,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;mi
 #ltv-col-left{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
 #ltv-col-center{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
 #ltv-col-right{display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
+#ltv-ocultos{display:none}
 /* GA4 (25-26/08) — mesma forma/altura do hero-row de Vendas/SDR/LTV (hero +
    7 kchips). display:none por padrão, JS liga/desliga em setView(). */
 /* 26/08: uniformizado com o resto da aba GA4 (referência: dashboard-telao.html
@@ -1031,7 +1032,7 @@ body.tv-grande .rv-k-val{font-size:19px}
 }
 </style>
 <!-- Dossiê do SDR (Fase 1): padrão da aba SDR; ?sdr=1 volta à aba antiga -->
-<link rel="stylesheet" href="legivel.css?v=20261104a">
+<link rel="stylesheet" href="legivel.css?v=20261109b">
 <script>if (true) document.write('<script src="../sdr2.js?v=20261109b"><\/script>');</script>
 <script>if (true) document.write('<script src="../rfm.js?v=20261109a"><\/script>');</script>
 </head>
@@ -1418,26 +1419,28 @@ body.tv-grande .rv-k-val{font-size:19px}
 
     <div id="ltv-col-center">
       <div id="pz-slot-ltv" class="pz-slot"></div>
+    </div>
+
+    <div id="ltv-col-right">
       <div class="card has-expand" id="ltv-rep-card"><button class="expand-btn" data-target="ltv-lb-rows" data-title="Ranking Representantes (Reposição)">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Ranking Representantes (Reposição)</span>
           <span class="badge" id="ltv-rep-badge"></span>
         </div>
         <div class="lb-header">
-          <div class="lb-grid">
+          <div class="rkt-grid rkt-head" role="group" aria-label="Colunas do ranking de reposição">
             <span></span>
-            <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);text-align:center">Nome</span>
-            <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);text-align:center">Conv.</span>
-            <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);text-align:center">Pipeline</span>
-            <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);text-align:center">Ganhos</span>
-            <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);text-align:center">Ativos</span>
+            <button type="button" class="l" tabindex="-1" style="cursor:default">Nome</button>
+            <button type="button" tabindex="-1" style="cursor:default">Pipeline</button>
+            <button type="button" tabindex="-1" style="cursor:default">Ativos</button>
+            <button type="button" tabindex="-1" style="cursor:default">Total</button>
+            <button type="button" tabindex="-1" style="cursor:default" title="Número de recompras fechadas">Nº</button>
           </div>
         </div>
         <div class="lb-rows" id="ltv-lb-rows"></div>
       </div>
-    </div>
-
-    <div id="ltv-col-right">
+      <!-- 09/11 (Robert): Recompras Fechadas e Ciclos Perdidos saíram da tela do telão (já abrem clicando em Ganho/Perdidos); os nós ficam ocultos só para a rotina de preenchimento não falhar -->
+      <div id="ltv-ocultos" hidden>
       <div class="card has-expand" id="ltv-won-card"><button class="expand-btn" data-target="ltv-won-rows" data-title="Recompras Fechadas">⤢</button>
         <div class="card-hd">
           <span class="card-hd-title">Recompras Fechadas</span>
@@ -1451,6 +1454,7 @@ body.tv-grande .rv-k-val{font-size:19px}
           <span class="hd-total lost" id="ltv-lost-total"></span>
         </div>
         <div class="feed-scroll" id="ltv-lost-rows"></div>
+      </div>
       </div>
     </div>
   </div>
@@ -5638,27 +5642,26 @@ function renderLtvSectionTelao(d) {
 
   el('ltv-rep-badge').textContent = d.reps.length + ' reps';
   const maxPipeline = Math.max(...d.reps.map(r => r.pipeline), 1);
+  // 09/11 (Robert: "ranking da LTV todo bugado, sem scroll, parecido com a aba Vendas"): linhas de UMA linha só, mesma estrutura do ranking de Vendas (posição, nome, pipeline, ativos, ganho em reposição, ganhos) e barra fina do ganho; o detalhe (conversão, ticket, perdidos, ciclos) fica no expandido.
+  const maxGanhoLtv = Math.max(...d.reps.map(r => r.ganhoValor), 1);
   el('ltv-lb-rows').innerHTML = d.reps.map((r, i) => {
-    const rank = ['🥇','🥈','🥉','4️⃣','5️⃣'][i] || (i+1)+'°';
-    const pipelinePct = Math.max((r.pipeline / maxPipeline) * 100, 3);
-    const convClass = convClass_(r.conversao, r.leadsNoPeriodo);
+    const rank = ['🥇','🥈','🥉'][i] || (i+1)+'°';
     const convText  = r.conversao !== null ? r.conversao + '%' : '—';
     const staleText = r.stale > 0 ? `<span class="lb-stale">⚠${r.stale}</span>` : '';
+    const wg = Math.min(100, (r.ganhoValor / maxGanhoLtv) * 100);
     return `
-      <div class="lb-row ${i===0?'gold':''}" onclick="openLtvRepModal(${r.id})">
-        <div class="lb-top-row">
+      <div class="lb-row ${i===0 && r.ganhoValor > 0 ?'gold':''}" onclick="openLtvRepModal(${r.id})">
+        <div class="rk-top rkt-grid">
           <span class="lb-rank">${rank}</span>
           <span class="lb-name">${escHtml(r.name)}</span>
-          <span class="lb-conv ${convClass}">${convText}</span>
-          <div class="pipeline-cell">
-            <span class="pipeline-val">${r.pipeline > 0 ? fmtMoney(r.pipeline) : '—'}</span>
-            <div class="pipeline-bar-wrap"><div class="pipeline-bar" style="width:${pipelinePct}%"></div></div>
-          </div>
-          <span class="lb-num">${fmtMoney(r.ganhoValor)}</span>
-          <span class="lb-num" style="min-width:36px">${r.ativos}${staleText}</span>
+          <span class="lb-num rk-v" title="Pipeline de reposição">${r.pipeline > 0 ? fmtMoney(r.pipeline) : '—'}</span>
+          <span class="lb-num rk-v" title="Ciclos ativos">${r.ativos}${staleText}</span>
+          <span class="lb-num rk-tot" title="Ganho em reposição no período">${fmtMoney(r.ganhoValor)}</span>
+          <span class="lb-num rk-g" title="Recompras fechadas no período">${r.ganhoCont}</span>
         </div>
-        <div class="lb-sub">
-          <span>Ganhos <b>${r.ganhoCont}</b></span>
+        <div class="rk-bar" role="img" aria-label="Ganho em reposição ${escHtml(fmtMoney(r.ganhoValor))}"><i class="rk-r" style="width:${wg.toFixed(2)}%"></i></div>
+        <div class="lb-det">
+          <span>Conversão <b>${convText}</b></span>
           <span>Ticket médio <b>${r.ticketMedio > 0 ? fmtMoney(r.ticketMedio) : '—'}</b></span>
           <span>Perdidos <b>${r.perdidoCont}</b></span>
           <span>Ciclos <b>${r.leadsNoPeriodo || 0}</b></span>

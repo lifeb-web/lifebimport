@@ -1255,6 +1255,7 @@ async function entrar(token, silencioso) {
   var ult = null; try { ult = JSON.parse(lsGet('sh_ultimo') || 'null'); } catch (e) { ult = null; }
   if (ult && ult.ok && ult._fmt === 2) { S.doCache = true; S.vm = ult.versao ? { negocios: ult.versao.negocios, atrasadas: ult.versao.atrasadas, tarefas: ult.versao.tarefas } : null; desenhar(ult); S.tem = true; mostrar('s-dia'); $('atualizado').classList.add('velho'); } // mostra o último dado conhecido NA HORA (cinza) e troca sozinho quando o novo chegar
   else { S.tem = false; var bl = $('blocos'); bl.textContent = ''; bl.appendChild(el('div', 'carregando-msg', 'Carregando o seu dia... a primeira leitura pode levar alguns segundos.')); for (var q = 0; q < 4; q++) bl.appendChild(el('div', 'esq')); mostrar('s-dia'); }
+  if (S.tem) aoMudarHash(); // 09/11: link direto para um lead (botão do WhatsApp): abre o lead JÁ, em paralelo com a leitura do dia (antes esperava o dia inteiro carregar)
   await carregar(false, false); carregarAguardando(true); carregarPerdasCtx(); processarSaida({ agora: true }); aoMudarHash();
   if (haAbertoSemConfirmar()) iniciarPoll();
   return true;
