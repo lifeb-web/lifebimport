@@ -2436,8 +2436,9 @@ function registrarResultadoLigacao(it, taskId, botao) {
     // 09/11 (Robert: "registrar rápido, atualização otimista"): a janela fecha NA HORA e o resultado segue em segundo plano; só volta a incomodar se o servidor não confirmar.
     if (!sel) return; var corpo = { ligacao: { resultado: sel } }; if (nt.value.trim()) corpo.ligacao.nota = nt.value.trim(); var j; var emp = it.empresa || 'a ligação';
     fechar(); msg(emp + ': registrando o resultado... (pode seguir, eu confiro no Agendor)', 'aviso');
-    try { j = await api('/lead/' + it.dealId + '/tarefa/' + taskId + '/resultado', corpo, null, null, { idem: novaChave() }); } catch (e) { j = { _status: 0, ok: false }; }
+    try { j = await enviarAcao({ dealId: it.dealId, caminho: '/tarefa/' + taskId + '/resultado', corpo: corpo, tipo: 'tarefa', meta: { titulo: emp } }); } catch (e) { j = { _status: 0, ok: false }; } // fila durável: sem rede ou app fechado, o resultado fica guardado e segue sozinho
     if (j && j._status === 401) { sair('Senha não confere. Entre de novo.'); return; }
+    if (j && j._enfileirado) { msg(emp + ': sem conexão. Guardei o resultado e envio sozinho quando a rede voltar.', 'aviso'); return; }
     if (j && j.ok) { invalidaLead(it.dealId); msg(emp + ': resultado registrado ✓', 'ok'); carregar(true); return; }
     msg(emp + ': não consegui registrar o resultado (' + ((j && j.mensagem) || 'sem conexão') + '). Toque em "Falta o resultado da ligação" para tentar de novo.', 'erro');
   };
