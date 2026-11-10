@@ -1011,7 +1011,7 @@ function desenharControle(d) {
   linha('Esperando você iniciar:', fo);
   if (c.pendentes || S.cont.rodando) { var p = el('div', 'pend'); p.setAttribute('role', 'status'); var nFalta = S.cont.rodando && S.cont.pendentes != null ? S.cont.pendentes : c.pendentes; var tot = S.prog && S.prog.total >= nFalta ? S.prog.total : 0; var feitos = tot ? tot - nFalta : 0; p.textContent = (tot ? 'Iniciados ' + feitos + ' de ' + tot + '. ' : '') + (S.cont.rodando ? 'Iniciando seus leads: faltam ' + nFalta + '.' : 'Faltam ' + nFalta + '. A Bia termina sozinha, mesmo se você fechar a página. Não precisa clicar de novo.'); st.appendChild(p); }
   if (c.atencaoLiberacao && c.atencaoLiberacao.length) { var pa = el('div', 'pend'); pa.setAttribute('role', 'alert'); pa.textContent = 'Atenção: ' + (c.atencaoLiberacao.length === 1 ? '1 lead não conseguiu entrar' : c.atencaoLiberacao.length + ' leads não conseguiram entrar') + ' (negócio ' + c.atencaoLiberacao.map(function (x) { return x.dealId; }).join(', ') + '). Nada foi perdido: eles continuam na fila. Clique em Iniciar neles de novo; se repetir, avise o Robert.'; st.appendChild(pa); }
-  if (d.filaAtencao) { var at = el('div', 'pend'); at.textContent = d.filaAtencao + (d.filaAtencao === 1 ? ' lead já tem negócio aberto em outro funil (ex.: com representante na Arena). Ele NÃO entra no "Iniciar todos". Abra e confira antes.' : ' leads já têm negócio aberto em outro funil (ex.: com representante na Arena). Eles NÃO entram no "Iniciar todos". Abra e confira antes.'); st.appendChild(at); }
+  if (d.filaAtencao) { var at = el('div', 'pend'); at.textContent = d.filaAtencao + (d.filaAtencao === 1 ? ' lead já tem negócio aberto com um representante. Ele NÃO entra no "Iniciar todos". Abra e confira antes.' : ' leads já têm negócio aberto com um representante. Eles NÃO entram no "Iniciar todos". Abra e confira antes.'); st.appendChild(at); }
   var ok = c.janelaAberta && c.cadenciaLive && !S.ocupado;
   ['bLiberar', 'bTodos', 'bFila'].forEach(function (id) { $(id).disabled = S.ocupado; });
   $('bLiberar').disabled = !ok || fo === 0 || !c.ligada; $('bTodos').disabled = !ok || fo === 0 || !c.ligada;
@@ -1383,7 +1383,7 @@ function avisoPulo() {
   var box = $('filaAviso'); box.textContent = '';
   var esc = S.fila.filter(function (i) { return S.sel[i.dealId]; }); if (!esc.length || S.filaFunil !== 'outbound') return;
   box.textContent = textoPulo(esc);
-  var at = esc.filter(function (i) { return i.atencao; }); if (at.length) box.textContent += (box.textContent ? ' ' : '') + at.length + ' dos escolhidos já têm negócio aberto em outro funil (ex.: com representante na Arena). Abra e confira antes.';
+  var at = esc.filter(function (i) { return i.atencao; }); if (at.length) box.textContent += (box.textContent ? ' ' : '') + at.length + ' dos escolhidos já têm negócio aberto com um representante. Abra e confira antes.';
 }
 function podeLiberar() { return !!(S.ctl && S.ctl.janelaAberta && S.ctl.cadenciaLive && (S.filaFunil === 'inbound' || S.ctl.ligada)); }
 function buscando() { return $('filaBusca').value.trim() !== '' || S.filaOrigem !== '' || S.filaFonte !== ''; } // com busca OU origem escolhida, "iniciar todos" vale só para o que está na tela
@@ -1918,7 +1918,7 @@ function renderRodape(L) {
     var sm = el('select'); sm.setAttribute('aria-label', 'Motivo da perda'); var o0 = el('option', null, 'Escolha o motivo...'); o0.value = ''; sm.appendChild(o0);
     (L.motivos || []).filter(function (m) { return !/cad[eê]ncia\s+esgotada/i.test(m.nome); }).forEach(function (m) { var o = el('option', null, m.nome); o.value = String(m.id); sm.appendChild(o); }); sm.value = L.motivoSel || ''; sm.onchange = function () { L.motivoSel = sm.value; atualizaCont(); };
     var nota = el('textarea'); nota.setAttribute('aria-label', 'O que aconteceu (obrigatório)'); nota.placeholder = 'O que aconteceu? Com quem você falou e o que a pessoa disse. Obrigatório, em poucas palavras.'; nota.value = L.notaPerda || ''; nota.style.marginTop = '6px';
-    var cont = el('p', 'sub'); cont.style.margin = '2px 0 0'; var atualizaCont = function () { var mm = (L.motivos || []).filter(function (x) { return String(x.id) === String(L.motivoSel); })[0]; if (mm && mm.dispensa) { nota.placeholder = 'Opcional: escreva só se ajudar.'; nota.setAttribute('aria-label', 'O que aconteceu (opcional)'); cont.textContent = 'Para este motivo não precisa explicar. Escreva só se ajudar.'; return; } nota.placeholder = 'O que aconteceu? Com quem você falou e o que a pessoa disse. Obrigatório, em poucas palavras.'; nota.setAttribute('aria-label', 'O que aconteceu (obrigatório)'); var n = contaLetras(nota.value); cont.textContent = n >= 5 ? 'Ok ✓' : 'Escreva um pouco mais: o que aconteceu com este lead?'; };
+    var cont = el('p', 'sub'); cont.style.margin = '2px 0 0'; var atualizaCont = function () { var mm = (L.motivos || []).filter(function (x) { return String(x.id) === String(L.motivoSel); })[0]; var nm = mm ? String(mm.nome || '') : ''; if (mm && mm.dispensa) { nota.placeholder = 'Opcional: escreva só se ajudar.'; nota.setAttribute('aria-label', 'O que aconteceu (opcional)'); cont.textContent = 'Para este motivo não precisa explicar. Escreva só se ajudar.'; return; } nota.setAttribute('aria-label', 'O que aconteceu (obrigatório)'); if (/duplicad/i.test(nm)) { nota.placeholder = 'Cole o link do Agendor ou o número do negócio original.'; cont.textContent = temOriginalDuplicado(nota.value) ? 'Ok ✓' : 'Cole o link do Agendor ou o número (5 dígitos ou mais) do negócio original.'; return; } nota.placeholder = dicaMotivo(nm); var n = contaLetras(nota.value); cont.textContent = n >= 5 ? 'Ok ✓' : 'Escreva um pouco mais: o que aconteceu com este lead?'; };
     nota.oninput = function () { L.notaPerda = nota.value; atualizaCont(); }; atualizaCont();
     var bc = el('button', 'perigo', 'Confirmar Perdido'); bc.type = 'button'; bc.style.marginTop = '6px'; bc.onclick = function () { marcarPerdido(L); };
     f.appendChild(sm); f.appendChild(nota); f.appendChild(cont); f.appendChild(bc); rd.appendChild(f);
@@ -1997,11 +1997,14 @@ async function reabrirLead(L) {
   else { var t0 = j.mensagem || msgErro(j); setEstado(L, 'erro', t0, function () { reabrirLead(L); }); renderRodape(L); }
 }
 // ---- perdido (otimista) ----
+function temOriginalDuplicado(t) { t = String(t || ''); return /https?:\/\/|agendor\.com/i.test(t) || /\d{5,}/.test(t); } // mesma regra do servidor para o negócio original do "Duplicado"
+function dicaMotivo(nome) { var n = String(nome || '').toLowerCase(); if (/pre[cç]o/.test(n)) return 'O que ele disse do preço? (ex.: o concorrente está mais barato)'; if (/prazo/.test(n)) return 'Quando ele pediu para voltar a falar?'; if (/sem interesse|desist/.test(n)) return 'O que ele disse? Uma frase curta basta.'; if (/lp?gpd|contactar/.test(n)) return 'O que a pessoa pediu? (ex.: não quer mais ser contatada)'; if (/perfil|icp/.test(n)) return 'Por que não é o perfil? (ex.: não é farmácia nem supermercado)'; if (/erro na constru/.test(n)) return 'Qual foi o erro? (ex.: telefone de outra empresa)'; return 'O que aconteceu? Com quem você falou e o que a pessoa disse. Obrigatório, em poucas palavras.'; }
 async function marcarPerdido(L) {
   if (L.ocupado || S.L !== L) return; var mid = Number(L.motivoSel);
   if (!mid) { setEstado(L, 'erro', 'Escolha o motivo da perda.'); return; }
   var mot = (L.motivos || []).filter(function (m) { return Number(m.id) === mid; })[0]; var nome = L.lead.titulo || 'este lead';
   // 09/11: contar o que aconteceu é obrigatório (o servidor confere de novo); 10/11: motivos que se explicam sozinhos (m.dispensa, vindo do servidor) não pedem texto
+  if (mot && /duplicad/i.test(mot.nome) && !temOriginalDuplicado(L.notaPerda)) { setEstado(L, 'erro', 'Duplicado: cole o link do Agendor ou o número do negócio original.'); return; }
   if (contaLetras(L.notaPerda) < 5 && !(mot && mot.dispensa)) { setEstado(L, 'erro', 'Conte, em poucas palavras, o que aconteceu com este lead antes de confirmar.'); return; }
   if (!window.confirm('Marcar "' + nome + '" como PERDIDO (' + (mot ? mot.nome : 'motivo') + ')? As tarefas abertas da cadência serão encerradas.')) return;
   var corpo = { motivoId: mid }; if (String(L.notaPerda || '').trim()) corpo.nota = String(L.notaPerda).trim();
@@ -2506,7 +2509,7 @@ function perdaSemCtx(dealId) { return (S.pcx.itens || []).filter(function (i) { 
 function desenharPerdasCtx() {
   var b = $('perdasCtx'); b.textContent = ''; var it = S.pcx.itens || []; if (!it.length) { b.classList.add('hide'); return; } b.classList.remove('hide');
   b.appendChild(el('h3', null, '🔴 ' + plural(it.length, 'lead perdido sem explicação', 'leads perdidos sem explicação')));
-  b.appendChild(el('p', 'sub', 'Todo lead perdido precisa de uma frase dizendo o que aconteceu. Toque e conte (em poucas palavras letras).'));
+  b.appendChild(el('p', 'sub', 'Todo lead perdido precisa de uma frase dizendo o que aconteceu. Toque e conte em poucas palavras.'));
   it.slice(0, 8).forEach(function (i) {
     var row = el('div', 'fi2'); var tx = el('div'); tx.appendChild(el('div', 'tt', i.titulo || ('Negócio ' + i.dealId))); tx.appendChild(el('div', 'mm', [i.motivo, i.horas != null ? 'há ' + (i.horas < 1 ? 'menos de 1 hora' : i.horas + ' h') : ''].filter(Boolean).join(' · '))); row.appendChild(tx);
     var bt = el('button', 'perigo', 'Contar o que houve'); bt.type = 'button'; bt.onclick = function () { abrirLead(i.dealId, null); }; row.appendChild(bt); b.appendChild(row);
@@ -2515,8 +2518,9 @@ function desenharPerdasCtx() {
 }
 function formContextoPerda(L, rd) {
   var f = el('div', 'pcx-form'); f.appendChild(el('strong', null, '🔴 Este lead foi perdido sem explicação. O que aconteceu?'));
-  var nota = el('textarea'); nota.setAttribute('aria-label', 'O que aconteceu (obrigatório)'); nota.placeholder = 'Com quem você falou e o que a pessoa disse. Em poucas palavras.'; nota.value = L.notaCtx || ''; nota.style.marginTop = '6px';
-  var cont = el('p', 'sub'); cont.style.margin = '2px 0 0'; var at = function () { var n = contaLetras(nota.value); cont.textContent = n >= 5 ? 'Ok ✓' : 'Escreva um pouco mais.'; }; nota.oninput = function () { L.notaCtx = nota.value; at(); }; at();
+  var pItem = perdaSemCtx(L.dealId); var ehDup = !!(pItem && /duplicad/i.test(String(pItem.motivo || ''))); // Duplicado: a dica diz que é preciso o link ou número do original (igual ao servidor)
+  var nota = el('textarea'); nota.setAttribute('aria-label', 'O que aconteceu (obrigatório)'); nota.placeholder = ehDup ? 'Cole o link do Agendor ou o número do negócio original.' : (pItem && pItem.motivo ? dicaMotivo(pItem.motivo) : 'Com quem você falou e o que a pessoa disse. Em poucas palavras.'); nota.value = L.notaCtx || ''; nota.style.marginTop = '6px';
+  var cont = el('p', 'sub'); cont.style.margin = '2px 0 0'; var at = function () { if (ehDup) { cont.textContent = temOriginalDuplicado(nota.value) ? 'Ok ✓' : 'Cole o link do Agendor ou o número (5 dígitos ou mais) do negócio original.'; return; } var n = contaLetras(nota.value); cont.textContent = n >= 5 ? 'Ok ✓' : 'Escreva um pouco mais.'; }; nota.oninput = function () { L.notaCtx = nota.value; at(); }; at();
   var bt = el('button', 'forte', 'Registrar'); bt.type = 'button'; bt.style.marginTop = '6px'; bt.disabled = !!L.ocupado; bt.onclick = function () { enviarContextoPerda(L); };
   f.appendChild(nota); f.appendChild(cont); f.appendChild(bt); rd.appendChild(f);
 }
