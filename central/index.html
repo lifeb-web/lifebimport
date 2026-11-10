@@ -303,6 +303,7 @@ function toast(msg){var t=$('toast');t.textContent=msg;t.classList.remove('hide'
 var RISCO={alto:'Risco alto',medio:'Risco médio',baixo:'Risco baixo'};
 var ROT_ESTADO={ligado:'Ligado',desligado:'Desligado',off:'Desligado',shadow:'Sombra',live:'Ao vivo'};
 var PAPEL={robert:'Robert',admin:'Administrador',sdr:'SDR'};
+var NIVEL={ok:'Normal',atencao:'Atenção',falha:'Falha',aviso:'Atenção'};
 var SAUDE_NOMES={crons:'Rotinas agendadas',vigiaExterno:'Vigia externo',cerebro:'Cérebro da Bia',n8n:'Conversa (n8n)',varreduraSdr:'Varredura do SDR',atividadesSdr:'Atividades do SDR',garantiaTarefa:'Garantia de tarefa',filaMotor:'Fila do Motor',alertas:'Alertas',webhooks:'Avisos do Agendor',pausa:'Pausa de avisos'};
 function fmtData(ms){var d=new Date(ms);return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}
 function pode(risco){return S.eu&&(S.eu.papel==='robert'||(S.eu.papel==='admin'&&risco!=='alto'));}
@@ -394,7 +395,7 @@ function atencoes(){
   if(def('NOTIF_PAUSE'))l.push(['warn','Avisos automáticos pausados','A pausa de avisos está ativa. As rotinas seguem, mas os avisos esperam.']);
   if(def('TEST_MODE'))l.push(['warn','Modo de teste ligado','As mensagens parecem enviadas, mas nada sai de verdade.']);
   (S.dados.editaveis||[]).forEach(function(e){if((e.tipo==='liga_off'||e.tipo==='flag_off1')&&e.estado==='desligado'&&e.risco!=='baixo')l.push(['warn',e.rotulo+' desligado','Esta proteção está desligada agora.']);if(e.tipo==='modo3'&&e.estado==='off'&&e.risco==='alto'&&e.padrao!=='off')l.push(['warn',e.rotulo+' desligado','Fora do padrão ('+ROT_ESTADO[e.padrao]+').']);});
-  var sa=S.saude&&S.saude.itens;if(sa)Object.keys(sa).forEach(function(k){var n=sa[k]&&sa[k].nivel;if(n&&n!=='ok')l.push([n==='falha'?'bad':'warn',(SAUDE_NOMES[k]||k)+' pede atenção','Estado: '+n+'.']);});
+  var sa=S.saude&&S.saude.itens;if(sa)Object.keys(sa).forEach(function(k){var n=sa[k]&&sa[k].nivel;if(n&&n!=='ok')l.push([n==='falha'?'bad':'warn',(SAUDE_NOMES[k]||k)+' pede atenção','Estado: '+(NIVEL[n]||n)+'.']);});
   return l;
 }
 /* ---------- visão geral ---------- */
@@ -413,7 +414,7 @@ function telaVisao(c){
   var esq=el('div');var s1=el('div','sec');s1.appendChild(el('h3',null,'Saúde da plataforma'));s1.appendChild(el('span',null,'ao vivo'));esq.appendChild(s1);
   var tl=el('div','tiles');tl.style.gridTemplateColumns='repeat(2,minmax(0,1fr))';var sa=(S.saude&&S.saude.itens)||{};var chaves=Object.keys(sa);
   if(!chaves.length)esq.appendChild(el('div','vazio','Saúde indisponível agora.'));
-  else{chaves.forEach(function(k){var n=sa[k]&&sa[k].nivel;var t=el('div','card tile');var tt=el('div','t');tt.appendChild(el('span','dot '+(n==='ok'?'ok':n==='falha'?'bad':'warn')));tt.appendChild(document.createTextNode(SAUDE_NOMES[k]||k));t.appendChild(tt);t.appendChild(el('div','v',n==='ok'?'Normal':String(n)));tl.appendChild(t);});esq.appendChild(tl);}
+  else{chaves.forEach(function(k){var n=sa[k]&&sa[k].nivel;var t=el('div','card tile');var tt=el('div','t');tt.appendChild(el('span','dot '+(n==='ok'?'ok':n==='falha'?'bad':'warn')));tt.appendChild(document.createTextNode(SAUDE_NOMES[k]||k));t.appendChild(tt);t.appendChild(el('div','v',n==='ok'?'Normal':(NIVEL[n]||String(n))));tl.appendChild(t);});esq.appendChild(tl);}
   cl.appendChild(esq);
   var dir=el('div');var s2=el('div','sec');s2.appendChild(el('h3',null,'Atenção'));dir.appendChild(s2);var lc=el('div','card list');
   if(!at.length){var o=el('div','atencao ok');o.appendChild(icon('ok'));var tt2=el('div','t');tt2.appendChild(el('b',null,'Nada fora do padrão'));tt2.appendChild(el('div','hint','Proteções ligadas e rotinas saudáveis.'));o.appendChild(tt2);lc.appendChild(o);}
