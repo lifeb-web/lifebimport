@@ -89,6 +89,17 @@ td.k{font-weight:700}td .d{color:var(--muted);font-size:13px}
 .ev .m{font-size:14px}.ev .m b{color:var(--purple-d)}
 .ev.des{opacity:.6}
 .vv{font-family:var(--mono);font-size:12.5px;background:var(--gray-bg);padding:1px 6px;border-radius:6px}
+.lg label{display:block;font-weight:700;font-size:13px;margin-bottom:6px}
+.lg input{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);min-height:46px}
+.frame{width:100%;height:calc(100vh - 150px);min-height:560px;border:1px solid var(--line);border-radius:14px;background:var(--card)}
+.lk{display:flex;flex-direction:column;gap:4px;text-decoration:none;color:var(--fg)}
+.lk:hover{border-color:var(--mag)}
+.lk b{color:var(--purple-d);font-size:16px}.lk span{font-size:13.5px;color:var(--muted)}
+.form{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:18px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:end}
+.form label{font-weight:700;font-size:12.5px;display:block;margin-bottom:4px}
+.form input,.form select{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);min-height:44px}
+.seg button:disabled{opacity:.45;cursor:not-allowed}
+@media (max-width:1100px){.form{grid-template-columns:1fr 1fr}}
 /* painel de confirmação */
 #modal{position:fixed;inset:0;background:rgba(20,17,30,.55);display:grid;place-items:center;padding:20px;z-index:50}
 .mb{width:min(520px,100%);background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px}
@@ -107,19 +118,41 @@ td.k{font-weight:700}td .d{color:var(--muted);font-size:13px}
 <body>
 
 <div id="login">
-  <form class="lg" id="fLogin" autocomplete="off">
+  <div class="lg">
     <h1>Central Life B</h1>
-    <p>Painel de controle da plataforma. Entre com a chave da Central.</p>
-    <label for="chave">Chave da Central</label>
-    <input id="chave" type="password" autocomplete="current-password" required>
-    <div class="erro" id="loginErro" role="alert"></div>
-    <div class="row" style="margin-top:12px"><button class="btn" id="btnEntrar" type="submit">Entrar</button></div>
-  </form>
+    <p id="lgSub">Painel de controle da plataforma.</p>
+    <form id="fEntrar" class="hide" autocomplete="on">
+      <label for="usuario">Usuário</label>
+      <input id="usuario" type="text" autocomplete="username" autocapitalize="none" required>
+      <label for="senha" style="margin-top:14px">Senha</label>
+      <input id="senha" type="password" autocomplete="current-password" required>
+      <div class="erro" id="loginErro" role="alert"></div>
+      <div class="row" style="margin-top:12px"><button class="btn" id="btnEntrar" type="submit">Entrar</button></div>
+    </form>
+    <div id="fPrimeiro" class="hide">
+      <div class="alerta" style="background:var(--purple-bg);color:var(--purple-d);margin-bottom:14px">Primeiro acesso. Vou enviar um código ao WhatsApp do Robert. Depois você escolhe o seu usuário e a sua senha.</div>
+      <div class="row"><button class="btn" id="btnCodigo" type="button">Enviar código ao WhatsApp</button></div>
+      <form id="fCriar" class="hide" autocomplete="off" style="margin-top:16px">
+        <label for="codigo">Código recebido (6 números)</label>
+        <input id="codigo" type="text" inputmode="numeric" maxlength="6" autocomplete="one-time-code" required>
+        <label for="nUsuario" style="margin-top:14px">Seu usuário</label>
+        <input id="nUsuario" type="text" autocapitalize="none" autocomplete="username" required>
+        <label for="nSenha" style="margin-top:14px">Sua senha (mínimo 10, com letras e números)</label>
+        <input id="nSenha" type="password" autocomplete="new-password" required>
+        <label for="nSenha2" style="margin-top:14px">Repita a senha</label>
+        <input id="nSenha2" type="password" autocomplete="new-password" required>
+        <div class="erro" id="criarErro" role="alert"></div>
+        <div class="row" style="margin-top:12px"><button class="btn" id="btnCriar" type="submit">Criar acesso</button></div>
+      </form>
+      <div class="erro" id="codigoErro" role="alert"></div>
+    </div>
+    <div class="erro" id="boot" style="color:var(--muted);font-weight:600">Conectando...</div>
+  </div>
 </div>
 
 <div id="app" class="hide">
   <aside>
-    <div class="brand">Central Life B<small>Painel de controle</small></div>
+    <div class="brand">Central Life B<small>Painel de controle</small><small id="quem" style="margin-top:8px;color:var(--purple-d);font-weight:700"></small></div>
     <nav id="nav"></nav>
   </aside>
   <main>
@@ -140,60 +173,86 @@ td.k{font-weight:700}td .d{color:var(--muted);font-size:13px}
 (function(){
 'use strict';
 var API='https://gs-agendor-worker.robert131196.workers.dev/central';
-var S={chave:null,dados:null,hist:null,aba:'estado',busca:''};
+var S={tok:null,eu:null,dados:null,hist:null,usuarios:null,aba:'estado',busca:''};
 var $=function(id){return document.getElementById(id);};
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
-function getKey(){try{return sessionStorage.getItem('central_k');}catch(e){return null;}}
-function setKey(v){try{if(v)sessionStorage.setItem('central_k',v);else sessionStorage.removeItem('central_k');}catch(e){}}
+function getTok(){try{return sessionStorage.getItem('central_t');}catch(e){return null;}}
+function setTok(v){try{if(v)sessionStorage.setItem('central_t',v);else sessionStorage.removeItem('central_t');}catch(e){}}
 async function api(metodo,caminho,corpo){
-  var r=await fetch(API+caminho,{method:metodo,headers:{'x-central-key':S.chave,'Content-Type':'application/json'},body:corpo?JSON.stringify(corpo):undefined});
+  var h={'Content-Type':'application/json'};if(S.tok)h['x-central-token']=S.tok;
+  var r=await fetch(API+caminho,{method:metodo,headers:h,body:corpo?JSON.stringify(corpo):undefined});
   var j=null;try{j=await r.json();}catch(e){}
+  if(r.status===401&&S.tok&&caminho.indexOf('/acesso/')<0){sair(true);}
   return {status:r.status,j:j||{}};
 }
-function toast(msg){var t=$('toast');t.textContent=msg;t.classList.remove('hide');clearTimeout(toast._t);toast._t=setTimeout(function(){t.classList.add('hide');},3800);}
+function toast(msg){var t=$('toast');t.textContent=msg;t.classList.remove('hide');clearTimeout(toast._t);toast._t=setTimeout(function(){t.classList.add('hide');},4200);}
 var RISCO={alto:'Risco alto',medio:'Risco médio',baixo:'Risco baixo'};
 var ROT_ESTADO={ligado:'Ligado',desligado:'Desligado',off:'Desligado',shadow:'Sombra',live:'Ao vivo'};
+var PAPEL={robert:'Robert',admin:'Administrador',sdr:'SDR'};
 function fmtData(ms){var d=new Date(ms);return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}
+function pode(risco){return S.eu&&(S.eu.papel==='robert'||(S.eu.papel==='admin'&&risco!=='alto'));}
 
 /* ---------- login ---------- */
-async function entrar(chave){
-  S.chave=chave;$('loginErro').textContent='';
-  var r;try{r=await api('GET','/estado');}catch(e){$('loginErro').textContent='Não consegui falar com o servidor. Verifique a internet.';return false;}
-  if(r.status===503){$('loginErro').textContent='A Central ainda não tem chave configurada no servidor.';return false;}
-  if(r.status===401){$('loginErro').textContent='Chave incorreta.';return false;}
-  if(r.status!==200||!r.j.ok){$('loginErro').textContent='Erro inesperado ('+r.status+').';return false;}
-  setKey(chave);S.dados=r.j;$('login').classList.add('hide');$('app').classList.remove('hide');montarNav();render();return true;
+async function iniciar(){
+  var t=getTok();
+  if(t){S.tok=t;var r=await api('GET','/eu').catch(function(){return {status:0,j:{}};});if(r.status===200){S.eu=r.j;return abrirApp();}S.tok=null;setTok(null);}
+  var e;try{e=await api('GET','/acesso/estado');}catch(x){e={status:0,j:{}};}
+  $('boot').classList.add('hide');
+  if(e.status!==200){$('boot').classList.remove('hide');$('boot').textContent='Não consegui falar com o servidor. Atualize a página.';return;}
+  if(e.j.precisaPrimeiroAcesso){$('lgSub').textContent='Bem-vindo. Vamos criar o primeiro acesso.';$('fPrimeiro').classList.remove('hide');}
+  else{$('lgSub').textContent='Entre com seu usuário e senha.';$('fEntrar').classList.remove('hide');$('usuario').focus();}
 }
-$('fLogin').addEventListener('submit',async function(ev){ev.preventDefault();var b=$('btnEntrar');b.disabled=true;await entrar($('chave').value.trim());b.disabled=false;});
-$('btnSair').onclick=function(){setKey(null);S.chave=null;S.dados=null;$('app').classList.add('hide');$('login').classList.remove('hide');$('chave').value='';};
+$('fEntrar').addEventListener('submit',async function(ev){ev.preventDefault();var b=$('btnEntrar');b.disabled=true;$('loginErro').textContent='';
+  var r;try{r=await api('POST','/acesso/entrar',{usuario:$('usuario').value,senha:$('senha').value});}catch(e){r={status:0,j:{mensagem:'Sem conexão com o servidor.'}};}
+  b.disabled=false;
+  if(r.status===200&&r.j.token){S.tok=r.j.token;setTok(r.j.token);S.eu={usuario:r.j.usuario,nome:r.j.nome,papel:r.j.papel};$('senha').value='';abrirApp();}
+  else $('loginErro').textContent=r.j.mensagem||('Erro '+r.status);});
+$('btnCodigo').onclick=async function(){var b=this;b.disabled=true;$('codigoErro').textContent='';
+  var r;try{r=await api('POST','/acesso/codigo');}catch(e){r={status:0,j:{mensagem:'Sem conexão com o servidor.'}};}
+  if(r.status===200){$('fCriar').classList.remove('hide');$('codigoErro').style.color='var(--ok)';$('codigoErro').textContent='Código enviado. Veja o WhatsApp.';$('codigo').focus();setTimeout(function(){b.disabled=false;},20000);}
+  else{$('codigoErro').style.color='var(--bad)';$('codigoErro').textContent=r.j.mensagem||('Erro '+r.status);b.disabled=false;}};
+$('fCriar').addEventListener('submit',async function(ev){ev.preventDefault();$('criarErro').textContent='';
+  if($('nSenha').value!==$('nSenha2').value){$('criarErro').textContent='As senhas não conferem.';return;}
+  var b=$('btnCriar');b.disabled=true;var r;try{r=await api('POST','/acesso/primeiro',{codigo:$('codigo').value.trim(),usuario:$('nUsuario').value,nome:$('nUsuario').value,senha:$('nSenha').value});}catch(e){r={status:0,j:{mensagem:'Sem conexão com o servidor.'}};}
+  b.disabled=false;
+  if(r.status===200){var l=await api('POST','/acesso/entrar',{usuario:$('nUsuario').value,senha:$('nSenha').value});if(l.status===200){S.tok=l.j.token;setTok(l.j.token);S.eu={usuario:l.j.usuario,nome:l.j.nome,papel:l.j.papel};toast('Acesso criado');return abrirApp();}}
+  $('criarErro').textContent=r.j.mensagem||('Erro '+r.status);});
+async function sair(silencioso){try{if(S.tok)await fetch(API+'/acesso/sair',{method:'POST',headers:{'x-central-token':S.tok}});}catch(e){}S.tok=null;S.eu=null;setTok(null);location.reload();}
+$('btnSair').onclick=function(){sair(false);};
 $('btnAtualizar').onclick=function(){carregar(true);};
 $('busca').addEventListener('input',function(){S.busca=this.value.trim().toLowerCase();render();});
 
+async function abrirApp(){
+  var r=await api('GET','/estado');if(r.status!==200||!r.j.ok){toast('Erro ao carregar ('+r.status+')');return;}
+  S.dados=r.j;$('login').classList.add('hide');$('app').classList.remove('hide');$('quem').textContent=(S.eu.nome||S.eu.usuario)+' · '+(PAPEL[S.eu.papel]||S.eu.papel);montarNav();render();
+}
 async function carregar(avisar){
   var r=await api('GET','/estado');
-  if(r.status===200&&r.j.ok){S.dados=r.j;if(S.aba==='hist')await carregarHist();montarNav();render();if(avisar)toast('Estado atualizado');}
-  else toast('Não consegui atualizar ('+r.status+')');
+  if(r.status===200&&r.j.ok){S.dados=r.j;if(S.aba==='hist')await carregarHist();if(S.aba==='usuarios')await carregarUsuarios();montarNav();render();if(avisar)toast('Atualizado');}
+  else if(r.status!==401)toast('Não consegui atualizar ('+r.status+')');
 }
 async function carregarHist(){var r=await api('GET','/historico?dias=14');S.hist=(r.j&&r.j.itens)||[];}
+async function carregarUsuarios(){var r=await api('GET','/usuarios');S.usuarios=(r.j&&r.j.itens)||[];}
 
 /* ---------- navegação ---------- */
-function grupos(){var g={};(S.dados.editaveis||[]).forEach(function(e){g[e.grupo]=(g[e.grupo]||0)+1;});return g;}
+var ABAS=[['estado','Estado e controles'],['leitura','Todas as chaves'],['hist','Histórico'],['atalhos','Atalhos'],['eco','Ecossistema'],['usuarios','Usuários'],['conta','Minha conta']];
 function montarNav(){
-  var n=$('nav');n.textContent='';
-  var g=el('div','grp','Controles');n.appendChild(g);
-  [['estado','Estado e controles',(S.dados.editaveis||[]).length],['leitura','Todas as chaves',(S.dados.leitura||[]).length],['hist','Histórico','']].forEach(function(a){
-    var l=el('a',S.aba===a[0]?'on':'');l.appendChild(el('span',null,a[1]));l.appendChild(el('span','n',a[2]===''?'':String(a[2])));l.tabIndex=0;
-    l.onclick=async function(){S.aba=a[0];if(a[0]==='hist')await carregarHist();montarNav();render();};
+  var n=$('nav');n.textContent='';n.appendChild(el('div','grp','Controle'));
+  ABAS.forEach(function(a){
+    if(a[0]==='usuarios'&&S.eu.papel!=='robert')return;
+    if(a[0]==='atalhos')n.appendChild(el('div','grp','Plataforma'));
+    if(a[0]==='usuarios')n.appendChild(el('div','grp','Administração'));
+    var l=el('a',S.aba===a[0]?'on':'');l.appendChild(el('span',null,a[1]));
+    var cont=a[0]==='estado'?(S.dados.editaveis||[]).length:a[0]==='leitura'?(S.dados.leitura||[]).length:'';l.appendChild(el('span','n',String(cont)));
+    l.tabIndex=0;l.onclick=async function(){S.aba=a[0];if(a[0]==='hist')await carregarHist();if(a[0]==='usuarios')await carregarUsuarios();montarNav();render();};
     l.onkeydown=function(e){if(e.key==='Enter')l.onclick();};n.appendChild(l);
   });
 }
-
-/* ---------- telas ---------- */
 function casa(txt){return !S.busca||String(txt).toLowerCase().indexOf(S.busca)>=0;}
 function render(){
-  var c=$('conteudo');c.textContent='';
-  $('titulo').textContent={estado:'Estado e controles',leitura:'Todas as chaves',hist:'Histórico de mudanças'}[S.aba];
-  if(S.aba==='estado')telaEstado(c);else if(S.aba==='leitura')telaLeitura(c);else telaHist(c);
+  var c=$('conteudo');c.textContent='';var nome=ABAS.filter(function(a){return a[0]===S.aba;})[0][1];$('titulo').textContent=nome;
+  $('busca').classList.toggle('hide',['estado','leitura','hist'].indexOf(S.aba)<0);
+  ({estado:telaEstado,leitura:telaLeitura,hist:telaHist,atalhos:telaAtalhos,eco:telaEco,usuarios:telaUsuarios,conta:telaConta})[S.aba](c);
 }
 function badgeEstado(e){
   var p=el('span','pill',ROT_ESTADO[e.estado]||String(e.estado));
@@ -203,97 +262,88 @@ function badgeEstado(e){
   return p;
 }
 function telaEstado(c){
-  var d=S.dados.editaveis||[];
-  var sum=el('div','sum');
+  var d=S.dados.editaveis||[];var sum=el('div','sum');
   var cont={ligado:0,desligado:0,shadow:0,live:0};d.forEach(function(e){if(e.estado==='ligado')cont.ligado++;else if(e.estado==='desligado'||e.estado==='off')cont.desligado++;else if(e.estado==='shadow')cont.shadow++;else if(e.estado==='live')cont.live++;});
   [['Controles',d.length],['Ligados ou ao vivo',cont.ligado+cont.live],['Em sombra',cont.shadow],['Desligados',cont.desligado]].forEach(function(a){var b=el('div');b.appendChild(el('b',null,String(a[1])));b.appendChild(el('span',null,a[0]));sum.appendChild(b);});
   c.appendChild(sum);
+  if(S.eu.papel!=='robert')c.appendChild(el('div','alerta',S.eu.papel==='admin'?'Seu perfil muda controles de risco baixo e médio. Os de risco alto são só do Robert.':'Seu perfil é somente de leitura.')).style.marginBottom='16px';
   var por={};d.filter(function(e){return casa(e.k+' '+e.rotulo+' '+e.grupo+' '+e.desc);}).forEach(function(e){(por[e.grupo]=por[e.grupo]||[]).push(e);});
   var nomes=Object.keys(por);if(!nomes.length){c.appendChild(el('div','vazio','Nenhum controle encontrado para essa busca.'));return;}
-  nomes.forEach(function(g){
-    c.appendChild(el('h3',null,g)).style.cssText='margin:22px 0 10px;font-size:15px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em';
-    var gr=el('div','grid');por[g].forEach(function(e){gr.appendChild(cartao(e));});c.appendChild(gr);
-  });
+  nomes.forEach(function(g){var h=el('h3',null,g);h.style.cssText='margin:22px 0 10px;font-size:15px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em';c.appendChild(h);var gr=el('div','grid');por[g].forEach(function(e){gr.appendChild(cartao(e));});c.appendChild(gr);});
 }
 function cartao(e){
-  var it=el('div','it '+e.risco);
-  var topo=el('div','row');topo.style.justifyContent='space-between';
-  topo.appendChild(el('h3',null,e.rotulo));var dir=el('div','row');dir.appendChild(badgeEstado(e));dir.appendChild(el('span','pill '+e.risco,RISCO[e.risco]));topo.appendChild(dir);it.appendChild(topo);
-  it.appendChild(el('p',null,e.desc));
-  var ctl=el('div','row');
-  if(e.tipo==='liga_off'||e.tipo==='flag_off1'){
-    var sg=el('div','seg');['ligado','desligado'].forEach(function(v){var b=el('button',e.estado===v?'on':'',ROT_ESTADO[v]);b.type='button';b.onclick=function(){if(e.estado!==v)abrirConfirmacao(e,v);};sg.appendChild(b);});ctl.appendChild(sg);
-  }else if(e.tipo==='modo3'){
-    var sg2=el('div','seg');[['off','Desligado'],['shadow','Sombra'],['live','Ao vivo']].forEach(function(a){var b=el('button',e.estado===a[0]?'on':'',a[1]);b.type='button';b.onclick=function(){if(e.estado!==a[0])abrirConfirmacao(e,a[0]);};sg2.appendChild(b);});ctl.appendChild(sg2);
-  }else if(e.tipo==='numero'){
-    var nm=el('div','num');var inp=el('input');inp.type='number';inp.min=e.min;inp.max=e.max;inp.step=1;inp.value=e.estado;inp.setAttribute('aria-label',e.rotulo);nm.appendChild(inp);nm.appendChild(el('span','hint',e.un||''));
-    var ap=el('button','btn sec','Aplicar');ap.type='button';ap.onclick=function(){var v=Number(inp.value);if(String(v)===String(e.estado))return;abrirConfirmacao(e,v);};nm.appendChild(ap);ctl.appendChild(nm);
-    ctl.appendChild(el('span','hint','de '+e.min+' a '+e.max+' (padrão '+e.padrao+')'));
-  }
-  it.appendChild(ctl);
-  var rod=el('div','row');rod.appendChild(el('code',null,e.k));rod.appendChild(el('span','hint',e.definida?('valor gravado: '+(e.cru==null?'':e.cru)):'sem valor gravado (vale o padrão)'));it.appendChild(rod);
-  return it;
+  var it=el('div','it '+e.risco);var liberado=pode(e.risco);
+  var topo=el('div','row');topo.style.justifyContent='space-between';topo.appendChild(el('h3',null,e.rotulo));var dir=el('div','row');dir.appendChild(badgeEstado(e));dir.appendChild(el('span','pill '+e.risco,RISCO[e.risco]));topo.appendChild(dir);it.appendChild(topo);
+  it.appendChild(el('p',null,e.desc));var ctl=el('div','row');
+  function seg(opts){var sg=el('div','seg');opts.forEach(function(a){var b=el('button',e.estado===a[0]?'on':'',a[1]);b.type='button';b.disabled=!liberado;if(!liberado)b.title='Seu perfil não pode mudar este controle';b.onclick=function(){if(e.estado!==a[0])abrirConfirmacao(e,a[0]);};sg.appendChild(b);});ctl.appendChild(sg);}
+  if(e.tipo==='liga_off'||e.tipo==='flag_off1')seg([['ligado','Ligado'],['desligado','Desligado']]);
+  else if(e.tipo==='modo3')seg([['off','Desligado'],['shadow','Sombra'],['live','Ao vivo']]);
+  else if(e.tipo==='numero'){var nm=el('div','num');var inp=el('input');inp.type='number';inp.min=e.min;inp.max=e.max;inp.step=1;inp.value=e.estado;inp.disabled=!liberado;inp.setAttribute('aria-label',e.rotulo);nm.appendChild(inp);nm.appendChild(el('span','hint',e.un||''));var ap=el('button','btn sec','Aplicar');ap.type='button';ap.disabled=!liberado;ap.onclick=function(){var v=Number(inp.value);if(String(v)===String(e.estado))return;abrirConfirmacao(e,v);};nm.appendChild(ap);ctl.appendChild(nm);ctl.appendChild(el('span','hint','de '+e.min+' a '+e.max+' (padrão '+e.padrao+')'));}
+  it.appendChild(ctl);var rod=el('div','row');rod.appendChild(el('code',null,e.k));rod.appendChild(el('span','hint',e.definida?('valor gravado: '+(e.cru==null?'':e.cru)):'sem valor gravado (vale o padrão)'));it.appendChild(rod);return it;
 }
 function telaLeitura(c){
   var d=(S.dados.leitura||[]).filter(function(e){return casa(e.k+' '+e.g+' '+e.d);});
-  c.appendChild(el('p','hint','Chaves que a plataforma lê e que ainda não têm edição na Central (entram nas próximas fases). Só leitura.')).style.marginBottom='12px';
+  var p=el('p','hint','Chaves que a plataforma lê e que ainda não têm edição na Central (entram nas próximas fases). Somente leitura.');p.style.marginBottom='12px';c.appendChild(p);
   if(!d.length){c.appendChild(el('div','vazio','Nenhuma chave encontrada.'));return;}
   var t=el('table');var h=el('tr');['Chave','O que faz','Padrão','Valor gravado','Risco'].forEach(function(x){h.appendChild(el('th',null,x));});t.appendChild(h);
   d.sort(function(a,b){return a.g===b.g?a.k.localeCompare(b.k):a.g.localeCompare(b.g);});
-  d.forEach(function(e){var r=el('tr');var k=el('td','k');k.appendChild(el('code',null,e.k));k.appendChild(el('div','d',e.g));r.appendChild(k);r.appendChild(el('td',null,e.d));r.appendChild(el('td',null,e.p));
-    var v=el('td');if(e.ok===false)v.textContent='falha na leitura';else if(e.definida){v.appendChild(el('span','vv',e.cru==null?'':e.cru));}else v.appendChild(el('span','hint','vazio'));r.appendChild(v);
-    var rk=el('td');rk.appendChild(el('span','pill '+e.r,RISCO[e.r]||e.r));r.appendChild(rk);t.appendChild(r);});
-  c.appendChild(t);
+  d.forEach(function(e){var r=el('tr');var k=el('td','k');k.appendChild(el('code',null,e.k));k.appendChild(el('div','d',e.g));r.appendChild(k);r.appendChild(el('td',null,e.d));r.appendChild(el('td',null,e.p));var v=el('td');if(e.ok===false)v.textContent='falha na leitura';else if(e.definida)v.appendChild(el('span','vv',e.cru==null?'':e.cru));else v.appendChild(el('span','hint','vazio'));r.appendChild(v);var rk=el('td');rk.appendChild(el('span','pill '+e.r,RISCO[e.r]||e.r));r.appendChild(rk);t.appendChild(r);});c.appendChild(t);
 }
 function telaHist(c){
-  var h=(S.hist||[]).filter(function(x){return casa((x.rotulo||'')+' '+x.chave+' '+(x.motivo||''));});
+  var h=(S.hist||[]).filter(function(x){return casa((x.rotulo||'')+' '+x.chave+' '+(x.motivo||'')+' '+(x.quem||''));});
   if(!h.length){c.appendChild(el('div','vazio','Nenhuma mudança registrada nos últimos 14 dias.'));return;}
   var tl=el('div','tl');
-  h.forEach(function(x){
-    var ev=el('div','ev'+(x.desfeito?' des':''));ev.appendChild(el('div','t',fmtData(x.t)));
-    var m=el('div','m');var b=el('b',null,x.rotulo||x.chave);m.appendChild(b);m.appendChild(document.createTextNode(': '));
-    m.appendChild(el('span','vv',x.de==null?'padrão':x.de));m.appendChild(document.createTextNode(' → '));m.appendChild(el('span','vv',x.para==null?'padrão':x.para));
-    var mo=el('div','hint','Motivo: '+x.motivo+(x.desfeito?' (desfeita)':''));m.appendChild(mo);ev.appendChild(m);
-    var a=el('div');if(!x.desfeito&&!/^Desfazer /.test(x.motivo||'')){var bt=el('button','btn sec','Desfazer');bt.type='button';bt.onclick=function(){abrirDesfazer(x);};a.appendChild(bt);}
-    ev.appendChild(a);tl.appendChild(ev);
-  });
+  h.forEach(function(x){var ev=el('div','ev'+(x.desfeito?' des':''));ev.appendChild(el('div','t',fmtData(x.t)+(x.quem?' · '+x.quem:'')));
+    var m=el('div','m');m.appendChild(el('b',null,x.rotulo||x.chave));m.appendChild(document.createTextNode(': '));m.appendChild(el('span','vv',x.de==null?'padrão':x.de));m.appendChild(document.createTextNode(' → '));m.appendChild(el('span','vv',x.para==null?'padrão':x.para));m.appendChild(el('div','hint','Motivo: '+x.motivo+(x.desfeito?' (desfeita)':'')));ev.appendChild(m);
+    var a=el('div');var ed=(S.dados.editaveis||[]).filter(function(y){return y.k===x.chave;})[0];if(!x.desfeito&&!/^Desfazer /.test(x.motivo||'')&&ed&&pode(ed.risco)){var bt=el('button','btn sec','Desfazer');bt.type='button';bt.onclick=function(){abrirDesfazer(x);};a.appendChild(bt);}ev.appendChild(a);tl.appendChild(ev);});
   c.appendChild(tl);
+}
+var LINKS=[['Dash Geral','Vendas, LTV, RFM, SDR, anúncios e saúde da Bia','/dash/geral/'],['Dash em telão','Versão para TV, com páginas que trocam sozinhas','/dash/geral/telao/'],['Página Hoje','A mesa de trabalho do SDR','/hoje/'],['Página Lista','Subir listas de empresas','/lista/'],['Ecossistema','O guia completo da plataforma, com fluxogramas','/ecossistema/'],['Saúde da Bia','Estado das rotinas em tempo real (somente leitura)','https://gs-agendor-worker.robert131196.workers.dev/bia-saude'],['Plano da Central','Artefato com o projeto, as fases e o tempo','https://claude.ai/artifact/PpqJMZT8wWXhh1BkBGPb3r'],['Blindagem do SDR','As regras que mantêm o processo em dia','https://claude.ai/artifact/XMcRRH2JdGn7jPi78XoTPN'],['Guia de estudo','Programação para quem comanda o projeto','https://claude.ai/artifact/EoL8bj41Vjj1GxMTbLmiKs']];
+function telaAtalhos(c){c.appendChild(el('p','hint','Tudo da plataforma em um lugar. Os links abrem em uma nova aba.')).style.marginBottom='12px';var g=el('div','grid');LINKS.forEach(function(l){var a=el('a','it lk');a.href=l[2];a.target='_blank';a.rel='noopener noreferrer';a.appendChild(el('b',null,l[0]));a.appendChild(el('span',null,l[1]));g.appendChild(a);});c.appendChild(g);}
+function telaEco(c){var f=el('iframe','frame');f.src='/ecossistema/';f.title='Ecossistema Life B';f.loading='lazy';c.appendChild(f);}
+function telaUsuarios(c){
+  var f=el('div','form');
+  function campo(rot,tag,id,attrs){var d=el('div');var l=el('label',null,rot);l.htmlFor=id;d.appendChild(l);var i=el(tag);i.id=id;Object.keys(attrs||{}).forEach(function(k){i.setAttribute(k,attrs[k]);});d.appendChild(i);return {d:d,i:i};}
+  var cu=campo('Usuário','input','uUsuario',{autocapitalize:'none',autocomplete:'off'});var cn=campo('Nome','input','uNome',{autocomplete:'off'});
+  var cp=campo('Papel','select','uPapel');[['admin','Administrador'],['sdr','SDR'],['robert','Robert']].forEach(function(a){var o=el('option',null,a[1]);o.value=a[0];cp.i.appendChild(o);});
+  var cs=campo('Senha inicial (mínimo 10, letras e números)','input','uSenha',{type:'password',autocomplete:'new-password'});
+  [cu,cn,cp,cs].forEach(function(x){f.appendChild(x.d);});var bt=el('button','btn','Criar ou atualizar');bt.type='button';var er=el('div','erro');er.style.gridColumn='1/-1';
+  bt.onclick=async function(){er.textContent='';bt.disabled=true;var r=await api('POST','/usuarios',{usuario:cu.i.value,nome:cn.i.value,papel:cp.i.value,senha:cs.i.value||undefined});bt.disabled=false;if(r.status===200){toast(r.j.criado?'Usuário criado':'Usuário atualizado');cu.i.value=cn.i.value=cs.i.value='';await carregarUsuarios();render();}else er.textContent=r.j.mensagem||('Erro '+r.status);};
+  var rw=el('div');rw.appendChild(bt);f.appendChild(rw);f.appendChild(er);c.appendChild(f);
+  c.appendChild(el('p','hint','A senha é você quem digita. Peça para a pessoa trocar na primeira entrada (menu Minha conta).')).style.marginBottom='12px';
+  var t=el('table');var h=el('tr');['Usuário','Nome','Papel','Último acesso','Situação',''].forEach(function(x){h.appendChild(el('th',null,x));});t.appendChild(h);
+  (S.usuarios||[]).forEach(function(u){var r=el('tr');r.appendChild(el('td','k',u.usuario));r.appendChild(el('td',null,u.nome));r.appendChild(el('td',null,PAPEL[u.papel]||u.papel));r.appendChild(el('td',null,u.ultimoAcesso?fmtData(u.ultimoAcesso):'nunca'));var st=el('td');st.appendChild(el('span','pill '+(u.ativo?'on':'offp'),u.ativo?'Ativo':'Desativado'));r.appendChild(st);var ac=el('td');var b2=el('button','btn sec',u.ativo?'Desativar':'Reativar');b2.type='button';b2.onclick=async function(){var x=await api('POST','/usuarios/ativo',{usuario:u.usuario,ativo:!u.ativo});if(x.status===200){await carregarUsuarios();render();}else toast(x.j.mensagem||('Erro '+x.status));};ac.appendChild(b2);r.appendChild(ac);t.appendChild(r);});
+  c.appendChild(t);
+}
+function telaConta(c){
+  var f=el('div','form');f.style.gridTemplateColumns='repeat(3,minmax(0,1fr))';
+  function campo(rot,id){var d=el('div');var l=el('label',null,rot);l.htmlFor=id;d.appendChild(l);var i=el('input');i.id=id;i.type='password';i.autocomplete='off';d.appendChild(i);f.appendChild(d);return i;}
+  var a=campo('Senha atual','cAtual'),n=campo('Nova senha (mínimo 10, letras e números)','cNova'),n2=campo('Repita a nova senha','cNova2');
+  var bt=el('button','btn','Trocar senha');bt.type='button';var er=el('div','erro');er.style.gridColumn='1/-1';
+  bt.onclick=async function(){er.textContent='';if(n.value!==n2.value){er.textContent='As senhas novas não conferem.';return;}bt.disabled=true;var r=await api('POST','/acesso/senha',{atual:a.value,nova:n.value});bt.disabled=false;if(r.status===200){toast('Senha trocada');a.value=n.value=n2.value='';}else er.textContent=r.j.mensagem||('Erro '+r.status);};
+  var rw=el('div');rw.appendChild(bt);f.appendChild(rw);f.appendChild(er);
+  var d=el('div','it');d.style.marginBottom='18px';d.appendChild(el('h3',null,(S.eu.nome||S.eu.usuario)));d.appendChild(el('p',null,'Usuário: '+S.eu.usuario+' · Perfil: '+(PAPEL[S.eu.papel]||S.eu.papel)));c.appendChild(d);c.appendChild(f);
 }
 
 /* ---------- confirmação ---------- */
 function fecharModal(){$('modal').classList.add('hide');$('modal').textContent='';}
 function painel(titulo,corpoFn,textoBtn,acaoFn,risco){
-  var m=$('modal');m.textContent='';var b=el('div','mb');var h=el('h3',null,titulo);h.id='mTit';b.appendChild(h);
-  corpoFn(b);
+  var m=$('modal');m.textContent='';var b=el('div','mb');var h=el('h3',null,titulo);h.id='mTit';b.appendChild(h);corpoFn(b);
   var lm=el('label',null,'Motivo da mudança (obrigatório)');lm.htmlFor='mMotivo';b.appendChild(lm);var im=el('input');im.type='text';im.id='mMotivo';im.maxLength=200;im.placeholder='Ex.: manutenção da guarda';b.appendChild(im);
-  var ic=null;
-  if(risco==='alto'){b.appendChild(el('div','alerta','Mudança de risco alto. Ela é registrada e avisada pela Bia.')).style.marginTop='14px';var lc=el('label',null,'Digite CONFIRMO para continuar');lc.htmlFor='mConf';b.appendChild(lc);ic=el('input');ic.type='text';ic.id='mConf';ic.autocomplete='off';b.appendChild(ic);}
+  var ic=null;if(risco==='alto'){var al=el('div','alerta','Mudança de risco alto. Ela é registrada e avisada pela Bia.');al.style.marginTop='14px';b.appendChild(al);var lc=el('label',null,'Digite CONFIRMO para continuar');lc.htmlFor='mConf';b.appendChild(lc);ic=el('input');ic.type='text';ic.id='mConf';ic.autocomplete='off';b.appendChild(ic);}
   var er=el('div','erro');er.setAttribute('role','alert');b.appendChild(er);
   var ac=el('div','acoes');var cx=el('button','btn sec','Cancelar');cx.type='button';cx.onclick=fecharModal;var ok=el('button','btn',textoBtn);ok.type='button';
-  ok.onclick=async function(){
-    var motivo=im.value.trim();if(motivo.length<5){er.textContent='Escreva o motivo (mínimo 5 letras).';im.focus();return;}
+  ok.onclick=async function(){var motivo=im.value.trim();if(motivo.length<5){er.textContent='Escreva o motivo (mínimo 5 letras).';im.focus();return;}
     if(ic&&ic.value.trim().toUpperCase()!=='CONFIRMO'){er.textContent='Digite CONFIRMO para continuar.';ic.focus();return;}
-    ok.disabled=true;cx.disabled=true;ok.textContent='Aplicando...';er.textContent='';
-    var r;try{r=await acaoFn(motivo,ic?ic.value.trim():'');}catch(e){r={status:0,j:{mensagem:'Falha de conexão.'}};}
-    if(r.status===200&&r.j.ok){fecharModal();toast('Mudança aplicada e registrada');await carregar(false);}
-    else{ok.disabled=false;cx.disabled=false;ok.textContent=textoBtn;er.textContent=(r.j&&r.j.mensagem)||('Erro '+r.status);}
-  };
-  ac.appendChild(cx);ac.appendChild(ok);b.appendChild(ac);m.appendChild(b);m.classList.remove('hide');im.focus();
-  m.onkeydown=function(e){if(e.key==='Escape')fecharModal();};
+    ok.disabled=true;cx.disabled=true;ok.textContent='Aplicando...';er.textContent='';var r;try{r=await acaoFn(motivo,ic?ic.value.trim():'');}catch(e){r={status:0,j:{mensagem:'Falha de conexão.'}};}
+    if(r.status===200&&r.j.ok){fecharModal();toast('Mudança aplicada e registrada');await carregar(false);}else{ok.disabled=false;cx.disabled=false;ok.textContent=textoBtn;er.textContent=(r.j&&r.j.mensagem)||('Erro '+r.status);}};
+  ac.appendChild(cx);ac.appendChild(ok);b.appendChild(ac);m.appendChild(b);m.classList.remove('hide');im.focus();m.onkeydown=function(e){if(e.key==='Escape')fecharModal();};
 }
-function abrirConfirmacao(e,valor){
-  var rot=function(v){return typeof v==='number'?String(v):(ROT_ESTADO[v]||String(v));};
-  painel(e.rotulo,function(b){
-    b.appendChild(el('p','hint',e.desc));var d=el('div','de');d.appendChild(el('span','pill',rot(e.estado)));d.appendChild(document.createTextNode('→'));d.appendChild(el('span','pill sh',rot(valor)));b.appendChild(d);
-  },'Aplicar',function(motivo,conf){return api('POST','/alterar',{chave:e.k,valor:valor,motivo:motivo,confirmacao:conf});},e.risco);
-}
-function abrirDesfazer(x){
-  var e=(S.dados.editaveis||[]).filter(function(y){return y.k===x.chave;})[0];
-  painel('Desfazer: '+(x.rotulo||x.chave),function(b){var d=el('div','de');d.appendChild(el('span','vv',x.para==null?'padrão':x.para));d.appendChild(document.createTextNode('→'));d.appendChild(el('span','vv',x.de==null?'padrão':x.de));b.appendChild(d);},'Desfazer',function(motivo,conf){return api('POST','/desfazer',{id:x.id,confirmacao:conf});},e&&e.risco);
-}
-
-/* ---------- início ---------- */
-var k=getKey();if(k){entrar(k).then(function(ok){if(!ok){setKey(null);}});}
+function abrirConfirmacao(e,valor){var rot=function(v){return typeof v==='number'?String(v):(ROT_ESTADO[v]||String(v));};
+  painel(e.rotulo,function(b){var p=el('p','hint',e.desc);b.appendChild(p);var d=el('div','de');d.appendChild(el('span','pill',rot(e.estado)));d.appendChild(document.createTextNode('→'));d.appendChild(el('span','pill sh',rot(valor)));b.appendChild(d);},'Aplicar',function(motivo,conf){return api('POST','/alterar',{chave:e.k,valor:valor,motivo:motivo,confirmacao:conf});},e.risco);}
+function abrirDesfazer(x){var e=(S.dados.editaveis||[]).filter(function(y){return y.k===x.chave;})[0];
+  painel('Desfazer: '+(x.rotulo||x.chave),function(b){var d=el('div','de');d.appendChild(el('span','vv',x.para==null?'padrão':x.para));d.appendChild(document.createTextNode('→'));d.appendChild(el('span','vv',x.de==null?'padrão':x.de));b.appendChild(d);},'Desfazer',function(motivo,conf){return api('POST','/desfazer',{id:x.id,confirmacao:conf});},e&&e.risco);}
+iniciar();
 })();
 </script>
 </body>
