@@ -729,7 +729,7 @@ function casaBusca(it, q) {
 
 // ---------- chamadas ----------
 // ---------- resiliência: rede com retry, disjuntor, caixa de saída, versão, relógio do servidor, telemetria ----------
-var PAGINA_VERSAO = '2026-11-05.4';
+var PAGINA_VERSAO = '2026-11-10.1';
 var REDE = { escala: 1, falhas: 0, ultima: 0, desvio: 0 };
 function dormir(ms) { return new Promise(function (r) { setTimeout(r, ms * REDE.escala); }); }
 function jitter(ms) { return ms * (0.5 + Math.random() * 0.5); }
@@ -2106,11 +2106,13 @@ async function confirmarGanho(L) {
   if (bad || faltaAinda(L).length || L.ganhoPessoa == null) { L.ganhoMarcar = true; renderGanho(L); setEstado(L, 'erro', L.ganhoPessoa == null ? 'Este lead não tem contato cadastrado. Cadastre a pessoa no Agendor e tente de novo.' : 'Preencha os campos obrigatórios (*) antes de confirmar.'); return; }
   if (L.ganhoFixo && L.ganhoPessoa != null) delete L.edits['p.' + L.ganhoPessoa + '.whatsapp']; // seguindo com o telefone cadastrado: não envia telefone nenhum
   // fecha o pop-up na hora: o envio roda por trás (salvar campos e depois ganho), pela caixa de saída e com retry
-  L.ganhoRodando = true; S.qualif[L.dealId] = true; $('modalGanho').classList.add('hide'); setQualificando(L, true); redesenharTudo();
+  L.ganhoRodando = true; S.qualif[L.dealId] = true; setQualificando(L, true); redesenharTudo();
+  // 10/11 (Robert: 'demora, tem que ser otimista'): não espera o servidor para mostrar o próximo passo. Já abre 'Quem atende esta loja?' (dá para escolher na hora) enquanto o Ganho é confirmado por trás.
+  L.repAntes = null; L.rep = { aguardandoGanho: true, responsaveis: (L.responsaveis && L.responsaveis.length ? L.responsaveis : (S.listas && S.listas.responsaveis) || []), dono: null }; mostrarGanhoModal(L);
   var r = await enviarCampos(L); // se a rede cair, fica guardado e o ganho entra na fila logo atrás
-  if (r === 'erro') { L.ganhoRodando = false; delete S.qualif[L.dealId]; setQualificando(L, false); redesenharTudo(); if (!S.token) return; mostrarGanhoModal(L, true); return; } // reabre no ponto do problema (a mensagem e o conflito já estão no pop-up)
-  var j = await chamarLead(L, '/ganho', {}, null, { tipo: 'ganho', meta: { titulo: L.lead.titulo } }); if (!j) { L.ganhoRodando = false; delete S.qualif[L.dealId]; return; } // 401: volta ao login
-  if (j._enfileirado) { L.ganhoRodando = false; L.modalAberto = false; msg((L.lead.titulo || 'Lead') + ': sem conexão. A qualificação ficou guardada e sai sozinha quando a rede voltar.', 'aviso'); return; }
+  if (r === 'erro') { L.ganhoRodando = false; L.rep = null; L.repAntes = null; delete S.qualif[L.dealId]; setQualificando(L, false); redesenharTudo(); if (!S.token) return; mostrarGanhoModal(L, true); return; } // reabre no ponto do problema (a mensagem e o conflito já estão no pop-up)
+  var j = await chamarLead(L, '/ganho', {}, null, { tipo: 'ganho', meta: { titulo: L.lead.titulo } }); if (!j) { L.ganhoRodando = false; L.rep = null; delete S.qualif[L.dealId]; return; } // 401: volta ao login
+  if (j._enfileirado) { L.ganhoRodando = false; L.rep = null; $('modalGanho').classList.add('hide'); L.modalAberto = false; msg((L.lead.titulo || 'Lead') + ': sem conexão. A qualificação ficou guardada e sai sozinha quando a rede voltar.', 'aviso'); return; }
   resolverGanho(L, j);
 }
 async function enviarGanho(L) { // só o POST /ganho (usado no "Tentar de novo" e no "Atualizar" do repasse)
@@ -2120,17 +2122,17 @@ async function enviarGanho(L) { // só o POST /ganho (usado no "Tentar de novo" 
   resolverGanho(L, j);
 }
 function resolverGanho(L, j) { // resposta final do /ganho: mostra o resultado ou reabre exatamente onde está o problema
-  L.ganhoRodando = false; delete S.qualif[L.dealId]; setQualificando(L, false); redesenharTudo();
+  if (L.rep && L.rep.aguardandoGanho) L.rep = null; L.ganhoRodando = false; delete S.qualif[L.dealId]; setQualificando(L, false); redesenharTudo();
   if (j.erro === 'faltando' || (!j.ok && faltandoGrupos(j.faltando).length)) { // 422: o Agendor ainda pede dados
     if (j.lead) aplicarResposta(L, j); var ch = chavesDe(j); L.lead.faltando = j.faltando || L.lead.faltando; if (ch) L.lead.faltandoChaves = ch;
     abrirGanho(L, j.faltando, true, ch); setEstado(L, 'erro', j.mensagem || 'O Agendor ainda precisa de mais dados. Os campos que faltam estão marcados.'); return;
   }
   var titulo = L.lead.titulo || 'Lead';
   if (j.repasseDesligado) { aplicarResposta(L, j); L.rep = { desligado: true, mensagem: j.mensagem }; msg(j.mensagem || (titulo + ': Ganho registrado ✓'), 'ok'); mostrarGanhoModal(L); carregar(true, 'tarefas'); return; }
-  if (j.repassePendente) { aplicarResposta(L, j); L.rep = { pendente: true, ate: Date.now() + 60000 }; msg(titulo + ': Ganho registrado ✓', 'ok'); mostrarGanhoModal(L); carregar(true, 'tarefas'); return; }
+  if (j.repassePendente) { aplicarResposta(L, j); L.rep = { pendente: true, ate: Date.now() + 60000 }; msg(titulo + ': Ganho registrado ✓', 'ok'); if (!L.repAntes) mostrarGanhoModal(L); carregar(true, 'tarefas'); aguardarArena(L); return; }
   if (j.ok !== false && j._status < 300) {
     aplicarResposta(L, j); msg(j.mensagem || (titulo + ': Ganho registrado ✓'), 'ok'); carregar(true, 'tarefas'); carregarAguardando(true);
-    if (j.arena && j.arena.dealId) { registrarRepPend(L.dealId, titulo, j); L.rep = { arenaId: j.arena.dealId, link: j.arena.link, responsaveis: j.responsaveis || L.responsaveis || [], dono: null, mensagem: j.mensagem || '' }; mostrarGanhoModal(L); }
+    if (j.arena && j.arena.dealId) { registrarRepPend(L.dealId, titulo, j); L.rep = { arenaId: j.arena.dealId, link: j.arena.link, responsaveis: j.responsaveis || L.responsaveis || [], dono: null, mensagem: j.mensagem || '' }; var ra = L.repAntes; L.repAntes = null; if (ra) aplicarRepAntes(L, ra); else mostrarGanhoModal(L); }
     else { $('modalGanho').classList.add('hide'); L.modalAberto = false; renderLead(); }
     return;
   }
@@ -2155,7 +2157,14 @@ function renderRepStep(L) { // depois do Ganho: "Quem atende esta loja?" (a Bia 
   L.refs.estado = el('div', 'estado hide'); L.refs.estado.setAttribute('role', 'status'); L.refs.estado.setAttribute('aria-live', 'polite'); rd.appendChild(L.refs.estado);
   var row = el('div', 'row');
   function botaoBia(destaque) { var b = el('button', destaque ? 'forte' : 'sec', 'Deixar a Bia distribuir'); b.type = 'button'; b.className = (destaque ? 'forte' : 'sec') + ' rep-op bia-padrao'; b.onclick = function () { soltaRepPend(L.dealId); fecharGanho(); }; return b; }
-  if (rp.pendente) {
+  if (rp.aguardandoGanho) {
+    c.appendChild(el('p', 'sub', 'Qualificando... (já pode escolher quem atende; eu passo assim que o negócio estiver pronto)'));
+    c.appendChild(el('h3', null, 'Quem atende esta loja?')); var marc = L.repAntes;
+    var bb = el('button', marc && marc.bia ? 'forte' : 'sec', 'Deixar a Bia distribuir' + (marc && marc.bia ? ' ✓' : '')); bb.type = 'button'; bb.className = (marc && marc.bia ? 'forte' : 'sec') + ' rep-op bia-padrao'; bb.onclick = function () { L.repAntes = { bia: true }; renderRepStep(L); }; c.appendChild(bb);
+    var repsA = (rp.responsaveis || []).filter(function (r) { return !semAcaoRep(r); });
+    if (repsA.length) { c.appendChild(el('p', 'sub', 'Ou escolha um representante de campo:')); repsA.forEach(function (r) { var esc = marc && marc.id === r.id; var b = el('button', esc ? 'forte' : 'sec', r.nome + (esc ? ' ✓' : '')); b.type = 'button'; b.className = (esc ? 'forte' : 'sec') + ' rep-op'; b.onclick = function () { L.repAntes = r; renderRepStep(L); }; c.appendChild(b); }); }
+    if (marc) c.appendChild(el('p', 'sub', marc.bia ? 'Escolhido: a Bia distribui.' : 'Escolhido: ' + marc.nome + '. Passo para essa pessoa assim que o Ganho confirmar.'));
+  } else if (rp.pendente) {
     c.appendChild(el('p', null, 'A Bia está concluindo o envio ao time de vendas.')); c.appendChild(el('p', 'sub', 'Isso leva cerca de 1 minuto. Depois dele, escolha o representante aqui ou na aba "Aguardando representante".'));
     var at = el('button', 'forte', 'Atualizar'); at.type = 'button'; at.onclick = function () { if (Date.now() < rp.ate) { setEstado(L, '', 'Ainda dentro de 1 minuto. Espere um pouco e clique de novo.'); return; } enviarGanho(L); }; row.appendChild(at); c.appendChild(botaoBia(false));
   } else if (rp.desligado) {
@@ -2169,14 +2178,26 @@ function renderRepStep(L) { // depois do Ganho: "Quem atende esta loja?" (a Bia 
     if (reps.length) { c.appendChild(el('p', 'sub', 'Ou escolha um representante de campo:')); reps.forEach(function (r) { var b = el('button', 'sec', r.nome); b.type = 'button'; b.className = 'sec rep-op'; b.onclick = function () { escolherRep(L, r); }; c.appendChild(b); }); }
     else c.appendChild(el('p', 'sub', 'A Bia escolhe o representante e avisa a pessoa.'));
   }
-  var fc = el('button', rp.dono ? 'forte' : 'sec', rp.dono || rp.pendente || rp.desligado ? 'Fechar' : 'Escolher depois'); fc.type = 'button'; fc.onclick = fecharGanho; row.appendChild(fc); rd.appendChild(row);
+  var fc = el('button', rp.dono ? 'forte' : 'sec', rp.dono || rp.pendente || rp.desligado || rp.aguardandoGanho ? 'Fechar' : 'Escolher depois'); fc.type = 'button'; fc.onclick = fecharGanho; row.appendChild(fc); rd.appendChild(row);
 }
-async function escolherRep(L, r) {
-  if (L.ocupado) return; if (!confirmaRep(L.lead.titulo, r)) return;
-  L.ocupado = true; setEstado(L, 'salvando', 'Passando para ' + r.nome + '...'); var j = await postRep(L.rep.arenaId, r); if (!j) return; L.ocupado = false;
-  if (j.cancelado) { setEstado(L, '', 'Cancelado. Nada mudou.'); return; }
-  if (j.ok !== false && j._status < 300 && j.confirmado !== false) { L.rep.dono = (j.dono && j.dono.nome) || r.nome; L.rep.avisou = r.tipo === 'rep'; soltaRepPend(L.dealId); renderRepStep(L); setEstado(L, 'ok', j.mensagem || 'Feito ✓'); carregarAguardando(true); }
-  else setEstado(L, 'erro', msgErro(j), function () { escolherRep(L, r); });
+async function escolherRep(L, r, auto) { // 10/11: otimista. Mostra "Agora é de X" NA HORA, confirma por trás e só volta atrás se falhar.
+  if (L.ocupado || !L.rep) return; if (!auto && !confirmaRep(L.lead.titulo, r)) return;
+  var rp = L.rep, titulo = (L.lead && L.lead.titulo) || 'Lead';
+  rp.dono = r.nome; rp.avisou = r.tipo === 'rep'; if (L.rep === rp) { renderRepStep(L); setEstado(L, 'salvando', 'Passando para ' + r.nome + '... (confirmando por trás)'); }
+  L.ocupado = true; var j = await postRep(rp.arenaId, r); L.ocupado = false; if (!j) return;
+  var visivel = L.rep === rp && !$('modalGanho').classList.contains('hide');
+  if (j.cancelado) { rp.dono = null; if (visivel) { renderRepStep(L); setEstado(L, '', 'Cancelado. Nada mudou.'); } return; }
+  if (j.ok !== false && j._status < 300 && j.confirmado !== false) { rp.dono = (j.dono && j.dono.nome) || r.nome; soltaRepPend(L.dealId); if (visivel) { renderRepStep(L); setEstado(L, 'ok', j.mensagem || 'Feito ✓'); } else msg(titulo + ': agora é de ' + rp.dono + (rp.avisou ? ' (avisado) ✓' : ' ✓'), 'ok'); carregarAguardando(true); return; }
+  rp.dono = null; L.rep = rp; if ($('modalGanho').classList.contains('hide')) { mostrarGanhoModal(L); } else renderRepStep(L);   // falhou: desfaz o "agora é de X" e deixa tentar de novo
+  setEstado(L, 'erro', msgErro(j), function () { escolherRep(L, r, true); });
+}
+function aplicarRepAntes(L, ra) { // o Felipe já escolheu quem atende enquanto o Ganho confirmava: aplica sozinho
+  var titulo = (L.lead && L.lead.titulo) || 'Lead';
+  if (ra.bia || semAcaoRep(ra)) { soltaRepPend(L.dealId); L.rep = null; $('modalGanho').classList.add('hide'); L.modalAberto = false; renderLead(); msg(titulo + ': qualificado ✓ A Bia vai distribuir.', 'ok'); carregarAguardando(true); return; }
+  if ($('modalGanho').classList.contains('hide')) L.modalAberto = false; escolherRep(L, ra, true);
+}
+function aguardarArena(L) { // repasse ainda rodando: confere sozinho a cada 4 s (até ~80 s) e segue quando o negócio do time de vendas nasce; sem clicar em "Atualizar"
+  var n = 0; (function tick() { if (!L.rep || !L.rep.pendente || n++ >= 20) return; setTimeout(async function () { if (!L.rep || !L.rep.pendente) return; var j = null; try { j = await api('/lead/' + L.dealId + '/ganho', {}, null, null, { idem: novaChave() }); } catch (e) { j = null; } if (j && j._status === 401) return; if (j && j.ok !== false && j._status < 300 && j.arena && j.arena.dealId) resolverGanho(L, j); else tick(); }, 4000); })();
 }
 function secaoRep(L) {
   var s = el('div', 'secao'); s.appendChild(el('h3', null, 'Representante')); var sel = el('select'); sel.setAttribute('aria-label', 'Escolher quem recebe'); var o0 = el('option', null, 'Escolha quem recebe...'); o0.value = ''; sel.appendChild(o0);
