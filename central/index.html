@@ -178,6 +178,8 @@ td{padding:12px 16px;border-bottom:1px solid var(--line);vertical-align:top}tr:l
 .pal .foot{display:flex;gap:14px;padding:10px 16px;border-top:1px solid var(--line);font-size:12px;color:var(--faint)}
 #toast{position:fixed;right:24px;bottom:24px;background:var(--purple-d);color:var(--card);padding:13px 18px;border-radius:14px;font-weight:700;z-index:300;max-width:380px;box-shadow:0 10px 30px rgba(0,0,0,.3)}
 
+.clic{cursor:pointer}.clic:hover{border-color:var(--mag);box-shadow:0 0 0 1px var(--mag),var(--shadow)}
+.grlist{display:flex;flex-direction:column;gap:10px;max-height:52vh;overflow:auto;margin:14px 0 4px}.grit{border:1px solid var(--line);background:var(--card2);border-radius:12px;padding:12px 14px}.grit p{margin:2px 0 8px;color:var(--muted);font-size:14px}
 /* ---------- v3: console denso, visual de tecnologia ---------- */
 main{background-color:var(--bg);background-image:radial-gradient(color-mix(in srgb,var(--faint) 28%,transparent) 1px,transparent 1px);background-size:24px 24px}
 .top{border-bottom:1px solid var(--line)}
@@ -460,6 +462,16 @@ function atencoes(){
 }
 /* ---------- visão geral ---------- */
 function painel_(titulo,meta,cls){var p=el('div','card pn '+(cls||''));var h=el('div','ph');h.appendChild(el('span',null,titulo));if(meta!=null)h.appendChild(el('em',null,meta));p.appendChild(h);var b=el('div','pb');p.appendChild(b);p._b=b;return p;}
+
+var GRUPOS={
+ ligados:{t:'Controles ligados',x:'Estão funcionando de verdade: a Bia faz a ação e escreve no Agendor ou manda a mensagem.',f:function(e){return e.tipo!=='numero'&&(e.estado==='ligado'||e.estado==='live');}},
+ sombra:{t:'Controles em sombra',x:'Modo simulação: a Bia calcula e registra o que FARIA, mas não escreve no Agendor nem manda nada a ninguém. Serve para conferir antes de ligar de verdade.',f:function(e){return e.tipo!=='numero'&&e.estado==='shadow';}},
+ desligados:{t:'Controles desligados',x:'Parados de propósito: a regra não roda. Vale confirmar se é isso mesmo que você quer.',f:function(e){return e.tipo!=='numero'&&(e.estado==='desligado'||e.estado==='off');}}
+};
+function abrirGrupo(k){var g=GRUPOS[k];var lista=((S.dados||{}).editaveis||[]).filter(g.f);var m=$('modal');m.textContent='';var b=el('div','mb');b.style.width='min(640px,100%)';var h=el('h3',null,g.t+' ('+lista.length+')');h.id='mTit';b.appendChild(h);b.appendChild(el('p','hint',g.x));
+  var ul=el('div','grlist');if(!lista.length)ul.appendChild(el('div','vazio','Nenhum controle nesse estado agora.'));
+  lista.forEach(function(e){var r=el('div','grit');var t=el('div','t');t.appendChild(el('b',null,e.rotulo));t.appendChild(el('p',null,e.desc));var meta=el('div','row');meta.appendChild(el('code',null,e.k));meta.appendChild(el('span','pill '+e.risco,RISCO[e.risco]));t.appendChild(meta);r.appendChild(t);ul.appendChild(r);});
+  b.appendChild(ul);var ac=el('div','acoes');var cx=el('button','btn ghost','Fechar');cx.type='button';cx.onclick=fecharModal;var ir_=el('button','btn','Abrir em Controles');ir_.type='button';ir_.onclick=function(){fecharModal();S.filtro=k==='sombra'?'shadow':k==='desligados'?'desligados':'todos';ir('estado');};ac.appendChild(cx);ac.appendChild(ir_);b.appendChild(ac);m.appendChild(b);m.classList.remove('hide');cx.focus();m.onkeydown=function(e){if(e.key==='Escape')fecharModal();};m.onclick=function(e){if(e.target===m)fecharModal();};}
 function telaVisao(c){
   var at=atencoes();var geral=S.saude&&S.saude.geral;var grave=at.some(function(x){return x[0]==='bad';});
   var d=(S.dados||{}).editaveis||[];var cont={ligado:0,desligado:0,shadow:0,live:0};d.forEach(function(e){if(e.tipo==='numero')return;if(e.estado==='ligado')cont.ligado++;else if(e.estado==='desligado'||e.estado==='off')cont.desligado++;else if(e.estado==='shadow')cont.shadow++;else if(e.estado==='live')cont.live++;});
@@ -473,8 +485,8 @@ function telaVisao(c){
   // KPIs
   var nf=(S.filas||[]).reduce(function(a,f){return a+f.total;},0);var nome={ },hh=(S.hist||[]);
   var folgas=(S.cal||[]).filter(function(x){return x>=(S.calHoje||'');});
-  [['Controles ligados',cont.ligado+cont.live,'de '+d.filter(function(e){return e.tipo!=='numero';}).length+' no catálogo','ok'],['Em sombra',cont.shadow,'simulando, sem efeito real','visao'],['Desligados',cont.desligado,cont.desligado?'confira em Atenção':'nenhum desligado','alerta'],[S.eu.papel==='sdr'?'Mudanças em 14 dias':'Mensagens em fila',S.eu.papel==='sdr'?hh.length:(S.filas==null?'...':nf),S.eu.papel==='sdr'?'no histórico':((S.filas||[]).length+' pessoa(s) esperando'),'filas']].forEach(function(k,i){
-    var b=el('div','card kpi c3');var t=el('div','kt');t.appendChild(icon(k[3]));t.appendChild(el('span',null,k[0]));b.appendChild(t);b.appendChild(el('b',null,String(k[1])));b.appendChild(el('small',null,k[2]));g.appendChild(b);});
+  [['Controles ligados',cont.ligado+cont.live,'de '+d.filter(function(e){return e.tipo!=='numero';}).length+' · toque para ver quais','ok'],['Em sombra',cont.shadow,'simulando, sem efeito real · toque para ver quais','visao'],['Desligados',cont.desligado,cont.desligado?'toque para ver quais':'nenhum desligado','alerta'],[S.eu.papel==='sdr'?'Mudanças em 14 dias':'Mensagens em fila',S.eu.papel==='sdr'?hh.length:(S.filas==null?'...':nf),S.eu.papel==='sdr'?'no histórico':((S.filas||[]).length+' pessoa(s) esperando · toque para abrir'),'filas']].forEach(function(k,i){
+    var b=el('div','card kpi c3 clic');b.tabIndex=0;b.setAttribute('role','button');b.setAttribute('aria-label',k[0]+': '+k[1]+'. Abrir detalhes');var acao=[function(){abrirGrupo('ligados');},function(){abrirGrupo('sombra');},function(){abrirGrupo('desligados');},function(){if(S.eu.papel!=='sdr')ir('filas');else ir('hist');}][i];b.onclick=acao;b.onkeydown=function(ev){if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();acao();}};var t=el('div','kt');t.appendChild(icon(k[3]));t.appendChild(el('span',null,k[0]));b.appendChild(t);b.appendChild(el('b',null,String(k[1])));b.appendChild(el('small',null,k[2]));g.appendChild(b);});
   // saúde
   var ps=painel_('Saúde da plataforma','ao vivo','c8');var tl=el('div','tiles3');var sa=(S.saude&&S.saude.itens)||{};var chaves=Object.keys(sa);
   if(!chaves.length)ps._b.appendChild(el('div','vazio','Saúde indisponível agora.'));

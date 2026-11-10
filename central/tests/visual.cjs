@@ -24,7 +24,8 @@ const MEDIDA = () => {
     item.cortado = e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).overflow !== "visible" && tipo !== "input";
     item.vazaPai = (() => { const p = e.parentElement; if (!p) return false; const pr = p.getBoundingClientRect(); return r.right > pr.right + 1.5 && getComputedStyle(p).overflowX === "visible" && p.scrollWidth > p.clientWidth + 1; })();
     const cx = r.left + r.width / 2, cy = r.top + r.height / 2; const topo = document.elementFromPoint(Math.min(cx, innerWidth - 1), Math.min(cy, innerHeight - 1));
-    item.coberto = cy >= 0 && cy <= innerHeight && cx >= 0 && cx <= innerWidth && topo && !(e === topo || e.contains(topo) || topo.contains(e));
+    const recortado = (() => { for (let a = e.parentElement; a && a !== document.body; a = a.parentElement) { const o = getComputedStyle(a).overflowY; if (o === "auto" || o === "scroll" || o === "hidden") { const ar = a.getBoundingClientRect(); if (cy < ar.top || cy > ar.bottom) return true; } } return false; })();   // fora da área visível de uma lista com rolagem: não conta como coberto
+    item.coberto = !recortado && cy >= 0 && cy <= innerHeight && cx >= 0 && cx <= innerWidth && topo && !(e === topo || e.contains(topo) || topo.contains(e));
     out.push(item);
   }
   return { itens: out, sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth };
@@ -64,6 +65,9 @@ const MEDIDA = () => {
     for (const t of TELAS) {
       await p.click(`nav a:has-text("${t}")`); await p.waitForTimeout(450); await medir(t);
       await p.screenshot({ path: path.join(process.env.SHOTS || "/tmp", `c-${tag}-${t.replace(/\W/g, "")}.png`), fullPage: true });
+      if (t === "Visão geral") {   // cartões clicáveis abrem a lista do que está ligado, em sombra e desligado
+        for (let k = 0; k < 3; k++) { const cs = await p.$$(".kpi.clic"); await cs[k].click(); await p.waitForTimeout(200); if (!(await p.$("#modal:not(.hide) .grit, #modal:not(.hide) .vazio"))) F(`[${tag}] cartão ${k} não abriu a lista`); await medir("lista do cartão " + k); await p.screenshot({ path: path.join(process.env.SHOTS || "/tmp", `c-${tag}-cartao${k}.png`) }); await p.keyboard.press("Escape"); await p.waitForTimeout(120); }
+      }
       if (t === "Controles") {   // exercita filtros e abre/fecha o modal de um interruptor
         for (const f of ["Risco alto", "Em sombra", "Desligados", "Todos"]) { await p.click(`.chip:has-text("${f}")`); await p.waitForTimeout(120); }
         const sw = await p.$(".switch:not([disabled])"); if (sw) { await sw.click(); await p.waitForTimeout(250); await medir("modal de confirmação"); await p.keyboard.press("Escape"); await p.waitForTimeout(150); if (await p.$("#modal:not(.hide)")) F(`[${tag}] modal não fechou com Esc`); }
