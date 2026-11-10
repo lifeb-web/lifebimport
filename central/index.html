@@ -205,7 +205,7 @@ async function iniciar(){
 $('fEntrar').addEventListener('submit',async function(ev){ev.preventDefault();var b=$('btnEntrar');b.disabled=true;$('loginErro').textContent='';
   var r;try{r=await api('POST','/acesso/entrar',{usuario:$('usuario').value,senha:$('senha').value});}catch(e){r={status:0,j:{mensagem:'Sem conexão com o servidor.'}};}
   b.disabled=false;
-  if(r.status===200&&r.j.token){S.tok=r.j.token;setTok(r.j.token);S.eu={usuario:r.j.usuario,nome:r.j.nome,papel:r.j.papel};$('senha').value='';abrirApp();}
+  if(r.status===200&&r.j.token){S.tok=r.j.token;setTok(r.j.token);S.eu={usuario:r.j.usuario,nome:r.j.nome,papel:r.j.papel,trocarSenha:!!r.j.trocarSenha};$('senha').value='';abrirApp();}
   else $('loginErro').textContent=r.j.mensagem||('Erro '+r.status);});
 $('btnCodigo').onclick=async function(){var b=this;b.disabled=true;$('codigoErro').textContent='';
   var r;try{r=await api('POST','/acesso/codigo');}catch(e){r={status:0,j:{mensagem:'Sem conexão com o servidor.'}};}
@@ -224,7 +224,7 @@ $('busca').addEventListener('input',function(){S.busca=this.value.trim().toLower
 
 async function abrirApp(){
   var r=await api('GET','/estado');if(r.status!==200||!r.j.ok){toast('Erro ao carregar ('+r.status+')');return;}
-  S.dados=r.j;$('login').classList.add('hide');$('app').classList.remove('hide');$('quem').textContent=(S.eu.nome||S.eu.usuario)+' · '+(PAPEL[S.eu.papel]||S.eu.papel);montarNav();render();
+  S.dados=r.j;if(S.eu.trocarSenha)S.aba='conta';$('login').classList.add('hide');$('app').classList.remove('hide');$('quem').textContent=(S.eu.nome||S.eu.usuario)+' · '+(PAPEL[S.eu.papel]||S.eu.papel);montarNav();render();
 }
 async function carregar(avisar){
   var r=await api('GET','/estado');
@@ -320,9 +320,9 @@ function telaConta(c){
   function campo(rot,id){var d=el('div');var l=el('label',null,rot);l.htmlFor=id;d.appendChild(l);var i=el('input');i.id=id;i.type='password';i.autocomplete='off';d.appendChild(i);f.appendChild(d);return i;}
   var a=campo('Senha atual','cAtual'),n=campo('Nova senha (mínimo 10, letras e números)','cNova'),n2=campo('Repita a nova senha','cNova2');
   var bt=el('button','btn','Trocar senha');bt.type='button';var er=el('div','erro');er.style.gridColumn='1/-1';
-  bt.onclick=async function(){er.textContent='';if(n.value!==n2.value){er.textContent='As senhas novas não conferem.';return;}bt.disabled=true;var r=await api('POST','/acesso/senha',{atual:a.value,nova:n.value});bt.disabled=false;if(r.status===200){toast('Senha trocada');a.value=n.value=n2.value='';}else er.textContent=r.j.mensagem||('Erro '+r.status);};
+  bt.onclick=async function(){er.textContent='';if(n.value!==n2.value){er.textContent='As senhas novas não conferem.';return;}bt.disabled=true;var r=await api('POST','/acesso/senha',{atual:a.value,nova:n.value});bt.disabled=false;if(r.status===200){toast('Senha trocada');a.value=n.value=n2.value='';S.eu.trocarSenha=false;render();}else er.textContent=r.j.mensagem||('Erro '+r.status);};
   var rw=el('div');rw.appendChild(bt);f.appendChild(rw);f.appendChild(er);
-  var d=el('div','it');d.style.marginBottom='18px';d.appendChild(el('h3',null,(S.eu.nome||S.eu.usuario)));d.appendChild(el('p',null,'Usuário: '+S.eu.usuario+' · Perfil: '+(PAPEL[S.eu.papel]||S.eu.papel)));c.appendChild(d);c.appendChild(f);
+  if(S.eu.trocarSenha){var av=el('div','alerta','Esta é uma senha provisória. Troque agora por uma senha só sua (mínimo 10, com letras e números).');av.style.marginBottom='16px';c.appendChild(av);}var d=el('div','it');d.style.marginBottom='18px';d.appendChild(el('h3',null,(S.eu.nome||S.eu.usuario)));d.appendChild(el('p',null,'Usuário: '+S.eu.usuario+' · Perfil: '+(PAPEL[S.eu.papel]||S.eu.papel)));c.appendChild(d);c.appendChild(f);
 }
 
 /* ---------- confirmação ---------- */
