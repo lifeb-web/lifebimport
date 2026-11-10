@@ -359,8 +359,8 @@ function inicial(n){return String(n||'?').trim().charAt(0).toUpperCase();}
 
 /* ---------- login ---------- */
 async function iniciar(){
-  var t=getTok();
-  if(t){S.tok=t;var ce=null;try{ce=JSON.parse(sessionStorage.getItem('central_eu')||'null');}catch(e){}if(ce){S.eu=ce;api('GET','/eu').then(function(r){if(r.status===200){S.eu=r.j;try{sessionStorage.setItem('central_eu',JSON.stringify(r.j));}catch(e){}}}).catch(function(){});return abrirApp();}var r=await api('GET','/eu').catch(function(){return {status:0,j:{}};});if(r.status===200){S.eu=r.j;try{sessionStorage.setItem('central_eu',JSON.stringify(r.j));}catch(e){}return abrirApp();}S.tok=null;setTok(null);}
+  var t=getTok();if(!t){try{sessionStorage.removeItem('central_cache_v2');sessionStorage.removeItem('central_eu');localStorage.removeItem('central_cache_v2');}catch(e){}}
+  if(t){S.tok=t;var r=await api('GET','/eu').catch(function(){return {status:0,j:{}};});if(r.status===200){S.eu=r.j;try{sessionStorage.setItem('central_eu',JSON.stringify(r.j));}catch(e){}return abrirApp();}S.tok=null;setTok(null);}
   var e;try{e=await api('GET','/acesso/estado');}catch(x){e={status:0,j:{}};}
   $('boot').classList.add('hide');
   if(e.status!==200){$('boot').classList.remove('hide');$('boot').textContent='Não consegui falar com o servidor. Atualize a página.';return;}
@@ -382,15 +382,15 @@ $('fCriar').addEventListener('submit',async function(ev){ev.preventDefault();$('
   b.disabled=false;
   if(r.status===200){var l=await api('POST','/acesso/entrar',{usuario:$('nUsuario').value,senha:$('nSenha').value});if(l.status===200){S.tok=l.j.token;setTok(l.j.token);S.eu={usuario:l.j.usuario,nome:l.j.nome,papel:l.j.papel};try{sessionStorage.setItem('central_eu',JSON.stringify(S.eu));}catch(e){}toast('Acesso criado');return abrirApp();}}
   $('criarErro').textContent=r.j.mensagem||('Erro '+r.status);});
-async function sair(){try{if(S.tok)await fetch(API+'/acesso/sair',{method:'POST',headers:{'x-central-token':S.tok}});}catch(e){}S.tok=null;S.eu=null;setTok(null);try{sessionStorage.removeItem('central_eu');localStorage.removeItem('central_cache_v2');}catch(e){}location.reload();}
+async function sair(){try{if(S.tok)await fetch(API+'/acesso/sair',{method:'POST',headers:{'x-central-token':S.tok}});}catch(e){}S.tok=null;S.eu=null;setTok(null);try{sessionStorage.removeItem('central_eu');sessionStorage.removeItem('central_cache_v2');try{localStorage.removeItem('central_cache_v2');}catch(e){}}catch(e){}location.reload();}
 $('btnSair').onclick=function(){sair();};
 $('btnAtualizar').onclick=function(){carregar(true);};
 $('btnTema').onclick=function(){var r=document.documentElement,a=r.getAttribute('data-theme');var escuro=a?a==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;var novo=escuro?'light':'dark';r.setAttribute('data-theme',novo);try{localStorage.setItem('central_tema',novo);}catch(e){}};
 $('busca').addEventListener('input',function(){S.busca=this.value.trim().toLowerCase();render();});
 $('btnPaleta').onclick=abrirPaleta;
 
-function lerCache(){try{var j=JSON.parse(localStorage.getItem('central_cache_v2')||'null');return j&&j.u===(S.eu&&S.eu.usuario)?j:null;}catch(e){return null;}}
-function gravarCache(){try{localStorage.setItem('central_cache_v2',JSON.stringify({u:S.eu.usuario,dados:S.dados,saude:S.saude,hist:S.hist,t:Date.now()}));}catch(e){}}
+function lerCache(){try{var j=JSON.parse(sessionStorage.getItem('central_cache_v2')||'null');return j&&j.u===(S.eu&&S.eu.usuario)?j:null;}catch(e){return null;}}
+function gravarCache(){try{sessionStorage.setItem('central_cache_v2',JSON.stringify({u:S.eu.usuario,dados:S.dados,saude:S.saude,hist:S.hist,t:Date.now()}));}catch(e){}}
 var _rt=null;function renderSoon(){if(_rt)return;_rt=setTimeout(function(){_rt=null;if(S.eu){montarNav();render();}},30);}
 async function abrirApp(){
   if(S.eu.trocarSenha)S.aba='conta';
