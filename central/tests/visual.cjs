@@ -6,6 +6,7 @@ const fx = JSON.parse(fs.readFileSync(path.join(__dirname, "fixture.json")));
 const BASE = process.env.CENTRAL_URL || "http://localhost:8802/central/";
 const saude = { geral: "ok", ts: Date.now(), itens: { crons: { nivel: "ok" }, cerebro: { nivel: "ok" }, n8n: { nivel: "ok" }, webhooks: { nivel: "atencao" }, pausa: { nivel: "ok" } } };
 const filas = { ok: true, itens: [{ fone: "5562911112222", nome: "Iramar", total: 2, mensagens: [{ ts: Date.now() - 36e5, texto: "Lead novo: Farmácia Central aguardando contato." }, { ts: Date.now() - 72e5, texto: "Tarefa vencida: Retomar contato com SUPER MED" }] }] };
+const agentes = { ok: true, agentes: [{ id: "sdr_inbound", nome: "Ana (SDR Inbound)", saude: { ok: true, modo: "sombra", killSwitch: false, responde: false, versao: "0.3.0", segredos: { anthropic: true, openrouter: true, meta_token: false, meta_phone_id: false } }, config: { modo: "sombra", killSwitch: false, qualificacao: { minimoFarmacia: 100000, minimoSupermercado: 300000 }, ritmo: { inicial: 100, teto: 1000 }, cadencia: { maxContatos: 5, janelaDias: 6, horaIni: 8, horaFim: 20 }, humano: { debounceMs: 4000 }, destino: { sdrNome: "Felipe", sdrFone: "556293568997" } }, editaveis: [], conversas: [{ fone: "5562999990000", nome: "Carlos da Drogaria Central com nome bem comprido para testar quebra", estagio: "perguntou_cnpj", humano: false, pausado: false, ts: Date.now() - 6e4 }, { fone: "5562988880000", nome: "Mariana", estagio: "aguardando_humano", humano: true, pausado: false, ts: Date.now() - 36e5 }], auditoria: [{ ts: Date.now() - 9e5, quem: "Robert", para: { modo: "sombra" }, motivo: "começar a sombra" }] }] };
 const falhas = []; const aviso = []; let verificados = 0;
 const F = (m) => falhas.push(m);
 const MEDIDA = () => {
@@ -33,7 +34,7 @@ const MEDIDA = () => {
 (async () => {
   const b = await chromium.launch({ executablePath: process.argv[3] });
   const users = [{ usuario: "robert@x.com", nome: "Robert", papel: "robert", ativo: true, ultimoAcesso: Date.now() }, { usuario: "luiz", nome: "Luiz", papel: "admin", ativo: false, ultimoAcesso: null }];
-  const TELAS = ["Visão geral", "Controles", "Todas as chaves", "Filas de mensagens", "Calendário", "Histórico", "Atalhos", "Usuários", "Minha conta"];
+  const TELAS = ["Visão geral", "Controles", "Todas as chaves", "Filas de mensagens", "Calendário", "Agentes", "Histórico", "Atalhos", "Usuários", "Minha conta"];
   const COMBOS = [[1920, 1080, "light"], [1440, 900, "light"], [1440, 900, "dark"], [1280, 800, "light"], [1024, 768, "light"], [768, 1024, "light"], [390, 844, "light"], [390, 844, "dark"], [360, 740, "dark"]];
   for (const [w, h, tema] of COMBOS) {
     const ctx = await b.newContext({ viewport: { width: w, height: h }, colorScheme: tema }); const p = await ctx.newPage(); const tag = `${w}x${h}-${tema}`; let erroApi = null;
@@ -43,7 +44,7 @@ const MEDIDA = () => {
       if (url.pathname === "/bia-saude") j = saude; else if (u === "/acesso/estado") j = { ok: true, precisaPrimeiroAcesso: false };
       else if (u === "/acesso/entrar") j = { ok: true, token: "t", usuario: "robert@x.com", nome: "Robert", papel: "robert" }; else if (u === "/eu") j = { ok: true, usuario: "robert@x.com", nome: "Robert", papel: "robert" };
       else if (u === "/estado") j = fx.est; else if (u === "/historico") j = fx.h; else if (u === "/filas") j = filas; else if (u === "/calendario") j = { ok: true, hoje: "2026-11-10", dias: ["2026-11-20", "2026-12-24"] };
-      else if (u === "/usuarios" && m === "GET") j = { ok: true, itens: users };
+      else if (u === "/agentes") j = agentes; else if (u === "/agentes/conversa") j = { ok: true, hist: [{ de: "lead", ts: Date.now(), texto: "Oi, vi o formulário" }, { de: "aline", ts: Date.now(), texto: "Oi! Sou a Ana, assistente virtual da Life B." }], dados: { segmento: "farmacia" } }; else if (u === "/usuarios" && m === "GET") j = { ok: true, itens: users };
       r.fulfill({ status: 200, contentType: "application/json", headers: { "access-control-allow-origin": "*", "access-control-allow-headers": "*" }, body: JSON.stringify(j) }); });
     const medir = async (rotulo) => {
       const r = await p.evaluate(MEDIDA); verificados += r.itens.length;

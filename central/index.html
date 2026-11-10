@@ -425,7 +425,7 @@ async function carregarUsuarios(){var r=await api('GET','/usuarios');S.usuarios=
 function tickLive(){var s=Math.round((Date.now()-S.ult)/1000);$('liveTxt').textContent=S.carregando?'atualizando...':(S.cache?'dados salvos':(s<8?'agora':('há '+(s<60?s+' s':Math.round(s/60)+' min'))));$('liveDot').className='dot '+(S.carregando?'warn':(s<120?'ok':s<600?'warn':'bad'));var st=$('stLat');if(st)st.textContent=S.lat?S.lat+' ms':'...';var sa=$('stSync');if(sa)sa.textContent=S.ult?new Date(S.ult).toLocaleTimeString('pt-BR'):'...';}
 
 /* ---------- navegação ---------- */
-var ABAS=[['visao','Visão geral','visao','Saúde da plataforma e atenção do dia'],['estado','Controles','controles','Liga, desliga, sombra e limites'],['leitura','Todas as chaves','chaves','Somente leitura'],['filas','Filas de mensagens','filas','Mensagens esperando para sair, por pessoa'],['cal','Calendário','cal','Dias de folga marcados à mão'],['hist','Histórico','hist','Quem mudou o quê, com desfazer'],['atalhos','Atalhos','atalhos','Dashboards, páginas e artefatos'],['eco','Ecossistema','eco','O guia completo da plataforma'],['usuarios','Usuários','usuarios','Acessos e papéis'],['conta','Minha conta','conta','Senha e perfil']];
+var ABAS=[['visao','Visão geral','visao','Saúde da plataforma e atenção do dia'],['estado','Controles','controles','Liga, desliga, sombra e limites'],['leitura','Todas as chaves','chaves','Somente leitura'],['filas','Filas de mensagens','filas','Mensagens esperando para sair, por pessoa'],['cal','Calendário','cal','Dias de folga marcados à mão'],['agentes','Agentes','controles','Ana (SDR Inbound): modo, conversas ao vivo e controle total'],['hist','Histórico','hist','Quem mudou o quê, com desfazer'],['atalhos','Atalhos','atalhos','Dashboards, páginas e artefatos'],['eco','Ecossistema','eco','O guia completo da plataforma'],['usuarios','Usuários','usuarios','Acessos e papéis'],['conta','Minha conta','conta','Senha e perfil']];
 function montarNav(){
   var n=$('nav');n.textContent='';
   ABAS.forEach(function(a){
@@ -438,14 +438,14 @@ function montarNav(){
     l.tabIndex=0;l.setAttribute('role','link');l.onclick=function(){ir(a[0]);};l.onkeydown=function(e){if(e.key==='Enter')ir(a[0]);};n.appendChild(l);
   });
 }
-function ir(aba){S.aba=aba;S.busca='';$('busca').value='';montarNav();render();window.scrollTo({top:0});var p=[];if(aba==='hist')p.push(carregarHist());if(aba==='usuarios')p.push(carregarUsuarios());if(aba==='filas')p.push(carregarFilas());if(aba==='cal')p.push(carregarCal());Promise.all(p).then(function(){if(S.aba===aba)renderSoon();});}
+function ir(aba){S.aba=aba;S.busca='';$('busca').value='';montarNav();render();window.scrollTo({top:0});var p=[];if(aba==='hist')p.push(carregarHist());if(aba==='usuarios')p.push(carregarUsuarios());if(aba==='filas')p.push(carregarFilas());if(aba==='cal')p.push(carregarCal());if(aba==='agentes')p.push(carregarAgentes());Promise.all(p).then(function(){if(S.aba===aba)renderSoon();});}
 function casa(txt){return !S.busca||String(txt).toLowerCase().indexOf(S.busca)>=0;}
 function render(){
   var c=$('conteudo');c.textContent='';var a=ABAS.filter(function(x){return x[0]===S.aba;})[0];
   $('titulo').firstChild.nodeValue=a[1];$('subtitulo').textContent=a[3];
   $('buscaBox').classList.toggle('hide',['estado','leitura','hist'].indexOf(S.aba)<0);
   if(!S.dados&&['visao','estado','leitura'].indexOf(S.aba)>=0){esqueleto(c);return;}
-  ({visao:telaVisao,estado:telaEstado,leitura:telaLeitura,filas:telaFilas,cal:telaCal,hist:telaHist,atalhos:telaAtalhos,eco:telaEco,usuarios:telaUsuarios,conta:telaConta})[S.aba](c);
+  ({visao:telaVisao,estado:telaEstado,leitura:telaLeitura,filas:telaFilas,cal:telaCal,agentes:telaAgentes,hist:telaHist,atalhos:telaAtalhos,eco:telaEco,usuarios:telaUsuarios,conta:telaConta})[S.aba](c);
 }
 function esqueleto(c){var g=el('div','ov');[[12,110],[3,92],[3,92],[3,92],[3,92],[8,300],[4,300],[4,200],[4,200],[4,200]].forEach(function(x){var b=el('div','sk c'+x[0]);b.style.height=x[1]+'px';g.appendChild(b);});c.appendChild(g);}
 function estadoRotulo(e){if(e.tipo==='numero')return e.estado+' '+(e.un||'');return ROT_ESTADO[e.estado]||String(e.estado);}
@@ -586,6 +586,43 @@ function telaCal(c0){var c=el('div','cols2e');c0.appendChild(c);var L=el('div'),
     var b=el('button','btn ghost sm','Remover');b.type='button';b.disabled=S.eu.papel==='sdr';b.onclick=function(){painel('Remover dia de folga',function(bb){bb.appendChild(el('p','hint',pt[2]+'/'+pt[1]+'/'+pt[0]+' volta a ser dia normal.'));},'Remover',function(motivo){return api('POST','/calendario',{acao:'remover',dia:dia,motivo:motivo});},'medio');};r.appendChild(b);lst.appendChild(r);});
   R.appendChild(lst);
 }
+async function carregarAgentes(){var r=await api('GET','/agentes').catch(function(){return {status:0,j:{}};});S.ag=r.status===200&&r.j.agentes?r.j.agentes[0]:null;S.agErro=S.ag?'':((r.j&&r.j.mensagem)||('Erro '+r.status));}
+var AG_MODOS={off:'Desligado',sombra:'Sombra (só registra, não envia)',ao_vivo:'Ao vivo (responde de verdade)'};
+var AG_ETAPAS={novo:'Novo',perguntou_segmento:'Perguntou o segmento',perguntou_cnpj:'Perguntou o CNPJ',perguntou_faturamento:'Perguntou o faturamento',perguntou_decisor:'Perguntou se decide',pediu_contato_decisor:'Pediu contato do decisor',convite:'Convidou para falar com o vendedor',aguardando_humano:'Aguardando o vendedor',encerrado:'Encerrado',confirmando_empresa:'Confirmando a empresa'};
+var AG_CAMPOS=[['qualificacao.minimoFarmacia','Público ideal: farmácia (R$)',1],['qualificacao.minimoSupermercado','Público ideal: supermercado (R$)',1],['ritmo.inicial','Contatos novos por dia (início)',1],['ritmo.teto','Teto de contatos por dia',1],['cadencia.maxContatos','Máximo de contatos por lead',1],['cadencia.janelaDias','Janela da cadência (dias)',1],['cadencia.horaIni','Acompanhamento: a partir de (hora)',1],['cadencia.horaFim','Acompanhamento: até (hora)',1],['humano.debounceMs','Espera para juntar mensagens (ms)',1]];
+function agGet(o,c){return c.split('.').reduce(function(a,k){return a==null?a:a[k];},o);}
+function telaAgentes(c){
+  if(S.agErro||!S.ag){c.appendChild(el('div','vazio',S.agErro||'Carregando o agente...'));return;}
+  var a=S.ag,cfg=a.config||{},sa=a.saude||{},pode=S.eu.papel!=='sdr',robert=S.eu.papel==='robert';
+  var modoEf=sa.killSwitch?'off':(cfg.modo||'off');
+  var top=el('div','card it');top.style.marginBottom='14px';var hd=el('div','head');var tx=el('div');tx.appendChild(el('h4',null,a.nome));
+  tx.appendChild(el('p',null,'Modo agora: '+AG_MODOS[modoEf]+(sa.killSwitch?' · PARADA DE EMERGÊNCIA LIGADA':'')+' · '+(sa.responde?'respondendo':'não responde ninguém')));hd.appendChild(tx);
+  var bx=el('div');bx.style.cssText='display:flex;gap:8px;flex-wrap:wrap';
+  var bm=el('button','btn ghost sm','Mudar modo');bm.type='button';bm.disabled=!pode;bm.onclick=function(){var sel;painel('Mudar o modo da Ana',function(b){b.appendChild(el('p','hint','Desligado: não faz nada. Sombra: pensa e registra o que enviaria, sem enviar. Ao vivo: responde de verdade (só o Robert).'));sel=el('select');sel.setAttribute('aria-label','Modo');Object.keys(AG_MODOS).forEach(function(k){var o=el('option',null,AG_MODOS[k]);o.value=k;if(k===cfg.modo)o.selected=true;sel.appendChild(o);});b.appendChild(sel);},'Aplicar',function(motivo){return api('POST','/agentes/config',{mudancas:{modo:sel.value},motivo:motivo});},'medio');};bx.appendChild(bm);
+  var bk=el('button',sa.killSwitch?'btn sm':'btn ghost sm',sa.killSwitch?'Liberar o agente':'Parada de emergência');bk.type='button';bk.disabled=!pode;bk.onclick=function(){painel(sa.killSwitch?'Liberar o agente':'Parada de emergência',function(b){b.appendChild(el('p','hint',sa.killSwitch?'O agente volta ao modo que estava configurado.':'Para o agente na hora: ele não envia mais nada, em qualquer modo. Dá para liberar depois.'));},sa.killSwitch?'Liberar':'Parar agora',function(motivo){return api('POST','/agentes/kill',{ligar:!sa.killSwitch,motivo:motivo});},'medio');};bx.appendChild(bk);
+  hd.appendChild(bx);top.appendChild(hd);
+  var seg=sa.segredos||{};top.appendChild(el('p','hint','Ligação com a Meta: '+(seg.meta_token&&seg.meta_phone_id?'configurada':'ainda não configurada (falta token e número)')+' · IA: '+(seg.anthropic?'Claude pronto':'Claude sem chave')+(seg.openrouter?' + reserva OpenRouter':'')+' · versão '+(sa.versao||'?')));c.appendChild(top);
+  var cols=el('div','cols2e');c.appendChild(cols);var L=el('div'),R=el('div');cols.appendChild(L);cols.appendChild(R);
+  var sc=el('div','sec');sc.appendChild(el('h3',null,'Configuração'));L.appendChild(sc);var cf=el('div','card list');
+  AG_CAMPOS.forEach(function(k){var r=el('div','row-i');var t=el('div','t');t.appendChild(document.createTextNode(k[1]));t.appendChild(el('small',null,String(agGet(cfg,k[0]))));r.appendChild(t);cf.appendChild(r);});
+  var d=cfg.destino||{};var r2=el('div','row-i');var t2=el('div','t');t2.appendChild(document.createTextNode('Quem recebe o lead qualificado'));t2.appendChild(el('small',null,(d.sdrNome||'')+' · '+(d.sdrFone||'')));r2.appendChild(t2);cf.appendChild(r2);L.appendChild(cf);
+  var be=el('button','btn ghost sm','Editar configuração');be.type='button';be.style.marginTop='10px';be.disabled=!pode;be.onclick=function(){var ins={};painel('Editar configuração da Ana',function(b){b.appendChild(el('p','hint','Só os campos que você mudar são enviados. Ninguém é descartado por faturamento: os valores de público ideal só marcam o perfil.'));AG_CAMPOS.forEach(function(k){var l=el('label',null,k[1]);l.htmlFor='ag_'+k[0];b.appendChild(l);var i=el('input');i.id='ag_'+k[0];i.type='number';i.value=agGet(cfg,k[0]);ins[k[0]]=i;b.appendChild(i);});},'Salvar',function(motivo){var m={};AG_CAMPOS.forEach(function(k){var v=Number(ins[k[0]].value);if(ins[k[0]].value!==''&&v!==agGet(cfg,k[0]))m[k[0]]=v;});if(!Object.keys(m).length)return Promise.resolve({status:422,j:{mensagem:'Você não mudou nenhum valor.'}});return api('POST','/agentes/config',{mudancas:m,motivo:motivo});},'medio');};L.appendChild(be);
+  var sh=el('div','sec');sh.appendChild(el('h3',null,'Conversas'));R.appendChild(sh);var cv=a.conversas||[];
+  if(!cv.length)R.appendChild(el('div','vazio','Nenhuma conversa ainda. Elas aparecem aqui assim que o agente receber a primeira mensagem.'));
+  else{var lt=el('div','card list');cv.forEach(function(x){var r=el('div','row-i');r.style.flexWrap='wrap';var t=el('div','t');t.style.cssText='flex:1 1 220px;min-width:0';t.appendChild(document.createTextNode((x.nome||'Sem nome')+' · '+x.fone));t.appendChild(el('small',null,(AG_ETAPAS[x.estagio]||x.estagio||'')+(x.humano?' · humano atendendo':'')+(x.pausado?' · pausada':'')+' · '+fmtData(x.ts)));r.appendChild(t);
+    var ac=el('div');ac.style.cssText='display:flex;gap:6px;flex-wrap:wrap';
+    var bv=el('button','btn ghost sm','Ver');bv.type='button';bv.onclick=function(){verConversa(x);};ac.appendChild(bv);
+    var b1=el('button','btn ghost sm',x.humano?'Devolver à Ana':'Assumir');b1.type='button';b1.onclick=async function(){b1.disabled=true;var rr=await api('POST','/agentes/conversa/controle',{fone:x.fone,acao:x.humano?'devolver':'assumir'});toast(rr.status===200?(x.humano?'Devolvida à Ana':'Você assumiu a conversa'):'Não consegui mudar');await carregarAgentes();render();};ac.appendChild(b1);
+    var b2=el('button','btn ghost sm',x.pausado?'Retomar':'Pausar');b2.type='button';b2.onclick=async function(){b2.disabled=true;var rr=await api('POST','/agentes/conversa/controle',{fone:x.fone,acao:x.pausado?'retomar':'pausar'});toast(rr.status===200?'Feito':'Não consegui mudar');await carregarAgentes();render();};ac.appendChild(b2);
+    r.appendChild(ac);lt.appendChild(r);});R.appendChild(lt);}
+  var sau=el('div','sec');sau.appendChild(el('h3',null,'Últimas mudanças'));R.appendChild(sau);var au=a.auditoria||[];
+  if(!au.length)R.appendChild(el('div','vazio','Nenhuma mudança registrada.'));else{var la=el('div','card list');au.slice(0,15).forEach(function(x){var r=el('div','row-i');var t=el('div','t');t.appendChild(document.createTextNode((x.quem||'')+': '+Object.keys(x.para||{}).join(', ')));t.appendChild(el('small',null,fmtData(x.ts)+' · '+(x.motivo||'')));r.appendChild(t);la.appendChild(r);});R.appendChild(la);}
+}
+async function verConversa(x){var r=await api('GET','/agentes/conversa?fone='+encodeURIComponent(x.fone)).catch(function(){return {status:0,j:{}};});var m=$('modal');m.textContent='';var b=el('div','mb');b.appendChild(el('h3',null,(x.nome||'Conversa')+' · '+x.fone));
+  var h=(r.j&&r.j.hist)||[];if(!h.length)b.appendChild(el('p','hint','Sem mensagens guardadas.'));var bx=el('div');bx.style.cssText='display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow:auto;margin:10px 0';
+  h.forEach(function(q){var l=el('div');l.style.cssText='padding:8px 12px;border-radius:12px;max-width:85%;background:'+(q.de==='lead'?'var(--card2)':'var(--accent-bg,#eee8f7)')+';align-self:'+(q.de==='lead'?'flex-start':'flex-end');l.appendChild(el('small',null,(q.de==='lead'?'Cliente':'Ana')+' · '+fmtData(q.ts)));l.appendChild(el('div',null,q.texto||('['+(q.tipo||'mensagem')+']')));bx.appendChild(l);});b.appendChild(bx);
+  var d=r.j&&r.j.dados;if(d)b.appendChild(el('p','hint','Dados coletados: segmento '+(d.segmento||'-')+' · CNPJ '+(d.cnpj||'-')+' · faturamento '+(d.faturamento!=null?'R$ '+d.faturamento:'-')+' · decisor '+(d.decisor===true?'sim':d.decisor===false?'não':'-')));
+  var ac=el('div','acoes');var fx=el('button','btn','Fechar');fx.type='button';fx.onclick=fecharModal;ac.appendChild(fx);b.appendChild(ac);m.appendChild(b);m.classList.remove('hide');m.onkeydown=function(e){if(e.key==='Escape')fecharModal();};m.onclick=function(e){if(e.target===m)fecharModal();};}
 function telaHist(c){
   var h=(S.hist||[]).filter(function(x){return casa((x.rotulo||'')+' '+x.chave+' '+(x.motivo||'')+' '+(x.quem||''));});
   if(!h.length){c.appendChild(el('div','vazio','Nenhuma mudança registrada nos últimos 14 dias.'));return;}
@@ -634,7 +671,7 @@ function painel(titulo,corpoFn,textoBtn,acaoFn,risco){
   ok.onclick=async function(){var motivo=im.value.trim();if(motivo.length<5){er.textContent='Escreva o motivo (mínimo 5 letras).';im.focus();return;}
     if(ic&&ic.value.trim().toUpperCase()!=='CONFIRMO'){er.textContent='Digite CONFIRMO para continuar.';ic.focus();return;}
     ok.disabled=true;cx.disabled=true;ok.textContent='Aplicando...';er.textContent='';var r;try{r=await acaoFn(motivo,ic?ic.value.trim():'');}catch(e){r={status:0,j:{mensagem:'Falha de conexão.'}};}
-    if(r.status===200&&r.j.ok){fecharModal();toast('Mudança aplicada e registrada');if(S.aba==='filas')await carregarFilas();if(S.aba==='cal')await carregarCal();await carregar(false);}else{ok.disabled=false;cx.disabled=false;ok.textContent=textoBtn;er.textContent=(r.j&&r.j.mensagem)||('Erro '+r.status);}};
+    if(r.status===200&&r.j.ok){fecharModal();toast('Mudança aplicada e registrada');if(S.aba==='filas')await carregarFilas();if(S.aba==='cal')await carregarCal();if(S.aba==='agentes')await carregarAgentes();await carregar(false);}else{ok.disabled=false;cx.disabled=false;ok.textContent=textoBtn;er.textContent=(r.j&&r.j.mensagem)||('Erro '+r.status);}};
   ac.appendChild(cx);ac.appendChild(ok);b.appendChild(ac);m.appendChild(b);m.classList.remove('hide');im.focus();m.onkeydown=function(e){if(e.key==='Escape')fecharModal();};m.onclick=function(e){if(e.target===m)fecharModal();};
 }
 function abrirConfirmacao(e,valor){var rot=function(v){return typeof v==='number'?String(v):(ROT_ESTADO[v]||String(v));};
