@@ -258,9 +258,10 @@ h3+.lead+.flow{margin-top:6px}
     <li class="grp">Regras e referência</li>
     <li><a href="#regras">15. Regras de ouro</a></li>
     <li><a href="#agendorapi">16. Como a Bia conversa com o Agendor</a></li>
-    <li><a href="#seguranca">17. Segurança e confiabilidade</a></li>
-    <li><a href="#novosdr">18. Novo SDR no time</a></li>
-    <li><a href="#glossario">19. Dúvidas e glossário</a></li>
+    <li><a href="#testes">17. Testes e qualidade</a></li>
+    <li><a href="#seguranca">18. Segurança e confiabilidade</a></li>
+    <li><a href="#novosdr">19. Novo SDR no time</a></li>
+    <li><a href="#glossario">20. Dúvidas e glossário</a></li>
   </ol>
 </nav>
 
@@ -960,8 +961,45 @@ h3+.lead+.flow{margin-top:6px}
 <ul><li>Aceita poucas chamadas por segundo; acima disso responde 429, com uma página genérica, sem informar quando tentar de novo.</li><li>Tarefa aberta criada há mais de 31 dias e nunca alterada não aparece nas buscas por filtro.</li><li>A lista de negócios muitas vezes não traz a empresa; ela vem da pessoa vinculada.</li><li>O filtro de funil na busca é ignorado; o recorte por funil é feito pela própria Bia.</li><li>Campos personalizados só vêm quando pedidos de forma explícita.</li></ul></details>
 </section>
 
+<section class="sec" id="testes">
+<h2><span class="n">17</span>Testes e qualidade</h2>
+<p class="lead">Nenhuma mudança vai ao ar sem passar por uma bateria de testes automáticos. A bateria é o que permite evoluir a plataforma com rapidez sem quebrar o que já funciona. Cada regra nova nasce junto com os testes dela.</p>
+
+<h3>O caminho de uma mudança até o ar</h3>
+<div class="flow item">
+  <div class="b"><b>1. Código e testes novos</b>Cada regra chega com testes que descrevem o que deve e o que não deve acontecer</div><div class="ar">→</div>
+  <div class="b m"><b>2. Suítes dos módulos</b>Mais de 50 conjuntos de testes, um por assunto (guardas, cadência, perda, estrutura, Dash, painéis)</div><div class="ar">→</div>
+  <div class="b m"><b>3. Suíte principal</b>Cerca de 12 mil verificações. Se uma falhar, a publicação é bloqueada</div><div class="ar">→</div>
+  <div class="b"><b>4. Testes de tela</b>Páginas abertas em navegador real, em várias larguras, para conferir layout, rolagem e botões</div>
+</div>
+<div class="flow item" style="margin-top:10px">
+  <div class="b"><b>5. Auditoria independente</b>Um revisor separado tenta quebrar a mudança e procura contradições com as outras regras</div><div class="ar">→</div>
+  <div class="b"><b>6. Cópia de segurança</b>O código anterior é guardado no Dropbox e no GitHub antes de publicar</div><div class="ar">→</div>
+  <div class="b g"><b>7. Publicação</b>Somente por um único roteiro de publicação, sem atalhos</div><div class="ar">→</div>
+  <div class="b g"><b>8. Conferência e aviso</b>A versão no ar é conferida e a gestão recebe o resumo pelo WhatsApp</div>
+</div>
+
+<details class="fx"><summary>O que os testes cobrem</summary>
+<ul>
+<li><b>Regras de negócio:</b> cada decisão da Bia (cadência, distribuição, perda com explicação, guarda de ligação, congelamento, voltas ao SDR, pós-venda) tem casos de sucesso, de recusa e de erro.</li>
+<li><b>Falhas do mundo real:</b> o Agendor devolvendo limite de chamadas, resposta perdida depois de gravar, leitura que falha e memória indisponível. O teste confirma que a Bia nunca duplica nem finge que concluiu.</li>
+<li><b>Comparação com a versão anterior:</b> alguns testes rodam a regra nova e a antiga lado a lado e exigem o mesmo resultado, para provar que uma melhoria não mudou o que não devia.</li>
+<li><b>Horário e fuso:</b> as datas são testadas também no fuso universal e no de Brasília, porque erro de fuso já aconteceu.</li>
+<li><b>Telas:</b> as páginas Hoje, Lista, Dash e Ecossistema são abertas em navegador de verdade e em larguras de celular a TV, conferindo que nada estoura, corta ou sobrepõe.</li>
+</ul></details>
+<details class="fx"><summary>Como a suíte é montada</summary>
+<ul>
+<li><b>Ambiente simulado:</b> os testes usam um Agendor e uma memória de mentira, que reproduzem as peculiaridades reais já descobertas (por exemplo, o Agendor ignorar o fuso em certos filtros). Nada de produção é tocado.</li>
+<li><b>Verificações em cadeia:</b> a suíte principal chama as suítes de cada módulo e só passa se todas passarem.</li>
+<li><b>Protege o futuro:</b> um erro encontrado em produção vira um teste novo. Assim o mesmo erro não volta.</li>
+</ul></details>
+<details class="fx"><summary>Auditorias independentes</summary>
+<p>Para mudanças relevantes, um revisor independente lê o código sem poder alterá-lo e tenta quebrar a regra: procura contradições entre regras, falhas silenciosas, limites da infraestrutura, volume de mensagens e formas de contornar o processo. Os achados são conferidos no código antes de qualquer correção, corrigidos com teste e a rodada seguinte revisa de novo.</p></details>
+<div class="note ok item"><strong>Por que isso importa</strong>A plataforma opera dinheiro, prazos e a rotina de uma equipe. A regra é provar antes de publicar e conferir depois de publicar.</div>
+</section>
+
 <section class="sec" id="seguranca">
-<h2><span class="n">17</span>Segurança e confiabilidade</h2>
+<h2><span class="n">18</span>Segurança e confiabilidade</h2>
 <p class="lead">O sistema foi feito para errar pouco e, quando errar, não piorar. Nenhuma senha ou chave aparece neste guia.</p>
 <div class="grid g2">
 <div class="card item"><h4>Uma coisa de cada vez</h4><p>Antes de criar algo, a Bia reserva o direito de fazer isso, para duas rotinas não agirem ao mesmo tempo no mesmo lead.</p></div>
@@ -975,7 +1013,7 @@ h3+.lead+.flow{margin-top:6px}
 
 <!-- 17 -->
 <section class="sec" id="novosdr">
-<h2><span class="n">18</span>Quando entrar um novo SDR</h2>
+<h2><span class="n">19</span>Quando entrar um novo SDR</h2>
 <p class="lead">O sistema foi pensado para crescer. O objetivo é que cada SDR tenha a própria página Hoje (a mesa de trabalho do SDR), o próprio painel de vendas e só enxerga os leads que passaram por ele. O endereço de cada SDR segue o padrão projetojlbv.com.br/hoje/nome-do-sdr. Quem abrir apenas projetojlbv.com.br/hoje é levado à página do SDR.</p>
 <ol class="steps">
 <li class="item">A equipe técnica cadastra o SDR nas listas do sistema, com nome completo, telefone e a conta no Agendor. Uma conferência automática acusa se alguma lista ficar fora de sincronia com as outras.</li>
@@ -988,7 +1026,7 @@ h3+.lead+.flow{margin-top:6px}
 
 <!-- 18 -->
 <section class="sec" id="glossario">
-<h2><span class="n">19</span>Dúvidas e glossário</h2>
+<h2><span class="n">20</span>Dúvidas e glossário</h2>
 <h3>Perguntas frequentes</h3>
 <details class="item"><summary>Por que meu lead não apareceu na Hoje?</summary><div><ul><li>Use a busca geral no topo: ela procura nos dois funis do SDR por nome, pessoa, CNPJ, telefone, número do negócio ou cidade.</li><li>Na fila de espera o lead só aparece em "Começar leads novos".</li><li>Lead que entrou depois das 17h30 só começa no próximo dia útil.</li><li>Se ele não está em um funil do SDR, a Hoje não o mostra.</li></ul></div></details>
 <details class="item"><summary>Posso reabrir um lead que ganhei por engano?</summary><div>Sim: "Reabrir lead" e "Tirar o Ganho e reabrir", enquanto o lead ainda não foi entregue ao Arena. Depois que o repasse foi feito, ele não é desfeito pela Bia.</div></details>
