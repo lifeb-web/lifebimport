@@ -315,22 +315,22 @@
       Object.keys(doc.sdr || {}).forEach(function (quem) {
         (doc.sdr[quem] || []).forEach(function (l) {
           var row = byId[l.d], funil = String(l.f);
-          out.push({ dia: doc.dia, sdr: String(quem), deal: l.d, funil: funil, origem: row ? row.origem : (funil === '916713' ? 'inbound' : 'outbound'), lado: row ? row.lado : (funil === '916713' ? 'inbound' : 'outbound'), a: l.a || zeroTipos(), j: l.j || zeroTipos() });
+          out.push({ dia: doc.dia, sdr: String(quem), deal: l.d, funil: funil, origem: row ? row.origem : (funil === '916713' ? 'inbound' : 'outbound'), lado: row ? row.lado : (funil === '916713' ? 'inbound' : 'outbound'), a: l.a || zeroTipos(), j: l.j || zeroTipos(), m: l.m || zeroTipos() });
         });
       });
     });
     return out;
   }
   function agregaAtv(linhas, from, to) {
-    var a = zeroTipos(), j = zeroTipos(), porDia = {};
+    var a = zeroTipos(), j = zeroTipos(), m = zeroTipos(), porDia = {};
     linhas.forEach(function (l) {
       if (l.dia < from || l.dia > to) return;
       var pd = porDia[l.dia] || (porDia[l.dia] = { a: 0, j: 0, lig: 0 });
-      TIPOS.forEach(function (t) { a[t[0]] += l.a[t[0]] || 0; j[t[0]] += l.j[t[0]] || 0; });
+      TIPOS.forEach(function (t) { a[t[0]] += l.a[t[0]] || 0; j[t[0]] += l.j[t[0]] || 0; m[t[0]] += (l.m && l.m[t[0]]) || 0; });
       pd.a += somaTipos(l.a); pd.j += somaTipos(l.j); pd.lig += l.a.lig || 0;
     });
     var diasAtivos = Object.keys(porDia).filter(function (d) { return porDia[d].a > 0; }).length;
-    return { a: a, j: j, feitas: somaTipos(a), junto: somaTipos(j), porDia: porDia, diasAtivos: diasAtivos, media: diasAtivos ? somaTipos(a) / diasAtivos : null };
+    return { a: a, j: j, m: m, manuais: somaTipos(m), feitas: somaTipos(a), junto: somaTipos(j), porDia: porDia, diasAtivos: diasAtivos, media: diasAtivos ? somaTipos(a) / diasAtivos : null };
   }
   // Janela do período que o Agendor cobre (a partir de atvInicio, até hoje) e quais dias dela têm agregado.
   function somaObj(o) { var n = 0; Object.keys(o || {}).forEach(function (k) { n += Number(o[k]) || 0; }); return n; }
@@ -687,7 +687,7 @@
     var a = t.ag, p = t.ant, ap = t.jn.apur;
     // 30/10: ligação é tarefa normal. O detalhe por tipo é só composição (todos os tipos no mesmo pé).
     var porTipo = TIPOS.map(function (x) { return { n: a.a[x[0]] || 0, l: x[1].toLowerCase() }; }).filter(function (x) { return x.n > 0; }).sort(function (u, v) { return v.n - u.n; }).slice(0, 3);
-    var sub = (porTipo.length ? 'por tipo: ' + porTipo.map(function (x) { return num(x.n) + ' ' + x.l; }).join(' · ') : 'por tipo: sem tarefas') + (a.junto ? ' · ' + num(a.junto) + ' fechadas junto' : '');
+    var sub = (porTipo.length ? 'por tipo: ' + porTipo.map(function (x) { return num(x.n) + ' ' + x.l; }).join(' · ') : 'por tipo: sem tarefas') + (a.junto ? ' · ' + num(a.junto) + ' fechadas junto' : '') + (a.manuais ? ' · ' + num(a.manuais) + (a.manuais === 1 ? ' manual' : ' manuais') : '');
     if (t.jn.sem.length) sub += ' · ' + t.jn.sem.length + (t.jn.sem.length === 1 ? ' dia sem dado' : ' dias sem dado');
     if (ap.ativo) {
       var tipAp = 'EM APURAÇÃO: este valor é parcial e vai subir. ' + apurTexto(t.jn) + '. Total lido no Agendor até agora: ' + num(t.jn.bruto.lidas) + ' tarefas (' + num(t.jn.bruto.pend) + ' ainda a atribuir). ' + tip;
@@ -975,10 +975,10 @@
     if (ap.ativo) h += '<div class="s2-ban">EM APURAÇÃO: ' + apurTexto(t.jn) + '. Os números abaixo são parciais, vão subir e não devem ser comparados com outro período.</div>';
     if (t.jn.sem.length) h += '<div class="s2-st warn">' + t.jn.sem.length + (t.jn.sem.length === 1 ? ' dia do período ainda sem dado (' : ' dias do período ainda sem dado (') + t.jn.sem.slice(0, 3).map(dm).join(', ') + (t.jn.sem.length > 3 ? '...' : '') + '). Os totais abaixo são parciais.</div>';
     var linhas = TIPOS.filter(function (x) { return a.a[x[0]] || a.j[x[0]] || x[0] === 'wa'; });
-    h += '<table class="s2-tb"><thead><tr><th>Por tipo</th><th>Feitas</th><th title="Encerradas no mesmo instante do ganho/perda do negócio">Fechadas junto</th></tr></thead><tbody>';
-    function lin(nome, f, j, cls) { return '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td>' + nome + '</td><td class="' + (f ? '' : 'z') + '">' + (f ? num(f) : '·') + '</td><td class="' + (j ? 'gc' : 'z') + '">' + (j ? num(j) : '·') + '</td></tr>'; }
-    linhas.forEach(function (x) { h += lin(x[1], a.a[x[0]], a.j[x[0]]); });
-    h += '<tr style="font-weight:800"><td>' + (ap.ativo ? 'Total parcial' : 'Total') + '</td><td>' + num(a.feitas) + '</td><td class="gc">' + num(a.junto) + '</td></tr></tbody></table>';
+    h += '<table class="s2-tb"><thead><tr><th>Por tipo</th><th>Feitas</th><th title="Encerradas no mesmo instante do ganho/perda do negócio">Fechadas junto</th><th title="Criadas pelo próprio SDR (fora da cadência). Já estão dentro de Feitas; aparecem aqui para a gestão saber de cada tipo.">Manuais</th></tr></thead><tbody>';
+    function lin(nome, f, j, mn, cls) { return '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td>' + nome + '</td><td class="' + (f ? '' : 'z') + '">' + (f ? num(f) : '·') + '</td><td class="' + (j ? 'gc' : 'z') + '">' + (j ? num(j) : '·') + '</td><td class="' + (mn ? 'mn' : 'z') + '">' + (mn ? num(mn) : '·') + '</td></tr>'; }
+    linhas.forEach(function (x) { h += lin(x[1], a.a[x[0]], a.j[x[0]], a.m ? a.m[x[0]] : 0); });
+    h += '<tr style="font-weight:800"><td>' + (ap.ativo ? 'Total parcial' : 'Total') + '</td><td>' + num(a.feitas) + '</td><td class="gc">' + num(a.junto) + '</td><td class="mn">' + num(a.manuais || 0) + '</td></tr></tbody></table>';
     h += svgAtv(r, tv);
     var bq = t.jn.bruto;
     h += '<div class="s2-nt' + (tv ? ' s2-xs' : '') + '" title="' + esc(TIP_LIDAS) + '"><b>Lidas no Agendor: ' + num(bq.lidas) + ' tarefas</b> <span class="s2-i">ⓘ</span> (sem filtros) = ' + num(bq.sdr) + ' feitas pelo SDR · ' + num(bq.junto) + ' fechadas junto · ' + num(bq.nc) + ' notas/migração GS · ' + num(bq.out) + ' de outras pessoas · ' + num(bq.sis) + ' do Sistema · ' + num(bq.fora) + ' fora dos funis SDR · ' + num(bq.pend) + ' a atribuir. Só as feitas pelo SDR contam como atividade; o restante não é trabalho do SDR.</div>';
