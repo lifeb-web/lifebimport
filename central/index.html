@@ -278,6 +278,7 @@ var IC={
  visao:'<path d="M3 12l9-8 9 8M5 10v10h5v-6h4v6h5V10"/>',
  controles:'<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
  chaves:'<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 8l3 3M14 10l2 2"/>',
+ filas:'<path d="M3 7h18M3 12h18M3 17h12"/><circle cx="19" cy="17" r="2"/>',
  hist:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
  atalhos:'<path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/>',
  eco:'<path d="M4 5a2 2 0 012-2h12a2 2 0 012 2v14l-4-3H6a2 2 0 01-2-2z"/><path d="M8 8h8M8 11h5"/>',
@@ -361,11 +362,12 @@ async function carregarExtras(){
   await Promise.all(pr);
 }
 async function carregarHist(){var r=await api('GET','/historico?dias=14');S.hist=(r.j&&r.j.itens)||[];}
+async function carregarFilas(){var r=await api('GET','/filas');S.filas=r.status===200?(r.j.itens||[]):[];S.filasErro=r.status===200?'':((r.j&&r.j.mensagem)||('Erro '+r.status));}
 async function carregarUsuarios(){var r=await api('GET','/usuarios');S.usuarios=(r.j&&r.j.itens)||[];}
 function tickLive(){var s=Math.round((Date.now()-S.ult)/1000);$('liveTxt').textContent=s<8?'agora':('há '+(s<60?s+' s':Math.round(s/60)+' min'));$('liveDot').className='dot '+(s<120?'ok':s<600?'warn':'bad');}
 
 /* ---------- navegação ---------- */
-var ABAS=[['visao','Visão geral','visao','Saúde da plataforma e atenção do dia'],['estado','Controles','controles','Liga, desliga, sombra e limites'],['leitura','Todas as chaves','chaves','Somente leitura'],['hist','Histórico','hist','Quem mudou o quê, com desfazer'],['atalhos','Atalhos','atalhos','Dashboards, páginas e artefatos'],['eco','Ecossistema','eco','O guia completo da plataforma'],['usuarios','Usuários','usuarios','Acessos e papéis'],['conta','Minha conta','conta','Senha e perfil']];
+var ABAS=[['visao','Visão geral','visao','Saúde da plataforma e atenção do dia'],['estado','Controles','controles','Liga, desliga, sombra e limites'],['leitura','Todas as chaves','chaves','Somente leitura'],['filas','Filas de mensagens','filas','Mensagens esperando para sair, por pessoa'],['hist','Histórico','hist','Quem mudou o quê, com desfazer'],['atalhos','Atalhos','atalhos','Dashboards, páginas e artefatos'],['eco','Ecossistema','eco','O guia completo da plataforma'],['usuarios','Usuários','usuarios','Acessos e papéis'],['conta','Minha conta','conta','Senha e perfil']];
 function montarNav(){
   var n=$('nav');n.textContent='';
   ABAS.forEach(function(a){
@@ -378,13 +380,13 @@ function montarNav(){
     l.tabIndex=0;l.setAttribute('role','link');l.onclick=function(){ir(a[0]);};l.onkeydown=function(e){if(e.key==='Enter')ir(a[0]);};n.appendChild(l);
   });
 }
-async function ir(aba){S.aba=aba;S.busca='';$('busca').value='';if(aba==='hist')await carregarHist();if(aba==='usuarios')await carregarUsuarios();if(aba==='visao'&&!S.hist)await carregarHist();montarNav();render();window.scrollTo({top:0});}
+async function ir(aba){S.aba=aba;S.busca='';$('busca').value='';if(aba==='hist')await carregarHist();if(aba==='usuarios')await carregarUsuarios();if(aba==='filas')await carregarFilas();if(aba==='visao'&&!S.hist)await carregarHist();montarNav();render();window.scrollTo({top:0});}
 function casa(txt){return !S.busca||String(txt).toLowerCase().indexOf(S.busca)>=0;}
 function render(){
   var c=$('conteudo');c.textContent='';var a=ABAS.filter(function(x){return x[0]===S.aba;})[0];
   $('titulo').firstChild.nodeValue=a[1];$('subtitulo').textContent=a[3];
   $('buscaBox').classList.toggle('hide',['estado','leitura','hist'].indexOf(S.aba)<0);
-  ({visao:telaVisao,estado:telaEstado,leitura:telaLeitura,hist:telaHist,atalhos:telaAtalhos,eco:telaEco,usuarios:telaUsuarios,conta:telaConta})[S.aba](c);
+  ({visao:telaVisao,estado:telaEstado,leitura:telaLeitura,filas:telaFilas,hist:telaHist,atalhos:telaAtalhos,eco:telaEco,usuarios:telaUsuarios,conta:telaConta})[S.aba](c);
 }
 function estadoRotulo(e){if(e.tipo==='numero')return e.estado+' '+(e.un||'');return ROT_ESTADO[e.estado]||String(e.estado);}
 function pillEstado(e){var p=el('span','pill',estadoRotulo(e));if(e.tipo==='modo3')p.className='pill '+(e.estado==='live'?'on':e.estado==='shadow'?'sh':'offp');else if(e.tipo==='numero')p.className='pill sh';else p.className='pill '+(e.estado==='ligado'?'on':'offp');return p;}
@@ -457,6 +459,17 @@ function telaLeitura(c){
   d.forEach(function(e){var r=el('tr');var k=el('td','k');k.appendChild(el('code',null,e.k));k.appendChild(el('div','d',e.g));r.appendChild(k);r.appendChild(el('td',null,e.d));r.appendChild(el('td',null,e.p));var v=el('td');if(e.ok===false)v.textContent='falha na leitura';else if(e.definida)v.appendChild(el('span','vv',e.cru==null?'':e.cru));else v.appendChild(el('span','hint','vazio'));r.appendChild(v);var rk=el('td');rk.appendChild(el('span','pill '+e.r,RISCO[e.r]||e.r));r.appendChild(rk);t.appendChild(r);});
   w.appendChild(t);c.appendChild(w);
 }
+function telaFilas(c){
+  if(S.filasErro){c.appendChild(el('div','vazio',S.filasErro));return;}
+  var d=(S.filas||[]);var p=el('p','hint','Mensagens que a Bia guardou porque a janela do WhatsApp da pessoa estava fechada. Ao limpar, uma cópia fica 7 dias e a ação entra no histórico.');p.style.marginBottom='14px';c.appendChild(p);
+  if(!d.length){c.appendChild(el('div','vazio','Nenhuma fila com mensagem agora.'));return;}
+  d.forEach(function(f){
+    var card=el('div','card it');var hd=el('div','head');var tx=el('div');tx.appendChild(el('h4',null,(f.nome||'Número')+' · '+f.fone));tx.appendChild(el('p',null,f.total+(f.total===1?' mensagem esperando':' mensagens esperando')));hd.appendChild(tx);
+    var tb=el('button','btn sec sm','Limpar tudo');tb.type='button';tb.disabled=S.eu.papel!=='robert';tb.onclick=function(){abrirLimpar(f,null);};hd.appendChild(tb);card.appendChild(hd);
+    f.mensagens.forEach(function(m){var r=el('div','row-i');r.style.cssText='border:1px solid var(--line);border-radius:12px;align-items:center';var t=el('div','t');t.appendChild(document.createTextNode(m.texto||''));t.appendChild(el('small',null,m.ts?fmtData(m.ts):''));r.appendChild(t);var b=el('button','btn sec sm','Remover');b.type='button';b.disabled=S.eu.papel!=='robert';b.onclick=function(){abrirLimpar(f,m);};r.appendChild(b);card.appendChild(r);});
+    c.appendChild(card);card.style.marginBottom='14px';});
+}
+function abrirLimpar(f,m){painel(m?'Remover esta mensagem':'Limpar a fila inteira',function(b){b.appendChild(el('p','hint',m?m.texto:(f.total+' mensagens de '+(f.nome||f.fone)+' serão removidas.')));},m?'Remover':'Limpar tudo',function(motivo){return api('POST','/filas/limpar',m?{fone:f.fone,ts:m.ts,motivo:motivo}:{fone:f.fone,todas:true,motivo:motivo});},'medio');}
 function telaHist(c){
   var h=(S.hist||[]).filter(function(x){return casa((x.rotulo||'')+' '+x.chave+' '+(x.motivo||'')+' '+(x.quem||''));});
   if(!h.length){c.appendChild(el('div','vazio','Nenhuma mudança registrada nos últimos 14 dias.'));return;}
@@ -505,7 +518,7 @@ function painel(titulo,corpoFn,textoBtn,acaoFn,risco){
   ok.onclick=async function(){var motivo=im.value.trim();if(motivo.length<5){er.textContent='Escreva o motivo (mínimo 5 letras).';im.focus();return;}
     if(ic&&ic.value.trim().toUpperCase()!=='CONFIRMO'){er.textContent='Digite CONFIRMO para continuar.';ic.focus();return;}
     ok.disabled=true;cx.disabled=true;ok.textContent='Aplicando...';er.textContent='';var r;try{r=await acaoFn(motivo,ic?ic.value.trim():'');}catch(e){r={status:0,j:{mensagem:'Falha de conexão.'}};}
-    if(r.status===200&&r.j.ok){fecharModal();toast('Mudança aplicada e registrada');await carregar(false);}else{ok.disabled=false;cx.disabled=false;ok.textContent=textoBtn;er.textContent=(r.j&&r.j.mensagem)||('Erro '+r.status);}};
+    if(r.status===200&&r.j.ok){fecharModal();toast('Mudança aplicada e registrada');if(S.aba==='filas')await carregarFilas();await carregar(false);}else{ok.disabled=false;cx.disabled=false;ok.textContent=textoBtn;er.textContent=(r.j&&r.j.mensagem)||('Erro '+r.status);}};
   ac.appendChild(cx);ac.appendChild(ok);b.appendChild(ac);m.appendChild(b);m.classList.remove('hide');im.focus();m.onkeydown=function(e){if(e.key==='Escape')fecharModal();};m.onclick=function(e){if(e.target===m)fecharModal();};
 }
 function abrirConfirmacao(e,valor){var rot=function(v){return typeof v==='number'?String(v):(ROT_ESTADO[v]||String(v));};
