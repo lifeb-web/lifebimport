@@ -256,9 +256,10 @@ h3+.lead+.flow{margin-top:6px}
     <li><a href="#outros">14. Demais componentes</a></li>
     <li class="grp">Regras e referência</li>
     <li><a href="#regras">15. Regras de ouro</a></li>
-    <li><a href="#seguranca">16. Segurança e confiabilidade</a></li>
-    <li><a href="#novosdr">17. Novo SDR no time</a></li>
-    <li><a href="#glossario">18. Dúvidas e glossário</a></li>
+    <li><a href="#agendorapi">16. Como a Bia conversa com o Agendor</a></li>
+    <li><a href="#seguranca">17. Segurança e confiabilidade</a></li>
+    <li><a href="#novosdr">18. Novo SDR no time</a></li>
+    <li><a href="#glossario">19. Dúvidas e glossário</a></li>
   </ol>
 </nav>
 
@@ -956,8 +957,39 @@ h3+.lead+.flow{margin-top:6px}
 </section>
 
 <!-- 16 -->
+<section class="sec" id="agendorapi">
+<h2><span class="n">16</span>Como a Bia conversa com o Agendor</h2>
+<p class="lead">Toda leitura e escrita no Agendor passa por uma camada única de proteção. O Agendor aceita poucas chamadas por segundo e pode demorar ou falhar; a camada garante que a operação continue sem duplicar nem perder nada, e que nenhuma rotina ou pessoa atrapalhe as outras. O desenho abaixo mostra o caminho de uma chamada, do pedido à confirmação.</p>
+
+<div class="svgw item" role="img" aria-label="Fluxograma do caminho de uma chamada ao Agendor: origem, travas antes de sair, fila com freio, chamada com limite de tempo, e os três desfechos: sucesso com releitura de confirmação, limite de chamadas com desaceleração e nova tentativa, falha temporária com regra própria para criações, e esgotamento das tentativas com alerta à gestão">
+<svg viewBox="0 0 1040 610" xmlns="http://www.w3.org/2000/svg" font-size="13"><defs><marker id="ag1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--mag)"/></marker></defs><text x="20" y="14" font-weight="800" fill="var(--faint)" font-size="11" letter-spacing="1">ANTES DE SAIR</text><text x="740" y="14" font-weight="800" fill="var(--faint)" font-size="11" letter-spacing="1">RESPOSTA DO AGENDOR</text><g stroke="var(--mag)" stroke-width="2" fill="none" marker-end="url(#ag1)"><path d="M220 50 H260"/><path d="M460 50 H500"/><path d="M700 50 H740"/><path d="M840 80 V130"/><path d="M740 180 H700"/><path d="M840 230 V290"/><path d="M740 320 H700"/><path d="M500 320 H240 V110 H600 V80"/><path d="M940 180 H1000 V425 H940"/><path d="M740 425 H700"/><path d="M500 425 H460"/><path d="M600 455 V490"/><path d="M700 520 H740"/></g><path d="M500 520 H240 V320" stroke="var(--mag)" stroke-width="2" fill="none"/><g font-weight="700" fill="var(--mag-t)" font-size="12"><text x="720" y="172" text-anchor="middle" font-size="11">Sucesso</text><text x="852" y="266">Limite de chamadas (429)</text><text x="1018" y="300" transform="rotate(90 1018 300)">Falha temporária</text><text x="492" y="416" text-anchor="end">Sim</text><text x="608" y="478">Não</text><text x="720" y="512" text-anchor="middle" font-size="11">Esgotou</text><text x="250" y="304" fill="var(--purple-d)">Volta para a fila</text></g><g><rect x="20" y="20" width="200" height="60" rx="12" fill="var(--card)" stroke="var(--line)" stroke-width="1"/><text x="34" y="44" font-weight="800" fill="var(--purple-d)">Pedido</text><text x="34" y="63" fill="var(--muted)" font-size="12">Rotina ou ação de uma pessoa</text></g><g><rect x="260" y="20" width="200" height="60" rx="12" fill="var(--card)" stroke="var(--line)" stroke-width="1"/><text x="274" y="44" font-weight="800" fill="var(--purple-d)">Travas de segurança</text><text x="274" y="63" fill="var(--muted)" font-size="12">Bloqueia ID inválido e funil</text></g><g><rect x="500" y="20" width="200" height="60" rx="12" fill="var(--purple-bg)" stroke="var(--purple)" stroke-width="1"/><text x="514" y="44" font-weight="800" fill="var(--purple-d)">Fila com freio</text><text x="514" y="63" fill="var(--muted)" font-size="12">Uma fila para todas as rotinas</text></g><g><rect x="740" y="20" width="200" height="60" rx="12" fill="var(--card)" stroke="var(--mag)" stroke-width="2"/><text x="754" y="44" font-weight="800" fill="var(--mag-t)">Chamada ao Agendor</text><text x="754" y="63" fill="var(--muted)" font-size="12">Limite de 15 s por tentativa</text></g><g><polygon points="840,130 940,180 840,230 740,180" fill="var(--purple-bg)" stroke="var(--purple)" stroke-width="2"/><text x="840" y="177" text-anchor="middle" font-weight="800" fill="var(--purple-d)">Como o Agendor</text><text x="840" y="193" text-anchor="middle" font-weight="800" fill="var(--purple-d)">respondeu?</text></g><g><rect x="500" y="150" width="200" height="60" rx="12" fill="var(--green-bg)" stroke="var(--green)" stroke-width="2"/><text x="514" y="174" font-weight="800" fill="var(--green-t)">Releitura e registro</text><text x="514" y="193" fill="var(--green-t)" font-size="12">Só diz "feito" após ler de novo</text></g><g><rect x="740" y="290" width="200" height="60" rx="12" fill="var(--card)" stroke="var(--line)" stroke-width="1"/><text x="754" y="314" font-weight="800" fill="var(--purple-d)">Freio adaptativo</text><text x="754" y="333" fill="var(--muted)" font-size="12">Todas as rotinas desaceleram</text></g><g><rect x="500" y="290" width="200" height="60" rx="12" fill="var(--card)" stroke="var(--line)" stroke-width="1"/><text x="514" y="314" font-weight="800" fill="var(--purple-d)">Aguarda e repete</text><text x="514" y="333" fill="var(--muted)" font-size="12">Pausa antes da nova tentativa</text></g><g><rect x="740" y="395" width="200" height="60" rx="12" fill="var(--card)" stroke="var(--line)" stroke-width="1"/><text x="754" y="419" font-weight="800" fill="var(--purple-d)">Falha temporária</text><text x="754" y="438" fill="var(--muted)" font-size="12">Erro do servidor ou demora</text></g><g><rect x="500" y="395" width="200" height="60" rx="12" fill="var(--purple-bg)" stroke="var(--purple)" stroke-width="2"/><text x="514" y="419" font-weight="800" fill="var(--purple-d)">Era uma criação?</text><text x="514" y="438" fill="var(--muted)" font-size="12">Negócio, pessoa ou tarefa nova</text></g><g><rect x="260" y="395" width="200" height="60" rx="12" fill="var(--card)" stroke="var(--line)" stroke-width="1"/><text x="274" y="419" font-weight="800" fill="var(--purple-d)">Não repete às cegas</text><text x="274" y="438" fill="var(--muted)" font-size="12">Confere se já foi criada</text></g><g><rect x="500" y="490" width="200" height="60" rx="12" fill="var(--card)" stroke="var(--line)" stroke-width="1"/><text x="514" y="514" font-weight="800" fill="var(--purple-d)">Repete com pausa</text><text x="514" y="533" fill="var(--muted)" font-size="12">Até 3 vezes, pausa crescente</text></g><g><rect x="740" y="490" width="200" height="60" rx="12" fill="var(--gray-bg)" stroke="var(--faint)" stroke-width="2"/><text x="754" y="514" font-weight="800" fill="var(--fg)">Para sem insistir</text><text x="754" y="533" fill="var(--muted)" font-size="12">Alerta à gestão (na 2ª vez)</text></g><text x="20" y="590" fill="var(--muted)" font-size="12.5">Leituras pontuais feitas por um clique (por exemplo, no Painel do Representante) pulam a fila, para a pessoa não esperar atrás das rotinas em lote.</text></svg></div>
+<p class="dica-svg">Deslize o desenho para o lado para ver tudo.</p>
+
+<h3>As camadas, em ordem</h3>
+<details class="fx" open><summary>1. Travas antes de sair</summary>
+<p>Antes de qualquer chamada, a camada barra o que nunca deve acontecer:</p>
+<ul><li><b>Escrita em identificador zero:</b> é sempre erro de programação. A chamada é bloqueada sem tocar no Agendor e sem acordar a gestão.</li><li><b>Mudança de etapa que trocaria o negócio de funil:</b> o Agendor move o negócio de funil sem avisar se o funil informado for diferente do atual. Antes de qualquer mudança de etapa, a camada lê o funil real e só deixa passar se for o mesmo. Funil desconhecido bloqueia (a camada nunca decide escrita por falta de dado).</li></ul></details>
+<details class="fx"><summary>2. Fila com freio adaptativo</summary>
+<p>O Agendor aceita poucas chamadas por segundo. Todas as rotinas dos dois sistemas (a Bia e o Painel do Representante) passam por uma fila única, coordenada, que controla o ritmo.</p>
+<ul><li>Cada resposta de limite (429) aciona o freio: todas as rotinas desaceleram juntas. Depois de um período sem novo erro, o ritmo volta ao normal sozinho. É o mesmo princípio usado por grandes provedores de nuvem (aumento gradual, redução forte).</li><li>Leituras pontuais de baixo volume, disparadas por uma pessoa, pulam a fila coordenada. Isso evita que um clique espere atrás de varreduras em lote.</li><li>Quando o endereço de saída é bloqueado pelo Agendor, a chamada pode sair por uma rota alternativa, sem esperar o intervalo.</li></ul></details>
+<details class="fx"><summary>3. Limite de tempo e regras por tipo de chamada</summary>
+<p>Cada tentativa tem limite de 15 segundos. Nenhuma chamada fica pendurada para sempre. O que acontece depois depende do tipo da chamada:</p>
+<div class="tw"><table><thead><tr><th>Tipo</th><th>O que faz</th><th>Se der limite (429)</th><th>Se der falha temporária</th></tr></thead><tbody>
+<tr><td class="k">Leitura</td><td>Consulta dados</td><td>Espera e repete</td><td>Repete, até 3 tentativas, com pausa crescente</td></tr>
+<tr><td class="k">Alteração</td><td>Muda um dado existente</td><td>Espera e repete</td><td>Repete (alterar duas vezes dá o mesmo resultado)</td></tr>
+<tr><td class="k">Exclusão</td><td>Apaga um registro</td><td>Espera e repete</td><td>Repete (apagar duas vezes dá o mesmo resultado)</td></tr>
+<tr><td class="k">Criação</td><td>Cria negócio, pessoa, empresa ou tarefa</td><td>Espera e repete (o Agendor não processou)</td><td><b>Nunca repete às cegas:</b> o Agendor pode ter gravado e demorado a responder. A rotina confere antes se o registro já existe e o adota</td></tr>
+</tbody></table></div></details>
+<details class="fx"><summary>4. Confirmação: nunca confiar só na resposta</summary>
+<ul><li><b>Releitura:</b> a Bia só diz que algo foi feito depois de ler o Agendor de novo e ver o resultado esperado. Uma resposta de sucesso não basta.</li><li><b>Marcar antes, conferir depois:</b> a rotina anota o que vai fazer antes de fazer. No pior caso o resultado é "não fez hoje", nunca "fez duas vezes".</li><li><b>Reserva única:</b> antes de criar algo, a rotina reserva o direito de fazê-lo (reserva atômica, com validade). Duas rotinas no mesmo instante nunca criam o mesmo registro.</li><li><b>Leitura falhou, não age:</b> se a leitura necessária para decidir falhou, a rotina espera a próxima rodada em vez de adivinhar.</li></ul></details>
+<details class="fx"><summary>5. Quando esgota: alerta sem barulho</summary>
+<p>Se as tentativas acabam, a rotina para sem insistir e a gestão é avisada. Para não gerar ruído por falha passageira, o alerta só chega na segunda ocorrência em sequência. Falhas de automação vão sempre para a gestão e nunca para o time.</p></details>
+<details class="fx"><summary>Limites conhecidos do Agendor</summary>
+<ul><li>Aceita poucas chamadas por segundo; acima disso responde 429, com uma página genérica, sem informar quando tentar de novo.</li><li>Tarefa aberta criada há mais de 31 dias e nunca alterada não aparece nas buscas por filtro.</li><li>A lista de negócios muitas vezes não traz a empresa; ela vem da pessoa vinculada.</li><li>O filtro de funil na busca é ignorado; o recorte por funil é feito pela própria Bia.</li><li>Campos personalizados só vêm quando pedidos de forma explícita.</li></ul></details>
+</section>
+
 <section class="sec" id="seguranca">
-<h2><span class="n">16</span>Segurança e confiabilidade</h2>
+<h2><span class="n">17</span>Segurança e confiabilidade</h2>
 <p class="lead">O sistema foi feito para errar pouco e, quando errar, não piorar. Nenhuma senha ou chave aparece neste guia.</p>
 <div class="grid g2">
 <div class="card item"><h4>Uma coisa de cada vez</h4><p>Antes de criar algo, a Bia reserva o direito de fazer isso, para duas rotinas não agirem ao mesmo tempo no mesmo lead.</p></div>
@@ -971,7 +1003,7 @@ h3+.lead+.flow{margin-top:6px}
 
 <!-- 17 -->
 <section class="sec" id="novosdr">
-<h2><span class="n">17</span>Quando entrar um novo SDR</h2>
+<h2><span class="n">18</span>Quando entrar um novo SDR</h2>
 <p class="lead">O sistema foi pensado para crescer. O objetivo é que cada SDR tenha a própria página Hoje (a mesa de trabalho do SDR), o próprio painel de vendas e só enxerga os leads que passaram por ele. O endereço de cada SDR segue o padrão projetojlbv.com.br/hoje/nome-do-sdr. Quem abrir apenas projetojlbv.com.br/hoje é levado à página do SDR.</p>
 <ol class="steps">
 <li class="item">A equipe técnica cadastra o SDR nas listas do sistema, com nome completo, telefone e a conta no Agendor. Uma conferência automática acusa se alguma lista ficar fora de sincronia com as outras.</li>
@@ -984,7 +1016,7 @@ h3+.lead+.flow{margin-top:6px}
 
 <!-- 18 -->
 <section class="sec" id="glossario">
-<h2><span class="n">18</span>Dúvidas e glossário</h2>
+<h2><span class="n">19</span>Dúvidas e glossário</h2>
 <h3>Perguntas frequentes</h3>
 <details class="item"><summary>Por que meu lead não apareceu na Hoje?</summary><div><ul><li>Use a busca geral no topo: ela procura nos dois funis do SDR por nome, pessoa, CNPJ, telefone, número do negócio ou cidade.</li><li>Na fila de espera o lead só aparece em "Começar leads novos".</li><li>Lead que entrou depois das 17h30 só começa no próximo dia útil.</li><li>Se ele não está em um funil do SDR, a Hoje não o mostra.</li></ul></div></details>
 <details class="item"><summary>Posso reabrir um lead que ganhei por engano?</summary><div>Sim: "Reabrir lead" e "Tirar o Ganho e reabrir", enquanto o lead ainda não foi entregue ao Arena. Depois que o repasse foi feito, ele não é desfeito pela Bia.</div></details>
