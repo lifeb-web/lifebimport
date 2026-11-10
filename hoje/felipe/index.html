@@ -582,7 +582,7 @@ details.sec-empresa>summary,details.dados-opcional>summary{cursor:pointer;font-w
     <span class="status-ctl" id="filaResumo"></span>
   </div>
   <div class="orgfiltro hide" id="filaOrigens" role="group" aria-label="Filtrar por origem"></div>
-  <div class="orgfiltro hide" id="filaFontes" role="group" aria-label="Filtrar por lista (arquivo de onde o lead veio)"></div>
+  <div class="orgfiltro hide" id="filaFontes" role="group" aria-label="Filtrar por fonte (a lista de onde o lead veio)"></div>
   <div class="corpo" id="filaLista"></div>
   <div class="rodape">
     <div class="msgacao aviso" id="filaAviso" role="status" aria-live="polite"></div>
@@ -1428,7 +1428,7 @@ function desenharFila() {
     var emp = el('div', 'emp'); emp.appendChild(el('span', 'nv n' + i.nivel, '#' + i.posicao + ' ' + (S.filaFunil === 'inbound' ? (i.depoisExpediente ? 'Depois do expediente' : 'Aguardando') : (NIVEL[i.nivel] || 'Comum')))); emp.appendChild(document.createTextNode(i.empresa)); tx.appendChild(emp);
     if (i.pessoa) tx.appendChild(el('div', 'pes', i.pessoa)); var fl = foneLinha(i.fone, 'fone'); if (fl) tx.appendChild(fl);
     tx.appendChild(el('div', 'mot', i.motivo));
-    var meta = [i.cidade, i.fonte ? 'lista ' + i.fonte : '', i.entrada ? 'entrou em ' + i.entrada.slice(8, 10) + '/' + i.entrada.slice(5, 7) + '/' + i.entrada.slice(0, 4) : ''].filter(Boolean).join(' · ');
+    var meta = [i.cidade, i.fonte ? 'fonte ' + i.fonte : '', i.entrada ? 'entrou em ' + i.entrada.slice(8, 10) + '/' + i.entrada.slice(5, 7) + '/' + i.entrada.slice(0, 4) : ''].filter(Boolean).join(' · ');
     if (meta) tx.appendChild(el('div', 'meta', meta));
     if (i.atencao && i.aviso) tx.appendChild(el('div', 'aviso-linha', 'Atenção: ' + i.aviso));
     row.appendChild(tx);
@@ -1449,7 +1449,7 @@ function atualizaSel() {
   if (S.filaOrigem || S.filaFonte) { var el2 = elegiveisOrigem(); bo.textContent = 'Iniciar os ' + el2.length + ' de ' + rotuloFiltro(); bo.disabled = !el2.length || S.ocupado || !podeLiberar(); }
   avisoPulo();
 }
-function rotuloFiltro() { var a = []; if (S.filaOrigem) a.push(origemRotulo(S.filaOrigem)); if (S.filaFonte) a.push('lista ' + S.filaFonte); return a.join(' · '); }
+function rotuloFiltro() { var a = []; if (S.filaOrigem) a.push(origemRotulo(S.filaOrigem)); if (S.filaFonte) a.push('fonte ' + S.filaFonte); return a.join(' · '); }
 function iniciarPorOrigem() {
   if (!S.filaOrigem && !S.filaFonte) return; var el2 = elegiveisOrigem(); if (!el2.length) return;
   var fora = S.filaVis.length - el2.length; var rot = rotuloFiltro();
@@ -1916,9 +1916,9 @@ function renderRodape(L) {
   if (L.perdidoAberto && ac.perdido && andamento) {
     var f = el('div', 'secao'); f.style.marginTop = '8px'; f.appendChild(el('h3', null, 'Por que perdeu?'));
     var sm = el('select'); sm.setAttribute('aria-label', 'Motivo da perda'); var o0 = el('option', null, 'Escolha o motivo...'); o0.value = ''; sm.appendChild(o0);
-    (L.motivos || []).filter(function (m) { return !/cad[eê]ncia\s+esgotada/i.test(m.nome); }).forEach(function (m) { var o = el('option', null, m.nome); o.value = String(m.id); sm.appendChild(o); }); sm.value = L.motivoSel || ''; sm.onchange = function () { L.motivoSel = sm.value; };
+    (L.motivos || []).filter(function (m) { return !/cad[eê]ncia\s+esgotada/i.test(m.nome); }).forEach(function (m) { var o = el('option', null, m.nome); o.value = String(m.id); sm.appendChild(o); }); sm.value = L.motivoSel || ''; sm.onchange = function () { L.motivoSel = sm.value; atualizaCont(); };
     var nota = el('textarea'); nota.setAttribute('aria-label', 'O que aconteceu (obrigatório)'); nota.placeholder = 'O que aconteceu? Com quem você falou e o que a pessoa disse. Obrigatório, em poucas palavras.'; nota.value = L.notaPerda || ''; nota.style.marginTop = '6px';
-    var cont = el('p', 'sub'); cont.style.margin = '2px 0 0'; var atualizaCont = function () { var n = contaLetras(nota.value); cont.textContent = n >= 5 ? 'Ok ✓' : 'Escreva um pouco mais: o que aconteceu com este lead?'; };
+    var cont = el('p', 'sub'); cont.style.margin = '2px 0 0'; var atualizaCont = function () { var mm = (L.motivos || []).filter(function (x) { return String(x.id) === String(L.motivoSel); })[0]; if (mm && mm.dispensa) { nota.placeholder = 'Opcional: escreva só se ajudar.'; nota.setAttribute('aria-label', 'O que aconteceu (opcional)'); cont.textContent = 'Para este motivo não precisa explicar. Escreva só se ajudar.'; return; } nota.placeholder = 'O que aconteceu? Com quem você falou e o que a pessoa disse. Obrigatório, em poucas palavras.'; nota.setAttribute('aria-label', 'O que aconteceu (obrigatório)'); var n = contaLetras(nota.value); cont.textContent = n >= 5 ? 'Ok ✓' : 'Escreva um pouco mais: o que aconteceu com este lead?'; };
     nota.oninput = function () { L.notaPerda = nota.value; atualizaCont(); }; atualizaCont();
     var bc = el('button', 'perigo', 'Confirmar Perdido'); bc.type = 'button'; bc.style.marginTop = '6px'; bc.onclick = function () { marcarPerdido(L); };
     f.appendChild(sm); f.appendChild(nota); f.appendChild(cont); f.appendChild(bc); rd.appendChild(f);
@@ -2001,8 +2001,8 @@ async function marcarPerdido(L) {
   if (L.ocupado || S.L !== L) return; var mid = Number(L.motivoSel);
   if (!mid) { setEstado(L, 'erro', 'Escolha o motivo da perda.'); return; }
   var mot = (L.motivos || []).filter(function (m) { return Number(m.id) === mid; })[0]; var nome = L.lead.titulo || 'este lead';
-  // 09/11: contar o que aconteceu é obrigatório (o servidor confere de novo; "Cadência esgotada" é isenta)
-  if (contaLetras(L.notaPerda) < 5) { setEstado(L, 'erro', 'Conte, em poucas palavras, o que aconteceu com este lead antes de confirmar.'); return; }
+  // 09/11: contar o que aconteceu é obrigatório (o servidor confere de novo); 10/11: motivos que se explicam sozinhos (m.dispensa, vindo do servidor) não pedem texto
+  if (contaLetras(L.notaPerda) < 5 && !(mot && mot.dispensa)) { setEstado(L, 'erro', 'Conte, em poucas palavras, o que aconteceu com este lead antes de confirmar.'); return; }
   if (!window.confirm('Marcar "' + nome + '" como PERDIDO (' + (mot ? mot.nome : 'motivo') + ')? As tarefas abertas da cadência serão encerradas.')) return;
   var corpo = { motivoId: mid }; if (String(L.notaPerda || '').trim()) corpo.nota = String(L.notaPerda).trim();
   L.ocupado = true; S.ocultos[L.dealId] = true; redesenharTudo(); fecharLead(); msg(nome + ': marcando como Perdido... (já saiu da tela, estou conferindo no Agendor)', 'aviso');
