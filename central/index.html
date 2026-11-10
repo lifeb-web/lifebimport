@@ -279,6 +279,7 @@ var IC={
  controles:'<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
  chaves:'<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 8l3 3M14 10l2 2"/>',
  filas:'<path d="M3 7h18M3 12h18M3 17h12"/><circle cx="19" cy="17" r="2"/>',
+ cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
  hist:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
  atalhos:'<path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/>',
  eco:'<path d="M4 5a2 2 0 012-2h12a2 2 0 012 2v14l-4-3H6a2 2 0 01-2-2z"/><path d="M8 8h8M8 11h5"/>',
@@ -363,11 +364,12 @@ async function carregarExtras(){
 }
 async function carregarHist(){var r=await api('GET','/historico?dias=14');S.hist=(r.j&&r.j.itens)||[];}
 async function carregarFilas(){var r=await api('GET','/filas');S.filas=r.status===200?(r.j.itens||[]):[];S.filasErro=r.status===200?'':((r.j&&r.j.mensagem)||('Erro '+r.status));}
+async function carregarCal(){var r=await api('GET','/calendario');S.cal=r.status===200?(r.j.dias||[]):[];S.calHoje=(r.j&&r.j.hoje)||'';S.calErro=r.status===200?'':((r.j&&r.j.mensagem)||('Erro '+r.status));}
 async function carregarUsuarios(){var r=await api('GET','/usuarios');S.usuarios=(r.j&&r.j.itens)||[];}
 function tickLive(){var s=Math.round((Date.now()-S.ult)/1000);$('liveTxt').textContent=s<8?'agora':('há '+(s<60?s+' s':Math.round(s/60)+' min'));$('liveDot').className='dot '+(s<120?'ok':s<600?'warn':'bad');}
 
 /* ---------- navegação ---------- */
-var ABAS=[['visao','Visão geral','visao','Saúde da plataforma e atenção do dia'],['estado','Controles','controles','Liga, desliga, sombra e limites'],['leitura','Todas as chaves','chaves','Somente leitura'],['filas','Filas de mensagens','filas','Mensagens esperando para sair, por pessoa'],['hist','Histórico','hist','Quem mudou o quê, com desfazer'],['atalhos','Atalhos','atalhos','Dashboards, páginas e artefatos'],['eco','Ecossistema','eco','O guia completo da plataforma'],['usuarios','Usuários','usuarios','Acessos e papéis'],['conta','Minha conta','conta','Senha e perfil']];
+var ABAS=[['visao','Visão geral','visao','Saúde da plataforma e atenção do dia'],['estado','Controles','controles','Liga, desliga, sombra e limites'],['leitura','Todas as chaves','chaves','Somente leitura'],['filas','Filas de mensagens','filas','Mensagens esperando para sair, por pessoa'],['cal','Calendário','cal','Dias de folga marcados à mão'],['hist','Histórico','hist','Quem mudou o quê, com desfazer'],['atalhos','Atalhos','atalhos','Dashboards, páginas e artefatos'],['eco','Ecossistema','eco','O guia completo da plataforma'],['usuarios','Usuários','usuarios','Acessos e papéis'],['conta','Minha conta','conta','Senha e perfil']];
 function montarNav(){
   var n=$('nav');n.textContent='';
   ABAS.forEach(function(a){
@@ -380,13 +382,13 @@ function montarNav(){
     l.tabIndex=0;l.setAttribute('role','link');l.onclick=function(){ir(a[0]);};l.onkeydown=function(e){if(e.key==='Enter')ir(a[0]);};n.appendChild(l);
   });
 }
-async function ir(aba){S.aba=aba;S.busca='';$('busca').value='';if(aba==='hist')await carregarHist();if(aba==='usuarios')await carregarUsuarios();if(aba==='filas')await carregarFilas();if(aba==='visao'&&!S.hist)await carregarHist();montarNav();render();window.scrollTo({top:0});}
+async function ir(aba){S.aba=aba;S.busca='';$('busca').value='';if(aba==='hist')await carregarHist();if(aba==='usuarios')await carregarUsuarios();if(aba==='filas')await carregarFilas();if(aba==='cal')await carregarCal();if(aba==='visao'&&!S.hist)await carregarHist();montarNav();render();window.scrollTo({top:0});}
 function casa(txt){return !S.busca||String(txt).toLowerCase().indexOf(S.busca)>=0;}
 function render(){
   var c=$('conteudo');c.textContent='';var a=ABAS.filter(function(x){return x[0]===S.aba;})[0];
   $('titulo').firstChild.nodeValue=a[1];$('subtitulo').textContent=a[3];
   $('buscaBox').classList.toggle('hide',['estado','leitura','hist'].indexOf(S.aba)<0);
-  ({visao:telaVisao,estado:telaEstado,leitura:telaLeitura,filas:telaFilas,hist:telaHist,atalhos:telaAtalhos,eco:telaEco,usuarios:telaUsuarios,conta:telaConta})[S.aba](c);
+  ({visao:telaVisao,estado:telaEstado,leitura:telaLeitura,filas:telaFilas,cal:telaCal,hist:telaHist,atalhos:telaAtalhos,eco:telaEco,usuarios:telaUsuarios,conta:telaConta})[S.aba](c);
 }
 function estadoRotulo(e){if(e.tipo==='numero')return e.estado+' '+(e.un||'');return ROT_ESTADO[e.estado]||String(e.estado);}
 function pillEstado(e){var p=el('span','pill',estadoRotulo(e));if(e.tipo==='modo3')p.className='pill '+(e.estado==='live'?'on':e.estado==='shadow'?'sh':'offp');else if(e.tipo==='numero')p.className='pill sh';else p.className='pill '+(e.estado==='ligado'?'on':'offp');return p;}
@@ -470,6 +472,22 @@ function telaFilas(c){
     c.appendChild(card);card.style.marginBottom='14px';});
 }
 function abrirLimpar(f,m){painel(m?'Remover esta mensagem':'Limpar a fila inteira',function(b){b.appendChild(el('p','hint',m?m.texto:(f.total+' mensagens de '+(f.nome||f.fone)+' serão removidas.')));},m?'Remover':'Limpar tudo',function(motivo){return api('POST','/filas/limpar',m?{fone:f.fone,ts:m.ts,motivo:motivo}:{fone:f.fone,todas:true,motivo:motivo});},'medio');}
+function telaCal(c){
+  if(S.calErro){c.appendChild(el('div','vazio',S.calErro));return;}
+  var p=el('p','hint','Fim de semana e feriados nacionais já ficam de folga sozinhos. Aqui você marca dias extras (ex.: recesso da equipe). Nesses dias vale a mesma regra de folga dos feriados: avisos de rotina ao time esperam o próximo dia útil.');p.style.marginBottom='14px';c.appendChild(p);
+  var f=el('div','card form');f.style.gridTemplateColumns='repeat(3,minmax(0,1fr))';
+  var d1=el('div');var l1=el('label',null,'Dia de folga');l1.htmlFor='calDia';d1.appendChild(l1);var i1=el('input');i1.id='calDia';i1.type='date';i1.min=S.calHoje||'';d1.appendChild(i1);f.appendChild(d1);
+  var d2=el('div');var l2=el('label',null,'Motivo');l2.htmlFor='calMot';d2.appendChild(l2);var i2=el('input');i2.id='calMot';i2.type='text';i2.maxLength=200;i2.placeholder='Ex.: recesso da equipe';d2.appendChild(i2);f.appendChild(d2);
+  var bt=el('button','btn','Marcar folga');bt.type='button';bt.disabled=S.eu.papel==='sdr';var er=el('div','erro');er.style.gridColumn='1/-1';
+  bt.onclick=async function(){er.textContent='';bt.disabled=true;var r=await api('POST','/calendario',{dia:i1.value,motivo:i2.value});bt.disabled=false;if(r.status===200){toast('Dia marcado como folga');await carregarCal();render();}else er.textContent=r.j.mensagem||('Erro '+r.status);};
+  var rw=el('div');rw.appendChild(bt);f.appendChild(rw);f.appendChild(er);c.appendChild(f);
+  var sec=el('div','sec');sec.appendChild(el('h3',null,'Dias marcados'));c.appendChild(sec);
+  if(!(S.cal||[]).length){c.appendChild(el('div','vazio','Nenhum dia extra marcado.'));return;}
+  var lst=el('div','card list');
+  S.cal.forEach(function(dia){var r=el('div','row-i');var t=el('div','t');var pt=dia.split('-');var dt=new Date(Date.UTC(+pt[0],+pt[1]-1,+pt[2],12));t.appendChild(document.createTextNode(pt[2]+'/'+pt[1]+'/'+pt[0]));t.appendChild(el('small',null,dt.toLocaleDateString('pt-BR',{weekday:'long',timeZone:'UTC'})+(dia<S.calHoje?' · já passou':'')));r.appendChild(t);
+    var b=el('button','btn sec sm','Remover');b.type='button';b.disabled=S.eu.papel==='sdr';b.onclick=function(){painel('Remover dia de folga',function(bb){bb.appendChild(el('p','hint',pt[2]+'/'+pt[1]+'/'+pt[0]+' volta a ser dia normal.'));},'Remover',function(motivo){return api('POST','/calendario',{acao:'remover',dia:dia,motivo:motivo});},'medio');};r.appendChild(b);lst.appendChild(r);});
+  c.appendChild(lst);
+}
 function telaHist(c){
   var h=(S.hist||[]).filter(function(x){return casa((x.rotulo||'')+' '+x.chave+' '+(x.motivo||'')+' '+(x.quem||''));});
   if(!h.length){c.appendChild(el('div','vazio','Nenhuma mudança registrada nos últimos 14 dias.'));return;}
@@ -518,7 +536,7 @@ function painel(titulo,corpoFn,textoBtn,acaoFn,risco){
   ok.onclick=async function(){var motivo=im.value.trim();if(motivo.length<5){er.textContent='Escreva o motivo (mínimo 5 letras).';im.focus();return;}
     if(ic&&ic.value.trim().toUpperCase()!=='CONFIRMO'){er.textContent='Digite CONFIRMO para continuar.';ic.focus();return;}
     ok.disabled=true;cx.disabled=true;ok.textContent='Aplicando...';er.textContent='';var r;try{r=await acaoFn(motivo,ic?ic.value.trim():'');}catch(e){r={status:0,j:{mensagem:'Falha de conexão.'}};}
-    if(r.status===200&&r.j.ok){fecharModal();toast('Mudança aplicada e registrada');if(S.aba==='filas')await carregarFilas();await carregar(false);}else{ok.disabled=false;cx.disabled=false;ok.textContent=textoBtn;er.textContent=(r.j&&r.j.mensagem)||('Erro '+r.status);}};
+    if(r.status===200&&r.j.ok){fecharModal();toast('Mudança aplicada e registrada');if(S.aba==='filas')await carregarFilas();if(S.aba==='cal')await carregarCal();await carregar(false);}else{ok.disabled=false;cx.disabled=false;ok.textContent=textoBtn;er.textContent=(r.j&&r.j.mensagem)||('Erro '+r.status);}};
   ac.appendChild(cx);ac.appendChild(ok);b.appendChild(ac);m.appendChild(b);m.classList.remove('hide');im.focus();m.onkeydown=function(e){if(e.key==='Escape')fecharModal();};m.onclick=function(e){if(e.target===m)fecharModal();};
 }
 function abrirConfirmacao(e,valor){var rot=function(v){return typeof v==='number'?String(v):(ROT_ESTADO[v]||String(v));};
