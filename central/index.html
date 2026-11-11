@@ -310,6 +310,7 @@ body.aba-atend .strip,body.aba-agentes .strip{display:none}body.aba-atend .top{p
 .ax #atPrev:empty{display:none}.ax .cm{gap:8px}
 @media (hover:hover){.ax .gp .fb{opacity:0;transition:opacity .15s}.ax .gp:hover .fb,.ax .gp .fb:focus-within{opacity:1}}
 @media (max-width:860px){.ax .hd{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;gap:8px 10px;align-items:center}.ax .hd .nm{flex:none}.ax .hd .ac{grid-column:1/-1;flex-wrap:nowrap}.ax .hd .ac .ib.pau{display:none}.ax .hd .fx .bt2{display:none}.ax .hd .ac .ib.pr{flex:1}.ax .hd .tg{justify-self:end}}
+.ap{margin-top:8px}.ap button{min-height:36px;padding:6px 14px;border-radius:18px;border:1px solid var(--line,#c9c4d6);background:transparent;color:inherit;font:inherit;font-size:13px;cursor:pointer}.ap button:disabled{opacity:.6;cursor:default}.ap audio{display:block;width:100%;max-width:280px;height:38px}
 </style>
 </head>
 <body>
@@ -778,6 +779,12 @@ function axAvatar(x,st){var a=el('div','av',inicial(x.nome||'?'));a.style.backgr
 function atTitulo(){var n=((S.ag&&S.ag.conversas)||[]).filter(function(x){return atStatus(x)[0]==='pr';}).length;document.title=(n?'('+n+') ':'')+'Central Life B';}
 function axContagens(lista){var c={todos:lista.length,precisa:0,ana:0,pausada:0};lista.forEach(function(x){var s=atStatus(x)[0];if(s==='pr'||x.humano)c.precisa++;if(s==='an')c.ana++;if(s==='pa')c.pausada++;});return c;}
 // ── lista ──
+// Áudio REAL na conversa (Robert 11/11): botão "Ouvir o áudio" busca o original e toca aqui; o elemento é guardado por id para a conversa redesenhar sem interromper a reprodução.
+function atPlayer(id){AT.pl=AT.pl||{};var w=AT.pl[id];if(w)return w;w=el('div','ap');var b=el('button','sc2','Ouvir o áudio');b.type='button';b.setAttribute('aria-label','Ouvir o áudio original');w.appendChild(b);AT.pl[id]=w;
+  b.onclick=async function(){b.disabled=true;b.textContent='Carregando...';var r=await api('GET','/agentes/conversa/audio?fone='+encodeURIComponent(AT.fone||'')+'&id='+encodeURIComponent(id)).catch(function(){return {status:0,j:{}};});
+    if(r.status===200&&r.j&&r.j.ok&&r.j.b64){try{var bin=atob(r.j.b64),u=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);var au=document.createElement('audio');au.controls=true;au.preload='auto';au.setAttribute('aria-label','Áudio da conversa');au.src=URL.createObjectURL(new Blob([u],{type:r.j.mime||'audio/ogg'}));w.textContent='';w.appendChild(au);var pr=au.play();if(pr&&pr.catch)pr.catch(function(){});return;}catch(e){}}
+    b.disabled=false;b.textContent='Ouvir o áudio';toast((r.j&&r.j.mensagem)||'Não consegui abrir o áudio. A transcrição está logo acima.');};
+  return w;}
 function atDesenharLista(){
   var box=document.getElementById('atItens');if(!box)return;var todas=(S.ag&&S.ag.conversas)||[];var lista=atFiltrar(todas);var cn=axContagens(todas);var _rolou=box.scrollTop;var _foco=document.activeElement&&box.contains(document.activeElement)?document.activeElement.dataset&&document.activeElement.dataset.fone:null;box.textContent='';
   var fl=document.getElementById('atFiltros');if(fl){fl.textContent='';[['todos','Todas'],['precisa','Precisam de você'],['ana','Ana atendendo'],['pausada','Pausadas']].forEach(function(f){var b=el('button','cp2'+(AT.filtro===f[0]?' on':'')+(f[0]==='precisa'&&cn.precisa?' al':''));b.type='button';b.appendChild(document.createTextNode(f[1]));var n=el('i',null,String(cn[f[0]]));b.appendChild(n);b.onclick=function(){AT.filtro=f[0];atDesenharLista();};fl.appendChild(b);});}
@@ -821,11 +828,11 @@ function atDesenharChat(forcar,manterTopo){
   var ms=el('div','ms');ms.id='atMsgs';var h=AT.antigas.concat(v.hist||[]);var vistos={};h=h.filter(function(q){var k=q.de+'|'+q.ts+'|'+(q.texto||'');if(vistos[k])return false;vistos[k]=1;return true;}).sort(function(a,b){return a.ts-b.ts;});
   if(AT.temMais===true||(AT.temMais===null&&(v.hist||[]).length>=60)){var mo=el('div','mo');var bmo=el('button',null,'Carregar mensagens anteriores');bmo.type='button';bmo.onclick=axMaisAntigas;mo.appendChild(bmo);ms.appendChild(mo);}
   if(!h.length)ms.appendChild(el('div','vz','Sem mensagens ainda.'));
-  var ultDia='',ultDe='',ultLead='',grp=null;
+  var ultDia='',ultDe='',ultLead='',grp=null,ultAud='';
   h.forEach(function(q){var dia=axDia(q.ts);if(dia!==ultDia){ultDia=dia;ultDe='';ms.appendChild(el('div','dia',dia));}var cl=q.de==='lead'?'le':q.de==='humano'?'eq':'an';
     if(cl!==ultDe||!grp){grp=el('div','gp '+cl);if(cl!=='le')grp.appendChild(el('div','sd',cl==='an'?'Ana':'Equipe'+(q.quem?' · '+q.quem:'')));ms.appendChild(grp);ultDe=cl;}
     var b=el('div','bb');if(q.viaMidia){b.appendChild(el('span','mi',q.viaMidia==='audio'?'Áudio transcrito':q.viaMidia==='image'?'Foto lida':q.viaMidia==='document'?'Documento lido':q.viaMidia));b.appendChild(document.createElement('br'));}
-    b.appendChild(document.createTextNode(q.texto||('['+(q.tipo||'mensagem')+']')));if(q.tipo==='audio'&&q.de==='humano')b.appendChild(el('span','mi','Áudio na voz da Ana'));if(q.tipo==='audio'&&q.de==='ana')b.insertBefore(el('span','mi','Áudio da Ana · transcrição'),b.firstChild),b.insertBefore(document.createElement('br'),b.childNodes[1]);b.appendChild(el('span','tm',axHora(q.ts)));if(q.de==='lead')ultLead=q.texto||'';grp.appendChild(b);if(cl==='an'&&q.texto)atFeedback(grp,q.texto,ultLead);});
+    b.appendChild(document.createTextNode(q.texto||('['+(q.tipo||'mensagem')+']')));if(q.tipo==='audio'&&q.de==='humano')b.appendChild(el('span','mi','Áudio na voz da Ana'));if(q.tipo==='audio'&&q.de==='ana')b.insertBefore(el('span','mi','Áudio da Ana'+(q.audioId?'':' · transcrição')),b.firstChild),b.insertBefore(document.createElement('br'),b.childNodes[1]);if(q.audioId&&q.audioId!==ultAud){var pw=atPlayer(q.audioId);if(pw)b.appendChild(pw);}ultAud=q.audioId||'';b.appendChild(el('span','tm',axHora(q.ts)));if(q.de==='lead')ultLead=q.texto||'';grp.appendChild(b);if(cl==='an'&&q.texto)atFeedback(grp,q.texto,ultLead);});
   var ult=h.length?h[h.length-1]:null;
   if(v.pendentes>0&&!v.humano){var dg=el('div','dg');dg.appendChild(document.createTextNode('Ana está respondendo'));dg.appendChild(el('span'));dg.appendChild(el('span'));dg.appendChild(el('span'));ms.appendChild(dg);}
   else if(!v.humano&&!v.pausado&&ult&&ult.de==='lead'&&Date.now()-ult.ts>180000&&v.estagio!=='aguardando_humano'){ms.appendChild(el('div','al2','Lead sem resposta há '+atQuando(ult.ts)));}
