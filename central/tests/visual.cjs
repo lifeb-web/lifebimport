@@ -69,6 +69,7 @@ const MEDIDA = () => {
       await p.click(`nav a:has-text("${t}")`); await p.waitForTimeout(450); await medir(t);
       await p.screenshot({ path: path.join(process.env.SHOTS || "/tmp", `c-${tag}-${t.replace(/\W/g, "")}.png`), fullPage: true });
       if (t === "Visão geral") {   // cartões clicáveis abrem a lista do que está ligado, em sombra e desligado
+        { const hero = await p.$(".hero.clic"); if (!hero) F(`[${tag}] cartão de pontos de atenção não é clicável`); else { await hero.click(); await p.waitForTimeout(200); const itens = await p.$$("#modal:not(.hide) .grit"); if (!itens.length) F(`[${tag}] cartão de atenção não abriu a lista com explicação`); await medir("lista de pontos de atenção"); await p.click("#modal button:has-text('Fechar')"); await p.waitForTimeout(150); if (await p.$("#modal:not(.hide)")) F(`[${tag}] lista de atenção não fechou`); } }
         for (let k = 0; k < 3; k++) { const cs = await p.$$(".kpi.clic"); await cs[k].click(); await p.waitForTimeout(200); if (!(await p.$("#modal:not(.hide) .grit, #modal:not(.hide) .vazio"))) F(`[${tag}] cartão ${k} não abriu a lista`); await medir("lista do cartão " + k); await p.screenshot({ path: path.join(process.env.SHOTS || "/tmp", `c-${tag}-cartao${k}.png`) }); await p.keyboard.press("Escape"); await p.waitForTimeout(120); }
       }
       if (t === "Controles") {   // exercita filtros e abre/fecha o modal de um interruptor
