@@ -473,7 +473,7 @@ function lerCache(){try{var j=JSON.parse(sessionStorage.getItem('central_cache_v
 function gravarCache(){try{sessionStorage.setItem('central_cache_v2',JSON.stringify({u:S.eu.usuario,dados:S.dados,saude:S.saude,hist:S.hist,t:Date.now()}));}catch(e){}}
 var _rt=null;function renderSoon(){if(_rt)return;_rt=setTimeout(function(){_rt=null;if(S.eu){montarNav();render();}},30);}
 async function abrirApp(){
-  if(S.eu.trocarSenha)S.aba='conta';
+  if(S.eu.trocarSenha)S.aba='conta';else if(/^#atendimento(-55\d{10,11})?$/.test(location.hash||''))S.aba='atend';   // link da Bia (#atendimento ou #atendimento-<fone>) abre direto no Atendimento
   $('login').classList.add('hide');$('app').classList.remove('hide');
   $('stUser').textContent=S.eu.usuario;$('quemNome').textContent=S.eu.nome||S.eu.usuario;$('quemPapel').textContent=PAPEL[S.eu.papel]||S.eu.papel;$('avatar').textContent=inicial(S.eu.nome||S.eu.usuario);
   var ch=lerCache();if(ch){S.dados=ch.dados;S.saude=ch.saude;S.hist=ch.hist;S.ult=ch.t;S.cache=true;}
@@ -491,6 +491,7 @@ async function carregar(avisar,primeira){
   if(S.eu.papel!=='sdr')pOut.push(carregarFilas().then(renderSoon));
   pOut.push(carregarCal().then(renderSoon));
   if(S.aba==='usuarios')pOut.push(carregarUsuarios().then(renderSoon));
+  if(S.aba==='atend'||S.aba==='agentes')pOut.push(carregarAgentes().then(renderSoon));   // abriu direto pelo link #atendimento: já carrega as conversas
   await Promise.all([pEstado].concat(pOut));
   S.carregando=false;gravarCache();tickLive();renderSoon();
   if(avisar)toast(S.erro||'Atualizado');
@@ -778,7 +779,7 @@ function atTitulo(){var n=((S.ag&&S.ag.conversas)||[]).filter(function(x){return
 function axContagens(lista){var c={todos:lista.length,precisa:0,ana:0,pausada:0};lista.forEach(function(x){var s=atStatus(x)[0];if(s==='pr'||x.humano)c.precisa++;if(s==='an')c.ana++;if(s==='pa')c.pausada++;});return c;}
 // ── lista ──
 function atDesenharLista(){
-  var box=document.getElementById('atItens');if(!box)return;var todas=(S.ag&&S.ag.conversas)||[];var lista=atFiltrar(todas);var cn=axContagens(todas);box.textContent='';
+  var box=document.getElementById('atItens');if(!box)return;var todas=(S.ag&&S.ag.conversas)||[];var lista=atFiltrar(todas);var cn=axContagens(todas);var _rolou=box.scrollTop;var _foco=document.activeElement&&box.contains(document.activeElement)?document.activeElement.dataset&&document.activeElement.dataset.fone:null;box.textContent='';
   var fl=document.getElementById('atFiltros');if(fl){fl.textContent='';[['todos','Todas'],['precisa','Precisam de você'],['ana','Ana atendendo'],['pausada','Pausadas']].forEach(function(f){var b=el('button','cp2'+(AT.filtro===f[0]?' on':'')+(f[0]==='precisa'&&cn.precisa?' al':''));b.type='button';b.appendChild(document.createTextNode(f[1]));var n=el('i',null,String(cn[f[0]]));b.appendChild(n);b.onclick=function(){AT.filtro=f[0];atDesenharLista();};fl.appendChild(b);});}
   var ct=document.getElementById('atContagem');if(ct)ct.textContent=todas.length+(todas.length===1?' conversa':' conversas');
   if(!lista.length){var v=el('div','vz');v.appendChild(el('b',null,todas.length?'Nenhuma conversa neste filtro':'Nenhuma conversa ainda'));v.appendChild(document.createTextNode(todas.length?'Troque o filtro ou limpe a busca.':'Quando um lead chamar a Ana, a conversa aparece aqui.'));box.appendChild(v);return;}
@@ -789,9 +790,10 @@ function atDesenharLista(){
     var l3=el('div','l3');l3.appendChild(el('span','tg '+st[0],st[1]));if(x.nome&&x.estagio&&st[0]==='an')l3.appendChild(el('span','tg',axEtapa(x.estagio)));tx.appendChild(l3);r.appendChild(tx);
     r.appendChild(naoLida?el('span','pt'):el('span'));
     r.onclick=function(){axAbrir(x.fone);};r.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();r.onclick();}else if(e.key==='ArrowDown'&&r.nextSibling)r.nextSibling.focus();else if(e.key==='ArrowUp'&&r.previousSibling)r.previousSibling.focus();};box.appendChild(r);});
+  box.scrollTop=_rolou;if(_foco){var _f=box.querySelector('.ri[data-fone="'+_foco+'"]');if(_f)try{_f.focus({preventScroll:true});}catch(e){}}   // a lista é refeita a cada 4 s: mantém a rolagem e o foco onde o usuário estava
 }
 function axAbrir(fone){AT.fone=fone;AT.antigas=[];AT.temMais=null;AT.ficha=false;var x=((S.ag&&S.ag.conversas)||[]).filter(function(c){return c.fone===fone;})[0];if(x)AT.vistos[fone]=x.ts||Date.now();var a=document.querySelector('.ax');if(a){a.classList.add('chatAberto');a.classList.remove('fichaOn');}AT.conv=null;atDesenharLista();atDesenharChat(true);atBuscarConversa().then(function(){atDesenharChat(true);});try{history.replaceState(null,'','#atendimento-'+fone);}catch(e){}}
-async function atAtualizarLista(){var r=await api('GET','/agentes').catch(function(){return {status:0,j:{}};});if(r.status===200&&r.j.agentes){S.ag=r.j.agentes[0];if(S.aba==='atend'){atDesenharLista();atTitulo();}}}
+async function atAtualizarLista(){var r=await api('GET','/agentes').catch(function(){return {status:0,j:{}};});if(r.status===200&&r.j.agentes){S.ag=r.j.agentes[0];if(S.aba==='atend'){var sg=JSON.stringify(((S.ag&&S.ag.conversas)||[]).map(function(c){return [c.fone,c.ts,c.estagio,c.previa,c.humano,c.pausado,c.ultimaDe,c.nome];}))+'|'+AT.filtro+'|'+AT.busca+'|'+AT.fone+'|'+Math.floor(Date.now()/60000);if(sg!==AT.sigLista){AT.sigLista=sg;atDesenharLista();}atTitulo();}}}   // só redesenha a lista quando algo mudou (ou a cada minuto, para o 'há X min'): menos pulo de tela
 async function atBuscarConversa(){if(!AT.fone)return;var fone=AT.fone;var r=await api('GET','/agentes/conversa?fone='+encodeURIComponent(fone)).catch(function(){return {status:0,j:{}};});if(fone!==AT.fone||r.status!==200||!r.j.ok)return;var v=r.j;var tam=(v.hist||[]).length;var ult=tam?v.hist[tam-1].ts:0;var mud=!AT.conv||AT.conv.hum!==v.humano||AT.conv.paus!==v.pausado||AT.conv.tam!==tam||AT.conv.ult!==ult||AT.conv.est!==v.estagio||AT.conv.pend!==v.pendentes||(AT.conv.notas||0)!==(v.notas||[]).length;AT.conv={hum:v.humano,paus:v.pausado,tam:tam,ult:ult,est:v.estagio,pend:v.pendentes,notas:(v.notas||[]).length,v:v};if(mud)atDesenharChat(false);}
 function axDia(ts){var d=new Date(ts);var h=new Date();var ont=new Date(Date.now()-864e5);if(d.toDateString()===h.toDateString())return 'Hoje';if(d.toDateString()===ont.toDateString())return 'Ontem';return d.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'});}
 function axHora(ts){return new Date(ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}
@@ -933,6 +935,7 @@ function telaAtend(c){
   if(AT.euPosso===null)api('GET','/agentes/exclusao-autorizados').then(function(r){AT.euPosso=!!(r.status===200&&r.j&&r.j.euPosso);if(S.aba==='atend'){atDesenharLista();atDesenharChat(false);}});
   atendParar();if(AT.wall)AT.timer3=setInterval(atWallBuscar,4000);AT.timer1=setInterval(function(){if(S.aba!=='atend'||document.hidden)return;atAtualizarLista();},4000);AT.timer2=setInterval(function(){if(S.aba!=='atend'||document.hidden||AT.rec||AT.fbAberto)return;atBuscarConversa();},1500);if(AT.fone)atBuscarConversa().then(function(){atDesenharChat(true);});
 }
+window.addEventListener('hashchange',function(){var m=(location.hash||'').match(/^#atendimento(?:-(55\d{10,11}))?$/);if(!m||!S.eu)return;if(S.aba!=='atend')ir('atend');if(m[1]&&AT.fone!==m[1])setTimeout(function(){axAbrir(m[1]);},60);});
 document.addEventListener('keydown',function(e){var t=e.target&&e.target.tagName;if(S.aba==='atend'&&e.key==='/'&&t!=='INPUT'&&t!=='TEXTAREA'&&!e.ctrlKey&&!e.metaKey){var b=document.getElementById('atBusca');if(b){e.preventDefault();b.focus();b.select();}}});
 
 async function abrirSimulador(){
