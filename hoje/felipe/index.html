@@ -744,12 +744,12 @@ function faixa(id, texto, tipo, botao) { // faixa discreta e única por id (rede
   f.className = 'faixa ' + (tipo || ''); f.setAttribute('role', tipo === 'erro' ? 'alert' : 'status'); f.textContent = texto;
   if (botao) { var b = el('button', 'sec', botao.rot); b.type = 'button'; b.onclick = botao.acao; f.appendChild(b); }
 }
-function marcaRede(ok) {
-  if (ok) { REDE.falhas = 0; faixa('rede', ''); } else { REDE.falhas++; if (disjuntorAberto()) faixa('rede', 'Sem conexão estável. Seus dados estão salvos neste aparelho. Tentando de novo a cada 15 segundos.', 'aviso'); else if (REDE.falhas >= 2) faixa('rede', 'Sem conexão, tentando de novo...', 'aviso'); }
+function marcaRede(ok, motivo) { // motivo: 'rede' (sem internet), 'lento' (o servidor não respondeu a tempo) ou 'servidor' (erro 5xx): o aviso diz a verdade, em vez de culpar sempre a conexão
+  if (ok) { REDE.falhas = 0; REDE.motivo = ''; faixa('rede', ''); } else { REDE.falhas++; REDE.motivo = motivo || REDE.motivo || 'rede'; var m = REDE.motivo; if (disjuntorAberto()) faixa('rede', (m === 'rede' ? 'Sem conexão estável.' : 'O servidor está instável.') + ' Seus dados estão salvos neste aparelho. Tentando de novo a cada 15 segundos.', 'aviso'); else if (REDE.falhas >= 2) faixa('rede', m === 'lento' ? 'O servidor está lento, tentando de novo...' : m === 'servidor' ? 'O servidor não está respondendo direito, tentando de novo...' : 'Sem conexão, tentando de novo...', 'aviso'); }
 }
 // uma chamada com timeout, tentativas e espera crescente. Só repete o que é seguro: GET, ou POST com x-idem (o servidor devolve a mesma resposta sem repetir a escrita).
 async function api(path, corpo, ext, base, opt) {
-  opt = opt || {}; var seguro = !corpo || !!opt.idem; var max = seguro ? 3 : 1; var ultimo = null;
+  opt = opt || {}; var seguro = !corpo || !!opt.idem; var max = seguro ? 3 : 1; var ultimo = null; var contou = false; // as 3 tentativas de UMA chamada contam como uma falha só (antes 1 chamada lenta já acendia o aviso)
   if (disjuntorAberto() && Date.now() - REDE.ultima < 15000 * REDE.escala && !opt.furaDisjuntor) return { _status: 0, ok: false, _disjuntor: true, mensagem: 'Sem conexão no momento. Tentando de novo em instantes.' };
   for (var t = 0; t < max; t++) {
     if (ext && ext.signal && ext.signal.aborted) throw Object.assign(new Error('abortado'), { name: 'AbortError' });
@@ -773,7 +773,7 @@ async function api(path, corpo, ext, base, opt) {
       else if (quebrado && r.status < 300 && seguro) { repete = true; espera = jitter(1000 * Math.pow(2, t)); }
       else if (st >= 500 && st !== 502 && seguro) { repete = true; espera = jitter(1000 * Math.pow(2, t)); }
       else if (st === 423 && seguro) { repete = true; espera = jitter(1000 * Math.pow(2, t)); }
-      if (st >= 500 && st !== 502) marcaRede(false); else if (!quebrado) marcaRede(true);
+      if (st >= 500 && st !== 502) { if (!contou) { contou = true; marcaRede(false, 'servidor'); } } else if (!quebrado) marcaRede(true);
       if (st === 429 || (st === 409 && j.erro === 'ocupado')) { /* servidor respondeu: rede ok */ }
       ultimo = j; clearTimeout(tm); if (ext && ext.signal) ext.signal.removeEventListener('abort', aoAbortar);
       if (!repete || t === max - 1) return j;
@@ -781,7 +781,7 @@ async function api(path, corpo, ext, base, opt) {
     } catch (e) {
       clearTimeout(tm); if (ext && ext.signal) ext.signal.removeEventListener('abort', aoAbortar);
       if (ext && ext.signal && ext.signal.aborted) throw e; // o próprio usuário cancelou
-      marcaRede(false); ultimo = { _status: 0, ok: false, mensagem: estourou ? 'O servidor demorou para responder. Tente de novo.' : 'Sem conexão. Tente de novo.' };
+      if (!contou) { contou = true; marcaRede(false, estourou ? 'lento' : (typeof navigator !== 'undefined' && navigator.onLine === false ? 'rede' : 'servidor')); } ultimo = { _status: 0, ok: false, mensagem: estourou ? 'O servidor demorou para responder. Tente de novo.' : 'Sem conexão. Tente de novo.' };
       if (t === max - 1) return ultimo; await dormir(jitter(1000 * Math.pow(2, t)));
     }
   }
