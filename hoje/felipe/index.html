@@ -30,6 +30,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:15
 a{color:var(--purple)}
 button{font-family:var(--font);font-weight:700;font-size:14px;min-height:36px;border:0;border-radius:8px;padding:6px 14px;cursor:pointer;background:var(--purple-bt);color:#fff}
 button.sec{background:transparent;color:var(--purple);border:1.5px solid var(--purple)}
+@keyframes piscaAg{0%,100%{box-shadow:0 0 0 0 rgba(233,32,133,.55)}50%{box-shadow:0 0 0 9px rgba(233,32,133,0)}}
+#bAguard.pisca{background:#E92085;color:#fff;border-color:#E92085;font-weight:800;animation:piscaAg 1.6s ease-in-out infinite}   /* lead qualificado esperando o Felipe escolher o representante: destaca e pisca para não ser esquecido */
 a.btn-painel{display:inline-flex;align-items:center;justify-content:center;min-height:36px;font-family:var(--font);font-weight:700;font-size:14px;padding:6px 14px;border-radius:8px;text-decoration:none;white-space:nowrap;color:var(--purple);background:var(--track);border:1.5px solid var(--purple)}
 a.btn-painel:hover{filter:brightness(.97)}
 button.link{background:none;color:var(--purple);text-decoration:underline;padding:6px 4px}
@@ -2554,7 +2556,7 @@ async function enviarContextoPerda(L) {
 
 // ---------- Aguardando representante (leads que o Felipe qualificou e ainda estão com o Sistema ou com ele) ----------
 S.ag = { itens: [], total: 0, responsaveis: [], ocultos: {}, timer: null, aberto: false, seq: 0 };
-function rotuloAguard() { var n = S.ag.itens.filter(function (i) { return !S.ag.ocultos[i.dealId]; }).length; $('bAguard').textContent = 'Aguardando representante (' + (S.ag.total != null ? Math.max(0, S.ag.total - Object.keys(S.ag.ocultos).length) : n) + ')'; }
+function rotuloAguard() { var n = S.ag.itens.filter(function (i) { return !S.ag.ocultos[i.dealId]; }).length; var q = S.ag.total != null ? Math.max(0, S.ag.total - Object.keys(S.ag.ocultos).length) : n; $('bAguard').textContent = 'Aguardando representante (' + q + ')'; $('bAguard').classList.toggle('pisca', q > 0); $('bAguard').title = q > 0 ? q + ' lead(s) qualificado(s) esperando você escolher o representante' : 'Leads que você qualificou e ainda esperam representante'; }
 async function carregarAguardando(silencioso, fresco) {
   if (!S.token) return; var meu = ++S.ag.seq; var j; try { j = await api('/aguardando-representante' + (fresco ? '?fresco=1' : '')); } catch (e) { j = { _status: 0 }; }
   if (j._status === 401) { sair('Senha não confere.'); return; } if (meu !== S.ag.seq) return;
