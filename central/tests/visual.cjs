@@ -34,7 +34,7 @@ const MEDIDA = () => {
 (async () => {
   const b = await chromium.launch({ executablePath: process.argv[3] });
   const users = [{ usuario: "robert@x.com", nome: "Robert", papel: "robert", ativo: true, ultimoAcesso: Date.now() }, { usuario: "luiz", nome: "Luiz", papel: "admin", ativo: false, ultimoAcesso: null }];
-  const TELAS = ["Visão geral", "Controles", "Todas as chaves", "Filas de mensagens", "Calendário", "Agentes", "Histórico", "Atalhos", "Usuários", "Minha conta"];
+  const TELAS = ["Visão geral", "Controles", "Todas as chaves", "Filas de mensagens", "Calendário", "Atendimento", "Agentes", "Histórico", "Atalhos", "Usuários", "Minha conta"];
   const COMBOS = [[1920, 1080, "light"], [1440, 900, "light"], [1440, 900, "dark"], [1280, 800, "light"], [1024, 768, "light"], [768, 1024, "light"], [390, 844, "light"], [390, 844, "dark"], [360, 740, "dark"]];
   for (const [w, h, tema] of COMBOS) {
     const ctx = await b.newContext({ viewport: { width: w, height: h }, colorScheme: tema }); const p = await ctx.newPage(); const tag = `${w}x${h}-${tema}`; let erroApi = null;
@@ -48,6 +48,7 @@ const MEDIDA = () => {
       r.fulfill({ status: 200, contentType: "application/json", headers: { "access-control-allow-origin": "*", "access-control-allow-headers": "*" }, body: JSON.stringify(j) }); });
     const medir = async (rotulo) => {
       const r = await p.evaluate(MEDIDA); verificados += r.itens.length;
+      if (process.env.SHOTS && /^390x844-/.test(tag) && /Agentes|Atendimento/.test(rotulo)) { try { await p.screenshot({ path: path.join(process.env.SHOTS, `${tag}-${rotulo.replace(/[^A-Za-z0-9]+/g, "_")}.png`), fullPage: true }); } catch (e) {} }
       if (r.sw > r.cw) F(`[${tag}] ${rotulo}: rolagem lateral (${r.sw} > ${r.cw})`);
       for (const i of r.itens) {
         const onde = `[${tag}] ${rotulo}: ${i.nome} (${i.w}x${i.h})`;
@@ -73,6 +74,7 @@ const MEDIDA = () => {
         for (const f of ["Risco alto", "Em sombra", "Desligados", "Todos"]) { await p.click(`.chip:has-text("${f}")`); await p.waitForTimeout(120); }
         const sw = await p.$(".switch:not([disabled])"); if (sw) { await sw.click(); await p.waitForTimeout(250); await medir("modal de confirmação"); await p.keyboard.press("Escape"); await p.waitForTimeout(150); if (await p.$("#modal:not(.hide)")) F(`[${tag}] modal não fechou com Esc`); }
       }
+      if (t === "Atendimento") { const it = await p.$(".at .it2"); if (it) { await it.click(); await p.waitForTimeout(500); await medir("Atendimento: conversa aberta"); const ta = await p.$("#atTxt"); if (!ta) F(`[${tag}] conversa assumida sem caixa de resposta`); const bk = await p.$(".at .back"); if (bk && (await bk.isVisible())) { await bk.click(); await p.waitForTimeout(200); await medir("Atendimento: lista no celular"); } for (const f of ["Precisam de você", "Ana atendendo", "Pausadas", "Todas"]) { await p.click(`.chp:has-text("${f}")`); await p.waitForTimeout(100); } await p.click(".at .it2 >> nth=0").catch(() => {}); await p.waitForTimeout(300); await medir("Atendimento: depois dos filtros"); } else F(`[${tag}] Atendimento sem conversas na lista`); }
       if (t === "Filas de mensagens") { const rm = await p.$("button:has-text('Remover')"); if (rm) { await rm.click(); await p.waitForTimeout(250); await medir("modal remover mensagem"); await p.keyboard.press("Escape"); } }
     }
     await p.keyboard.press("Control+k"); await p.waitForTimeout(250); await medir("paleta"); if (!(await p.$(".pal"))) F(`[${tag}] paleta não abriu`); await p.keyboard.press("Escape");
