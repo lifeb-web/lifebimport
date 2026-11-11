@@ -257,6 +257,7 @@ h3+.lead+.flow{margin-top:6px}
     <li><a href="#outros">14. Demais componentes</a></li>
     <li class="grp">Regras e referência</li>
     <li><a href="#regras">15. Regras de ouro</a></li>
+    <li><a href="#ana">16. A Ana (SDR virtual)</a></li>
     <li><a href="#agendorapi">16. Como a Bia conversa com o Agendor</a></li>
     <li><a href="#testes">17. Testes e qualidade</a></li>
     <li><a href="#seguranca">18. Segurança e confiabilidade</a></li>
@@ -923,7 +924,7 @@ h3+.lead+.flow{margin-top:6px}
 <h2><span class="n">14</span>Demais componentes</h2>
 <div class="grid g2">
 <div class="card item"><h4>Central Life B (painel de controle)</h4><p>Página protegida por usuário e senha, em projetojlbv.com.br/central. Reúne a visão geral da saúde da plataforma, as chaves de liga e desliga das proteções e automações, as filas de mensagens, o calendário de folga e os atalhos para o Dash, a Hoje, a Lista e esta página. Cada mudança pede um motivo, aparece no histórico com quem fez e pode ser desfeita. O Robert vê e muda tudo; administradores mudam só o que é de risco baixo ou médio; o SDR só lê.</p></div>
-<div class="card item"><h4>Agente SDR Inbound "Ana" (em construção, desligado)</h4><p>Assistente virtual de WhatsApp que atende quem se cadastra ou chama, faz 4 perguntas (segmento, CNPJ, faturamento, decisor), contorna preço sem falar valor e passa o lead qualificado para o Felipe (ou o SDR escolhido). Vive num Worker próprio (lifeb-agente-sdr), separado da Bia, com número novo (62) 9627-1531 na mesma conta da Meta. O Agendor é a única fonte de verdade: usuário e funil "SDR IA" (hoje ainda com o nome antigo no Agendor; o Robert renomeia para "Ana SDR IA") (Novo lead, Em conversa, Qualificado aguardando horário, Repassado ao SDR, Sem resposta, Encerrado). Ninguém é descartado por região ou faturamento; não fala de bonificação nem de pagamento à vista. Hoje: motor da conversa, webhook assinado, cascata de IA e envio prontos e testados; falta ligar o número na Meta e o modo sombra com o número real. Controle total (modo, parada de emergência, configuração, conversas ao vivo, humano assume) já está na Central, aba Agentes. Documentação: AGENTE-SDR-DOCUMENTACAO.md.</p></div>
+<div class="card item"><h4>Ana, a SDR virtual do WhatsApp (no ar)</h4><p>Atende quem chama o número dela, qualifica e entrega o lead pronto. Tudo sobre como ela pensa, o que pergunta, quando dispensa, para quem passa o lead e como a equipe entra na conversa está na <a href="#ana">seção 16</a>. Controle total na Central, aba Agentes e aba Atendimento.</p></div>
 <div class="card item"><h4>Filas e calendário de folga (na Central)</h4><p>Quando o WhatsApp de uma pessoa está com a janela fechada, a Bia guarda as mensagens em uma fila. Na Central, o Robert vê essa fila por pessoa e remove uma mensagem ou limpa tudo, com cópia guardada por 7 dias. No calendário, ele marca dias extras de folga: nesses dias vale a mesma regra dos feriados para o envio de mensagens.</p></div>
 <div class="card item"><h4>Livro de mudanças do SDR</h4><p>Registro diário de tudo o que foi alterado direto no Agendor nos leads do SDR (ligação apagada, lead movido, perda sem explicação). A Bia usa esse livro para avisar a gestão em um resumo, no máximo a cada 30 minutos, sem repetir o mesmo caso.</p></div>
 <div class="card item"><h4>Análise mensal ERP e Agendor</h4><p>Rotina que cruza as vendas do ERP do mês com os negócios do Agendor e gera uma página de análise. Só lê; nada é escrito no Agendor. O ERP não é integrado ao Agendor.</p></div>
@@ -945,6 +946,53 @@ h3+.lead+.flow{margin-top:6px}
 <div class="card item"><h4>Processo</h4><ul><li>Mudou uma regra? Procure em todos os lugares onde ela aparece, inclusive Ecossistema e Central.</li><li>Nada vai ao ar sem a suíte de testes verde e sem auditoria independente quando a mudança é grande.</li><li>Publicação só pelo roteiro único, com cópia de segurança antes.</li><li>Servidor primeiro, página depois.</li></ul></div>
 <div class="card item"><h4>Automação</h4><ul><li>Escreveu? Releia. Só se diz "confirmado" quando a leitura bate.</li><li>Em simulação não há escrita nem WhatsApp.</li><li>Se a leitura falhou, a automação não age.</li><li>Cada tipo liga separado, com limite pequeno por padrão.</li></ul></div>
 </div>
+</section>
+
+<!-- 16 -->
+<section class="sec" id="ana">
+<h2><span class="n">16</span>A Ana, a SDR virtual do WhatsApp</h2>
+<p class="lead">A Ana é a SDR do inbound: é ela que conversa com o lead, pelo número dela, a qualquer hora. O objetivo dela é um só: <b>qualificar</b>. Ela apresenta o projeto Mega Vision USA (exposição estratégica de produtos de alto giro e compra por impulso, o "vendedor silencioso" da loja), descobre se o lead tem perfil e entrega tudo pronto. O Felipe não é um segundo atendente: ele só entra na mesma conversa, pela Central, quando a Ana precisa de uma pessoa.</p>
+<h3>Da primeira mensagem ao handoff</h3>
+<div class="flow item">
+<div class="b"><b>1. Abre a conversa</b>Responde em segundos. Se não sabe o nome, pergunta com quem fala.</div><div class="ar">→</div>
+<div class="b"><b>2. Confirma o segmento</b>Usa o que já existe (cadastro no Agendor, CNPJ, campanha) e só confirma: "vi aqui que é uma farmácia, é isso?".</div><div class="ar">→</div>
+<div class="b"><b>3. CNPJ e empresa</b>Pede o CNPJ, acha a empresa, confere a cidade e o tempo de empresa e confirma com o lead.</div><div class="ar">→</div>
+<div class="b"><b>4. Porte e decisor</b>Faturamento em faixa (uma vez, aceita recusa) e se é o dono ou quem decide.</div><div class="ar">→</div>
+<div class="b m"><b>5. Handoff</b>Nota completa, dados da empresa e resumo no Agendor; o lead segue para o time.</div>
+</div>
+<h3>Os portões: quem é o foco e quem precisa mostrar interesse</h3>
+<div class="grid g3">
+<div class="card item"><span class="tag t-green">Foco</span><h4>Farmácia, drogaria e supermercado</h4><p>Atendimento completo e acolhedor. Nenhuma conversa sobre valor mínimo.</p></div>
+<div class="card item"><span class="tag t-purple">Mais firme</span><h4>Outros segmentos e MEI</h4><p>Todos podem comprar, mas a Ana é mais dura: avisa com educação que o pedido começa em R$ 2 mil e pergunta se o interesse de compra é real. Sem interesse, dispensa com educação e deixa a porta aberta; se o lead voltar, a conversa reabre.</p></div>
+<div class="card item"><span class="tag t-gray">Empresa nova</span><h4>CNPJ com menos de 2 anos</h4><p>A Ana confere pelo CNPJ e deixa o lead ciente: o fechamento é à vista ou no cartão de crédito, em até 3x sem juros ou até 12x com juros. Sempre com respeito.</p></div>
+</div>
+<h3>Para onde vai o lead qualificado</h3>
+<div class="flow item">
+<div class="b g"><b>Em Goiás e no Distrito Federal</b>Fluxo normal: o Felipe confirma e o representante de campo atende.</div><div class="ar">ou</div>
+<div class="b m"><b>Fora de GO e DF</b>O handoff é para o Felipe, que atende e decide o que fazer. A nota e a observação no Agendor trazem essa marca.</div>
+</div>
+<h3>Quando uma pessoa entra na conversa</h3>
+<div class="flow item">
+<div class="b"><b>Gatilhos</b>Lead pede uma pessoa, mídia que ela não consegue abrir, resposta bloqueada por regra, dúvida que não está na base, lead irritado, insistência depois do repasse.</div><div class="ar">→</div>
+<div class="b"><b>A equipe assume</b>Pela Central, no mesmo número. A Ana se cala naquela conversa.</div><div class="ar">→</div>
+<div class="b g"><b>Devolve à Ana</b>Quando quiser, com um clique. Assumir não é "passar o lead": a Ana não diz que transferiu.</div>
+</div>
+<div class="note item"><strong>Assumir é diferente de passar</strong>Assumir acontece por um gatilho de intervenção humana e a conversa continua com a equipe. Passar é o handoff do lead qualificado, que muda de mãos no Agendor.</div>
+<h3>Como ela fala</h3>
+<div class="grid g2">
+<div class="card item"><h4>Natural e curta</h4><p>Mensagens curtas, no máximo três por vez, com pausa entre elas como uma pessoa digitando. Emoji só de vez em quando. Usa o nome do lead só se parecer um nome confiável; se não souber, pergunta. Em áudio, só fala nomes comuns que a voz pronuncia bem.</p></div>
+<div class="card item"><h4>Áudio</h4><p>Responde por nota de voz quando o lead manda áudio ou pede áudio. Números, parcelas e siglas são falados por extenso. A Meta não oferece o aviso "gravando áudio", só o "digitando".</p></div>
+<div class="card item"><h4>Desvios e cantadas</h4><p>Responde com uma frase leve e educada e volta ao assunto. Na terceira cantada coloca um limite claro e a equipe é avisada; depois disso não responde mais a cantada, mas atende se o lead voltar a falar da loja.</p></div>
+<div class="card item"><h4>Nunca</h4><p>Preço, desconto, bonificação, prazo ou resultado garantido. Citar nomes de pessoas. Dizer que é humana. Citar concorrentes.</p></div>
+</div>
+<h3>Segurança, histórico e avisos</h3>
+<div class="grid g2">
+<div class="card item"><h4>Histórico guardado para sempre</h4><p>Toda mensagem, nota e decisão vai para um arquivo permanente que só cresce, com fila de segurança se o banco falhar e conferência de hora em hora.</p></div>
+<div class="card item"><h4>Excluir conversa, só com controle</h4><p>Só o Robert e quem ele autorizar. Primeiro dá para ocultar (reversível). Excluir exige motivo, os quatro últimos dígitos do telefone e a senha; a conversa vai para uma lixeira por 30 dias, recuperável. Apagar de vez só o Robert, com a palavra APAGAR e a senha. Tudo fica registrado e o Robert é avisado.</p></div>
+<div class="card item"><h4>Avisos pela Bia</h4><p>Lead novo e dispensado entram no resumo (8h e 18h). Qualificado, pediu pessoa, intervenção e fora de GO/DF avisam o Robert na hora (de dia). Falha e lead sem resposta avisam sempre. O Felipe só recebe se o Robert ligar essa chave. O time de reps nunca recebe aviso da Ana.</p></div>
+<div class="card item"><h4>Aprendizado supervisionado</h4><p>Cada resposta pode receber 👍 ou 👎 na Central. Uma análise diária propõe melhorias e nada muda sem a aprovação do Robert na Central.</p></div>
+</div>
+<div class="note ok item"><strong>Parada de emergência</strong>Na Central, aba Agentes, o Robert desliga a Ana na hora, em qualquer modo, e liga de novo quando quiser.</div>
 </section>
 
 <!-- 16 -->
