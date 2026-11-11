@@ -73,7 +73,7 @@
   // ---------- Estado ----------
   var S = { raw: null, rows: [], loading: false, err: null, mode: 'm', root: null, inited: false,
             f: { sdr: '', funil: '', origem: '' }, gran: '', cfg: null, lastFetch: 0, timer: null,
-            total: null, dupes: 0, gs: null, atv: null, atvErr: null, ini: null, iniErr: null, etp: null, etpErr: null, byId: {}, etapaNome: {}, w: 'p' };
+            agent: 'felipe', total: null, dupes: 0, gs: null, atv: null, atvErr: null, ini: null, iniErr: null, etp: null, etpErr: null, byId: {}, etapaNome: {}, w: 'p' };
 
   // ---------- Utilidades ----------
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -1041,8 +1041,24 @@
     return '<div class="s2-card' + (extra.cls ? ' ' + extra.cls : '') + '"' + (extra.style ? ' style="' + extra.style + '"' : '') + '><div class="s2-ch"><span class="s2-ct">' + titulo + '</span><span class="s2-cs">' + (sub || '') + '</span></div><div class="s2-cb">' + corpo + '</div></div>';
   }
 
+  // Seletor de agente (11/11): Felipe (padrão, intocado) ou Ana (SDR virtual de WhatsApp, agentes.js)
+  function htmlAgente() {
+    if (!w.AGENTES) return '';
+    return '<div class="s2-fg"><span class="s2-fl">Agente</span>' + [['felipe', 'Felipe'], ['ana', 'Ana']].map(function (a) {
+      return '<button class="s2-c' + (S.agent === a[0] ? ' on' : '') + '" data-ag="' + a[0] + '" aria-pressed="' + (S.agent === a[0]) + '">' + a[1] + '</button>';
+    }).join('') + '</div>';
+  }
+  function drawAna(root, per, tv) {
+    var glob = S.cfg.getOrigin ? S.cfg.getOrigin() : 'both';
+    medeLargura();
+    var x = w.AGENTES.sdrHtml({ tv: tv, per: per, glob: glob, cw: S.cw }), st = x.status || {};
+    var topo = '<div class="s2-hd"><div class="s2-ttl">SDR (<b>Ana</b>) · <b>' + esc(per.label || (dm(per.from) + ' a ' + dm(per.to))) + '</b> <span class="s2-st' + (st.warn ? ' warn' : '') + '" style="text-transform:none;letter-spacing:0">· ' + esc(st.txt || '') + (st.falha ? '' : (st.atrasado ? ' (atrasado)' : '')) + '</span></div><div class="s2-fil">' + htmlAgente() +
+      (glob && glob !== 'both' ? '<span class="s2-st warn" title="Vem da barra Outbound / Inbound / Ambos do topo do Dash">Filtro do Dash: ' + (glob === 'inbound' ? 'Inbound' : 'Outbound') + '</span>' : '') + '</div></div>' + (x.cov || '');
+    root.innerHTML = topo + (x.kpis || '') + x.body;
+  }
+
   function htmlFiltros(r) {
-    var h = '<div class="s2-fil">';
+    var h = '<div class="s2-fil">' + htmlAgente();
     var sdrIds = Object.keys(CFG.sdrs);
     if (sdrIds.length > 1) {
       h += '<div class="s2-fg"><span class="s2-fl">SDR</span><button class="s2-c' + (!r.f.sdr ? ' on' : '') + '" data-f="sdr" data-v="">Todos</button>' +
@@ -1074,6 +1090,7 @@
     var root = S.root; if (!root) return;
     var per = S.cfg && S.cfg.getPeriod ? S.cfg.getPeriod() : null;
     if (!per) { root.innerHTML = '<div class="s2-empty">Carregando período…</div>'; return; }
+    if (S.agent === 'ana' && w.AGENTES) { drawAna(root, per, S.mode === 't'); return; }
     if (S.err && !S.rows.length) { root.innerHTML = '<div class="s2-empty">Não consegui ler os negócios do SDR agora. Tente de novo em instantes.<br><button class="s2-c" data-retry="deals" style="margin-top:6px">Tentar de novo</button></div>'; return; }
     if (!S.raw) { root.innerHTML = '<div class="s2-empty">Carregando negócios do SDR…</div>'; return; }
     var tv = S.mode === 't';
@@ -1227,6 +1244,9 @@
     if (TIT[go]) return abreLista(TIT[go], lista(go), cor);
   }
   function onRootClick(ev) {
+    var ag = ev.target.closest('button[data-ag]');
+    if (ag) { mudaAgente(ag.getAttribute('data-ag')); return; }
+    if (S.agent === 'ana' && w.AGENTES && w.AGENTES.click(ev)) return;
     var rt = ev.target.closest('button[data-retry]');
     if (rt) { var k = rt.getAttribute('data-retry'); if (k === 'atv') { S.atvErr = null; render(); return lerAtividades(); } if (k === 'ini') { S.iniErr = null; render(); return lerIniciados(); } return carregar(true); }
     var b = ev.target.closest('button[data-f]');
@@ -1248,6 +1268,14 @@
       return;
     }
     if (ev.target.closest('.s2-ks') || ev.target.closest('.s2-dup')) onClick(ev);
+  }
+
+  function mudaAgente(a) {
+    if (a !== 'felipe' && a !== 'ana') return;
+    S.agent = a;
+    if (S.cfg && S.cfg.onAgent) { try { S.cfg.onAgent(a); } catch (e) {} }
+    if (a === 'ana' && w.AGENTES) w.AGENTES.carregar(false);
+    render();
   }
 
   // ---------- Dados (somente leitura) ----------
@@ -1355,6 +1383,7 @@
       S.cfg = cfg; S.mode = cfg.mode || 'm'; S.root = cfg.root;
       injetaCss();
       S.root.classList.add('s2', S.mode === 't' ? 'tv' : 'm');
+      if (w.AGENTES) w.AGENTES.init({ bridge: cfg.bridge, key: cfg.key, onChange: function () { if (S.agent === 'ana' && S.cfg && S.cfg.isActive && S.cfg.isActive()) render(); } });
       if (!S.inited) {
         S.root.addEventListener('click', onRootClick); S.inited = true;
         var rt; w.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { if (S.cfg.isActive && S.cfg.isActive() && S.raw) render(); }, 200); });
@@ -1367,14 +1396,20 @@
     },
     activate: function () {
       render();
+      if (S.agent === 'ana' && w.AGENTES) w.AGENTES.carregar(false);
       carregar(false);
       if (S.raw && (!S.atv || Date.now() - (S.atvTs || 0) > 300000)) lerAtividades();
       if (S.raw && (!S.ini || Date.now() - (S.iniTs || 0) > 300000)) lerIniciados();
       if (S.mode === 't' && !S.timer) {
-        S.timer = setInterval(function () { if (S.cfg.isActive && S.cfg.isActive()) carregar(true); }, CFG.refreshTelaoMs);
+        S.timer = setInterval(function () { if (S.cfg.isActive && S.cfg.isActive()) { carregar(true); if (S.agent === 'ana' && w.AGENTES) w.AGENTES.carregar(true); } }, CFG.refreshTelaoMs);
       }
     },
     render: render,
+    ensureCss: injetaCss,
+    agent: function () { return S.agent; },
+    setAgent: mudaAgente,
+    // distribui os cartões de OUTRO bloco (aba Agentes) em colunas, com a mesma regra do SDR (PC e tablet)
+    layoutIn: function (root) { var o = S.root; S.root = root; try { medeLargura(); if (S.w !== 'p') empacota(); } finally { S.root = o; } },
     // núcleo puro, exposto para teste
     _core: { setIni: function (x) { S.ini = x; }, prep: prep, calcular: calcular, dataBRT: dataBRT, origemKey: origemKey, origensDe: origensDe, rotuloOrigem: rotuloOrigem, corOrigem: corOrigem, agrega: agrega, serie: serie, periodoAnterior: periodoAnterior, atvLinhas: atvLinhas, iniDia: iniDia, iniMapa: iniMapa, agregaIni: agregaIni, serieIniFin: serieIniFin, conferir: conferir, agregaAtv: agregaAtv, janelaAtv: janelaAtv, agregaEtp: agregaEtp, etpLinhas: etpLinhas }
   };
