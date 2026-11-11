@@ -80,7 +80,7 @@
     return pad(b.getUTCDate()) + '/' + pad(b.getUTCMonth() + 1) + ' ' + pad(b.getUTCHours()) + ':' + pad(b.getUTCMinutes());
   }
   function semAcento(s) { return String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim(); }
-  function usd(n) { if (n == null || !isFinite(n)) return 'n/d'; var a = Math.abs(n); return 'US$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: a >= 1 ? 2 : 4, maximumFractionDigits: a >= 1 ? 2 : 4 }); }
+  function usd(n) { return brl(brlDe(n)); }   // 11/11 (Robert: "vivemos em real"): o custo vem em US$ da IA, mas o Dash mostra SEMPRE em R$ (cotação CFG.cotacao)
   function brl(n) { if (n == null || !isFinite(n)) return 'n/d'; var a = Math.abs(n); return 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: a >= 1 ? 2 : 4, maximumFractionDigits: a >= 1 ? 2 : 4 }); }
   function brlDe(u) { return u == null ? null : u * CFG.cotacao; }
   function rotuloEstagio(k) {
@@ -520,11 +520,10 @@
     var j = r.j, mo = modoInfo(ana), semUso = r.temCusto && r.serieC.length && r.usd === 0 && !(r.turnos > 0);
     var h = '';
     h += chip('Situação ⓘ', '<span style="color:' + (mo.cor === 'ok' ? '#15803d' : mo.cor === 'crit' ? '#b91c1c' : '#b45309') + '">' + esc(mo.t) + '</span>', mo.sub + ' · voz ' + (ana && ana.vozLigada ? 'ligada' : 'desligada'), { tip: 'Modo da Ana: ao vivo (responde), sombra (só observa) ou parada de emergência. A voz é o áudio falado nas respostas.' });
-    h += chip('Custo no período ⓘ', r.temCusto ? usd(r.usd) : 'n/d', r.temCusto ? (semUso ? 'sem uso da IA neste período' : brl(brlDe(r.usd)) + ' (estimativa, cotação R$ ' + String(CFG.cotacao).replace('.', ',') + ')') : 'sem dado de custo', { tip: 'Soma do custo da IA e da voz no período. O valor em reais é uma estimativa com cotação fixa de R$ ' + String(CFG.cotacao).replace('.', ',') + ' por dólar.', cinza: !r.temCusto || semUso });
-    h += chip('Custo em reais ⓘ', r.temCusto ? brl(brlDe(r.usd)) : 'n/d', 'estimativa · US$ ' + String(CFG.cotacao).replace('.', ',') + ' = R$ 1', { tip: 'Estimativa: dólar multiplicado pela cotação fixa de R$ ' + String(CFG.cotacao).replace('.', ',') + '. Não é o valor da fatura.', cinza: !r.temCusto });
-    h += chip('Por lead novo ⓘ', r.usdLead == null ? 'n/d' : usd(r.usdLead), r.usdLead == null ? (j.novos === 0 ? 'contador de leads novo, existe desde ' + dm(NOVOS_DESDE) : 'nenhum lead novo no período') : brl(brlDe(r.usdLead)) + ' est. · ' + num(r.leads) + ' leads' + (j.novos < j.n ? ' (em ' + j.novos + ' de ' + j.n + ' dias com registro)' : ''), { tip: 'Custo ÷ conversas novas, contando só os dias em que o contador de leads novos existe (desde ' + dm(NOVOS_DESDE) + ').', cinza: r.usdLead == null });
-    h += chip('Por qualificado ⓘ', r.usdQual == null ? 'n/d' : usd(r.usdQual), r.usdQual == null ? 'nenhum qualificado no período' : brl(brlDe(r.usdQual)) + ' est. · ' + num(r.qual) + ' qualificados', { tip: 'Custo ÷ conversas qualificadas (handoffs) no período.', cinza: r.usdQual == null });
-    h += chip('Por turno ⓘ', r.usdTurno == null ? 'n/d' : usd(r.usdTurno), r.usdTurno == null ? 'nenhum turno no período' : brl(brlDe(r.usdTurno)) + ' est. · ' + num(r.turnos) + ' turnos', { tip: 'Custo ÷ turnos (respostas da Ana).', cinza: r.usdTurno == null });
+    h += chip('Custo no período ⓘ', r.temCusto ? usd(r.usd) : 'n/d', r.temCusto ? (semUso ? 'sem uso da IA neste período' : 'em reais (IA e voz)') : 'sem dado de custo', { tip: 'Soma do custo da IA e da voz no período. Em reais; a IA é cobrada em dólar e o Dash converte pela cotação de R$ ' + String(CFG.cotacao).replace('.', ',') + '.', cinza: !r.temCusto || semUso });
+    h += chip('Por lead novo ⓘ', r.usdLead == null ? 'n/d' : usd(r.usdLead), r.usdLead == null ? (j.novos === 0 ? 'contador de leads novo, existe desde ' + dm(NOVOS_DESDE) : 'nenhum lead novo no período') : '' +  + num(r.leads) + ' leads' + (j.novos < j.n ? ' (em ' + j.novos + ' de ' + j.n + ' dias com registro)' : ''), { tip: 'Custo ÷ conversas novas, contando só os dias em que o contador de leads novos existe (desde ' + dm(NOVOS_DESDE) + ').', cinza: r.usdLead == null });
+    h += chip('Por qualificado ⓘ', r.usdQual == null ? 'n/d' : usd(r.usdQual), r.usdQual == null ? 'nenhum qualificado no período' : '' +  + num(r.qual) + ' qualificados', { tip: 'Custo ÷ conversas qualificadas (handoffs) no período.', cinza: r.usdQual == null });
+    h += chip('Por turno ⓘ', r.usdTurno == null ? 'n/d' : usd(r.usdTurno), r.usdTurno == null ? 'nenhum turno no período' : '' +  + num(r.turnos) + ' turnos', { tip: 'Custo ÷ turnos (respostas da Ana).', cinza: r.usdTurno == null });
     h += chip('Projeção do mês ⓘ', r.projecao == null ? 'n/d' : usd(r.projecao), r.projecao == null ? 'sem projeção' : brl(brlDe(r.projecao)) + ' est. · não muda com o período', { tip: 'Quanto o mês corrente deve custar no ritmo atual. Não muda com o período escolhido.', cinza: r.projecao == null });
     h += chip('Acerto de cache ⓘ', r.cachePct == null ? 'n/d' : dec1(r.cachePct * 100) + '%', r.cachePct == null ? 'sem entrada de IA no período' : num(r.tCache) + ' de ' + num(r.tIn + r.tCache) + ' tokens de entrada lidos do cache', { tip: 'Parte da entrada da IA que veio do cache (mais barata). Quanto maior, menor o custo.', cinza: r.cachePct == null });
     h += chip('Escritos pela IA ⓘ', r.turnosN == null ? 'n/d' : (r.turnosIa == null || !(r.turnosN > 0) ? 'n/d' : pct(r.turnosIa, r.turnosN)), r.turnosN == null ? 'sem registro no período' : num(r.turnosIa || 0) + ' pela IA · ' + num(r.turnosPadrao || 0) + ' texto padrão · queda ' + (r.queda == null ? 'n/d' : pct(r.turnosPadrao, r.turnosN)), { tip: 'Dos turnos, quantos a IA escreveu. Os outros caem no texto padrão (mensagem pronta) quando a IA falha ou demora. Queda no texto padrão = turnos de texto padrão ÷ turnos.', cinza: r.turnosN == null });
@@ -539,18 +538,18 @@
     if (gran === 's') { var m = {}, o = []; b.forEach(function (x) { var k = mondayOf(x.k); if (!m[k]) { m[k] = { k: k, v: 0 }; o.push(m[k]); } m[k].v += x.v; }); b = o; }
     b = b.map(function (x) { return { k: x.k, v: x.v }; });
     var tudoZero = b.every(function (x) { return !x.v; });
-    return barras(b, [{ campo: 'v', cor: CFG.corCusto, rot: '(' + (gran === 's' ? 'semana' : 'dia') + ')', fmt: function (v) { return usd(v); } }], { tv: tv, cw: cw, gran: 'd', aria: 'Custo da Ana por ' + (gran === 's' ? 'semana' : 'dia') + ' em dólares', eixo: function (v) { return v >= 1 ? v.toFixed(0) : v.toFixed(2).replace('.', ','); }, h: tv ? 330 : 160, minMax: 0.01, valores: false, padL: 34 }) +
-      '<div class="s2-lg"><span><i style="background:' + CFG.corCusto + '"></i>Custo por ' + (gran === 's' ? 'semana' : 'dia') + ' em US$ (passe o mouse ou toque: R$ estimado ' + String(CFG.cotacao).replace('.', ',') + ')</span></div>' +
-      (tudoZero ? '<div class="s2-nt s2-xs">Sem custo registrado neste período.</div>' : '<div class="s2-nt s2-xs">Total: <b>' + usd(r.usd) + '</b> · ' + brl(brlDe(r.usd)) + ' (estimativa)</div>');
+    return barras(b, [{ campo: 'v', cor: CFG.corCusto, rot: '(' + (gran === 's' ? 'semana' : 'dia') + ')', fmt: function (v) { return usd(v); } }], { tv: tv, cw: cw, gran: 'd', aria: 'Custo da Ana por ' + (gran === 's' ? 'semana' : 'dia') + ' em reais', eixo: function (v) { return v >= 1 ? v.toFixed(0) : v.toFixed(2).replace('.', ','); }, h: tv ? 330 : 160, minMax: 0.01, valores: false, padL: 34 }) +
+      '<div class="s2-lg"><span><i style="background:' + CFG.corCusto + '"></i>Custo por ' + (gran === 's' ? 'semana' : 'dia') + ' em R$ (passe o mouse ou toque)</span></div>' +
+      (tudoZero ? '<div class="s2-nt s2-xs">Sem custo registrado neste período.</div>' : '<div class="s2-nt s2-xs">Total: <b>' + usd(r.usd) + '</b></div>');
   }
   function modelosSaude(r) {
     if (!r.temCusto) return '<div class="s2-empty">Sem dado de custo da Ana</div>';
-    var tot = r.usd, h = '<table class="s2-tb ag-tb"><thead><tr><th>Modelo</th><th>US$</th><th>R$ est.</th><th>%</th></tr></thead><tbody>';
+    var tot = r.usd, h = '<table class="s2-tb ag-tb"><thead><tr><th>Modelo</th><th>R$</th><th>%</th></tr></thead><tbody>';
     CFG.modelos.forEach(function (m) {
       var v = r.mod[m.k] || 0;
-      h += '<tr><td title="' + esc(m.nome) + '"><i class="s2-dot" style="background:' + m.cor + ';margin-right:6px"></i>' + esc(m.nome) + '</td><td>' + usd(v).replace('US$ ', '') + '</td><td>' + brl(brlDe(v)).replace('R$ ', '') + '</td><td class="gc">' + (tot > 0 ? pct(v, tot) : 'n/d') + '</td></tr>';
+      h += '<tr><td title="' + esc(m.nome) + '"><i class="s2-dot" style="background:' + m.cor + ';margin-right:6px"></i>' + esc(m.nome) + '</td><td>' + usd(v).replace('R$ ', '') + '</td><td class="gc">' + (tot > 0 ? pct(v, tot) : 'n/d') + '</td></tr>';
     });
-    h += '<tr><td><i class="s2-dot" style="background:#E92085;margin-right:6px"></i>Voz (falada)</td><td>' + usd(r.tts).replace('US$ ', '') + '</td><td>' + brl(brlDe(r.tts)).replace('R$ ', '') + '</td><td class="gc">' + (tot > 0 ? pct(r.tts, tot) : 'n/d') + '</td></tr>';
+    h += '<tr><td><i class="s2-dot" style="background:#E92085;margin-right:6px"></i>Voz (falada)</td><td>' + usd(r.tts).replace('R$ ', '') + '</td><td class="gc">' + (tot > 0 ? pct(r.tts, tot) : 'n/d') + '</td></tr>';
     h += '</tbody></table>';
     var chars = r.ttsCharsDias != null ? r.ttsCharsDias : r.ttsChars;
     h += '<div class="s2-nt"><b>Voz:</b> ' + num(chars || 0) + ' caracteres falados no período · voz ' + (S.ana && S.ana.vozLigada ? 'ligada' : 'desligada') + '. Valores em US$ e, ao lado, R$ estimado (cotação fixa).</div>';
@@ -601,7 +600,7 @@
     p.push('Ana: ' + (j.n ? num(j.comDado) + ' de ' + num(j.n) + ' dias com registro (' + dm(j.ini) + ' a ' + dm(j.fim) + ')' : 'o período não tem dias cobertos'));
     p.push('contadores novos desde ' + dm(NOVOS_DESDE) + (j.novos ? ': ' + num(j.novos) + ' de ' + num(j.n) + ' dias com registro' : ': nenhum dia deste período com registro'));
     if (j.recortado) p.push('a rota guarda só os últimos ' + CFG.diasApi + ' dias');
-    p.push('reais em estimativa (cotação fixa R$ ' + String(CFG.cotacao).replace('.', ',') + ')');
+    p.push('valores em reais (IA cobrada em dólar, convertida a R$ ' + String(CFG.cotacao).replace('.', ',') + ')');
     p.push('esta aba mostra a Ana inteira: não muda com Outbound/Inbound');
     return { txt: p.join(' · '), warn: !j.n };
   }
@@ -612,7 +611,7 @@
     var cv = coberturaSaude(r), fl = tv ? 'flex:1' : '', fx = tv ? 'flex:0 0 auto' : '';
     var kpis = '<div class="s2-ks ag-ks">' + kpisSaude(r, S.ana) + '</div>';
     var cCusto = card('Custo por dia', esc(r.dias.length ? dm(r.j.ini) + ' a ' + dm(r.j.fim) : ''), graficoCusto(r, tv, opts.cw), { style: fx });
-    var cMod = card('Custo por modelo', 'US$ e R$ estimado', modelosSaude(r), { style: fl });
+    var cMod = card('Custo por modelo', 'em reais', modelosSaude(r), { style: fl });
     var cTok = card('Tokens e cache', 'entrada, saída e cache', tokensSaude(r), { style: fl });
     var cTur = card('Turnos: IA x texto padrão', 'quem escreveu a resposta', turnosSaude(r), { style: fl });
     var cAg = card('Conversas agora', 'momento atual', agoraSaude(r), { style: fl });

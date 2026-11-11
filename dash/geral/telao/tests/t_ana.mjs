@@ -51,8 +51,8 @@ async function aba(f, a) { await clica(f, '#ag-bar [data-ag-pick="' + a + '"]');
 const kpis = f => f().evaluate((sel) => { const root = document.querySelector(sel); const o = {}; if (!root) return o; root.querySelectorAll('.s2-k').forEach(k => { const l = (k.querySelector('.s2-kl') || {}).textContent || ''; o[l.replace(/\s*ⓘ\s*/g, '').trim()] = { v: (k.querySelector('.s2-kv') || {}).textContent || '', t: (k.querySelector('.s2-kt') || {}).textContent || '', go: k.getAttribute('data-ag-go') }; }); return o; }, null);
 const kpisEm = (f, sel) => f().evaluate((sel) => { const root = document.querySelector(sel); const o = {}; if (!root) return o; root.querySelectorAll('.s2-k').forEach(k => { const l = (k.querySelector('.s2-kl') || {}).textContent || ''; o[l.replace(/\s*ⓘ\s*/g, '').trim()] = { v: (k.querySelector('.s2-kv') || {}).textContent || '', t: (k.querySelector('.s2-kt') || {}).textContent || '', go: k.getAttribute('data-ag-go') }; }); return o; }, sel);
 const nint = s => { const m = /^[^0-9n]*([0-9.]+)/.exec(s.trim()); return m ? parseInt(m[1].replace(/\./g, ''), 10) : null; };
-const fU = n => 'US$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: n >= 1 ? 2 : 4, maximumFractionDigits: n >= 1 ? 2 : 4 });
 const fR = n => 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: n >= 1 ? 2 : 4, maximumFractionDigits: n >= 1 ? 2 : 4 });
+const fU = n => fR(n * COT);   // o Dash mostra o custo SEMPRE em reais (11/11)
 const dec1 = n => (Math.round(n * 10) / 10).toString().replace('.', ',');
 const COT = 5.5;
 
@@ -231,8 +231,6 @@ for (const [W, H, tv] of [[390, 844, false], [1800, 1012, true]]) {
     await per(f, pd); await p.waitForTimeout(1500);
     const pp = await periodo(f), e = esperado(FX.ana, pp.from, pp.to), kk = await kpisEm(f, '#ag-root'), tag = nome + ' saude [' + pd + ' ' + pp.from + ' a ' + pp.to + ']';
     ok(kk['Custo no período'].v.trim() === fU(e.usd), tag + ': custo ' + kk['Custo no período'].v + ' esperado ' + fU(e.usd));
-    ok(kk['Custo em reais'].v.trim() === fR(e.usd * COT), tag + ': custo em reais ' + kk['Custo em reais'].v + ' esperado ' + fR(e.usd * COT));
-    ok(/estimativa/.test(kk['Custo em reais'].t), tag + ': reais sem rotulo de estimativa');
     ok(e.sTurnos > 0 ? kk['Por turno'].v.trim() === fU(e.usd / e.sTurnos) : /n\/d/.test(kk['Por turno'].v), tag + ': por turno ' + kk['Por turno'].v);
     ok(e.sQual > 0 ? kk['Por qualificado'].v.trim() === fU(e.usd / e.sQual) : /n\/d/.test(kk['Por qualificado'].v), tag + ': por qualificado ' + kk['Por qualificado'].v);
     ok(e.nNovos > 0 && e.leadsN > 0 ? kk['Por lead novo'].v.trim() === fU(e.usdN / e.leadsN) : /n\/d/.test(kk['Por lead novo'].v), tag + ': por lead ' + kk['Por lead novo'].v);
@@ -244,7 +242,7 @@ for (const [W, H, tv] of [[390, 844, false], [1800, 1012, true]]) {
     // custo por modelo (tabela) e voz
     const tab = await f().evaluate(() => [...document.querySelectorAll('#ag-root .s2-card')].filter(c => /custo por modelo/i.test(c.textContent)).map(c => [...c.querySelectorAll('tbody tr')].map(tr => [...tr.children].map(td => td.textContent.trim())))[0] || []);
     const mapa = { 'Claude Sonnet 5.5': 'claude-sonnet', 'Claude Haiku 5.5': 'claude-haiku', 'Reserva (OpenRouter)': 'openrouter-reserva' };
-    tab.forEach(row => { const k = mapa[row[0]]; if (k) ok(row[1] === fU(e.mod[k] || 0).replace('US$ ', ''), tag + ': modelo ' + row[0] + ' ' + row[1] + ' esperado ' + fU(e.mod[k] || 0)); else if (/Voz/.test(row[0])) ok(row[1] === fU(e.tts).replace('US$ ', ''), tag + ': voz ' + row[1] + ' esperado ' + fU(e.tts)); });
+    tab.forEach(row => { const k = mapa[row[0]]; if (k) ok(row[1] === fU(e.mod[k] || 0).replace('R$ ', ''), tag + ': modelo ' + row[0] + ' ' + row[1] + ' esperado ' + fU(e.mod[k] || 0)); else if (/Voz/.test(row[0])) ok(row[1] === fU(e.tts).replace('R$ ', ''), tag + ': voz ' + row[1] + ' esperado ' + fU(e.tts)); });
     ok(tab.length === 4, tag + ': tabela de modelos com ' + tab.length + ' linhas');
     const chars = await f().evaluate(() => (/([\d.]+) caracteres falados/.exec(document.querySelector('#ag-root').textContent) || [])[1]);
     ok(chars && parseInt(chars.replace(/\./g, ''), 10) === (e.n && FX.ana.dias.filter(d => d.dia >= (pp.from > FX.ana.dias[0].dia ? pp.from : FX.ana.dias[0].dia) && d.dia <= (pp.to > HOJE ? HOJE : pp.to)).reduce((a, d) => a + (d.tts_caracteres || 0), 0)), tag + ': caracteres falados ' + chars);
