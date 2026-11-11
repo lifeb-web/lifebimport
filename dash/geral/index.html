@@ -262,6 +262,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 .bia-status-warn{background:#fff3cd;border:1px solid #e8c468;color:#8a6100}
 .bia-status-crit{background:#fee2e2;border:1px solid #f5b5b5;color:#991b1b}
 .bia-status-escopo{font-weight:600;opacity:.85}
+body.ag-ana #bia-view{display:none!important}
 @media (max-width:639px){ #bia-view .kpi-strip .kchip:last-child{grid-column:1/-1} }
 .bia-sdr-card{display:flex;align-items:center;gap:8px;background:var(--bg);border-radius:9px;padding:9px 12px;font-size:.82rem;font-weight:700}
 .bia-sdr-avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.62rem;background:linear-gradient(135deg,var(--purple),var(--magenta));flex-shrink:0}
@@ -681,7 +682,8 @@ footer strong{color:#fff}
 @media(max-width:370px){.funil-row{grid-template-columns:10px minmax(0,1fr) 0 26px 64px 38px 10px;column-gap:4px;padding-left:10px;padding-right:10px}.funil-stage-name{font-size:10.5px}.funil-bar-wrap{width:0;visibility:hidden}}
 </style>
 <!-- Dossiê do SDR (Fase 1): padrão da aba SDR; ?sdr=1 volta à aba antiga -->
-<script>if (true) document.write('<script src="sdr2.js?v=20261109c"><\/script>');</script>
+<script>if (true) document.write('<script src="sdr2.js?v=20261111a"><\/script>');</script>
+<script>if (true) document.write('<script src="agentes.js?v=20261111a"><\/script>');</script>
 <script>if (true) document.write('<script src="rfm.js?v=20261109a"><\/script>');</script>
 </head>
 <body>
@@ -714,7 +716,7 @@ footer strong{color:#fff}
     <button class="ochip" data-v="sdr" onclick="setView(this)">SDR</button>
     <button class="ochip" data-v="ads" onclick="setView(this)">ADS</button>
     <button class="ochip" data-v="ga4" onclick="setView(this)">GA4</button>
-    <button class="ochip" data-v="bia" onclick="setView(this)">BIA</button>
+    <button class="ochip" data-v="bia" onclick="setView(this)">AGENTES</button>
   </div>
 </div>
 
@@ -1367,6 +1369,7 @@ footer strong{color:#fff}
        de monitoramento do agente de IA "Bia" (WhatsApp com os representantes).
        Lê do worker isolado bia-dash-sync (GET /api/snapshot), nunca do
        gs-agendor-worker direto. -->
+  <div id="ag-view" style="display:none"><div id="ag-bar" class="ag-bar" style="display:none"></div><div id="ag-root" style="display:none"></div></div>
   <div id="bia-view" style="display:none">
     <div class="sec-hd">Bia (IA)</div>
 
@@ -3815,9 +3818,36 @@ function sdr2Activate_() {
   }
   if (!window.SDR2) { r.innerHTML = '<div class="sdr-empty">Não consegui carregar o módulo do SDR.</div>'; return; }
   SDR2.init({ root: r, mode: 'm', getPeriod: () => (_data && _data.period) ? _data.period : null, getOrigin: () => _originMode,
-              bridge: SUPABASE_URL, key: SUPABASE_ANON_KEY, isActive: () => _sdrViewActive });
+              bridge: SUPABASE_URL, key: SUPABASE_ANON_KEY, isActive: () => _sdrViewActive,
+              onAgent: (a) => { const t = a === 'ana' ? 'SDR (Ana)' : 'SDR (Felipe)'; el('footer-mode').textContent = t; el('h-title-text').textContent = t; } });
   SDR2.activate();
 }
+
+
+// ── Agentes (11/11): aba "Agentes" = seletor Bia | Ana. Bia = conteúdo de sempre (intocado); Ana = painel de saúde e custo (agentes.js). ──
+let _agTab_ = 'bia';
+function agAnaAtivo_() { return _biaViewActive && _agTab_ === 'ana'; }
+function agAnaActivate_() {
+  const r = el('ag-root'); if (!r || !window.AGENTES) return;
+  AGENTES.initSaude({ root: r, mode: 'm', getPeriod: () => (_data && _data.period) ? _data.period : null,
+                      bridge: SUPABASE_URL, key: SUPABASE_ANON_KEY, isActive: () => agAnaAtivo_() });
+  AGENTES.activateSaude();
+}
+function agApply_() {
+  const on = _biaViewActive, ana = agAnaAtivo_();
+  const v = el('ag-view'); if (v) v.style.display = on ? '' : 'none';
+  const bar = el('ag-bar'); if (bar) { bar.style.display = on ? '' : 'none'; if (on && window.AGENTES) AGENTES.barra(bar, _agTab_, [['bia', 'Bia'], ['ana', 'Ana']]); }
+  document.body.classList.toggle('ag-ana', ana);
+  const r = el('ag-root'); if (r) r.style.display = ana ? '' : 'none';
+  if (on) {
+    const label = _agTab_ === 'ana' ? 'Agentes (Ana)' : 'Agentes (Bia)', fonte = _agTab_ === 'ana' ? 'ana-painel' : 'bia-dash-sync';
+    el('footer-mode').textContent = label; el('h-title-text').textContent = label; el('footer-source').textContent = fonte;
+  }
+  if (ana) agAnaActivate_();
+  
+}
+function agPick_(k) { if (k !== 'bia' && k !== 'ana') return; _agTab_ = k; agApply_(); if (k === 'bia') { try { if (_biaSnap) renderBiaSection(_biaSnap); } catch (e) {} } }
+document.addEventListener('click', (e) => { const b = e.target.closest && e.target.closest('#ag-bar [data-ag-pick]'); if (b) agPick_(b.getAttribute('data-ag-pick')); });
 
 // RFM (04/11/2026): aba da carteira. Lê o MESMO _rawDeals do dash (zero fonte nova, zero escrita); rfm.js desenha.
 function rfmActivate_() {
@@ -3858,14 +3888,15 @@ function setView(btn) {
   el('ads-view').style.display = view === 'ads' ? '' : 'none';
   el('ga4-view').style.display = view === 'ga4' ? '' : 'none';
   el('bia-view').style.display = view === 'bia' ? '' : 'none';
+  agApply_();
   pzMover_(view); // a rosca mora na aba Vendas e na LTV (um cartão só, movido de lugar)
   // achado 02/08 (auditoria): faltava aqui — h-title-text/footer-mode/
   // footer-source só eram escritos por setOrigin(), nunca por setView().
   // Entrar em SDR/Ads (sem nunca ter tocado o filtro de origem) deixava os
   // 3 textos errados ("Painel Geral"/"Dados: Agendor") mesmo com uma aba
   // de fonte diferente claramente ativa.
-  const label = view === 'rfm' ? 'RFM' : view === 'ltv' ? 'LTV (Pós-venda)' : (view === 'sdr' ? 'SDR (Felipe)' : (view === 'ads' ? 'Meta Ads' : (view === 'ga4' ? 'GA4 Analytics' : (view === 'bia' ? 'Bia (IA)' : ORIGIN_LABELS[_originMode]))));
-  const source = (view === 'ltv' || view === 'rfm') ? 'Agendor' : (view === 'sdr' ? (SDR2_ON ? 'Agendor' : 'GS Engage') : (view === 'ads' ? 'Meta Ads' : (view === 'ga4' ? 'Google Analytics' : (view === 'bia' ? 'bia-dash-sync' : 'Agendor'))));
+  const label = view === 'rfm' ? 'RFM' : view === 'ltv' ? 'LTV (Pós-venda)' : (view === 'sdr' ? 'SDR (Felipe)' : (view === 'ads' ? 'Meta Ads' : (view === 'ga4' ? 'GA4 Analytics' : (view === 'bia' ? (_agTab_ === 'ana' ? 'Agentes (Ana)' : 'Agentes (Bia)') : ORIGIN_LABELS[_originMode]))));
+  const source = (view === 'ltv' || view === 'rfm') ? 'Agendor' : (view === 'sdr' ? (SDR2_ON ? 'Agendor' : 'GS Engage') : (view === 'ads' ? 'Meta Ads' : (view === 'ga4' ? 'Google Analytics' : (view === 'bia' ? (_agTab_ === 'ana' ? 'ana-painel' : 'bia-dash-sync') : 'Agendor'))));
   el('h-title-text').textContent = label;
   el('footer-mode').textContent = label;
   el('footer-source').textContent = source;
@@ -5923,6 +5954,7 @@ async function loadBiaFresh_() {
   }
 }
 function refreshBiaIfActive_() {
+  if (agAnaAtivo_()) { if (window.AGENTES) AGENTES.renderSaude(); return; }
   if (_biaViewActive) {
     if (_biaSnap) renderBiaSection(_biaSnap); else biaRenderStatus_();
     loadBiaFresh_();

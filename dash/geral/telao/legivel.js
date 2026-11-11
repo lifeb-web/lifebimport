@@ -23,6 +23,7 @@
     ga4: ['Conversão e visitantes', 'Cidades, origem e páginas'],
     bia: ['Saúde ao vivo', 'Motor e custos']
   };
+  var PAGES0 = JSON.parse(JSON.stringify(PAGES)), NOMES0 = JSON.parse(JSON.stringify(NOMES));
   var q = location.search;
   function param(n) { var m = new RegExp('[?&]' + n + '=([^&]*)').exec(q); return m ? decodeURIComponent(m[1]) : null; }
   var SEG = Math.max(5, parseInt(param('seg') || '20', 10) || 20);
@@ -100,7 +101,12 @@
     view: function () { return S.view; },
     onView: function (v) { if (!PAGES[v]) v = 'vendas'; S.view = v; S.cur = 1; S.left = SEG; desenha(); try { window.dispatchEvent(new Event('resize')); } catch (e) {} },
     toggle: function () { S.auto = !S.auto; S.left = SEG; desenha(); },
-    pause: function (on) { S.auto = !on; desenha(); }
+    pause: function (on) { S.auto = !on; desenha(); },
+    // 11/11: a quantidade e os nomes das páginas de uma aba mudam conforme o agente escolhido (SDR: Felipe 3 / Ana 2; Agentes: Bia / Ana). Sem nomes = padrão.
+    paginas: function (v, n, nomes) {
+      PAGES[v] = n || PAGES0[v]; NOMES[v] = nomes || NOMES0[v];
+      if (S.view === v) { if (S.cur > PAGES[v]) S.cur = 1; S.left = SEG; desenha(); try { window.dispatchEvent(new Event('resize')); } catch (e) {} }
+    }
   };
   window.LB_PG = api; window.__pg = api;
 
@@ -159,7 +165,7 @@
   function decora() {
     pend = false;
     limpaVazios();
-    var hs = document.querySelectorAll('#body .card-hd:not([data-x]),#s2-root .s2-ch:not([data-x]),#rf-root .rf-ch:not([data-x])');
+    var hs = document.querySelectorAll('#body .card-hd:not([data-x]),#s2-root .s2-ch:not([data-x]),#ag-root .s2-ch:not([data-x]),#rf-root .rf-ch:not([data-x])');
     for (var i = 0; i < hs.length; i++) {
       var h = hs[i], card = h.closest('.card,.s2-card,.rf-card');
       if (!card || card.closest('.expand-overlay')) continue;
@@ -189,7 +195,7 @@
     return true;
   }
   function limpaVazios() {
-    var cs = document.querySelectorAll('#body .card,#s2-root .s2-card,#rf-root .rf-card');
+    var cs = document.querySelectorAll('#body .card,#s2-root .s2-card,#ag-root .s2-card,#rf-root .rf-card');
     for (var i = 0; i < cs.length; i++) {
       var c = cs[i], vazio = semConteudo(c), ph = c.querySelector(':scope > .lb-ph');
       if (vazio && !ph) {
@@ -364,7 +370,7 @@
     var card = X.card;
     if (!card || !document.contains(card)) {
       card = null;
-      var cs = document.querySelectorAll('#body .card,#s2-root .s2-card,#rf-root .rf-card');
+      var cs = document.querySelectorAll('#body .card,#s2-root .s2-card,#ag-root .s2-card,#rf-root .rf-card');
       for (var i = 0; i < cs.length; i++) if (cs[i].offsetParent !== null && tituloDe(cs[i]) === X.titulo && podeExpandir(cs[i])) { card = cs[i]; break; }
       if (!card) return;
       X.card = card;
@@ -402,7 +408,7 @@
 
   function init() {
     decora();
-    var alvo = [$('body'), $('s2-root'), $('rf-root')];
+    var alvo = [$('body'), $('s2-root'), $('ag-root'), $('rf-root')];
     alvo.forEach(function (a) { if (a && window.MutationObserver) new MutationObserver(agenda).observe(a, { childList: true, subtree: true }); });
     document.addEventListener('click', function (e) {
       var ov = $('expandOverlay');
@@ -413,6 +419,12 @@
           var filtro = e.target.closest('button[data-f],button[data-gran],button[data-retry],tr[data-go*=":"]');
           try { window.SDR2.click(e); } catch (err) {}
           if (filtro) fechar();
+        }
+        // Agentes (Ana): listas, gráfico dia/semana/mês e "tentar de novo" dentro do expandido repassam o clique para agentes.js
+        if (ov.contains(e.target) && window.AGENTES && e.target.closest('[data-ag-go],button[data-ag-gran],button[data-ag-retry]')) {
+          var fa = e.target.closest('button[data-ag-gran],button[data-ag-retry]');
+          try { window.AGENTES.click(e); } catch (err3) {}
+          if (fa) fechar();
         }
         // RFM: células, segmentos e linhas dentro do expandido repassam o clique para o tratador da aba
         if (ov.contains(e.target) && window.RFM && e.target.closest('[data-rf]')) {
