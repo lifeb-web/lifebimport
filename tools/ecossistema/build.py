@@ -1,5 +1,5 @@
 import sys,re
-sys.path.insert(0,'/tmp/eco')
+import os; sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
 from gen import svg
 D1=svg([
  [("lead","Lead","WhatsApp ou cadastro no site","n")],
