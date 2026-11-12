@@ -503,7 +503,7 @@ async function carregar(avisar,primeira){
   S.carregando=false;gravarCache();tickLive();renderSoon();
   if(avisar)toast(S.erro||'Atualizado');
 }
-async function carregarSaude(){try{var r=await fetch(SAUDE);S.saude=await r.json();}catch(e){S.saude=S.saude||null;}}
+async function carregarSaude(){try{var r=await fetch(SAUDE);S.saude=await r.json();}catch(e){S.saude=S.saude||null;}try{if(S.saude&&S.saude.geral&&S.saude.geral!=='ok'){var q=await api('GET','/saude');if(q.status===200&&q.j&&q.j.ok)S.saudeDet=q.j.pontos||[];}else S.saudeDet=[];}catch(e){}}   // 12/11: o que é CADA ponto de atenção (a visão pública só traz o nível)
 async function carregarHist(){var r=await api('GET','/historico?dias=14').catch(function(){return {status:0,j:{}};});if(r.status===200)S.hist=r.j.itens||[];else if(!S.hist)S.hist=[];}
 async function carregarFilas(){var r=await api('GET','/filas').catch(function(){return {status:0,j:{}};});S.filas=r.status===200?(r.j.itens||[]):[];S.filasErro=r.status===200?'':((r.j&&r.j.mensagem)||('Erro '+r.status));}
 async function carregarCal(){var r=await api('GET','/calendario').catch(function(){return {status:0,j:{}};});S.cal=r.status===200?(r.j.dias||[]):[];S.calHoje=(r.j&&r.j.hoje)||'';S.calErro=r.status===200?'':((r.j&&r.j.mensagem)||('Erro '+r.status));}
@@ -544,7 +544,7 @@ function atencoes(){
   if(def('NOTIF_PAUSE'))l.push(['warn','Avisos automáticos pausados','A pausa de avisos está ativa. As rotinas seguem, mas os avisos esperam.']);
   if(def('TEST_MODE'))l.push(['warn','Modo de teste ligado','As mensagens parecem enviadas, mas nada sai de verdade.']);
   ((S.dados||{}).editaveis||[]).forEach(function(e){if((e.tipo==='liga_off'||e.tipo==='flag_off1')&&e.estado==='desligado'&&e.risco!=='baixo')l.push(['warn',e.rotulo+' desligado','Esta proteção está desligada agora.']);if(e.tipo==='modo3'&&e.estado==='off'&&e.risco==='alto'&&e.padrao!=='off')l.push(['warn',e.rotulo+' desligado','Fora do padrão ('+ROT_ESTADO[e.padrao]+').']);});
-  var sa=S.saude&&S.saude.itens;if(sa)Object.keys(sa).forEach(function(k){var n=sa[k]&&sa[k].nivel;if(n&&n!=='ok')l.push([n==='falha'?'bad':'warn',(SAUDE_NOMES[k]||k)+' pede atenção','Estado: '+(NIVEL[n]||n)+'.']);});
+  var sa=S.saude&&S.saude.itens;if(sa)Object.keys(sa).forEach(function(k){var n=sa[k]&&sa[k].nivel;if(n&&n!=='ok')var dp=((S.saudeDet||[]).filter(function(x){return x.k===k;})[0]);l.push([n==='falha'?'bad':'warn',(SAUDE_NOMES[k]||k)+' pede atenção',dp&&dp.texto?dp.texto:'Estado: '+(NIVEL[n]||n)+'. Carregando os detalhes…']);});
   return l;
 }
 /* ---------- visão geral ---------- */
@@ -572,7 +572,7 @@ function telaVisao(c){
   var h=el('div','hero c12'+(grave?' bad':at.length?' warn':''));var ic=el('div','heroic');ic.appendChild(icon(grave||at.length?'alerta':'ok'));h.appendChild(ic);
   var tx=el('div');tx.style.cssText='flex:1;min-width:220px';tx.appendChild(el('div','big',grave?'Há algo que precisa de ação':at.length?('Operando, com '+at.length+(at.length===1?' ponto de atenção':' pontos de atenção')):'Plataforma operando normalmente'));
   tx.appendChild(el('div','smalltxt',geral?('Saúde geral da Bia: '+geral+(S.saude&&S.saude.ts?'. Atualizado '+new Date(S.saude.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:TZ_BR}):'')+'.'):'Saúde da Bia indisponível agora.'));h.appendChild(tx);
-  var hs=el('div','hstats');[['Ligados',cont.ligado+cont.live],['Sombra',cont.shadow],['Desligados',cont.desligado]].forEach(function(x){var q=el('div');q.appendChild(el('b',null,String(x[1])));q.appendChild(el('span',null,x[0]));hs.appendChild(q);});h.appendChild(hs);if(at.length){h.classList.add('clic');h.tabIndex=0;h.setAttribute('role','button');h.setAttribute('aria-label','Ver os '+at.length+' pontos de atenção');h.onclick=abrirAtencao;h.onkeydown=function(ev){if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();abrirAtencao();}};tx.appendChild(el('div','smalltxt','Toque aqui para ver o que é cada ponto e por que aparece.'));}g.appendChild(h);
+  var hs=el('div','hstats');[['Ligados',cont.ligado+cont.live],['Sombra',cont.shadow],['Desligados',cont.desligado]].forEach(function(x){var q=el('div');q.appendChild(el('b',null,String(x[1])));q.appendChild(el('span',null,x[0]));hs.appendChild(q);});h.appendChild(hs);if(at.length){h.classList.add('clic');h.tabIndex=0;h.setAttribute('role','button');h.setAttribute('aria-label','Ver os '+at.length+' pontos de atenção');h.onclick=abrirAtencao;h.onkeydown=function(ev){if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();abrirAtencao();}};tx.appendChild(el('div','smalltxt','Toque aqui para ver o que é cada ponto e por que aparece.'));(S.saudeDet||[]).slice(0,3).forEach(function(pt){var ln=el('div','smalltxt');ln.style.cssText='margin-top:6px;overflow-wrap:anywhere';var bb=el('b',null,pt.titulo+': ');ln.appendChild(bb);ln.appendChild(document.createTextNode(pt.texto));tx.appendChild(ln);});}g.appendChild(h);
   // KPIs
   var nf=(S.filas||[]).reduce(function(a,f){return a+f.total;},0);var nome={ },hh=(S.hist||[]);
   var folgas=(S.cal||[]).filter(function(x){return x>=(S.calHoje||'');});
