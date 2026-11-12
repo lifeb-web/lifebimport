@@ -4,7 +4,7 @@ from gen import svg
 D1=svg([
  [("lead","Lead","WhatsApp ou cadastro no site","n")],
  [("meta","WhatsApp (Meta)","Número da Ana, janela de 24 h e modelos aprovados","n")],
- [("ana","Ana, serviço próprio","Atende, qualifica e registra, na nuvem, sem depender de nenhum computador","p")],
+ [("ana","Ana, serviço próprio","Atende, qualifica e registra, na nuvem, 24 horas por dia","p")],
  [("cer","Cérebro","Regras + IA; texto padrão seguro se a IA falhar","p"),("hist","Histórico","Toda mensagem guardada para sempre","n")],
  [("bia","Bia (ponte)","Única porta para o Agendor e os avisos","m"),("voz","Voz","ElevenLabs; reserva na voz da Bia","n")],
  [("ag","Agendor","Fonte da verdade: negócio, notas e tarefas","g"),("wa","Avisos","Robert, Felipe e dono do negócio, com botão","n")],
@@ -22,7 +22,7 @@ D2=svg([
  [("i","Registra e confere","Histórico, entrega ✓✓, etapa e nota no Agendor, avisos pela Bia","g")],
 ],[("a","b",""),("b","c",""),("c","d",""),("d","e",""),("e","f",""),("f","g",""),("g","ok",""),("g","no",""),("ok","h",""),("no","h",""),("h","i","")],"a2")
 D3=svg([
- [("a","Ana pede à Bia","Só pedidos fixos e com chave; nunca fala direto com o Agendor","p")],
+ [("a","Ana pede à Bia","Só pedidos fixos e autenticados; nunca fala direto com o Agendor","p")],
  [("b","Bia confere o pedido","Dados válidos, funil da Ana e sem negócio duplicado","m")],
  [("c1","Cria o lead","Negócio no funil da Ana, com pessoa e empresa","n"),("c2","Lê o contexto","Já é cliente? Tem negócio em outro funil?","n")],
  [("d1","Muda a etapa","Novo lead, Em conversa, Retorno combinado, Repassado...","n"),("d2","Grava nota e campos","Nota [Ana], sem sobrescrever o que já existe","n")],
@@ -43,11 +43,11 @@ D4=svg([
  [("h","Vigia a cada 5 minutos","Reenvia até 5 por rodada e volta ao passo da Bia","n")],
 ],[("a","b",""),("b","c1","noite"),("b","c2","dia"),("c2","d",""),("d","e",""),("e","f",""),("f","g1","sim"),("f","g2","não"),("g2","h","")],"a4")
 D5=svg([
- [("a","Todo dia às 11h","Se o Mac estava desligado, roda ao ligar e repete a cada hora até dar certo","p")],
+ [("a","Backup automático diário","Se uma execução falha, a rotina tenta de novo sozinha até dar certo","p")],
  [("b1","Ana","Histórico completo, memória, código e documentos","n"),("b2","Bia","Memória, fluxos do n8n, documentos e configuração","n")],
  [("c1","Espelho dos documentos","Todo o projeto, sem vídeos e arquivos gigantes","n"),("c2","Backups de deploy","Um a cada publicação (os 60 mais recentes)","n")],
  [("d","Criptografia e teste de restauração","Abre o pacote de volta e confere tudo antes de dar OK","m")],
- [("e","OneDrive, a nuvem","Fora deste computador","g")],
+ [("e","Cópia na nuvem","Fora do ambiente de trabalho, protegida","g")],
  [("f","Falhou ou passou de 30 h?","A Bia avisa o Robert uma vez por dia","x")],
 ],[("a","b1",""),("a","b2",""),("b1","c1",""),("b2","c2",""),("c1","d",""),("c2","d",""),("d","e",""),("e","f","")],"a5")
 def fig(s,label): return f'<div class="svgw v item" role="img" aria-label="{label}">{s}</div>'
@@ -59,7 +59,7 @@ H=f'''<section class="sec" id="ana">
 {fig(D1,"Mapa da Ana: o lead escreve no WhatsApp, a Meta entrega à Ana, o cérebro decide e consulta a Bia, que fala com o Agendor e manda os avisos; histórico guardado para sempre e voz por ElevenLabs")}
 <p class="dica-svg">O desenho cabe na tela do celular.</p>
 <div class="grid g3">
-<div class="card item"><h4>Ana</h4><p>Serviço próprio na nuvem. Recebe a mensagem, decide, responde e registra. Não depende de nenhum computador ligado.</p></div>
+<div class="card item"><h4>Ana</h4><p>Serviço próprio na nuvem, no ar 24 horas por dia. Recebe a mensagem, decide, responde e registra.</p></div>
 <div class="card item"><h4>Bia, a ponte</h4><p>A Ana nunca escreve direto no Agendor nem manda aviso por conta própria: pede à Bia, que aplica as regras da casa e confere o resultado.</p></div>
 <div class="card item"><h4>Agendor, fonte da verdade</h4><p>Negócio, etapa, notas e tarefas. Se a conversa e o Agendor divergirem, vale o Agendor.</p></div>
 </div>
@@ -136,12 +136,12 @@ H=f'''<section class="sec" id="ana">
 </div>
 
 <h3>Histórico, segurança e backup</h3>
-{fig(D5,"Backup em nuvem: todo dia às 11h, a Ana e a Bia, o espelho dos documentos e os backups de deploy são copiados criptografados para o OneDrive, com teste de restauração e alerta se falhar")}
-<p class="dica-svg">O backup é feito para sobreviver à perda do computador.</p>
+{fig(D5,"Backup em nuvem: todo dia, a Ana e a Bia, o espelho dos documentos e os backups de cada publicação são copiados criptografados para a nuvem, com teste de restauração, repetição automática e alerta se falhar")}
+<p class="dica-svg">O backup existe para recuperar tudo, mesmo se um equipamento for perdido.</p>
 <div class="grid g2">
 <div class="card item"><h4>Histórico para sempre</h4><p>Toda mensagem, nota e decisão fica num arquivo permanente que só cresce, com fila de segurança se o banco falhar e conferência de hora em hora.</p></div>
 <div class="card item"><h4>Excluir conversa, só com controle</h4><p>Só o Robert e quem ele autorizar. Ocultar é reversível; excluir pede motivo, os 4 últimos dígitos do telefone e a senha, e vai para uma lixeira por 30 dias.</p></div>
-<div class="card item"><h4>Backup na nuvem, com repetição</h4><p>Todo dia às 11h, e a cada hora até dar certo se o computador estava desligado. Tudo vai criptografado para o OneDrive e o pacote é aberto de volta para conferir. Se algo ficar 30 horas sem sucesso, a Bia avisa. A chave dos backups precisa ficar guardada também fora do computador.</p></div>
+<div class="card item"><h4>Backup na nuvem, com repetição</h4><p>Todo dia, com repetição automática se a execução falhar. Ana e Bia (memória, fluxos, documentos e configuração) e os backups de cada publicação vão criptografados para a nuvem, e cada pacote é aberto de volta para conferir que dá para restaurar. Se alguma parte ficar mais de 30 horas sem sucesso, a Bia avisa a gestão. A chave de criptografia fica guardada em cofre separado.</p></div>
 <div class="card item"><h4>Aprendizado supervisionado</h4><p>Cada 👍 ou 👎 na Central vira exemplo. Uma análise diária propõe melhorias e nada muda sem a aprovação do Robert.</p></div>
 </div>
 
