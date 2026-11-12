@@ -1723,9 +1723,10 @@ function marcarAbertoNaLista(dealId, feito) {
   try {
     gravarAbriu(dealId); var ms = lerAbriu()[dealId] || Date.now();
     var cards = document.querySelectorAll('[data-deal="' + String(dealId).replace(/\D/g, '') + '"]');
-    Array.prototype.forEach.call(cards, function (li) { if (!li.classList || li.classList.contains('feito')) return; li.classList.add('aberto'); var ja = li.querySelector('.abriu'); var txt = 'Você abriu às ' + horaClique(ms) + '. Quando finalizar no Agendor, fica verde aqui em poucos segundos.'; if (ja) ja.textContent = txt; else { var d = el('div', 'abriu', txt); var anc = li.querySelector('.acoes, .btns, .linha-acoes'); if (anc && anc.parentNode === li) li.insertBefore(d, anc); else li.appendChild(d); } });
+    Array.prototype.forEach.call(cards, function (li) { if (!li.classList || li.classList.contains('feito')) return; if (!li.classList.contains('item')) return;   /* 12/11: só o cartão da LISTA (.item); o cartão da Fila de espera (.fi, linha flex) quebrava o desenho (print do Robert) */ li.classList.add('aberto'); var ja = li.querySelector('.abriu'); var txt = 'Você abriu às ' + horaClique(ms) + '. Quando finalizar no Agendor, fica verde aqui em poucos segundos.'; if (ja) ja.textContent = txt; else { var d = el('div', 'abriu', txt); var anc = li.querySelector('.acoes, .btns, .linha-acoes'); if (anc && anc.parentNode === li) li.insertBefore(d, anc); else li.appendChild(d); } });
   } catch (e) { /* marca visual: nunca atrapalha abrir o lead */ }
 }
+try { window.__marcarAbertoNaLista = marcarAbertoNaLista; } catch (e) { /* gancho só para teste */ }
 async function abrirLead(dealId, opener, item, ctx) {
   var painel = $('painelLead'); var mesmo = S.L && S.L.dealId === dealId && S.L.lead;
   var L = mesmo ? S.L : { dealId: dealId, lead: null, opcoes: (S.listas && S.listas.opcoes) || {}, motivos: (S.listas && S.listas.motivos) || [], responsaveis: (S.listas && S.listas.responsaveis) || [], edits: lerRascunho(dealId), forcar: {}, origemCampo: {}, mostrar: [], todos: false, ocupado: false, estado: null, receita: null, receitaCnpj: '', perdidoAberto: false, refs: {} };
