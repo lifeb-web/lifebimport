@@ -2033,7 +2033,7 @@ async function marcarPerdido(L) {
   L.ocupado = true; S.ocultos[L.dealId] = true; redesenharTudo(); fecharLead(); msg(nome + ': marcando como Perdido... (já saiu da tela, estou conferindo no Agendor)', 'aviso');
   var j = await chamarLead(L, '/perdido', corpo, null, { tipo: 'perdido', meta: { titulo: nome } }); if (!j) return; L.ocupado = false;
   if (j._enfileirado) { msg(nome + ': sem conexão. Guardei o Perdido e envio sozinho quando a rede voltar.', 'aviso'); return; }
-  if (j.ok && j.confirmado !== false) { L.lead.status = 'perdido'; lsDel(rascKey(L.dealId)); L.edits = {}; msg(nome + ' marcado como Perdido e conferido no Agendor ✓', 'ok'); carregar(true, 'tarefas'); }
+  if (j.ok && j.confirmado !== false) { L.lead.status = 'perdido'; lsDel(rascKey(L.dealId)); L.edits = {}; if (j.notaPendente) msg(nome + ' marcado como Perdido ✓, mas ATENÇÃO: ' + (j.avisoNota || 'a nota ainda não chegou ao Agendor; ela será gravada sozinha em instantes.'), 'aviso'); else msg(nome + ' marcado como Perdido e conferido no Agendor ✓', 'ok'); carregar(true, 'tarefas'); }
   else { delete S.ocultos[L.dealId]; redesenharTudo(); msg(nome + ' voltou para a tela: ' + (j.ok && j.confirmado === false ? 'o Agendor não confirmou o Perdido.' : msgErro(j)), 'erro'); S.L = L; $('painelLead').classList.remove('hide'); renderLead(); setEstado(L, 'erro', j.ok && j.confirmado === false ? 'O Agendor não confirmou o Perdido. Nada mudou. Tente de novo.' : msgErro(j), function () { marcarPerdido(L); }); }
 }
 function redesenharTudo() { if (S.dados) { desenharTopo(S.dados); desenharBlocos(); } if (!$('painelFila').classList.contains('hide')) desenharFila(); }

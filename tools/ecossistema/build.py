@@ -30,7 +30,7 @@ D3=svg([
  [("f","Camada única do Agendor","Fila com freio, limite de tempo e nova tentativa","p")],
  [("g","Agendor","Recebe a escrita","g")],
  [("h","Bia relê e confirma","Só responde 'feito' depois de ler o Agendor de novo","g")],
- [("i","Ana registra","Se falhou, guarda, tenta de novo e avisa o Robert","n")],
+ [("i","Ana registra","Se falhou, guarda, tenta de novo e avisa a gestão","n")],
 ],[("a","b",""),("b","c1",""),("b","c2",""),("c1","d1",""),("c2","d2",""),("d1","e1",""),("d2","e2",""),("e1","f",""),("e2","f",""),("f","g",""),("g","h",""),("h","i","")],"a3")
 D4=svg([
  [("a","Evento na conversa","Lead novo, pediu pessoa, qualificado, irritado, sem resposta...","n")],
@@ -44,12 +44,11 @@ D4=svg([
 ],[("a","b",""),("b","c1","noite"),("b","c2","dia"),("c2","d",""),("d","e",""),("e","f",""),("f","g1","sim"),("f","g2","não"),("g2","h","")],"a4")
 D5=svg([
  [("a","Backup automático diário","Se uma execução falha, a rotina tenta de novo sozinha até dar certo","p")],
- [("b1","Ana","Histórico completo, memória, código e documentos","n"),("b2","Bia","Memória, fluxos do n8n, documentos e configuração","n")],
- [("c1","Espelho dos documentos","Todo o projeto, sem vídeos e arquivos gigantes","n"),("c2","Backups de deploy","Um a cada publicação (os 60 mais recentes)","n")],
- [("d","Criptografia e teste de restauração","Abre o pacote de volta e confere tudo antes de dar OK","m")],
- [("e","Cópia na nuvem","Fora do ambiente de trabalho, protegida","g")],
- [("f","Falhou ou passou de 30 h?","A Bia avisa o Robert uma vez por dia","x")],
-],[("a","b1",""),("a","b2",""),("b1","c1",""),("b2","c2",""),("c1","d",""),("c2","d",""),("d","e",""),("e","f","")],"a5")
+ [("b","O que entra no pacote","Ana: histórico completo, memória, código e documentos. Bia: memória, fluxos do n8n, documentos e configuração. Espelho dos documentos do projeto. Backup de cada publicação.","n")],
+ [("c","Criptografia e teste de restauração","Abre o pacote de volta e confere tudo antes de dar OK","m")],
+ [("d","Cópia na nuvem","Fora do ambiente de trabalho, protegida","g")],
+ [("e","Falhou ou passou de 30 h?","A Bia avisa a gestão uma vez por dia","x")],
+],[("a","b",""),("b","c",""),("c","d",""),("d","e","")],"a5")
 def fig(s,label): return f'<div class="svgw v item" role="img" aria-label="{label}">{s}</div>'
 H=f'''<section class="sec" id="ana">
 <h2><span class="n">16</span>A Ana, a SDR virtual do WhatsApp</h2>
