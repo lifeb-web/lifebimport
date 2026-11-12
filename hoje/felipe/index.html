@@ -1778,6 +1778,7 @@ function renderLead() {
     if (!(p.telefones || []).length) bx.appendChild(el('div', 'sub', 'Sem telefone.'));
     if (p.principal && ac.campos) { var bt = el('button', 'sec trocar-contato', 'Trocar contato / telefone'); bt.type = 'button'; bt.setAttribute('data-fk', 'trocar-contato'); bt.title = 'Use quando você está falando com o decisor e o cadastro tem o telefone da loja'; bt.onclick = function () { trocarContato(L, p); }; bx.appendChild(bt); }
     if (!p.principal && ac.campos) { var br = el('button', 'lixo-contato', ''); br.type = 'button'; br.setAttribute('data-fk', 'retirar-contato'); br.setAttribute('aria-label', 'Retirar o contato ' + (p.nome || 'sem nome')); br.title = 'Retirar este contato'; br.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3"/></svg>'; br.onclick = function () { retirarContato(L, p); }; bx.appendChild(br); }   // lixeirinha (Robert 11/11); o contato principal fica sempre: o negócio nunca fica sem contato
+    if (p.principal && ac.campos) { var bp = el('button', 'lixo-contato lixo-principal', ''); bp.type = 'button'; bp.setAttribute('data-fk', 'retirar-principal'); bp.setAttribute('aria-label', 'Retirar o contato principal ' + (p.nome || 'sem nome')); bp.title = 'Este é o contato principal'; bp.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3"/></svg>'; bp.onclick = function () { explicarPrincipal(L, p); }; bx.appendChild(bp); }   // 12/11 (Robert): a lixeira aparece em TODO contato; no principal ela explica e leva ao "Trocar contato" (o Agendor não deixa tirar o principal)
     if (p.principal && ac.campos && (lead.pessoas || []).length > 1) bx.appendChild(el('div', 'sub dica-principal', 'Contato principal: não pode ser retirado (o negócio sempre fica com ao menos 1 contato).'));
     s4.appendChild(bx);
   }); if (ac.campos) { var ba = el('button', 'sec trocar-contato', '+ Adicionar contato'); ba.type = 'button'; ba.setAttribute('data-fk', 'adicionar-contato'); ba.onclick = function () { adicionarContato(L, s4, ba); }; s4.appendChild(ba); } if (ac.campos) { var lc = el('div', 'linha-cnpj'); var cj = (lead.empresa || {}).cnpj; lc.appendChild(el('span', 'sub', cj ? 'CNPJ ' + fmtCnpj(cj) : 'Sem CNPJ cadastrado')); var bc = el('button', 'sec trocar-contato', cj ? 'Trocar CNPJ' : 'Adicionar CNPJ'); bc.type = 'button'; bc.setAttribute('data-fk', 'trocar-cnpj'); bc.onclick = function () { trocarCnpj(L); }; lc.appendChild(bc); lc.style.cssText = 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px'; s4.appendChild(lc); } corpo.appendChild(s4);
@@ -2390,6 +2391,22 @@ function adicionarContato(L, caixa, botao) {
   lin.appendChild(ok); lin.appendChild(cx); f.appendChild(nome); f.appendChild(cargo); f.appendChild(fone); f.appendChild(msgBx); f.appendChild(lin); caixa.appendChild(f); nome.focus();
 }
 
+function explicarPrincipal(L, p) {
+  if (!p || L.ocupado) return;
+  var abriu = document.activeElement; var ov = el('div', 'lig-ov'); ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Contato principal');
+  var cx = el('div', 'lig-cx'); ov.appendChild(cx);
+  function fechar() { document.removeEventListener('keydown', esc, true); if (ov.parentNode) ov.parentNode.removeChild(ov); try { if (abriu && abriu.focus && document.body.contains(abriu)) abriu.focus(); } catch (e) {} }
+  function esc(ev) { if (ev.key === 'Escape') { ev.stopPropagation(); fechar(); } }
+  document.addEventListener('keydown', esc, true); ov.addEventListener('mousedown', function (ev) { if (ev.target === ov) fechar(); });
+  var outros = ((L.lead && L.lead.pessoas) || []).length > 1;
+  cx.appendChild(el('h3', null, 'Este é o contato principal'));
+  cx.appendChild(el('p', 'sub', 'O Agendor não permite tirar o contato principal do negócio: o negócio sempre fica com ao menos 1 contato.' + (outros ? ' Os outros contatos podem ser retirados pela lixeira de cada um.' : '')));
+  cx.appendChild(el('p', 'sub', 'Se este contato não presta (número da loja, pessoa errada), use "Trocar contato / telefone": o cadastro dele é corrigido para o decisor certo e o número antigo fica no histórico.'));
+  var bt = el('button', 'forte', 'Trocar contato / telefone'); bt.type = 'button'; bt.onclick = function () { fechar(); trocarContato(L, p); };
+  var bf = el('button', 'sec', 'Fechar'); bf.type = 'button'; bf.onclick = fechar; bf.style.marginLeft = '8px';
+  var lin = el('div'); lin.style.marginTop = '12px'; lin.appendChild(bt); lin.appendChild(bf); cx.appendChild(lin);
+  document.body.appendChild(ov); try { bt.focus({ preventScroll: true }); } catch (e) {}
+}
 function trocarContato(L, p) {
   if (!p || L.ocupado) return;
   var abriu = document.activeElement; var ov = el('div', 'lig-ov'); ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Trocar contato principal');
