@@ -244,13 +244,14 @@ a{color:var(--purple-d)}
 <!-- PASSO 4 -->
 <section id="s-subindo" class="card hide">
   <h2 id="subTitulo">5. Subindo para o Agendor</h2>
-  <p class="sub" id="subSub">Não feche esta página. Se cair, é só abrir de novo e continuar: nada é duplicado.</p>
+  <p class="sub" id="subSub">Pode fechar esta página: o servidor continua sozinho e avisa no WhatsApp quando terminar. Se quiser acompanhar, é só abrir de novo: nada é duplicado.</p>
   <div id="progBox">
     <div class="pct" id="subPct">0%</div>
     <div class="bar"><i id="subBar"></i></div>
     <div id="subTxt" style="font-weight:700">Começando...</div>
     <div class="muted" id="subTempo"></div>
     <div class="muted" id="subAgora"></div>
+    <div class="row" style="margin-top:10px"><button class="sec" id="bPausar">Pausar</button><button class="sec" id="bCancelarLista">Cancelar o que falta</button></div>
   </div>
   <div id="subErro" class="blk vermelho hide"><b id="subErroTxt"></b><div class="row" style="margin-top:8px"><button id="bTentar">Tentar de novo</button><button class="sec" id="bNovaErro">Começar uma nova lista</button></div></div>
   <div id="relBox" class="hide">
@@ -670,6 +671,7 @@ async function rodarJob(totalIni, nomes) {
       if (r._status === 404) { lsDel('sl_job'); mostrarErroSub(traduz(r).msg, true); return; }
       if (r.ocupado) { ocupados++; $('subTxt').textContent = 'Outra janela está subindo esta lista. Aguardando...'; if (ocupados > 25) { mostrarErroSub('Esta lista continua sendo processada em outra janela. Feche as outras e clique em "Tentar de novo".', false); return; } await pausa(3000); continue; }
       ocupados = 0;
+      if (r.pausado) { S.pausada = true; mostrarErroSub((r.feitos || 0) + " de " + (r.total || 0) + " já foram processadas. A lista está PAUSADA: nada novo será criado até você continuar.", false); $("bTentar").textContent = "Continuar"; return; }
       if (!r.ok) { mostrarErroSub(traduz(r).msg, r._status === 404); return; } // 400/500: para e mostra, nunca fica tentando para sempre
       run.total = r.total || run.total || 1; run.feitos = r.feitos; run.ultimo = Date.now(); run.base = r.feitos; run.criados = r.criados; run.erros = r.erros; run.pulados = r.pulados; run.proxima = r.proximaEmpresa;
       desenhaProg(run);
@@ -709,6 +711,7 @@ async function mostrarRelatorio() {
   } catch (e) { mostrarErroSub('Terminei de subir, mas não consegui carregar o relatório agora. Clique em "Tentar de novo" para ver o relatório (nada será recriado).', false); S.soRelatorio = true; return; }
   S.soRelatorio = false; lsDel('sl_job'); // só apaga depois que o relatório carregou
   S.relatorio = { resumo: ult, criados: criados, erros: erros };
+  if (ult && ult.status === 'cancelado') $('subTitulo').textContent = 'Relatório (lista cancelada: o que não foi processado NÃO foi criado)';
   var pulados = ult.pulados || [];
   var h = '';
   if (criados.length) h += '<div class="blk verde"><h3>' + (criados.length === 1 ? '1 lead entrou' : 'Os ' + criados.length + ' leads entraram') + ' na FILA DE ESPERA do Outbound.</h3><div class="ex">Nada começa sozinho: abra a página Hoje e clique em Iniciar quando quiser.</div><div style="margin-top:8px"><a class="big" style="display:inline-block;text-decoration:none;padding:12px 18px;border-radius:10px;background:var(--acc,#0a7a3d);color:#fff;font-weight:700" target="_blank" rel="noopener" href="https://projetojlbv.com.br/hoje/">Abrir a página Hoje</a> <span class="muted">https://projetojlbv.com.br/hoje/</span></div></div>';
@@ -855,7 +858,9 @@ $('bReenviar').onclick = async function () {
   if (trataFatal(j)) return;
   if (j.ok) { lsSet('sl_job', JSON.stringify({ job: S.jobId, arquivo: S.nomeArq })); rodarJob(j.total, []); } else alert(traduz(j).msg);
 };
-$('bTentar').onclick = function () { $('subErro').classList.add('hide'); if (S.soRelatorio) { $('progBox').classList.add('hide'); mostrarRelatorio(); } else { $('progBox').classList.remove('hide'); rodarJob(S.run ? S.run.total : 0, []); } };
+$('bPausar').onclick = async function () { $('bPausar').disabled = true; var j; try { j = await api('/pausar', { body: { job: S.jobId } }); } catch (e) { j = { ok: false }; } $('bPausar').disabled = false; if (!j || !j.ok) { alert('Não consegui pausar agora. Tente de novo.'); return; } $('subTxt').textContent = 'Pausando... termina o negócio que está sendo criado e para.'; };
+$('bCancelarLista').onclick = async function () { if (!confirm('Cancelar o que falta? O que já foi criado FICA no Agendor (nada é apagado). O que ainda não foi processado não será criado.')) return; $('bCancelarLista').disabled = true; var j; try { j = await api('/cancelar', { body: { job: S.jobId } }); } catch (e) { j = { ok: false }; } $('bCancelarLista').disabled = false; if (!j || !j.ok) { alert('Não consegui cancelar agora. Tente de novo.'); return; } S.cancelando = true; $('subTxt').textContent = 'Cancelando... o que já foi criado fica no Agendor.'; };
+$('bTentar').onclick = async function () { $('subErro').classList.add('hide'); if (S.pausada) { S.pausada = false; $('bTentar').textContent = 'Tentar de novo'; try { await api('/retomar', { body: { job: S.jobId } }); } catch (e) { /* se falhar, o /processar abaixo avisa que continua pausada */ } } if (S.soRelatorio) { $('progBox').classList.add('hide'); mostrarRelatorio(); } else { $('progBox').classList.remove('hide'); rodarJob(S.run ? S.run.total : 0, []); } };
 $('bNovaErro').onclick = function () { novaLista(); };
 $('bCsv').onclick = baixarCsv;
 function novaLista() { S.itens = []; S.interp = null; S.abas = null; S.mapa = {}; S.manual = []; S.jobId = null; $('arqNome').textContent = 'nenhum arquivo escolhido'; $('arq').value = ''; lsDel('sl_job'); $('retomar').classList.add('hide'); desenharManual(); atualizaBotoes(); mostrar('s-arquivo'); }
@@ -870,6 +875,7 @@ window.__slTeste = { lerXlsx: lerXlsx, lerArquivo: lerArquivo, parseCsv: parseCs
   if (t) { var ok = await entrar(t, true); if (ok) return; }
   mostrar('s-login');
 })();
+try { window.__listaTeste = { get S() { return S; }, rodarJob: rodarJob }; } catch (e) { /* só para os testes da página */ }
 })();
 </script>
 </body>
