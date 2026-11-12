@@ -27,9 +27,11 @@ const falhas = []; const F = (m) => falhas.push(m); let checks = 0; const ok = (
     // rolagem da lista lateral + da conversa + da página: rola, deixa passar 2 atualizações de 4 s e confere que nada voltou ao topo
     if (!soChat) await p.waitForSelector("#atItens .ri", { timeout: 6000 }).catch(async () => { F(`[${tag}] lista de conversas não apareceu; tela: ` + (await p.evaluate(() => document.body.innerText.slice(0, 200).replace(/\n/g, " | ")))); }); const lista = await p.evaluate(() => { const e = document.getElementById("atItens"); if (!e) return { rolavel: false, top: 0 }; const alvo = e.scrollHeight > e.clientHeight ? e : e.parentElement; e.scrollTop = 400; return { rolavel: e.scrollHeight > e.clientHeight, top: e.scrollTop }; });
     const msgs = await p.evaluate(() => { const e = document.getElementById("atMsgs"); if (!e) return null; e.scrollTop = 300; return { top: e.scrollTop, rolavel: e.scrollHeight > e.clientHeight }; });
+    if (msgs && msgs.rolavel) { hist.push({ de: "lead", ts: Date.now(), tipo: "texto", texto: "Mensagem NOVA chegando enquanto você lê lá em cima" }); }   // nova mensagem durante a leitura: não pode puxar a tela
     await p.waitForTimeout(9500);
     const depois = await p.evaluate(() => ({ lista: document.getElementById("atItens") && document.getElementById("atItens").scrollTop, msgs: document.getElementById("atMsgs") && document.getElementById("atMsgs").scrollTop, win: window.pageYOffset }));
     if (lista.rolavel) ok(Math.abs(depois.lista - lista.top) <= 2, `[${tag}] a lista lateral voltou ao topo (${lista.top} -> ${depois.lista})`);
+    if (msgs && msgs.rolavel) ok(await p.$eval("#atMsgs", (e) => /Mensagem NOVA chegando/.test(e.textContent)), `[${tag}] a mensagem nova NÃO apareceu na conversa (perdida!)`);
     if (msgs && msgs.rolavel) ok(Math.abs(depois.msgs - msgs.top) <= 3, `[${tag}] a conversa voltou ao topo/fundo (${msgs.top} -> ${depois.msgs})`);
     await ctx.close();
   }
