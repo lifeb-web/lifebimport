@@ -18,7 +18,7 @@ const WAV = "UklGRmQGAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YUAGAAAAAAAAAAA
     r.fulfill({ status: 200, contentType: "application/json", headers: { "access-control-allow-origin": "*", "access-control-allow-headers": "*" }, body: JSON.stringify(j) }); });
   await p.goto(BASE + "#atendimento-5562990000003"); await p.fill("#usuario", "robert@x.com"); await p.fill("#senha", "x"); await p.click("#btnEntrar"); await p.waitForSelector("#app:not(.hide)"); await p.waitForSelector("#atMsgs .bb", { timeout: 8000 }); await p.waitForTimeout(600);
   const btns = await p.$$eval("#atMsgs .ap button", (e) => e.map((x) => x.textContent)); ok(btns.length === 2, `deveria haver 2 botões de áudio (lead + Ana, os 2 balões da Ana juntos), há ${btns.length}`);
-  ok((await p.$$eval("#atMsgs .bb", (e) => e.map((x) => x.textContent)).then((t) => t.filter((x) => /Primeiro balão|Segundo balão/.test(x)).length)) === 2, "os 2 balões da Ana (transcrição) continuam visíveis");
+  ok((await p.$$eval("#atMsgs .bb", (e) => e.map((x) => x.textContent)).then((t) => t.filter((x) => /Primeiro balão/.test(x) && /Segundo balão/.test(x)).length)) === 1, "as 2 frases da Ana (transcrição) ficam visíveis JUNTAS num balão só (13/11: áudio = 1 balão)");
   ok(await p.$eval("#atMsgs", (e) => /Áudio da Ana/.test(e.textContent)), "rótulo 'Áudio da Ana' ausente");
   await p.click("#atMsgs .ap button >> nth=1"); await p.waitForSelector("#atMsgs .ap audio", { timeout: 4000 }); ok(pedidos.length === 1 && /id=aud_out_5562990000003_1/.test(pedidos[0]) && /fone=5562990000003/.test(pedidos[0]), "pedido do áudio errado: " + pedidos.join(","));
   const src1 = await p.$eval("#atMsgs .ap audio", (a) => a.src); ok(/^blob:/.test(src1), "o áudio não virou blob tocável");
