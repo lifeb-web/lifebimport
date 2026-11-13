@@ -258,6 +258,19 @@ a{color:var(--purple-d)}
     <div id="relBlocos"></div>
     <div class="row"><button id="bReenviar" class="hide">Reenviar os com erro</button><button class="sec" id="bCsv">Baixar relatório (CSV)</button><button class="sec" id="bNova">Subir outra lista</button></div>
     <p class="muted" style="margin-top:8px" id="waMsg"></p>
+    <div class="row" style="margin-top:14px"><button class="sec" id="bExcluirJob">Excluir o que esta lista criou...</button></div>
+    <div id="excBox" class="hide" style="margin-top:10px;border:2px solid var(--red);border-radius:12px;padding:12px">
+      <b>Excluir do Agendor o que ESTA lista criou</b>
+      <p class="muted" id="excTxt">Conferindo o que seria apagado (nada é apagado ainda)...</p>
+      <div id="excLista" style="max-height:260px;overflow:auto;font-size:14px"></div>
+      <div id="excConfirmaBox" class="hide">
+        <p style="margin-top:10px">Só são apagados negócios CRIADOS por esta lista, ainda abertos, na etapa inicial e que o SDR nunca iniciou, junto com a pessoa e a empresa que a lista criou e que não têm mais nada. O que já existia, foi trabalhado ou tem outro vínculo FICA. Cada item apagado tem backup por 180 dias.</p>
+        <label for="excDigite" class="muted">Para apagar de verdade, digite exatamente: <b id="excCodigo"></b></label>
+        <input id="excDigite" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" style="width:100%;font-size:16px;min-height:44px">
+        <div class="row" style="margin-top:8px"><button id="bExcApagar" disabled>Apagar de verdade</button><button class="sec" id="bExcFechar">Não apagar</button></div>
+      </div>
+      <div class="row hide" id="excSoFechar" style="margin-top:8px"><button class="sec" id="bExcFechar2">Fechar</button></div>
+    </div>
   </div>
 </section>
 
@@ -852,6 +865,39 @@ $('leads').addEventListener('change', function (e) {
   desenharPrevia();
 });
 $('bSubir').onclick = subir;
+
+// ---------- excluir o que esta lista criou (12/11): simulação primeiro, depois confirmação digitada ----------
+var EXC = { job: '', codigo: '', ocupado: false };
+function excFechar() { $('excBox').classList.add('hide'); $('excLista').textContent = ''; $('excDigite').value = ''; $('bExcApagar').disabled = true; $('excConfirmaBox').classList.add('hide'); $('excSoFechar').classList.add('hide'); EXC.ocupado = false; }
+function excLinha(it) { var t = ''; if (it.apagaria && it.apagaria.length) t += 'APAGA: ' + it.apagaria.map(function (a) { return a.tipo === 'deals' ? 'negócio' : a.tipo === 'people' ? 'pessoa' : 'empresa'; }).join(' + '); if (it.apagados && it.apagados.length) t += 'APAGADO: ' + it.apagados.map(function (a) { return a.tipo === 'deals' ? 'negócio' : a.tipo === 'people' ? 'pessoa' : 'empresa'; }).join(' + '); var fica = (it.ficam || []).map(function (f) { return f.motivo; }); if (it.pulado) t += 'FICA: ' + it.pulado; if (fica.length) t += (t ? ' · ' : '') + 'também fica: ' + fica.join('; '); if (it.falhas && it.falhas.length) t += ' · FALHA: ' + it.falhas.map(function (f) { return f.motivo; }).join('; '); return '<div style="padding:4px 0;border-bottom:1px solid var(--line,#ddd)"><b>' + esc(it.empresa || '') + '</b><br>' + esc(t) + '</div>'; }
+async function excRodar(confirmar) {
+  var de = 0, tot = { negocios: 0, pessoas: 0, empresas: 0, pulados: 0, falhas: 0 }, html = '', guard = 0, ult = null;
+  while (guard++ < 400) {
+    var j; try { j = await api('/excluir-job', { body: { job: EXC.job, confirmar: confirmar || '', de: de }, timeout: 120000 }); } catch (e) { return { ok: false, msg: 'Sem conexão. Nada foi apagado a mais; clique de novo para continuar de onde parou.', tot: tot, html: html }; }
+    if (trataFatal(j)) return { ok: false, msg: '', tot: tot, html: html };
+    if (j.ocupado) { $('excTxt').textContent = 'Outro apagamento deste job está em andamento. Aguardando...'; await pausa(1500); continue; }
+    if (!j.ok) return { ok: false, msg: j.mensagem || (j.erro === 'job_em_andamento' ? 'Este job ainda está sendo processado. Pause ou cancele o que falta antes.' : 'Não consegui agora (' + (j.erro || 'erro') + ').'), tot: tot, html: html };
+    ult = j; ['negocios', 'pessoas', 'empresas', 'pulados', 'falhas'].forEach(function (k) { tot[k] += (j.resumo && j.resumo[k]) || 0; }); html += (j.itens || []).map(excLinha).join(''); $('excLista').innerHTML = html;
+    $('excTxt').textContent = (confirmar ? 'Apagando... ' : 'Conferindo... ') + ((j.proximo == null ? j.total : j.proximo)) + ' de ' + j.total;
+    if (j.concluido) break; de = j.proximo; await pausa(200);
+  }
+  return { ok: true, tot: tot, html: html };
+}
+$('bExcluirJob').onclick = async function () {
+  if (EXC.ocupado) return; EXC.ocupado = true; EXC.job = S.jobId; EXC.codigo = 'APAGAR ' + S.jobId; $('excBox').classList.remove('hide'); $('excLista').textContent = ''; $('excConfirmaBox').classList.add('hide'); $('excSoFechar').classList.add('hide'); $('excTxt').textContent = 'Conferindo o que seria apagado (nada é apagado ainda)...';
+  var r = await excRodar(''); EXC.ocupado = false;
+  if (!r.ok) { $('excTxt').textContent = r.msg || 'Não consegui conferir agora.'; $('excSoFechar').classList.remove('hide'); return; }
+  $('excTxt').textContent = 'SIMULAÇÃO (nada foi apagado): apagaria ' + r.tot.negocios + ' negócios, ' + r.tot.pessoas + ' pessoas e ' + r.tot.empresas + ' empresas. Ficam intactos: ' + r.tot.pulados + ' leads.';
+  if (!r.tot.negocios) { $('excSoFechar').classList.remove('hide'); return; }
+  $('excCodigo').textContent = EXC.codigo; $('excDigite').value = ''; $('bExcApagar').disabled = true; $('excConfirmaBox').classList.remove('hide');
+};
+$('excDigite').oninput = function () { $('bExcApagar').disabled = $('excDigite').value !== EXC.codigo; };
+$('bExcApagar').onclick = async function () {
+  if (EXC.ocupado || $('excDigite').value !== EXC.codigo) return; EXC.ocupado = true; $('bExcApagar').disabled = true; $('excConfirmaBox').classList.add('hide'); $('excLista').textContent = ''; $('excTxt').textContent = 'Apagando... não feche esta página (se fechar, é só abrir de novo e repetir: o que já foi apagado é pulado).';
+  var r = await excRodar(EXC.codigo); EXC.ocupado = false;
+  $('excTxt').textContent = (r.ok ? 'Pronto. ' : 'Parou: ' + (r.msg || '') + ' ') + 'Apagados: ' + r.tot.negocios + ' negócios, ' + r.tot.pessoas + ' pessoas, ' + r.tot.empresas + ' empresas. Não apagados: ' + r.tot.pulados + '. Falhas: ' + r.tot.falhas + '. O relatório também foi para o WhatsApp.'; $('excSoFechar').classList.remove('hide');
+};
+$('bExcFechar').onclick = excFechar; $('bExcFechar2').onclick = excFechar;
 $('bReenviar').onclick = async function () {
   $('bReenviar').disabled = true;
   var j; try { j = await api('/reenviar', { body: { job: S.jobId } }); } catch (e) { j = { ok: false }; } $('bReenviar').disabled = false;
