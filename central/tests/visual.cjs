@@ -35,7 +35,7 @@ const MEDIDA = () => {
 (async () => {
   const b = await chromium.launch({ executablePath: process.argv[3] });
   const users = [{ usuario: "robert@x.com", nome: "Robert", papel: "robert", ativo: true, ultimoAcesso: Date.now() }, { usuario: "luiz", nome: "Luiz", papel: "admin", ativo: false, ultimoAcesso: null }];
-  const TELAS = ["Visão geral", "Controles", "Todas as chaves", "Filas de mensagens", "Calendário", "Atendimento", "Agentes", "Histórico", "Atalhos", "Usuários", "Minha conta"];
+  const TELAS = ["Visão geral", "Bia e automações", "Todas as chaves", "Filas de mensagens", "Calendário", "Atendimento", "Ana", "Histórico", "Atalhos", "Usuários", "Minha conta"];
   const COMBOS = [[1920, 1080, "light"], [1440, 900, "light"], [1440, 900, "dark"], [1280, 800, "light"], [1024, 768, "light"], [768, 1024, "light"], [390, 844, "light"], [390, 844, "dark"], [360, 740, "dark"]];
   for (const [w, h, tema] of COMBOS.filter((c) => !process.env.ONLY || String(c[0]) === process.env.ONLY)) {
     const ctx = await b.newContext({ viewport: { width: w, height: h }, colorScheme: tema }); const p = await ctx.newPage(); const tag = `${w}x${h}-${tema}`; let erroApi = null;
@@ -49,7 +49,7 @@ const MEDIDA = () => {
       r.fulfill({ status: 200, contentType: "application/json", headers: { "access-control-allow-origin": "*", "access-control-allow-headers": "*" }, body: JSON.stringify(j) }); });
     const medir = async (rotulo) => {
       const r = await p.evaluate(MEDIDA); verificados += r.itens.length;
-      if (process.env.SHOTS && new RegExp(process.env.SHOTRE || '^390x844-').test(tag) && /Agentes|Atendimento/.test(rotulo)) { try { await p.screenshot({ path: path.join(process.env.SHOTS, `${tag}-${rotulo.replace(/[^A-Za-z0-9]+/g, "_")}.png`), fullPage: true }); } catch (e) {} }
+      if (process.env.SHOTS && new RegExp(process.env.SHOTRE || '^390x844-').test(tag) && /Ana|Atendimento/.test(rotulo)) { try { await p.screenshot({ path: path.join(process.env.SHOTS, `${tag}-${rotulo.replace(/[^A-Za-z0-9]+/g, "_")}.png`), fullPage: true }); } catch (e) {} }
       if (r.sw > r.cw) F(`[${tag}] ${rotulo}: rolagem lateral (${r.sw} > ${r.cw})`);
       for (const i of r.itens) {
         const onde = `[${tag}] ${rotulo}: ${i.nome} (${i.w}x${i.h})`;
@@ -72,11 +72,11 @@ const MEDIDA = () => {
         { const hero = await p.$(".hero.clic"); if (!hero) F(`[${tag}] cartão de pontos de atenção não é clicável`); else { await hero.click(); await p.waitForTimeout(200); const itens = await p.$$("#modal:not(.hide) .grit"); if (!itens.length) F(`[${tag}] cartão de atenção não abriu a lista com explicação`); await medir("lista de pontos de atenção"); await p.click("#modal button:has-text('Fechar')"); await p.waitForTimeout(150); if (await p.$("#modal:not(.hide)")) F(`[${tag}] lista de atenção não fechou`); } }
         for (let k = 0; k < 3; k++) { const cs = await p.$$(".kpi.clic"); await cs[k].click(); await p.waitForTimeout(200); if (!(await p.$("#modal:not(.hide) .grit, #modal:not(.hide) .vazio"))) F(`[${tag}] cartão ${k} não abriu a lista`); await medir("lista do cartão " + k); await p.screenshot({ path: path.join(process.env.SHOTS || "/tmp", `c-${tag}-cartao${k}.png`) }); await p.keyboard.press("Escape"); await p.waitForTimeout(120); }
       }
-      if (t === "Controles") {   // exercita filtros e abre/fecha o modal de um interruptor
+      if (t === "Bia e automações") {   // exercita filtros e abre/fecha o modal de um interruptor
         for (const f of ["Risco alto", "Em sombra", "Desligados", "Todos"]) { await p.click(`.chip:has-text("${f}")`); await p.waitForTimeout(120); }
         const sw = await p.$(".switch:not([disabled])"); if (sw) { await sw.click(); await p.waitForTimeout(250); await medir("modal de confirmação"); await p.keyboard.press("Escape"); await p.waitForTimeout(150); if (await p.$("#modal:not(.hide)")) F(`[${tag}] modal não fechou com Esc`); }
       }
-      if (t === "Agentes") { const bap = await p.$("button:has-text('Aprendizado')"); if (!bap) F(`[${tag}] Agentes sem botão Aprendizado`); else { await bap.click(); await p.waitForTimeout(400); await medir("Agentes: Aprendizado"); if (!(await p.$("button:has-text('Aprovar e aplicar')"))) F(`[${tag}] Aprendizado sem proposta pendente para aprovar`); await p.click("#modal button:has-text('Fechar')"); await p.waitForTimeout(150); } }
+      if (t === "Ana") { const bap = await p.$("button:has-text('Aprendizado')"); if (!bap) F(`[${tag}] Agentes sem botão Aprendizado`); else { await bap.click(); await p.waitForTimeout(400); await medir("Agentes: Aprendizado"); if (!(await p.$("button:has-text('Aprovar e aplicar')"))) F(`[${tag}] Aprendizado sem proposta pendente para aprovar`); await p.click("#modal button:has-text('Fechar')"); await p.waitForTimeout(150); } }
       if (t === "Atendimento") {
         const lista = await p.$$(".ax .ri"); if (!lista.length) F(`[${tag}] Atendimento sem conversas na lista`);
         else {
@@ -98,7 +98,7 @@ const MEDIDA = () => {
           const vo = await p.$(".ax .hd .vo"); if (vo && (await vo.isVisible())) { await p.click(".ax .hd .vo", { timeout: 4000 }).catch(async () => { F(`[${tag}] botão Voltar não clicável (coberto)`); await p.screenshot({ path: "/tmp/vo_fail.png" }).catch(() => {}); }); await p.waitForTimeout(200); await medir("Atendimento: lista no celular"); }
           await p.click(".ax .lst .mn button"); await p.waitForTimeout(150); await p.click(".ax .mm button:has-text('Lixeira')"); await p.waitForTimeout(400); await medir("Atendimento: lixeira"); if (!(await p.$("#modal button:has-text('Restaurar')"))) F(`[${tag}] lixeira sem Restaurar`); await p.click("#modal button:has-text('Fechar')"); await p.waitForTimeout(150);
           await p.click(".ax .lst .mn button"); await p.waitForTimeout(150); await p.click(".ax .mm button:has-text('Conversas ocultas')"); await p.waitForTimeout(400); await medir("Atendimento: ocultas"); await p.click("#modal button:has-text('Fechar')"); await p.waitForTimeout(150);
-          for (const f of ["Precisam de você", "Ana atendendo", "Pausadas", "Todas"]) { await p.click(`.ax .cp2:has-text("${f}")`); await p.waitForTimeout(100); } await medir("Atendimento: depois dos filtros"); await p.fill("#atBusca", "farmácia"); await p.waitForTimeout(900); if (!(await p.$("#atAcharMsgs .ri"))) F(`[${tag}] busca nas mensagens não trouxe resultado`); else await medir("Atendimento: busca nas mensagens"); await p.fill("#atBusca", ""); await p.waitForTimeout(200);
+          for (const f of ["Precisam de você", "Ana atendendo", "Pausadas", "Todas"]) { await p.click(`.ax .cp2:has-text("${f}")`); await p.waitForTimeout(100); } await medir("Atendimento: depois dos filtros"); await p.fill("#atBusca", "farmácia"); await p.waitForSelector("#atAcharMsgs .ri", { timeout: 6000 }).catch(() => {}); if (!(await p.$("#atAcharMsgs .ri"))) F(`[${tag}] busca nas mensagens não trouxe resultado`); else await medir("Atendimento: busca nas mensagens"); await p.fill("#atBusca", ""); await p.waitForTimeout(200);
         }
       }
       if (t === "Filas de mensagens") { const rm = await p.$("button:has-text('Remover')"); if (rm) { await rm.click(); await p.waitForTimeout(250); await medir("modal remover mensagem"); await p.keyboard.press("Escape"); } }
