@@ -770,7 +770,7 @@ async function api(path, corpo, ext, base, opt) {
       if (opt.idem) init.headers['x-idem'] = opt.idem;
       var agoraPf = function () { return (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now(); }; var tIni = agoraPf(); var r = await fetch((base || API) + path, init); var quebrado = false; try { perfRegistra(path, agoraPf() - tIni, r); } catch (ePf) { /* medir nunca atrapalha */ }
       j = await r.json().catch(function () { quebrado = true; return {}; }); if (!j || typeof j !== 'object') { j = {}; quebrado = true; }
-      j._status = r.status; if (quebrado) { j._quebrado = true; if (r.status < 300) { j.ok = false; j.mensagem = j.mensagem || 'O servidor respondeu algo que não entendi.'; } }
+      j._status = r.status; try { if (j.erro === 'agendor_ocupado') faixa('agendor', 'O Agendor está ocupado. Tentando de novo sozinho…', ''); else if (!quebrado && r.status < 500 && r.status !== 429) faixa('agendor', ''); } catch (e) {} if (quebrado) { j._quebrado = true; if (r.status < 300) { j.ok = false; j.mensagem = j.mensagem || 'O servidor respondeu algo que não entendi.'; } }
       try { if (r.headers && r.headers.get('x-idem-replay')) j._replay = true; } catch (e) {}
       var ra = 0; try { ra = r.headers && r.headers.get ? Number(r.headers.get('retry-after')) || 0 : 0; } catch (e) {}
       var st = r.status; var repete = false;
@@ -800,11 +800,12 @@ function lerSaida() { try { var a = JSON.parse(lsGet(SAIDA_KEY) || 'null'); if (
 function gravarSaida(a) { S.saidaMem = a; if (!a.length) lsDel(SAIDA_KEY); else lsSet(SAIDA_KEY, JSON.stringify(a)); atualizarSelo(); try { if (S.canal) S.canal.postMessage({ t: 'saida' }); } catch (e) {} }
 function atualizarSelo() {
   var n = lerSaida().length; var s = $('seloSaida'); if (!s) return; s.classList.toggle('hide', !n);
-  s.textContent = n ? (n === 1 ? '1 ação aguardando conexão' : n + ' ações aguardando conexão') : '';
+  s.textContent = n ? (n === 1 ? '1 ação na fila, tentando de novo' : n + ' ações na fila, tentando de novo') : '';
 }
 function souLider() { try { var o = JSON.parse(lsGet('sh_lider') || 'null'); var agora = Date.now(); if (!o || o.id === S.abaId || agora - o.ts > 15000) { lsSet('sh_lider', JSON.stringify({ id: S.abaId, ts: agora })); return true; } return false; } catch (e) { return true; } }
 function classe(j, imediato) { // 'ok' | 'rede' (tenta de novo) | 'recusa' (definitivo: volta para a tela com a mensagem)
   var st = j._status;
+  if (j.fila === true) return 'fila';   // 13/11 (auditoria 5, A1): o SERVIDOR guardou a ação na fila durável e conclui sozinho: a página NÃO repete (senão duplicava)
   if (j.ok !== false && st < 300 && j.confirmado !== false && !j._quebrado) return 'ok';
   if (st === 0 || j._disjuntor || st === 429 || st === 423 || j._quebrado || (st >= 500 && st !== 502) || (st === 409 && j.erro === 'ocupado')) return 'rede';
   if (st === 502 && !imediato) return 'rede';
@@ -835,6 +836,7 @@ async function enviarAcao(def) {
   var j = await executar(e);
   if (j._status === 401) { return j; }
   var c = classe(j, true);
+  if (c === 'fila') { gravarSaida(lerSaida().filter(function (x) { return x.id !== e.id; })); try { faixa('fila', j.mensagem || 'O Agendor está ocupado: a ação ficou na fila e conclui sozinha.', ''); setTimeout(function () { faixa('fila', ''); }, 15000); } catch (x) {} return { _status: 0, ok: false, _enfileirado: true, _naFila: true }; }
   if (c === 'rede') { e.tent = 1; e.proximo = Date.now() + jitter(2000) * REDE.escala; gravarSaida(lerSaida().map(function (x) { return x.id === e.id ? e : x; })); return { _status: 0, ok: false, _enfileirado: true }; }
   gravarSaida(lerSaida().filter(function (x) { return x.id !== e.id; }));
   return j;
@@ -851,7 +853,8 @@ async function processarSaida(opt) {
       var c = classe(j, false);
       if (c === 'rede') { alvo.tent = (alvo.tent || 0) + 1; var espera = j._status === 429 ? 5000 : Math.min(30000, 1000 * Math.pow(2, alvo.tent)); alvo.proximo = Date.now() + jitter(espera) * REDE.escala; gravarSaida(lerSaida().map(function (x) { return x.id === alvo.id ? alvo : x; })); if (alvo.tent >= 12 && j._status !== 0) { gravarSaida(lerSaida().filter(function (x) { return x.id !== alvo.id; })); saidaRecusada(alvo, j); } break; }
       gravarSaida(lerSaida().filter(function (x) { return x.id !== alvo.id; }));
-      if (c === 'ok') { propagarBase(alvo, j); soltarBase(alvo); saidaOk(alvo, j); } else { soltarBase(alvo); saidaRecusada(alvo, j); }
+      if (c === 'fila') { soltarBase(alvo); try { faixa('fila', j.mensagem || 'O Agendor está ocupado: a ação ficou na fila e conclui sozinha.', ''); setTimeout(function () { faixa('fila', ''); }, 15000); } catch (x) {} }
+      else if (c === 'ok') { propagarBase(alvo, j); soltarBase(alvo); saidaOk(alvo, j); } else { soltarBase(alvo); saidaRecusada(alvo, j); }
     }
   } finally { S.processando = false; }
 }
@@ -1368,14 +1371,15 @@ function funilAtual() { return $('filaFunil').value || 'outbound'; }
 async function carregarFila() {
   var funil = funilAtual();
   if (!S.fila.length) { try { var cf = JSON.parse(lsGet('sh_fila_' + funil) || 'null'); if (cf && cf._fmt === 1 && Array.isArray(cf.itens)) { S.fila = cf.itens; S.filaFunil = funil; desenharFila(); $('filaResumo').textContent += ' (dados de ' + horaBRT(cf.ts) + ', atualizando...)'; } } catch (e) {} }
-  var j; try { j = await api('/fila?funil=' + encodeURIComponent(funil)); } catch (e) { $('filaResumo').textContent = 'Sem conexão.'; return; }
+  var j; try { var qBusca = ($('filaBusca').value || '').trim(); S.filaQ = qBusca.length >= 3 ? qBusca : ''; j = await api('/fila?funil=' + encodeURIComponent(funil) + (S.filaQ ? '&q=' + encodeURIComponent(S.filaQ) : '')); } catch (e) { $('filaResumo').textContent = 'Sem conexão.'; return; }
   if (j._status === 401) { sair('Senha não confere.'); return; }
-  if (!j.ok) { $('filaResumo').textContent = j.mensagem || 'Não consegui ler a fila.'; return; }
+  if (!j.ok) { $('filaResumo').textContent = j.mensagem || 'Não consegui ler a fila.'; if (j._status === 503 && j.retentavel) setTimeout(function () { if (!$('painelFila').classList.contains('hide')) carregarFila(); }, 6000 * REDE.escala); return; }   // 13/11: fila ainda carregando (Agendor lento, sem retrato): tenta de novo sozinha
   var fs = $('filaFunil'); var ant = fs.value || funil; fs.textContent = '';
   (j.funis || [{ id: 'outbound', nome: 'SDR · Outbound', total: 0 }, { id: 'inbound', nome: 'SDR · Inbound', total: 0 }]).forEach(function (f) { S.filaTotais[f.id] = f.total; var o = el('option', null, f.nome + ' (' + (f.total ? f.total + ' esperando você iniciar' : 'ninguém esperando') + ')'); o.value = f.id; fs.appendChild(o); }); // os dois funis sempre visíveis
   fs.value = ant; S.fila = j.itens || []; S.filaFunil = j.funil;
   try { lsSet('sh_fila_' + j.funil, JSON.stringify({ _fmt: 1, ts: Date.now(), itens: S.fila.map(function (x) { var c = Object.assign({}, x); delete c.fone; return c; }) })); } catch (e) {}
   desenharFila();
+  try { var extra = []; if (j.total > (j.itens || []).length) extra.push('mostrando os ' + (j.itens || []).length + ' primeiros por prioridade, de ' + j.total); if (j.velho && j.mensagem) extra.push(j.mensagem); if (extra.length) $('filaResumo').textContent += ' · ' + extra.join(' · '); } catch (e) {}
 }
 function selIds() { return Object.keys(S.sel).filter(function (k) { return S.sel[k]; }).map(Number); }
 function textoPulo(esc) { // aviso de pulo: quem espera na frente de quem foi escolhido (texto igual ao de sempre)
@@ -1468,7 +1472,7 @@ function iniciarPorOrigem() {
 }
 $('bFila').onclick = async function () { $('painelFila').classList.remove('hide'); if (!$('filaFunil').value) { var o = el('option', null, 'SDR · Outbound'); o.value = 'outbound'; $('filaFunil').appendChild(o); } await carregarFila(); $('filaBusca').focus(); };
 $('bFecharFila').onclick = function () { $('painelFila').classList.add('hide'); };
-$('filaFunil').onchange = function () { S.sel = {}; S.filaOrigem = ''; S.filaFonte = ''; carregarFila(); }; var debFila = null; $('filaBusca').oninput = function () { clearTimeout(debFila); debFila = setTimeout(function () { desenharFila(); }, 150); };
+$('filaFunil').onchange = function () { S.sel = {}; S.filaOrigem = ''; S.filaFonte = ''; carregarFila(); }; var debFila = null; $('filaBusca').oninput = function () { clearTimeout(debFila); debFila = setTimeout(function () { var q = ($('filaBusca').value || '').trim(); var cortada = (S.filaTotais[S.filaFunil] || 0) > S.fila.length || !!S.filaQ; if (cortada && (q.length >= 3 || S.filaQ)) { carregarFila(); } else desenharFila(); }, 400); };   // 13/11: a fila vem limitada (300 por prioridade): com a lista cortada, a busca consulta o SERVIDOR (/fila?q=)
 $('bLiberarSel').onclick = function () { var ids = selIds(); if (!ids.length) return; if (!window.confirm('Iniciar ' + plural(ids.length, 'lead marcado', 'leads marcados') + ' agora?' + avisoTarde())) return; liberar({ dealIds: ids, funil: S.filaFunil }).then(function () { S.sel = {}; atualizaSel(); }); };
 $('bLiberarTodosFunil').onclick = function () {
   var nome = S.filaFunil === 'inbound' ? 'Inbound' : 'Outbound';
