@@ -1,6 +1,6 @@
 """Seções 16 a 22 do Ecossistema."""
-VERSAO = "2026-11-14.1"
-DATA_V = "14/11/2026"
+VERSAO = "2026-11-15.1"
+DATA_V = "15/11/2026"
 from comp import *
 from diagramas import fig
 
@@ -71,6 +71,7 @@ def s_observ():
         ["Nova tentativa", "Falha temporária é repetida com pausa crescente, com teto de tentativas. Aviso não entregue volta a cada 5 minutos por até 24 horas.", "Fila durável"],
         ["Plano B", "IA falhou: texto padrão seguro. Voz falhou: voz reserva e depois a da Bia, e por fim texto. Rota de saída do Agendor bloqueada: rota alternativa.", "Dentro da própria conversa"],
         ["Só conta se saiu", "\"Enviado\" só quando o WhatsApp aceitou.", "Registro de cada tentativa"],
+        ["Falha da Meta na abertura da Ana (131049)", "Um reenvio por modelo de utilidade; se falhar, espera o lead e cria tarefa humana com alerta. No ar desde 15/11 às 10h02 (patch 1.3); o resultado do primeiro reenvio ainda será confirmado.", "Central e alerta à gestão"],
         ["Status visível", "Fila por pessoa, avisos pendentes e saúde das rotinas.", "Central e aba BIA do Dash"],
         ["Alerta sem barulho", "Se esgotar, a rotina para de insistir e avisa a gestão; falha passageira só alerta na segunda ocorrência seguida.", "WhatsApp da gestão"],
       ], "", "Camadas de entrega garantida")
@@ -81,7 +82,7 @@ def s_observ():
         card("Coerência", ul(["Auditor de coerência: lê o que a Bia disse e confere no Agendor se foi feito de verdade; divergência vai à gestão.", "Cópia à gestão de todo aviso enviado ao SDR."])),
         card("Custo", ul(["Dash, aba Agentes: gasto por modelo, por lead novo, por qualificado e projeção do mês.", "Alerta de custo diário e mensal."])),
       ], 2)
-      + aviso("Limites declarados", "A falha de entrega da própria Meta ainda não gera reenvio automático. O custo real da Bia ainda não é medido por completo. A conferência do Agendor só enxerga tarefas abertas há menos de 31 dias nas buscas por filtro.", "w"))
+      + aviso("Limites declarados", "A falha de entrega da própria Meta nos avisos da Bia ainda não gera reenvio automático (na abertura da Ana já gera). O custo real da Bia ainda não é medido por completo. A conferência do Agendor só enxerga tarefas abertas há menos de 31 dias nas buscas por filtro.", "w"))
     return sec("observ", "Plataforma", "Observabilidade e entrega garantida", "Vigias, nova tentativa, plano B e status visível na Central.", corpo)
 
 def s_duvidas():
@@ -128,11 +129,13 @@ def s_versoes():
         ("Rollback", "A versão anterior fica guardada e a volta atrás é testada. Registrada aqui, junto da versão e da data.")])
     corpo = (aviso("De onde vêm estes números", "Quando dá, a versão é lida ao vivo (rota de versão ou lista de versões do servidor). Quando não dá, vem do arquivo de dados desta página, atualizado pelo roteiro de deploy de cada sistema. \"A registrar\" significa que a leitura ainda não existe: nada é inventado. Posição de " + d["atualizado_em"] + ".", "n")
       + tabela(["Sistema", "Versão em produção", "Último deploy", "Estado", "Checklist de verificação do último deploy"], rows, "ver", "Versão de cada sistema e verificações do último deploy")
+      + '<h3 class="mt">Deploys recentes e o que foi verificado em cada um</h3>' + tabela(["Sistema", "Versão", "Data", "Anterior", "Verificações"], [[x["sistema"], f"<b>{x['versao']}</b>", x["data"], x["anterior"], "<br>".join(f"<b>{k}:</b> {x[k]}" for k in ("varredura", "testes", "auditor", "fumaca", "rollback"))] for x in d.get("deploys", [])], "ver", "Deploys recentes")
       + '<h3 class="mt">O que se verifica em todo deploy</h3>' + ciclo
       + grid([card("Atualização automática pelo deploy", "<p>O roteiro de deploy de cada sistema chama a atualização do arquivo de versões depois de publicar (versão, data e resultado de cada verificação) e remonta esta página. Hoje o comando existe; ligá-lo em cada roteiro de deploy é o próximo passo.</p>", p="pl"),
               card("Documentação de cada verificação", "<p>Cada deploy deixa registro: o que foi varrido, quais testes rodaram e o resultado, quem auditou e o veredito, o resultado da fumaça e como voltar atrás. Os registros ficam nos documentos do projeto e as linhas de resumo aparecem aqui.</p>", p="ok")], 2)
       + '<h3 class="mt">Histórico de versões desta página</h3>' + tabela(["Versão", "Data", "O que mudou"], [
-        [VERSAO, DATA_V, "Página refeita (ver a seção Sobre), com a Central e suas conexões e esta seção de versões e verificações."],
+        [VERSAO, DATA_V, "Versões reais de Ana, Bia e Central (lidas do servidor e do git); camada de entrega 131049 da Ana no ar; datas alinhadas a 15/11; restaurados o mapa de infraestrutura, a grade de horários dos resumos e a nota do GS Engage legado; Hoje release 1 no ar; registro de deploys e verificações."],
+        ["2026-11-14.1", "14/11/2026", "Página refeita (23 seções, fluxogramas, modo apresentação, status e checklist)."],
         ["2026-11-09", "09/11/2026", "Versão anterior, de 20 seções."]], "", "Histórico"))
     return sec("versoes", "Plataforma", "Versões e verificações por deploy", "A versão de cada sistema, a data do último deploy e o checklist que foi feito.", corpo)
 
@@ -141,11 +144,12 @@ def s_sobre():
       '<h3>Versão desta página</h3>'
       + f'<p><b>Versão {VERSAO}</b>, de {DATA_V}. A cada entrega que muda uma regra, um processo, uma automação ou o status de algo, esta página é atualizada, o número da versão sobe e uma linha é acrescentada abaixo. O histórico completo fica guardado junto do código da página.</p>'
       + tabela(["Versão", "Data", "O que mudou"], [
-        [VERSAO, DATA_V, "Página refeita: 22 seções navegáveis, status e checklist honestos, 12 fluxogramas em SVG com tema claro e escuro, a Central e suas conexões, modo apresentação e tela cheia, posição preservada ao atualizar e nenhum nome de pessoa. Entra o que mudou desde 09/11: Ana com apresentação em capítulos, Bia com funil da Ana por nome, folga e vínculo de empresa, os 3 destinos, observabilidade e entrega garantida."],
+        [VERSAO, DATA_V, "Versões reais de Ana, Bia e Central (lidas do servidor e do git); camada de entrega 131049 da Ana no ar; datas alinhadas a 15/11; restaurados o mapa de infraestrutura, a grade de horários dos resumos e a nota do GS Engage legado; Hoje release 1 no ar; registro de deploys e verificações."],
+        ["2026-11-14.1", "14/11/2026", "Página refeita: 23 seções navegáveis, status e checklist honestos, 12 fluxogramas em SVG com tema claro e escuro, a Central e suas conexões, modo apresentação e tela cheia, posição preservada ao atualizar e nenhum nome de pessoa. Entra o que mudou desde 09/11: Ana com apresentação em capítulos, Bia com funil da Ana por nome, folga e vínculo de empresa, os 3 destinos, observabilidade e entrega garantida."],
         ["2026-11-09", "09/11/2026", "Versão anterior: 20 seções com vocabulário, funis etapa por etapa, cadência, Hoje e Lista, regras, voltas ao SDR, Bia, Dash, Painel do Representante, Ana, camada do Agendor, testes e segurança."],
       ], "", "Histórico de versões")
       + '<h3 class="mt">Sobre este guia</h3>'
-      + '<p>Este guia reflete o sistema em <b>14/11/2026</b>. Regras e prazos podem mudar depois. Em caso de dúvida, o que está ao vivo (aba BIA do Dash e o Agendor) vale mais do que este texto. A cada mudança de regra, esta página é atualizada junto.</p>'
+      + '<p>Este guia reflete o sistema em <b>15/11/2026</b>. Regras e prazos podem mudar depois. Em caso de dúvida, o que está ao vivo (aba BIA do Dash e o Agendor) vale mais do que este texto. A cada mudança de regra, esta página é atualizada junto.</p>'
       + '<h3 class="mt">Modo apresentação e tela cheia</h3>'
       + '<p>Toque em <b>Apresentar</b> no topo da página (ícone de tela) para mostrar só o conteúdo, uma seção por vez. Funciona em computador, tablet e celular. Em navegadores que permitem, abre em tela cheia; nos outros, cobre a janela inteira.</p>'
       + tabela(["Tecla ou gesto", "O que faz"], [

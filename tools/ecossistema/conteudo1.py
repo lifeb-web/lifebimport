@@ -3,7 +3,7 @@ from comp import *
 from diagramas import fig
 import dados_status as S
 
-DATA = "14/11/2026"
+DATA = "15/11/2026"
 
 def s_inicio():
     c = S.contagem()
@@ -11,7 +11,7 @@ def s_inicio():
       '<div class="hero-b"><div class="hero-t"><p class="eyebrow">Guia do projeto · Life B Importadora</p>'
       '<p class="h1" role="presentation">Ecossistema Life B</p>'
       '<p class="hero-p">O mapa completo da operação comercial: como o lead chega, como a Ana (SDR virtual no WhatsApp) e a Bia (assistente de operação) trabalham, onde cada informação é escrita e quais regras mantêm tudo em ordem. Feito para a equipe, para parceiros e para quem está conhecendo a empresa agora.</p>'
-      '<div class="chips"><span class="chip">Versão '+__import__("conteudo3").VERSAO+' · atualizado em 14/11/2026</span><span class="chip">Sem dados pessoais de clientes</span><span class="chip">Conferido no código e nos painéis</span></div>'
+      '<div class="chips"><span class="chip">Versão '+__import__("conteudo3").VERSAO+' · atualizado em 15/11/2026</span><span class="chip">Sem dados pessoais de clientes</span><span class="chip">Conferido no código e nos painéis</span></div>'
       '<div class="hero-a"><a class="btn pri" href="#status">Ver o status de hoje</a><button type="button" class="btn" data-apres>Abrir em modo apresentação</button></div></div></div>'
       + stats([(c["ok"], "entregas no ar e conferidas", "ok"), (c["te"], "prontas, em teste ou aguardando auditoria", "te"), (c["pl"] + c["of"] + c["lm"], "planejadas, desligadas de propósito ou com limite conhecido", "pl"), (c["de"], "dependem de decisão da gestão", "de")])
       + '<h3 class="mt">Em 1 minuto</h3>'
@@ -27,22 +27,20 @@ def s_inicio():
 
 def s_status():
     ok = [
-      ("Ana (13/11)", "Abertura, apresentação em capítulos, qualificação e repasse; voz; assumir, instruir e devolver pela Central; vigia do webhook; custo medido no Dash."),
-      ("Bia (14/11, 18h25)", "Trava de folga que não segura gestão, administradores e SDR; funil da Ana por nome de etapa; empresa existente vinculada por CNPJ; avisos da Ana ao SDR das 7h às 21h; compatível com a Ana atual."),
-      ("Central (13/11)", "Atendimento com tela cheia, atalho para o Life B Solicita, instruções, 👍/👎 e link direto por conversa."),
+      ("Ana (15/11, 10h02)", "Camada de entrega para falha da Meta (131049) com reenvio por modelo de utilidade (patch 1.3). Abertura, apresentação em capítulos, qualificação e repasse; voz; assumir, instruir e devolver pela Central; vigia do webhook; custo no Dash; número do time só quando o lead pede; lojista nunca descartado por engano; cadência de abertura com 4 toques."),
+      ("Bia (15/11, 04h49)", "Aviso NOVO LEAD com vigia de reenvio, pacote do Arena e servidor do Hoje 2.0 em sombra. Antes (14/11): trava de folga que não segura gestão, administradores e SDR; funil da Ana por nome de etapa; empresa existente vinculada por CNPJ; avisos da Ana ao SDR das 7h às 21h; compatível com a Ana atual."),
+      ("Central (15/11, 09h50)", "Atendimento com tela cheia, instruções, 👍/👎; pacote de hoje: link por aba, rolagem preservada, exportar conversa, simulador em chat e login que persiste."),
       ("Hoje (14/11, 17h42)", "Release 1 da página, versão 2026-11-14.1: fila completa em linhas por lista, teto de 50 por clique, minimizar o lead, observação do SDR e balão lilás. Espelho do Hoje 2.0 em modo sombra."),
       ("SDR e cadência", "Cadência por dia útil, repasse com trava, inbound direto, Subir lista, enriquecimento por CNPJ e voltas ao SDR."),
       ("Demais", "Painel do Representante, Dash, Canal, monitoria da Ana e roteiro único de publicação."),
     ]
     te = [
-      ("Ana, fase 1", "Especialista só quando é closer, CNPJ confirmado uma vez, instrução \"agora\" uma só vez, dados editáveis. Falta rodada completa, auditoria e publicação."),
-      ("Central, pacote", "Arquivar, cancelar toques, áudio da equipe, sinal \"Fora do foco\". Depende dos deploys da Ana e da Bia."),
-      ("Painel do Representante", "Recarga só no horário comercial e só de quem abriu a página. Falta auditoria."),
+            ("Painel do Representante", "Recarga só no horário comercial e só de quem abriu a página. Falta auditoria."),
       ("Este Ecossistema", "Refeito do zero; publica depois do teste visual e do auditor independente."),
     ]
     pl = [
       ("Ana", "Texto pronto só como saudação; objeções por IA; mídia nunca vira fala; botão para falar com o especialista; personalização pelo CNPJ; cadência de 3 toques; suítes de conversas; simulador com relógio real."),
-      ("Central", "3 botões manuais (ganho, perdido, repasse), link por aba, login persistente, exportar conversa, silenciar a Bia por pessoa, desfazer em tudo."),
+      ("Central", "3 botões manuais (ganho, perdido, repasse), silenciar a Bia por pessoa, desfazer em tudo e conferência de arquivar, cancelar toques e Fora do foco."),
       ("Bia", "Observação do SDR só do SDR, teto de 50 no servidor, reenvio quando a Meta falha, backup fora do ambiente de trabalho."),
       ("Hoje", "Releases 2 (blindagem e modo foco) e 3 (raia do closer); página lendo do espelho depois de 5 dias úteis com divergência abaixo de 0,5%."),
       ("Plataforma", "Mineração de leads, arquivar modelos antigos da Meta, revisão das cadências com dados reais."),
@@ -53,7 +51,7 @@ def s_status():
     corpo = (f'<div class="cols3">{col("O que está valendo agora", "ok", ok)}{col("Pronto e em teste", "te", te)}{col("Na fila", "pl", pl)}</div>'
       + '<h3 class="mt">Depende de decisão da gestão</h3>' + ul(S.DEPENDE)
       + aviso("Como ler este status", "\"No ar\" só aparece quando foi conferido em produção e não tem pendência declarada. Se existe pendência, ela aparece escrita ao lado, no checklist. \"Em teste\" quer dizer pronto em disco, ainda sem publicação.", "n"))
-    return sec("status", "Começar", "Status: no ar, em teste e planejado", f"Posição de {DATA}, 17h. O que está valendo, o que está pronto esperando auditoria e o que está na fila, em ordem.", corpo)
+    return sec("status", "Começar", "Status: no ar, em teste e planejado", f"Posição de {DATA}, 10h. O que está valendo, o que está pronto esperando auditoria e o que está na fila, em ordem.", corpo)
 
 def s_checklist():
     rows = []
@@ -152,7 +150,7 @@ def s_ana():
       + '<h3 class="mt">O caminho de cada mensagem</h3>' + fig("msg")
       + grid([
         card("Guardar primeiro", "<p>A mensagem do lead entra no histórico antes de qualquer outra coisa, mesmo com a Ana parada. Nada se perde.</p>"),
-        card("Juntar mensagens", "<p>Se o lead manda várias seguidas, a Ana espera cerca de 1,5 segundo e responde tudo de uma vez. Só a primeira resposta a um lead novo espera de 75 a 150 segundos, como uma pessoa faria.</p>"),
+        card("Juntar mensagens", "<p>Se o lead está escrevendo, a Ana espera 8 segundos sem mensagem nova (no máximo 20 segundos desde a primeira do grupo) e responde tudo de uma vez. Só a primeira resposta a um lead novo espera de 75 a 150 segundos, como uma pessoa faria.</p>"),
         card("Cumprimento primeiro", "<p>Quem só diz \"bom dia\" recebe o cumprimento de volta, com o nome, antes de qualquer explicação.</p>"),
         card("Voz", "<p>Responde em áudio quando o lead manda áudio ou pede. Cascata: voz da Ana, uma versão reserva e, por último, a voz da Bia. Se tudo falhar, vai em texto.</p>"),
       ], 2)
@@ -163,12 +161,12 @@ def s_ana():
         ["Empresa nova (CNPJ com menos de 2 anos)", "Deixa o lead ciente de que o fechamento é à vista ou no cartão, em até 3x sem juros ou 12x com juros. Não dispensa: passa ao especialista decidir."],
         ["Rede (quatro ou mais lojas)", "Sem qualificar: repasse direto ao closer, com atenção humana, e continua respondendo."],
         ["Só empresa, sem CNPJ", "Explica com educação, continua tirando dúvidas e só repassa com o CNPJ."],
-        ["Já é da casa (cliente ou lead de um representante)", "Não requalifica: avisa a gestão e o dono do negócio."],
+        ["Já é da casa (cliente com negócio ganho ou em Pós-venda, ou lead em atendimento)", "Não requalifica: avisa a gestão e o dono do negócio e aguarda a equipe."],
         ["Fora de Goiás e do Distrito Federal", "O lead qualificado vai ao Arena, com o closer como dono."],
       ], "", "Portões de segmento e porte")
       + '<h3 class="mt">Quando o lead some ou pede para voltar</h3>'
-      + fluxo([("Retorno combinado", "\"Me chama amanhã às 10h\": a Ana cria a tarefa e volta no horário, ajustado para 8h a 22h."), ("Toques de retomada", "Até 5 toques: 2 h depois, 2º dia útil às 9h, mais 3 úteis às 15h, mais 5 úteis às 10h e mais 8 úteis às 14h. Retomada, exemplo, pergunta leve, valor e despedida educada.", "m"), ("Sem resposta", "Qualquer resposta do lead cancela o que falta. No fim, o negócio vai para a etapa de encerramento por silêncio.", "x")])
-      + '<p class="legenda">Quando o lead escreve, a Ana responde a qualquer hora e dia. Quando a iniciativa é dela, só entre 8h e 22h (horário de Brasília), todos os dias. Fora da janela de 24 horas da Meta ela usa um modelo aprovado. Tudo cancela sozinho se o lead voltou, se a equipe assumiu ou se a Ana está pausada. ' + pill("pl", "Planejado: cadência de 3 toques") + '</p>'
+      + fluxo([("Retorno combinado", "\"Me chama amanhã às 10h\": a Ana cria a tarefa e volta no horário, ajustado para 8h a 22h."), ("Toques de retomada", "Quem para no meio da conversa: até 5 toques (farmácia) ou 4; fora do foco, 2. O 1º vem 2 h depois (em dia útil), o 2º no dia seguinte às 9h e os próximos 2, 4 e 6 dias úteis depois, às 15h, 10h e 14h. Quem se cadastrou e nunca escreveu: abertura de 4 toques (abertura, caso ou pergunta, valor e encerramento). Retorno combinado: até 3.", "m"), ("Sem resposta", "Qualquer resposta do lead cancela o que falta. No fim, o negócio vai para a etapa de encerramento por silêncio.", "x")])
+      + '<p class="legenda">Quando o lead escreve, a Ana responde a qualquer hora e dia. Quando a iniciativa é dela, só entre 8h e 22h (horário de Brasília), todos os dias. Fora da janela de 24 horas da Meta ela usa um modelo aprovado. Tudo cancela sozinho se o lead voltou, se a equipe assumiu ou se a Ana está pausada. ' + '</p>'
       + '<h3 class="mt">Quando uma pessoa entra na conversa</h3>'
       + fluxo([("Gatilhos", "Lead pede uma pessoa, mídia ilegível, resposta bloqueada, dúvida fora da base, irritação ou insistência depois do repasse."), ("Equipe assume ou instrui", "Pela Central, no mesmo número. Assumir faz a Ana se calar; instruir faz ela agir sem a equipe assumir.", "m"), ("Devolve à Ana", "Com um clique. Ela relê tudo, inclusive o que a equipe escreveu, e segue.", "g")])
       + grid([
@@ -192,7 +190,7 @@ def s_ana2():
       + '<h3 class="mt">O que a Ana nunca faz</h3>'
       + grid([
         card("Nas conversas", ul(["Falar preço de produto, desconto, bonificação ou resultado garantido (exceto o mínimo de R$ 2 mil para outros segmentos e a condição de pagamento da empresa nova).", "Dizer que a Life B faz a implantação ou a reposição na loja do lead.", "Falar em proposta, investimento ou orçamento, ou perguntar faturamento.", "Dizer segmento diferente ou \"fora do perfil\".", "Negar ser uma inteligência artificial quando perguntam.", "Prometer áudio, ligação ou horário que não vai cumprir.", "Falar com quem pediu para parar.", "Citar concorrentes."])),
-        card("Nas ações", ul(["Escrever por iniciativa própria fora de 8h a 22h.", "Falar com os representantes.", "Dizer que anotou, recebeu ou fez algo que não aconteceu. Se o CNPJ falado em áudio não fechar, ela repete o que entendeu e pergunta se está certo.", "Escrever direto no Agendor: só pede à Bia.", "Marcar ganho ou perdido por conta própria: hoje ela só muda a etapa do próprio funil, cria tarefa de retorno e escreve nota.", "Sobrescrever campo que já tem valor no Agendor."])),
+        card("Nas ações", ul(["Escrever por iniciativa própria fora de 8h a 22h.", "Passar o número do time sem o lead pedir.", "Falar com os representantes.", "Dizer que anotou, recebeu ou fez algo que não aconteceu. Se o CNPJ falado em áudio não fechar, ela repete o que entendeu e pergunta se está certo.", "Escrever direto no Agendor: só pede à Bia.", "Marcar ganho ou perdido por conta própria: hoje ela só muda a etapa do próprio funil, cria tarefa de retorno e escreve nota.", "Sobrescrever campo que já tem valor no Agendor."])),
       ], 2)
       + '<h3 class="mt">Avisos que a equipe recebe sobre a Ana</h3>'
       + tabela(["Evento", "Quem recebe", "Como"], [

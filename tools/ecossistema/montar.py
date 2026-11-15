@@ -81,7 +81,7 @@ def montar():
 </nav>
 <main id="conteudo" aria-label="Conteúdo do guia">
 {html_corpo}
-<footer class="foot"><b>Ecossistema Life B</b> · Versão {VERSAO} · Última atualização: 14/11/2026. Este guia reflete o sistema nessa data. Regras e prazos podem mudar depois; em caso de dúvida, vale o que está ao vivo (aba BIA do Dash e o Agendor).</footer>
+<footer class="foot"><b>Ecossistema Life B</b> · Versão {VERSAO} · Última atualização: 15/11/2026. Este guia reflete o sistema nessa data. Regras e prazos podem mudar depois; em caso de dúvida, vale o que está ao vivo (aba BIA do Dash e o Agendor).</footer>
 </main>
 </div>
 <div class="approg" role="progressbar" aria-label="Progresso da apresentação" aria-valuemin="1" aria-valuemax="{N}" aria-valuenow="1"><i></i></div>

@@ -96,6 +96,11 @@ for (const [w, h] of [[390, 844], [768, 1024], [1024, 768], [1440, 900], [1920, 
     t(`${id}: botão Sair da barra também sai`, await page.evaluate(() => !document.documentElement.classList.contains("apres")));
     await ctx.close(); }
 }
+// ---------- título da seção inteiro na barra do modo apresentação (390 e 360 px) ----------
+for (const w of [390, 360]) { const { ctx, page } = await abrirPagina(nav, { w, h: 800, touch: true }); await page.click("#apBtn"); await page.waitForTimeout(300);
+  const ruins = await page.evaluate(() => { const out = []; const N = window.__eco.N; for (let i = 0; i < N; i++) { window.__eco.mostra(i); const bar = document.getElementById("apbar").getBoundingClientRect(); const b = document.getElementById("apT"); const r = b.getBoundingClientRect(); const full = b.scrollWidth <= b.clientWidth + 1; const dentro = r.left >= bar.left - 1 && r.right <= bar.right + 1 && r.top >= bar.top - 1 && r.bottom <= bar.bottom + 1; const botoes = [...document.querySelectorAll("#apbar .btn")].every((x) => { const q = x.getBoundingClientRect(); return q.right <= innerWidth + 1 && q.left >= -1 && q.width >= 40; }); if (!full || !dentro || !botoes) out.push(i + ":" + b.textContent.slice(0, 30) + " cheio=" + full + " dentro=" + dentro + " botoes=" + botoes); } return out; });
+  t(`${w}px: título de todas as 23 seções aparece inteiro na barra e os botões cabem`, ruins.length === 0, ruins);
+  await page.evaluate(() => window.__eco.mostra(15)); await page.waitForTimeout(150); await page.screenshot({ path: `${PRINTS}/apres_${w}_titulo.png` }); await ctx.close(); }
 // ---------- hash malformado e logo que falha ----------
 { const { ctx, page, erros } = await abrirPagina(nav, { w: 1440, h: 900, hash: "#%E0%A4%A" }); await page.waitForTimeout(400);
   t("hash malformado (#%E0%A4%A) não gera erro de JS e a página abre", erros.length === 0 && (await page.evaluate(() => document.querySelectorAll("main .sec").length)) === 23, erros);
