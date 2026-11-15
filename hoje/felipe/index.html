@@ -76,7 +76,7 @@ kbd{font-family:var(--font);font-size:13px;border:1px solid var(--border);border
 .trunc-ind{margin:6px 20px 0;color:var(--muted);font-size:13px}.trunc-aviso{margin:6px 20px 0;color:var(--muted);font-size:13px}.trunc-aviso button{margin-left:8px}
 .aviso{margin:8px 20px 0;background:var(--amber-bg);border:1px solid var(--amber);color:var(--amber);border-radius:10px;padding:8px 12px;font-weight:600}
 /* painel de colunas */
-#blocos{flex:1;min-height:0;min-width:0;display:grid;grid-template-columns:var(--tpl1,repeat(8,minmax(0,1fr)));grid-template-rows:minmax(0,1fr);gap:8px;padding:8px 10px 10px;overflow:hidden}
+#blocos{flex:1;min-height:0;min-width:0;display:grid;grid-template-columns:var(--tpl1,repeat(10,minmax(0,1fr)));grid-template-rows:minmax(0,1fr);gap:8px;padding:8px 10px 10px;overflow:hidden}
 .col{display:flex;flex-direction:column;min-height:0;min-width:0;background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
 .col-h{padding:8px 8px 6px;border-bottom:1px solid var(--border);flex:none}
 .col-h h3{font-size:14px;font-weight:800;display:flex;justify-content:space-between;gap:6px;align-items:baseline;flex-wrap:wrap;overflow-wrap:anywhere;min-width:0}
@@ -384,6 +384,7 @@ a.subir{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:6
 .org .max{border-radius:6px;white-space:nowrap}
 .org.sa{flex-wrap:nowrap;white-space:nowrap;gap:4px;letter-spacing:.1px;padding:2px 8px}.org.sa .max{padding:0 4px;letter-spacing:0}
 .fone a.wa,.pessoa-tel a.wa{white-space:nowrap}
+#blocos .item .fone a.wa{white-space:normal;max-width:100%} /* 15/11: com 10 colunas abertas em notebook o cartão fica estreito: o número quebra em vez de vazar */
 .item .acoes{flex-wrap:nowrap;align-items:stretch}
 .item .acoes button.abrir{flex:1 1 auto;min-height:34px;font-size:14px}
 .item .acoes a.bt{display:inline-flex;align-items:center;min-height:34px}
@@ -777,7 +778,7 @@ function casaBusca(it, q) {
 })();
 // ---------- chamadas ----------
 // ---------- resiliência: rede com retry, disjuntor, caixa de saída, versão, relógio do servidor, telemetria ----------
-var PAGINA_VERSAO = '2026-11-15.2';
+var PAGINA_VERSAO = '2026-11-15.3';
 var REDE = { escala: 1, falhas: 0, ultima: 0, desvio: 0 };
 function dormir(ms) { return new Promise(function (r) { setTimeout(r, ms * REDE.escala); }); }
 function jitter(ms) { return ms * (0.5 + Math.random() * 0.5); }
@@ -1214,7 +1215,7 @@ function desenharBlocos() {
   function colBloco(b) {
     if (!b) return;
     if (b.id === 'inbound_follow' && !b.total) return;
-    var inb = b.id.indexOf('inbound') === 0;
+    var inb = b.id.indexOf('inbound') === 0 || b.id === 'ana_qualificou' || b.id === 'repasse_ana'; // 15/11: fluxo novo da Ana (colunas sem cadência: o Felipe completa os dados e atribui)
     if (S.funil === 'outbound' && inb) return; if (S.funil === 'inbound' && !inb && b.id !== 'fim') return;
     var itens = b.itens.filter(visivel); var feitas = itens.filter(function (i) { return i.feito; }).length;
     var conf = b.id === 'fim' ? d.negociosEm : d.tarefasEm;
@@ -1225,7 +1226,7 @@ function desenharBlocos() {
     anexarEmBlocos(k2.l, lista, function (it) { return cartao(it, { atras: atrasado && b.progresso && !it.feito && !it.semTarefas, inb: inb, estado: b.progresso, passo: true, fim: b.id === 'fim' }); });
     k2.vazio = itens.length === 0; k2.id = b.id; k2.titulo = b.titulo; k2.n = itens.length; cols.push(k2);
   }
-  colBloco(porId.inbound_novo);
+  colBloco(porId.ana_qualificou); colBloco(porId.repasse_ana); colBloco(porId.inbound_novo);
   // ATRASADAS (nunca somem), agrupadas por empresa
   if (d.atrasadas && d.atrasadas.total) {
     var gr = (d.atrasadas.grupos || []).filter(visivel); var ta = gr.reduce(function (s, g) { return s + g.n; }, 0);
