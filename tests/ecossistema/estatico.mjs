@@ -1,0 +1,49 @@
+// Teste estático + jsdom do Ecossistema (14/11/2026): estrutura, links internos, nomes proibidos, segredos, versão, acessibilidade básica e JS sem erro.
+import { createRequire } from "node:module"; import { t, resumo, HTML } from "./_comum.mjs";
+const require = createRequire((process.env.JSDOM_DIR || "/private/tmp/jsd") + "/node_modules/"); const { JSDOM, VirtualConsole } = require("jsdom");
+const erros = []; const vc = new VirtualConsole(); vc.on("jsdomError", (e) => erros.push(String(e.message).slice(0, 160)));
+const dom = new JSDOM(HTML, { runScripts: "dangerously", pretendToBeVisual: true, url: "https://projetojlbv.com.br/ecossistema/", virtualConsole: vc });
+const D = dom.window.document; await new Promise((r) => setTimeout(r, 300));
+t("JS roda no jsdom sem erro", erros.length === 0, erros);
+const secs = [...D.querySelectorAll("main .sec")]; const ids = secs.map((s) => s.id);
+t("23 seções com id único", secs.length === 23 && new Set(ids).size === 23, ids);
+t("todos os ids do documento são únicos", (() => { const a = [...D.querySelectorAll("[id]")].map((e) => e.id); return new Set(a).size === a.length; })());
+t("cada seção tem título h2 e aria-labelledby válido", secs.every((s) => D.getElementById(s.getAttribute("aria-labelledby")) && s.querySelector("h2")));
+const nav = [...D.querySelectorAll(".toc a")]; t("índice tem 23 links e todos apontam para uma seção", nav.length === 23 && nav.every((a) => ids.includes(a.getAttribute("href").slice(1))));
+const ancoras = [...D.querySelectorAll('a[href^="#"]')].filter((a) => a.getAttribute("href").length > 1); t("todos os links internos (#hash) têm destino", ancoras.every((a) => D.getElementById(a.getAttribute("href").slice(1))), ancoras.filter((a) => !D.getElementById(a.getAttribute("href").slice(1))).map((a) => a.href));
+t("nenhum link externo no corpo (só fontes no head)", [...D.querySelectorAll("main a[href^='http']")].length === 0);
+t("12 desenhos, cada um com legenda para leitor de tela", D.querySelectorAll("figure.fig").length === 12 && [...D.querySelectorAll("figure.fig")].every((f) => f.querySelector("figcaption.sr").textContent.length > 40));
+t("tabelas com cabeçalho e rótulos para o celular (data-l)", [...D.querySelectorAll("table")].every((tb) => tb.querySelector("thead th") && [...tb.querySelectorAll("tbody td")].every((td) => td.hasAttribute("data-l"))));
+t("html lang pt-BR, viewport, título e versão", D.documentElement.lang === "pt-BR" && /viewport-fit=cover/.test(D.querySelector('meta[name=viewport]').content) && D.title === "Ecossistema Life B" && /^\d{4}-\d{2}-\d{2}\.\d+$/.test(D.querySelector('meta[name=versao]').content));
+const versao = D.querySelector('meta[name=versao]').content; t("versão aparece na capa, no topo, no rodapé e no histórico", ["#inicio", ".mast", ".foot", "#sobre"].every((s) => D.querySelector(s).textContent.includes(versao)), versao);
+t("histórico de versões tem a versão atual e a anterior (09/11)", /Histórico de versões/.test(D.querySelector("#sobre").innerHTML) && D.querySelector("#sobre").textContent.includes("2026-11-09"));
+t("há seção Central com o desenho das conexões", !!D.querySelector("#central figure.fig") && /Ana/.test(D.querySelector("#central").textContent) && /Canal/.test(D.querySelector("#central").textContent) && /Dash/.test(D.querySelector("#central").textContent));
+t("modo apresentação: barra, progresso e atalhos existem", !!D.getElementById("apbar") && !!D.querySelector(".approg") && !!D.getElementById("aphelp") && !!D.getElementById("apBtn"));
+t("imagens com alt; botões só com ícone têm aria-label", [...D.querySelectorAll("img")].every((i) => i.hasAttribute("alt")) && [...D.querySelectorAll("button")].every((b) => b.getAttribute("aria-label") || b.textContent.trim()));
+t("seções-chave presentes (Ana, Bia, funis, 3 destinos, cadência, recuperação, Hoje, Central, Meta, segurança, observabilidade, status, checklist)", ["ana", "ana-seguranca", "bia", "destinos", "cadencia", "recuperacao", "hoje", "central", "meta", "seguranca", "observ", "status", "checklist", "crm", "regras"].every((i) => ids.includes(i)));
+const texto = (D.body.textContent || "").replace(/\s+/g, " "); const bruto = HTML;
+// ---- nomes de pessoas proibidos ----
+const NOMES = ["Robert", "Roberto", "Felipe", "Cassiano", "Luiz", "Bruno", "Thais", "Thaís", "Giselle", "Guilherme", "Natan", "Gabriella", "Gabriela", "Cleomar", "Isabela", "Eduardo", "Nathalia", "Natália", "Washington", "Anderson", "Francinaldo", "Felicio", "Manoel", "Diego", "Trajano", "Samarah", "Cleber", "Alline", "Camello", "Marques", "Claude", "Codex", "Anthropic", "OpenAI", "Keychain", "OneDrive"];
+const achados = NOMES.filter((n) => new RegExp("(^|[^\\p{L}])" + n + "([^\\p{L}]|$)", "u").test(bruto.replace(/<style[\s\S]*?<\/style>|<script[\s\S]*?<\/script>/g, " ")));
+const rep = /(^|[^\p{L}])Rep([^\p{L}]|$)/u.test(texto); t("regra do projeto: \"representante\" nunca abreviado como \"Rep\"", !rep);
+t("nenhum nome de pessoa (nem ferramenta interna) no HTML", achados.length === 0, achados);
+// ---- segredos e dados pessoais ----
+const PADROES = { "token sk-": /sk-[A-Za-z0-9_-]{16,}/, "JWT": /eyJ[A-Za-z0-9_-]{15,}\./, "Bearer": /Bearer\s+[A-Za-z0-9._-]{12,}/, "github/slack": /(ghp_|gho_|xox[bpa]-)[A-Za-z0-9-]{10,}/, "hex longo": /\b[a-f0-9]{32,}\b/i, "telefone (62) 9": /\(?\b\d{2}\)?\s?9?\d{4}[-\s]?\d{4}\b/, "telefone com 55": /\b55\d{10,11}\b/, "CNPJ formatado": /\b\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}\b/, "CNPJ cru": /\b\d{14}\b/, "CPF": /\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/, "e-mail": /[\w.+-]+@[\w-]+\.[\w.]+/, "senha=": /(senha|password|token|secret)\s*[:=]\s*\S{6,}/i, "chave de API": /(api[_-]?key|apikey)\s*[:=]/i, "id longo (>=8 dígitos)": /\b\d{8,}\b/ };
+const ruins = Object.entries(PADROES).filter(([k, re]) => re.test(texto)).map(([k]) => k);
+t("nenhum segredo, telefone, CNPJ, e-mail nem identificador longo no texto", ruins.length === 0, ruins);
+const ruins2 = Object.entries(PADROES).filter(([k, re]) => re.test(bruto.replace(/<style[\s\S]*?<\/style>/g, " ").replace(/viewBox="[^"]*"|d="[^"]*"|points="[^"]*"/g, ""))).map(([k]) => k);
+t("o HTML bruto (atributos, scripts) também está limpo", ruins2.length === 0, ruins2);
+t("sem linguagem que a regra de projeto proíbe (burlar, fingir, pego, foge da regra)", !/\b(burlar|burla|fingir|foge da regra|pego)\b/i.test(texto));
+t("sem termos internos operacionais (Mac, 11h backup, chaves, rotas)", !/\b(Mac |Keychain|wrangler|worker\.dev|KV |SDR_[A-Z_]+|ENFORCE_|ANA_[A-Z_]+)/.test(texto));
+t("datas no formato dia/mês/ano (sem AAAA-MM-DD no texto, exceto a versão)", !/\b\d{4}-\d{2}-\d{2}\b/.test(texto.replace(/\d{4}-\d{2}-\d{2}\.\d+/g, "").replace("2026-11-09", "")));
+// ---- comportamento no jsdom ----
+const w = dom.window; w.document.getElementById("apBtn").click();
+t("jsdom: clicar em Apresentar entra no modo e mostra só a seção atual", w.document.documentElement.classList.contains("apres") && [...D.querySelectorAll(".sec.atual")].length === 1);
+const tecla = (k) => w.document.dispatchEvent(new w.KeyboardEvent("keydown", { key: k, bubbles: true }));
+tecla("Home"); tecla("ArrowRight"); tecla("ArrowRight"); const i2 = w.__eco.estado().i; tecla("ArrowLeft"); const i1 = w.__eco.estado().i;
+t("jsdom: setas avançam e voltam", i2 === 2 && i1 === 1, [i2, i1]);
+tecla("End"); t("jsdom: End vai à última", w.__eco.estado().i === 22); tecla("Home"); t("jsdom: Home vai à primeira", w.__eco.estado().i === 0);
+t("jsdom: o endereço acompanha a seção", w.location.hash === "#" + ids[0] || w.location.hash === "#" + ids[w.__eco.estado().i]);
+tecla("Escape"); t("jsdom: Esc sai da apresentação", !w.document.documentElement.classList.contains("apres") && D.querySelectorAll(".sec.atual").length === 0);
+w.sessionStorage.setItem("eco.ap", "1"); t("jsdom: estado de apresentação fica em sessionStorage (limpo ao sair)", w.sessionStorage.getItem("eco.ap") === "1");
+resumo();
