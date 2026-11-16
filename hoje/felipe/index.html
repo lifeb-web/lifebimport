@@ -1161,7 +1161,9 @@ function cartao(it, opts) {
   if (it.depoisExpediente) extra.appendChild(el('span', 'pill amber', 'Chegou ontem depois das 17:30. Atenda primeiro.'));
   li.appendChild(extra);
   if (abriu && !feito) li.appendChild(el('div', 'abriu', 'Você abriu às ' + horaClique(abriu) + '. Quando finalizar, fica verde aqui em poucos segundos.'));
+  /* 16/11 (Robert #1962): leads repassados pela Ana ganham o botão 'Abrir atendimento': vai direto para a conversa deste lead na Central (o Felipe lê o que a Ana conversou antes de distribuir) */
   acoesCartao(li, it.dealId, it.link, function () { if (!feito) { gravarAbriu(it.dealId); setTimeout(function () { if (S.dados) desenharBlocos(); }, 50); } }, it);
+  if (opts.ana && it.fone) { var fnA = String(it.fone).replace(/\D/g, ''); if (fnA.length >= 10) { var acA = li.querySelector('.acoes'); if (acA) { var at = el('a', 'bt', 'Abrir atendimento'); at.href = 'https://projetojlbv.com.br/central/#atendimento-' + (fnA.length <= 11 ? '55' + fnA : fnA); at.target = '_blank'; at.rel = 'noopener'; at.title = 'Abre a conversa da Ana com este lead na Central'; at.onclick = function (ev) { ev.preventDefault(); var alvo = at.href, w = null; try { w = window.open('about:blank', '_blank'); if (w) w.opener = null; } catch (e) { w = null; } var abrir = function (u) { if (w) { try { w.location.href = u; return; } catch (e) { /* cai para a aba atual */ } } location.href = u; }; api('/ana-fone?fone=' + encodeURIComponent(fnA)).then(function (j) { abrir(j && j.ok && j.fone ? 'https://projetojlbv.com.br/central/#atendimento-' + j.fone : alvo); }).catch(function () { abrir(alvo); }); };   /* a Ana guarda o número com OU sem o 9: o servidor diz qual */ at.setAttribute('aria-label', 'Abrir o atendimento da Ana com este lead na Central'); acA.appendChild(at); } } }
   if (opts.fim && !feito && it.dealId != null) { var bv = el('button', 'sec voltar-cad', 'Voltar para a cadência'); bv.type = 'button'; bv.title = 'Escolher a etapa e recomeçar a cadência deste lead, sem sair da Hoje'; bv.onclick = function () { voltarCadencia(it, bv); }; li.appendChild(bv); }
   return li;
 }
@@ -1224,7 +1226,7 @@ function desenharBlocos() {
     var lista = ordenar(itens, modo === 'hora' ? 'pend' : modo).filter(function (it) { return passa(it) && !(esconder && it.feito); });
     if (!itens.length) k2.l.appendChild(el('p', 'vazio', 'Nada para hoje aqui.'));
     else if (!lista.length) k2.l.appendChild(el('p', 'vazio', busca ? 'Nenhum resultado para essa busca aqui.' : 'Tudo certo por aqui.'));
-    anexarEmBlocos(k2.l, lista, function (it) { return cartao(it, { atras: atrasado && b.progresso && !it.feito && !it.semTarefas, inb: inb, estado: b.progresso, passo: true, fim: b.id === 'fim' }); });
+    anexarEmBlocos(k2.l, lista, function (it) { return cartao(it, { atras: atrasado && b.progresso && !it.feito && !it.semTarefas, inb: inb, ana: b.id === 'ana_qualificou' || b.id === 'repasse_ana', estado: b.progresso, passo: true, fim: b.id === 'fim' }); });
     k2.vazio = itens.length === 0; k2.id = b.id; k2.titulo = b.titulo; k2.n = itens.length; cols.push(k2);
   }
   colBloco(porId.ana_qualificou); colBloco(porId.repasse_ana); colBloco(porId.inbound_novo);
