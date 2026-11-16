@@ -1399,7 +1399,8 @@ function mostrarLiberados(lista) {
   $('detLiberados').classList.toggle('hide', !lista.length); $('detResumo').textContent = 'Quem foi iniciado agora (' + lista.length + ')'; if (lista.length) $('detLiberados').open = true;
 }
 function qtdEscolhida() { var v = $('qtd').value === 'outro' ? Number($('qtdOutro').value) : Number($('qtd').value); return Number.isInteger(v) && v >= 1 ? v : null; }
-function avisoTarde() { return depoisDas1630() ? ' As tarefas vencem hoje às 18:00. Se não der tempo, viram atrasadas amanhã.' : ''; }
+function foraDoExpediente() { var b = partesBRT(); var fim = false; try { var w = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', weekday: 'short' }).format(new Date(agoraMs())); fim = (w === 'Sat' || w === 'Sun'); } catch (e) {} return fim || b.h < 8 || b.h > 17 || (b.h === 17 && b.m >= 30); }
+function avisoTarde() { if (foraDoExpediente()) return ' Fora do expediente: as tarefas deste lead começam no próximo dia útil.'; return depoisDas1630() ? ' As tarefas vencem hoje às 18:00. Se não der tempo, viram atrasadas amanhã.' : ''; } /* 16/11: o início vale a qualquer hora (Robert #2162) */
 // envia o pedido com a MESMA chave até dar certo (duplo clique e nova tentativa nunca iniciam duas vezes); espera crescente em 503
 async function liberar(corpo) {
   if (S.ocupado) return; S.ocupado = true; if (S.dados) desenharControle(S.dados);
@@ -1554,7 +1555,7 @@ function avisoPulo() {
   box.textContent = textoPulo(esc);
   var at = esc.filter(function (i) { return i.atencao; }); if (at.length) box.textContent += (box.textContent ? ' ' : '') + at.length + ' dos escolhidos já têm negócio aberto com um representante. Abra e confira antes.';
 }
-function podeLiberar() { return !!(S.ctl && S.ctl.janelaAberta && S.ctl.cadenciaLive && (S.filaFunil === 'inbound' || S.ctl.ligada)); }
+function podeLiberar() { return !!(S.ctl && S.ctl.cadenciaLive && (S.filaFunil === 'inbound' || (S.ctl.janelaAberta && S.ctl.ligada))); } /* 16/11: Inbound sem trava de horário (Robert #2162) */
 function buscando() { return $('filaBusca').value.trim() !== '' || S.filaOrigem !== '' || !!S.filaFonte; } /* busca, origem OU lista escolhida */ // com busca OU origem escolhida, o botão de iniciar vale só para o que está na tela
 var SEM_ORIGEM = '(SEM ORIGEM)', SEM_LISTA = 'Sem lista';
 function origemDoItem(i) { return i && i.origemNome !== undefined ? i.origemNome : (i ? i.origem : undefined); } // em "Iniciados hoje" o campo `origem` é QUEM iniciou (auto/manual); a origem do lead vem em `origemNome`
@@ -1720,7 +1721,7 @@ function bgCartao(it) {
   var ab = el('button', 'abrir', 'Abrir'); ab.type = 'button'; ab.setAttribute('aria-label', 'Abrir o lead completo: ' + it.empresa); ab.onclick = function () { abrirLead(it.dealId, ab, it); }; ligaPrefetch(ab, it.dealId); ac.appendChild(ab);
   var tb = el('button', 'sec', 'Tarefas'); tb.type = 'button'; tb.setAttribute('aria-label', 'Ver as tarefas de ' + it.empresa); tb.onclick = function () { abrirLead(it.dealId, tb, it); var n = 0; var rola = function () { var sec = document.querySelector('#painelLead .secao-tarefas'); if (sec) { try { sec.scrollIntoView({ block: 'start' }); } catch (e) { logFalha('l993 foco/rolagem/seleção é só conforto; se falhar a ação já foi feita', e); /* foco/rolagem/seleção é só conforto; se falhar a ação já foi feita */ } } else if (++n < 12) setTimeout(rola, 250); }; setTimeout(rola, 250); }; ac.appendChild(tb);
   if (it.podeIniciar) {
-    var pode = !!(S.ctl && S.ctl.janelaAberta && S.ctl.cadenciaLive && (it.funil === 'inbound' || S.ctl.ligada));
+    var pode = !!(S.ctl && S.ctl.cadenciaLive && (it.funil === 'inbound' || (S.ctl.janelaAberta && S.ctl.ligada)));
     var ib = el('button', 'forte', 'Iniciar'); ib.type = 'button'; ib.disabled = S.ocupado || !pode; ib.title = pode ? 'Começar a cadência deste lead agora' : 'Agora não dá para iniciar (fora do horário ou desligado)';
     ib.onclick = function () { if (!window.confirm('Iniciar ' + it.empresa + ' agora? As tarefas do 1º contato são criadas na hora.' + avisoTarde())) return; liberar({ dealIds: [it.dealId], funil: it.funil }).then(function () { buscarGeral(); }); };
     ac.appendChild(ib);
