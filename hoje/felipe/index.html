@@ -1514,14 +1514,16 @@ async function hoje2MaisDoGrupo(k, jaTem) {   // próxima página de UMA lista, 
 S.filaTotalResp = null; S.filaNota = ''; S.filaSeq = 0; S.filaAbertos = Object.create(null); S.filaMostrar = Object.create(null);
 async function carregarFila(completa) {
   var funil = funilAtual(); var seq = ++S.filaSeq;
+  var pedidoCompleta = !!completa; var cacheOk = !completa && !S.fila.length;   /* 16/11 (Robert #2036): a fila vem de UMA vez só (antes: 300 e logo depois 1138, redesenhando no meio e 'bugando' a tela); o que estava guardado no aparelho aparece enquanto isso */
+  if (!completa && !hoje2FilaLigado() && (($('filaBusca').value || '').trim().length < 3)) completa = true;
   if (!completa && hoje2FilaLigado()) { S.filaQ = (($('filaBusca').value || '').trim().length >= 3) ? $('filaBusca').value.trim() : ''; if (await carregarFilaHoje2(funil, seq)) return; if (seq !== S.filaSeq) return; S.filaGruposSrv = null; S.filaAvisoHoje2 = 'Lista pelo modo normal (' + S.filaHoje2Motivo + ').'; }
   else if (!hoje2FilaLigado()) S.filaGruposSrv = null;
-  if (!completa && !S.fila.length) { try { var cf = JSON.parse(lsGet('sh_fila_' + funil) || 'null'); if (cf && cf._fmt === 1 && Array.isArray(cf.itens)) { S.fila = cf.itens; S.filaFunil = funil; S.filaNota = 'dados de ' + horaBRT(cf.ts) + ', atualizando...'; desenharFila(); } } catch (e) { logFalha('l809 cache da fila corrompido: ignora e lê do servidor', e); /* cache da fila corrompido: ignora e lê do servidor */ } }
+  if (cacheOk) { try { var cf = JSON.parse(lsGet('sh_fila_' + funil) || 'null'); if (cf && cf._fmt === 1 && Array.isArray(cf.itens)) { S.fila = cf.itens; S.filaFunil = funil; S.filaNota = 'dados de ' + horaBRT(cf.ts) + ', atualizando...'; desenharFila(); } } catch (e) { logFalha('l809 cache da fila corrompido: ignora e lê do servidor', e); /* cache da fila corrompido: ignora e lê do servidor */ } }
   var j; try { var qBusca = ($('filaBusca').value || '').trim(); S.filaQ = qBusca.length >= 3 ? qBusca : ''; j = await api('/fila?funil=' + encodeURIComponent(funil) + (S.filaQ ? '&q=' + encodeURIComponent(S.filaQ) : '') + (completa ? '&limite=' + FILA_MAX : '')); } catch (e) { if (seq === S.filaSeq) { S.filaNota = 'Sem conexão com o servidor.'; S.filaErroRetry = true; desenharFila(); } return; }
   if (seq !== S.filaSeq) return;   // chegou resposta velha (trocou de funil ou recarregou): ignora
   if (j._status === 401) { sair('Senha não confere.'); return; }
   if (!j.ok) {
-    if (completa) { S.filaNota = 'não consegui carregar o resto da fila.'; S.filaErroRetry = true; desenharFila(); return; }   // a lista curta continua na tela; o aviso nunca some em silêncio
+    if (pedidoCompleta) { S.filaNota = 'não consegui carregar o resto da fila.'; S.filaErroRetry = true; desenharFila(); return; }   // a lista curta continua na tela; o aviso nunca some em silêncio
     $('filaResumo').textContent = (typeof j.mensagem === 'string' && j.mensagem ? semForn(j.mensagem) : 'Não consegui ler a fila agora.'); filaErroBtn(); if (j._status === 503 && j.retentavel) setTimeout(function () { if (!$('painelFila').classList.contains('hide')) carregarFila(); }, 6000 * REDE.escala); return;   // 13/11: fila ainda carregando (Agendor lento, sem retrato): tenta de novo sozinha
   }
   var fs = $('filaFunil'); var ant = fs.value || funil; fs.textContent = '';
@@ -2386,9 +2388,10 @@ function resolverGanho(L, j) { // resposta final do /ganho: mostra o resultado o
     abrirGanho(L, j.faltando, true, ch); setEstado(L, 'erro', j.mensagem || 'Ainda faltam dados. Os campos que faltam estão marcados.'); return;
   }
   var titulo = L.lead.titulo || 'Lead';
-  if (j.repasseDesligado) { aplicarResposta(L, j); L.rep = { desligado: true, mensagem: j.mensagem }; msg(j.mensagem || (titulo + ': Ganho registrado ✓'), 'ok'); mostrarGanhoModal(L); carregar(true, 'tarefas'); return; }
-  if (j.repassePendente) { aplicarResposta(L, j); L.rep = { pendente: true, ate: Date.now() + 60000 }; msg(titulo + ': Ganho registrado ✓', 'ok'); if (!L.repAntes) mostrarGanhoModal(L); carregar(true, 'tarefas'); aguardarArena(L); return; }
+  if (j.repasseDesligado) { S.ocultos[L.dealId] = true; redesenharTudo(); aplicarResposta(L, j); L.rep = { desligado: true, mensagem: j.mensagem }; msg(j.mensagem || (titulo + ': Ganho registrado ✓'), 'ok'); mostrarGanhoModal(L); carregar(true, 'tarefas'); return; }
+  if (j.repassePendente) { S.ocultos[L.dealId] = true; redesenharTudo(); aplicarResposta(L, j); L.rep = { pendente: true, ate: Date.now() + 60000 }; msg(titulo + ': Ganho registrado ✓', 'ok'); if (!L.repAntes) mostrarGanhoModal(L); carregar(true, 'tarefas'); aguardarArena(L); return; }
   if (j.ok !== false && j._status < 300) {
+    S.ocultos[L.dealId] = true; redesenharTudo();   /* 16/11 (Robert #2035): qualificado confirmado pelo servidor: o lead sai da tela NA HORA (a leitura em camadas do servidor demorava a refletir) */
     aplicarResposta(L, j); msg(j.mensagem || (titulo + ': Ganho registrado ✓'), 'ok'); carregar(true, 'tarefas'); carregarAguardando(true);
     if (j.arena && j.arena.dealId) { registrarRepPend(L.dealId, titulo, j); L.rep = { arenaId: j.arena.dealId, link: j.arena.link, responsaveis: j.responsaveis || L.responsaveis || [], dono: null, mensagem: j.mensagem || '' }; var ra = L.repAntes; L.repAntes = null; if (ra) aplicarRepAntes(L, ra); else mostrarGanhoModal(L); }
     else { $('modalGanho').classList.add('hide'); L.modalAberto = false; renderLead(); }
