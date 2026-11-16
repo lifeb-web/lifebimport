@@ -1118,12 +1118,11 @@ function desenharControle(d) {
   if (c.pendentes || S.cont.rodando) { var p = el('div', 'pend'); p.setAttribute('role', 'status'); var nFalta = S.cont.rodando && S.cont.pendentes != null ? S.cont.pendentes : c.pendentes; var tot = S.prog && S.prog.total >= nFalta ? S.prog.total : 0; var feitos = tot ? tot - nFalta : 0; p.textContent = (tot ? 'Iniciados ' + feitos + ' de ' + tot + '. ' : '') + (S.cont.rodando ? 'Iniciando seus leads: faltam ' + nFalta + '.' : 'Faltam ' + nFalta + '. A Bia termina sozinha, mesmo se você fechar a página. Não precisa clicar de novo.'); st.appendChild(p); }
   if (c.atencaoLiberacao && c.atencaoLiberacao.length) { var pa = el('div', 'pend'); pa.setAttribute('role', 'alert'); pa.textContent = 'Atenção: ' + (c.atencaoLiberacao.length === 1 ? '1 lead não conseguiu entrar' : c.atencaoLiberacao.length + ' leads não conseguiram entrar') + ' (negócio ' + c.atencaoLiberacao.map(function (x) { return x.dealId; }).join(', ') + '). Nada foi perdido: eles continuam na fila. Clique em Iniciar neles de novo; se repetir, avise o Robert.'; st.appendChild(pa); }
   if (d.filaAtencao) { var at = el('div', 'pend'); at.textContent = d.filaAtencao + (d.filaAtencao === 1 ? ' lead já tem negócio aberto com um representante. Ele NÃO entra nos lotes. Abra e confira antes.' : ' leads já têm negócio aberto com um representante. Eles NÃO entram nos lotes. Abra e confira antes.'); st.appendChild(at); }
-  var ok = c.janelaAberta && c.cadenciaLive && !S.ocupado;
+  var ok = c.cadenciaLive && !S.ocupado; /* 16/11: sem trava de horário */
   ['bLiberar', 'bFila'].forEach(function (id) { $(id).disabled = S.ocupado; });
   $('bLiberar').disabled = !ok || fo === 0 || !c.ligada;
-  $('bLiberar').title = !c.janelaAberta ? (c.janelaMsg || '') : '';
-  if (!c.janelaAberta) { $('msgAcao').textContent = c.janelaMsg; $('msgAcao').className = 'msgacao aviso'; S.avisoJanela = true; }
-  else if (!c.cadenciaLive || !c.ligada) { $('msgAcao').textContent = 'Iniciar está pausado agora. Fale com o Robert.'; $('msgAcao').className = 'msgacao aviso'; S.avisoJanela = true; }
+  $('bLiberar').title = !c.janelaAberta ? 'Fora do expediente: o Dia 1 dos leads começa no próximo dia útil.' : '';
+  if (!c.cadenciaLive || !c.ligada) { $('msgAcao').textContent = 'Iniciar está pausado agora. Fale com o Robert.'; $('msgAcao').className = 'msgacao aviso'; S.avisoJanela = true; }
   else if (S.avisoJanela) { $('msgAcao').textContent = ''; $('msgAcao').className = 'msgacao'; S.avisoJanela = false; } // a janela abriu: o aviso de horário não pode ficar na tela depois das 08:00
   var h = (d.historico || []).filter(function (x) { return x.origem !== 'ajuste_auto' && !/teto/.test(String(x.resultado || '')); }); var hist = $('historico');
   var meus = h.filter(function (x) { return x.origem === 'manual'; }).map(function (x) { return x.n + ' às ' + x.quando + (x.resultado && x.resultado !== 'ok' ? ' (' + String(x.resultado).replace(/_/g, ' ') + ')' : ''); });
@@ -1438,7 +1437,7 @@ async function liberar(corpo) {
 }
 // ---------- continuar a saída em lotes (uma chamada por vez, só uma aba conduz) ----------
 S.cont = { rodando: false, pendentes: null, parou: null, paradoAte: 0, paradoPend: null };
-function podeContinuar() { var c = S.ctl; return !!(S.token && c && c.pendentes > 0 && c.janelaAberta && c.cadenciaLive && c.ligada && !S.doCache); }
+function podeContinuar() { var c = S.ctl; return !!(S.token && c && c.pendentes > 0 && c.cadenciaLive && c.ligada && !S.doCache); }
 function iniciarContinuar(manual) {
   var C = S.cont; if (manual) C.paradoAte = 0;
   if (C.rodando || !podeContinuar() || document.hidden) return;
@@ -1555,7 +1554,7 @@ function avisoPulo() {
   box.textContent = textoPulo(esc);
   var at = esc.filter(function (i) { return i.atencao; }); if (at.length) box.textContent += (box.textContent ? ' ' : '') + at.length + ' dos escolhidos já têm negócio aberto com um representante. Abra e confira antes.';
 }
-function podeLiberar() { return !!(S.ctl && S.ctl.cadenciaLive && (S.filaFunil === 'inbound' || (S.ctl.janelaAberta && S.ctl.ligada))); } /* 16/11: Inbound sem trava de horário (Robert #2162) */
+function podeLiberar() { return !!(S.ctl && S.ctl.cadenciaLive && (S.filaFunil === 'inbound' || S.ctl.ligada)); } /* 16/11: Inbound sem trava de horário (Robert #2162) */
 function buscando() { return $('filaBusca').value.trim() !== '' || S.filaOrigem !== '' || !!S.filaFonte; } /* busca, origem OU lista escolhida */ // com busca OU origem escolhida, o botão de iniciar vale só para o que está na tela
 var SEM_ORIGEM = '(SEM ORIGEM)', SEM_LISTA = 'Sem lista';
 function origemDoItem(i) { return i && i.origemNome !== undefined ? i.origemNome : (i ? i.origem : undefined); } // em "Iniciados hoje" o campo `origem` é QUEM iniciou (auto/manual); a origem do lead vem em `origemNome`
@@ -1721,7 +1720,7 @@ function bgCartao(it) {
   var ab = el('button', 'abrir', 'Abrir'); ab.type = 'button'; ab.setAttribute('aria-label', 'Abrir o lead completo: ' + it.empresa); ab.onclick = function () { abrirLead(it.dealId, ab, it); }; ligaPrefetch(ab, it.dealId); ac.appendChild(ab);
   var tb = el('button', 'sec', 'Tarefas'); tb.type = 'button'; tb.setAttribute('aria-label', 'Ver as tarefas de ' + it.empresa); tb.onclick = function () { abrirLead(it.dealId, tb, it); var n = 0; var rola = function () { var sec = document.querySelector('#painelLead .secao-tarefas'); if (sec) { try { sec.scrollIntoView({ block: 'start' }); } catch (e) { logFalha('l993 foco/rolagem/seleção é só conforto; se falhar a ação já foi feita', e); /* foco/rolagem/seleção é só conforto; se falhar a ação já foi feita */ } } else if (++n < 12) setTimeout(rola, 250); }; setTimeout(rola, 250); }; ac.appendChild(tb);
   if (it.podeIniciar) {
-    var pode = !!(S.ctl && S.ctl.cadenciaLive && (it.funil === 'inbound' || (S.ctl.janelaAberta && S.ctl.ligada)));
+    var pode = !!(S.ctl && S.ctl.cadenciaLive && (it.funil === 'inbound' || S.ctl.ligada));
     var ib = el('button', 'forte', 'Iniciar'); ib.type = 'button'; ib.disabled = S.ocupado || !pode; ib.title = pode ? 'Começar a cadência deste lead agora' : 'Agora não dá para iniciar (fora do horário ou desligado)';
     ib.onclick = function () { if (!window.confirm('Iniciar ' + it.empresa + ' agora? As tarefas do 1º contato são criadas na hora.' + avisoTarde())) return; liberar({ dealIds: [it.dealId], funil: it.funil }).then(function () { buscarGeral(); }); };
     ac.appendChild(ib);
