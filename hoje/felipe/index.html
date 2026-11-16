@@ -255,6 +255,8 @@ button.copiar.ok{background:var(--green-bg);color:var(--green);border-color:var(
 .item .acoes{grid-column:1 / -1;display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
 .item .acoes button.abrir{min-height:26px;padding:1px 10px;font-size:13px;border-radius:7px}
 .item .acoes a.bt{flex:none}
+.item .acoes a.ana-at{display:inline-flex;align-items:center;justify-content:center;min-height:26px;padding:1px 10px;font-size:13px;border-radius:7px;white-space:nowrap;max-width:100%;flex:0 1 auto;border:1.5px solid var(--purple);color:var(--purple);background:transparent;font-weight:700;text-decoration:none;cursor:pointer}
+.item .acoes a.ana-at:hover{background:var(--purple-bt);color:#fff}
 .item .emp.clic{cursor:pointer}
 /* filtro por origem na fila */
 .orgfiltro{display:flex;gap:6px;flex-wrap:wrap;padding:8px 14px;border-bottom:1px solid var(--border);align-items:center}
@@ -346,7 +348,7 @@ a.subir{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:6
 /* "Agendor" no cartão é último recurso: discreto. O botão principal é "Abrir". */
 .item a.bt{background:transparent!important;color:var(--muted)!important;border:1px solid var(--border);font-weight:600}
 .item .acoes button.abrir{min-width:84px}
-@media(max-width:480px){.item .acoes{flex-wrap:nowrap}.item .acoes button.abrir{flex:1;min-height:44px} .item .acoes a.bt{width:auto;min-height:44px;padding:1px 12px} a.subir{width:100%;justify-content:center;min-height:44px}}
+@media(max-width:480px){.item .acoes{flex-wrap:nowrap}.item .acoes button.abrir{flex:1;min-height:44px} .item .acoes a.ana-at{flex:1;min-height:44px} .item .acoes a.bt{width:auto;min-height:44px;padding:1px 12px} a.subir{width:100%;justify-content:center;min-height:44px}}
 .rep-op{display:block;width:100%;margin-bottom:6px;text-align:left}
 .ag-sel{width:100%;min-height:44px;font-size:16px;margin-top:4px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--card);color:var(--text)}
 /* resiliência */
@@ -427,7 +429,7 @@ details.mais{display:contents}
   .chips.tem-mais{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 36px),transparent)}
   .histo{font-size:13px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .item .emp{font-size:15px}
-  .item .acoes button.abrir,.item .acoes a.bt{min-height:44px}
+  .item .acoes button.abrir,.item .acoes a.bt,.item .acoes a.ana-at{min-height:44px}
   .item .fone a.wa{font-size:14px;min-height:32px}
   .item button.copiar{min-height:36px}
   .orgfiltro{flex-wrap:nowrap;overflow-x:auto;gap:6px}
@@ -1163,7 +1165,7 @@ function cartao(it, opts) {
   if (abriu && !feito) li.appendChild(el('div', 'abriu', 'Você abriu às ' + horaClique(abriu) + '. Quando finalizar, fica verde aqui em poucos segundos.'));
   /* 16/11 (Robert #1962): leads repassados pela Ana ganham o botão 'Abrir atendimento': vai direto para a conversa deste lead na Central (o Felipe lê o que a Ana conversou antes de distribuir) */
   acoesCartao(li, it.dealId, it.link, function () { if (!feito) { gravarAbriu(it.dealId); setTimeout(function () { if (S.dados) desenharBlocos(); }, 50); } }, it);
-  if (opts.ana && it.fone) { var fnA = String(it.fone).replace(/\D/g, ''); if (fnA.length >= 10) { var acA = li.querySelector('.acoes'); if (acA) { var at = el('a', 'bt', 'Abrir atendimento'); at.href = 'https://projetojlbv.com.br/central/#atendimento-' + (fnA.length <= 11 ? '55' + fnA : fnA); at.target = '_blank'; at.rel = 'noopener'; at.title = 'Abre a conversa da Ana com este lead na Central'; at.onclick = function (ev) { ev.preventDefault(); var alvo = at.href, w = null; try { w = window.open('about:blank', '_blank'); if (w) w.opener = null; } catch (e) { w = null; } var abrir = function (u) { if (w) { try { w.location.href = u; return; } catch (e) { /* cai para a aba atual */ } } location.href = u; }; api('/ana-fone?fone=' + encodeURIComponent(fnA)).then(function (j) { abrir(j && j.ok && j.fone ? 'https://projetojlbv.com.br/central/#atendimento-' + j.fone : alvo); }).catch(function () { abrir(alvo); }); };   /* a Ana guarda o número com OU sem o 9: o servidor diz qual */ at.setAttribute('aria-label', 'Abrir o atendimento da Ana com este lead na Central'); acA.appendChild(at); } } }
+  if (opts.ana && it.fone) { var fnA = String(it.fone).replace(/\D/g, ''); if (fnA.length >= 10) { var acA = li.querySelector('.acoes'); if (acA) { var at = el('a', 'ana-at', 'Atendimento'); at.href = 'https://projetojlbv.com.br/central/#atendimento-' + (fnA.length <= 11 ? '55' + fnA : fnA); at.target = '_blank'; at.rel = 'noopener'; at.title = 'Abre a conversa da Ana com este lead na Central'; at.onclick = function (ev) { ev.preventDefault(); var alvo = at.href, w = null; try { w = window.open('about:blank', '_blank'); if (w) w.opener = null; } catch (e) { w = null; } var abrir = function (u) { if (w) { try { w.location.href = u; return; } catch (e) { /* cai para a aba atual */ } } location.href = u; }; api('/ana-fone?fone=' + encodeURIComponent(fnA)).then(function (j) { abrir(j && j.ok && j.fone ? 'https://projetojlbv.com.br/central/#atendimento-' + j.fone : alvo); }).catch(function () { abrir(alvo); }); };   /* a Ana guarda o número com OU sem o 9: o servidor diz qual */ at.setAttribute('aria-label', 'Abrir o atendimento da Ana com este lead na Central'); acA.appendChild(at); } } }
   if (opts.fim && !feito && it.dealId != null) { var bv = el('button', 'sec voltar-cad', 'Voltar para a cadência'); bv.type = 'button'; bv.title = 'Escolher a etapa e recomeçar a cadência deste lead, sem sair da Hoje'; bv.onclick = function () { voltarCadencia(it, bv); }; li.appendChild(bv); }
   return li;
 }
@@ -2362,13 +2364,13 @@ async function confirmarGanho(L) {
   var r = await enviarCampos(L); // se a rede cair, fica guardado e o ganho entra na fila logo atrás
   if (r === 'erro') { L.ganhoRodando = false; L.rep = null; L.repAntes = null; delete S.qualif[L.dealId]; setQualificando(L, false); redesenharTudo(); if (!S.token) return; mostrarGanhoModal(L, true); return; } // reabre no ponto do problema (a mensagem e o conflito já estão no pop-up)
   var j = await chamarLead(L, '/ganho', {}, null, { tipo: 'ganho', meta: { titulo: L.lead.titulo } }); if (!j) { L.ganhoRodando = false; L.rep = null; delete S.qualif[L.dealId]; return; } // 401: volta ao login
-  if (j._enfileirado) { L.ganhoRodando = false; L.rep = null; $('modalGanho').classList.add('hide'); L.modalAberto = false; msg((L.lead.titulo || 'Lead') + ': sem conexão. A qualificação ficou guardada e sai sozinha quando a rede voltar.', 'aviso'); return; }
+  if (j._enfileirado) { L.ganhoRodando = false; L.rep = null; $('modalGanho').classList.add('hide'); L.modalAberto = false; msg((L.lead.titulo || 'Lead') + ': a qualificação está guardada e sendo enviada; conclui sozinha, não precisa repetir. Confira no Arena em instantes; se não aparecer, atualize a página.', 'aviso'); return; }
   resolverGanho(L, j);
 }
 async function enviarGanho(L) { // só o POST /ganho (usado no "Tentar de novo" e no "Atualizar" do repasse)
   L.ocupado = true; atualizarGanhoBtn(L); setEstado(L, 'salvando', 'Marcando como Ganho…'); S.qualif[L.dealId] = true; setQualificando(L, true);
   var j = await chamarLead(L, '/ganho', {}, null, { tipo: 'ganho', meta: { titulo: L.lead.titulo } }); if (!j) { L.ocupado = false; delete S.qualif[L.dealId]; return; } L.ocupado = false;
-  if (j._enfileirado) { setEstado(L, 'salvando', 'Sem conexão. A qualificação ficou guardada e sai sozinha.'); return; }
+  if (j._enfileirado) { setEstado(L, 'salvando', 'Qualificação guardada e sendo enviada. Conclui sozinha, não precisa repetir.'); return; }
   resolverGanho(L, j);
 }
 function resolverGanho(L, j) { // resposta final do /ganho: mostra o resultado ou reabre exatamente onde está o problema
