@@ -256,6 +256,7 @@ button.copiar.ok{background:var(--green-bg);color:var(--green);border-color:var(
 .item .acoes button.abrir{min-height:26px;padding:1px 10px;font-size:13px;border-radius:7px}
 .item .acoes a.bt{flex:none}
 .item .acoes a.ana-at{display:inline-flex;align-items:center;justify-content:center;min-height:26px;padding:1px 10px;font-size:13px;border-radius:7px;white-space:nowrap;max-width:100%;flex:0 1 auto;border:1.5px solid var(--purple);color:var(--purple);background:transparent;font-weight:700;text-decoration:none;cursor:pointer}
+.orgfiltro.min{display:none!important}
 .item .acoes a.ana-at:hover{background:var(--purple-bt);color:#fff}
 .item .emp.clic{cursor:pointer}
 /* filtro por origem na fila */
@@ -602,6 +603,7 @@ details.sec-empresa>summary,details.dados-opcional>summary{cursor:pointer;font-w
     <input type="search" id="filaBusca" placeholder="Buscar por empresa, pessoa ou telefone" aria-label="Buscar na fila" autocomplete="off">
     <span class="status-ctl" id="filaResumo"></span>
   </div>
+  <button type="button" class="sec" id="bFiltrosFila" aria-expanded="true">Ocultar filtros</button>
   <div class="orgfiltro hide" id="filaOrigens" role="group" aria-label="Filtrar por origem"></div>
   <div class="orgfiltro hide" id="filaFontes" role="group" aria-label="Filtrar por lista"></div>
   <div class="corpo" id="filaLista"></div>
@@ -1569,6 +1571,10 @@ function desenharOrigens() {
 }
 // 16/11 (Robert #1956): FILTRO POR LISTA (fonte) na fila, ao lado do filtro por origem: um clique mostra só os leads daquela lista e os botões 'Iniciar os N primeiros' passam a valer só para ela.
 S.filaFonte = '';
+// 16/11 (Robert #2030): 'minimizar' os filtros (origem e lista) para não atrapalhar ver a fila; a escolha fica guardada neste aparelho
+S.filtrosMin = (function () { try { return lsGet('sh_filtros_min') === '1'; } catch (e) { return false; } })();
+function aplicarFiltrosMin() { ['filaOrigens', 'filaFontes'].forEach(function (id) { var b = $(id); if (b) b.classList.toggle('min', !!S.filtrosMin); }); var bt = $('bFiltrosFila'); if (bt) { var algumFiltro = ['filaOrigens', 'filaFontes'].some(function (id) { var b = $(id); return b && !b.classList.contains('hide'); }); bt.classList.toggle('hide', !algumFiltro); bt.setAttribute('aria-controls', 'filaOrigens filaFontes'); var ativos = (S.filaOrigem ? 1 : 0) + (S.filaFonte ? 1 : 0); bt.textContent = S.filtrosMin ? 'Mostrar filtros (origem e lista)' + (ativos ? ' · ' + ativos + ' ativo' + (ativos > 1 ? 's' : '') : '') : 'Ocultar filtros'; bt.setAttribute('aria-expanded', S.filtrosMin ? 'false' : 'true'); } }
+if ($('bFiltrosFila')) $('bFiltrosFila').onclick = function () { S.filtrosMin = !S.filtrosMin; try { lsSet('sh_filtros_min', S.filtrosMin ? '1' : '0'); } catch (e) { logFalha('filtros min é opcional', e); } aplicarFiltrosMin(); };
 function desenharFontes() {
   var box = $('filaFontes'); if (!box) return; box.textContent = ''; var cont = {}, ordem = [];
   S.fila.forEach(function (i) { if (S.ocultos[i.dealId] || iniciadoRecente(i.dealId)) return; if (S.filaOrigem && origemChave(i) !== S.filaOrigem) return; var k = i.fonte || SEM_LISTA; if (!cont[k]) { cont[k] = 0; ordem.push(k); } cont[k]++; });
@@ -1626,7 +1632,7 @@ S.filaIniciados = Object.create(null);   // 14/11 (auditor E4): quem acabou de s
 function iniciadoRecente(id) { var t = S.filaIniciados[id]; if (!t) return false; if (Date.now() - t > 120000) { delete S.filaIniciados[id]; return false; } return true; }
 function desenharFila() {
   var l = $('filaLista'); l.textContent = '';
-  if (S.filaGruposSrv) { $('filaOrigens').textContent = ''; $('filaOrigens').classList.add('hide'); S.filaOrigem = ''; if ($('filaFontes')) { $('filaFontes').textContent = ''; $('filaFontes').classList.add('hide'); } S.filaFonte = ''; } else { desenharOrigens(); desenharFontes(); }   // espelho: filtro por origem só com a lista inteira na tela
+  if (S.filaGruposSrv) { $('filaOrigens').textContent = ''; $('filaOrigens').classList.add('hide'); S.filaOrigem = ''; if ($('filaFontes')) { $('filaFontes').textContent = ''; $('filaFontes').classList.add('hide'); } S.filaFonte = ''; } else { desenharOrigens(); desenharFontes(); } aplicarFiltrosMin();   // espelho: filtro por origem só com a lista inteira na tela
   var q = $('filaBusca').value.trim();
   S.filaVis = S.fila.filter(function (i) { return !S.ocultos[i.dealId] && !iniciadoRecente(i.dealId) && casaBusca(i, q) && (!S.filaOrigem || origemChave(i) === S.filaOrigem) && (!S.filaFonte || (i.fonte || SEM_LISTA) === S.filaFonte); }); // busca e origem: instantâneas no cliente
   var filtrando = q || S.filaOrigem || S.filaFonte; var n = S.fila.length, tot = S.filaTotalResp != null ? Math.max(S.filaTotalResp, n) : n;
