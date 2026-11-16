@@ -601,6 +601,7 @@ details.sec-empresa>summary,details.dados-opcional>summary{cursor:pointer;font-w
     <span class="status-ctl" id="filaResumo"></span>
   </div>
   <div class="orgfiltro hide" id="filaOrigens" role="group" aria-label="Filtrar por origem"></div>
+  <div class="orgfiltro hide" id="filaFontes" role="group" aria-label="Filtrar por lista"></div>
   <div class="corpo" id="filaLista"></div>
   <div class="rodape">
     <div class="msgacao aviso" id="filaAviso" role="status" aria-live="polite"></div>
@@ -1546,7 +1547,7 @@ function avisoPulo() {
   var at = esc.filter(function (i) { return i.atencao; }); if (at.length) box.textContent += (box.textContent ? ' ' : '') + at.length + ' dos escolhidos já têm negócio aberto com um representante. Abra e confira antes.';
 }
 function podeLiberar() { return !!(S.ctl && S.ctl.janelaAberta && S.ctl.cadenciaLive && (S.filaFunil === 'inbound' || S.ctl.ligada)); }
-function buscando() { return $('filaBusca').value.trim() !== '' || S.filaOrigem !== ''; } // com busca OU origem escolhida, o botão de iniciar vale só para o que está na tela
+function buscando() { return $('filaBusca').value.trim() !== '' || S.filaOrigem !== '' || !!S.filaFonte; } /* busca, origem OU lista escolhida */ // com busca OU origem escolhida, o botão de iniciar vale só para o que está na tela
 var SEM_ORIGEM = '(SEM ORIGEM)', SEM_LISTA = 'Sem lista';
 function origemDoItem(i) { return i && i.origemNome !== undefined ? i.origemNome : (i ? i.origem : undefined); } // em "Iniciados hoje" o campo `origem` é QUEM iniciou (auto/manual); a origem do lead vem em `origemNome`
 function origemChave(i) { return origemNorm(origemDoItem(i)) || SEM_ORIGEM; }
@@ -1561,6 +1562,18 @@ function desenharOrigens() {
   var total = ordem.reduce(function (s, k) { return s + cont[k]; }, 0);
   chip('', 'Todas', total, null);
   ordem.forEach(function (k) { chip(k, origemRotulo(k), cont[k], k === SEM_ORIGEM ? null : seloOrigem(origemRotulo(k))); });
+}
+// 16/11 (Robert #1956): FILTRO POR LISTA (fonte) na fila, ao lado do filtro por origem: um clique mostra só os leads daquela lista e os botões 'Iniciar os N primeiros' passam a valer só para ela.
+S.filaFonte = '';
+function desenharFontes() {
+  var box = $('filaFontes'); if (!box) return; box.textContent = ''; var cont = {}, ordem = [];
+  S.fila.forEach(function (i) { if (S.ocultos[i.dealId] || iniciadoRecente(i.dealId)) return; if (S.filaOrigem && origemChave(i) !== S.filaOrigem) return; var k = i.fonte || SEM_LISTA; if (!cont[k]) { cont[k] = 0; ordem.push(k); } cont[k]++; });
+  if (S.filaFonte && !cont[S.filaFonte]) S.filaFonte = '';
+  box.classList.toggle('hide', ordem.length < 2); if (ordem.length < 2) { S.filaFonte = ''; return; }
+  ordem.sort(function (a, b) { return cont[b] - cont[a]; });
+  function chip(chave, rot, n) { var b = el('button', 'of'); b.type = 'button'; b.title = rot; b.setAttribute('aria-pressed', S.filaFonte === chave ? 'true' : 'false'); b.appendChild(document.createTextNode(rot.length > 34 ? rot.slice(0, 31) + '…' : rot)); b.appendChild(el('b', null, String(n))); b.onclick = function () { S.sel = {}; S.filaFonte = S.filaFonte === chave ? '' : chave; desenharFila(); }; /* auditor: trocar de lista limpa as marcações (nada escondido é iniciado) */ box.appendChild(b); }
+  chip('', 'Todas as listas', ordem.reduce(function (t, k) { return t + cont[k]; }, 0));
+  ordem.forEach(function (k) { chip(k, k, cont[k]); });
 }
 function linhaFila(i, agrupado) {   // um cartão da fila
   var row = el('div', 'fi n' + i.nivel + (i.atencao ? ' atencao' : '')); row.setAttribute('data-deal', String(i.dealId));
@@ -1609,10 +1622,10 @@ S.filaIniciados = Object.create(null);   // 14/11 (auditor E4): quem acabou de s
 function iniciadoRecente(id) { var t = S.filaIniciados[id]; if (!t) return false; if (Date.now() - t > 120000) { delete S.filaIniciados[id]; return false; } return true; }
 function desenharFila() {
   var l = $('filaLista'); l.textContent = '';
-  if (S.filaGruposSrv) { $('filaOrigens').textContent = ''; $('filaOrigens').classList.add('hide'); S.filaOrigem = ''; } else desenharOrigens();   // espelho: filtro por origem só com a lista inteira na tela
+  if (S.filaGruposSrv) { $('filaOrigens').textContent = ''; $('filaOrigens').classList.add('hide'); S.filaOrigem = ''; if ($('filaFontes')) { $('filaFontes').textContent = ''; $('filaFontes').classList.add('hide'); } S.filaFonte = ''; } else { desenharOrigens(); desenharFontes(); }   // espelho: filtro por origem só com a lista inteira na tela
   var q = $('filaBusca').value.trim();
-  S.filaVis = S.fila.filter(function (i) { return !S.ocultos[i.dealId] && !iniciadoRecente(i.dealId) && casaBusca(i, q) && (!S.filaOrigem || origemChave(i) === S.filaOrigem); }); // busca e origem: instantâneas no cliente
-  var filtrando = q || S.filaOrigem; var n = S.fila.length, tot = S.filaTotalResp != null ? Math.max(S.filaTotalResp, n) : n;
+  S.filaVis = S.fila.filter(function (i) { return !S.ocultos[i.dealId] && !iniciadoRecente(i.dealId) && casaBusca(i, q) && (!S.filaOrigem || origemChave(i) === S.filaOrigem) && (!S.filaFonte || (i.fonte || SEM_LISTA) === S.filaFonte); }); // busca e origem: instantâneas no cliente
+  var filtrando = q || S.filaOrigem || S.filaFonte; var n = S.fila.length, tot = S.filaTotalResp != null ? Math.max(S.filaTotalResp, n) : n;
   var base = !n ? 'Ninguém esperando você iniciar.' : (filtrando ? pluralM(S.filaVis.length, 'lead', 'leads') + ' de ' + milhar(n) + (tot > n ? ' carregados (' + milhar(tot) + ' no total)' : '') : (tot > n ? 'Mostrando ' + milhar(n) + ' de ' + milhar(tot) + ' leads esperando você iniciar' : pluralM(n, 'lead esperando você iniciar', 'leads esperando você iniciar'))) + '.';
   $('filaResumo').textContent = base + (S.filaNota ? ' ' + S.filaNota.charAt(0).toUpperCase() + S.filaNota.slice(1) + (/[.!]$/.test(S.filaNota) ? '' : '.') : '');
   if (S.filaErroRetry) filaErroBtn();
@@ -1642,7 +1655,7 @@ function iniciarPrimeiros() {   // os (até) 50 primeiros do que está na tela, 
 }
 $('bFila').onclick = async function () { $('painelFila').classList.remove('hide'); if (!$('filaFunil').value) { var o = el('option', null, 'SDR · Outbound'); o.value = 'outbound'; $('filaFunil').appendChild(o); } await carregarFila(); $('filaBusca').focus(); };
 $('bFecharFila').onclick = function () { $('painelFila').classList.add('hide'); };
-$('filaFunil').onchange = function () { S.sel = {}; S.filaOrigem = ''; S.fila = []; S.filaTotalResp = null; S.filaNota = ''; carregarFila(); }; var debFila = null; $('filaBusca').oninput = function () { clearTimeout(debFila); debFila = setTimeout(function () { var q = ($('filaBusca').value || '').trim(); var cortada = (S.filaTotalResp || 0) > S.fila.length || !!S.filaQ || !!S.filaGruposSrv; if (cortada && (q.length >= 3 || S.filaQ)) { carregarFila(); } else desenharFila(); }, 400); };   // com a lista cortada (só se o servidor tem mais que 2000), a busca consulta o SERVIDOR (/fila?q=); com a fila inteira na tela filtra na hora
+$('filaFunil').onchange = function () { S.sel = {}; S.filaOrigem = ''; S.filaFonte = ''; S.fila = []; S.filaTotalResp = null; S.filaNota = ''; carregarFila(); }; var debFila = null; $('filaBusca').oninput = function () { clearTimeout(debFila); debFila = setTimeout(function () { var q = ($('filaBusca').value || '').trim(); var cortada = (S.filaTotalResp || 0) > S.fila.length || !!S.filaQ || !!S.filaGruposSrv; if (cortada && (q.length >= 3 || S.filaQ)) { carregarFila(); } else desenharFila(); }, 400); };   // com a lista cortada (só se o servidor tem mais que 2000), a busca consulta o SERVIDOR (/fila?q=); com a fila inteira na tela filtra na hora
 $('bLiberarSel').onclick = function () { if (S.ocupado) return; var ids = selIds(); if (!ids.length) return; if (ids.length > MAX_POR_CLIQUE) { msg('O máximo é ' + MAX_POR_CLIQUE + ' por clique. Você marcou ' + ids.length + '.', 'erro'); return; } if (!window.confirm('Iniciar ' + plural(ids.length, 'lead marcado', 'leads marcados') + ' agora?' + avisoTarde())) return; liberar({ dealIds: ids, funil: S.filaFunil }).then(function () { S.sel = {}; atualizaSel(); }); };
 $('bLiberarPrimeiros').onclick = iniciarPrimeiros;
 $('bSelRecom').onclick = function () { var n = qtdEscolhida() || 10; S.sel = {}; S.filaVis.filter(function (i) { return i.recomendado; }).slice(0, n).forEach(function (i) { S.sel[i.dealId] = true; }); desenharFila(); };
