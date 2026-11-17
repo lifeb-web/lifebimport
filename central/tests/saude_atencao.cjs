@@ -12,7 +12,7 @@ async function cena(b, nome, saude, detalhe) {
   const b = await chromium.launch({ executablePath: process.argv[3] });
   let r = await cena(b, "todos_ok", { geral: "ok", ts: Date.now(), itens: ITENS_OK });
   S.ok(!/pede atenção/.test(r.txt) && !/Carregando os detalhes/.test(r.txt), "todos ok: nenhum 'pede atenção' / 'Carregando os detalhes' na Visão");
-  S.ok(/operando normalmente/i.test(r.txt), "todos ok: mensagem de plataforma normal");
+  S.ok(!/Estado: Normal/.test(r.txt) && !/Rotinas agendadas pede/i.test(r.txt) && /(operando normalmente|ponto de atenção|pontos de atenção)/i.test(r.txt), "todos ok: sem itens de saúde na lista (a Visão mostra 'operando normalmente' ou só pontos de OUTRAS origens, p.ex. chaves da fixture)");
   r = await cena(b, "um_atencao", { geral: "atencao", ts: Date.now(), itens: { ...ITENS_OK, fila: { nivel: "atencao" } } }, { json: { ok: true, pontos: [{ k: "fila", texto: "Fila com 3 itens parados há 20 min." }] } });
   const n1 = (r.txt.match(/pede atenção/g) || []).length; S.ok(n1 === 1 && /Fila com 3 itens parados/.test(r.txt), "1 em atenção: só ele aparece, com o detalhe (" + n1 + ")");
   r = await cena(b, "sem_detalhe", { geral: "atencao", ts: Date.now(), itens: { ...ITENS_OK, fila: { nivel: "atencao" } } }, { status: 500, json: { ok: false } });
