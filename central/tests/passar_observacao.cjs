@@ -19,6 +19,10 @@ const B = require("./_base.cjs"); const { chromium } = require(process.argv[2]);
   await p.waitForTimeout(500); await abrir(); await p.click('#modal button:has-text("Passar ao Felipe")'); await p.waitForTimeout(1200);
   const er = await p.evaluate(() => (document.getElementById("modal") || document.body).innerText); S.ok(/não foi confirmado no Agendor/.test(er), "leitura de volta que não confere: erro claro, modal continua aberto " + er.slice(0, 160));
   S.ok(await p.evaluate(() => document.querySelectorAll("#psObs").length) === 1, "modal segue aberto com a observação para repetir");
+  // 409 (decisão do servidor): motivo em português, SEM 'toque de novo'
+  resp = { status: 409, json: { ok: false, erro: "negocio_do_felipe_fechado", retentavel: false, mensagem: "Esse negócio já está fechado (ganho ou perdido): nada foi alterado. Se for um novo contato, crie outro negócio." } };
+  await p.click('#modal button:has-text("Passar ao Felipe")'); await p.waitForTimeout(1200);
+  const e9 = await p.evaluate(() => (document.getElementById("modal") || document.body).innerText); S.ok(/já está fechado \(ganho ou perdido\)/.test(e9) && !/tentar de novo|repetir é seguro/.test(e9), "409: mostra a mensagem do servidor e não sugere repetir: " + e9.slice(0, 200));
   S.ok(!(p._erros && p._erros.length), "sem erro no console " + JSON.stringify(p._erros));
   await b.close(); S.fim();
 })();
