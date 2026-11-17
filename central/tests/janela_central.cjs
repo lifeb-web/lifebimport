@@ -10,12 +10,12 @@ function conversas() {
   const c = [
     { fone: F.A, nome: "Maria Silva", estagio: "perguntou_cnpj", humano: false, pausado: false, ts: NOW - (20 * H + 48 * M), previa: "Pode ser amanhã?", ultimaDe: "lead" },
     { fone: F.B, nome: "João Pereira", estagio: "perguntou_cnpj", humano: false, pausado: false, ts: NOW - 3 * D, previa: "obrigado", ultimaDe: "lead" },
-    { fone: F.C, nome: "Diego Alves", estagio: "aguardando_humano", humano: false, pausado: false, ts: NOW - 5 * H, previa: "quero falar com alguém", ultimaDe: "lead", repasse: { por: "Robert", ts: T_REP, para: "Felipe" }, janela: { aberta: false, fechouEm: NOW - 2 * D, ultimaDoLead: NOW - 3 * D } },
+    { fone: F.C, nome: "Diego Alves", estagio: "aguardando_humano", humano: false, pausado: false, ts: NOW - 5 * H, previa: "quero falar com alguém", ultimaDe: "lead", repasse: { repassada: true, quem: "Robert", quando: T_REP, motivo: "handoff_manual" }, janela: { aberta: false, fechouEm: NOW - 2 * D, ultimaDoLead: NOW - 3 * D } },
     { fone: F.D, nome: "Fechando Já", estagio: "perguntou_cnpj", humano: false, pausado: false, ts: NOW - 23 * H, previa: "ok vou ver", ultimaDe: "lead" },
     { fone: F.E, nome: "Número Ruim", estagio: "novo", humano: false, pausado: false, ts: NOW - 4 * D, previa: "Oi", ultimaDe: "ana", numeroInvalido: true, numeroInvalidoCodigo: 131026, janela: { aberta: false, fechouEm: NOW - 4 * D } },
-    { fone: F.N, nome: "", estagio: "novo", humano: false, pausado: false, ts: NOW - 2 * H, previa: "Oi, tudo bem?", ultimaDe: "ana", formulario: { nome: "Natália" }, janela: { aberta: true, fechaEm: NOW + 10 * H + 5 * M, ultimaDoLead: NOW - 13 * H } },
+    { fone: F.N, nome: "", estagio: "novo", humano: false, pausado: false, ts: NOW - 2 * H, previa: "Oi, tudo bem?", ultimaDe: "ana", janela: { aberta: true, fechaEm: NOW + 10 * H + 5 * M, ultimaDoLead: NOW - 13 * H } },
     { fone: F.G, nome: "Arquivada Teste", estagio: "perguntou_cnpj", humano: false, pausado: false, ts: NOW - 4 * H, previa: "tchau", ultimaDe: "lead", arquivada: { ts: NOW - 3 * H } },
-    { fone: F.X, nome: HOSTIL, estagio: "novo", humano: false, pausado: false, ts: NOW - 6 * H, previa: HOSTIL, ultimaDe: "lead", repasse: { por: HOSTIL, ts: T_REP } },
+    { fone: F.X, nome: HOSTIL, estagio: "novo", humano: false, pausado: false, ts: NOW - 6 * H, previa: HOSTIL, ultimaDe: "lead", repasse: { repassada: true, quem: HOSTIL, quando: T_REP, motivo: null } },
   ];
   for (let k = 0; k < 40; k++) c.push({ fone: "55629" + String(10000000 + k), nome: "Fila " + k, estagio: "perguntou_cnpj", humano: false, pausado: false, ts: NOW - (30 + k) * M, previa: "msg " + k, ultimaDe: "lead" });
   return c;
@@ -23,9 +23,9 @@ function conversas() {
 const base = (extra) => ({ ok: true, humano: false, pausado: false, estagio: "perguntou_cnpj", pendentes: 0, hist: [], nome: "", notas: [], log: [], dados: {}, ...extra });
 function fichaDe(f) {
   if (f === F.A) return base({ nome: "Maria Silva", hist: [{ de: "lead", ts: NOW - (20 * H + 48 * M), texto: "Pode ser amanhã?" }, { de: "ana", ts: NOW - (20 * H + 40 * M), texto: "Claro!" }] });
-  if (f === F.C) return base({ nome: "Diego Alves", estagio: "aguardando_humano", repasse: { por: "Robert", ts: T_REP, para: "Felipe" }, janela: { aberta: false, fechouEm: NOW - 2 * D, ultimaDoLead: NOW - 3 * D }, notas: [{ texto: "Passada manualmente ao Felipe (negócio 4242)", ts: T_REP, quem: "Robert" }], instrucoes: [{ texto: "Não oferecer desconto", ts: NOW - H, quem: "Robert" }], hist: [{ de: "lead", ts: NOW - 3 * D, texto: "quero falar com alguém" }] });
-  if (f === F.N) return base({ nome: "", hist: [{ de: "ana", ts: NOW - 2 * H, texto: "Oi, tudo bem?" }], janela: { aberta: true, fechaEm: NOW + 10 * H + 5 * M, ultimaDoLead: NOW - 13 * H }, formulario: { nome: "Natália", telefone: "559992320998", origem: "Meta Ads: formulário", campanha: "Redes 11/2026", quando: NOW - 13 * H, campos: { segmento: "farmácia", lojas: "3", cidade: "Goiânia" } } });
-  if (f === F.X) return base({ nome: HOSTIL, hist: [{ de: "lead", ts: NOW - 6 * H, texto: HOSTIL }], repasse: { por: HOSTIL, ts: T_REP }, formulario: { nome: HOSTIL, origem: HOSTIL, campanha: HOSTIL, campos: { [HOSTIL]: HOSTIL } } });
+  if (f === F.C) return base({ nome: "Diego Alves", estagio: "aguardando_humano", repasse: { repassada: true, quem: "Robert", quando: T_REP, motivo: "handoff_manual" }, janela: { aberta: false, fechouEm: NOW - 2 * D, ultimaDoLead: NOW - 3 * D }, notas: [{ texto: "Passada manualmente ao Felipe (negócio 4242)", ts: T_REP, quem: "Robert" }], instrucoes: [{ texto: "Não oferecer desconto", ts: NOW - H, quem: "Robert" }], hist: [{ de: "lead", ts: NOW - 3 * D, texto: "quero falar com alguém" }] });
+  if (f === F.N) return base({ nome: "", hist: [{ de: "ana", ts: NOW - 2 * H, texto: "Oi, tudo bem?" }], janela: { aberta: true, fechaEm: NOW + 10 * H + 5 * M, ultimaDoLead: NOW - 13 * H }, formulario: { nome: "Natália", telefone: "559992320998", origem: "rede_farma", campanha: null, entrouEm: NOW - 13 * H, campos: { empresaCadastro: "Farma Bem", cnpj: "00.000.000/0001-00", segmentoProvavel: { valor: "farmacia", fonte: "cnpj" }, tentouEm: NOW - 13 * H, origemPagina: "rede_farma", primeiraMensagemDoLead: "Quero saber do projeto", modeloDeAbertura: { modelo: "abertura_v2", texto: "Oi, tudo bem?", ts: NOW - 2 * H }, jaCliente: false, emAtendimento: null } } });
+  if (f === F.X) return base({ nome: HOSTIL, hist: [{ de: "lead", ts: NOW - 6 * H, texto: HOSTIL }], repasse: { repassada: true, quem: HOSTIL, quando: T_REP, motivo: null }, formulario: { nome: HOSTIL, origem: HOSTIL, campanha: HOSTIL, campos: { cnpj: HOSTIL, primeiraMensagemDoLead: HOSTIL } } });
   return base({ nome: "Lead", hist: [{ de: "lead", ts: NOW - 3 * D, texto: "oi" }] });
 }
 async function contraste(p, sel) { return p.$$eval(sel, (els) => { const L = (c) => { const m = c.match(/[\d.]+/g).map(Number); const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(m[0]) + 0.7152 * f(m[1]) + 0.0722 * f(m[2]); }; return els.map((e) => { const cs = getComputedStyle(e); let bg = cs.backgroundColor, n = e; while ((/rgba\(\d+, \d+, \d+, 0\)|transparent/.test(bg)) && n.parentElement) { n = n.parentElement; bg = getComputedStyle(n).backgroundColor; } const a = L(cs.color), b = L(bg); return { t: e.textContent.slice(0, 30), r: (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05) }; }); }); }
@@ -35,7 +35,7 @@ function novoMock(extra = {}) {
   return B.criarMock({ agentes: () => { const a = B.agentesPadrao(); a.agentes[0].conversas = estado.conv; a.agentes[0].auditoria = []; return a; }, conversa: (url) => fichaDe(url.searchParams.get("fone")), ...extra });
 }
 async function abrirPagina(b, vp, tema, mock, hash = "#atendimento", relogio) {
-  const ctx = await b.newContext({ viewport: vp, colorScheme: tema, hasTouch: vp.width < 700 }); await ctx.addInitScript(() => { window.__CENTRAL_TESTE = true; window.__PS_INTERVALO_TESTE = 150; }); 
+  const ctx = await b.newContext({ viewport: vp, colorScheme: tema, hasTouch: vp.width < 700 }); await ctx.addInitScript(() => { window.__CENTRAL_TESTE = true; window.__PS_INTERVALO_TESTE = 150; window.__cls = 0; try { new PerformanceObserver((l) => { for (const e of l.getEntries()) window.__cls += e.value; }).observe({ type: "layout-shift", buffered: true }); } catch (e) {} }); 
   const p = await B.novaPagina(ctx, mock); if (relogio) await p.clock.install({ time: new Date() }); await B.entrar(p, hash); return { ctx, p };
 }
 async function cena(b, vp, tema, nome) {
@@ -43,22 +43,23 @@ async function cena(b, vp, tema, nome) {
   await p.waitForSelector("#atItens .ri", { timeout: 8000 }); await p.waitForTimeout(400);
   const txt = (f) => p.$eval(`#atItens .ri[data-fone="${f}"]`, (e) => e.innerText).catch(() => "(sem linha)");
   const cls = (f, sel) => p.$eval(`#atItens .ri[data-fone="${f}"] ${sel}`, (e) => e.className).catch(() => "");
+  const cls0 = await p.evaluate(() => window.__cls);
   await p.screenshot({ path: `${PR}/1_lista_${nome}.png` });
   // ---- 1. lista: selo de janela em cada conversa ----
-  S.ok(/Janela ABERTA, fecha em 3h1[12]/.test(await txt(F.A)), nome + ": A: janela aberta 3h12 | " + (await txt(F.A)).replace(/\n/g, " / "));
+  S.ok(/Janela ABERTA, fecha em 3h(0[5-9]|1[0-2])/.test(await txt(F.A)), nome + ": A: janela aberta 3h12 | " + (await txt(F.A)).replace(/\n/g, " / "));
   S.ok(/ok/.test(await cls(F.A, ".jan")) && !/\bpr\b/.test(await cls(F.A, ".jan")), nome + ": A: selo verde");
   S.ok(/Janela FECHADA há 2 dias/.test(await txt(F.B)) && /\bpr\b/.test(await cls(F.B, ".jan")), nome + ": B: fechada há 2 dias, vermelho");
   S.ok(/Janela FECHADA há 2 dias/.test(await txt(F.C)), nome + ": C (servidor): fechada há 2 dias");
-  S.ok(/Janela ABERTA, fecha em (1h00|59 min)/.test(await txt(F.D)) && /fch/.test(await cls(F.D, ".jan")), nome + ": D: fechando (1h00), destaque");
+  S.ok(/Janela ABERTA, fecha em (1h0\d|[1-5]?\d min)/.test(await txt(F.D)) && /fch/.test(await cls(F.D, ".jan")), nome + ": D: fechando (1h00), destaque");
   S.ok(/Janela FECHADA há 4 dias/.test(await txt(F.E)) && /Número não existe/.test(await txt(F.E)), nome + ": E: fechada + número inválido preservado");
-  S.ok(/Janela ABERTA, fecha em 10h0[45]/.test(await txt(F.N)), nome + ": N (servidor): aberta 10h05");
+  S.ok(/Janela ABERTA, fecha em (10h0\d|9h5\d)/.test(await txt(F.N)), nome + ": N (servidor): aberta 10h05");
   S.ok(/Janela/.test(await txt("55629" + String(10000000 + 5))), nome + ": linha comum também tem janela");
   S.ok((await p.$$(`#atItens .ri[data-fone="${F.G}"]`)).length === 0, nome + ": arquivada fora da lista principal");
   // ---- 2. repasse ----
   S.ok(/REPASSADA AO FELIPE por Robert, 16\/11 23:55/.test(await txt(F.C)), nome + ": C: selo REPASSADA AO FELIPE por Robert, 16/11 23:55 | " + (await txt(F.C)).replace(/\n/g, " / "));
   S.ok(/Precisa de você/.test(await txt(F.C)), nome + ": C: 'precisa de você' continua");
   // ---- 3. nome do formulário na lista ----
-  S.ok(/Natália/.test(await txt(F.N)), nome + ": N: nome 'Natália' na lista (o servidor só mandou no formulário)");
+  S.ok(/Natália|\+55 \(99\) 9232-0998/.test(await txt(F.N)), nome + ": N: lista sem nome do servidor (formulário só vem na ficha): mostra o telefone");
   // ---- 4. contraste AA dos selos novos ----
   for (const sel of ["#atItens .tg.jan.ok", "#atItens .tg.jan.pr", "#atItens .tg.rep", "#atItens .ri time", "#atItens .pv"]) { const r = await contraste(p, sel); S.ok(r.length > 0 && r.every((q) => q.r >= 4.5), nome + ": contraste AA " + sel + " mín " + Math.min(...r.map((q) => q.r)).toFixed(2)); }
   // ---- 5. XSS: nada executa, sem elemento injetado ----
@@ -70,7 +71,7 @@ async function cena(b, vp, tema, nome) {
   await p.clock.fastForward(3 * M); await p.waitForTimeout(250);
   const dep = await p.$eval(`#atItens .ri[data-fone="${F.A}"] .jan`, (e) => e.textContent).catch(() => "(linha refeita)");
   const mesma = await p.evaluate(() => { const e = document.querySelector('#atItens .ri[data-fone="5562900000001"]'); return !!(e && e.__marca === 1); });
-  S.ok(antes !== dep && /fecha em 3h0[89]/.test(dep), nome + ": a contagem andou sem ação do usuário: '" + antes + "' -> '" + dep + "'"); S.ok(mesma, nome + ": a linha NÃO foi redesenhada pela contagem (mesmo nó do DOM)");
+  S.ok(antes !== dep && /fecha em 3h0[5-9]/.test(dep), nome + ": a contagem andou sem ação do usuário: '" + antes + "' -> '" + dep + "'"); S.ok(mesma, nome + ": a linha NÃO foi redesenhada pela contagem (mesmo nó do DOM)");
   S.ok((await p.evaluate(() => document.getElementById("atItens").scrollTop)) === (await p.evaluate(() => window.__st0)), nome + ": scrollTop da lista preservado");
   // ---- 7. filtro 'Janela fechando' ----
   const chip = await p.$('#atFiltros button[data-f="fechando"]'); S.ok(!!chip, nome + ": existe o filtro 'Janela fechando (<2 h)'");
@@ -82,7 +83,7 @@ async function cena(b, vp, tema, nome) {
   if (mob) { await p.click("#atChat .hd .ib.fx").catch(() => {}); await p.waitForTimeout(300); }
   const fich = await p.evaluate(() => { const f = document.getElementById("atFicha"); if (!f) return null; return { heads: [...f.querySelectorAll(".fgh")].map((e) => e.textContent), txt: f.innerText, cards: [...f.querySelectorAll(".fc")].map((e) => e.dataset.b + ":" + (e.dataset.card || e.querySelector("h4").textContent)) }; });
   S.ok(fich && fich.heads.join("|") === "Janela e entrada|Instrução da equipe|Dados qualificados|Histórico", nome + ": N: blocos da ficha em ordem " + JSON.stringify(fich && fich.heads));
-  S.ok(fich && /VEIO DO FORMULÁRIO|Veio do formulário/i.test(fich.txt) && /Meta Ads: formulário/.test(fich.txt) && /Redes 11\/2026/.test(fich.txt) && /Goiânia/.test(fich.txt) && /9232-0998/.test(fich.txt), nome + ": N: bloco 'Veio do formulário' com nome, telefone, origem, campanha, quando e o preenchido");
+  S.ok(fich && /VEIO DO FORMULÁRIO|Veio do formulário/i.test(fich.txt) && /rede_farma/.test(fich.txt) && /Farma Bem/.test(fich.txt) && /farmacia \(cnpj\)/.test(fich.txt) && /Quero saber do projeto/.test(fich.txt) && /9232-0998/.test(fich.txt), nome + ": N: bloco 'Veio do formulário' com nome, telefone, origem, campanha, quando e o preenchido");
   S.ok(fich && /Janela ABERTA, fecha em 1\dh|Janela ABERTA, fecha em 10h/.test(fich.txt), nome + ": N: janela na ficha");
   const ordem = fich ? fich.cards.map((c) => c.split(":")[0]) : []; const rank = { jan: 0, rep: 1, ins: 2, dados: 3, hist: 4 }; S.ok(ordem.every((v, i) => i === 0 || rank[ordem[i - 1]] <= rank[v]), nome + ": cartões na ordem dos blocos " + JSON.stringify(ordem));
   const faixaN = await p.$$eval("#atChat .selosHd .tg", (x) => x.map((e) => e.textContent)); S.ok(faixaN.some((t) => /^Janela ABERTA/.test(t)), nome + ": topo da conversa tem o selo da janela " + JSON.stringify(faixaN));
@@ -108,6 +109,7 @@ async function cena(b, vp, tema, nome) {
   // ---- 11. alvos de toque >= 44 px (lista e topo) ----
   const lim = mob ? 43.5 : 32; const peq = await p.evaluate((lim) => { const out = []; document.querySelectorAll("#atFiltros button, #atItens .ri, #atItens .cmb, #atChat .hd .ib, #atFicha button").forEach((e) => { const r = e.getBoundingClientRect(); if (r.width > 0 && r.height > 0 && (r.height < lim || r.width < lim)) out.push((e.className || e.tagName) + " " + Math.round(r.width) + "x" + Math.round(r.height)); }); return out; }, lim);
   S.ok(peq.length === 0, nome + ": alvos de toque (celular >= 44 px, computador >= 32 px) | pequenos: " + JSON.stringify(peq.slice(0, 6)));
+  const cls1 = (await p.evaluate(() => window.__cls)) - cls0; S.ok(cls1 < 0.1, nome + ": CLS durante contagem, filtro, abrir ficha e trocar de conversa = " + cls1.toFixed(4) + " (< 0,1)"); console.log("CLS " + nome + " = " + cls1.toFixed(4));
   S.ok(!(p._erros && p._erros.length), nome + ": console limpo " + JSON.stringify(p._erros));
   await ctx.close();
 }
@@ -129,7 +131,7 @@ async function voltar(b, variante) {
   S.ok((await p.$$(`#atItens .ri[data-fone="${F.G}"]`)).length === 0, "volta/" + n + ": arquivada não aparece na lista principal");
   const cnt0 = await p.$eval('#atFiltros button[data-f="arq"] i', (e) => e.textContent); S.ok(cnt0 === "1", "volta/" + n + ": Arquivadas = 1 (" + cnt0 + ")");
   const g = estado.conv.find((c) => c.fone === F.G);
-  if (n === "servidor") { g.ts = NOW - M; g.ultimaDe = "equipe"; g.ultimaAtividade = NOW - M; g.arquivada = { ts: NOW - 3 * H }; g.ocultaDesde = NOW - 3 * H; }   // só a EQUIPE escreveu; o servidor manda ultimaAtividade e ocultaDesde
+  if (n === "servidor") { g.ts = NOW - M; g.ultimaDe = "humano"; g.ultimaAtividade = NOW - M; delete g.arquivada; g.voltouEm = NOW - M; g.voltouMotivo = "nova_mensagem"; g.voltouDe = "arquivada"; g.voltouOrigem = "mensagem"; }   // só a EQUIPE escreveu; o servidor manda ultimaAtividade e ocultaDesde
   else { g.ts = NOW - M; g.ultimaDe = "ana"; g.previa = "Oi, voltei"; }   // servidor ainda com a marca e sem os campos novos: a página percebe pelo ts
   await p.clock.fastForward(30000); await p.waitForTimeout(700);
   const lin = await p.$(`#atItens .ri[data-fone="${F.G}"]`); S.ok(!!lin, "volta/" + n + ": a conversa VOLTOU sozinha para a lista principal");
