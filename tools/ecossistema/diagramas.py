@@ -10,7 +10,7 @@ D["mapa"] = dict(cols=4, titulo="Mapa do ecossistema: quem escreve onde",
  desc="O lead escreve no WhatsApp. A Meta entrega à Ana, que entende e decide. A Ana guarda o histórico e pede à Bia. A Bia é a única que escreve no Agendor e envia os avisos. As páginas de trabalho leem o Agendor ao vivo.",
  nodes=[N("lead","Lead","Anúncio, site, lista ou WhatsApp direto","n",0,0),
   N("meta","WhatsApp (Meta)","Número da Ana, janela de 24 h e modelos aprovados","n",1,0),
-  N("ana","Ana, SDR virtual","A IA entende e responde; regras fixas travam. Nunca escreve no Agendor","p",2,0,2),
+  N("ana","Ana, SDR Inbound virtual","A IA entende e responde; regras fixas travam. Nunca escreve no Agendor","p",2,0,2),
   N("hist","Histórico","Toda mensagem é guardada antes de qualquer ação","n",0,1),
   N("bia","Bia, a única que escreve","Confere as regras, escreve no Agendor, relê para confirmar e avisa a equipe","m",1,1,3),
   N("ag","Agendor, a fonte da verdade","Empresa, pessoa, negócio, etapa, notas e tarefas","g",0,2,2),
@@ -19,7 +19,7 @@ D["mapa"] = dict(cols=4, titulo="Mapa do ecossistema: quem escreve onde",
  edges=[("lead","meta",""),("meta","ana",""),("ana","hist","grava"),("ana","bia","pede"),("bia","ag","escreve"),("bia","av","avisa"),("ag","pag","lê")])
 
 D["jornada"] = dict(cols=4, titulo="Jornada do lead novo até o destino final",
- desc="O lead novo conversa com a Ana, que qualifica. Quando qualifica, o negócio da Ana vira Ganho e nasce um negócio no SDR Inbound, na etapa Ana qualificou. O Arena só nasce quando o SDR qualifica pela Hoje. Quem não serve vai a perdido; quem some entra em toques de retomada.",
+ desc="O lead novo conversa com a Ana, que qualifica. Quando qualifica, o negócio da Ana vira Ganho e nasce um negócio no SDR Inbound, na etapa Ana qualificou. O Arena só nasce quando o SDR qualifica pela página Hoje. Quem não serve vai a perdido; quem some entra em toques de retomada.",
  nodes=[N("lead","Lead novo","Anúncio, site ou WhatsApp direto","n",0,0),
   N("ana","Ana conversa","Nome, segmento, CNPJ e apresentação completa do projeto","p",1,0,2),
   N("som","Lead some","Lead some: retorno combinado ou toques; qualquer resposta cancela o que falta","x",3,0),
@@ -28,8 +28,8 @@ D["jornada"] = dict(cols=4, titulo="Jornada do lead novo até o destino final",
   N("gan","Ganho na Ana","Ao qualificar, o negócio da Ana vira Ganho (qualificação)","g",0,2),
   N("rep","SDR Inbound","Novo negócio na etapa Ana qualificou, com o SDR como dono","p",1,2,2),
   N("per","Perdido, com motivo","Sem interesse, não contatar ou fora do perfil","x",3,2),
-  N("clo","Arena","Só nasce quando o SDR qualifica pela Hoje; ganho aqui é venda","g",0,3,2),
-  N("sdr","SDR na Hoje","Cadência D0 a D4, ligação e qualificação","n",2,3),
+  N("clo","Arena","Só nasce quando o SDR qualifica pela página Hoje; ganho aqui é venda","g",0,3,2),
+  N("sdr","SDR na página Hoje","Cadência D0 a D4, ligação e qualificação","n",2,3),
   N("rec","Recuperação","Volta depois de 14 dias, se o motivo permitir","n",3,3)],
  edges=[("lead","ana",""),("ana","qual",""),("ana","som",""),("som","sem",""),("qual","gan","qualificou"),("qual","rep","novo negócio"),("qual","per","descarta"),("rep","sdr","trabalha"),("sdr","clo",""),("per","rec","")],
  ordem_narrow=["lead","ana","qual","rep","sdr","gan","clo","per","rec"])
@@ -86,7 +86,7 @@ D["volta"] = dict(cols=4, titulo="Recuperação e reativação: quando o lead vo
   N("no","Se perder de novo","Pode voltar com espera maior a cada nova perda","x",2,3,2)],
  edges=[("s1","reg",""),("s2","reg",""),("s3","reg",""),("s4","reg",""),("reg","fila",""),("fila","cad",""),("cad","ok",""),("cad","no","")])
 
-D["avisos"] = dict(cols=4, titulo="Aviso garantido: da regra à confirmação de entrega",
+D["avisos"] = dict(cols=4, titulo="Aviso: da regra à confirmação de entrega",
  desc="Um evento passa pelas regras da Ana e da Bia. A Bia envia no WhatsApp e só conta como enviado se saiu de verdade. Se o envio falhar, o aviso fica em uma fila durável por 24 horas e um vigia reenvia a cada 5 minutos. Falha de entrega recusada pela Meta ainda não é reenviada.",
  nodes=[N("ev","Evento na conversa","Lead novo, pediu pessoa, qualificado, irritado, sem resposta","n",0,0,2),
   N("ra","Regras da Ana","Já avisei este lead? Limite por hora? Silêncio da noite?","m",2,0,2),
@@ -101,10 +101,10 @@ D["avisos"] = dict(cols=4, titulo="Aviso garantido: da regra à confirmação de
  edges=[("ev","ra",""),("ra","no","noite"),("ra","pd","dia"),("pd","rb",""),("rb","en",""),("en","sa",""),("sa","si","sim"),("sa","nao","não"),("nao","vi","")])
 
 D["funis"] = dict(cols=4, titulo="Mapa dos funis do Agendor",
- desc="A Ana registra a conversa no funil Ana SDR IA. Quando a Ana qualifica, nasce um negócio no SDR Inbound (etapa Ana qualificou). SDR Outbound e Inbound qualificam para o Arena pela Hoje. O Arena leva ao Pós-venda, e o cliente que não repõe passa pela Reativação e volta ao SDR.",
+ desc="A Ana registra a conversa no funil Ana SDR IA. Quando a Ana qualifica, nasce um negócio no SDR Inbound (etapa Ana qualificou). SDR Outbound e Inbound qualificam para o Arena pela página Hoje. O Arena leva ao Pós-venda, e o cliente que não repõe passa pela Reativação e volta ao SDR.",
  nodes=[N("ana","Ana SDR IA","Registro da conversa. Ao qualificar, vira Ganho e nasce o negócio no SDR Inbound","p",1,0,2),
-  N("inb","SDR Inbound","D0 a D4 e Fim. O lead chega sozinho","n",0,1,2),
-  N("out","SDR Outbound","D1 a D10 e Fim. A Life B vai buscar","n",2,1,2),
+  N("inb","SDR Inbound","D0 a D4 e Fim. O lead chega sozinho e o SDR atende pela página Hoje","n",0,1,2),
+  N("out","SDR Outbound","D1 a D10 e Fim. A Life B vai buscar; o SDR trabalha pela página Hoje","n",2,1,2),
   N("are","Arena","Conexão, Diagnóstico/Solução, Negociação. Ganho aqui é venda de verdade","g",1,2,2),
   N("pv","Pós-venda","Ciclo Ativo, Contato e Negociação de Reposição","n",0,3,2),
   N("rea","Reativação","Cliente que não repôs no prazo; se perder, volta ao SDR. Conexão, Diagnóstico/Solução, Negociação","n",2,3,2)],
@@ -132,8 +132,8 @@ D["camada"] = dict(cols=3, titulo="Como a Bia conversa com o Agendor",
   N("e","5. Se esgotar","Para de insistir e avisa a gestão, na segunda ocorrência seguida","x",1,1,2)],
  edges=[("a","b",""),("b","c",""),("c","d",""),("d","e","")])
 
-D["central"] = dict(cols=6, titulo="A Central e como ela se conecta",
- desc="A Central é o painel de controle da gestão. Ela controla a Ana (assumir, instruir, pausar), controla a Bia (interruptores, filas, folga, histórico) e tem atalhos para a Hoje, o Dash, o Canal e o Life B Solicita. A Ana pede à Bia, e a Bia escreve no Agendor.",
+D["central"] = dict(cols=6, titulo="A página Central e como ela se conecta",
+ desc="A página Central é o painel de controle da gestão. Ela controla a Ana (assumir, instruir, pausar), controla a Bia (interruptores, filas, folga, histórico) e tem atalhos para a página Hoje, o Dash, o Canal e o Life B Solicita. A Ana pede à Bia, e a Bia escreve no Agendor.",
  nodes=[N("c","Central","Painel de controle da gestão, com login. Cada mudança pede motivo, fica no histórico e pode ser desfeita","p",0,0,6),
   N("ana","Ana","Atendimento: assumir, instruir, devolver, pausar","n",0,1),
   N("bia","Bia","Chaves, filas, folga e histórico","m",1,1),
@@ -141,7 +141,7 @@ D["central"] = dict(cols=6, titulo="A Central e como ela se conecta",
   N("dash","Dash","Atalho; custo e saúde","n",3,1),
   N("canal","Canal","Conversa da gestão com o assistente","n",4,1),
   N("sol","Solicita","Atalho para pedidos","n",5,1),
-  N("ag","Agendor, a fonte da verdade","A Ana pede à Bia; a Bia escreve; a Central e a Hoje leem","g",0,2,3)],
+  N("ag","Agendor, a fonte da verdade","A Ana pede à Bia; a Bia escreve; a página Central e a página Hoje leem","g",0,2,3)],
  edges=[("c","ana","controla",),("c","bia","controla","w"),("c","hoje","","w"),("c","dash","","w"),("c","canal","","w"),("c","sol","","w"),("ana","bia",""),("bia","ag","escreve"),("hoje","ag","lê","w")],
  ordem_narrow=["c","ana","bia","ag","hoje","dash","canal","sol"])
 
@@ -160,14 +160,14 @@ if __name__ == "__main__":
     print(ok, "/", len(D))
 
 D["hoje"] = dict(cols=4, titulo="Hoje: da fila do SDR ao negócio no Arena",
- desc="O SDR trabalha a fila da página Hoje, por listas, sem travas de horário. Ao qualificar pela Hoje, a Bia cria o negócio no funil certo, o Arena. Quem não serve vai a perdido com motivo; quem precisa de tempo é congelado.",
+ desc="O SDR trabalha a fila da página Hoje, por listas, sem travas de horário. Ao qualificar pela página Hoje, a Bia cria o negócio no funil certo, o Arena. Quem não serve vai a perdido com motivo; quem precisa de tempo é congelado.",
  nodes=[N("fila","Fila por listas","Leads do SDR Inbound e Outbound; tarefas atrasadas lidas aos poucos","n",0,0,2),
-  N("sdr","SDR trabalha na Hoje","Liga, anota, completa dados e decide, sem horário travado","p",2,0,2),
+  N("sdr","SDR trabalha na página Hoje","Liga, anota, completa dados e decide, sem horário travado","p",2,0,2),
   N("q","Qualificou","Pela Hoje, com representante escolhido","g",0,1,2),
   N("per","Perdido, com motivo","Sai da fila e o motivo é registrado","x",2,1,2),
   N("bia","Bia cria o negócio","No funil certo, e relê o Agendor para confirmar","m",0,2,2),
   N("rec","Volta depois","Motivo recuperável: nasce negócio novo no prazo","n",2,2,2),
-  N("are","Arena","O representante recebe o lead e vende","g",0,3,2)],
+  N("are","Arena","O representante de campo recebe o lead e vende","g",0,3,2)],
  edges=[("fila","sdr",""),("sdr","q","qualifica"),("sdr","per","descarta"),("q","bia",""),("per","rec",""),("bia","are","")],
  ordem_narrow=["fila","sdr","q","bia","are","per","rec"])
 
@@ -183,3 +183,13 @@ D["dash"] = dict(cols=4, titulo="Dash: de onde vêm os números",
   N("a","Anúncios","Resultado das campanhas","n",2,2),
   N("g","Agentes","Custo e métricas da Ana e da Bia","n",3,2)],
  edges=[("ag","dash",""),("ads","dash",""),("agt","dash",""),("rep","dash",""),("dash","v",""),("dash","s",""),("dash","a",""),("dash","g","")])
+
+
+D["autom"] = dict(cols=4, titulo="Automações no CRM: quem dispara, o que faz e com que regra",
+ desc="Um relógio, um evento do Agendor ou uma ação da página Hoje dispara a automação. As regras e o modo (desligada, sombra ou ao vivo) decidem se ela age. A Bia escreve no Agendor e relê para confirmar. Depois avisa quem precisa agir, registra e alerta a gestão se falhar.",
+ nodes=[N("t","Dispara","Relógio (a cada minuto, 5 minutos ou diário), evento do Agendor ou ação da página Hoje","n",0,0,2),
+  N("m","Modo e regras","Desligada, em sombra (só simula e relata) ou ao vivo; horário, dia útil e limites por rodada e por dia","m",2,0,2),
+  N("b","Bia age no CRM","Cria e fecha tarefas, move etapa, cria negócio e distribui; relê o Agendor para confirmar","p",2,1,2),
+  N("a","Avisa e registra","Aviso a quem precisa agir, com registro do autor","n",0,1,2),
+  N("g","Alerta à gestão","Se a rotina falhar ou esgotar as tentativas","x",0,2,4)],
+ edges=[("t","m",""),("m","b",""),("b","a",""),("a","g","")])

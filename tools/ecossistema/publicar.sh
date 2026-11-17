@@ -16,6 +16,7 @@ roda "🧪 1/4 estrutura, links, nomes proibidos, segredos e JS (jsdom)" estatic
 roda "🖼️ 2/4 visual no Chromium: 5 larguras, claro e escuro, sem rolagem lateral, contraste, desenhos" visual.mjs
 echo "🔗 pós-deploy (atualizar_versao, marcador e vigia)"; bash tests/ecossistema/pos_deploy.test.sh | tail -2 | grep -q " 0 falhou" || { echo "❌ ABORTADO: pos_deploy.test.sh falhou"; exit 1; }
 roda "🕹️ 3/4 interação: menu, hash, posição ao atualizar" interacao.mjs
+roda "🧩 3a/4 página dentro de um iframe (aba Ecossistema da Central): sem recarga, sem tela cheia, slides navegáveis" iframe.mjs
 roda "📽️ 3b/4 apresentação em slides: sem rolagem em 6 telas, setas, toque, tema, Esc" apresentacao.mjs
 echo "♿ 4/4 liberação manual: o auditor independente e a auditoria visual dos prints liberaram?"; [ "${ECO_AUDITOR_OK:-}" = "sim" ] || { read -r -p "(responda sim) > " R; [ "$R" = "sim" ] || { echo "❌ ABORTADO: sem liberação do auditor"; exit 1; }; }
 # ---- TRAVAS DE GIT ----

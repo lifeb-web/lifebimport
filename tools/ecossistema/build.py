@@ -51,7 +51,7 @@ D5=svg([
 ],[("a","b",""),("b","c",""),("c","d",""),("d","e","")],"a5")
 def fig(s,label): return f'<div class="svgw v item" role="img" aria-label="{label}">{s}</div>'
 H=f'''<section class="sec" id="ana">
-<h2><span class="n">16</span>A Ana, a SDR virtual do WhatsApp</h2>
+<h2><span class="n">16</span>A Ana, o SDR Inbound virtual (IA) do WhatsApp</h2>
 <p class="lead">A Ana é a SDR do inbound: conversa com o lead pelo número dela, a qualquer hora, e tem um objetivo só: <b>qualificar</b>. Ela se apresenta como "Ana, da equipe Life B", apresenta o projeto Mega Vision USA (exposição estratégica, categorizada e personalizada de produtos de alto giro, que trabalha como vendedor silencioso na loja), entende a loja e entrega o lead pronto ao especialista. Esta seção mostra como ela funciona por dentro: quem fala com quem, o caminho de cada mensagem, como ela conversa com o Agendor, como os avisos nunca se perdem e como tudo fica guardado na nuvem.</p>
 
 <h3>Quem fala com quem</h3>

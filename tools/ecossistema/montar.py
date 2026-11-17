@@ -19,11 +19,11 @@ def sem_hashes(h):
 
 def montar():
     NAV.clear()
-    corpo = [c1.s_inicio(), c1.s_status(), c1.s_checklist(), c1.s_visao(), c1.s_entrada(), c1.s_ana(), c1.s_ana2(), c1.s_destinos(),
+    corpo = [c1.s_inicio(), c1.s_quem(), c1.s_status(), c1.s_checklist(), c1.s_visao(), c1.s_entrada(), c1.s_ana(), c1.s_ana2(), c1.s_destinos(),
              c2.s_cadencia(), c2.s_recuperacao(), c2.s_bia(), c2.s_automacoes(), c2.s_crm(), c2.s_hoje(), c2.s_central(), c2.s_outras(), c2.s_meta(),
              c3.s_regras(), c3.s_seguranca(), c3.s_versoes(), c3.s_observ(), c3.s_duvidas(), c3.s_sobre()]
     # a capa foi registrada no NAV depois de status (ordem de chamada); reordena para a ordem real do documento
-    ordem = ["inicio", "status", "checklist", "visao", "entrada", "ana", "ana-seguranca", "destinos", "cadencia", "recuperacao", "bia", "automacoes", "crm", "hoje", "central", "outras", "meta", "regras", "seguranca", "versoes", "observ", "duvidas", "sobre"]
+    ordem = ["inicio", "quem", "status", "checklist", "visao", "entrada", "ana", "ana-seguranca", "destinos", "cadencia", "recuperacao", "bia", "automacoes", "crm", "hoje", "central", "outras", "meta", "regras", "seguranca", "versoes", "observ", "duvidas", "sobre"]
     d = {i: (g, i, t) for g, i, t in NAV}
     nav = [d[i] for i in ordem]
     # números das seções = posição real
@@ -63,7 +63,7 @@ def montar():
 <meta name="color-scheme" content="light dark">
 <meta name="robots" content="noindex,nofollow,noarchive">
 <meta name="versao" content="{VERSAO}">
-<meta name="description" content="Como a operação comercial da Life B funciona: Ana (SDR virtual), Bia, Agendor, funis, cadência, páginas de trabalho, segurança e status das entregas.">
+<meta name="description" content="Como a operação comercial da Life B funciona: Ana (SDR Inbound virtual), Bia, Agendor, funis, cadência, páginas de trabalho, segurança e status das entregas.">
 <link rel="icon" href="/favicon-32.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <script>try{{var t=localStorage.getItem('eco.tema');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}}catch(e){{}}</script>

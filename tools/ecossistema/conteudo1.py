@@ -10,15 +10,15 @@ def s_inicio():
     corpo = (
       '<div class="hero-b"><div class="hero-t"><p class="eyebrow">Guia do projeto · Life B Importadora</p>'
       '<p class="h1" role="presentation">Ecossistema Life B</p>'
-      '<p class="hero-p">O mapa completo da operação comercial: como o lead chega, como a Ana (SDR virtual no WhatsApp) e a Bia (assistente de operação) trabalham, onde cada informação é escrita e quais regras mantêm tudo em ordem. Feito para a equipe, para parceiros e para quem está conhecendo a empresa agora.</p>'
+      '<p class="hero-p">O mapa completo da operação comercial: como o lead chega, como a Ana (SDR Inbound virtual no WhatsApp) e a Bia (assistente de operação) trabalham, onde cada informação é escrita e quais regras mantêm tudo em ordem. Feito para a equipe, para parceiros e para quem está conhecendo a empresa agora.</p>'
       '<div class="chips"><span class="chip">Versão '+__import__("conteudo3").VERSAO+' · atualizado em 16/11/2026</span><span class="chip">Sem dados pessoais de clientes</span><span class="chip">Conferido no código e nos painéis</span></div>'
       '<div class="hero-a"><a class="btn pri" href="#status">Ver o status de hoje</a><button type="button" class="btn" data-apres>Apresentar em tela cheia</button></div></div></div>'
       + stats([(c["ok"], "entregas no ar e conferidas", "ok"), (c["te"], "prontas e em implantação (ainda não no ar)", "te"), (c["pl"] + c["of"] + c["lm"], "planejadas, desligadas de propósito ou com limite conhecido", "pl"), (c["de"], "dependem de decisão da gestão", "de")])
       + '<h3 class="mt">Em 1 minuto</h3>'
       + grid([
         card("A conversa", ul(["A <b>Ana</b> atende leads no WhatsApp, 24 horas por dia, apresenta o projeto, qualifica e passa ao time comercial.", "Quem entende o lead é a IA; quem trava o que pode ser dito e feito são regras fixas, que não dependem da IA.", "Quem some recebe toques de retomada; qualquer resposta cancela o que falta."])),
-        card("O registro", ul(["O <b>Agendor</b> (CRM) é a fonte da verdade: se está lá, é o que vale.", "A Ana decide; a <b>Bia</b> é a única que escreve no Agendor, e só diz \"feito\" depois de reler.", "Quando a Ana qualifica, o negócio dela vira Ganho e nasce um negócio no SDR Inbound (etapa \"Ana qualificou\", dono SDR). O Arena só nasce quando o SDR qualifica pela Hoje."])),
-        card("O trabalho", ul(["O SDR trabalha na página <b>Hoje</b>; a gestão controla pela <b>Central</b>; o representante usa o <b>Painel do Representante</b>; os números ficam no <b>Dash</b>.", "A Bia avisa a equipe pelo WhatsApp, com botões, no horário certo."])),
+        card("O registro", ul(["O <b>Agendor</b> (CRM) é a fonte da verdade: se está lá, é o que vale.", "A Ana decide; a <b>Bia</b> é a única que escreve no Agendor, e só diz \"feito\" depois de reler.", "Quando a Ana qualifica, o negócio dela vira Ganho e nasce um negócio no SDR Inbound (etapa \"Ana qualificou\", dono SDR). O Arena só nasce quando o SDR qualifica pela página Hoje."])),
+        card("O trabalho", ul(["O SDR trabalha na página <b>Hoje</b>; a gestão controla pela página <b>Central</b>; o representante usa o <b>Painel do Representante</b>; os números ficam no <b>Dash</b>.", "A Bia avisa a equipe pelo WhatsApp, com botões, no horário certo."])),
         card("A segurança", ul(["Nada vai ao ar sem testes, auditoria independente, cópia de segurança e o roteiro único de publicação.", "Falha de envio de aviso entra numa fila durável e é reenviada sozinha; falha de entrega recusada pela Meta ainda não (planejado).", "A gestão tem interruptores de emergência em cada regra."])),
       ]))
     NAV.append(("Começar", "inicio", "Capa e resumo"))
@@ -26,26 +26,16 @@ def s_inicio():
             f'<h2 id="h-inicio" class="sr">Capa e resumo do Ecossistema Life B</h2>{corpo}</div></section>')
 
 def s_status():
-    ok = [
-      ("Ana", "Conversa completa, voz em áudio (ElevenLabs) quando o lead manda áudio, treinamento da diretoria aplicado desde 13/11, humanização (digitando e pausas), cadência de retomada, encerramento educado de quem está fora do perfil e instrução da equipe pela Central (a Ana guarda a instrução e usa na próxima resposta). Camada de entrega para falha da Meta (131049) com reenvio por modelo de utilidade (patch 1.3). Abertura, apresentação em capítulos, qualificação e repasse; voz; assumir, instruir e devolver pela Central; vigia do webhook; custo no Dash; número do time só quando o lead pede; lojista nunca descartado por engano; cadência de abertura em poucos toques."),
-      ("Bia", "Agente interno (WhatsApp e CRM Agendor), avisos ao time, motores proativos e painel do representante. Aviso NOVO LEAD com vigia de reenvio, pacote do Arena e servidor do Hoje 2.0 em sombra, sem uso real. Antes (14/11): trava de folga que não segura gestão, administradores e SDR; funil da Ana por nome de etapa; empresa existente vinculada por CNPJ; avisos da Ana ao SDR das 7h às 21h; compatível com a Ana atual."),
-      ("Central", "Atendimento com tela cheia, instruções, 👍/👎; pacote de hoje: link por aba, rolagem preservada, exportar conversa, simulador em chat e login que persiste."),
-      ("Hoje", "Mesa do SDR sem travas de horário, fila por listas, leitura incremental de tarefas atrasadas e qualificação que cria o negócio no funil certo. Também: limite de leads por clique, minimizar o lead, observação do SDR e balão lilás. Espelho do Hoje 2.0 em sombra, sem uso real."),
-      ("SDR e cadência", "Cadência por dia útil, repasse com trava, inbound direto, Subir lista, enriquecimento por CNPJ e voltas ao SDR."),
-      ("Demais", "Painel do Representante, Dash, Canal, monitoria da Ana e roteiro único de publicação."),
+    import json as _j, os as _o
+    est = _j.load(open(_o.path.join(_o.path.dirname(_o.path.abspath(__file__)), "estado.json"), encoding="utf-8"))["componentes"]
+    ok = [(c["nome"], "; ".join(c["no_ar"]) + ".") for c in est if c["no_ar"]]
+    ok.append(("SDR e cadência", "Cadência por dia útil, repasse com trava, inbound direto, Subir lista, enriquecimento por CNPJ e voltas ao SDR."))
+    te = [(c["nome"], "; ".join(c["implantacao"]) + ".") for c in est if c["implantacao"]] + [
+      ("Painel do Representante (nova recarga)", "O painel já está no ar; falta só o pacote novo, com recarga em horário comercial, que aguarda auditoria."),
+      ("Este Ecossistema", "Atualizado, com apresentação em slides; publica depois do teste visual e do auditor independente."),
     ]
-    te = [
-      ("Ana: pacote de correções", "A instrução da equipe manda e encerra; fora do perfil passa a incluir vendedor de sistema; CNPJ baixado tratado. Pronto, ainda não no ar."),
-      ("Central: pacote de botões", "Botões, selos do CRM e lista leve. Pronto, ainda não no ar."),
-      ("Painel do Representante (nova recarga)", "O painel já está no ar; o que falta é só o pacote novo, com recarga em horário comercial e só de quem abriu a página, que aguarda auditoria."),
-      ("Este Ecossistema", "Atualizado e com o modo apresentação em slides; publica depois do teste visual e do auditor independente."),
-    ]
-    pl = [
-      ("Ana", "Cadência de 3 toques com mensagens de utilidade; juízes de IA como guarda-corpo em tempo real; texto pronto só como saudação; objeções por IA; mídia nunca vira fala; personalização pelo CNPJ."),
-      ("Central", "Controles manuais completos (ganho, perdido, repasse), silenciar a Bia por pessoa e desfazer em tudo."),
-      ("Bia", "Observação do SDR só do SDR, limite por clique também no servidor, reenvio quando a Meta recusa a entrega, backup fora do ambiente de trabalho."),
-      ("Hoje", "Hoje 2.0 (página lendo do espelho, depois de 5 dias úteis com divergência abaixo de 0,5%), blindagem de erros, modo foco e raia do closer."),
-      ("Dash", "Dash expandido com mais indicadores do SDR e da Ana."),
+    pl = [(c["nome"], "; ".join(c["planejado"]) + ".") for c in est if c["planejado"]] + [
+      ("Bia", "Observação do SDR só do SDR, limite por clique no servidor, reenvio quando a Meta recusa a entrega, backup fora do ambiente de trabalho."),
       ("Plataforma", "Mineração de leads, arquivar modelos antigos da Meta, revisão das cadências com dados reais."),
     ]
     def col(tit, k, itens):
@@ -68,20 +58,20 @@ def s_visao():
     vocab = [
       ["Life B Importadora", "Importadora que vende para drogarias e supermercados, por meio de representantes de campo."],
       ["Representante", "Vendedor de campo: atende as lojas, negocia e fecha pedidos."],
-      ["SDR", "Profissional de pré-venda: faz os primeiros contatos, descobre quem tem interesse e entrega ao time de vendas. A <b>Ana</b> é a SDR virtual do WhatsApp."],
+      ["SDR", "Profissional de pré-venda: faz os primeiros contatos, descobre quem tem interesse e entrega ao time de vendas. A <b>Ana</b> é o SDR Inbound virtual (IA) do WhatsApp."],
       ["Closer", "Especialista que atende e fecha os leads de rede e de fora de Goiás e do Distrito Federal."],
       ["Lead e lead qualificado", "Lead é a empresa com interesse ou potencial de compra. Qualificado é o que confirmou interesse e foi entregue ao time de vendas."],
       ["Cadência", "Sequência de contatos em dias úteis combinados."],
       ["Outbound e Inbound", "Outbound: a Life B vai atrás do lead. Inbound: o lead chega sozinho, por anúncio ou formulário."],
       ["Funil e etapa", "Sequência de etapas pela qual um negócio avança no Agendor."],
-      ["Arena", "O funil de vendas: onde o time de vendas conduz o lead qualificado até a venda."],
+      ["Arena", "O funil de vendas dos representantes de campo (e do closer, em redes). A IA não vende: a venda é feita por pessoas."],
       ["Agendor", "O CRM da empresa (clientes, negócios e tarefas). É a fonte da verdade."],
       ["Bia", "A assistente de operação: aplica as regras, escreve no Agendor, avisa a equipe pelo WhatsApp e faz o trabalho repetitivo."],
       ["Central, Hoje, Painel do Representante e Dash", "As páginas de trabalho: controle, mesa do SDR, carteira de cada representante e painel de números."],
     ]
     pecas = [
       ["Agendor", "Clientes, negócios, tarefas e funis. Fonte da verdade.", "SDR, closer, representantes e gestão"],
-      ["Ana", "SDR virtual que conversa pelo WhatsApp, qualifica e registra. Serviço próprio na nuvem, 24 horas.", "Leads (quem conversa); gestão (quem controla)"],
+      ["Ana", "SDR Inbound virtual que conversa pelo WhatsApp, qualifica e registra. Serviço próprio na nuvem, 24 horas.", "Leads (quem conversa); gestão (quem controla)"],
       ["Bia", "A única que escreve no Agendor e envia avisos. Roda o tempo todo e conversa com a equipe pelo WhatsApp.", "Gestão, SDR, closer e representantes"],
       ["Hoje e Lista", "Mesa de trabalho do SDR e envio de listas de empresas.", "SDR"],
       ["Central", "Painel de controle com login: saúde, interruptores, atendimento da Ana, filas e calendário de folga.", "Gestão (muda tudo), administradores (risco baixo e médio), SDR (só lê)"],
@@ -120,7 +110,7 @@ def s_entrada():
     corpo = (grid([
       card("Inbound: anúncio e site", ul([
         "As páginas de captação ficam em projetojlbv.com.br. Quando alguém preenche o formulário, a Bia cria empresa, pessoa e negócio no começo do funil SDR Inbound, sem duplicar quem já existe.",
-        "O aviso ao SDR traz contato, empresa, anúncio de origem e o prazo: 15 minutos em dia útil, das 8h às 18h. Fora do horário, o lead espera na Hoje até o próximo dia útil às 8h.",
+        "O aviso ao SDR traz contato, empresa, anúncio de origem e o prazo: 15 minutos em dia útil, das 8h às 18h. Fora do horário, o lead espera na página Hoje até o próximo dia útil às 8h.",
         "Quando o link do anúncio chega sem a campanha, o aviso diz \"campanha não identificada\" em vez de inventar.",
         "A campanha de Redes pergunta o número de lojas; nas demais, a Ana presume uma loja."]), p="ok"),
       card("WhatsApp direto para a Ana", ul([
@@ -144,9 +134,9 @@ def s_entrada():
 def s_ana():
     capitulos = "Impulso, modelo sem caixa fechada, espaço, público feminino, case, implantação, acompanhamento do giro e indústria. Nunca repete um capítulo."
     corpo = (
-      '<p>A Ana é a SDR virtual da Life B. Conversa com o lead pelo número dela e tem um objetivo só: <b>qualificar</b>. Ela se apresenta como \"Ana, da equipe Life B\", apresenta o projeto Mega Vision USA (exposição estratégica, categorizada e personalizada de produtos de alto giro, que trabalha como vendedor silencioso na loja), entende a loja e entrega o lead pronto ao especialista.</p>'
+      '<p>A Ana é o SDR Inbound virtual (IA) da Life B. Conversa com o lead pelo número dela e tem um objetivo só: <b>qualificar</b>. Ela se apresenta como \"Ana, da equipe Life B\", apresenta o projeto Mega Vision USA (exposição categorizada e personalizada de produtos de alto giro na loja), entende a loja e entrega o lead pronto ao especialista.</p>'
       + '<h3 class="mt">Do lead novo ao destino</h3>' + fig("jornada")
-      + '<p class="legenda">Quando a Ana qualifica, o negócio dela vira Ganho (qualificação, nunca venda) e nasce um negócio no SDR Inbound, na etapa "Ana qualificou", com o SDR como dono. O Arena só nasce quando o SDR qualifica pela Hoje. Quem não serve vai a perdido com motivo; quem some entra nos toques de retomada. Os detalhes estão na seção Funis do Agendor.</p>'
+      + '<p class="legenda">Quando a Ana qualifica, o negócio dela vira Ganho (qualificação, nunca venda) e nasce um negócio no SDR Inbound, na etapa "Ana qualificou", com o SDR como dono. O Arena só nasce quando o SDR qualifica pela página Hoje. Quem não serve vai a perdido com motivo; quem some entra nos toques de retomada. Os detalhes estão na seção Funis do Agendor.</p>'
       + '<h3 class="mt">O fluxo da conversa</h3>'
       + fluxo([("1. Nome e tipo de loja", "Pergunta o nome e o segmento."), ("2. CNPJ", "Pede uma vez; se o lead só responde \"sim\", pede de outro jeito, no máximo 2 vezes."), ("3. Apresentação completa", "8 capítulos curtos, 2 por turno, com uma pergunta leve de reação. Pergunta ou objeção do lead é respondida primeiro.", "m"), ("4. Lojas e decisor", "Lojas só na campanha de Redes; nas demais, presume uma. O decisor vem no fim."), ("5. Repasse", "Diz o que acontece a seguir e passa ao especialista.", "g")])
       + '<p class="legenda">Capítulos da apresentação: ' + capitulos + ' Respostas sobre implantação e reposição dizem que o projeto prevê isso e que o especialista avalia como seria na loja: a Ana não promete que a Life B vai fazer.</p>'
@@ -174,9 +164,9 @@ def s_ana():
       + fluxo([("Gatilhos", "Lead pede uma pessoa, mídia ilegível, resposta bloqueada, dúvida fora da base, irritação ou insistência depois do repasse."), ("Equipe assume ou instrui", "Pela Central, no mesmo número. Assumir faz a Ana se calar; instruir faz ela agir sem a equipe assumir.", "m"), ("Devolve à Ana", "Com um clique. Ela relê tudo, inclusive o que a equipe escreveu, e segue.", "g")])
       + grid([
         card("Instrução não é mensagem", "<p>Há dois botões: \"Só orientar\" (a Ana guarda e usa na próxima resposta) e \"Orientar e mandar agora\" (age na hora, uma única vez). A instrução pode ser digitada ou gravada em áudio, e, em regra, o lead não percebe que ela existiu.</p>", p="ok"),
-        card("Ficha do lead na Central", "<p>Mostra onde o lead está: etapa do funil, momento da conversa e cadência (por exemplo, \"toque 2\"), progresso da qualificação (segmento, CNPJ, empresa, projeto apresentado, quem decide), sinais, dúvidas e anotações.</p>", p="ok"),
+        card("Ficha do lead na página Central", "<p>Mostra onde o lead está: etapa do funil, momento da conversa e cadência (por exemplo, \"toque 2\"), progresso da qualificação (segmento, CNPJ, empresa, projeto apresentado, quem decide), sinais, dúvidas e anotações.</p>", p="ok"),
       ], 2))
-    return sec("ana", "Ana, a SDR virtual", "Ana: a conversa", "Fluxo, apresentação, qualificação, portões, retomada e intervenção da equipe.", corpo)
+    return sec("ana", "Ana, o SDR Inbound virtual (IA)", "Ana: a conversa", "Fluxo, apresentação, qualificação, portões, retomada e intervenção da equipe.", corpo)
 
 def s_ana2():
     ia = tabela(["Quem", "O que faz", "Estado"], [
@@ -205,7 +195,7 @@ def s_ana2():
       + '<h3 class="mt">Monitoria e aprendizado</h3>'
       + grid([
         card("Monitoria", "<p>Cada resposta da Ana em conversa real é lida e, se preciso, corrigida orientando a próxima resposta. Revisão independente e prova ao vivo da orientação estão na fila.</p>", p="ok"),
-        card("Aprendizado supervisionado", "<p>Cada 👍 ou 👎 na Central vira exemplo. Uma análise diária propõe melhorias e nada muda sem a aprovação da gestão.</p>", p="ok"),
+        card("Aprendizado supervisionado", "<p>Cada 👍 ou 👎 na página Central vira exemplo. Uma análise diária propõe melhorias e nada muda sem a aprovação da gestão.</p>", p="ok"),
         card("Treino comercial da diretoria", "<p>Frases aprovadas pela diretoria comercial, guardadas palavra por palavra, em dois níveis (leve e pleno), só para o público foco e nunca com datas ou reforma tributária. O interruptor está desligado até revisão, simulação com IA real e OK da diretoria.</p>", p="of"),
         card("Parada de emergência", "<p>Na Central, na aba Agentes, a gestão desliga a Ana na hora e liga de novo quando quiser.</p>", p="ok"),
       ], 2)
@@ -215,7 +205,7 @@ def s_ana2():
         card("Excluir conversa, só com controle", "<p>Só a gestão e quem ela autorizar. Ocultar é reversível; excluir pede motivo, os 4 últimos dígitos do telefone e a senha, e vai para uma lixeira por 30 dias.</p>"),
         card("Backup na nuvem", "<p>Diariamente, com nova tentativa automática se a execução falhar. Os dados da Ana e da Bia vão criptografados para a nuvem, e cada pacote é aberto de volta para provar que dá para restaurar. Se alguma parte ficar mais de 30 horas sem sucesso, a gestão é avisada. A chave de criptografia fica guardada em um cofre separado, nunca junto dos pacotes.</p>"),
       ], 3))
-    return sec("ana-seguranca", "Ana, a SDR virtual", "Ana: entendimento, travas e monitoria", "Onde a IA decide e onde as regras fixas mandam. O que a Ana nunca faz.", corpo)
+    return sec("ana-seguranca", "Ana, o SDR Inbound virtual (IA)", "Ana: entendimento, travas e monitoria", "Onde a IA decide e onde as regras fixas mandam. O que a Ana nunca faz.", corpo)
 
 def s_destinos():
     etapas = [
@@ -227,8 +217,8 @@ def s_destinos():
       ["D3 · Follow-up", "WhatsApp de novo contato e WhatsApp com uma novidade, sem pedir nada.", "5º dia útil"],
       ["D5 · Ligação e follow-up 2", "Ligar para quem decide e mandar WhatsApp de novo contato.", "8º dia útil"],
       ["D8 · Follow-up 3", "Ligar e WhatsApp com novidade ou exemplo de loja parecida.", "10º dia útil"],
-      ["D10 · Deal breaker", "Ligar e WhatsApp avisando que vai encerrar o contato (\"Última tentativa\" na Hoje).", "Depois do D10, vai ao Fim"],
-      ["Fim da cadência", "Sala de espera de 3 dias úteis (\"Tentativas acabaram\" na Hoje): Ganho, Perdido ou Voltar para a cadência.", "Sem ação em 3 dias úteis, fecha como Cadência esgotada"]]
+      ["D10 · Deal breaker", "Ligar e WhatsApp avisando que vai encerrar o contato (\"Última tentativa\" na página Hoje).", "Depois do D10, vai ao Fim"],
+      ["Fim da cadência", "Sala de espera de 3 dias úteis (\"Tentativas acabaram\" na página Hoje): Ganho, Perdido ou Voltar para a cadência.", "Sem ação em 3 dias úteis, fecha como Cadência esgotada"]]
     inb = [
       ["D0 · Novo lead", "Lead quente: atender primeiro, antes de qualquer outra fila.", "Dia útil seguinte"],
       ["D1 · Abertura", "WhatsApp com a primeira mensagem.", "Dia útil seguinte"], ["D2 · Follow-up", "WhatsApp de novo contato.", "Dia útil seguinte"],
@@ -252,13 +242,13 @@ def s_destinos():
       + '<p class="legenda">Funil é uma sequência de etapas pela qual o negócio caminha. A Bia nunca confunde um funil com outro. \"Lead\", nos números da empresa, é somente negócio do Arena; ganho no SDR é qualificação, e não venda.</p>'
       + '<h3 class="mt">Os caminhos de um negócio da Ana</h3>'
       + grid([
-        card("Qualificou", "<p>O negócio da Ana vira <b>Ganho</b> (qualificação, nunca venda) e nasce um negócio no <b>SDR Inbound</b>, na etapa \"Ana qualificou\", com o SDR como dono.</p><p class=\"muted\">O Arena só nasce depois, quando o SDR qualifica o lead pela Hoje.</p>", p="ok"),
-        card("Perdido, com motivo", "<p>Sem interesse, não contatar (pediu para parar) ou fora do perfil, incluindo quem vende sistema. O motivo é buscado por nome na lista do Agendor e relido.</p><p class=\"muted\">Fora do perfil com mais casos (vendedor de sistema, CNPJ baixado) está em implantação.</p>", p="te"),
+        card("Qualificou", "<p>O negócio da Ana vira <b>Ganho</b> (qualificação, nunca venda) e nasce um negócio no <b>SDR Inbound</b>, na etapa \"Ana qualificou\", com o SDR como dono.</p><p class=\"muted\">O Arena só nasce depois, quando o SDR qualifica o lead pela página Hoje.</p>", p="ok"),
+        card("Perdido, com motivo", "<p>Sem interesse, não contatar (pediu para parar) ou fora do perfil, incluindo quem vende sistema. O motivo é buscado por nome na lista do Agendor e relido.</p><p class=\"muted\">Fora do perfil inclui vendedor de sistema, e CNPJ baixado é tratado (no ar desde 16/11).</p>", p="ok"),
         card("Sem resposta", "<p>Fim dos toques de retomada: o negócio vai para a etapa de encerramento por silêncio. Se o lead voltar a escrever, a Ana retoma.</p>", p="ok"),
       ], 3)
       + tabela(["Quem", "Marca", "Observação"], [
         ["Ana", "Ganho ao qualificar; encerra quem é fora do perfil", "Cria o negócio no SDR Inbound (etapa \"Ana qualificou\"), tarefa de retorno e nota."],
-        ["SDR", "Ganho = qualificação do lead; perdido com motivo", "Ao qualificar pela Hoje nasce o negócio no Arena. Ganho do SDR não é venda."],
+        ["SDR", "Ganho = qualificação do lead; perdido com motivo", "Ao qualificar pela página Hoje nasce o negócio no Arena. Ganho do SDR não é venda."],
         ["Bia", "Perdido: Cadência esgotada, depois do Fim", "Automático, em dia útil. No funil da Ana, o fechamento automático está desligado."],
         ["Representante e closer", "Ganho e perda de venda no Arena", "Aí é venda de verdade."],
       ], "", "Quem marca ganho e perdido")
@@ -276,3 +266,30 @@ def s_destinos():
               card("Perdido sem volta", "<p>Motivo que nunca volta: duplicado, erro na lista, fora do perfil, já atendido, LGPD, restrição de pagamento. O caminho termina ali.</p>"),
               card("Espera a volta", "<p>Motivo que pode voltar: passado o prazo, nasce um negócio novo na fila do SDR e a cadência recomeça. O SDR também pode congelar um lead, com data e motivo.</p>")], 3))
     return sec("destinos", "Funis e cadência", "Funis do Agendor e os caminhos do lead", "Ana SDR IA, SDR Inbound, SDR Outbound, Arena, Pós-venda e Reativação, e como um negócio termina.", corpo)
+
+
+def s_quem():
+    pecas = [
+      ("Ana", "A assistente de IA que conversa com o lojista no WhatsApp, descobre se ele tem interesse, e passa o lead pronto ao time comercial.", "ok"),
+      ("Bia", "O agente interno: fala com o time pelo WhatsApp, escreve no CRM, avisa quem precisa agir e confere o que foi feito.", "ok"),
+      ("Hoje", "A mesa de trabalho do SDR: a fila de leads do dia, ligações, anotações e a decisão de qualificar ou descartar.", "ok"),
+      ("Central", "A central de atendimento e o painel de controle da Ana: a equipe acompanha as conversas, assume ou orienta, e configura regras, voz e conhecimento.", "ok"),
+      ("Dash", "O painel de números: vendas, atendimento, anúncios e custo dos agentes, em um só lugar.", "ok"),
+      ("Agendor (CRM)", "O sistema de cadastro da empresa: clientes, negócios, tarefas e funis. É a fonte da verdade.", "ok"),
+    ]
+    termos = [
+      ("CRM", "Sistema que guarda clientes, negócios e tarefas. Aqui, o Agendor."),
+      ("Funil e etapa", "Caminho em etapas pelo qual um negócio avança no CRM, do primeiro contato à venda."),
+      ("SDR", "Profissional de pré-venda: faz o primeiro contato e qualifica o lead. A Ana é o SDR Inbound virtual (IA)."),
+      ("Qualificar", "Confirmar que o lojista tem perfil e interesse (segmento, lojas, quem decide, CNPJ ativo)."),
+      ("Repasse", "Entregar o lead qualificado ao time comercial, com o contexto da conversa."),
+      ("Cadência", "Sequência combinada de contatos em dias úteis, para não deixar o lead esfriar."),
+      ("Arena", "O funil de vendas dos representantes de campo (e do closer, em redes). A IA não vende: a venda é feita por pessoas."),
+      ("Meta (WhatsApp)", "A empresa dona do WhatsApp Business. Define as regras de mensagens e modelos aprovados."),
+      ("Closer e representante", "Closer: especialista que fecha redes. Representante: vendedor de campo que atende a carteira."),
+      ("Juízes de IA", "Planejado: revisores automáticos que conferem cada resposta da Ana em tempo real, como guarda-corpo."),
+    ]
+    corpo = ('<h3>As seis peças</h3>' + grid([card(n, f"<p>{d}</p>", p=p) for n, d, p in pecas], 3)
+      + '<h3 class="mt">Termos que aparecem neste guia</h3>'
+      + '<dl class="quem">' + "".join(f"<div><dt>{a}</dt><dd>{b}</dd></div>" for a, b in termos) + '</dl>')
+    return sec("quem", "Começar", "Quem é quem", "Em linguagem simples: o que cada peça faz e o que cada termo quer dizer.", corpo)

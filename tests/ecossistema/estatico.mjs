@@ -6,19 +6,19 @@ const dom = new JSDOM(HTML, { runScripts: "dangerously", pretendToBeVisual: true
 const D = dom.window.document; await new Promise((r) => setTimeout(r, 300));
 t("JS roda no jsdom sem erro", erros.length === 0, erros);
 const secs = [...D.querySelectorAll("main .sec")]; const ids = secs.map((s) => s.id);
-t("23 seções com id único", secs.length === 23 && new Set(ids).size === 23, ids);
+t("24 seções com id único", secs.length === 24 && new Set(ids).size === 24, ids);
 t("todos os ids do documento são únicos", (() => { const a = [...D.querySelectorAll("[id]")].map((e) => e.id); return new Set(a).size === a.length; })());
 t("cada seção tem título h2 e aria-labelledby válido", secs.every((s) => D.getElementById(s.getAttribute("aria-labelledby")) && s.querySelector("h2")));
-const nav = [...D.querySelectorAll(".toc a")]; t("índice tem 23 links e todos apontam para uma seção", nav.length === 23 && nav.every((a) => ids.includes(a.getAttribute("href").slice(1))));
+const nav = [...D.querySelectorAll(".toc a")]; t("índice tem 24 links e todos apontam para uma seção", nav.length === 24 && nav.every((a) => ids.includes(a.getAttribute("href").slice(1))));
 const ancoras = [...D.querySelectorAll('a[href^="#"]')].filter((a) => a.getAttribute("href").length > 1); t("todos os links internos (#hash) têm destino", ancoras.every((a) => D.getElementById(a.getAttribute("href").slice(1))), ancoras.filter((a) => !D.getElementById(a.getAttribute("href").slice(1))).map((a) => a.href));
 t("nenhum link externo no corpo (só fontes no head)", [...D.querySelectorAll("main a[href^='http']")].length === 0);
-t("14 desenhos, cada um com legenda para leitor de tela", D.querySelectorAll("figure.fig").length === 14 && [...D.querySelectorAll("figure.fig")].every((f) => f.querySelector("figcaption.sr").textContent.length > 40));
+t("15 desenhos, cada um com legenda para leitor de tela", D.querySelectorAll("figure.fig").length === 15 && [...D.querySelectorAll("figure.fig")].every((f) => f.querySelector("figcaption.sr").textContent.length > 40));
 t("tabelas com cabeçalho e rótulos para o celular (data-l)", [...D.querySelectorAll("table")].every((tb) => tb.querySelector("thead th") && [...tb.querySelectorAll("tbody td")].every((td) => td.hasAttribute("data-l"))));
 t("html lang pt-BR, viewport, título e versão", D.documentElement.lang === "pt-BR" && /viewport-fit=cover/.test(D.querySelector('meta[name=viewport]').content) && D.title === "Ecossistema Life B" && /^\d{4}-\d{2}-\d{2}\.\d+$/.test(D.querySelector('meta[name=versao]').content));
 const versao = D.querySelector('meta[name=versao]').content; t("versão aparece na capa, no topo, no rodapé e no histórico", ["#inicio", ".mast", ".foot", "#sobre"].every((s) => D.querySelector(s).textContent.includes(versao)), versao);
 t("histórico de versões tem a versão atual e a anterior (09/11)", /Histórico de versões/.test(D.querySelector("#sobre").innerHTML) && D.querySelector("#sobre").textContent.includes("2026-11-09"));
 t("há seção Central com o desenho das conexões", !!D.querySelector("#central figure.fig") && /Ana/.test(D.querySelector("#central").textContent) && /Canal/.test(D.querySelector("#central").textContent) && /Dash/.test(D.querySelector("#central").textContent));
-t("modo apresentação: deck com slides, controles e botão Apresentar", !!D.getElementById("deck") && D.querySelectorAll("#deck .slide").length >= 12 && D.querySelectorAll("#deck .slide").length <= 16 && !!D.getElementById("dctl") && !!D.getElementById("apBtn") && !!D.getElementById("estado-eco"));
+t("modo apresentação: deck com slides, controles e botão Apresentar", !!D.getElementById("deck") && D.querySelectorAll("#deck .slide").length >= 15 && D.querySelectorAll("#deck .slide").length <= 35 && !!D.getElementById("dctl") && !!D.getElementById("apBtn") && !!D.getElementById("estado-eco"));
 t("imagens com alt; botões só com ícone têm aria-label", [...D.querySelectorAll("img")].every((i) => i.hasAttribute("alt")) && [...D.querySelectorAll("button")].every((b) => b.getAttribute("aria-label") || b.textContent.trim()));
 t("seções-chave presentes (Ana, Bia, funis, 3 destinos, cadência, recuperação, Hoje, Central, Meta, segurança, observabilidade, status, checklist)", ["ana", "ana-seguranca", "bia", "destinos", "cadencia", "recuperacao", "hoje", "central", "meta", "seguranca", "observ", "status", "checklist", "crm", "regras"].every((i) => ids.includes(i)));
 const texto = (D.body.textContent || "").replace(/\s+/g, " "); const bruto = HTML;
@@ -37,7 +37,22 @@ t("sem linguagem que a regra de projeto proíbe (burlar, fingir, pego, foge da r
 t("sem termos internos operacionais (Mac, 11h backup, chaves, rotas)", !/\b(Mac |Keychain|wrangler|worker\.dev|KV |SDR_[A-Z_]+|ENFORCE_|ANA_[A-Z_]+)/.test(texto));
 t("datas no formato dia/mês/ano (sem AAAA-MM-DD no texto, exceto a versão)", !/\b\d{4}-\d{2}-\d{2}\b/.test(texto.replace(/\d{4}-\d{2}-\d{2}\.\d+/g, "").replace("2026-11-09", "")));
 t("sem hashes de commit nem versões técnicas na página pública", !/(?<![\w-])(?=[0-9a-f]*\d)(?=[0-9a-f]*[a-f])[0-9a-f]{8}(?![\w-])/.test(texto), texto.match(/.{20}(?<![\w-])(?=[0-9a-f]*\d)(?=[0-9a-f]*[a-f])[0-9a-f]{8}(?![\w-]).{5}/)?.[0]);
-t("sem a afirmação de cópia à gestão nem absolutos sobre botões/reenvio", !/em cópia|com cópia à gestão|chegam sempre/.test(texto));
+t("sem a afirmação de cópia à gestão nem absolutos sobre botões/reenvio", !/(^|[^\p{L}])em cópia|com cópia à gestão|chegam sempre/u.test(texto));
+t("terminologia: sempre \"página Hoje\" e \"página Central\" (nunca \"na Hoje\", \"pela Hoje\", \"a Central\" soltos)", !/(^|[^\p{L}])(na|nas|pela|pelas|da|das|à|às|a|A|para a|pra) (Hoje|Central)([^\p{L}0-9]|$)/u.test(texto.replace(/Hoje 2\.0/g, "")), texto.match(/.{20}(^|[^\p{L}])(na|nas|pela|pelas|da|das|à|às|a|A|para a|pra) (Hoje|Central)([^\p{L}0-9]|$).{10}/u)?.[0]);
+t("papéis: a IA não vende (nenhum \"até a venda\" ligado à IA, à Ana ou à Bia)", !/(inteligência artificial|(^|[^\p{L}])IA([^\p{L}]|$)|(^|[^\p{L}])Ana([^\p{L}]|$)|(^|[^\p{L}])Bia([^\p{L}]|$))[^.]{0,90}até a venda|até a venda[^.]{0,50}(inteligência artificial|(^|[^\p{L}])IA([^\p{L}]|$))/iu.test(texto), texto.match(/.{40}até a venda.{30}/)?.[0]);
+// ---- coerência página x apresentação x estado.json (uma fonte só) ----
+{ const J = JSON.parse(D.getElementById("estado-eco").textContent); const nomes = J.componentes.map((c) => c.nome);
+  const deckTxt = D.getElementById("deck").textContent.replace(/\s+/g, " "), pagTxt = [...D.querySelectorAll("main .sec")].map((x) => x.textContent).join(" ").replace(/\s+/g, " ");
+  t("todo componente do estado.json aparece na apresentação e na página longa", nomes.every((n) => deckTxt.includes(n) && pagTxt.includes(n)), nomes.filter((n) => !deckTxt.includes(n) || !pagTxt.includes(n)));
+  const itens = J.componentes.flatMap((c) => [...c.no_ar, ...c.implantacao, ...c.planejado]);
+  const stat = (D.querySelector("#status") || { textContent: "" }).textContent.replace(/\s+/g, " ");
+  t("todo item de estado.json aparece no slide de estado e na seção Status (mesmo estado nos dois)", itens.every((i) => deckTxt.includes(i) && stat.includes(i)), itens.filter((i) => !deckTxt.includes(i) || !stat.includes(i)));
+  const nDeck = [...D.querySelectorAll("#deck .est .ec li b")].map((b) => b.textContent.trim());
+  t("o slide de estado só lista componentes que existem no estado.json", nDeck.length > 0 && nDeck.every((n) => nomes.includes(n)), nDeck);
+  const EXTRAS = ["SDR e cadência", "Painel do Representante (nova recarga)", "Este Ecossistema", "Bia", "Plataforma"]; const nPag = [...D.querySelectorAll("#status .col li b")].map((b) => b.textContent.trim());
+  t("a seção Status só lista componentes do estado.json (ou itens fixos conhecidos)", nPag.length > 0 && nPag.every((n) => nomes.includes(n) || EXTRAS.includes(n)), nPag.filter((n) => !nomes.includes(n) && !EXTRAS.includes(n)));
+  const datas = { json: J.atualizado_em, paginaCapa: /atualizado em (\d\d\/\d\d\/\d{4})/.exec(D.querySelector("#inicio").textContent)?.[1], rodape: (D.getElementById("atualizadoEm") || {}).textContent?.trim(), capaApresentacao: /Atualizado em (\d\d\/\d\d\/\d{4})/.exec(D.getElementById("sl-capa").textContent)?.[1], statusSecao: /Posição de (\d\d\/\d\d\/\d{4})/.exec(D.getElementById("sl-estado").textContent)?.[1] };
+  t("'atualizado em' igual no estado.json, na capa da página, no rodapé, na capa da apresentação e no slide de estado", new Set(Object.values(datas)).size === 1, datas); }
 // ---- comportamento no jsdom (deck) ----
 const w = dom.window; w.document.getElementById("apBtn").click();
 t("jsdom: clicar em Apresentar abre o deck com UM slide visível", w.document.documentElement.classList.contains("deck-on") && D.querySelectorAll(".slide.on").length === 1);

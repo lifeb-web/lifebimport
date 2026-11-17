@@ -17,7 +17,7 @@ for (const [w, h] of [[390, 844], [768, 1024], [1024, 768], [1440, 900], [1920, 
       t(`${id}: botão Menu abre o índice (aria-expanded)`, await page.evaluate(() => document.getElementById("menuBtn").getAttribute("aria-expanded") === "true" && document.getElementById("side").classList.contains("open")));
     }
     await page.fill("#busca", "recuperação");
-    t(`${id}: busca filtra o índice`, await page.evaluate(() => { const v = [...document.querySelectorAll(".toc li[data-id]")].filter((l) => !l.classList.contains("off")).length; return v > 0 && v < 23; }));
+    t(`${id}: busca filtra o índice`, await page.evaluate(() => { const v = [...document.querySelectorAll(".toc li[data-id]")].filter((l) => !l.classList.contains("off")).length; return v > 0 && v < 24; }));
     await page.fill("#busca", "");
     await page.click('.toc a[href="#cadencia"]'); await page.waitForTimeout(2600);
     t(`${id}: link do índice leva à seção e atualiza o endereço`, (await page.evaluate(() => location.hash)) === "#cadencia" && Math.abs(await topoDe(page, "cadencia")) < 140, [await page.evaluate(() => location.hash), await topoDe(page, "cadencia")]);
@@ -50,7 +50,7 @@ for (const [w, h] of [[390, 844], [768, 1024], [1024, 768], [1440, 900], [1920, 
 }
 // ---------- hash malformado e logo que falha ----------
 { const { ctx, page, erros } = await abrirPagina(nav, { w: 1440, h: 900, hash: "#%E0%A4%A" }); await page.waitForTimeout(400);
-  t("hash malformado (#%E0%A4%A) não gera erro de JS e a página abre", erros.length === 0 && (await page.evaluate(() => document.querySelectorAll("main .sec").length)) === 23, erros);
+  t("hash malformado (#%E0%A4%A) não gera erro de JS e a página abre", erros.length === 0 && (await page.evaluate(() => document.querySelectorAll("main .sec").length)) === 24, erros);
   await page.click("#apBtn"); await page.waitForTimeout(300); t("hash malformado: a apresentação ainda abre", await page.evaluate(() => document.documentElement.classList.contains("deck-on"))); await ctx.close(); }
 for (const w of [640, 700, 740, 770]) { const ctx = await nav.newContext({ viewport: { width: w, height: 900 } }); const p = await ctx.newPage();
   await p.route("https://projetojlbv.com.br/ecossistema/**", (r) => r.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: HTML }));

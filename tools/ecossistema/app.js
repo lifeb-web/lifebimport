@@ -9,6 +9,8 @@
   function norm(s) { return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
   function jump(y) { try { W.scrollTo({ top: y, left: 0, behavior: 'instant' }); } catch (e) { W.scrollTo(0, y); } }
 
+  var emIf = false; try { emIf = W.self !== W.top; } catch (e) { emIf = true; }
+  if (emIf) H.classList.add('emif');   /* dentro de um iframe (por exemplo na aba da página Central): sem pulo de rolagem e sem mexer no endereço */
   var main = $('main'), secs = $$('main .sec'), N = secs.length;
   var ids = secs.map(function (s) { return s.id; });
   var side = $('#side'), menuBtn = $('#menuBtn');
@@ -76,7 +78,7 @@
     raf = W.requestAnimationFrame(function () {
       raf = 0;
       var i = secAtual(); marcaNav(i);
-      if (pronto && usuario && Date.now() > semHashAte && ids[i] !== ultimoHash) { ultimoHash = ids[i]; try { W.history.replaceState(null, '', '#' + ids[i]); } catch (e) {} }
+      if (!emIf && pronto && usuario && Date.now() > semHashAte && ids[i] !== ultimoHash) { ultimoHash = ids[i]; try { W.history.replaceState(null, '', '#' + ids[i]); } catch (e) {} }
       clearTimeout(tmr); tmr = setTimeout(salvaPos, 150);
     });
   }
@@ -93,7 +95,7 @@
   });
   function secDe(el) { while (el && el !== D.body) { if (el.classList && el.classList.contains('sec')) return el; el = el.parentElement; } return null; }
   function aplicaPosicao() {
-    if (emAp) return;
+    if (emAp || emIf) return;
     var h = dec((W.location.hash || '').slice(1)), st = posInicial;
     var alvo = h ? D.getElementById(h) : null;
     if (st && D.getElementById(st.id) && (!h || st.id === h || (alvo && secDe(alvo) && secDe(alvo).id === st.id))) {

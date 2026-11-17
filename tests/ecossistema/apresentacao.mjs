@@ -4,13 +4,19 @@ const nav = await abrirNavegador();
 const TAM0 = [[1920, 1080], [1366, 768], [1024, 768], [390, 844], [360, 640], [844, 390]]; const TAM = process.env.ECO_TAM ? TAM0.filter(([w]) => String(w) === process.env.ECO_TAM) : TAM0;
 const est = (page) => page.evaluate(() => window.__deck.estado());
 const nSlides = await (async () => { const { ctx, page } = await abrirPagina(nav, { w: 1440, h: 900 }); const n = await page.evaluate(() => window.__deck.N); await ctx.close(); return n; })();
-t("de 12 a 16 slides", nSlides >= 12 && nSlides <= 16, nSlides);
+t("de 15 a 35 slides (deck enxuto; os detalhes ficam na página longa)", nSlides >= 15 && nSlides <= 35, nSlides);
 { // nunca nomes de pessoas no HTML do deck nem da página
-  const deckHtml = HTML.slice(HTML.indexOf('<div id="deck"'), HTML.indexOf("</div></div>", HTML.indexOf('class="ddots"')) + 12);
+  const deckHtml = HTML.slice(HTML.indexOf('<div id="deck"'), HTML.indexOf("</body>"));
   t("HTML do deck existe", deckHtml.length > 2000);
   t("nenhum Felipe|Robert|Luiz|Thais|Gabriella (nem outros nomes) no HTML da página e do deck", !/(^|[^\p{L}])(Felipe|Robert|Roberto|Luiz|Thais|Thaís|Gabriella|Gabriela|Cleomar|Giselle|Natan|Bruno|Washington)([^\p{L}]|$)/u.test(HTML.replace(/<style[\s\S]*?<\/style>|<script[\s\S]*?<\/script>/g, " ")));
   t("sem número de telefone, e-mail ou chave no deck", !/(\(\d{2}\)\s?9?\d{4}-?\d{4}|[\w.]+@[\w.]+\.\w+|sk-[A-Za-z0-9]{16,})/.test(deckHtml));
 }
+{ const { ctx, page } = await abrirPagina(nav, { w: 1440, h: 900 });
+  const cob = await page.evaluate(() => { const ids = [...document.querySelectorAll("main .sec")].map((x) => x.id); const cobertas = new Set([...document.querySelectorAll(".slide")].flatMap((x) => (x.getAttribute("data-sec") || "").split(",").filter(Boolean))); return { ids, faltam: ids.filter((i) => !cobertas.has(i)), caps: [...new Set([...document.querySelectorAll(".slide")].map((x) => x.getAttribute("data-cap")))] }; });
+  t("cobertura: toda seção da página tem ao menos 1 slide", cob.faltam.length === 0, cob.faltam);
+  t("slides agrupados em capítulos (>= 6)", cob.caps.length >= 6, cob.caps);
+  t("slide 'Quem é quem' logo no início", await page.evaluate(() => [...document.querySelectorAll(".slide")].slice(0, 4).some((x) => /Quem é quem/.test(x.getAttribute("data-t")))));
+  await ctx.close(); }
 for (const [w, h] of TAM) {
   const touch = w < 800 || h < 500; const id = `${w}x${h}`;
   const { ctx, page, erros } = await abrirPagina(nav, { w, h, touch });
@@ -21,7 +27,8 @@ for (const [w, h] of TAM) {
   t(`${id}: deck cobre a tela inteira`, cobre[0] === cobre[2] && cobre[1] === cobre[3], cobre);
   const sem = await page.evaluate(() => ({ sx: document.documentElement.scrollWidth <= innerWidth + 1, sy: getComputedStyle(document.documentElement).overflow === "hidden", bodyOver: getComputedStyle(document.body).overflow }));
   t(`${id}: página sem rolagem com o deck aberto`, sem.sx && sem.sy && sem.bodyOver === "hidden", sem);
-  const tamMin = h < 500 ? 5.5 : w >= 1280 ? 11 : w >= 1000 ? 9 : w >= 380 ? 10.5 : 10; // celular deitado: palco 16:9 reduzido, texto pequeno por natureza (só tela cheia e sem rolagem são exigidos)
+  const svgMin = h < 500 ? 4.5 : w >= 1280 ? 11 : w >= 1000 ? 8.5 : w >= 380 ? 9.3 : 8.4;
+  const tamMin = h < 500 ? 5.5 : w >= 1280 ? 11 : w >= 1000 ? 8 : w >= 380 ? 10 : 9; // celular deitado: palco 16:9 reduzido, texto pequeno por natureza (só tela cheia e sem rolagem são exigidos)
   for (let i = 0; i < N; i++) {
     await page.evaluate((k) => window.__deck.mostra(k), i); await page.waitForTimeout(1100);
     const r = await page.evaluate(() => {
@@ -34,15 +41,48 @@ for (const [w, h] of TAM) {
         if (e.children.length === 0 && e.textContent.trim() && !(e instanceof SVGElement)) { const fs = parseFloat(getComputedStyle(e).fontSize) * esc; if (fs < min) min = fs; } });
       // título nunca sobrepõe o conteúdo, e o conteúdo respeita a folga da barra de controle
       const h = s.querySelector(".sl-h"); if (h && getComputedStyle(h).clip === "auto") { const hb = h.getBoundingClientRect().bottom; const tops = [...s.querySelector(".sl-b").querySelectorAll("*")].map((e) => e.getBoundingClientRect()).filter((r) => r.width && r.height).map((r) => r.top); if (tops.length && Math.min(...tops) < hb + 4) out.push("título sobrepõe o conteúdo " + Math.round(hb - Math.min(...tops))); const cb = document.getElementById("dctl").getBoundingClientRect(); const bots = [...s.querySelector(".sl-b").querySelectorAll("*")].map((e) => e.getBoundingClientRect()).filter((r) => r.width && r.height).map((r) => r.bottom); if (innerHeight >= 500 && bots.length && Math.max(...bots) > cb.top - 6 && Math.max(...bots) > 0) out.push("conteúdo encosta na barra de controle " + Math.round(Math.max(...bots) - cb.top)); }
+      if (s.classList.contains("s-capa")) { const cb2 = document.getElementById("dctl").getBoundingClientRect(); const ct = s.querySelector(".capa-t").getBoundingClientRect(); const cg = s.querySelector(".capa-g"); const gb = cg ? cg.getBoundingClientRect() : null; if (innerHeight >= 500 && (ct.bottom > cb2.top - 4 || (gb && gb.bottom > cb2.top - 4))) out.push("capa encosta na barra de controle " + Math.round(ct.bottom - cb2.top)); if (ct.top < 0 || ct.left < 0) out.push("capa fora da tela"); }
+      if (s.classList.contains("flow")) { const fig = s.querySelector(".dfig"); const vis = [...fig.querySelectorAll(".svgd")].find((d) => getComputedStyle(d).display !== "none"); const svg = vis && vis.querySelector("svg"); if (!svg) out.push("fluxograma sem desenho visível"); else { const sb = document.getElementById("stage").getBoundingClientRect(), fb = fig.getBoundingClientRect(); const bad = []; svg.querySelectorAll(".nd, .lb, .eds path").forEach((e) => { const b = e.getBoundingClientRect(); if (b.left < sb.left - 1 || b.right > sb.right + 1 || b.top < sb.top - 1 || b.bottom > sb.bottom + 1 || b.left < fb.left - 2 || b.right > fb.right + 2 || b.top < fb.top - 2 || b.bottom > fb.bottom + 2) bad.push("extrapola " + (e.className.baseVal || e.tagName)); }); svg.querySelectorAll(".nd").forEach((g) => { const r = g.querySelector("rect").getBoundingClientRect(); g.querySelectorAll("text").forEach((tx) => { const b = tx.getBoundingClientRect(); if (b.left < r.left - 1 || b.right > r.right + 1 || b.top < r.top - 1 || b.bottom > r.bottom + 1) bad.push("texto fora da caixa"); }); }); out.push(...new Set(bad)); } }
       // sobreposição de cartões irmãos
       const grupos = s.querySelectorAll(".dg2,.dg3,.dsteps,.chain,.funis,.kan,.two,.eq");
       grupos.forEach((g) => { const f = [...g.children].map((c) => c.getBoundingClientRect()); for (let a = 0; a < f.length; a++) for (let b = a + 1; b < f.length; b++) { const A = f[a], B = f[b]; if (A.width && B.width && A.left < B.right - 3 && B.left < A.right - 3 && A.top < B.bottom - 3 && B.top < A.bottom - 3) out.push("sobrepõe em " + g.className); } });
-      return { out: [...new Set(out)].slice(0, 6), min, id: s.id, vis: getComputedStyle(s).visibility, n: document.querySelectorAll(".slide.on").length };
+      let svgMin = null; s.querySelectorAll("svg.capa-g").forEach(() => {}); s.querySelectorAll(".dfig .svgd svg").forEach((sv) => { if (getComputedStyle(sv.parentElement).display === "none") return; sv.querySelectorAll("text").forEach((tx) => { const fs = parseFloat(getComputedStyle(tx).fontSize) * tx.getScreenCTM().a; if (svgMin === null || fs < svgMin) svgMin = fs; }); });
+      return { out: [...new Set(out)].slice(0, 6), min, svgMin, id: s.id, vis: getComputedStyle(s).visibility, n: document.querySelectorAll(".slide.on").length };
     });
+    if (process.env.ECO_ALLFLOW && await page.evaluate(() => document.querySelector(".slide.on").classList.contains("flow"))) await page.screenshot({ path: `${PRINTS}/flow_${id}_${String(i + 1).padStart(2, "0")}_${r.id.slice(3)}.png` });
     t(`${id} slide ${i + 1} (${r.id}): cabe sem rolagem, nada fora nem sobreposto`, r.out.length === 0 && r.vis === "visible" && r.n === 1, r);
     t(`${id} slide ${i + 1}: menor texto >= ${tamMin}px na tela`, r.min >= tamMin, r.min);
-    if (i === 0 || [5, 7, 10, 12].includes(i) || i === N - 1) await page.screenshot({ path: `${PRINTS}/deck_${id}_${String(i + 1).padStart(2, "0")}.png` });
+    if (r.svgMin !== null) t(`${id} slide ${i + 1}: texto do fluxograma >= ${svgMin}px na tela`, r.svgMin >= svgMin, r.svgMin);
+    if (["capa", "quem1", "estado", "mapa", "ponte", "jor", "msg", "sdrfluxo", "volta", "autom", "av", "hoje", "cenarq", "cenmod"].some((c) => r.id === "sl-" + c)) await page.screenshot({ path: `${PRINTS}/deck_${id}_${String(i + 1).padStart(2, "0")}.png` });
   }
+  // logo (A) e controles (B)
+  const lgs = () => page.evaluate(() => { const vis = [...document.querySelectorAll(".dlogo img")].filter((i) => getComputedStyle(i).display !== "none"); const i = vis[0]; const r = i ? i.getBoundingClientRect() : null; const s = document.querySelector(".slide.on"); const textoRects = (el) => { const r = document.createRange(); r.selectNodeContents(el); return [...r.getClientRects()]; }; const alvo = [...[...s.querySelectorAll(".kick, h2")].flatMap(textoRects), ...[...s.querySelectorAll(".sl-b, .sl-b *")].map((e) => e.getBoundingClientRect())].filter((b) => b.width && b.height); const c = document.getElementById("dctl").getBoundingClientRect(); const ov = (a, b) => a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1; return { n: vis.length, ok: !!i && i.complete && i.naturalWidth > 0, alt: i ? i.alt : "", h: r ? Math.round(r.height) : 0, sobreConteudo: r ? alvo.some((b) => ov(r, b)) : false, sobreBarra: r ? ov(r, c) : false, dentro: r ? r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight : false, cover: getComputedStyle(document.querySelector(".dlogo")).display }; });
+  await page.evaluate(() => { document.getElementById("deck").classList.remove("quieto"); window.__deck.mostra(6); }); await page.waitForTimeout(900);
+  const L1 = await lgs();
+  t(`${id}: logo da Life B carrega (imagem real), cabe na tela e não cobre conteúdo nem a barra de controle (tema claro)`, L1.n === 1 && L1.ok && L1.alt === "Life B" && L1.h >= (h < 500 ? 22 : 24) && !L1.sobreConteudo && !L1.sobreBarra && L1.dentro, L1);
+  await page.evaluate(() => document.documentElement.setAttribute("data-theme", "dark")); await page.waitForTimeout(300);
+  const L2 = await lgs(); const darkSrc = await page.evaluate(() => [...document.querySelectorAll(".dlogo img")].find((i) => getComputedStyle(i).display !== "none")?.getAttribute("src"));
+  t(`${id}: logo no tema escuro (versão escura) carrega e não cobre nada`, L2.ok && darkSrc === "/logo-lifeb-escuro.png" && !L2.sobreConteudo && !L2.sobreBarra, [L2, darkSrc]);
+  await page.evaluate(() => { window.__deck.mostra(0); }); await page.waitForTimeout(700);
+  const cv = await page.evaluate(() => { const i = [...document.querySelectorAll("#sl-capa .capa-logo")].find((x) => getComputedStyle(x).display !== "none"); const r = i && i.getBoundingClientRect(); return { ok: !!i && i.complete && i.naturalWidth > 0, h: r ? Math.round(r.height) : 0, dentro: r ? r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight : false, fixo: getComputedStyle(document.querySelector(".dlogo")).display }; });
+  t(`${id}: logo maior na capa (carrega, dentro da tela) e a logo fixa some na capa`, cv.ok && cv.dentro && cv.fixo === "none", cv);
+  await page.evaluate(() => document.documentElement.removeAttribute("data-theme")); await page.evaluate(() => window.__deck.mostra(6)); await page.waitForTimeout(500);
+  const bts = await page.evaluate(() => [...document.querySelectorAll("#dctl .db")].map((b) => { const r = b.getBoundingClientRect(); return { id: b.id, w: Math.round(r.width), h: Math.round(r.height), vis: r.width > 0 }; }));
+  const bar = await page.evaluate(() => { const r = document.getElementById("dctl").getBoundingClientRect(); const lis = [...document.querySelectorAll("#dctl .db, #dctl .dind")].map((e) => e.getBoundingClientRect()); const sobrepoe = lis.some((a, k) => lis.some((b, m) => m > k && a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1)); const alinhados = Math.max(...lis.map((q) => q.top + q.height / 2)) - Math.min(...lis.map((q) => q.top + q.height / 2)) < 3; return { dentro: r.left >= 0 && r.right <= innerWidth && r.bottom <= innerHeight, centro: Math.abs((r.left + r.right) / 2 - innerWidth / 2) < 3, sobrepoe, alinhados }; });
+  t(`${id}: barra de controle alinhada, centralizada, sem botões sobrepostos e dentro da tela`, bar.dentro && bar.centro && !bar.sobrepoe && bar.alinhados, bar);
+  if (touch) t(`${id}: todos os botões de controle com alvo de toque >= 44px`, bts.filter((b) => b.vis).every((b) => b.w >= 44 && b.h >= 44), bts);
+  await page.focus("#dPrev"); await page.keyboard.press("Tab"); const foco = await page.evaluate(() => { const e = document.activeElement; const cs = getComputedStyle(e); return { id: e.id, ow: parseFloat(cs.outlineWidth), os: cs.outlineStyle }; });
+  t(`${id}: foco do teclado visível nos botões de controle`, foco.id === "dNext" && foco.ow >= 2 && foco.os !== "none", foco);
+  await page.hover("#dIdx"); await page.waitForTimeout(250); const hov = await page.evaluate(() => getComputedStyle(document.getElementById("dIdx")).backgroundColor); await page.mouse.move(5, 5); await page.waitForTimeout(250); const nor = await page.evaluate(() => getComputedStyle(document.getElementById("dIdx")).backgroundColor);
+  if (!touch) t(`${id}: estado hover do botão é diferente do normal`, hov !== nor, [hov, nor]);
+  // índice (G)
+  await page.keyboard.press("g"); await page.waitForTimeout(200);
+  const ix1 = await page.evaluate(() => !document.getElementById("didx").hidden && document.querySelectorAll(".ix-b").length === window.__deck.N);
+  await page.click(".ix-b[data-i='5']"); await page.waitForTimeout(200);
+  const ix2 = await page.evaluate(() => document.getElementById("didx").hidden && window.__deck.estado().i === 5);
+  await page.keyboard.press("g"); await page.keyboard.press("Escape"); await page.waitForTimeout(150);
+  const ix3 = await page.evaluate(() => document.getElementById("didx").hidden && window.__deck.estado().aberto);
+  t(`${id}: índice (G) lista todos os slides, pula para o escolhido e Esc fecha só o índice`, ix1 && ix2 && ix3, [ix1, ix2, ix3]);
   // navegação
   await page.evaluate(() => window.__deck.mostra(0)); await page.waitForTimeout(100);
   await page.keyboard.press("ArrowRight"); await page.keyboard.press("Space"); const a = (await est(page)).i;

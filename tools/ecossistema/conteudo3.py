@@ -1,30 +1,30 @@
 """Seções 16 a 22 do Ecossistema."""
-VERSAO = "2026-11-16.1"
+VERSAO = "2026-11-16.2"
 DATA_V = "16/11/2026"
 from comp import *
 from diagramas import fig
 
 def s_regras():
     corpo = (
-      '<p>Estas regras existem para que o histórico de cada lead e os números do Dash mostrem o que aconteceu de verdade. Quem trabalha pela Hoje não precisa fazer nada diferente: tudo já é registrado no caminho certo. Quando alguém mexe direto no Agendor, a Bia ajuda a manter o combinado: reorganiza o que ficou fora do lugar e avisa, sem apagar histórico.</p>'
+      '<p>Estas regras existem para que o histórico de cada lead e os números do Dash mostrem o que aconteceu de verdade. Quem trabalha pela página Hoje não precisa fazer nada diferente: tudo já é registrado no caminho certo. Quando alguém mexe direto no Agendor, a Bia ajuda a manter o combinado: reorganiza o que ficou fora do lugar e avisa, sem apagar histórico.</p>'
       + '<h3 class="mt">Regras de ouro</h3>'
       + grid([
         card("Tarefas", ul(["Tarefa de negócio sempre com o dono do negócio como responsável.", "Tarefa da cadência vence às 18h, em dia útil.", "Negócio aberto fora do SDR não fica sem tarefa.", "Tarefa de negócio ganho ou perdido é fechada."])),
         card("SDR", ul(["Ganho do SDR é qualificação, não venda.", "No Outbound, em regra, nada começa sozinho: só o botão Iniciar.", "Todo lead qualificado é distribuído, nem que seja para o próprio SDR.", "Lead perdido, em regra, tem explicação.", "Ligação, em regra, tem resultado."])),
         card("Donos", ul(["A conta Sistema nunca é dona de negócio.", "Atribuição automática só para quem está ativo na equipe.", "Cada SDR só enxerga o que passou por ele."])),
         card("Números e datas", ul(["A origem da empresa nunca muda nas voltas.", "Lead é só negócio do Arena.", "Datas no formato dia/mês, em horário de Brasília."])),
-        card("Processo", ul(["Mudou uma regra? Procure em todos os lugares onde ela aparece, inclusive este Ecossistema e a Central.", "Nada vai ao ar sem a suíte de testes verde e sem auditoria independente quando a mudança é grande.", "Publicação só pelo roteiro único, com cópia de segurança antes. Servidor primeiro, página depois."])),
+        card("Processo", ul(["Mudou uma regra? Procure em todos os lugares onde ela aparece, inclusive este Ecossistema e a página Central.", "Nada vai ao ar sem a suíte de testes verde e sem auditoria independente quando a mudança é grande.", "Publicação só pelo roteiro único, com cópia de segurança antes. Servidor primeiro, página depois."])),
         card("Automação", ul(["Escreveu? Releia. Só se diz \"confirmado\" quando a leitura bate.", "Em simulação não há escrita nem WhatsApp.", "Se a leitura falhou, a automação não age.", "Cada tipo liga separado, com limite pequeno por padrão."])),
       ], 3)
       + '<h3 class="mt">O caminho da ligação</h3>'
       + '<p>A ligação é a tarefa mais importante da cadência. Cada ligação termina com o resultado registrado, e o time inteiro entende o que aconteceu.</p>'
-      + fluxo([("A Bia cria a tarefa", "Ligar para quem decide, vence às 18h."), ("O SDR liga e registra na Hoje", "Falou com quem decide, caixa postal, número errado...", "m"), ("Resultado guardado", "A Hoje conclui a tarefa e escreve a nota no negócio.", "g")])
-      + fluxo([("Concluiu direto no Agendor, sem resultado?", "Em 15 minutos a Bia devolve a tarefa à Hoje, marca a concluída como anulada (o Dash não a conta) e avisa o SDR.", "x"), ("O SDR registra", "Ou escolhe \"Não houve ligação\", que fica anotado.", "g")])
-      + ul(["Se a tarefa for apagada ou renomeada direto no Agendor, a Bia recria, restaura o nome e avisa. No máximo 3 devoluções da mesma ligação; na segunda, a gestão também recebe o aviso. Quem registrou pela Hoje nunca recebe aviso."])
+      + fluxo([("A Bia cria a tarefa", "Ligar para quem decide, vence às 18h."), ("O SDR liga e registra na página Hoje", "Falou com quem decide, caixa postal, número errado...", "m"), ("Resultado guardado", "A página Hoje conclui a tarefa e escreve a nota no negócio.", "g")])
+      + fluxo([("Concluiu direto no Agendor, sem resultado?", "Em 15 minutos a Bia devolve a tarefa à página Hoje, marca a concluída como anulada (o Dash não a conta) e avisa o SDR.", "x"), ("O SDR registra", "Ou escolhe \"Não houve ligação\", que fica anotado.", "g")])
+      + ul(["Se a tarefa for apagada ou renomeada direto no Agendor, a Bia recria, restaura o nome e avisa. No máximo 3 devoluções da mesma ligação; na segunda, a gestão também recebe o aviso. Quem registrou pela página Hoje nunca recebe aviso."])
       + '<h3 class="mt">O caminho da perda</h3>'
       + fluxo([("O SDR escolhe o motivo", "E conta, em poucas palavras, o que aconteceu."), ("A Bia confere se está claro", "Pede mais detalhe se o texto for genérico, copiado ou sem sentido.", "m"), ("Perda registrada", "Com a explicação na nota do negócio.", "g")])
       + ul(["Só três motivos se explicam sozinhos: Já está sendo atendido(a)/cliente, Restrição de pagamento e Sem retorno. Os demais pedem uma frase curta. Em \"Duplicado\", informar qual é o negócio original.",
-            "Perdido direto no Agendor: o lead aparece em vermelho no topo da Hoje até o SDR contar o que houve; a gestão é avisada se passar de 24 horas. O lead nunca é reaberto.",
+            "Perdido direto no Agendor: o lead aparece em vermelho no topo da página Hoje até o SDR contar o que houve; a gestão é avisada se passar de 24 horas. O lead nunca é reaberto.",
             "O lead só volta pela Recuperação depois da explicação."])
       + '<h3 class="mt">Mais proteções contra ação manual</h3>'
       + grid([
@@ -65,37 +65,37 @@ def s_seguranca():
 def s_observ():
     corpo = (
       '<p>Uma falha silenciosa é inaceitável. Cada ponto crítico tem um vigia, uma nova tentativa e um alerta para a gestão.</p>'
-      + '<h3 class="mt">Aviso garantido, passo a passo</h3>' + fig("avisos")
-      + '<h3 class="mt">A camada de entrega garantida</h3>'
+      + '<h3 class="mt">Do evento ao aviso enviado, passo a passo</h3>' + fig("avisos")
+      + '<h3 class="mt">A camada de entrega</h3>'
       + tabela(["Camada", "O que faz", "Onde aparece"], [
         ["Nova tentativa", "Falha temporária é repetida com pausa crescente, com teto de tentativas. Aviso cujo envio falhou volta a cada 5 minutos por até 24 horas.", "Fila durável"],
         ["Plano B", "IA falhou: texto padrão seguro. Voz falhou: voz reserva e depois a da Bia, e por fim texto. Rota de saída do Agendor bloqueada: rota alternativa.", "Dentro da própria conversa"],
         ["Só conta se saiu", "\"Enviado\" só quando o WhatsApp aceitou.", "Registro de cada tentativa"],
-        ["Falha da Meta na abertura da Ana (131049)", "Um reenvio por modelo de utilidade; se falhar, espera o lead e cria tarefa humana com alerta. No ar desde 15/11 às 10h02 (patch 1.3); o resultado do primeiro reenvio ainda será confirmado.", "Central e alerta à gestão"],
+        ["Falha da Meta na abertura da Ana", "Um reenvio por modelo de utilidade; se falhar, espera o lead e cria tarefa humana com alerta. No ar desde 15/11; o resultado do primeiro reenvio ainda será confirmado.", "Central e alerta à gestão"],
         ["Status visível", "Fila por pessoa, avisos pendentes e saúde das rotinas.", "Central e aba BIA do Dash"],
         ["Alerta sem barulho", "Se esgotar, a rotina para de insistir e avisa a gestão; falha passageira só alerta na segunda ocorrência seguida.", "WhatsApp da gestão"],
-      ], "", "Camadas de entrega garantida")
+      ], "", "Camadas de entrega")
       + '<h3 class="mt">Os vigias</h3>'
       + grid([
         card("Dados e rotinas", ul(["Negócio sem tarefa, cadastro incompleto, funil errado, duplicados, tarefa duplicada e congelados.", "Se os avisos do Agendor pararam de chegar, a Bia passa a conferir a cada 2 minutos até normalizar.", "Sincronização do Dash: alerta se parar por mais de 15 minutos."])),
         card("Infraestrutura", ul(["Agendor e automações do n8n nas últimas 24 horas, batimento cardíaco e autoteste.", "Webhook do número da Ana na Meta, a cada 5 minutos.", "Backups: alerta se uma parte passar de 30 horas sem sucesso."])),
-        card("Coerência", ul(["Auditor de coerência: lê o que a Bia disse e confere no Agendor se foi feito de verdade; divergência vai à gestão.", "Cópia à gestão de todo aviso enviado ao SDR."])),
+        card("Coerência", ul(["Auditor de coerência: lê o que a Bia disse e confere no Agendor se foi feito de verdade; divergência vai à gestão.", ])),
         card("Custo", ul(["Dash, aba Agentes: gasto por modelo, por lead novo, por qualificado e projeção do mês.", "Alerta de custo diário e mensal."])),
       ], 2)
       + aviso("Limites declarados", "Falha de ENVIO entra na fila e é reenviada; falha de ENTREGA recusada pela Meta, nos avisos da Bia, ainda não gera reenvio automático (planejado; na abertura da Ana já gera). O custo real da Bia ainda não é medido por completo. A conferência do Agendor só enxerga tarefas abertas há menos de 31 dias nas buscas por filtro.", "w"))
-    return sec("observ", "Plataforma", "Observabilidade e entrega garantida", "Vigias, nova tentativa, plano B e status visível na Central.", corpo)
+    return sec("observ", "Plataforma", "Observabilidade e entrega de avisos", "Vigias, nova tentativa, plano B e status visível na página Central.", corpo)
 
 def s_duvidas():
     faq = [
-      ("Por que meu lead não apareceu na Hoje?", "Use a busca geral no topo: ela procura nos dois funis do SDR por nome, pessoa, CNPJ, telefone, número do negócio ou cidade. Na fila de espera o lead só aparece em \"Começar leads novos\". Lead que entrou depois das 17h30 só começa no próximo dia útil. Se ele não está em um funil do SDR, a Hoje não o mostra."),
+      ("Por que meu lead não apareceu na página Hoje?", "Use a busca geral no topo: ela procura nos dois funis do SDR por nome, pessoa, CNPJ, telefone, número do negócio ou cidade. Na fila de espera o lead só aparece em \"Começar leads novos\". Lead que entrou depois das 17h30 só começa no próximo dia útil. Se ele não está em um funil do SDR, a página Hoje não o mostra."),
       ("Posso reabrir um lead que ganhei por engano?", "Sim: \"Reabrir lead\" e \"Tirar o Ganho e reabrir\", enquanto o lead ainda não foi entregue ao Arena. Depois do repasse, a Bia não desfaz."),
       ("Por que um lead perdido voltou para a fila?", "É uma das voltas ao SDR. A etiqueta no cartão e a caixa \"De onde veio este lead\" explicam. Ele só começa quando o SDR clica Iniciar."),
-      ("Por que a Bia devolveu uma ligação para a Hoje?", "Porque a ligação foi concluída ou apagada direto no Agendor sem dizer como foi. Abra a Hoje: se ligou, conclua dizendo o resultado; se não ligou, toque em \"Não houve ligação\"."),
+      ("Por que a Bia devolveu uma ligação para a página Hoje?", "Porque a ligação foi concluída ou apagada direto no Agendor sem dizer como foi. Abra a página Hoje: se ligou, conclua dizendo o resultado; se não ligou, toque em \"Não houve ligação\"."),
       ("Por que um lead perdido aparece em vermelho?", "Porque foi perdido sem explicação. Escreva em uma frase curta o que aconteceu. O lead continua perdido."),
       ("Por que não chegou a cobrança ao representante?", "O aviso precisa da aprovação da gestão, respeita o intervalo de 20 minutos entre avisos, só sai em dia útil e as cobranças começam às 9h. Lead ainda não distribuído também não gera cobrança."),
       ("A Ana pode prometer preço ou prazo?", "Não. Ela não fala preço, desconto, bonificação nem resultado garantido, e não promete que a Life B fará implantação ou reposição na loja."),
     ]
-    gl = [["Agendor", "O sistema de clientes, negócios, tarefas e funis."], ["Ana", "A SDR virtual do WhatsApp."], ["Bia", "A assistente de operação, que escreve no Agendor e avisa a equipe."],
+    gl = [["Agendor", "O sistema de clientes, negócios, tarefas e funis."], ["Ana", "A SDR Inbound virtual do WhatsApp."], ["Bia", "A assistente de operação, que escreve no Agendor e avisa a equipe."],
       ["SDR", "Quem faz o primeiro contato e qualifica o lead."], ["Closer", "Especialista que atende redes e fecha vendas no Arena."], ["Representante", "Vendedor de campo que atende a carteira."], ["Gestão", "Quem aprova, pausa e acompanha o conjunto."],
       ["Lead", "Negócio do Arena."], ["Qualificado", "Lead aprovado pelo SDR e entregue ao Arena (Ganho no SDR)."], ["Cadência", "Sequência de contatos em dias úteis."], ["Dia útil", "Segunda a sexta, sem feriado."],
       ["Fila de espera", "Leads do Outbound sem tarefa, esperando o Iniciar."], ["Fim da cadência", "Etapa depois da última tentativa; três dias úteis antes do fechamento automático."], ["Cadência esgotada", "Motivo usado só pela Bia para quem nunca respondeu."],
@@ -107,7 +107,7 @@ def s_duvidas():
       + '<h3 class="mt">Quando entrar um novo SDR</h3>'
       + '<p>O sistema foi pensado para crescer: cada SDR terá a própria página Hoje (projetojlbv.com.br/hoje/ seguido do nome) e o próprio painel de vendas, e só enxerga os leads que passaram por ele.</p>'
       + ul(["A equipe técnica cadastra o SDR nas listas do sistema, com nome completo, telefone e conta no Agendor. Uma conferência automática acusa se alguma lista ficar fora de sincronia.", "As regras de ligação com resultado, perda com explicação e dono ativo passam a cobrir o novo SDR depois do cadastro.", "Ele passa a aparecer na lista de distribuição, com a opção \"Fico com este lead\".", "Criar o atalho curto da página e, se ele também vender, o painel dele."])
-      + aviso("Situação atual: um único SDR", "A Hoje funciona com um acesso só. Antes de entrar o segundo SDR é preciso dar a cada um o seu acesso e filtrar a página pelos leads dele. Está na lista de próximos passos.", "w")
+      + aviso("Situação atual: um único SDR", "A página Hoje funciona com um acesso só. Antes de entrar o segundo SDR é preciso dar a cada um o seu acesso e filtrar a página pelos leads dele. Está na lista de próximos passos.", "w")
       + '<h3 class="mt">Glossário</h3>' + tabela(["Termo", "Quer dizer"], gl, "", "Glossário"))
     return sec("duvidas", "Referência", "Dúvidas, novo SDR e glossário", "Respostas rápidas e o vocabulário da operação.", corpo)
 
@@ -125,7 +125,7 @@ def s_versoes():
         est = pill("ok", "No ar") if x["estado"] == "no ar" else pill("te", "Em implantação")
         vf = "<br>".join(f"<b>{k.capitalize() if k!='fumaca' else 'Fumaça'}:</b> {val}" for k, val in v.items())
         rows.append([x["nome"], f"<b>{vis(x['versao'])}</b>" + (f"<br><span class=\"muted\">{x['nota']}</span>" if x["nota"] else ""), x["data"], est + "<br><span class=\"muted\">Fonte: " + x["fonte"] + "</span>", vf])
-    ciclo = passos([("Varredura de todos os lugares", "A regra mudada é procurada no código, nas mensagens, nas páginas, na Central, neste Ecossistema e nos documentos. O roteiro exige a linha \"Varredura:\"."),
+    ciclo = passos([("Varredura de todos os lugares", "A regra mudada é procurada no código, nas mensagens, nas páginas, na página Central, neste Ecossistema e nos documentos. O roteiro exige a linha \"Varredura:\"."),
         ("Testes", "Suíte principal (cerca de 12 mil verificações) e suítes dos módulos; nas páginas, testes de tela em navegador real, 5 larguras e dois temas."),
         ("Auditoria independente", "Revisor separado, que não corrige o próprio achado, tenta quebrar a mudança. Em páginas, inclui auditoria visual olhando os prints."),
         ("Antirregressão", "Linha \"Antirregressão:\" obrigatória: baseline, conversas reais como casos, mutação das travas, volta atrás testada."),
@@ -139,8 +139,9 @@ def s_versoes():
       + grid([card("Atualização automática pelo deploy", "<p>O roteiro de deploy de cada sistema chama a atualização do arquivo de versões depois de publicar (versão, data e resultado de cada verificação) e remonta esta página. Hoje o comando existe; ligá-lo em cada roteiro de deploy é o próximo passo.</p>", p="pl"),
               card("Documentação de cada verificação", "<p>Cada deploy deixa registro: o que foi varrido, quais testes rodaram e o resultado, quem auditou e o veredito, o resultado da fumaça e como voltar atrás. Os registros ficam nos documentos do projeto e as linhas de resumo aparecem aqui.</p>", p="ok")], 2)
       + '<h3 class="mt">Histórico de versões desta página</h3>' + tabela(["Versão", "Data", "O que mudou"], [
-        [VERSAO, DATA_V, "Página atualizada para 16/11: funis Ana, SDR Inbound e Arena (a Ana ganha ao qualificar e o SDR Inbound nasce na etapa Ana qualificou), Hoje sem travas de horário, pacotes da Ana e da Central como em implantação, futuros marcados como planejado; novo modo apresentação em slides (tela cheia, sem rolagem, celular em pé); estado por componente em estado.json e data de atualização na página."],
-        ["2026-11-15.1", "15/11/2026", "Versões reais de Ana, Bia e Central (lidas do servidor e do git); camada de entrega 131049 da Ana no ar; datas alinhadas a 15/11; restaurados o mapa de infraestrutura, a grade de horários dos resumos e a nota do GS Engage legado; Hoje release 1 no ar; registro de deploys e verificações."],
+        [VERSAO, DATA_V, "Rodada 2: seção e slides \"Quem é quem\" (glossário em linguagem simples); modo apresentação com todos os capítulos da página (índice navegável pela tecla G, fluxogramas encaixados em partes, texto que se ajusta sozinho); pacote 1 da Ana e limpeza de avisos da Bia no ar; Central nova ainda em implantação; cópia automática de avisos ao gestor desligada; sem códigos técnicos e contagens voláteis."],
+        ["2026-11-16.1", DATA_V, "Página atualizada para 16/11: funis Ana, SDR Inbound e Arena (a Ana ganha ao qualificar e o SDR Inbound nasce na etapa Ana qualificou), Hoje sem travas de horário, pacote da Ana no ar, Central nova em implantação, futuros marcados como planejado; novo modo apresentação em slides (tela cheia, sem rolagem, celular em pé); estado por componente em estado.json e data de atualização na página."],
+        ["2026-11-15.1", "15/11/2026", "Versões reais de Ana, Bia e Central (lidas do servidor e do git); camada de entrega da Ana no ar; datas alinhadas a 15/11; restaurados o mapa de infraestrutura, a grade de horários dos resumos e a nota do GS Engage legado; Hoje release 1 no ar; registro de deploys e verificações."],
         ["2026-11-14.1", "14/11/2026", "Página refeita, com fluxogramas, modo apresentação, status e checklist."],
         ["2026-11-09", "09/11/2026", "Versão anterior, de 20 seções."]], "", "Histórico"))
     return sec("versoes", "Plataforma", "Versões e verificações por deploy", "A versão de cada sistema, a data do último deploy e o checklist que foi feito.", corpo)
@@ -150,9 +151,10 @@ def s_sobre():
       '<h3>Versão desta página</h3>'
       + f'<p><b>Versão {VERSAO}</b>, de {DATA_V}. A cada entrega que muda uma regra, um processo, uma automação ou o status de algo, esta página é atualizada, o número da versão sobe e uma linha é acrescentada abaixo. O histórico completo fica guardado junto do código da página.</p>'
       + tabela(["Versão", "Data", "O que mudou"], [
-        [VERSAO, DATA_V, "Página atualizada para 16/11: funis Ana, SDR Inbound e Arena (a Ana ganha ao qualificar e o SDR Inbound nasce na etapa Ana qualificou), Hoje sem travas de horário, pacotes da Ana e da Central como em implantação, futuros marcados como planejado; novo modo apresentação em slides (tela cheia, sem rolagem, celular em pé); estado por componente em estado.json e data de atualização na página."],
-        ["2026-11-15.1", "15/11/2026", "Versões reais de Ana, Bia e Central (lidas do servidor e do git); camada de entrega 131049 da Ana no ar; datas alinhadas a 15/11; restaurados o mapa de infraestrutura, a grade de horários dos resumos e a nota do GS Engage legado; Hoje release 1 no ar; registro de deploys e verificações."],
-        ["2026-11-14.1", "14/11/2026", "Página refeita: seções navegáveis, status e checklist honestos, fluxogramas com tema claro e escuro, a Central e suas conexões, modo apresentação e tela cheia, posição preservada ao atualizar e nenhum nome de pessoa. Entra o que mudou desde 09/11: Ana com apresentação em capítulos, Bia com funil da Ana por nome, folga e vínculo de empresa, os 3 destinos, observabilidade e entrega garantida."],
+        [VERSAO, DATA_V, "Rodada 2: seção e slides \"Quem é quem\" (glossário em linguagem simples); modo apresentação com todos os capítulos da página (índice navegável pela tecla G, fluxogramas encaixados em partes, texto que se ajusta sozinho); pacote 1 da Ana e limpeza de avisos da Bia no ar; Central nova ainda em implantação; cópia automática de avisos ao gestor desligada; sem códigos técnicos e contagens voláteis."],
+        ["2026-11-16.1", DATA_V, "Página atualizada para 16/11: funis Ana, SDR Inbound e Arena (a Ana ganha ao qualificar e o SDR Inbound nasce na etapa Ana qualificou), Hoje sem travas de horário, pacote da Ana no ar, Central nova em implantação, futuros marcados como planejado; novo modo apresentação em slides (tela cheia, sem rolagem, celular em pé); estado por componente em estado.json e data de atualização na página."],
+        ["2026-11-15.1", "15/11/2026", "Versões reais de Ana, Bia e Central (lidas do servidor e do git); camada de entrega da Ana no ar; datas alinhadas a 15/11; restaurados o mapa de infraestrutura, a grade de horários dos resumos e a nota do GS Engage legado; Hoje release 1 no ar; registro de deploys e verificações."],
+        ["2026-11-14.1", "14/11/2026", "Página refeita: seções navegáveis, status e checklist honestos, fluxogramas com tema claro e escuro, a página Central e suas conexões, modo apresentação e tela cheia, posição preservada ao atualizar e nenhum nome de pessoa. Entra o que mudou desde 09/11: Ana com apresentação em capítulos, Bia com funil da Ana por nome, folga e vínculo de empresa, os 3 destinos, observabilidade e entrega garantida."],
         ["2026-11-09", "09/11/2026", "Versão anterior: 20 seções com vocabulário, funis etapa por etapa, cadência, Hoje e Lista, regras, voltas ao SDR, Bia, Dash, Painel do Representante, Ana, camada do Agendor, testes e segurança."],
       ], "", "Histórico de versões")
       + '<h3 class="mt">Sobre este guia</h3>'
