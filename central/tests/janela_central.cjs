@@ -165,10 +165,11 @@ async function saude(b, tema, vp, nome) {
   S.ok(!/Rotinas agendadas pede/i.test(t) && !/Estado: Normal/.test(t) && !/Carregando os detalhes/.test(t) && !/pede atenção/.test(t), "saúde/" + nome + ": tudo ok => sem 'Rotinas agendadas pede atenção', 'Estado: Normal' nem 'Carregando os detalhes…'");
   await p.screenshot({ path: `${PR}/5_saude_${nome}.png` }); S.ok(!(p._erros && p._erros.length), "saúde/" + nome + ": console limpo " + JSON.stringify(p._erros)); await ctx.close();
 }
+const cena_ = async (nome, fn) => { try { await fn(); } catch (e) { S.F("EXCEÇÃO no cenário " + nome + ": " + String(e.message).split("\n")[0].slice(0, 200)); } };   // um cenário que cai não derruba os demais
 (async () => {
   const b = await chromium.launch({ executablePath: process.argv[3] });
-  for (const [vp, tema, nome] of [[{ width: 1440, height: 900 }, "light", "desk_claro"], [{ width: 1440, height: 900 }, "dark", "desk_escuro"], [{ width: 390, height: 780 }, "light", "cel_claro"], [{ width: 390, height: 780 }, "dark", "cel_escuro"]]) { await cena(b, vp, tema, nome); await saude(b, tema, vp, nome); }
-  await fecharSozinha(b); await voltar(b, "cliente"); await voltar(b, "servidor");
-  for (const c of ["ok", "falha", "falha_final", "409"]) await passar(b, c);
+  for (const [vp, tema, nome] of [[{ width: 1440, height: 900 }, "light", "desk_claro"], [{ width: 1440, height: 900 }, "dark", "desk_escuro"], [{ width: 390, height: 780 }, "light", "cel_claro"], [{ width: 390, height: 780 }, "dark", "cel_escuro"]]) { await cena_("cena/" + nome, () => cena(b, vp, tema, nome)); await cena_("saude/" + nome, () => saude(b, tema, vp, nome)); }
+  await cena_("fecharSozinha", () => fecharSozinha(b)); await cena_("voltar/cliente", () => voltar(b, "cliente")); await cena_("voltar/servidor", () => voltar(b, "servidor"));
+  for (const c of ["ok", "falha", "falha_final", "409"]) await cena_("passar/" + c, () => passar(b, c));
   S.fim(); await b.close();
 })();
