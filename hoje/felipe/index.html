@@ -2340,7 +2340,7 @@ async function enviarCampos(L) {
     diff.forEach(function (d) { if (nao.indexOf(d.k.split('.').pop()) < 0 && !(j.lead && j.lead.observacaoSdr != null)) gravouNoServidor(L, d.k, d.v); }); // base de TODOS os campos salvos = o que foi gravado
     diff.forEach(function (d) { var nome = d.k.split('.').pop(); if (nao.indexOf(nome) >= 0) return; delete L.edits[d.k]; });
     gravarRascunho(L); L.receita = null; L.receitaCnpj = '';
-    if (S.L === L) { redesenhar(L); setEstado(L, nao.length ? 'erro' : 'ok', nao.length ? 'Não consegui salvar tudo: ' + nao.join(', ') + '. O que você digitou continua aqui.' : (j.empresaVinculada ? 'Salvo ✓ (o negócio foi ligado à empresa que já tinha esse CNPJ)' : (j.telefones && j.telefones.substituidoEm && j.telefones.substituidoEm.length ? 'Telefone trocado ✓ (o novo substituiu o antigo)' : 'Salvo ✓')), nao.length ? function () { (L.modalAberto ? confirmarGanho : salvarCampos)(L); } : null); notaAvisos(L, j); }
+    if (S.L === L) { redesenhar(L); setEstado(L, nao.length ? 'erro' : 'ok', nao.length ? 'Não consegui salvar tudo: ' + nao.join(', ') + '. O que você digitou continua aqui.' : (j.empresaVinculada ? 'Salvo ✓ (o negócio foi ligado à empresa que já tinha esse CNPJ' + (j.empresaVinculada.jaCliente ? '; atenção: essa empresa já é cliente' : '') + ')' : (j.telefones && j.telefones.substituidoEm && j.telefones.substituidoEm.length ? 'Telefone trocado ✓ (o novo substituiu o antigo)' : 'Salvo ✓')), nao.length ? function () { (L.modalAberto ? confirmarGanho : salvarCampos)(L); } : null); notaAvisos(L, j); }
     if (!j.lead) carregarLead(L, true);
     return nao.length ? 'erro' : 'ok';
   }
