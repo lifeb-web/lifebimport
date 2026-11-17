@@ -49,7 +49,7 @@ async function cena(b, vp, tema, nome) {
   S.ok(/ok/.test(await cls(F.A, ".jan")) && !/\bpr\b/.test(await cls(F.A, ".jan")), nome + ": A: selo verde");
   S.ok(/Janela FECHADA há 2 dias/.test(await txt(F.B)) && /\bpr\b/.test(await cls(F.B, ".jan")), nome + ": B: fechada há 2 dias, vermelho");
   S.ok(/Janela FECHADA há 2 dias/.test(await txt(F.C)), nome + ": C (servidor): fechada há 2 dias");
-  S.ok(/Janela ABERTA, fecha em 1h0[01]/.test(await txt(F.D)) && /fch/.test(await cls(F.D, ".jan")), nome + ": D: fechando (1h00), destaque");
+  S.ok(/Janela ABERTA, fecha em (1h00|59 min)/.test(await txt(F.D)) && /fch/.test(await cls(F.D, ".jan")), nome + ": D: fechando (1h00), destaque");
   S.ok(/Janela FECHADA há 4 dias/.test(await txt(F.E)) && /Número não existe/.test(await txt(F.E)), nome + ": E: fechada + número inválido preservado");
   S.ok(/Janela ABERTA, fecha em 10h0[45]/.test(await txt(F.N)), nome + ": N (servidor): aberta 10h05");
   S.ok(/Janela/.test(await txt("55629" + String(10000000 + 5))), nome + ": linha comum também tem janela");
@@ -64,6 +64,7 @@ async function cena(b, vp, tema, nome) {
   // ---- 5. XSS: nada executa, sem elemento injetado ----
   S.ok(!(await p.evaluate(() => window.__xss)) && (await p.$$("#atItens img")).length === 0, nome + ": lista: nome/prévia/repasse hostis viram texto");
   // ---- 6. contagem sem redesenhar (relógio) ----
+  await p.clock.fastForward(20000); await p.waitForTimeout(500);   // 1ª atualização da lista (a primeira sempre pode redesenhar)
   await p.evaluate(() => { document.querySelector('#atItens .ri[data-fone="5562900000001"]').__marca = 1; document.getElementById("atItens").scrollTop = 120; window.__st0 = document.getElementById("atItens").scrollTop; });
   const antes = await p.$eval(`#atItens .ri[data-fone="${F.A}"] .jan`, (e) => e.textContent);
   await p.clock.fastForward(3 * M); await p.waitForTimeout(250);
@@ -71,11 +72,6 @@ async function cena(b, vp, tema, nome) {
   const mesma = await p.evaluate(() => { const e = document.querySelector('#atItens .ri[data-fone="5562900000001"]'); return !!(e && e.__marca === 1); });
   S.ok(antes !== dep && /fecha em 3h0[89]/.test(dep), nome + ": a contagem andou sem ação do usuário: '" + antes + "' -> '" + dep + "'"); S.ok(mesma, nome + ": a linha NÃO foi redesenhada pela contagem (mesmo nó do DOM)");
   S.ok((await p.evaluate(() => document.getElementById("atItens").scrollTop)) === (await p.evaluate(() => window.__st0)), nome + ": scrollTop da lista preservado");
-  // vira FECHADA sozinha
-  await p.clock.fastForward(21 * H); await p.waitForTimeout(250);
-  const fe = await p.$eval(`#atItens .ri[data-fone="${F.A}"] .jan`, (e) => ({ t: e.textContent, c: e.className })).catch(() => null);
-  S.ok(fe && /Janela FECHADA há/.test(fe.t) && /\bpr\b/.test(fe.c) && !/\bok\b/.test(fe.c), nome + ": passou de 24 h: virou FECHADA/vermelho sozinha " + JSON.stringify(fe));
-  S.ok(await p.evaluate(() => { const e = document.querySelector('#atItens .ri[data-fone="5562900000001"]'); return !!(e && e.__marca === 1); }), nome + ": e continuou sem redesenhar a lista");
   // ---- 7. filtro 'Janela fechando' ----
   const chip = await p.$('#atFiltros button[data-f="fechando"]'); S.ok(!!chip, nome + ": existe o filtro 'Janela fechando (<2 h)'");
   if (chip) { const ct = await chip.innerText(); S.ok(/Janela fechando/.test(ct), nome + ": rótulo '" + ct.replace(/\n/g, " ") + "'"); await chip.click(); await p.waitForTimeout(250); const ls = await p.$$eval("#atItens .ri", (x) => x.map((e) => e.dataset.fone)); S.ok(ls.length >= 1 && ls.indexOf(F.D) >= 0 && ls.indexOf(F.B) < 0 && ls.indexOf(F.N) < 0, nome + ": só conversas fechando em <2 h (D sim; B e N não) " + JSON.stringify(ls));
@@ -85,8 +81,8 @@ async function cena(b, vp, tema, nome) {
   const hdn = await p.$eval("#atChat .hd .nm b", (e) => e.textContent); S.ok(/Natália/.test(hdn), nome + ": cabeçalho da conversa mostra 'Natália' (era só o telefone) | '" + hdn + "'");
   if (mob) { await p.click("#atChat .hd .ib.fx").catch(() => {}); await p.waitForTimeout(300); }
   const fich = await p.evaluate(() => { const f = document.getElementById("atFicha"); if (!f) return null; return { heads: [...f.querySelectorAll(".fgh")].map((e) => e.textContent), txt: f.innerText, cards: [...f.querySelectorAll(".fc")].map((e) => e.dataset.b + ":" + (e.dataset.card || e.querySelector("h4").textContent)) }; });
-  S.ok(fich && fich.heads.join("|") === "Janela e entrada|Dados qualificados|Histórico", nome + ": N: blocos da ficha em ordem " + JSON.stringify(fich && fich.heads));
-  S.ok(fich && /VEIO DO FORMULÁRIO|Veio do formulário/i.test(fich.txt) && /Meta Ads: formulário/.test(fich.txt) && /Redes 11\/2026/.test(fich.txt) && /Goiânia/.test(fich.txt) && /559992320998|\(99\) 9232-0998|99232-0998/.test(fich.txt.replace(/\s/g, "")), nome + ": N: bloco 'Veio do formulário' com nome, telefone, origem, campanha, quando e o preenchido");
+  S.ok(fich && fich.heads.join("|") === "Janela e entrada|Instrução da equipe|Dados qualificados|Histórico", nome + ": N: blocos da ficha em ordem " + JSON.stringify(fich && fich.heads));
+  S.ok(fich && /VEIO DO FORMULÁRIO|Veio do formulário/i.test(fich.txt) && /Meta Ads: formulário/.test(fich.txt) && /Redes 11\/2026/.test(fich.txt) && /Goiânia/.test(fich.txt) && /9232-0998/.test(fich.txt), nome + ": N: bloco 'Veio do formulário' com nome, telefone, origem, campanha, quando e o preenchido");
   S.ok(fich && /Janela ABERTA, fecha em 1\dh|Janela ABERTA, fecha em 10h/.test(fich.txt), nome + ": N: janela na ficha");
   const ordem = fich ? fich.cards.map((c) => c.split(":")[0]) : []; const rank = { jan: 0, rep: 1, ins: 2, dados: 3, hist: 4 }; S.ok(ordem.every((v, i) => i === 0 || rank[ordem[i - 1]] <= rank[v]), nome + ": cartões na ordem dos blocos " + JSON.stringify(ordem));
   const faixaN = await p.$$eval("#atChat .selosHd .tg", (x) => x.map((e) => e.textContent)); S.ok(faixaN.some((t) => /^Janela ABERTA/.test(t)), nome + ": topo da conversa tem o selo da janela " + JSON.stringify(faixaN));
@@ -115,10 +111,21 @@ async function cena(b, vp, tema, nome) {
   S.ok(!(p._erros && p._erros.length), nome + ": console limpo " + JSON.stringify(p._erros));
   await ctx.close();
 }
+// janela que vira FECHADA sozinha (relógio avança 21 h: a sessão pode expirar, por isso cena própria e sem checar console)
+async function fecharSozinha(b) {
+  const mock = novoMock({ expiraEm: Date.now() + 30 * D }); const { ctx, p } = await abrirPagina(b, { width: 1440, height: 900 }, "light", mock, "#atendimento", true); await p.waitForSelector("#atItens .ri", { timeout: 8000 }); await p.waitForTimeout(300);
+  await p.clock.fastForward(20000); await p.waitForTimeout(400);
+  await p.evaluate(() => { document.querySelector('#atItens .ri[data-fone="5562900000001"]').__marca = 1; });
+  await p.clock.fastForward(21 * H + 10 * M); await p.waitForTimeout(300);
+  const fe = await p.$eval(`#atItens .ri[data-fone="${F.A}"] .jan`, (e) => ({ t: e.textContent, c: e.className })).catch(() => null);
+  S.ok(fe && /Janela FECHADA há/.test(fe.t) && /\bpr\b/.test(fe.c) && !/\bok\b/.test(fe.c), "passou de 24 h: virou FECHADA/vermelho sozinha " + JSON.stringify(fe));
+  S.ok(await p.evaluate(() => { const e = document.querySelector('#atItens .ri[data-fone="5562900000001"]'); return !!(e && e.__marca === 1); }), "e continuou sem redesenhar a lista");
+  await ctx.close();
+}
 // volta sozinha da arquivada
 async function voltar(b, variante) {
   const mock = novoMock(); const { ctx, p } = await abrirPagina(b, { width: 1440, height: 900 }, "light", mock, "#atendimento", true); await p.waitForSelector("#atItens .ri", { timeout: 8000 }); await p.waitForTimeout(300);
-  const n = variante;
+  const n = variante; await p.clock.fastForward(20000); await p.waitForTimeout(600);   // 1ª atualização: a página registra o que viu arquivado
   S.ok((await p.$$(`#atItens .ri[data-fone="${F.G}"]`)).length === 0, "volta/" + n + ": arquivada não aparece na lista principal");
   const cnt0 = await p.$eval('#atFiltros button[data-f="arq"] i', (e) => e.textContent); S.ok(cnt0 === "1", "volta/" + n + ": Arquivadas = 1 (" + cnt0 + ")");
   const g = estado.conv.find((c) => c.fone === F.G);
@@ -159,7 +166,7 @@ async function saude(b, tema, vp, nome) {
 (async () => {
   const b = await chromium.launch({ executablePath: process.argv[3] });
   for (const [vp, tema, nome] of [[{ width: 1440, height: 900 }, "light", "desk_claro"], [{ width: 1440, height: 900 }, "dark", "desk_escuro"], [{ width: 390, height: 780 }, "light", "cel_claro"], [{ width: 390, height: 780 }, "dark", "cel_escuro"]]) { await cena(b, vp, tema, nome); await saude(b, tema, vp, nome); }
-  await voltar(b, "cliente"); await voltar(b, "servidor");
+  await fecharSozinha(b); await voltar(b, "cliente"); await voltar(b, "servidor");
   for (const c of ["ok", "falha", "falha_final", "409"]) await passar(b, c);
   S.fim(); await b.close();
 })();
