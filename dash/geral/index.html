@@ -144,6 +144,14 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 
 #err-banner{display:none;background:#fef2f2;border:1.5px solid #fecaca;border-radius:10px;padding:10px 14px;font-size:12px;font-weight:600;color:#991b1b}
 #err-banner.show{display:block}
+/* 17/11: faixa de estado dos dados (último dado bom / modo emergência / atualização parcial) */
+#dados-banner{display:none;border-radius:10px;padding:10px 14px;font-size:12px;font-weight:700;line-height:1.4}
+#dados-banner.show{display:block}
+#dados-banner.stale{background:#fffbeb;border:1.5px solid #fcd34d;color:#78350f}
+#dados-banner.emerg{background:#fef2f2;border:2px solid #dc2626;color:#7f1d1d}
+#dados-banner .err-retry{font:inherit;font-weight:800;color:inherit;background:#fff;border:1.5px solid currentColor;border-radius:8px;padding:6px 12px;margin-left:4px;cursor:pointer;min-height:32px;position:relative}
+#dados-banner .err-retry::after{content:'';position:absolute;left:0;right:0;top:-6px;bottom:-6px}
+body.modo-emerg #main{filter:grayscale(.55)}
 #err-banner .err-retry{font:inherit;font-weight:800;color:#991b1b;background:#fff;border:1.5px solid #fecaca;border-radius:8px;padding:6px 12px;margin-left:4px;cursor:pointer;min-height:32px;position:relative}
 #err-banner .err-retry::after{content:'';position:absolute;left:0;right:0;top:-6px;bottom:-6px}
 
@@ -756,6 +764,7 @@ footer strong{color:#fff}
 
 <div id="main">
   <div id="err-banner"></div>
+  <div id="dados-banner" role="alert"></div>
 
   <div id="vendas-view">
   <div class="sec-hd">Visão Geral · <span id="period-label" style="color:var(--purple);font-weight:800">90 dias</span><span id="period-total-badge" class="total-badge">⏳ HISTÓRICO COMPLETO</span><span id="period-trunc-badge" class="trunc-badge" title="Volume muito alto: parte antiga do histórico pode não estar contada">⚠ parcial</span></div>
@@ -2126,6 +2135,15 @@ function origemCenter_(bd, mode, hoverKey) {
   return ['Sem vendas', '—', 'no período'];
 }
 
+// 17/11: texto do centro num grupo próprio (<g class="orig-ctr">): o hover troca SÓ ele (antes trocava "os 3 primeiros <text>" por posição,
+// o que quebra quando "Filtro · X" vira 2 linhas). Depois de trocar, origemAjustar_() mede e encaixa de novo no aro.
+function origemCenterSVG_(l1, l2, l3) {
+  return (/^Filtro · /.test(l1)
+    ? `<text x="100" y="74" text-anchor="middle" class="orig-t1">Filtro</text><text x="100" y="86" text-anchor="middle" class="orig-t1">${escHtml(l1.slice(9))}</text>`
+    : `<text x="100" y="86" text-anchor="middle" class="orig-t1">${escHtml(l1)}</text>`) +
+    `<text x="100" y="108" text-anchor="middle" class="orig-t2" style="font-size:${l2.length > 11 ? 15 : (l2.length > 9 ? 18 : 21)}px">${escHtml(l2)}</text>` +
+    `<text x="100" y="126" text-anchor="middle" class="orig-t3">${escHtml(l3)}</text>`;
+}
 // Rosca em SVG (viewBox fixo 200x200 — tudo, inclusive o texto central, escala
 // junto com o tamanho real do contêiner: nunca corta nem sobrepõe em telas
 // diferentes). Fatias por stroke-dasharray: funciona igual com 1 fatia (100%),
@@ -2174,8 +2192,8 @@ function origemDonutSVG_(bd, mode, hoverKey, animate) {
     ['r', 'l'].forEach(sd => {
       const arr = side[sd].sort((a, b) => a.y - b.y);
       if (arr.length) arr[0].y = Math.max(arr[0].y, soPct ? 2 : 3); // 07/10: o 1º rótulo já respeita o topo ANTES de empurrar os de baixo (senão o limite do topo colava o vizinho)
-      for (let i = 1; i < arr.length; i++) if (arr[i].y < arr[i - 1].y + (soPct ? 12 : 22)) arr[i].y = arr[i - 1].y + (soPct ? 12 : 22); // anti-colisão vertical
-      { const gp = soPct ? 12 : 22, maxY = soPct ? 198 : 192; for (let i = arr.length - 1; i >= 0; i--) { if (arr[i].y > maxY) arr[i].y = maxY; if (i > 0 && arr[i - 1].y > arr[i].y - gp) arr[i - 1].y = arr[i].y - gp; } } // 07/10: sem estourar a borda de baixo, sobe o grupo em vez de sobrepor
+      for (let i = 1; i < arr.length; i++) if (arr[i].y < arr[i - 1].y + (soPct ? 14 : 28)) arr[i].y = arr[i - 1].y + (soPct ? 14 : 28); // anti-colisão vertical
+      { const gp = soPct ? 14 : 28, maxY = soPct ? 198 : 192; for (let i = arr.length - 1; i >= 0; i--) { if (arr[i].y > maxY) arr[i].y = maxY; if (i > 0 && arr[i - 1].y > arr[i].y - gp) arr[i - 1].y = arr[i].y - gp; } } // 07/10: sem estourar a borda de baixo, sobe o grupo em vez de sobrepor
       arr.forEach(it => {
         // 07/10 (Robert: "nunca dar merda"): além de não colidir com o vizinho, o texto SEMPRE fica fora do anel na altura em que está (o anel abaulado invadia o
         // rótulo empurrado pra baixo perto do topo). yEff = a linha do texto mais perto do centro; 90 = raio externo do anel ativo; 8 = folga.
@@ -2190,9 +2208,7 @@ function origemDonutSVG_(bd, mode, hoverKey, animate) {
   }
   return `<svg viewBox="${VB.join(' ')}" class="orig-svg" style="aspect-ratio:${VB[2]}/${VB[3]}" role="group" aria-label="Vendas do período (rosca)">
     <g class="${animate ? 'orig-anim' : ''}"><g transform="rotate(-90 100 100)">${segs}</g></g>
-    <text x="100" y="86" text-anchor="middle" class="orig-t1">${escHtml(l1)}</text>
-    <text x="100" y="108" text-anchor="middle" class="orig-t2" style="font-size:${l2.length > 11 ? 15 : (l2.length > 9 ? 18 : 21)}px">${escHtml(l2)}</text>
-    <text x="100" y="126" text-anchor="middle" class="orig-t3">${escHtml(l3)}</text>
+    <g class="orig-ctr">${origemCenterSVG_(l1, l2, l3)}</g>
     ${lbHTML}
   </svg>`;
 }
@@ -2245,6 +2261,57 @@ function origemFootHTML_(bd) {
   return `<span>Novos clientes <b>${origemMoneyShort_(novos)}</b>${t > 0 ? ' (' + pn + '%)' : ''}</span><span>Recorrência <b>${origemMoneyShort_(recor)}</b>${t > 0 ? ' (' + (100 - pn) + '%)' : ''}</span>`;
 }
 
+// 🔴 FIX 17/11 (Robert: "o gráfico de pizza às vezes corta nomes como SuperAgos"; texto central "FILTRO · OUTBOUND" passava do aro):
+// o desenho em unidades fixas não sabe a largura real do texto (fonte Montserrat, nomes longos, largura do contêiner).
+// Depois de pintar, MEDE (getBBox) e corrige: (1) cada linha do centro cabe na corda do aro (fonte menor, depois reticências
+// com o texto inteiro no title); (2) rótulos de fatia que ainda se sobreponham são afastados (pra longe do centro, nunca
+// pra dentro do aro); (3) a janela do SVG (viewBox) cresce o necessário pra NADA ficar cortado. Não muda dado nem cor.
+function origemAjustar_(donut) {
+  try {
+    const svg = donut && donut.querySelector('svg'); if (!svg) return;
+    if (!donut.getBoundingClientRect().width) return; // aba escondida: sem medida, a próxima pintura ajusta
+    const NS = 'http://www.w3.org/2000/svg';
+    const RIN = 55; // raio interno útil do aro (61 normal, 58 com fatia em destaque, menos folga)
+    svg.querySelectorAll('.orig-t1,.orig-t2,.orig-t3').forEach(t => {
+      const full = t.textContent; if (!full.trim()) return;
+      let bb = t.getBBox(), fs = parseFloat(getComputedStyle(t).fontSize) || 10;
+      const lim = () => { const d = Math.max(Math.abs(bb.y - 100), Math.abs(bb.y + bb.height - 100)); return 2 * Math.sqrt(Math.max(RIN * RIN - d * d, 400)); };
+      let g = 0;
+      while (bb.width > lim() && fs > 6 && g++ < 60) { fs -= 0.5; t.style.fontSize = fs + 'px'; bb = t.getBBox(); }
+      if (bb.width > lim()) {
+        let s = full; g = 0;
+        while (s.length > 3 && bb.width > lim() && g++ < 80) { s = s.slice(0, -1); t.textContent = s.replace(/\s+$/, '') + '…'; bb = t.getBBox(); }
+        const ti = document.createElementNS(NS, 'title'); ti.textContent = full; t.appendChild(ti);
+      }
+    });
+    // rótulos de fatia: afasta sobreposições medidas (cada lado, do centro pra fora)
+    const gs = [...svg.querySelectorAll('.orig-lb')].map(g => ({ g, t: g.querySelector('text'), pl: g.querySelector('polyline') })).filter(o => o.t);
+    const mv = (o, dy) => {
+      o.t.setAttribute('y', (parseFloat(o.t.getAttribute('y')) + dy).toFixed(1));
+      const pts = o.pl.getAttribute('points').trim().split(/\s+/); const last = pts[pts.length - 1].split(',');
+      pts[pts.length - 1] = last[0] + ',' + (parseFloat(last[1]) + dy).toFixed(1); o.pl.setAttribute('points', pts.join(' '));
+    };
+    [['r', 1], ['l', -1]].forEach(([, dir]) => {
+      const lado = gs.filter(o => (o.t.getAttribute('text-anchor') === 'start') === (dir > 0));
+      [lado.filter(o => parseFloat(o.t.getAttribute('y')) >= 100).sort((a, b) => a.t.getBBox().y - b.t.getBBox().y), lado.filter(o => parseFloat(o.t.getAttribute('y')) < 100).sort((a, b) => b.t.getBBox().y - a.t.getBBox().y)].forEach((arr, metade) => {
+        for (let i = 1; i < arr.length; i++) {
+          const a = arr[i - 1].t.getBBox(), b = arr[i].t.getBBox();
+          const dy = metade === 0 ? (a.y + a.height + 2) - b.y : (a.y - 2) - (b.y + b.height); // metade de baixo desce, de cima sobe
+          if (metade === 0 ? dy > 0 : dy < 0) mv(arr[i], dy);
+        }
+      });
+    });
+    const vb = svg.viewBox.baseVal; let x0 = vb.x, y0 = vb.y, x1 = vb.x + vb.width, y1 = vb.y + vb.height; const M = 3;
+    gs.forEach(o => { const b = o.t.getBBox(); x0 = Math.min(x0, b.x - M); x1 = Math.max(x1, b.x + b.width + M); y0 = Math.min(y0, b.y - M); y1 = Math.max(y1, b.y + b.height + M); });
+    if (x0 < vb.x || y0 < vb.y || x1 > vb.x + vb.width || y1 > vb.y + vb.height) {
+      svg.setAttribute('viewBox', [x0, y0, x1 - x0, y1 - y0].map(v => +v.toFixed(1)).join(' '));
+      svg.style.aspectRatio = (x1 - x0).toFixed(1) + '/' + (y1 - y0).toFixed(1);
+    }
+  } catch (e) { console.warn('origemAjustar_ falhou (rosca fica como desenhada):', e && e.message); }
+}
+// fonte web (Montserrat) chega depois da 1ª pintura e muda a largura dos textos: reajusta quando ela chegar
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { try { if (typeof _origemData !== 'undefined' && _origemData) paintOrigem_(); } catch (_) {} });
+
 // Chamada de dentro de render(d) — sempre a partir do período JÁ resolvido em d
 // (nunca recalcula o filtro por conta própria). Falha aqui nunca derruba o resto
 // do painel: só marca o card como indisponível.
@@ -2290,8 +2357,8 @@ function origemHover_(key) {
   });
   svg.querySelectorAll('.orig-lb').forEach(g => { if (foco && !origemAtivo_(foco, g.dataset.k, _origemHover)) g.setAttribute('opacity', '.3'); else g.removeAttribute('opacity'); });
   const [l1, l2, l3] = origemCenter_(pzAtual_(), _origemMode, _origemHover);
-  const t = svg.querySelectorAll('text');
-  if (t.length >= 3) { t[0].textContent = l1; t[1].textContent = l2; t[1].style.fontSize = (l2.length > 11 ? 15 : (l2.length > 9 ? 18 : 21)) + 'px'; t[2].textContent = l3; }
+  const ctr = svg.querySelector('.orig-ctr');
+  if (ctr) { ctr.innerHTML = origemCenterSVG_(l1, l2, l3); origemAjustar_(donut); }
   document.querySelectorAll('#origem-legend .orig-item').forEach(it => it.classList.toggle('hl', !!_origemHover && it.dataset.k === _origemHover));
 }
 
@@ -2326,6 +2393,7 @@ function paintOrigem_(hoverKey, animate) {
   const ae = document.activeElement;
   const focoK = ae && ae.dataset && ae.dataset.k && (ae.classList.contains('orig-seg') ? 'seg' : (ae.classList.contains('orig-item') ? 'item' : null)) ? { t: ae.classList.contains('orig-seg') ? 'seg' : 'item', k: ae.dataset.k } : null;
   donut.innerHTML = origemDonutSVG_(bd, _origemMode, _origemHover, !!animate);
+  origemAjustar_(donut);
   origemBindSegs_();
   const leg = document.getElementById('origem-legend');
   leg.classList.toggle('pz-on', !!pz);
@@ -2601,48 +2669,75 @@ async function _fetchViaStaticBridge_(table, query) {
   if (!res.ok) throw new Error('ponte HTTP ' + res.status);
   const payload = await res.json();
   const rows = payload.rows || [];
+  if (payload.syncedAt) _bridgeSyncedAt_ = payload.syncedAt; // carimbo REAL do snapshot da ponte (mostrado na faixa de emergência)
   // dash_ads_daily vem do Postgres direto (não do PostgREST) nesse caminho —
   // coluna `date` chega como timestamp completo em vez de só a data; corta
   // pro mesmo formato YYYY-MM-DD que o resto do painel espera.
   if (table === 'dash_ads_daily') rows.forEach(r => { if (r.date) r.date = String(r.date).slice(0, 10); });
   return rows;
 }
-async function _fetchTablePage_(table, query) {
-  try {
-    const PAGE = 1000;
-    let all = [];
-    let from = 0;
-    while (true) {
-      const res = await fetch(SUPABASE_URL + '/rest/v1/' + table + '?' + query, {
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
-          Range: from + '-' + (from + PAGE - 1),
-          Prefer: 'count=exact'
-        }
-      });
-      if (!res.ok) throw new Error('Supabase HTTP ' + res.status + ' (' + table + ')');
-      const chunk = await res.json();
-      all = all.concat(chunk);
-      const cr = res.headers.get('content-range');
-      const total = (cr && cr.indexOf('/') !== -1) ? parseInt(cr.split('/')[1], 10) : chunk.length;
-      if (all.length >= total || chunk.length < PAGE) break;
-      from += PAGE;
-    }
-    return all;
-  } catch (e) {
-    console.warn('Supabase REST falhou (' + table + '), tentando ponte estática de emergência:', e.message);
-    return await _fetchViaStaticBridge_(table, query);
+// 🔴 FIX 17/11 (Robert: números "diferentes toda hora" + erros intermitentes). ANTES: qualquer falha do REST da D1
+// (rede/HTTP) caía em silêncio na ponte KV (/api/table), um snapshot CONGELADO (sem origem_especial, mês corrente
+// vazio), e o painel calculava KPIs com ele sem avisar. AGORA: (1) retenta o REST 3x com espera crescente;
+// (2) se ainda falhar, NÃO cai mais na ponte aqui — lança o erro e o loadData() decide: mantém o último dado bom
+// (memória ou localStorage) com a faixa "dados de HH:MM"; (3) só usa a ponte se NÃO houver NENHUM dado bom
+// (_forceBridge_), sempre com a faixa vermelha de emergência e sem gravar esse dado como "último bom".
+let _bridgeSyncedAt_ = null;
+let _forceBridge_ = false;
+function _retryWaits_() { return (typeof window !== 'undefined' && window.__DASH_RETRY_MS__) || [1000, 2500, 6000]; }
+async function _fetchRestAll_(table, query) {
+  const PAGE = 1000;
+  let all = [];
+  let from = 0;
+  while (true) {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/' + table + '?' + query, {
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
+        Range: from + '-' + (from + PAGE - 1),
+        Prefer: 'count=exact'
+      }
+    });
+    if (!res.ok) { const er = new Error('Supabase HTTP ' + res.status + ' (' + table + ')'); er.status = res.status; throw er; }
+    const chunk = await res.json();
+    all = all.concat(chunk);
+    const cr = res.headers.get('content-range');
+    const total = (cr && cr.indexOf('/') !== -1) ? parseInt(cr.split('/')[1], 10) : chunk.length;
+    if (all.length >= total || chunk.length < PAGE) break;
+    from += PAGE;
   }
+  return all;
+}
+async function _fetchTablePage_(table, query) {
+  if (_forceBridge_) return _fetchViaStaticBridge_(table, query);
+  const waits = _retryWaits_();
+  let lastErr;
+  for (let a = 0; a <= waits.length; a++) {
+    try { return await _fetchRestAll_(table, query); }
+    catch (e) {
+      lastErr = e;
+      // erro de pedido (400/401/403/404...) não melhora tentando de novo; rede, 408, 429 e 5xx sim
+      const st = e && e.status;
+      if (st && st < 500 && st !== 408 && st !== 429) break;
+      if (a < waits.length) { console.warn('D1 REST falhou (' + table + '), nova tentativa ' + (a + 1) + '/' + waits.length + ':', e.message); await new Promise(r => setTimeout(r, waits[a])); }
+    }
+  }
+  throw lastErr;
 }
 
 let _lastDealsSyncedAt_ = null;
+// 17/11: depois de um período em fallback (último dado bom velho ou ponte de emergência) o dado em memória NÃO é confiável
+// pra merge incremental — cada tabela volta a ser buscada INTEIRA (cold) quando o REST voltar. Por tabela, pra uma falha
+// parcial não repetir a busca inteira das outras.
+let _needCold_ = { deals: false, ads: false, leads: false };
+function _markAllCold_() { _needCold_ = { deals: true, ads: true, leads: true }; }
 async function fetchRawDeals() {
-  const cold = !_rawDeals;
+  const cold = !_rawDeals || _needCold_.deals;
   const query = (cold || !_lastDealsSyncedAt_)
     ? 'select=*'
     : 'select=*&synced_at=gt.' + encodeURIComponent(_lastDealsSyncedAt_);
   const fresh = await _fetchTablePage_('dash_geral_deals', query);
+  if (cold) { _lastDealsSyncedAt_ = null; _needCold_.deals = false; }
   fresh.forEach(d => {
     if (espOrigem_(d)) d.origin = 'outbound'; // 🆕 03/10: SuperAgos conta como OUTBOUND em tudo (destaque só na rosca de Vendas)
     d.closed_at = _effectiveClosedAt(d);
@@ -2773,12 +2868,12 @@ let _adsRawDaily     = null;
 let _adsRawDailyMap_ = null;
 let _lastAdsRawSyncedAt_ = null;
 async function fetchAdsRawDaily() {
-  const cold = !_adsRawDailyMap_;
-  if (cold) _adsRawDailyMap_ = new Map();
+  const cold = !_adsRawDailyMap_ || _needCold_.ads;
   const excludeFilter = 'entity_id=not.in.(' + ADS_EXCLUDE_CAMPAIGN_IDS.join(',') + ')';
   const base = 'select=entity_id,date,spend,synced_at&entity_type=eq.campaign&' + excludeFilter;
   const query = (!cold && _lastAdsRawSyncedAt_) ? base + '&synced_at=gt.' + encodeURIComponent(_lastAdsRawSyncedAt_) : base;
   const rows = await _fetchTablePage_('dash_ads_daily', query);
+  if (cold) { _adsRawDailyMap_ = new Map(); _lastAdsRawSyncedAt_ = null; _needCold_.ads = false; } // só troca depois da busca dar certo (falha não apaga o que já tinha)
   rows.forEach(r => {
     _adsRawDailyMap_.set(r.entity_id + '|' + r.date, parseFloat(r.spend) || 0);
     if (r.synced_at && (!_lastAdsRawSyncedAt_ || r.synced_at > _lastAdsRawSyncedAt_)) _lastAdsRawSyncedAt_ = r.synced_at;
@@ -2814,9 +2909,10 @@ async function fetchAdsRawDaily() {
 let _leadsRawDaily = null;
 let _lastLeadsRawSyncedAt_ = null;
 async function fetchLeadsRawDaily() {
-  const cold = !_leadsRawDaily;
+  const cold = !_leadsRawDaily || _needCold_.leads;
   const query = (!cold && _lastLeadsRawSyncedAt_) ? 'select=*&synced_at=gt.' + encodeURIComponent(_lastLeadsRawSyncedAt_) : 'select=*';
   const fresh = await _fetchTablePage_('dash_geral_leads_daily', query);
+  if (cold) { _lastLeadsRawSyncedAt_ = null; _needCold_.leads = false; }
   fresh.forEach(r => { if (r.synced_at && (!_lastLeadsRawSyncedAt_ || r.synced_at > _lastLeadsRawSyncedAt_)) _lastLeadsRawSyncedAt_ = r.synced_at; });
   // Append-only por natureza (1 linha por lead válido, gravada uma única vez,
   // nunca reescrita) — sem necessidade de merge-by-id nem checagem de
@@ -3079,6 +3175,54 @@ function prevRangeOf(period) {
   return { from: fmt(prevFrom), to: fmt(prevTo) };
 }
 
+// ── FAIXA DE ESTADO DOS DADOS (17/11) ──
+let _dadosEstado_ = null;   // null = dados de hoje (D1) | 'stale' = último dado bom | 'emergencia' = ponte KV congelada
+let _staleSince_ = null;    // quando foi o último dado bom (ms)
+let _lastGoodAt_ = null;
+let _partialFail_ = [];     // tabelas secundárias que não atualizaram (anúncios/leads)
+let _recTimer_ = null, _recN_ = 0;
+const _MESES_PT_ = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+function _p2_(n) { return String(n).padStart(2, '0'); }
+function _stampBR_(ms) {
+  const d = new Date(ms), hoje = new Date();
+  const hm = _p2_(d.getHours()) + ':' + _p2_(d.getMinutes());
+  return d.toDateString() === hoje.toDateString() ? hm : _p2_(d.getDate()) + '/' + _p2_(d.getMonth() + 1) + ' às ' + hm;
+}
+function renderDadosBanner_() {
+  const b = document.getElementById('dados-banner'); if (!b) return;
+  let txt = '', cls = '';
+  if (_dadosEstado_ === 'emergencia') {
+    const t = _bridgeSyncedAt_ ? new Date(_bridgeSyncedAt_) : null;
+    const dia = t && !isNaN(t) ? _p2_(t.getDate()) + '/' + _p2_(t.getMonth() + 1) : 'data antiga';
+    txt = 'Sem conexão com os dados de hoje. Mostrando dados de ' + dia + ' (modo emergência). Os números NÃO são de ' + _MESES_PT_[new Date().getMonth()] + '.';
+    cls = 'emerg';
+  } else if (_dadosEstado_ === 'stale') {
+    txt = 'Sem conexão com os dados de hoje. Mostrando o último dado bom: dados de ' + _stampBR_(_staleSince_ || Date.now()) + '. Tentando de novo automaticamente.';
+    cls = 'stale';
+  } else if (_partialFail_.length) {
+    txt = 'Não deu para atualizar: ' + _partialFail_.join(' e ') + '. Investimento/CPL podem estar desatualizados.';
+    cls = 'stale';
+  }
+  document.body.classList.toggle('modo-emerg', cls === 'emerg');
+  if (!txt) { b.className = ''; b.textContent = ''; return; }
+  b.className = 'show ' + cls; b.textContent = '';
+  const t = document.createElement('span'); t.textContent = '⚠ ' + txt + ' ';
+  const bt = document.createElement('button'); bt.type = 'button'; bt.className = 'err-retry'; bt.textContent = 'Tentar de novo';
+  bt.onclick = function () { loadData(true); };
+  b.appendChild(t); b.appendChild(bt);
+}
+// retentativa automática enquanto estiver em fallback/erro: espera crescente (15s, 30s, 60s, teto 2min) — volta sozinho quando a D1 volta
+function armaRecuperacao_() {
+  if (_recTimer_) return;
+  const d = window.__DASH_RECOVER_MS__ || Math.min(15000 * Math.pow(2, _recN_), 120000);
+  _recN_++;
+  _recTimer_ = setTimeout(async () => {
+    _recTimer_ = null;
+    await loadData(true, true);
+    if (_dadosEstado_ || _partialFail_.length || window.__lbErr) armaRecuperacao_(); else _recN_ = 0;
+  }, d);
+}
+
 async function loadData(force, silent) {
   const mySeq = ++_reqSeq;
   // Só precisa tocar a rede em duas situações: cold start (ainda não tem
@@ -3097,13 +3241,17 @@ async function loadData(force, silent) {
   try {
     if (needsFetch) {
       _rawDeals = await fetchRawDeals();
+      _partialFail_ = [];
       // best-effort: falha aqui nunca derruba o carregamento principal do CRM
       // (que já terminou acima) — loadAdsSection() simplesmente mostra "—"
       // se _adsRawDaily continuar null. achado 30/07 (auditoria): catch era
       // 100% silencioso (zero console.warn) — card de Ads sumia sem nenhuma
       // pista de por quê, nem no console. Logado igual ao catch do CPL.
-      try { _adsRawDaily = await fetchAdsRawDaily(); } catch (eAds) { console.warn('fetchAdsRawDaily falhou:', eAds.message); }
-      try { _leadsRawDaily = await fetchLeadsRawDaily(); } catch (eLeads) { console.warn('fetchLeadsRawDaily falhou:', eLeads.message); }
+      try { _adsRawDaily = await fetchAdsRawDaily(); } catch (eAds) { console.warn('fetchAdsRawDaily falhou:', eAds.message); _partialFail_.push('anúncios'); }
+      try { _leadsRawDaily = await fetchLeadsRawDaily(); } catch (eLeads) { console.warn('fetchLeadsRawDaily falhou:', eLeads.message); _partialFail_.push('leads'); }
+      // 17/11: de onde vieram os dados deste carregamento? REST da D1 = bom; ponte KV (só se não havia NADA) = emergência.
+      if (_forceBridge_) { _dadosEstado_ = 'emergencia'; _markAllCold_(); }
+      else { _dadosEstado_ = null; _lastGoodAt_ = Date.now(); }
     } else if (!silent) {
       await new Promise(r => setTimeout(r, 150)); // respiro mínimo pro pulso ser visível
     }
@@ -3149,6 +3297,8 @@ async function loadData(force, silent) {
     refreshAdsHierarchyIfActive_();
     refreshGa4IfActive_();
     refreshBiaIfActive_();
+    renderDadosBanner_();
+    if (_dadosEstado_ || _partialFail_.length) armaRecuperacao_(); else _recN_ = 0;
     flashDot();
     // 07/09 (rede de segurança, mesmo incidente do estouro de egress): salva
     // também os dados CRUS (não só o resultado já calculado) — se o Supabase
@@ -3156,32 +3306,42 @@ async function loadData(force, silent) {
     // snapshot velho e continua respondendo a troca de filtro/período/aba
     // normalmente (antes, só reexibia o MESMO recorte congelado que estava
     // ativo no momento em que o snapshot foi salvo).
-    try { localStorage.setItem('geral_snapshot', JSON.stringify({ data: curr, rawDeals: _rawDeals, adsRawDaily: _adsRawDaily, leadsRawDaily: _leadsRawDaily, savedAt: Date.now() })); } catch(_) {}
+    // 17/11: dado de emergência (ponte KV) ou velho restaurado NUNCA vira "último dado bom" (senão apagava o bom com o congelado)
+    if (!_dadosEstado_) try { localStorage.setItem('geral_snapshot', JSON.stringify({ data: curr, rawDeals: _rawDeals, adsRawDaily: _adsRawDaily, leadsRawDaily: _leadsRawDaily, savedAt: Date.now() })); } catch(_) {}
   } catch(e) {
-    // Se ainda não carregou nada NESTA sessão (ex: F5 durante o erro, ou
-    // durante um bloqueio de cota do Supabase), restaura o último snapshot
-    // bom — velho, mas muito melhor que tela de erro vazia — e com os dados
-    // CRUS de volta o resto do painel (troca de filtro/aba) continua
-    // funcionando em vez de ficar congelado no recorte salvo.
-    if (!_data) {
-      try {
-        const snap = JSON.parse(localStorage.getItem('geral_snapshot') || 'null');
-        if (snap && snap.data) {
-          _data = snap.data;
-          if (snap.rawDeals) _rawDeals = snap.rawDeals;
+    // 🔴 FIX 17/11 — falha de dados em 3 degraus, sempre com faixa (#dados-banner), NUNCA calculando com a ponte KV
+    // se existir qualquer dado bom:
+    //  1) dado bom em memória (esta sessão): mantém tudo como está + faixa "dados de HH:MM";
+    //  2) último dado bom salvo (localStorage): restaura (com os dados crus, recalcula pelos filtros de agora) + faixa;
+    //  3) NADA salvo: só então a ponte KV (modo emergência), com a faixa vermelha dizendo de que dia são os números.
+    if (mySeq !== _reqSeq) return; // um pedido mais novo já está em voo e trata a própria falha
+    console.warn('loadData: falha ao buscar dados:', e && e.message);
+    if (_rawDeals) {
+      if (!_dadosEstado_) { _dadosEstado_ = 'stale'; _staleSince_ = _lastGoodAt_ || Date.now(); }
+      renderDadosBanner_(); armaRecuperacao_();
+    } else {
+      let snap = null;
+      try { snap = JSON.parse(localStorage.getItem('geral_snapshot') || 'null'); } catch(_) {}
+      if (snap && snap.data) {
+        _dadosEstado_ = 'stale'; _staleSince_ = snap.savedAt || Date.now();
+        if (snap.rawDeals) {
+          _rawDeals = snap.rawDeals;
           if (snap.adsRawDaily) _adsRawDaily = snap.adsRawDaily;
           if (snap.leadsRawDaily) _leadsRawDaily = snap.leadsRawDaily;
-          render(_data);
-          const mins = Math.round((Date.now() - snap.savedAt) / 60000);
-          showErr('Dados de ' + mins + 'min atrás (atualização falhando: ' + friendlyErr(e) + ')');
+          _markAllCold_();
+          await loadData(false, true); // recalcula em cima do dado cru restaurado, pelo período/origem de agora (zero rede)
         } else {
-          if (mySeq === _reqSeq) showErr('Erro ao carregar: ' + friendlyErr(e));
+          _data = snap.data; render(_data); renderDadosBanner_();
         }
-      } catch(_) {
-        if (mySeq === _reqSeq) showErr('Erro ao carregar: ' + friendlyErr(e));
+        armaRecuperacao_();
+      } else if (!_forceBridge_) {
+        _forceBridge_ = true;
+        try { await loadData(true, silent); } finally { _forceBridge_ = false; }
+        return;
+      } else {
+        showErr('Erro ao carregar: ' + friendlyErr(e));
+        armaRecuperacao_();
       }
-    } else {
-      if (mySeq === _reqSeq) showErr('Erro ao carregar: ' + friendlyErr(e));
     }
   } finally {
     // achado 28/07 (Robert: "quando tem um ganho precisa dar F5 pra atualizar"):
