@@ -19,19 +19,19 @@ D["mapa"] = dict(cols=4, titulo="Mapa do ecossistema: quem escreve onde",
  edges=[("lead","meta",""),("meta","ana",""),("ana","hist","grava"),("ana","bia","pede"),("bia","ag","escreve"),("bia","av","avisa"),("ag","pag","lê")])
 
 D["jornada"] = dict(cols=4, titulo="Jornada do lead novo até o destino final",
- desc="O lead novo conversa com a Ana, que qualifica. O resultado é um de três destinos: ganho com negócio no Arena, repasse que troca o mesmo negócio de funil, ou perdido com motivo. Quem some entra em toques de retomada.",
+ desc="O lead novo conversa com a Ana, que qualifica. Quando qualifica, o negócio da Ana vira Ganho e nasce um negócio no SDR Inbound, na etapa Ana qualificou. O Arena só nasce quando o SDR qualifica pela Hoje. Quem não serve vai a perdido; quem some entra em toques de retomada.",
  nodes=[N("lead","Lead novo","Anúncio, site ou WhatsApp direto","n",0,0),
   N("ana","Ana conversa","Nome, segmento, CNPJ e apresentação completa do projeto","p",1,0,2),
   N("som","Lead some","Lead some: retorno combinado ou toques; qualquer resposta cancela o que falta","x",3,0),
   N("qual","Qualificação","Segmento, CNPJ, lojas e quem decide. Portões: foco, rede, empresa nova, já é cliente","m",1,1,2),
   N("sem","Sem resposta","Fim dos toques: etapa de encerramento por silêncio","x",3,1),
-  N("gan","Ganho","Rede qualificada: ganho com 2º negócio no Arena","g",0,2),
-  N("rep","Repasse","O mesmo negócio troca de funil: SDR Inbound (GO e DF) ou Arena","p",1,2,2),
+  N("gan","Ganho na Ana","Ao qualificar, o negócio da Ana vira Ganho (qualificação)","g",0,2),
+  N("rep","SDR Inbound","Novo negócio na etapa Ana qualificou, com o SDR como dono","p",1,2,2),
   N("per","Perdido, com motivo","Sem interesse, não contatar ou fora do perfil","x",3,2),
-  N("clo","Closer ou representante","Atende e vende no Arena; ganho aqui é venda","g",0,3,2),
-  N("sdr","Cadência do SDR","D1 a D4, fim e fechamento por cadência esgotada","n",2,3),
+  N("clo","Arena","Só nasce quando o SDR qualifica pela Hoje; ganho aqui é venda","g",0,3,2),
+  N("sdr","SDR na Hoje","Cadência D0 a D4, ligação e qualificação","n",2,3),
   N("rec","Recuperação","Volta depois de 14 dias, se o motivo permitir","n",3,3)],
- edges=[("lead","ana",""),("ana","qual",""),("ana","som",""),("som","sem",""),("qual","gan","rede"),("qual","rep","qualificado"),("qual","per","descarta"),("gan","clo",""),("rep","clo","fora de GO e DF","w"),("rep","sdr","GO e DF"),("per","rec","")],
+ edges=[("lead","ana",""),("ana","qual",""),("ana","som",""),("som","sem",""),("qual","gan","qualificou"),("qual","rep","novo negócio"),("qual","per","descarta"),("rep","sdr","trabalha"),("sdr","clo",""),("per","rec","")],
  ordem_narrow=["lead","ana","qual","rep","sdr","gan","clo","per","rec"])
 
 D["msg"] = dict(cols=4, titulo="O caminho de cada mensagem dentro da Ana",
@@ -101,14 +101,14 @@ D["avisos"] = dict(cols=4, titulo="Aviso garantido: da regra à confirmação de
  edges=[("ev","ra",""),("ra","no","noite"),("ra","pd","dia"),("pd","rb",""),("rb","en",""),("en","sa",""),("sa","si","sim"),("sa","nao","não"),("nao","vi","")])
 
 D["funis"] = dict(cols=4, titulo="Mapa dos funis do Agendor",
- desc="A Ana registra a conversa no funil Ana SDR IA. O repasse leva o lead ao SDR Inbound ou, fora de GO e DF, ao Arena. SDR Outbound e Inbound qualificam para o Arena. O Arena leva ao Pós-venda, e o cliente que não repõe passa pela Reativação e volta ao SDR.",
- nodes=[N("ana","Ana SDR IA","Registro da conversa. O repasse vai ao SDR Inbound (GO e DF) ou ao Arena (fora de GO e DF)","p",1,0,2),
+ desc="A Ana registra a conversa no funil Ana SDR IA. Quando a Ana qualifica, nasce um negócio no SDR Inbound (etapa Ana qualificou). SDR Outbound e Inbound qualificam para o Arena pela Hoje. O Arena leva ao Pós-venda, e o cliente que não repõe passa pela Reativação e volta ao SDR.",
+ nodes=[N("ana","Ana SDR IA","Registro da conversa. Ao qualificar, vira Ganho e nasce o negócio no SDR Inbound","p",1,0,2),
   N("inb","SDR Inbound","D0 a D4 e Fim. O lead chega sozinho","n",0,1,2),
   N("out","SDR Outbound","D1 a D10 e Fim. A Life B vai buscar","n",2,1,2),
   N("are","Arena","Conexão, Diagnóstico/Solução, Negociação. Ganho aqui é venda de verdade","g",1,2,2),
   N("pv","Pós-venda","Ciclo Ativo, Contato e Negociação de Reposição","n",0,3,2),
   N("rea","Reativação","Cliente que não repôs no prazo; se perder, volta ao SDR. Conexão, Diagnóstico/Solução, Negociação","n",2,3,2)],
- edges=[("ana","inb","repasse"),("ana","are","fora de GO e DF","w"),("inb","are","qualificado"),("out","are","qualificado"),("are","pv","venda"),("pv","rea",""),("rea","out","volta ao SDR")])
+ edges=[("ana","inb","qualificou"),("inb","are","qualificado"),("out","are","qualificado"),("are","pv","venda"),("pv","rea",""),("rea","out","volta ao SDR")])
 
 D["pipeline"] = dict(cols=3, titulo="O caminho de uma mudança até o ar",
  desc="Nove passos: código e testes, suítes por módulo, suíte principal, testes de tela em navegador real, varredura de todos os lugares, auditoria independente, cópia de segurança, publicação só pelo roteiro único e conferência com teste de fumaça.",
@@ -158,3 +158,28 @@ if __name__ == "__main__":
         except Exception as e:
             print("ERRO", k, e)
     print(ok, "/", len(D))
+
+D["hoje"] = dict(cols=4, titulo="Hoje: da fila do SDR ao negócio no Arena",
+ desc="O SDR trabalha a fila da página Hoje, por listas, sem travas de horário. Ao qualificar pela Hoje, a Bia cria o negócio no funil certo, o Arena. Quem não serve vai a perdido com motivo; quem precisa de tempo é congelado.",
+ nodes=[N("fila","Fila por listas","Leads do SDR Inbound e Outbound; tarefas atrasadas lidas aos poucos","n",0,0,2),
+  N("sdr","SDR trabalha na Hoje","Liga, anota, completa dados e decide, sem horário travado","p",2,0,2),
+  N("q","Qualificou","Pela Hoje, com representante escolhido","g",0,1,2),
+  N("per","Perdido, com motivo","Sai da fila e o motivo é registrado","x",2,1,2),
+  N("bia","Bia cria o negócio","No funil certo, e relê o Agendor para confirmar","m",0,2,2),
+  N("rec","Volta depois","Motivo recuperável: nasce negócio novo no prazo","n",2,2,2),
+  N("are","Arena","O representante recebe o lead e vende","g",0,3,2)],
+ edges=[("fila","sdr",""),("sdr","q","qualifica"),("sdr","per","descarta"),("q","bia",""),("per","rec",""),("bia","are","")],
+ ordem_narrow=["fila","sdr","q","bia","are","per","rec"])
+
+D["dash"] = dict(cols=4, titulo="Dash: de onde vêm os números",
+ desc="O Agendor, os anúncios e os agentes Ana e Bia alimentam o Dash Geral, que mostra vendas, SDR, anúncios e custo dos agentes.",
+ nodes=[N("ag","Agendor","Negócios, funis e vendas","g",0,0),
+  N("ads","Anúncios","Origem e custo dos leads","n",1,0),
+  N("agt","Ana e Bia","Uso e custo dos agentes","p",2,0),
+  N("rep","Representantes e SDR","Atividade do dia","n",3,0),
+  N("dash","Dash Geral","Reúne tudo em um só lugar, lido ao vivo","m",0,1,4),
+  N("v","Vendas","Ganhos e clientes","n",0,2),
+  N("s","SDR","Funil e cadência","n",1,2),
+  N("a","Anúncios","Resultado das campanhas","n",2,2),
+  N("g","Agentes","Custo e métricas da Ana e da Bia","n",3,2)],
+ edges=[("ag","dash",""),("ads","dash",""),("agt","dash",""),("rep","dash",""),("dash","v",""),("dash","s",""),("dash","a",""),("dash","g","")])

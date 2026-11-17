@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Monta ecossistema/index.html (página única, tudo embutido). Uso: python3 tools/ecossistema/montar.py [saida]
 (O antigo build.py só reescrevia a seção da Ana na página anterior e não deve mais ser usado.)"""
-import os, sys, re
+import os, sys, re, json
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, AQUI)
 from comp import NAV, e
@@ -30,6 +30,11 @@ def montar():
         toc.append(f'<li data-id="{i}"><a href="#{i}"><span class="n">{pos}</span><span>{e(t)}</span></a></li>')
     css = open(os.path.join(AQUI, "estilo.css"), encoding="utf-8").read()
     js = open(os.path.join(AQUI, "app.js"), encoding="utf-8").read()
+    css += "\n" + open(os.path.join(AQUI, "deck.css"), encoding="utf-8").read()
+    djs = open(os.path.join(AQUI, "deck.js"), encoding="utf-8").read()
+    import slides as SL
+    deck = SL.deck()
+    estado_json = json.dumps(SL.ESTADO, ensure_ascii=False).replace("</", "<\\/")
     N = len(nav)
     ic_menu = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>'
     ic_tema = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4v16"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg>'
@@ -60,6 +65,7 @@ def montar():
 </style>
 </head>
 <body>
+<script type="application/json" id="estado-eco">{estado_json}</script>
 <a class="skip" href="#inicio">Pular para o conteúdo</a>
 <header class="mast" role="banner"><div class="mast-in">
 <button type="button" class="btn" id="menuBtn" aria-expanded="false" aria-controls="side" aria-label="Abrir o índice de seções">{ic_menu}<span class="tx">Menu</span></button>
@@ -81,26 +87,15 @@ def montar():
 </nav>
 <main id="conteudo" aria-label="Conteúdo do guia">
 {html_corpo}
-<footer class="foot"><b>Ecossistema Life B</b> · Versão {VERSAO} · Última atualização: 15/11/2026. Este guia reflete o sistema nessa data. Regras e prazos podem mudar depois; em caso de dúvida, vale o que está ao vivo (aba BIA do Dash e o Agendor).</footer>
+<footer class="foot"><b>Ecossistema Life B</b> · Versão {VERSAO} · Atualizado em <span id="atualizadoEm">{SL.ATUAL}</span>. Este guia reflete o sistema nessa data. Regras e prazos podem mudar depois; em caso de dúvida, vale o que está ao vivo (aba BIA do Dash e o Agendor).</footer>
 </main>
 </div>
-<div class="approg" role="progressbar" aria-label="Progresso da apresentação" aria-valuemin="1" aria-valuemax="{N}" aria-valuenow="1"><i></i></div>
-<div class="apbar" id="apbar" role="toolbar" aria-label="Controles da apresentação" hidden>
-<button type="button" class="btn" id="apPrev" aria-label="Seção anterior">{ic_prev}<span class="tx">Anterior</span></button>
-<div class="tit" aria-live="polite" aria-atomic="true"><b id="apT"></b><span id="apC"></span></div>
-<button type="button" class="btn pri" id="apNext" aria-label="Próxima seção"><span class="tx">Próxima</span>{ic_next}</button>
-<button type="button" class="btn" id="apFs" aria-pressed="false" aria-label="Alternar tela cheia">{ic_fs}<span class="tx">Tela cheia</span></button>
-<button type="button" class="btn" id="apHelpBtn" aria-label="Mostrar atalhos de teclado">{ic_q}<span class="tx">Atalhos</span></button>
-<button type="button" class="btn" id="apExit" aria-label="Sair do modo apresentação">{ic_x}<span class="tx">Sair</span></button>
-</div>
-<div class="aphelp" id="aphelp" role="dialog" aria-modal="true" aria-labelledby="aphT" hidden><div>
-<h2 id="aphT">Atalhos da apresentação</h2>
-<dl><dt><kbd>→</kbd> <kbd>Espaço</kbd> <kbd>PgDn</kbd></dt><dd>Próxima seção</dd><dt><kbd>←</kbd> <kbd>PgUp</kbd></dt><dd>Seção anterior</dd><dt><kbd>Home</kbd> <kbd>End</kbd></dt><dd>Primeira e última</dd><dt><kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Rolar dentro da seção</dd><dt><kbd>F</kbd></dt><dd>Tela cheia</dd><dt><kbd>?</kbd></dt><dd>Esta lista</dd><dt><kbd>Esc</kbd></dt><dd>Sair da apresentação</dd><dt>Deslizar</dt><dd>Muda de seção (celular e tablet)</dd></dl>
-<p id="semFs" class="muted" hidden>Este navegador não oferece tela cheia: a apresentação cobre a janela inteira.</p>
-<button type="button" class="btn pri fecha-ajuda">Fechar</button>
-</div></div>
+{deck}
 <script>
 {js}
+</script>
+<script>
+{djs}
 </script>
 </body>
 </html>

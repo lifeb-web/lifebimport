@@ -105,125 +105,19 @@
   }
   function marca() { marcaNav(secAtual()); }
 
-  /* ---------- modo apresentação ---------- */
-  var apBar = $('#apbar'), apTit = $('#apT'), apCont = $('#apC'), apProg = $('.approg'), apHelp = $('#aphelp');
-  var apI = 0, fsPediu = false, fsEstava = false, fsManter = false, apBtns = $$('[data-apres]');
-  var temFs = !!(H.requestFullscreen || H.webkitRequestFullscreen);
-  var fsEl = function () { return D.fullscreenElement || D.webkitFullscreenElement; };
-  function setBtns(on) { apBtns.forEach(function (b) { b.setAttribute('aria-pressed', on ? 'true' : 'false'); }); }
-  function tentaFs() {
-    var f = H.requestFullscreen || H.webkitRequestFullscreen;
-    if (!f) return;
-    try { var p = f.call(H); fsPediu = true; if (p && p.catch) p.catch(function () { fsPediu = false; }); } catch (e) { fsPediu = false; }
-  }
-  function saiFs() { if (fsEl()) { var x = D.exitFullscreen || D.webkitExitFullscreen; try { var p = x.call(D); if (p && p.catch) p.catch(function () {}); } catch (e) {} } }
-  function alternaFs() { if (!temFs) return; fsManter = true; if (fsEl()) saiFs(); else tentaFs(); setTimeout(function () { fsManter = false; }, 600); }
-  function onFs() {
-    var agora = !!fsEl();
-    if (emAp && fsEstava && !agora && !fsManter) sairAp();
-    fsEstava = agora;
-    var b = $('#apFs'); if (b) b.setAttribute('aria-pressed', agora ? 'true' : 'false');
-  }
-  D.addEventListener('fullscreenchange', onFs); D.addEventListener('webkitfullscreenchange', onFs);
-
-  function mostra(i, alvoEl) {
-    i = Math.max(0, Math.min(N - 1, i)); apI = i;
-    secs.forEach(function (s, k) { s.classList.toggle('atual', k === i); });
-    main.scrollTop = 0;
-    var s = secs[i], t = s.getAttribute('data-t');
-    apTit.textContent = t; apCont.textContent = (i + 1) + ' de ' + N;
-    apProg.setAttribute('aria-valuenow', String(i + 1)); apProg.firstElementChild.style.width = ((i + 1) / N * 100).toFixed(1) + '%';
-    setTimeout(rotulo, 30);
-    try { W.history.replaceState(null, '', '#' + s.id); } catch (e) {}
-    ultimoHash = s.id; ss('eco.apIdx', String(i)); marcaNav(i);
-    if (alvoEl && s.contains(alvoEl) && alvoEl !== s) { try { alvoEl.scrollIntoView({ block: 'start' }); } catch (e) {} }
-  }
-  function sobra() { return main.scrollHeight - main.clientHeight - main.scrollTop; }
-  function partes() { var ch = main.clientHeight || 1, tot = Math.max(1, Math.ceil((main.scrollHeight - 10) / (ch * 0.85))); var p = Math.min(tot, Math.floor(main.scrollTop / (ch * 0.85)) + 1); return [p, tot]; }
-  function rotulo() { if (!emAp) return; var pt = partes(), n = (apI + 1) + ' de ' + N; apCont.textContent = pt[1] > 1 ? n + ' · parte ' + pt[0] + ' de ' + pt[1] : n; $('#apPrev').disabled = apI === 0 && main.scrollTop < 8; $('#apNext').disabled = apI === N - 1 && sobra() < 16; }
-  function proximo() { if (sobra() > 24) { main.scrollBy({ top: Math.round(main.clientHeight * 0.85), behavior: 'smooth' }); } else if (apI < N - 1) mostra(apI + 1); }
-  function anterior() { if (main.scrollTop > 8) { main.scrollBy({ top: -Math.round(main.clientHeight * 0.85), behavior: 'smooth' }); } else if (apI > 0) mostra(apI - 1); }
-  main.addEventListener('scroll', function () { if (emAp) rotulo(); }, { passive: true });
-  W.addEventListener('resize', rotulo);
-  function entraAp(i, opt) {
-    if (emAp) return;
-    opt = opt || {};
-    menu(false);
-    emAp = true; dets.forEach(function (d) { d.open = true; });
-    H.classList.add('apres'); ss('eco.ap', '1'); setBtns(true);
-    apBar.hidden = false;
-    mostra(i);
-    if (!opt.semFs) tentaFs();
-    try { main.setAttribute('tabindex', '-1'); main.focus({ preventScroll: true }); } catch (e) {}
-  }
-  function sairAp() {
-    if (!emAp) return;
-    var i = apI; emAp = false;
-    fechaAjuda();
-    H.classList.remove('apres'); ss('eco.ap', null); setBtns(false);
-    secs.forEach(function (s) { s.classList.remove('atual'); });
-    try { var ab = JSON.parse(ss('eco.det') || '[]'); dets.forEach(function (d) { d.open = ab.indexOf(d.id) > -1; }); } catch (e) {}
-    saiFs();
-    jump(secs[i].getBoundingClientRect().top + W.scrollY - mastH() - 4);
-    usuario = true; ultimoHash = ''; salvaPos(); marca();
-    var b = $('#apBtn'); if (b) b.focus({ preventScroll: true });
-  }
-  function abreAjuda() { if (apHelp) { apHelp.hidden = false; var c = $('button', apHelp); if (c) c.focus(); } }
-  function fechaAjuda() { if (apHelp && !apHelp.hidden) { apHelp.hidden = true; var b = $('#apHelpBtn'); if (b && emAp) b.focus({ preventScroll: true }); } }
-  apBtns.forEach(function (b) { b.addEventListener('click', function () { if (emAp) sairAp(); else entraAp(secAtual()); }); });
-  $('#apPrev').addEventListener('click', anterior);
-  $('#apNext').addEventListener('click', proximo);
-  $('#apExit').addEventListener('click', sairAp);
-  $('#apHelpBtn').addEventListener('click', function () { if (apHelp.hidden) abreAjuda(); else fechaAjuda(); });
-  $('#apFs').addEventListener('click', alternaFs);
-  if (!temFs) { var fsb = $('#apFs'); fsb.hidden = true; var nf = $('#semFs'); if (nf) nf.hidden = false; }
-  $('.fecha-ajuda', apHelp).addEventListener('click', fechaAjuda);
-  apHelp.addEventListener('click', function (e) { if (e.target === apHelp) fechaAjuda(); });
-
-  D.addEventListener('keydown', function (e) {
-    var t = e.target, tag = t && t.tagName, campo = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable);
-    if (e.ctrlKey || e.metaKey || e.altKey) return;
-    if (!emAp) { if (e.key === '/' && !campo && busca) { e.preventDefault(); if (W.innerWidth < 1180) menu(true); busca.focus(); } return; }
-    if (campo) return;
-    var k = e.key;
-    if (k === 'Escape') { e.preventDefault(); if (apHelp && !apHelp.hidden) fechaAjuda(); else sairAp(); return; }
-    if (apHelp && !apHelp.hidden) { if (k === '?' || k === 'h' || k === 'H') { e.preventDefault(); fechaAjuda(); } return; }
-    var botao = tag === 'BUTTON' || tag === 'A' || tag === 'SUMMARY';
-    if (k === 'ArrowRight' || k === 'PageDown' || (k === ' ' && !botao && !e.shiftKey)) { e.preventDefault(); proximo(); }
-    else if (k === 'ArrowLeft' || k === 'PageUp' || (k === ' ' && !botao && e.shiftKey)) { e.preventDefault(); anterior(); }
-    else if (k === 'Home') { e.preventDefault(); mostra(0); }
-    else if (k === 'End') { e.preventDefault(); mostra(N - 1); }
-    else if (k === 'f' || k === 'F') { e.preventDefault(); alternaFs(); }
-    else if (k === '?' || k === 'h' || k === 'H') { e.preventDefault(); abreAjuda(); }
-  });
-  var tx = 0, ty = 0, tt = 0;
-  main.addEventListener('touchstart', function (e) { if (!emAp || e.touches.length !== 1) return; tx = e.touches[0].clientX; ty = e.touches[0].clientY; tt = Date.now(); }, { passive: true });
-  main.addEventListener('touchend', function (e) {
-    if (!emAp || !e.changedTouches.length) return;
-    var dx = e.changedTouches[0].clientX - tx, dy = e.changedTouches[0].clientY - ty;
-    if (Date.now() - tt < 800 && Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.8) mostra(apI + (dx < 0 ? 1 : -1));
-  }, { passive: true });
-
   W.addEventListener('hashchange', function () {
-    var h = dec((W.location.hash || '').slice(1)); if (!h) return;
-    var el = D.getElementById(h), s = secDe(el);
-    if (emAp) { if (s) { var i = secs.indexOf(s); if (i !== apI) mostra(i, el); else if (el !== s) { try { el.scrollIntoView({ block: 'start' }); } catch (e) {} } } }
-    else { ultimoHash = h; marca(); }
+    var h = dec((W.location.hash || '').slice(1)); if (!h || /^slide-\d+$/.test(h)) return;
+    ultimoHash = h; marca();
   });
 
   /* ---------- início ---------- */
-  var h0 = dec((W.location.hash || '').slice(1)), s0 = h0 ? secDe(D.getElementById(h0)) : null;
-  if (ss('eco.ap') === '1') {
-    var i0 = s0 ? secs.indexOf(s0) : parseInt(ss('eco.apIdx') || '0', 10) || 0;
-    entraAp(i0, { semFs: true });
-    if (s0 && D.getElementById(h0) !== s0) { try { D.getElementById(h0).scrollIntoView({ block: 'start' }); } catch (e) {} }
-  } else {
+  if (!/^#slide-\d+$/.test(W.location.hash || '')) {
     aplicaPosicao(); marca();
-    var refaz = function () { if (!usuario && !emAp) aplicaPosicao(); marca(); };
+    var refaz = function () { if (!usuario) aplicaPosicao(); marca(); };
     if (D.fonts && D.fonts.ready) D.fonts.ready.then(refaz);
     W.addEventListener('load', function () { refaz(); setTimeout(function () { pronto = true; }, 50); });
     setTimeout(function () { pronto = true; }, 1200);
   }
   if (D.readyState === 'complete') pronto = true;
-  W.__eco = { N: N, ids: ids, mostra: mostra, entraAp: entraAp, sairAp: sairAp, estado: function () { return { ap: emAp, i: apI }; } };
+  W.__eco = { N: N, ids: ids };
 })();

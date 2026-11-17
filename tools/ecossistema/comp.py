@@ -7,7 +7,7 @@ def e(s):
 _det = [0]
 
 # estados de entrega: ok = no ar; te = pronto/em teste; pl = planejado; de = depende de decisão; lm = limite conhecido; of = desligado de propósito
-PILL = {"ok": "No ar", "te": "Em teste", "pl": "Planejado", "de": "Depende de decisão", "lm": "Limite conhecido", "of": "Desligado de propósito"}
+PILL = {"ok": "No ar", "te": "Em implantação", "pl": "Planejado", "de": "Depende de decisão", "lm": "Limite conhecido", "of": "Desligado de propósito"}
 
 def pill(k, txt=None):
     return f'<span class="pill p-{k}">{txt or PILL[k]}</span>'

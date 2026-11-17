@@ -13,7 +13,8 @@ roda() { local n="$1" f="$2" out; echo "$n"; out="$(node "tests/ecossistema/$f" 
 roda "🧪 1/4 estrutura, links, nomes proibidos, segredos e JS (jsdom)" estatico.mjs
 roda "🖼️ 2/4 visual no Chromium: 5 larguras, claro e escuro, sem rolagem lateral, contraste, desenhos" visual.mjs
 echo "🔗 pós-deploy (atualizar_versao, marcador e vigia)"; bash tests/ecossistema/pos_deploy.test.sh | tail -2 | grep -q " 0 falhou" || { echo "❌ ABORTADO: pos_deploy.test.sh falhou"; exit 1; }
-roda "🕹️ 3/4 interação: menu, hash, posição ao atualizar, modo apresentação, tela cheia, teclado" interacao.mjs
+roda "🕹️ 3/4 interação: menu, hash, posição ao atualizar" interacao.mjs
+roda "📽️ 3b/4 apresentação em slides: sem rolagem em 6 telas, setas, toque, tema, Esc" apresentacao.mjs
 echo "♿ 4/4 liberação manual: o auditor independente e a auditoria visual dos prints liberaram?"; [ "${ECO_AUDITOR_OK:-}" = "sim" ] || { read -r -p "(responda sim) > " R; [ "$R" = "sim" ] || { echo "❌ ABORTADO: sem liberação do auditor"; exit 1; }; }
 # ---- TRAVAS DE GIT ----
 N0=$(git ls-files | wc -l | tr -d ' '); [ "$N0" -gt 0 ] || { echo "❌❌❌ ABORTADO: o índice do git está VAZIO (git ls-files = 0). Nada foi commitado."; exit 1; }

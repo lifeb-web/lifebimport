@@ -1,6 +1,6 @@
 """Seções 16 a 22 do Ecossistema."""
-VERSAO = "2026-11-15.1"
-DATA_V = "15/11/2026"
+VERSAO = "2026-11-16.1"
+DATA_V = "16/11/2026"
 from comp import *
 from diagramas import fig
 
@@ -96,7 +96,7 @@ def s_duvidas():
       ("A Ana pode prometer preço ou prazo?", "Não. Ela não fala preço, desconto, bonificação nem resultado garantido, e não promete que a Life B fará implantação ou reposição na loja."),
     ]
     gl = [["Agendor", "O sistema de clientes, negócios, tarefas e funis."], ["Ana", "A SDR virtual do WhatsApp."], ["Bia", "A assistente de operação, que escreve no Agendor e avisa a equipe."],
-      ["SDR", "Quem faz o primeiro contato e qualifica o lead."], ["Closer", "Especialista que atende redes e leads de fora de GO e DF."], ["Representante", "Vendedor de campo que atende a carteira."], ["Gestão", "Quem aprova, pausa e acompanha o conjunto."],
+      ["SDR", "Quem faz o primeiro contato e qualifica o lead."], ["Closer", "Especialista que atende redes e fecha vendas no Arena."], ["Representante", "Vendedor de campo que atende a carteira."], ["Gestão", "Quem aprova, pausa e acompanha o conjunto."],
       ["Lead", "Negócio do Arena."], ["Qualificado", "Lead aprovado pelo SDR e entregue ao Arena (Ganho no SDR)."], ["Cadência", "Sequência de contatos em dias úteis."], ["Dia útil", "Segunda a sexta, sem feriado."],
       ["Fila de espera", "Leads do Outbound sem tarefa, esperando o Iniciar."], ["Fim da cadência", "Etapa depois da última tentativa; três dias úteis antes do fechamento automático."], ["Cadência esgotada", "Motivo usado só pela Bia para quem nunca respondeu."],
       ["Distribuir", "Escolher quem fica com o lead qualificado: um representante ou o próprio SDR."], ["Simulação", "A automação só observa e relata, sem escrever."], ["Com aprovação", "A automação só age depois que a gestão aprova."],
@@ -117,7 +117,7 @@ def s_versoes():
     rows = []
     for x in d["sistemas"]:
         v = x["verif"]
-        est = pill("ok", "No ar") if x["estado"] == "no ar" else pill("te", "Em teste")
+        est = pill("ok", "No ar") if x["estado"] == "no ar" else pill("te", "Em implantação")
         vf = "<br>".join(f"<b>{k.capitalize() if k!='fumaca' else 'Fumaça'}:</b> {val}" for k, val in v.items())
         rows.append([x["nome"], f"<b>{x['versao']}</b>" + (f"<br><span class=\"muted\">{x['nota']}</span>" if x["nota"] else ""), x["data"], est + "<br><span class=\"muted\">Fonte: " + x["fonte"] + "</span>", vf])
     ciclo = passos([("Varredura de todos os lugares", "A regra mudada é procurada no código, nas mensagens, nas páginas, na Central, neste Ecossistema e nos documentos. O roteiro exige a linha \"Varredura:\"."),
@@ -134,7 +134,8 @@ def s_versoes():
       + grid([card("Atualização automática pelo deploy", "<p>O roteiro de deploy de cada sistema chama a atualização do arquivo de versões depois de publicar (versão, data e resultado de cada verificação) e remonta esta página. Hoje o comando existe; ligá-lo em cada roteiro de deploy é o próximo passo.</p>", p="pl"),
               card("Documentação de cada verificação", "<p>Cada deploy deixa registro: o que foi varrido, quais testes rodaram e o resultado, quem auditou e o veredito, o resultado da fumaça e como voltar atrás. Os registros ficam nos documentos do projeto e as linhas de resumo aparecem aqui.</p>", p="ok")], 2)
       + '<h3 class="mt">Histórico de versões desta página</h3>' + tabela(["Versão", "Data", "O que mudou"], [
-        [VERSAO, DATA_V, "Versões reais de Ana, Bia e Central (lidas do servidor e do git); camada de entrega 131049 da Ana no ar; datas alinhadas a 15/11; restaurados o mapa de infraestrutura, a grade de horários dos resumos e a nota do GS Engage legado; Hoje release 1 no ar; registro de deploys e verificações."],
+        [VERSAO, DATA_V, "Página atualizada para 16/11: funis Ana, SDR Inbound e Arena (a Ana ganha ao qualificar e o SDR Inbound nasce na etapa Ana qualificou), Hoje sem travas de horário, pacotes da Ana e da Central como em implantação, futuros marcados como planejado; novo modo apresentação em slides (tela cheia, sem rolagem, celular em pé); estado por componente em estado.json e data de atualização na página."],
+        ["2026-11-15.1", "15/11/2026", "Versões reais de Ana, Bia e Central (lidas do servidor e do git); camada de entrega 131049 da Ana no ar; datas alinhadas a 15/11; restaurados o mapa de infraestrutura, a grade de horários dos resumos e a nota do GS Engage legado; Hoje release 1 no ar; registro de deploys e verificações."],
         ["2026-11-14.1", "14/11/2026", "Página refeita (23 seções, fluxogramas, modo apresentação, status e checklist)."],
         ["2026-11-09", "09/11/2026", "Versão anterior, de 20 seções."]], "", "Histórico"))
     return sec("versoes", "Plataforma", "Versões e verificações por deploy", "A versão de cada sistema, a data do último deploy e o checklist que foi feito.", corpo)
@@ -144,20 +145,21 @@ def s_sobre():
       '<h3>Versão desta página</h3>'
       + f'<p><b>Versão {VERSAO}</b>, de {DATA_V}. A cada entrega que muda uma regra, um processo, uma automação ou o status de algo, esta página é atualizada, o número da versão sobe e uma linha é acrescentada abaixo. O histórico completo fica guardado junto do código da página.</p>'
       + tabela(["Versão", "Data", "O que mudou"], [
-        [VERSAO, DATA_V, "Versões reais de Ana, Bia e Central (lidas do servidor e do git); camada de entrega 131049 da Ana no ar; datas alinhadas a 15/11; restaurados o mapa de infraestrutura, a grade de horários dos resumos e a nota do GS Engage legado; Hoje release 1 no ar; registro de deploys e verificações."],
+        [VERSAO, DATA_V, "Página atualizada para 16/11: funis Ana, SDR Inbound e Arena (a Ana ganha ao qualificar e o SDR Inbound nasce na etapa Ana qualificou), Hoje sem travas de horário, pacotes da Ana e da Central como em implantação, futuros marcados como planejado; novo modo apresentação em slides (tela cheia, sem rolagem, celular em pé); estado por componente em estado.json e data de atualização na página."],
+        ["2026-11-15.1", "15/11/2026", "Versões reais de Ana, Bia e Central (lidas do servidor e do git); camada de entrega 131049 da Ana no ar; datas alinhadas a 15/11; restaurados o mapa de infraestrutura, a grade de horários dos resumos e a nota do GS Engage legado; Hoje release 1 no ar; registro de deploys e verificações."],
         ["2026-11-14.1", "14/11/2026", "Página refeita: 23 seções navegáveis, status e checklist honestos, 12 fluxogramas em SVG com tema claro e escuro, a Central e suas conexões, modo apresentação e tela cheia, posição preservada ao atualizar e nenhum nome de pessoa. Entra o que mudou desde 09/11: Ana com apresentação em capítulos, Bia com funil da Ana por nome, folga e vínculo de empresa, os 3 destinos, observabilidade e entrega garantida."],
         ["2026-11-09", "09/11/2026", "Versão anterior: 20 seções com vocabulário, funis etapa por etapa, cadência, Hoje e Lista, regras, voltas ao SDR, Bia, Dash, Painel do Representante, Ana, camada do Agendor, testes e segurança."],
       ], "", "Histórico de versões")
       + '<h3 class="mt">Sobre este guia</h3>'
-      + '<p>Este guia reflete o sistema em <b>15/11/2026</b>. Regras e prazos podem mudar depois. Em caso de dúvida, o que está ao vivo (aba BIA do Dash e o Agendor) vale mais do que este texto. A cada mudança de regra, esta página é atualizada junto.</p>'
+      + '<p>Este guia reflete o sistema em <b>16/11/2026</b>. Regras e prazos podem mudar depois. Em caso de dúvida, o que está ao vivo (aba BIA do Dash e o Agendor) vale mais do que este texto. A cada mudança de regra, esta página é atualizada junto.</p>'
       + '<h3 class="mt">Modo apresentação e tela cheia</h3>'
-      + '<p>Toque em <b>Apresentar</b> no topo da página (ícone de tela) para mostrar só o conteúdo, uma seção por vez. Funciona em computador, tablet e celular. Em navegadores que permitem, abre em tela cheia; nos outros, cobre a janela inteira.</p>'
+      + '<p>Toque em <b>Apresentar</b> no topo da página para ver a apresentação em slides: tela cheia, sem rolagem, no computador, no projetor, no tablet e no celular (em pé ou deitado). Os slides se ajustam sozinhos a qualquer tela.</p>'
       + tabela(["Tecla ou gesto", "O que faz"], [
-        ["Seta para a direita, Espaço ou Page Down", "Próxima seção"], ["Seta para a esquerda ou Page Up", "Seção anterior"], ["Home e End", "Primeira e última seção"],
-        ["Setas para cima e para baixo", "Rola dentro da seção, quando ela é maior que a tela"], ["F", "Entra e sai da tela cheia"], ["? ou H", "Mostra e esconde esta lista de atalhos"], ["Esc", "Sai do modo apresentação"],
-        ["Deslizar para o lado (celular e tablet)", "Muda de seção"], ["Botões da barra inferior", "Anterior, próxima, tela cheia, atalhos e sair"],
+        ["Seta para a direita, Espaço ou Page Down", "Próximo slide"], ["Seta para a esquerda ou Page Up", "Slide anterior"], ["Home e End", "Primeiro e último slide"],
+        ["F", "Entra e sai da tela cheia"], ["T", "Alterna o tema claro e escuro"], ["Esc", "Sai da apresentação"],
+        ["Deslizar (celular e tablet) ou clicar nas bordas", "Muda de slide"], ["Barra inferior e bolinhas laterais", "Anterior, próximo, tema, tela cheia, sair e ir a um slide"],
       ], "", "Atalhos do modo apresentação")
-      + ul(["A barra superior mostra o progresso (seção atual de total).", "Se você atualizar a página, ela volta para onde estava, no modo apresentação ou na leitura normal.", "O endereço da página muda para a seção atual (por exemplo #cadencia), então dá para compartilhar o link de uma seção."])
+      + ul(["O indicador mostra o slide atual e o total, e a barra no alto mostra o progresso.", "Se você atualizar a página, ela volta para o mesmo slide (endereço #slide-3, por exemplo).", "O estado de cada componente (no ar, em implantação, planejado) e a data de atualização saem do arquivo estado.json, o mesmo que alimenta os slides."])
       + '<h3 class="mt">Navegação</h3>'
       + ul(["No computador, o índice fica à esquerda; no celular, no botão Menu.", "A busca do índice filtra as seções que contêm o termo.", "Tema claro, escuro ou automático pelo botão de tema no topo.", "Os desenhos dos fluxos se ajustam: versão larga no computador e versão em coluna no celular."]))
     return sec("sobre", "Referência", "Sobre esta página e o modo apresentação", "Como usar, atalhos e o que esta página garante.", corpo)

@@ -3,7 +3,7 @@ from comp import *
 from diagramas import fig
 import dados_status as S
 
-DATA = "15/11/2026"
+DATA = "16/11/2026"
 
 def s_inicio():
     c = S.contagem()
@@ -11,13 +11,13 @@ def s_inicio():
       '<div class="hero-b"><div class="hero-t"><p class="eyebrow">Guia do projeto · Life B Importadora</p>'
       '<p class="h1" role="presentation">Ecossistema Life B</p>'
       '<p class="hero-p">O mapa completo da operação comercial: como o lead chega, como a Ana (SDR virtual no WhatsApp) e a Bia (assistente de operação) trabalham, onde cada informação é escrita e quais regras mantêm tudo em ordem. Feito para a equipe, para parceiros e para quem está conhecendo a empresa agora.</p>'
-      '<div class="chips"><span class="chip">Versão '+__import__("conteudo3").VERSAO+' · atualizado em 15/11/2026</span><span class="chip">Sem dados pessoais de clientes</span><span class="chip">Conferido no código e nos painéis</span></div>'
-      '<div class="hero-a"><a class="btn pri" href="#status">Ver o status de hoje</a><button type="button" class="btn" data-apres>Abrir em modo apresentação</button></div></div></div>'
-      + stats([(c["ok"], "entregas no ar e conferidas", "ok"), (c["te"], "prontas, em teste ou aguardando auditoria", "te"), (c["pl"] + c["of"] + c["lm"], "planejadas, desligadas de propósito ou com limite conhecido", "pl"), (c["de"], "dependem de decisão da gestão", "de")])
+      '<div class="chips"><span class="chip">Versão '+__import__("conteudo3").VERSAO+' · atualizado em 16/11/2026</span><span class="chip">Sem dados pessoais de clientes</span><span class="chip">Conferido no código e nos painéis</span></div>'
+      '<div class="hero-a"><a class="btn pri" href="#status">Ver o status de hoje</a><button type="button" class="btn" data-apres>Apresentar em tela cheia</button></div></div></div>'
+      + stats([(c["ok"], "entregas no ar e conferidas", "ok"), (c["te"], "prontas e em implantação (ainda não no ar)", "te"), (c["pl"] + c["of"] + c["lm"], "planejadas, desligadas de propósito ou com limite conhecido", "pl"), (c["de"], "dependem de decisão da gestão", "de")])
       + '<h3 class="mt">Em 1 minuto</h3>'
       + grid([
         card("A conversa", ul(["A <b>Ana</b> atende leads no WhatsApp, 24 horas por dia, apresenta o projeto, qualifica e passa ao time comercial.", "Quem entende o lead é a IA; quem trava o que pode ser dito e feito são regras fixas, que não dependem da IA.", "Quem some recebe toques de retomada; qualquer resposta cancela o que falta."])),
-        card("O registro", ul(["O <b>Agendor</b> (CRM) é a fonte da verdade: se está lá, é o que vale.", "A Ana decide; a <b>Bia</b> é a única que escreve no Agendor, e só diz \"feito\" depois de reler.", "Todo lead termina em um de três destinos: ganho com negócio no Arena, perdido com motivo, ou repasse que troca o mesmo negócio de funil."])),
+        card("O registro", ul(["O <b>Agendor</b> (CRM) é a fonte da verdade: se está lá, é o que vale.", "A Ana decide; a <b>Bia</b> é a única que escreve no Agendor, e só diz \"feito\" depois de reler.", "Quando a Ana qualifica, o negócio dela vira Ganho e nasce um negócio no SDR Inbound (etapa \"Ana qualificou\", dono SDR). O Arena só nasce quando o SDR qualifica pela Hoje."])),
         card("O trabalho", ul(["O SDR trabalha na página <b>Hoje</b>; a gestão controla pela <b>Central</b>; o representante usa o <b>Painel do Representante</b>; os números ficam no <b>Dash</b>.", "A Bia avisa a equipe pelo WhatsApp, com botões, no horário certo."])),
         card("A segurança", ul(["Nada vai ao ar sem testes, auditoria independente, cópia de segurança e o roteiro único de publicação.", "Avisos que falham ficam numa fila durável e são reenviados sozinhos.", "A gestão tem interruptores de emergência em cada regra."])),
       ]))
@@ -27,31 +27,34 @@ def s_inicio():
 
 def s_status():
     ok = [
-      ("Ana (15/11, 10h02)", "Camada de entrega para falha da Meta (131049) com reenvio por modelo de utilidade (patch 1.3). Abertura, apresentação em capítulos, qualificação e repasse; voz; assumir, instruir e devolver pela Central; vigia do webhook; custo no Dash; número do time só quando o lead pede; lojista nunca descartado por engano; cadência de abertura com 4 toques."),
-      ("Bia (15/11, 04h49)", "Aviso NOVO LEAD com vigia de reenvio, pacote do Arena e servidor do Hoje 2.0 em sombra. Antes (14/11): trava de folga que não segura gestão, administradores e SDR; funil da Ana por nome de etapa; empresa existente vinculada por CNPJ; avisos da Ana ao SDR das 7h às 21h; compatível com a Ana atual."),
+      ("Ana (15/11, 10h02)", "Conversa completa, voz em áudio (ElevenLabs) quando o lead manda áudio, treinamento da diretoria aplicado desde 13/11, humanização (digitando e pausas), cadência de retomada, encerramento educado de quem está fora do perfil e instrução da equipe pela Central. Camada de entrega para falha da Meta (131049) com reenvio por modelo de utilidade (patch 1.3). Abertura, apresentação em capítulos, qualificação e repasse; voz; assumir, instruir e devolver pela Central; vigia do webhook; custo no Dash; número do time só quando o lead pede; lojista nunca descartado por engano; cadência de abertura com 4 toques."),
+      ("Bia (15/11, 04h49)", "Agente interno (WhatsApp e CRM Agendor), avisos ao time, motores proativos e painel do representante. Aviso NOVO LEAD com vigia de reenvio, pacote do Arena e servidor do Hoje 2.0 em sombra. Antes (14/11): trava de folga que não segura gestão, administradores e SDR; funil da Ana por nome de etapa; empresa existente vinculada por CNPJ; avisos da Ana ao SDR das 7h às 21h; compatível com a Ana atual."),
       ("Central (15/11, 09h50)", "Atendimento com tela cheia, instruções, 👍/👎; pacote de hoje: link por aba, rolagem preservada, exportar conversa, simulador em chat e login que persiste."),
-      ("Hoje (14/11, 17h42)", "Release 1 da página, versão 2026-11-14.1: fila completa em linhas por lista, teto de 50 por clique, minimizar o lead, observação do SDR e balão lilás. Espelho do Hoje 2.0 em modo sombra."),
+      ("Hoje", "Mesa do SDR sem travas de horário, fila por listas, leitura incremental de tarefas atrasadas e qualificação que cria o negócio no funil certo. Release 1 (14/11): teto de 50 por clique, minimizar o lead, observação do SDR e balão lilás. Espelho do Hoje 2.0 em modo sombra."),
       ("SDR e cadência", "Cadência por dia útil, repasse com trava, inbound direto, Subir lista, enriquecimento por CNPJ e voltas ao SDR."),
       ("Demais", "Painel do Representante, Dash, Canal, monitoria da Ana e roteiro único de publicação."),
     ]
     te = [
-            ("Painel do Representante", "Recarga só no horário comercial e só de quem abriu a página. Falta auditoria."),
-      ("Este Ecossistema", "Refeito do zero; publica depois do teste visual e do auditor independente."),
+      ("Ana: pacote de correções", "A instrução da equipe manda e encerra; fora do perfil passa a incluir vendedor de sistema; CNPJ baixado tratado. Pronto, ainda não no ar."),
+      ("Central: pacote de botões", "Botões, selos do CRM e lista leve. Pronto, ainda não no ar."),
+      ("Painel do Representante", "Recarga só no horário comercial e só de quem abriu a página. Falta auditoria."),
+      ("Este Ecossistema", "Atualizado e com o modo apresentação em slides; publica depois do teste visual e do auditor independente."),
     ]
     pl = [
-      ("Ana", "Texto pronto só como saudação; objeções por IA; mídia nunca vira fala; botão para falar com o especialista; personalização pelo CNPJ; cadência de 3 toques; suítes de conversas; simulador com relógio real."),
-      ("Central", "3 botões manuais (ganho, perdido, repasse), silenciar a Bia por pessoa, desfazer em tudo e conferência de arquivar, cancelar toques e Fora do foco."),
+      ("Ana", "Cadência de 3 toques com mensagens de utilidade; juízes de IA como guarda-corpo em tempo real; texto pronto só como saudação; objeções por IA; mídia nunca vira fala; personalização pelo CNPJ."),
+      ("Central", "Controles manuais completos (ganho, perdido, repasse), silenciar a Bia por pessoa e desfazer em tudo."),
       ("Bia", "Observação do SDR só do SDR, teto de 50 no servidor, reenvio quando a Meta falha, backup fora do ambiente de trabalho."),
-      ("Hoje", "Releases 2 (blindagem e modo foco) e 3 (raia do closer); página lendo do espelho depois de 5 dias úteis com divergência abaixo de 0,5%."),
+      ("Hoje", "Hoje 2.0 (página lendo do espelho, depois de 5 dias úteis com divergência abaixo de 0,5%), blindagem de erros, modo foco e raia do closer."),
+      ("Dash", "Dash expandido com mais indicadores do SDR e da Ana."),
       ("Plataforma", "Mineração de leads, arquivar modelos antigos da Meta, revisão das cadências com dados reais."),
     ]
     def col(tit, k, itens):
         lis = "".join(f"<li><b>{a}</b>{b}</li>" for a, b in itens)
         return f'<div class="col col-{k}"><h3>{pill(k)} {tit}</h3><ul class="plain">{lis}</ul></div>'
-    corpo = (f'<div class="cols3">{col("O que está valendo agora", "ok", ok)}{col("Pronto e em teste", "te", te)}{col("Na fila", "pl", pl)}</div>'
+    corpo = (f'<div class="cols3">{col("O que está valendo agora", "ok", ok)}{col("Pronto, em implantação", "te", te)}{col("Na fila", "pl", pl)}</div>'
       + '<h3 class="mt">Depende de decisão da gestão</h3>' + ul(S.DEPENDE)
-      + aviso("Como ler este status", "\"No ar\" só aparece quando foi conferido em produção e não tem pendência declarada. Se existe pendência, ela aparece escrita ao lado, no checklist. \"Em teste\" quer dizer pronto em disco, ainda sem publicação.", "n"))
-    return sec("status", "Começar", "Status: no ar, em teste e planejado", f"Posição de {DATA}, 10h. O que está valendo, o que está pronto esperando auditoria e o que está na fila, em ordem.", corpo)
+      + aviso("Como ler este status", "\"No ar\" só aparece quando foi conferido em produção e não tem pendência declarada. Se existe pendência, ela aparece escrita ao lado, no checklist. \"Em implantação\" quer dizer pronto, mas ainda não no ar. \"Planejado\" é futuro: ainda não existe.", "n"))
+    return sec("status", "Começar", "Status: no ar, em teste e planejado", f"Posição de {DATA}. O que está no ar, o que está pronto e em implantação (ainda não no ar) e o que é futuro planejado, em ordem.", corpo)
 
 def s_checklist():
     rows = []
@@ -90,7 +93,7 @@ def s_visao():
     papeis = [
       ["Gestão", "Decide o que a Bia e a Ana podem fazer, aprova avisos sensíveis, vê todos os números e é avisada quando algo precisa de atenção.", "WhatsApp, Central, Dash, Agendor"],
       ["SDR", "Primeiro contato, qualificação e distribuição do lead qualificado.", "Hoje, Lista, WhatsApp"],
-      ["Closer", "Atende e fecha redes e leads de fora de GO e DF.", "Agendor, WhatsApp"],
+      ["Closer", "Atende e fecha redes no Arena.", "Agendor, WhatsApp"],
       ["Representante", "Vende no Arena e cuida do Pós-venda e da Reativação.", "WhatsApp, Painel do Representante, Agendor"],
       ["Administrador", "Acompanha e muda só o que tem risco baixo ou médio.", "Central"],
       ["Conta técnica \"Sistema\"", "Conta que a Bia usa para escrever no Agendor. Nenhuma pessoa a usa e ela nunca pode ser dona de um negócio.", "Só a Bia"],
@@ -143,7 +146,7 @@ def s_ana():
     corpo = (
       '<p>A Ana é a SDR virtual da Life B. Conversa com o lead pelo número dela e tem um objetivo só: <b>qualificar</b>. Ela se apresenta como \"Ana, da equipe Life B\", apresenta o projeto Mega Vision USA (exposição estratégica, categorizada e personalizada de produtos de alto giro, que trabalha como vendedor silencioso na loja), entende a loja e entrega o lead pronto ao especialista.</p>'
       + '<h3 class="mt">Do lead novo ao destino</h3>' + fig("jornada")
-      + '<p class="legenda">Todo lead termina em um de três destinos: ganho com negócio no Arena, repasse que troca o mesmo negócio de funil, ou perdido com motivo. Quem some entra nos toques de retomada. Os detalhes de cada destino estão na seção Funis do Agendor.</p>'
+      + '<p class="legenda">Quando a Ana qualifica, o negócio dela vira Ganho (qualificação, nunca venda) e nasce um negócio no SDR Inbound, na etapa "Ana qualificou", com o SDR como dono. O Arena só nasce quando o SDR qualifica pela Hoje. Quem não serve vai a perdido com motivo; quem some entra nos toques de retomada. Os detalhes estão na seção Funis do Agendor.</p>'
       + '<h3 class="mt">O fluxo da conversa</h3>'
       + fluxo([("1. Nome e tipo de loja", "Pergunta o nome e o segmento."), ("2. CNPJ", "Pede uma vez; se o lead só responde \"sim\", pede de outro jeito, no máximo 2 vezes."), ("3. Apresentação completa", "8 capítulos curtos, 2 por turno, com uma pergunta leve de reação. Pergunta ou objeção do lead é respondida primeiro.", "m"), ("4. Lojas e decisor", "Lojas só na campanha de Redes; nas demais, presume uma. O decisor vem no fim."), ("5. Repasse", "Diz o que acontece a seguir e passa ao especialista.", "g")])
       + '<p class="legenda">Capítulos da apresentação: ' + capitulos + ' Respostas sobre implantação e reposição dizem que o projeto prevê isso e que o especialista avalia como seria na loja: a Ana não promete que a Life B vai fazer.</p>'
@@ -218,7 +221,7 @@ def s_destinos():
     etapas = [
       ["Novo lead", "Primeira mensagem."], ["Em conversa", "Qualificando, ou a equipe precisou intervir sem repasse."],
       ["Retorno combinado", "O lead pediu para chamar depois; a Ana criou a tarefa com a data."],
-      ["Repassado ao time comercial", "Repasse feito."], ["Sem resposta", "Toques sem resposta."], ["Encerrado", "Sem interesse ou pediu para parar."]]
+      ["Repassado ao time comercial", "Qualificou: o negócio da Ana virou Ganho e o negócio do SDR Inbound nasceu."], ["Sem resposta", "Toques sem resposta."], ["Encerrado", "Sem interesse ou pediu para parar."]]
     out = [
       ["D1 · Abertura", "Pesquisar a empresa (Google, Instagram, CNPJ), mandar a primeira mensagem no WhatsApp e ligar para quem decide.", "3º dia útil, sozinho"],
       ["D3 · Follow-up", "WhatsApp de novo contato e WhatsApp com uma novidade, sem pedir nada.", "5º dia útil"],
@@ -247,19 +250,19 @@ def s_destinos():
     corpo = (
       '<h3>O mapa dos funis</h3>' + fig("funis")
       + '<p class="legenda">Funil é uma sequência de etapas pela qual o negócio caminha. A Bia nunca confunde um funil com outro. \"Lead\", nos números da empresa, é somente negócio do Arena; ganho no SDR é qualificação, e não venda.</p>'
-      + '<h3 class="mt">Os 3 destinos de um negócio da Ana</h3>'
+      + '<h3 class="mt">Os caminhos de um negócio da Ana</h3>'
       + grid([
-        card("Ganho", "<p>Em rede qualificada, a Ana marca ganho e cria um segundo negócio no Arena, para o closer atender.</p><p class=\"muted\">Fica registrado como ganho de qualificação, nunca como venda.</p>", p="de"),
-        card("Perdido, com motivo", "<p>Sem interesse, não contatar (pediu para parar) ou fora do perfil. O motivo é buscado por nome na lista do Agendor e relido. \"Não contatar\" sempre regrava o motivo.</p><p class=\"muted\">A Bia já aceita esses motivos; a Ana atual ainda não os envia.</p>", p="te"),
-        card("Repasse", "<p>O mesmo negócio troca de funil e vai para o SDR Inbound (GO e DF) ou para o Arena (fora de GO e DF). Hoje o repasse cria o negócio no destino e leva o negócio da Ana para Repassado.</p>", p="te"),
+        card("Qualificou", "<p>O negócio da Ana vira <b>Ganho</b> (qualificação, nunca venda) e nasce um negócio no <b>SDR Inbound</b>, na etapa \"Ana qualificou\", com o SDR como dono.</p><p class=\"muted\">O Arena só nasce depois, quando o SDR qualifica o lead pela Hoje.</p>", p="ok"),
+        card("Perdido, com motivo", "<p>Sem interesse, não contatar (pediu para parar) ou fora do perfil, incluindo quem vende sistema. O motivo é buscado por nome na lista do Agendor e relido.</p><p class=\"muted\">Fora do perfil com mais casos (vendedor de sistema, CNPJ baixado) está em implantação.</p>", p="te"),
+        card("Sem resposta", "<p>Fim dos toques de retomada: o negócio vai para a etapa de encerramento por silêncio. Se o lead voltar a escrever, a Ana retoma.</p>", p="ok"),
       ], 3)
       + tabela(["Quem", "Marca", "Observação"], [
-        ["Ana", "Nada de ganho ou perdido (hoje)", "Só muda a etapa do funil dela, cria tarefa de retorno e nota."],
-        ["SDR", "Ganho = qualificação do lead; perdido com motivo", "Ganho do SDR não é venda."],
+        ["Ana", "Ganho ao qualificar; encerra quem é fora do perfil", "Cria o negócio no SDR Inbound (etapa \"Ana qualificou\"), tarefa de retorno e nota."],
+        ["SDR", "Ganho = qualificação do lead; perdido com motivo", "Ao qualificar pela Hoje nasce o negócio no Arena. Ganho do SDR não é venda."],
         ["Bia", "Perdido: Cadência esgotada, depois do Fim", "Automático, em dia útil. No funil da Ana, o fechamento automático está desligado."],
         ["Representante e closer", "Ganho e perda de venda no Arena", "Aí é venda de verdade."],
       ], "", "Quem marca ganho e perdido")
-      + aviso("Pendência declarada", "O negócio do funil da Ana nunca fecha hoje: em Repassado, Encerrado e Sem resposta ele fica aberto, mesmo quando o lead já foi ganho, perdido ou parou de responder. Pode bloquear a recuperação. A decisão sobre isso está com a gestão.", "w")
+      + aviso("Pendência declarada", "Ao qualificar, o negócio da Ana vira Ganho. Nos finais Encerrado e Sem resposta o negócio ainda fica aberto, mesmo quando o lead foi perdido ou parou de responder, e isso pode bloquear a recuperação. A decisão sobre fechar esses negócios está com a gestão.", "w")
       + '<h3 class="mt">Funil da Ana (Ana SDR IA)</h3>' + '<p>Registro da conversa. A etapa muda sozinha conforme a conversa, e a Bia lê de volta para confirmar. O sem resposta vai para uma etapa de encerramento por silêncio; o fechamento automático por Cadência esgotada está implementado e desligado.</p>'
       + tabela(["Etapa", "Quando o negócio fica nela"], etapas, "", "Etapas do funil da Ana")
       + '<h3 class="mt">Etapa por etapa dos outros funis</h3>'
@@ -272,4 +275,4 @@ def s_destinos():
       + grid([card("Vira cliente", "<p>A venda no Arena leva ao Pós-venda. Cada reposição abre um novo ciclo; sem reposição no prazo, o cliente passa pela Reativação e volta ao SDR.</p>"),
               card("Perdido sem volta", "<p>Motivo que nunca volta: duplicado, erro na lista, fora do perfil, já atendido, LGPD, restrição de pagamento. O caminho termina ali.</p>"),
               card("Espera a volta", "<p>Motivo que pode voltar: passado o prazo, nasce um negócio novo na fila do SDR e a cadência recomeça. O SDR também pode congelar um lead, com data e motivo.</p>")], 3))
-    return sec("destinos", "Funis e cadência", "Funis do Agendor e os 3 destinos", "Ana SDR IA, SDR Inbound, SDR Outbound, Arena, Pós-venda e Reativação, e como um negócio termina.", corpo)
+    return sec("destinos", "Funis e cadência", "Funis do Agendor e os caminhos do lead", "Ana SDR IA, SDR Inbound, SDR Outbound, Arena, Pós-venda e Reativação, e como um negócio termina.", corpo)
