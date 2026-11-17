@@ -6,7 +6,9 @@ MSG="$1"; [ -z "$MSG" ] && { echo "❌ passe a mensagem do commit"; exit 1; }
 RAIZ="$(cd "$(dirname "$0")/../.." && pwd)"; PAG="$RAIZ/ecossistema/index.html"; REL="ecossistema/index.html"
 export TZ=UTC JSDOM_DIR="${JSDOM_DIR:-/private/tmp/jsd}" PW_DIR="${PW_DIR:-$HOME/.npm/_npx/e41f203b7505f1fb}" PAGINA="$PAG"
 cd "$RAIZ"
-[ "$(git rev-parse --abbrev-ref HEAD)" = "gh-pages" ] || { echo "❌ ABORTADO: a branch atual não é gh-pages"; exit 1; }
+# 16/11: a branch gh-pages pode estar ocupada por outro worktree; vale a branch gh-pages OU um HEAD solto que DESCENDE de origin/gh-pages (o push é sempre HEAD:gh-pages sem force, então só avança)
+git fetch -q origin gh-pages 2>/dev/null || true
+if [ "$(git rev-parse --abbrev-ref HEAD)" != "gh-pages" ]; then git merge-base --is-ancestor origin/gh-pages HEAD || { echo "❌ ABORTADO: nem a branch gh-pages nem um HEAD que descende de origin/gh-pages"; exit 1; }; fi
 echo "🔧 0/4 a página em disco é a que o montador gera (nada editado à mão)"
 python3 tools/ecossistema/montar.py /tmp/eco_conferencia.html >/dev/null; cmp -s /tmp/eco_conferencia.html "$PAG" || { echo "❌ ABORTADO: ecossistema/index.html não bate com o montador. Rode python3 tools/ecossistema/montar.py e refaça os testes."; exit 1; }
 roda() { local n="$1" f="$2" out; echo "$n"; out="$(node "tests/ecossistema/$f" 2>&1)" || true; echo "$out" | tail -3; echo "$out" | grep -q "TOTAL: .* 0 falhou" || { echo "❌ ABORTADO: $f falhou (prints em /tmp/ecossistema_prints)"; exit 1; }; }
