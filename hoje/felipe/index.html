@@ -122,6 +122,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .painel header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;background:var(--head);border-bottom:1px solid var(--border)}
 .painel h2{font-size:18px;color:var(--purple)}
 .painel .barra{display:flex;gap:8px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--border);align-items:center}
+#leadBarra{min-height:56px} /* 17.5 (CLS): a barra do lead (selo de origem) reserva altura desde o esqueleto */
 .painel .corpo{flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:6px}
 .painel .rodape{padding:10px 14px;border-top:1px solid var(--border);background:var(--head)}
 .fi{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--border);border-left:4px solid var(--border);border-radius:8px;padding:6px 8px;background:var(--card)}
@@ -2082,6 +2083,9 @@ function marcarAbertoNaLista(dealId, feito) {
   } catch (e) { logFalha('l1194 marca visual: nunca atrapalha abrir o lead', e); /* marca visual: nunca atrapalha abrir o lead */ }
 }
 try { window.__marcarAbertoNaLista = marcarAbertoNaLista; } catch (e) { logFalha('l1196 gancho só para teste', e); /* gancho só para teste */ }
+function rodapeEsqueleto() { // 17.5 (CLS): o rodapé do lead nasce com a MESMA altura do definitivo (3 botões desativados) e é trocado pelo real quando o servidor responde; antes crescia 21 -> 121 px e empurrava o corpo (CLS 0,1 a 0,19 no celular)
+  var rd = $('leadRodape'); rd.textContent = ''; var row = el('div', 'row esqueleto'); row.setAttribute('aria-hidden', 'true'); [['forte', 'Salvar'], ['sec', 'Marcar como Ganho / Qualificado'], ['sec', 'Marcar como Perdido']].forEach(function (b) { var x = el('button', b[0], b[1]); x.type = 'button'; x.disabled = true; x.tabIndex = -1; row.appendChild(x); }); rd.appendChild(row);
+}
 async function abrirLead(dealId, opener, item, ctx) {
   var painel = $('painelLead'); var mesmo = S.L && S.L.dealId === dealId && S.L.lead;
   var L = mesmo ? S.L : { dealId: dealId, lead: null, opcoes: (S.listas && S.listas.opcoes) || {}, motivos: (S.listas && S.listas.motivos) || [], responsaveis: (S.listas && S.listas.responsaveis) || [], edits: lerRascunho(dealId), forcar: {}, origemCampo: {}, mostrar: [], todos: false, ocupado: false, estado: null, receita: null, receitaCnpj: '', perdidoAberto: false, refs: {} };
@@ -2090,7 +2094,7 @@ async function abrirLead(dealId, opener, item, ctx) {
   try { if (location.hash !== '#lead=' + dealId) { history.pushState(null, '', '#lead=' + dealId); S.pushou = true; } } catch (e) { logFalha('l1202 histórico indisponível: o lead abre do mesmo jeito', e); /* histórico indisponível: o lead abre do mesmo jeito */ }
   var cache = S.pre[dealId]; var fresco = cache && Date.now() - cache.t < 3000;
   var pintouCache = false; if (!mesmo && cache) { aplicarResposta(L, cache.j); limparEditsIguais(L); recomputarMostrar(L); mesmo = true; pintouCache = true; L.revalidado = !!fresco; }
-  $('leadTitulo').textContent = mesmo ? (L.lead.titulo || 'Lead') : ((L.item && L.item.empresa) || 'Carregando o lead...'); $('leadRodape').textContent = '';
+  $('leadTitulo').textContent = mesmo ? (L.lead.titulo || 'Lead') : ((L.item && L.item.empresa) || 'Carregando o lead...'); $('leadRodape').textContent = ''; if (!mesmo) rodapeEsqueleto();
   if (mesmo) renderLead(); else renderCardInfo(L);
   try { $('leadTitulo').focus({ preventScroll: true }); } catch (e) { logFalha('l1207 foco/rolagem/seleção é só conforto; se falhar a ação já foi feit', e); /* foco/rolagem/seleção é só conforto; se falhar a ação já foi feita */ }
   prefetchProximo(L);
@@ -2106,7 +2110,7 @@ async function carregarLead(L, silencioso) {
   if (S.L !== L) return;
   if (!j.ok || !j.lead) {
     if (L.lead) { if (!silencioso) return; setEstado(L, 'erro', 'Não consegui atualizar agora. Estou mostrando o que já tinha.', function () { carregarLead(L, false); }); return; } // com dado já na tela, nunca esconde
-    renderCardInfo(L); var c = $('leadCorpo'); var cx = el('div', 'estado erro'); cx.setAttribute('role', 'alert'); cx.appendChild(el('span', null, msgErro(j) + ' Mostrando só o que o cartão sabe.'));
+    $('leadRodape').textContent = ''; renderCardInfo(L); var c = $('leadCorpo'); var cx = el('div', 'estado erro'); cx.setAttribute('role', 'alert'); cx.appendChild(el('span', null, msgErro(j) + ' Mostrando só o que o cartão sabe.'));
     var b = el('button', null, 'Tentar de novo'); b.type = 'button'; b.style.marginLeft = '8px'; b.onclick = function () { renderCardInfo(L); carregarLead(L, false); }; cx.appendChild(b); c.insertBefore(cx, c.firstChild); try { b.focus({ preventScroll: true }); } catch (e) { logFalha('l1221 foco/rolagem/seleção é só conforto; se falhar a ação já foi feit', e); /* foco/rolagem/seleção é só conforto; se falhar a ação já foi feita */ } return;
   }
   if (silencioso && L.ocupado) return;
