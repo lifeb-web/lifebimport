@@ -35,7 +35,7 @@ function novoMock(extra = {}) {
   return B.criarMock({ agentes: () => { const a = B.agentesPadrao(); a.agentes[0].conversas = estado.conv; a.agentes[0].auditoria = []; return a; }, conversa: (url) => fichaDe(url.searchParams.get("fone")), ...extra });
 }
 async function abrirPagina(b, vp, tema, mock, hash = "#atendimento", relogio) {
-  const ctx = await b.newContext({ viewport: vp, colorScheme: tema }); await ctx.addInitScript(() => { window.__CENTRAL_TESTE = true; window.__PS_INTERVALO_TESTE = 150; }); 
+  const ctx = await b.newContext({ viewport: vp, colorScheme: tema, hasTouch: vp.width < 700 }); await ctx.addInitScript(() => { window.__CENTRAL_TESTE = true; window.__PS_INTERVALO_TESTE = 150; }); 
   const p = await B.novaPagina(ctx, mock); if (relogio) await p.clock.install({ time: new Date() }); await B.entrar(p, hash); return { ctx, p };
 }
 async function cena(b, vp, tema, nome) {
@@ -106,8 +106,8 @@ async function cena(b, vp, tema, nome) {
   S.ok(!(await p.evaluate(() => window.__xss)) && (await p.$$("#atChat img, #atFicha img")).length === 0, nome + ": ficha hostil (nome/formulário/repasse/campos) vira texto, nada executa");
   S.ok(/<img src=x/.test(await p.$eval("#atFicha", (e) => e.innerText)), nome + ": o texto hostil aparece LITERAL na ficha");
   // ---- 11. alvos de toque >= 44 px (lista e topo) ----
-  const peq = await p.evaluate(() => { const out = []; document.querySelectorAll("#atFiltros button, #atItens .ri, #atItens .cmb, #atChat .hd .ib, #atFicha button").forEach((e) => { const r = e.getBoundingClientRect(); if (r.width > 0 && r.height > 0 && (r.height < 43.5 || r.width < 43.5)) out.push((e.className || e.tagName) + " " + Math.round(r.width) + "x" + Math.round(r.height)); }); return out; });
-  S.ok(peq.length === 0, nome + ": alvos de toque >= 44 px | pequenos: " + JSON.stringify(peq.slice(0, 6)));
+  const lim = mob ? 43.5 : 32; const peq = await p.evaluate((lim) => { const out = []; document.querySelectorAll("#atFiltros button, #atItens .ri, #atItens .cmb, #atChat .hd .ib, #atFicha button").forEach((e) => { const r = e.getBoundingClientRect(); if (r.width > 0 && r.height > 0 && (r.height < lim || r.width < lim)) out.push((e.className || e.tagName) + " " + Math.round(r.width) + "x" + Math.round(r.height)); }); return out; }, lim);
+  S.ok(peq.length === 0, nome + ": alvos de toque (celular >= 44 px, computador >= 32 px) | pequenos: " + JSON.stringify(peq.slice(0, 6)));
   S.ok(!(p._erros && p._erros.length), nome + ": console limpo " + JSON.stringify(p._erros));
   await ctx.close();
 }
