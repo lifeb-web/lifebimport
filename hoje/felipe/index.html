@@ -194,6 +194,7 @@ button.recolher{background:transparent;color:var(--muted);border:0;min-height:0;
 textarea.recup-pend{border:2.5px solid var(--amber)!important;background:var(--amber-bg)}
 .link-falta{background:none;border:0;color:inherit;font:inherit;font-weight:800;text-decoration:underline;cursor:pointer;padding:12px 6px;margin:-12px -2px;min-height:44px;display:inline-block}
 .rodape-falta{margin:0 0 8px;font-size:14px}
+#modalGanho .falta-topo{min-height:1.4em;margin:0 0 8px;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .link-falta:focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:4px}
 .atual.velho{color:#8a8499;font-style:italic}
 .esq{background:linear-gradient(90deg,var(--track),var(--card),var(--track));background-size:200% 100%;animation:brilho 1.2s linear infinite;border-radius:12px;min-height:200px;border:1px solid var(--border)}
@@ -1859,6 +1860,11 @@ function valorOrig(lead, k) {
   if (p[0] === 'p') { var ps = lead.pessoas || []; for (var i = 0; i < ps.length; i++) if (String(ps[i].id) === p[1]) return (p[2] === 'whatsapp' ? ps[i].whatsappPrincipal : ps[i][p[2]]) || ''; }
   return '';
 }
+function baseDe(L, k) { // o valor que a página LEU do servidor (é o `base` do envio). A Observação do SDR abre vazia na tela, mas a base é o que está gravado no negócio (senão o 2º salvamento vira 'alguém alterou' contra o próprio texto)
+  if (k === 'n.observacao_sdr') return String((L.lead && L.lead.observacaoSdr) || '');
+  var v = valorOrig(L.lead, k); return String(v == null ? '' : v);
+}
+function gravouNoServidor(L, k, v) { if (k === 'n.observacao_sdr' && L.lead) L.lead.observacaoSdr = String(v == null ? '' : v).slice(0, 150); } // depois de salvar OK a base passa a ser o valor gravado
 function gravarLocal(lead, k, v) { // aplica no objeto local (atualização otimista)
   var p = k.split('.');
   if (p[0] === 'e') { lead.empresa = lead.empresa || {}; var e = lead.empresa; if (p[1] === 'end') { e.endereco = e.endereco || {}; e.endereco[p[2]] = v; } else if (p[1] === 'razao_social') e.razaoSocial = v; else if (p[1] === 'cnpj' || p[1] === 'nome' || p[1] === 'segmento') e[p[1]] = v; else { e.campos = e.campos || {}; e.campos[p[1]] = v; } }
@@ -2167,7 +2173,7 @@ function campoEl(L, f, pref, req, marcar) {
     ops.forEach(function (o) { var op = el('option', null, o); op.value = o; inp.appendChild(op); }); inp.value = atual;
   } else if (f.tipo === 'area') { inp = el('textarea'); inp.value = String(atual); inp.rows = 3; }   // sem maxlength e sem corte: o contador e o bloqueio fazem o trabalho (nada é cortado em silêncio)
   else { inp = el('input'); inp.type = 'text'; inp.value = atual; inp.autocomplete = 'off'; if (f.max) inp.setAttribute('maxlength', String(f.max)); if (f.tipo === 'cnpj' || f.tipo === 'cep') inp.setAttribute('inputmode', 'numeric'); if (f.tipo === 'fone') { inp.setAttribute('inputmode', 'tel'); inp.setAttribute('autocomplete', 'tel'); } if (f.tipo === 'uf') { inp.setAttribute('maxlength', '2'); inp.setAttribute('autocapitalize', 'characters'); } }
-  inp.id = id; inp.setAttribute('enterkeyhint', f.tipo === 'area' ? 'enter' : 'done'); inp.addEventListener('focus', function () { setTimeout(function () { try { if (inp.scrollIntoView) inp.scrollIntoView({ block: 'center' }); } catch (e) { logFalha('l1339 foco/rolagem/seleção é só conforto; se falhar a ação já foi feit', e); /* foco/rolagem/seleção é só conforto; se falhar a ação já foi feita */ } }, 300); }); if (req) inp.setAttribute('aria-required', 'true'); var err = el('div', 'erro-c'); err.setAttribute('role', 'alert'); err.classList.add('hide');
+  inp.id = id; inp.setAttribute('enterkeyhint', f.tipo === 'area' ? 'enter' : 'done'); inp.addEventListener('focus', function () { setTimeout(function () { try { var sc = inp.closest('#gCorpo,#leadCorpo'); var rc = inp.getBoundingClientRect(), rs = sc ? sc.getBoundingClientRect() : { top: 0, bottom: window.innerHeight }; var vv = window.visualViewport; var fundo = Math.min(rs.bottom, vv ? vv.height : rs.bottom); if (rc.top >= rs.top + 4 && rc.bottom <= fundo - 4) return; /* 17/11 (Robert #2599): campo já à vista não se mexe: antes recentralizava a cada foco e a tela 'pulava' */ if (inp.scrollIntoView) inp.scrollIntoView({ block: 'nearest' }); } catch (e) { logFalha('l1339 foco/rolagem/seleção é só conforto; se falhar a ação já foi feit', e); /* foco/rolagem/seleção é só conforto; se falhar a ação já foi feita */ } }, 300); }); if (req) inp.setAttribute('aria-required', 'true'); var err = el('div', 'erro-c'); err.setAttribute('role', 'alert'); err.classList.add('hide');
   function mostrarErro() { var m = validarCampo(L, f); if (!m && req && marcar) m = normVal(f.k, valorAtual(f.k)) === '' ? 'Falta preencher este campo.' : 'Este campo ainda precisa de um valor válido. Confira.'; err.textContent = m; err.classList.toggle('hide', !m); wrap.classList.toggle('erro', !!m); inp.setAttribute('aria-invalid', m ? 'true' : 'false'); return m; }
   function mudou() {
     var v = inp.value; if (f.tipo === 'cnpj') v = mascCnpj(v); else if (f.tipo === 'fone') v = mascFone(v); else if (f.tipo === 'cep') v = mascCep(v); else if (f.tipo === 'uf') v = mascUf(v);
@@ -2177,6 +2183,7 @@ function campoEl(L, f, pref, req, marcar) {
   if (f.k === 'n.observacao_sdr') { // o Agendor guarda 150 letras: contador n/150 e corte avisado
     var rascGrande = String(atual).length > OBS_MAX; var cont = el('div', 'dica-c contador'); cont.setAttribute('aria-live', 'polite'); wrap.appendChild(cont);
     var atualizaCont = function () { var n = inp.value.length; var passou = n > OBS_MAX; cont.textContent = n + '/' + OBS_MAX + (passou ? ' Passou ' + (n - OBS_MAX) + ' letras: tire para poder salvar.' + (rascGrande ? ' (Seu rascunho guardado já era maior que o limite do campo.)' : '') : ''); cont.classList.toggle('amber', n >= 130 || passou); cont.classList.toggle('erro', passou); inp.setAttribute('aria-invalid', passou ? 'true' : 'false'); };
+    if (pref === 'gf_') { var dOb = el('div', 'dica-c dica-obs', ''); dOb.style.minHeight = '2.6em'; wrap.appendChild(dOb); L.refs.obsDica = dOb; } // 17/11: a explicação da Observação fica numa linha reservada junto ao campo (antes aparecia/sumia no topo e empurrava tudo)
     inp.setAttribute('aria-describedby', cont.id = id + '_cont'); inp.placeholder = 'Escreva você: o que o representante precisa saber (até ' + OBS_MAX + ' letras)';
     inp.addEventListener('input', atualizaCont);
     atualizaCont();
@@ -2239,7 +2246,12 @@ function renderReceita(L) {
 function aplicarReceita(L) {
   var r = L.receita; if (!r || !r.propostas) return;
   r.propostas.forEach(function (p) { if (normVal(p.k, valorAtual(p.k)) !== '') return; L.edits[p.k] = p.v; L.origemCampo[p.k] = 'Receita'; });
-  r.propostas = []; gravarRascunho(L); redesenhar(L); setEstado(L, '', L.modalAberto ? 'Preenchi pela Receita. Confira os campos.' : 'Preenchi pela Receita. Confira e clique em Salvar.');
+  var aplic = r.propostas.slice(); r.propostas = []; gravarRascunho(L);
+  if (L.modalAberto && !L.rep && $('gCorpo').querySelector('#gf_e_cnpj')) { // 17/11: no pop-up atualiza só os campos preenchidos (sem recriar a tela: foco, rolagem e o que foi digitado ficam)
+    aplic.forEach(function (p) { var inp = $('gf_' + p.k.replace(/\./g, '_')); if (!inp) return; inp.value = p.v; var w = inp.closest('.campo'); if (w) { w.classList.remove('erro'); var er = w.querySelector('.erro-c'); if (er) { er.textContent = ''; er.classList.add('hide'); } inp.setAttribute('aria-invalid', 'false'); var lb = w.querySelector('label'); if (lb && !lb.querySelector('.tag-origem')) lb.appendChild(el('span', 'tag-origem', 'veio da Receita')); } });
+    renderReceita(L); atualizarGanhoBtn(L); setEstado(L, '', 'Preenchi pela Receita. Confira os campos.'); return;
+  }
+  redesenhar(L); setEstado(L, '', L.modalAberto ? 'Preenchi pela Receita. Confira os campos.' : 'Preenchi pela Receita. Confira e clique em Salvar.');
 }
 function atualizarSalvar(L) { var b = L.refs && L.refs.salvar; if (!b) return; var n = calcDiff(L).length; b.textContent = n ? 'Salvar (' + n + (n === 1 ? ' alteração)' : ' alterações)') : 'Salvar'; b.disabled = !n || L.ocupado; }
 
@@ -2280,7 +2292,7 @@ function campoDeApi(L, campo) { var p = String(campo).split('.'); if (p[0] === '
 async function enviarCampos(L) {
   var diff = calcDiff(L); if (!diff.length) { return 'nada'; }
   var corpo = montarCorpo(diff); if (L.confirmaTelefone) corpo.confirmaTelefone = true; var antes = copia(L.lead); var edits = {};
-  L.baseConf = L.baseConf || {}; corpo.base = {}; diff.forEach(function (d) { if (!Object.prototype.hasOwnProperty.call(L.baseConf, d.k)) L.baseConf[d.k] = String(valorOrig(L.lead, d.k) == null ? '' : valorOrig(L.lead, d.k)); corpo.base[campoApi(d.k)] = L.baseConf[d.k]; edits[d.k] = L.edits[d.k]; }); // o valor que a página LEU: se mudou no Agendor, o servidor avisa em vez de sobrescrever
+  L.baseConf = L.baseConf || {}; corpo.base = {}; diff.forEach(function (d) { if (!Object.prototype.hasOwnProperty.call(L.baseConf, d.k)) L.baseConf[d.k] = baseDe(L, d.k); corpo.base[campoApi(d.k)] = L.baseConf[d.k]; edits[d.k] = L.edits[d.k]; }); // o valor que a página LEU: se mudou no Agendor, o servidor avisa em vez de sobrescrever
   diff.forEach(function (d) { gravarLocal(L.lead, d.k, d.v); }); // aparece na hora
   L.ocupado = true; redesenhar(L); setEstado(L, 'salvando', 'Salvando… já mostrei na tela.');
   var j = await chamarLead(L, '/campos', corpo, null, { tipo: 'campos', meta: { titulo: L.lead.titulo, edits: edits } }); if (!j) { L.ocupado = false; return 'erro'; } L.ocupado = false;
@@ -2288,6 +2300,7 @@ async function enviarCampos(L) {
   if (j._enfileirado) { diff.forEach(function (d) { delete L.edits[d.k]; }); gravarRascunho(L); if (S.L === L) { redesenhar(L); setEstado(L, 'salvando', 'Sem conexão. Guardei a alteração neste aparelho e envio sozinho quando a rede voltar.'); } return 'fila'; }
   if (j.ok && j.confirmado !== false) {
     var nao = (Array.isArray(j.naoConfirmados) ? j.naoConfirmados : []).map(function (x) { return String(x).split('.').pop(); }); aplicarResposta(L, j);
+    diff.forEach(function (d) { if (nao.indexOf(d.k.split('.').pop()) < 0 && !(j.lead && j.lead.observacaoSdr != null)) gravouNoServidor(L, d.k, d.v); }); // base de TODOS os campos salvos = o que foi gravado
     diff.forEach(function (d) { var nome = d.k.split('.').pop(); if (nao.indexOf(nome) >= 0) return; delete L.edits[d.k]; });
     gravarRascunho(L); L.receita = null; L.receitaCnpj = '';
     if (S.L === L) { redesenhar(L); setEstado(L, nao.length ? 'erro' : 'ok', nao.length ? 'Não consegui salvar tudo: ' + nao.join(', ') + '. O que você digitou continua aqui.' : 'Salvo ✓', nao.length ? function () { (L.modalAberto ? confirmarGanho : salvarCampos)(L); } : null); notaAvisos(L, j); }
@@ -2316,14 +2329,15 @@ function mostrarConflitos(L, j) {
   function fim() {
     if (itens.some(function (c) { return !c.escolha; })) return;
     if (j.lead) aplicarResposta(L, j);
-    itens.forEach(function (c) { gravarLocal(L.lead, c.k, c.atual); if (c.escolha === 'atual') delete L.edits[c.k]; });
+    itens.forEach(function (c) { gravarLocal(L.lead, c.k, c.atual); gravouNoServidor(L, c.k, c.atual); if (c.escolha === 'atual') delete L.edits[c.k]; }); // a base do reenvio é o valor ATUAL do servidor
     gravarRascunho(L); var meus = itens.some(function (c) { return c.escolha === 'meu'; });
     if (meus) enviarCampos(L); else { redesenhar(L); setEstado(L, 'ok', 'Ficou o valor que já estava salvo.'); }
   }
   itens.forEach(function (c) {
     var f = campoDeK(L.lead, c.k) || { rot: c.campo }; var row = el('div', 'conflito');
     row.appendChild(el('div', null, 'Alguém alterou "' + f.rot + '" para "' + (fmtCampo(c.campo, c.atual) || 'vazio') + '". O seu: "' + fmtCampo(c.campo, L.edits[c.k] == null ? '' : L.edits[c.k]) + '".'));
-    var b1 = el('button', 'sec', 'Usar o atual'); b1.type = 'button'; var b2 = el('button', null, 'Manter o meu'); b2.type = 'button';
+    var meuTxt = L.edits[c.k] == null ? '' : String(L.edits[c.k]); if (meuTxt) { var ta = el('textarea'); ta.readOnly = true; ta.value = meuTxt; ta.rows = Math.min(4, Math.max(2, Math.ceil(meuTxt.length / 50))); ta.setAttribute('aria-label', 'O seu texto (para copiar)'); ta.style.cssText = 'width:100%;margin:4px 0;font-size:14px'; ta.onfocus = function () { try { ta.select(); } catch (e) { logFalha('conflito: selecionar o texto é conforto', e); } }; row.appendChild(el('div', 'sub', 'O seu texto (copie se quiser guardar):')); row.appendChild(ta); } // nunca descarta sem mostrar o texto dele
+    var b1 = el('button', 'sec', 'Usar o atual (descarta o meu)'); b1.type = 'button'; var b2 = el('button', null, 'Manter o meu texto'); b2.type = 'button';
     function esc(v) { c.escolha = v; b1.disabled = b2.disabled = true; row.appendChild(el('span', 'sub', v === 'atual' ? ' Vai usar o atual.' : ' Vai manter o seu.')); fim(); }
     b1.onclick = function () { esc('atual'); }; b2.onclick = function () { esc('meu'); }; row.appendChild(b1); row.appendChild(b2); lista.appendChild(row);
   });
@@ -2409,8 +2423,9 @@ function renderGanho(L) {
   autoReceita(L);
   var grade = null;
   var ordemG = GANHO_ORDEM.filter(function (k) { return (L.ganhoReq || {})[k]; }).concat(GANHO_ORDEM.filter(function (k) { return !(L.ganhoReq || {})[k]; })); // o que falta vem primeiro
-  L.refs.gFalta = el('p', 'pend'); L.refs.gFalta.setAttribute('role', 'status'); c.appendChild(L.refs.gFalta);
+  L.refs.gFalta = el('p', 'pend falta-topo'); L.refs.gFalta.setAttribute('role', 'status'); c.appendChild(L.refs.gFalta);
   ordemG.forEach(function (k) { var f = campoDe(k); if (!f) return; var req = !!(L.ganhoReq || {})[k]; if (f.par) { if (!grade) { grade = el('div', 'grade2'); c.appendChild(grade); } grade.appendChild(campoEl(L, f, 'gf_', req, L.ganhoMarcar && req)); } else { grade = null; c.appendChild(campoEl(L, f, 'gf_', req, L.ganhoMarcar && req)); } });
+  try { var cw = $('gf_e_cnpj'); if (cw && cw.parentNode && L.refs.receita) cw.parentNode.appendChild(L.refs.receita); } catch (e) { logFalha('receita embaixo do CNPJ: só posição', e); } // 17/11: a consulta da Receita aparece logo abaixo do CNPJ e não empurra os campos de cima
   c.scrollTop = rol; var rd = $('gRodape'); rd.textContent = '';
   L.refs.estado = el('div', 'estado hide'); L.refs.estado.setAttribute('role', 'status'); L.refs.estado.setAttribute('aria-live', 'polite'); rd.appendChild(L.refs.estado);
   L.refs.gFaltaRod = el('p', 'pend rodape-falta hide'); rd.appendChild(L.refs.gFaltaRod); // sem role=status: o aviso do topo já é anunciado (evita ler duas vezes por tecla)
@@ -2418,11 +2433,11 @@ function renderGanho(L) {
   var cn = el('button', 'sec', 'Cancelar'); cn.type = 'button'; cn.onclick = fecharGanho; row.appendChild(L.refs.ganhoBtn); row.appendChild(cn); rd.appendChild(row);
   atualizarGanhoBtn(L);
 }
-function preencherFalta(L, g, falta, compacto) { // 03/11 (Robert: "Falta 1 campo obrigatório. Número *" sem dizer onde): diz QUAIS campos faltam e cada nome leva direto ao campo. No rodapé (celular, teclado aberto) fica compacto: o primeiro campo e quantos mais faltam.
-  if (!g) return; g.classList.toggle('hide', !falta.length); g.textContent = '';
+function preencherFalta(L, g, falta, compacto, reservar) { // 03/11 (Robert: "Falta 1 campo obrigatório. Número *" sem dizer onde): diz QUAIS campos faltam e cada nome leva direto ao campo. No rodapé (celular, teclado aberto) fica compacto: o primeiro campo e quantos mais faltam.
+  if (!g) return; if (reservar) g.style.visibility = falta.length ? '' : 'hidden'; else g.classList.toggle('hide', !falta.length); var sig = falta.join('|') + (compacto ? 'c' : 'f'); if (g.getAttribute('data-sig') === sig) return; g.setAttribute('data-sig', sig); g.textContent = '';
   if (!falta.length) return;
   function btn(k) { var f = campoDeK(L.lead, k) || {}; var bt = el('button', 'link-falta', f.rot || k); bt.type = 'button'; bt.onclick = function () { var inp = $('gf_' + k.replace(/\./g, '_')); if (inp) { try { inp.scrollIntoView({ block: 'center', behavior: 'smooth' }); inp.focus({ preventScroll: true }); } catch (e) { logFalha('l1593 foco/rolagem/seleção é só conforto; se falhar a ação já foi feit', e); /* foco/rolagem/seleção é só conforto; se falhar a ação já foi feita */ } } }; return bt; }
-  if (compacto && falta.length > 2) { g.appendChild(document.createTextNode('Falta: ')); g.appendChild(btn(falta[0])); g.appendChild(document.createTextNode(' e mais ' + (falta.length - 1) + '.')); return; }
+  if (compacto && falta.length > 1) { g.appendChild(document.createTextNode('Falta: ')); g.appendChild(btn(falta[0])); g.appendChild(document.createTextNode(' e mais ' + (falta.length - 1) + '.')); return; }
   g.appendChild(document.createTextNode(falta.length === 1 ? 'Falta 1 campo obrigatório: ' : 'Faltam ' + falta.length + ' campos obrigatórios: '));
   falta.forEach(function (k, i) { g.appendChild(btn(k)); if (i < falta.length - 2) g.appendChild(document.createTextNode(', ')); else if (i === falta.length - 2) g.appendChild(document.createTextNode(' e ')); });
   g.appendChild(document.createTextNode('.'));
@@ -2431,11 +2446,10 @@ function atualizarGanhoBtn(L) {
   var b = L.refs && L.refs.ganhoBtn; if (!b || !L.modalAberto || L.rep) return; var falta = faltaAinda(L); var inval = false;
   Object.keys(L.ganhoReq || {}).forEach(function (k) { var f = campoDeK(L.lead, k); if (f && validarCampo(L, f)) inval = true; });
   if (L.ganhoPessoa == null) inval = true; // sem contato cadastrado não dá para qualificar
-  if (L.refs.gFalta) L.refs.gFalta.classList.toggle('hide', !falta.length && !inval);
-  preencherFalta(L, L.refs.gFalta, falta, false); preencherFalta(L, L.refs.gFaltaRod, falta, true);
-  var obsFalta = falta.indexOf('n.observacao_sdr') >= 0;
-  if (obsFalta && L.refs.gFalta) { var dica = el('div', 'sub'); dica.textContent = obsIgualAuto(L) ? 'A Observação do SDR precisa ser escrita por você, não vale o texto automático.' : 'Escreva você mesmo a Observação do SDR (até ' + OBS_MAX + ' letras): o representante lê esse campo.'; L.refs.gFalta.appendChild(dica); }
-  b.disabled = !!(falta.length || inval || L.ocupado); b.title = falta.length ? 'Falta preencher: ' + falta.map(function (k) { return (campoDeK(L.lead, k) || {}).rot; }).join(', ') : inval ? 'Corrija os campos em vermelho' : '';
+  preencherFalta(L, L.refs.gFalta, falta, true, true); preencherFalta(L, L.refs.gFaltaRod, falta, true); // 17/11: o aviso do topo tem 1 linha de altura fixa (não empurra os campos); o texto completo vai no title
+  if (L.refs.gFalta) L.refs.gFalta.title = falta.length ? 'Falta: ' + falta.map(function (k) { return (campoDeK(L.lead, k) || {}).rot || k; }).join(', ') : '';
+  if (L.refs.obsDica) { var tx = obsIgualAuto(L) ? 'A Observação do SDR precisa ser escrita por você, não vale o texto automático.' : 'Escreva você mesmo a Observação do SDR (até ' + OBS_MAX + ' letras): o representante lê esse campo.'; if (L.refs.obsDica.textContent !== tx) L.refs.obsDica.textContent = tx; }
+  var dis = !!(falta.length || inval || L.ocupado); if (b.disabled !== dis) b.disabled = dis; var ttl = falta.length ? 'Falta preencher: ' + falta.map(function (k) { return (campoDeK(L.lead, k) || {}).rot; }).join(', ') : inval ? 'Corrija os campos em vermelho' : ''; if (b.title !== ttl) b.title = ttl;
 }
 function textoAviso(a) { var t = typeof a === 'string' ? a : (a && (a.mensagem || a.campo)) || ''; if (/razao_social/.test(typeof a === 'string' ? a : (a && a.campo) || t)) return 'A razão social não foi gravada agora; o resto foi salvo.'; return t; }
 function notaAvisos(L, j) { var av = (j && Array.isArray(j.avisos) ? j.avisos : []).map(textoAviso).filter(Boolean); var box = L.refs && L.refs.estado; if (!box || !av.length) return; var n = el('div', 'sub aviso-discreto', av.join(' ')); box.appendChild(n); } // aviso discreto, nunca erro
