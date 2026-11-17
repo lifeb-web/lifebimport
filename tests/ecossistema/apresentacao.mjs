@@ -27,8 +27,8 @@ for (const [w, h] of TAM) {
   t(`${id}: deck cobre a tela inteira`, cobre[0] === cobre[2] && cobre[1] === cobre[3], cobre);
   const sem = await page.evaluate(() => ({ sx: document.documentElement.scrollWidth <= innerWidth + 1, sy: getComputedStyle(document.documentElement).overflow === "hidden", bodyOver: getComputedStyle(document.body).overflow }));
   t(`${id}: página sem rolagem com o deck aberto`, sem.sx && sem.sy && sem.bodyOver === "hidden", sem);
-  const svgMin = h < 500 ? 4.5 : w >= 1280 ? 11 : w >= 1000 ? 8.5 : w >= 380 ? 9.3 : 8.4;
-  const tamMin = h < 500 ? 5.5 : w >= 1280 ? 11 : w >= 1000 ? 9 : w >= 380 ? 9.5 : 9; // celular deitado: palco 16:9 reduzido, texto pequeno por natureza (só tela cheia e sem rolagem são exigidos)
+  const svgMin = h < 500 ? 5.5 : w >= 1280 ? 11 : w >= 1000 ? 9 : w >= 380 ? 10.5 : 10;   // pisos do texto publicado, também para os fluxogramas
+  const tamMin = h < 500 ? 5.5 : w >= 1280 ? 11 : w >= 1000 ? 9 : w >= 380 ? 10.5 : 10; // pisos publicados (celular deitado: 5,5)
   for (let i = 0; i < N; i++) {
     await page.evaluate((k) => window.__deck.mostra(k), i); await page.waitForTimeout(1100);
     const r = await page.evaluate(() => {

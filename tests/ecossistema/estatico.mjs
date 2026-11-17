@@ -53,6 +53,8 @@ t("papéis: a IA não vende (nenhum \"até a venda\" ligado à IA, à Ana ou à 
   t("a seção Status só lista componentes do estado.json (ou itens fixos conhecidos)", nPag.length > 0 && nPag.every((n) => nomes.includes(n) || EXTRAS.includes(n)), nPag.filter((n) => !nomes.includes(n) && !EXTRAS.includes(n)));
   const datas = { json: J.atualizado_em, paginaCapa: /atualizado em (\d\d\/\d\d\/\d{4})/.exec(D.querySelector("#inicio").textContent)?.[1], rodape: (D.getElementById("atualizadoEm") || {}).textContent?.trim(), capaApresentacao: /Atualizado em (\d\d\/\d\d\/\d{4})/.exec(D.getElementById("sl-capa").textContent)?.[1], statusSecao: /Posição de (\d\d\/\d\d\/\d{4})/.exec(D.getElementById("sl-estado").textContent)?.[1] };
   t("'atualizado em' igual no estado.json, na capa da página, no rodapé, na capa da apresentação e no slide de estado", new Set(Object.values(datas)).size === 1, datas); }
+t("datas sempre dd/mm/aaaa (nenhuma data sem ano no texto)", !/(?<![\d/.,])\d{1,2}\/\d{1,2}(?![\d/])/.test(texto), texto.match(/.{15}(?<![\d/.,])\d{1,2}\/\d{1,2}(?![\d/]).{10}/)?.[0]);
+t("horário de contato da Ana: nenhum \"só entre 8h e 22h, todos os dias\"", !/8h (e|a|às) 22h, todos os dias|só entre 8h e 22h/i.test(texto));
 // ---- comportamento no jsdom (deck) ----
 const w = dom.window; w.document.getElementById("apBtn").click();
 t("jsdom: clicar em Apresentar abre o deck com UM slide visível", w.document.documentElement.classList.contains("deck-on") && D.querySelectorAll(".slide.on").length === 1);

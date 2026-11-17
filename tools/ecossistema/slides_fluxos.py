@@ -27,17 +27,17 @@ parte("ponte", "Quem escreve no CRM: a Bia", "Por desenho, a Ana pede à Bia por
    N("pag", "Páginas Hoje e Central", "As páginas de trabalho também pedem à Bia; não escrevem direto", "n", 0, 1, 2), N("bia", "Bia", "Confere o pedido e as regras e escreve com fila e freio", "m", 2, 1, 2),
    N("ag", "Agendor", "Recebe a escrita", "g", 2, 2, 2), N("conf", "Confirmação", "A Bia relê o Agendor e só então devolve ok", "g", 0, 2, 2)],
   [("ana", "ponte", ""), ("ponte", "bia", ""), ("pag", "bia", ""), ("bia", "ag", "escreve"), ("ag", "conf", "")],
-  nodes_n=[N("ana", "Ana", "Conversa com o lead e decide o próximo passo", "p", 0, 0), N("ponte", "Ponte autenticada", "Pedidos fixos, com chave própria. Só aceita negócios do funil da Ana", "m", 0, 1),
-           N("bia", "Bia", "Confere o pedido e escreve. As páginas Hoje e Central também pedem à Bia", "m", 0, 2), N("ag", "Agendor", "Recebe a escrita", "g", 0, 3), N("conf", "Confirmação", "A Bia relê o Agendor e só então devolve ok", "g", 0, 4)],
-  edges_n=[("ana", "ponte", ""), ("ponte", "bia", ""), ("bia", "ag", "escreve"), ("ag", "conf", "relê")])
+  nodes_n=[N("ana", "Ana", "Conversa e decide o próximo passo", "p", 0, 0), N("ponte", "Ponte autenticada", "Pedidos fixos com chave própria; só negócios do funil da Ana", "m", 0, 1),
+           N("bia", "Bia", "Confere e escreve; as páginas Hoje e Central também pedem à Bia", "m", 0, 2), N("ag", "Agendor e confirmação", "Recebe a escrita; a Bia relê e só então devolve ok", "g", 0, 3)],
+  edges_n=[("ana", "ponte", ""), ("ponte", "bia", ""), ("bia", "ag", "escreve")])
 
 # ---- jornada do lead
 parte("jor", "Jornada do lead", "O lead conversa com a Ana. Ao qualificar, o negócio dela vira Ganho e nasce um negócio no SDR Inbound, com o SDR como dono. O SDR atende pela página Hoje e, ao qualificar, nasce o negócio no Arena.", 4,
   [N("lead", "Lead", "WhatsApp, anúncio ou site", "n", 0, 0), N("ana", "Ana conversa", "Segmento, lojas, decisor e CNPJ", "p", 1, 0, 2), N("per", "Fora do perfil", "Encerra com educação, com motivo registrado", "x", 3, 0),
    N("inb", "SDR Inbound", "Negócio nasce na etapa Ana qualificou, com o SDR como dono", "g", 0, 1, 2), N("hoje", "SDR na página Hoje", "Atende, liga e confirma o perfil", "p", 2, 1, 2), N("are", "Arena", "Nasce quando o SDR qualifica pela página Hoje. O representante de campo vende", "g", 2, 2, 2)],
   [("lead", "ana", ""), ("ana", "per", ""), ("ana", "inb", "qualificou"), ("inb", "hoje", ""), ("hoje", "are", "qualifica")],
-  nodes_n=[N("lead", "Lead", "WhatsApp, anúncio ou site", "n", 0, 0), N("ana", "Ana conversa", "Segmento, lojas, decisor e CNPJ. Fora do perfil: encerra com educação", "p", 0, 1),
-           N("inb", "SDR Inbound", "Nasce na etapa Ana qualificou, com o SDR como dono", "g", 0, 2), N("hoje", "SDR na página Hoje", "Atende, liga e confirma o perfil", "p", 0, 3), N("are", "Arena", "Nasce quando o SDR qualifica. O representante de campo vende", "g", 0, 4)],
+  nodes_n=[N("lead", "Lead", "WhatsApp, anúncio ou site", "n", 0, 0), N("ana", "Ana conversa", "Segmento, lojas, decisor e CNPJ; fora do perfil, encerra", "p", 0, 1),
+           N("inb", "SDR Inbound", "Etapa Ana qualificou, com o SDR como dono", "g", 0, 2), N("hoje", "SDR na página Hoje", "Atende, liga e confirma o perfil", "p", 0, 3), N("are", "Arena", "Nasce quando o SDR qualifica; o representante de campo vende", "g", 0, 4)],
   edges_n=[("lead", "ana", ""), ("ana", "inb", "qualificou"), ("inb", "hoje", ""), ("hoje", "are", "qualifica")])
 
 # ---- caminho da mensagem na Ana
@@ -45,8 +45,8 @@ parte("msg", "O caminho de cada mensagem na Ana", "A mensagem é guardada primei
   [N("a", "Guardar primeiro", "A mensagem entra no histórico antes de tudo", "n", 0, 0), N("b", "Juntar e entender", "Junta mensagens seguidas; áudio vira texto; foto e PDF são lidos", "n", 1, 0), N("c", "Cérebro decide", "Regras fixas e IA: cumprimento, segmento, CNPJ, apresentação, dúvida ou repasse", "p", 2, 0),
    N("d", "IA escreve", "No estilo da Ana, com o que já se sabe do lead", "p", 2, 1), N("e", "Validador confere", "Termos proibidos, gancho, tamanho e repetição. Se reprovar: texto padrão seguro", "m", 1, 1), N("f", "Envia, registra e pede à Bia", "Balões ou áudio; histórico; a Bia grava no Agendor", "g", 0, 1)],
   [("a", "b", ""), ("b", "c", ""), ("c", "d", ""), ("d", "e", ""), ("e", "f", "")],
-  nodes_n=[N("a", "Guardar e juntar", "Guarda a mensagem antes de tudo e junta mensagens seguidas; mídia é entendida", "n", 0, 0), N("c", "Cérebro decide", "Regras fixas e IA: cumprimento, segmento, CNPJ, apresentação, dúvida ou repasse", "p", 0, 1),
-           N("d", "IA escreve", "No estilo da Ana, com o que já se sabe do lead", "p", 0, 2), N("e", "Validador confere", "Se reprovar, entra um texto padrão seguro", "m", 0, 3), N("f", "Envia e pede à Bia", "Balões ou áudio; histórico; a Bia grava no Agendor", "g", 0, 4)],
+  nodes_n=[N("a", "Guardar e juntar", "Guarda antes de tudo, junta mensagens seguidas e entende a mídia", "n", 0, 0), N("c", "Cérebro decide", "Regras fixas e IA escolhem o próximo passo", "p", 0, 1),
+           N("d", "IA escreve", "No estilo da Ana, com o que já se sabe do lead", "p", 0, 2), N("e", "Validador confere", "Se reprovar, entra um texto padrão seguro", "m", 0, 3), N("f", "Envia e pede à Bia", "Balões ou áudio; a Bia grava no Agendor", "g", 0, 4)],
   edges_n=[("a", "c", ""), ("c", "d", ""), ("d", "e", ""), ("e", "f", "")])
 
 # ---- SDR: da lista ao representante
@@ -55,8 +55,8 @@ parte("sdr", "O SDR: da lista ao representante", "A lista do Outbound sobe pela 
    N("ini", "SDR clica Iniciar", "A Bia cria as tarefas da cadência: ligação e WhatsApp, em dias úteis", "p", 2, 0), N("res", "Resultado registrado", "Cada ligação termina com o resultado anotado na página Hoje", "n", 2, 1),
    N("dec", "SDR decide", "Qualifica e escolhe o representante, perde com motivo ou congela", "m", 1, 1), N("are", "Arena", "A Bia cria o negócio e o representante de campo vende", "g", 0, 1)],
   [("lista", "fila", ""), ("fila", "ini", ""), ("ini", "res", ""), ("res", "dec", ""), ("dec", "are", "")],
-  nodes_n=[N("lista", "Lista do Outbound", "Planilha na página Lista, com prévia e origem obrigatória", "n", 0, 0), N("fila", "Fila de espera", "Na página Hoje: negócios em D1, sem tarefas, por ordem de urgência", "n", 0, 1),
-           N("ini", "SDR clica Iniciar", "A Bia cria as tarefas da cadência, em dias úteis", "p", 0, 2), N("dec", "SDR registra e decide", "Resultado de cada ligação; qualifica, perde com motivo ou congela", "m", 0, 3), N("are", "Arena", "A Bia cria o negócio e o representante de campo vende", "g", 0, 4)],
+  nodes_n=[N("lista", "Lista do Outbound", "Planilha na página Lista, com prévia", "n", 0, 0), N("fila", "Fila de espera", "Negócios em D1, sem tarefas, por urgência", "n", 0, 1),
+           N("ini", "SDR clica Iniciar", "A Bia cria as tarefas da cadência, em dias úteis", "p", 0, 2), N("dec", "SDR registra e decide", "Registra a ligação; qualifica, perde ou congela", "m", 0, 3), N("are", "Arena", "A Bia cria o negócio e o representante de campo vende", "g", 0, 4)],
   edges_n=[("lista", "fila", ""), ("fila", "ini", ""), ("ini", "dec", ""), ("dec", "are", "qualifica")])
 
 # ---- voltas ao SDR
@@ -73,19 +73,19 @@ parte("av", "Do evento ao aviso enviado", "Um evento passa pelas regras da Ana e
   [N("ev", "Evento", "Lead novo, qualificado, pediu pessoa, tarefa vencida", "n", 0, 0), N("reg", "Regras da Ana e da Bia", "Sem repetir, limite por hora, silêncio da noite, destino permitido", "m", 1, 0), N("env", "Bia envia no WhatsApp", "Muitos avisos trazem botão para abrir a conversa", "p", 2, 0),
    N("conf", "Saiu de verdade?", "Só conta como enviado se o WhatsApp aceitou; então registra. Se não aceitou, vai para a fila", "g", 2, 1), N("fila", "Fila de reenvio", "Se o envio falhou, o aviso fica na fila e volta a cada poucos minutos; se a Meta recusar a entrega, ainda não há reenvio automático", "x", 1, 1)],
   [("ev", "reg", ""), ("reg", "env", ""), ("env", "conf", ""), ("conf", "fila", "")],
-  nodes_n=[N("ev", "Evento", "Lead novo, qualificado, pediu pessoa, tarefa vencida", "n", 0, 0), N("reg", "Regras da Ana e da Bia", "Sem repetir, limite por hora, silêncio da noite, destino permitido", "m", 0, 1), N("env", "Bia envia no WhatsApp", "Muitos avisos trazem botão para abrir a conversa", "p", 0, 2),
-           N("conf", "Saiu de verdade?", "Só conta como enviado se o WhatsApp aceitou", "g", 0, 3), N("fila", "Fila de reenvio", "Se o envio falhou, o aviso volta a cada poucos minutos", "x", 0, 4)],
+  nodes_n=[N("ev", "Evento", "Lead novo, qualificado, tarefa vencida", "n", 0, 0), N("reg", "Regras da Ana e da Bia", "Sem repetir; limite por hora; silêncio da noite", "m", 0, 1), N("env", "Bia envia no WhatsApp", "Muitos avisos trazem botão para abrir a conversa", "p", 0, 2),
+           N("conf", "Saiu de verdade?", "Só conta como enviado se o WhatsApp aceitou", "g", 0, 3), N("fila", "Fila de reenvio", "Se o envio falhou, volta a cada poucos minutos", "x", 0, 4)],
   edges_n=[("ev", "reg", ""), ("reg", "env", ""), ("env", "conf", ""), ("conf", "fila", "não")])
 
-# ---- Central: propósito e arquitetura (plano da Central, 09/11)
+# ---- Central: propósito e arquitetura (plano da Central, 09/11/2026)
 parte("cen", "Central: como ela controla a plataforma", "Pessoas com papéis usam a página Central. A API de controle valida, pede motivo e confirmação, grava o histórico e relê. Os valores ficam num registro de configuração que a Bia, a Ana e as páginas Hoje e Lista leem a cada uso.", 4,
   [N("pes", "Pessoas e papéis", "A gestão muda tudo; administradores só risco baixo ou médio; SDR: hoje só lê (no plano, depois, só o que é dele)", "n", 0, 0, 2), N("pag", "Página Central", "Atendimento, controles, histórico, filas, calendário e usuários", "p", 2, 0, 2),
    N("reg", "Registro de configuração", "Chaves e valores lidos a cada uso. Chave ausente: vale o padrão seguro do código", "g", 0, 1, 2), N("api", "API de controle", "Valida valor e permissão, pede motivo, grava o histórico e relê para confirmar", "m", 2, 1, 2),
    N("sis", "Bia, Ana e páginas Hoje e Lista", "Leem os valores a cada uso. A página Central muda valores, não a lógica das regras nem segredos", "n", 0, 2, 4)],
   [("pes", "pag", ""), ("pag", "api", ""), ("api", "reg", ""), ("reg", "sis", "")],
-  nodes_n=[N("pes", "Pessoas e papéis", "Gestão muda tudo; administrador, risco baixo e médio; SDR só lê hoje", "n", 0, 0), N("pag", "Página Central", "Atendimento, controles, histórico, filas, calendário e usuários", "p", 0, 1),
-           N("api", "API de controle", "Valida, pede motivo, grava o histórico e relê", "m", 0, 2), N("reg", "Registro de configuração", "Valores lidos a cada uso; chave ausente: padrão seguro", "g", 0, 3), N("sis", "Bia, Ana e páginas Hoje e Lista", "Leem os valores. A página Central não muda a lógica das regras", "n", 0, 4)],
-  edges_n=[("pes", "pag", ""), ("pag", "api", ""), ("api", "reg", ""), ("reg", "sis", "")])
+  nodes_n=[N("pes", "Pessoas e papéis", "Gestão muda tudo; administrador, risco baixo e médio; SDR só lê", "n", 0, 0), N("pag", "Página Central", "Atendimento, controles, histórico, filas, calendário e usuários", "p", 0, 1),
+           N("api", "API de controle e registro", "Valida, pede motivo, grava o histórico, relê; chave ausente: padrão seguro", "m", 0, 2), N("sis", "Bia, Ana e páginas Hoje e Lista", "Leem os valores; a página Central não muda a lógica", "n", 0, 3)],
+  edges_n=[("pes", "pag", ""), ("pag", "api", ""), ("api", "sis", "")])
 
 # ---- automações no CRM
 parte("autom", "Automações no CRM: quem dispara, o que faz e com que regra", "Um relógio, um evento do Agendor ou uma ação da página Hoje dispara a automação. O modo e as regras decidem se ela age. A Bia escreve no Agendor e relê para confirmar, avisa quem precisa agir e alerta a gestão se falhar.", 4,
@@ -93,9 +93,9 @@ parte("autom", "Automações no CRM: quem dispara, o que faz e com que regra", "
    N("b", "Bia age no CRM", "Cria e fecha tarefas, move etapa, cria negócio e distribui; relê o Agendor para confirmar", "p", 2, 1, 2), N("a", "Avisa e registra", "Aviso a quem precisa agir, com registro do autor", "n", 0, 1, 2),
    N("g", "Alerta à gestão", "Se a rotina falhar ou esgotar as tentativas", "x", 0, 2, 4)],
   [("t", "m", ""), ("m", "b", ""), ("b", "a", ""), ("a", "g", "")],
-  nodes_n=[N("t", "Dispara", "Relógio, evento do Agendor ou ação da página Hoje", "n", 0, 0), N("m", "Modo e regras", "Desligada, em sombra (só simula) ou ao vivo; horário e limites", "m", 0, 1), N("b", "Bia age no CRM", "Cria e fecha tarefas, move etapa, cria negócio; relê para confirmar", "p", 0, 2),
-           N("a", "Avisa e registra", "Aviso a quem precisa agir, com o autor", "n", 0, 3), N("g", "Alerta à gestão", "Se a rotina falhar", "x", 0, 4)],
-  edges_n=[("t", "m", ""), ("m", "b", ""), ("b", "a", ""), ("a", "g", "")])
+  nodes_n=[N("t", "Dispara", "Relógio, evento do Agendor ou ação da página Hoje", "n", 0, 0), N("m", "Modo e regras", "Desligada, em sombra (só simula) ou ao vivo; horário e limites", "m", 0, 1), N("b", "Bia age no CRM", "Cria tarefas e negócios, move etapa; relê para confirmar", "p", 0, 2),
+           N("a", "Avisa, registra e alerta", "Aviso a quem precisa agir, com o autor; alerta à gestão se falhar", "n", 0, 3)],
+  edges_n=[("t", "m", ""), ("m", "b", ""), ("b", "a", "")])
 
 def _vb(svg):
     m = re.search(r'viewBox="0 0 (\d+) (\d+)"', svg)

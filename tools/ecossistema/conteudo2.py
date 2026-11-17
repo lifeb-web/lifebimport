@@ -61,7 +61,7 @@ def s_recuperacao():
                 ("Passou do prazo sem reposição", "A Bia cria o negócio novo no SDR Outbound, na fila, com a origem Reativação e a nota de onde veio."),
                 ("Se o SDR qualificar", "O negócio vai ao funil de Reativação com o representante original, se ele ainda estiver no time. Se não estiver, fica com o SDR, que escolhe quem assume. O ciclo aberto do Pós-venda é fechado."),
                 ("O representante é avisado", "Com aviso de lead novo, depois da aprovação da gestão, e a Bia cria a tarefa de primeiro contato no nome dele.")])
-      + aviso("Em revisão", "Os prazos de Recuperação e as cadências curtas serão revistos com dados reais na semana de 18/11. Esta página será atualizada junto.", "w"))
+      + aviso("Em revisão", "Os prazos de Recuperação e as cadências curtas serão revistos com dados reais na semana de 18/11/2026. Esta página será atualizada junto.", "w"))
     return sec("recuperacao", "Funis e cadência", "Recuperação e reativação", "Quando e por que um lead perdido ou um cliente parado volta ao SDR.", corpo)
 
 def s_bia():
@@ -93,14 +93,14 @@ def s_bia():
       ], "", "Agendas da Bia")
       + '<h3 class="mt">Quem recebe o quê</h3>'
       + tabela(["Quando acontece", "SDR", "Representante", "Gestão"], [
-        ["Lead Inbound novo", "Aviso com contato, empresa, anúncio, origem e prazo", "Nada", "Sem cópia automática (desligada em 16/11)"],
+        ["Lead Inbound novo", "Aviso com contato, empresa, anúncio, origem e prazo", "Nada", "Sem cópia automática (desligada em 16/11/2026)"],
         ["Lead qualificado", "\"Novo lead para distribuir\", com a lista de representantes", "Tarefa de primeiro contato; aviso de lead novo depois da aprovação", "Aprovação do aviso ao representante (sem cópia automática)"],
-        ["Lead sem distribuir há mais de 2 horas", "Lembrete com a lista", "Nada", "Sem cópia automática (desligada em 16/11)"],
+        ["Lead sem distribuir há mais de 2 horas", "Lembrete com a lista", "Nada", "Sem cópia automática (desligada em 16/11/2026)"],
         ["Tarefa vencida (Arena, Reposição, Reativação)", "Nada", "Aviso com botões, depois da aprovação", "Aprova os avisos"],
-        ["Negócio do Arena há 5 dias úteis sem resposta", "Aviso diário, uma vez por negócio", "Nada novo", "Sem cópia automática (desligada em 16/11)"],
+        ["Negócio do Arena há 5 dias úteis sem resposta", "Aviso diário, uma vez por negócio", "Nada novo", "Sem cópia automática (desligada em 16/11/2026)"],
         ["Lead perdido sem explicação", "Aviso e fila vermelha na página Hoje", "Nada", "Aviso se passar de 24 horas"],
         ["Ligação concluída ou apagada sem registro", "Aviso de que a tarefa voltou para a página Hoje", "Nada", "Aviso na repetição"],
-        ["Dono que saiu da equipe", "Lista com o motivo e as opções", "Nada", "Sem cópia automática (desligada em 16/11)"],
+        ["Dono que saiu da equipe", "Lista com o motivo e as opções", "Nada", "Sem cópia automática (desligada em 16/11/2026)"],
         ["Mudança direto no Agendor (dono, etapa, valor, tarefa da cadência apagada)", "Nada", "Nada", "Resumo agrupado, no máximo a cada 30 minutos"],
         ["Lead congelado", "Nada", "Nada", "Aviso com funil, etapa, motivo e data para descongelar"],
       ], "", "Quem recebe cada aviso")
@@ -112,17 +112,17 @@ def s_automacoes():
       '<h3>Quem dispara, o que faz no CRM e com que regra</h3>' + fig("autom")
       + '<p class="legenda">Cada automação tem um modo: desligada, em sombra (só simula e relata, sem escrever) ou ao vivo. O estado de cada uma está na tabela abaixo; onde o estado ao vivo não foi conferido, a tabela diz.</p>'
       + tabela(["Automação", "Quem dispara", "O que faz no CRM", "Regra e limite", "Estado"], [
-        ["Cadência do SDR", "Relógio, por minuto", "Avança a etapa por dias úteis e cria a tarefa do dia, uma por vez", "Dias úteis; cota diária opcional de liberação", pill("ok", "No ar desde 20/10")],
-        ["Repasse SDR para Arena", "Relógio, por minuto", "Cria o negócio no Arena quando o SDR qualifica pela página Hoje e avisa", "Só depois da qualificação; relê para confirmar", pill("ok", "No ar desde 20/10")],
+        ["Cadência do SDR", "Relógio, por minuto", "Avança a etapa por dias úteis e cria a tarefa do dia, uma por vez", "Dias úteis; cota diária opcional de liberação", pill("ok", "No ar desde 20/10/2026")],
+        ["Repasse SDR para Arena", "Relógio, por minuto", "Cria o negócio no Arena quando o SDR qualifica pela página Hoje e avisa", "Só depois da qualificação; relê para confirmar", pill("ok", "No ar desde 20/10/2026")],
         ["Guardas do SDR", "Relógio e eventos do Agendor", "Devolve a ligação sem resultado, pede explicação em lead perdido, confere dono ativo e registra mudança direta", "Cada guarda tem chave de emergência", pill("ok", "No ar (blindagem do SDR)")],
         ["Fechamento e garantia de tarefa", "Relógio e eventos", "Fecha tarefa de negócio ganho ou perdido; cria tarefa faltante e corrige o responsável", "Nunca troca o dono; teto por rodada e por dia", pill("ok", "No ar (conforme esta página)")],
         ["Motor Proativo (Arena)", "Relógio, a cada 5 min em horário comercial", "Detecta tarefa vencida e lead parado e envia o card de cobrança ao representante", "Aprovação da gestão; 1 card por vez; sem repetir em 20 minutos", pill("ok", "No ar")],
         ["Pós-venda e reposição", "Relógio, a cada 30 min", "Mantém um negócio por ciclo de reposição, cria o primeiro contato e fecha o ciclo passada a janela", "Prazos por segmento; corrige ação manual sem quebrar o ciclo", pill("ok", "No ar")],
         ["Recuperação SDR, Recuperação e Reativação", "Relógio, diário e a cada 30 min", "Cria negócio novo no SDR Outbound para perdidos antigos e clientes que não repuseram", "Uma volta por empresa a cada 180 dias; limite por dia", pill("ok", "Em operação; prazos em revisão")],
-        ["Motores de Reposição e Reativação +75 (cards ao representante)", "Relógio", "Cobrança ao representante nos funis de Pós-venda e Reativação", "Aprovação da gestão; isolados do Arena", pill("de", "Estado ao vivo não verificado: a memória de 27/09 os registra em sombra, com a camada de entrega construída")],
-        ["Ana: abertura", "Relógio, 5 minutos depois do cadastro", "Pede à Bia o negócio no funil da Ana e a nota", "Só entre 8h e 22h; cancela se o lead escrever antes", pill("ok", "No ar")],
+        ["Motores de Reposição e Reativação +75 (cards ao representante)", "Relógio", "Cobrança ao representante nos funis de Pós-venda e Reativação", "Aprovação da gestão; isolados do Arena", pill("de", "Estado ao vivo não verificado: a memória de 27/09/2026 os registra em sombra, com a camada de entrega construída")],
+        ["Ana: abertura", "Relógio, 5 minutos depois do cadastro", "Pede à Bia o negócio no funil da Ana e a nota", "Só dentro do horário de contato (8h às 22h em dia útil; 9h às 20h em fim de semana e feriado); cancela se o lead escrever antes", pill("ok", "No ar")],
         ["Ana: retomada por abandono", "Relógio, dias úteis", "Pede à Bia a etapa Sem resposta no fim dos toques", "Toques em dias úteis; qualquer resposta cancela o que falta", pill("ok", "No ar")],
-        ["Ana: retorno combinado e vigias", "Relógio", "Cria a tarefa de retorno com a data pedida; vigia webhook, conversas sem resposta e custo", "Retorno ajustado a 8h-22h; vigia a cada 5 minutos", pill("ok", "No ar")],
+        ["Ana: retorno combinado e vigias", "Relógio", "Cria a tarefa de retorno com a data pedida; vigia webhook, conversas sem resposta e custo", "Retorno ajustado ao horário de contato; vigia a cada 5 minutos", pill("ok", "No ar")],
         ["Ana: cadência de 3 toques com mensagens de utilidade", "—", "—", "—", pill("pl", "Planejado")],
       ], "ver", "Automações da Bia e da Ana, com disparo, regra e estado")
       + '<h3 class="mt">Rotinas e quando cada uma roda</h3>'
@@ -196,7 +196,7 @@ def s_crm():
 def s_hoje():
     corpo = (
       '<p>A página Hoje é a mesa de trabalho do SDR: ele vê o lead inteiro, completa dados, liga, marca Perdido ou Ganho, escolhe o representante e cuida das tarefas sem abrir o Agendor. É uma página para computador.</p>'
-      + aviso("Versão no ar", "No ar em 16/11: a mesa do SDR sem travas de horário, a fila por listas, a leitura incremental de tarefas atrasadas e a qualificação que cria o negócio no funil certo (SDR Inbound e depois Arena). A base é a release 1 (versão 2026-11-14.1, de 14/11 às 17h42). Quem já estava com a página aberta precisa recarregar a aba para pegar a versão nova (a cópia dura cerca de 10 minutos). Parte da observação do SDR depende do próximo deploy da Bia.", "n")
+      + aviso("Versão no ar", "No ar em 16/11/2026: a mesa do SDR sem travas de horário, a fila por listas, a leitura incremental de tarefas atrasadas e a qualificação que cria o negócio no funil certo (SDR Inbound e depois Arena). A base é a release 1 (versão 2026-11-14.1, de 14/11/2026 às 17h42). Quem já estava com a página aberta precisa recarregar a aba para pegar a versão nova (a cópia dura cerca de 10 minutos). Parte da observação do SDR depende do próximo deploy da Bia.", "n")
       + '<h3 class="mt">Do lead na fila ao Arena</h3>' + fig("hoje")
       + '<h3 class="mt">A fila e o kanban</h3>'
       + grid([
@@ -223,7 +223,7 @@ def s_hoje():
 
 def s_central():
     corpo = (
-      '<p>A página Central é o painel de controle da plataforma, protegido por usuário e senha. A gestão vê e muda tudo; administradores mudam só o que tem risco baixo ou médio; o SDR hoje só lê (no plano de 09/11, depois, só o que é dele).</p>'
+      '<p>A página Central é o painel de controle da plataforma, protegido por usuário e senha. A gestão vê e muda tudo; administradores mudam só o que tem risco baixo ou médio; o SDR hoje só lê (no plano de 09/11/2026, depois, só o que é dele).</p>'
       + '<h3 class="mt">Como a página Central se conecta ao resto</h3>' + fig("central")
       + tabela(["Peça", "O que a página Central faz com ela", "Estado"], [
         ["Ana", "Central de atendimento (lista de conversas com selos de situação, conversa completa com histórico, áudios e fotos), assumir, responder por texto ou voz da Ana, devolver, passar ao time comercial, pausar, instruir por texto ou áudio, parada de emergência, voz, base de conhecimento editável e aprendizado por 👍/👎.", pill("ok")],
@@ -238,9 +238,9 @@ def s_central():
       + grid([
         card("Atendimento da Ana", ul(["Conversa da Ana com cada lead, com ficha e sinais.", "Assumir, instruir (texto ou áudio), devolver e pausar; 👍 ou 👎 em cada resposta.", "Tela cheia e link direto para cada conversa.", "Atalho para o Life B Solicita."]), p="ok"),
         card("Controle", ul(["Visão geral da saúde da plataforma.", "Interruptores de cada proteção e automação, em três níveis de risco. Cada mudança pede um motivo, aparece no histórico com quem fez e <b>pode ser desfeita</b>.", "Aba Agentes: parada de emergência da Ana e custo.", "Filas de mensagens por pessoa e calendário de folga."]), p="ok"),
-        card("Pacote de 15/11", ul(["Link por aba e rolagem preservada ao atualizar.", "Exportar conversa.", "Simulador em formato de chat.", "Login que persiste no celular."]), p="ok"),
-        card("Pacote Central (pronto, ainda não no ar)", ul(["Botões de ação com confirmação: mostram \"fazendo\", têm limite de tempo e leem a conversa de volta antes de dizer que deu certo.", "Selos do CRM na lista e no atendimento (qualificada, aguardando o SDR, no Arena, já cliente, no SDR, não contatar, perdido) e selo de início agendado, com data e hora.", "Lista leve: carrega menos dados e desenha 60 conversas por vez. Auditoria enxuta na aba da Ana.", "Entrada prevista para 17/11 às 9h."]), p="te"),
-        card("Planejado: controles manuais completos", ul(["Dar ganho, dar perdido com motivo e repassar ao SDR Inbound, sem precisar instruir nem assumir.", "Editar nome, empresa, CNPJ, segmento, lojas e decisor, com registro de quem fez e a Ana enxergando a edição; desfazer e apagar em tudo; arquivar; cancelar toques.", "Alertas com botão para abrir o atendimento; retomada por modelo após 24 horas; instrução à Ana com pré-visualização.", "Origem: levantamento de 16/11 e registro de decisões (o desenho será mostrado antes de publicar). Central 2.0 aguarda decisões da gestão."]), p="pl"),
+        card("Pacote de 15/11/2026", ul(["Link por aba e rolagem preservada ao atualizar.", "Exportar conversa.", "Simulador em formato de chat.", "Login que persiste no celular."]), p="ok"),
+        card("Pacote Central (pronto, ainda não no ar)", ul(["Botões de ação com confirmação: mostram \"fazendo\", têm limite de tempo e leem a conversa de volta antes de dizer que deu certo.", "Selos do CRM na lista e no atendimento (qualificada, aguardando o SDR, no Arena, já cliente, no SDR, não contatar, perdido) e selo de início agendado, com data e hora.", "Lista leve: carrega menos dados e desenha 60 conversas por vez. Auditoria enxuta na aba da Ana.", "Entrada prevista para 17/11/2026 às 9h."]), p="te"),
+        card("Planejado: controles manuais completos", ul(["Dar ganho, dar perdido com motivo e repassar ao SDR Inbound, sem precisar instruir nem assumir.", "Editar nome, empresa, CNPJ, segmento, lojas e decisor, com registro de quem fez e a Ana enxergando a edição; desfazer e apagar em tudo; arquivar; cancelar toques.", "Alertas com botão para abrir o atendimento; retomada por modelo após 24 horas; instrução à Ana com pré-visualização.", "Origem: levantamento de 16/11/2026 e registro de decisões (o desenho será mostrado antes de publicar). Central 2.0 aguarda decisões da gestão."]), p="pl"),
       ], 2)
       + '<h3 class="mt">Propósito e os 12 módulos do plano da página Central</h3>'
       + '<p>O plano da página Central (09/11/2026) a define como a plataforma de operação: um painel único para operar a Bia, as automações, as páginas Hoje e Lista, os motores proativos, o time e os prazos, sem abrir o terminal. A página Central muda <b>valores</b> (ligado ou desligado, número, horário, lista); não muda a lógica das regras (código com teste), os segredos (guardados no servidor) nem os limites de terceiros (Agendor, WhatsApp). Cada mudança passa por validação e permissão, pede motivo, é registrada com autor e valor anterior e pode ser desfeita. Se uma chave não existe, vale o padrão seguro do código.</p>'
@@ -280,8 +280,8 @@ def s_meta():
       card("Números separados", "<p>A Ana e a Bia usam números de WhatsApp diferentes. O webhook do número da Ana na Meta é vigiado a cada 5 minutos e recolocado se sumir.</p>"),
       card("Janela de 24 horas", "<p>Dentro de 24 horas da última mensagem do lead, a Ana responde livremente. Fora dela, só modelos aprovados. A janela só reabre quando a pessoa responde; por isso a Bia manda, antes de fechar, um \"tá tudo certo?\" com botões, em dia útil, das 8h às 18h, sem empilhar mensagens.</p>"),
       card("Modelos aprovados", "<p>Aberturas usam modelos de marketing, com texto humano; modelos utilitários só para retorno com data. Os modelos de \"cadastro recebido\" ficam como reserva, sem uso. Arquivar modelos antigos só depois de os novos estarem estáveis.</p>", p="pl"),
-      card("Ritmo e limites", "<p>Conservador de propósito, para proteger a qualidade do número: aviso da Bia a representantes, no máximo 1 a cada 20 minutos por pessoa e 30 por hora no total; a Ana só toma a iniciativa entre 8h e 22h; cada aviso tem regra de não repetir; nada vai a um lead real em teste.</p>"),
+      card("Ritmo e limites", "<p>Conservador de propósito, para proteger a qualidade do número: aviso da Bia a representantes, no máximo 1 a cada 20 minutos por pessoa e 30 por hora no total; a Ana só toma a iniciativa dentro do horário de contato (8h às 22h em dia útil; 9h às 20h em fim de semana e feriado); cada aviso tem regra de não repetir; nada vai a um lead real em teste.</p>"),
       card("Entrega", "<p>A Bia só considera \"enviado\" quando o WhatsApp aceitou. Qualquer outro retorno vira erro e o aviso entra na fila durável.</p>", p="ok"),
-      card("Falha de entrega da própria Meta", "<p>Nos avisos da Bia, a falha de ENTREGA recusada pela Meta fica registrada, mas ainda não gera reenvio automático (planejado); a falha de ENVIO entra na fila e é reenviada. Para a abertura da Ana a Ana tem, desde 15/11, uma camada de entrega: se a Meta recusar o modelo de marketing, a Ana faz um único reenvio por um modelo de utilidade (aprovado na Meta); se falhar de novo, espera o lead escrever e cria uma tarefa humana com alerta. O primeiro caso real já gerou o reenvio agendado; o resultado do envio ainda será confirmado.</p>", p="ok"),
+      card("Falha de entrega da própria Meta", "<p>Nos avisos da Bia, a falha de ENTREGA recusada pela Meta fica registrada, mas ainda não gera reenvio automático (planejado); a falha de ENVIO entra na fila e é reenviada. Para a abertura da Ana a Ana tem, desde 15/11/2026, uma camada de entrega: se a Meta recusar o modelo de marketing, a Ana faz um único reenvio por um modelo de utilidade (aprovado na Meta); se falhar de novo, espera o lead escrever e cria uma tarefa humana com alerta. O primeiro caso real já gerou o reenvio agendado; o resultado do envio ainda será confirmado.</p>", p="ok"),
     ], 2))
     return sec("meta", "Plataforma", "WhatsApp e Meta", "Modelos, janela de 24 horas e limites que protegem o número.", corpo)

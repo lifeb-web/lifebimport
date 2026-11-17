@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Monta ecossistema/index.html (página única, tudo embutido). Uso: python3 tools/ecossistema/montar.py [saida]
-(O antigo build.py só reescrevia a seção da Ana na página anterior e não deve mais ser usado.)"""
+"""
 import os, sys, re, json
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, AQUI)

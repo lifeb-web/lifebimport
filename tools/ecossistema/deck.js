@@ -15,7 +15,10 @@
   function refit() { slides.forEach(function (s) { s.removeAttribute('data-fit'); }); fit(slides[cur]); }
   function ajusta() {
     var w = W.innerWidth, h = W.innerHeight, port = h > w;
-    var sw = port ? 1080 : 1920, sh = port ? 1920 : 1080;
+    /* o palco acompanha a proporção da tela (sem faixas vazias): em pé, largura 1080 e altura proporcional; deitado, altura 1080 e largura proporcional (limites 1280 a 2100) */
+    var sw, sh;
+    if (port) { sw = 1080; sh = Math.max(1500, Math.min(2600, Math.round(1080 * h / w))); } else { sh = 1080; sw = Math.max(1280, Math.min(2100, Math.round(1080 * w / h))); }
+    stage.style.width = sw + 'px'; stage.style.height = sh + 'px';
     stage.classList.toggle('port', port);
     var k = Math.min(w / sw, h / sh);
     stage.style.transform = 'translate(' + Math.round((w - sw * k) / 2) + 'px,' + Math.round((h - sh * k) / 2) + 'px) scale(' + k + ')';

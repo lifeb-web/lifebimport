@@ -80,8 +80,8 @@ def todos():
     # ================= COMO SE CONECTA =================
     C = "Como se conecta"
     A(slide("mapa", "Como as peças se conectam", C, fx("mapa", "A Ana pede; a Bia escreve e avisa. A Ana nunca escreve direto no Agendor nem manda aviso por conta própria. Na página: Como tudo se conecta."), "flow", "visao,entrada"))
-    A(slide("ponte", "Quem escreve no CRM: a Bia", C, fx("ponte", "Por desenho, a Ana pede e a Bia escreve; a ponte recusa negócios fora do funil da Ana, e repetir o pedido de repasse não cria um segundo negócio. Na página: CRM como fonte da verdade."), "flow", "crm,visao,bia"))
-    A(slide("jor", "Jornada do lead", C, fx("jor", "Quem some entra nos toques de retomada. Ganho na Ana é qualificação, nunca venda. Depois da venda, o representante cuida do Pós-venda e da Reativação. Na página: Ana; Funis do Agendor."), "flow", "ana,destinos,entrada"))
+    A(slide("ponte", "Quem escreve no CRM: a Bia", C, fx("ponte", "A ponte recusa negócios fora do funil da Ana; repetir o repasse não cria outro negócio. Na página: CRM como fonte da verdade."), "flow", "crm,visao,bia"))
+    A(slide("jor", "Jornada do lead", C, fx("jor", "Ganho na Ana é qualificação, nunca venda. Depois da venda, o representante cuida do Pós-venda. Na página: Ana; Funis do Agendor."), "flow", "ana,destinos,entrada"))
 
     # ================= ANA =================
     C = "Ana"
@@ -91,7 +91,7 @@ def todos():
     ], 2) + band("Na página: Ana; Ana: a conversa.")
     A(slide("ana", "Ana: o que faz e como trata cada caso", C, ana1, "dense", "ana"))
     ana2 = g([
-        cat("O que nunca faz", ["Falar preço, desconto ou resultado garantido, ou prometer implantação na loja", "Negar ser inteligência artificial; falar com quem pediu para parar", "Escrever direto no Agendor ou marcar ganho ou perdido por conta própria", "Escrever por iniciativa própria fora de 8h a 22h"], "lock"),
+        cat("O que nunca faz", ["Falar preço, desconto ou resultado garantido, ou prometer implantação na loja", "Negar ser inteligência artificial; falar com quem pediu para parar", "Escrever direto no Agendor ou marcar ganho ou perdido por conta própria", "Escrever por iniciativa própria fora do horário de contato"], "lock"),
         cat("Quando a equipe entra", ["Pela página Central: assume, instrui, devolve ou pausa", "A instrução da equipe pode mandar e encerrar, quando é o caso", "Parada de emergência para a Ana inteira"], "user"),
     ], 2) + band("A IA entende e escreve; regras fixas decidem o que pode sair. Na página: Ana: entendimento, travas e monitoria.") + faixa_estado("ana")
     A(slide("ana_limites", "Ana: limites e intervenção da equipe", C, ana2, "dense", "ana-seguranca"))
@@ -113,31 +113,31 @@ def todos():
     fun1 = g([
         cat("Ana e SDR Inbound", ["Funil da Ana: Novo lead, Em conversa, Retorno combinado, Repassado, Sem resposta, Encerrado", "SDR Inbound: Ana qualificou (SDR como dono), D0 a D4 e Fim da cadência, tudo por WhatsApp"], "chat"),
         cat("SDR Outbound", ["D1 Abertura, D3 Follow-up, D5 Ligação, D8 Follow-up 3, D10 Última tentativa", "Fim da cadência: 3 dias úteis de espera; sem ação, fecha como cadência esgotada", "Tarefas criadas pela Bia: pesquisar, ligar e mandar WhatsApp"], "list"),
-    ], 2) + band("Os dias contam sempre como dias úteis. Os prazos das cadências curtas serão revistos com dados reais na semana de 18/11. Na página: Funis do Agendor; Cadência do SDR.")
+    ], 2) + band("Os dias contam sempre como dias úteis. Os prazos das cadências curtas serão revistos com dados reais na semana de 18/11/2026. Na página: Funis do Agendor; Cadência do SDR.")
     A(slide("funis", "Funis do SDR e cadências", C, fun1, "dense", "destinos,cadencia"))
     fun2 = g([
         cat("Arena, Pós-venda e Reativação", ["Arena: Conexão, Diagnóstico/Solução e Negociação; ganho é venda e exige o valor", "Pós-venda: ciclos de reposição, com janela para repor", "Reativação: cliente que não repôs no prazo"], "crm"),
-        cat("Voltas ao SDR", ["Recuperação SDR, Recuperação e Reativação criam negócio novo na fila de espera do Outbound, com nota de origem", "Uma volta por empresa a cada 180 dias; prazos em revisão na semana de 18/11"], "git"),
+        cat("Voltas ao SDR", ["Recuperação SDR, Recuperação e Reativação criam negócio novo na fila de espera do Outbound, com nota de origem", "Uma volta por empresa a cada 180 dias; prazos em revisão na semana de 18/11/2026"], "git"),
     ], 2) + band("Quem vende no Arena são os representantes de campo (e o closer, em redes). Na página: Funis do Agendor; Recuperação e reativação.")
     A(slide("funis2", "Arena, Pós-venda e voltas ao SDR", C, fun2, "dense", "destinos,recuperacao"))
     A(slide("volta", "Voltas ao SDR", C, fx("volta", "Cada rotina tem nome e origem próprios. Na página: Recuperação e reativação."), "flow", "recuperacao"))
 
     # ================= BIA =================
     C = "Bia"
-    A(slide("autom", "Automações no CRM: quem dispara e com que regra", C, fx("autom", "Cada automação tem um modo (desligada, em sombra ou ao vivo). Na sombra, só simula e relata, sem escrever. Na página: Automações da Bia e da Ana."), "flow", "automacoes,bia"))
+    A(slide("autom", "Automações no CRM: quem dispara e com que regra", C, fx("autom", "Em sombra, a automação só simula e relata. Na página: Automações da Bia e da Ana."), "flow", "automacoes,bia"))
     bia = g([
-        cat("No ar (conforme a página)", ["Cadência do SDR e repasse ao Arena, desde 20/10", "Guardas do SDR: ligação com resultado, perda com explicação, dono ativo", "Fechamento e garantia de tarefa; motor proativo do Arena, com aprovação da gestão", "Pós-venda e reposição, a cada 30 minutos; vigias de saúde"], "rocket"),
+        cat("No ar (conforme a página)", ["Cadência do SDR e repasse ao Arena, desde 20/10/2026", "Guardas do SDR: ligação com resultado, perda com explicação, dono ativo", "Fechamento e garantia de tarefa; motor proativo do Arena, com aprovação da gestão", "Pós-venda e reposição, a cada 30 minutos; vigias de saúde"], "rocket"),
         cat("Em operação, com prazos em revisão", ["Recuperação SDR, Recuperação e Reativação: criam negócio novo no SDR Outbound para perdidos antigos e clientes que não repuseram", "Uma volta por empresa a cada 180 dias, com limite por dia"], "git"),
-        cat("Estado ao vivo não verificado", ["Motores de Reposição e Reativação +75 (cards ao representante nos funis de Pós-venda e Reativação): a memória de 27/09 os registra em sombra, com a camada de entrega construída"], "eye"),
+        cat("Estado ao vivo não verificado", ["Motores de Reposição e Reativação +75 (cards ao representante nos funis de Pós-venda e Reativação): a memória de 27/09/2026 os registra em sombra, com a camada de entrega construída"], "eye"),
     ], 3) + band("Em sombra, a automação só simula e relata. Na página: Automações da Bia e da Ana; Bia: avisos, agendas e folga.") + faixa_estado("bia")
     A(slide("bia", "Automações da Bia e estado de cada uma", C, bia, "dense", "bia,automacoes"))
     ana_a = g([
-        cat("Quando o lead escreve", ["Responde na hora, a qualquer hora, juntando mensagens seguidas", "Retorno combinado: volta na hora pedida, ajustada a 8h-22h", "Instrução da equipe pela página Central"], "chat"),
-        cat("Quando a Ana toma a iniciativa", ["Só entre 8h e 22h, todos os dias", "Abertura: 5 minutos depois do cadastro, se o lead não escreveu antes", "Retomada por abandono: toques em dias úteis; qualquer resposta cancela o que falta", "Lead que escreveu e ficou sem resposta: um vigia a cada 5 minutos faz a Ana voltar"], "clock"),
+        cat("Quando o lead escreve", ["Responde na hora, a qualquer hora, juntando mensagens seguidas", "Retorno combinado: volta na hora pedida, ajustada ao horário de contato", "Instrução da equipe pela página Central"], "chat"),
+        cat("Quando a Ana toma a iniciativa", ["Só dentro do horário de contato: 8h às 22h em dia útil; 9h às 20h em fim de semana e feriado", "Abertura: 5 minutos depois do cadastro, se o lead não escreveu antes", "Retomada por abandono: toques em dias úteis; qualquer resposta cancela o que falta", "Lead que escreveu e ficou sem resposta: um vigia a cada 5 minutos faz a Ana voltar"], "clock"),
         cat("Vigias e planejado", ["Webhook do número da Ana, conversas sem resposta e custo diário e mensal", "Avisos à equipe de 7h às 21h; à noite viram resumo", "Planejado: cadência de 3 toques com mensagens de utilidade"], "eye"),
-    ], 3) + band("Fonte: horários e regras da Ana (docs do agente, 11/11) e página. O número exato de toques de retomada não é citado aqui. Na página: Automações da Bia e da Ana; Ana: a conversa.")
+    ], 3) + band("Fonte: horários e regras da Ana (docs do agente, 11/11/2026) e página. O número exato de toques de retomada não é citado aqui. Na página: Automações da Bia e da Ana; Ana: a conversa.")
     A(slide("autom_ana", "Automações da Ana", C, ana_a, "dense", "automacoes,ana"))
-    A(slide("av", "Do evento ao aviso enviado", C, fx("av", "A falha de envio entra na fila. A falha de entrega recusada pela Meta ainda não é reenviada (planejado). Na página: Observabilidade e entrega de avisos."), "flow", "bia,observ"))
+    A(slide("av", "Do evento ao aviso enviado", C, fx("av", "Falha de envio entra na fila; entrega recusada pela Meta ainda não é reenviada (planejado). Na página: Observabilidade e entrega de avisos."), "flow", "bia,observ"))
 
     # ================= PÁGINAS =================
     C = "Páginas de trabalho"
@@ -151,7 +151,7 @@ def todos():
         cat("Qualificar e o que vem", ["Qualificar pela página Hoje cria o negócio no funil certo, pela Bia", "A leitura de tarefas atrasadas é incremental", "Planejado: versão 2.0, lendo de um espelho dos dados (hoje só em teste)"], "rocket"),
     ], 2) + band("Na página: Página Hoje.")
     A(slide("hoje2", "Página Hoje: cuidados e o que vem", C, hoje2, "dense", "hoje"))
-    A(slide("cenarq", "Central: propósito e arquitetura", C, fx("cen", "A página Central é a plataforma de operação: o objetivo é operar a Bia, as automações, as páginas Hoje e Lista e o time sem abrir o terminal. Ela escreve sempre pela Bia. Na página: Central."), "flow", "central"))
+    A(slide("cenarq", "Central: propósito e arquitetura", C, fx("cen", "Objetivo: operar a Bia, as automações, as páginas Hoje e Lista e o time sem abrir o terminal. Por desenho, pede à Bia. Na página: Central."), "flow", "central"))
     def mod(n, nome, est, txt):
         return (f"{n}. {nome} " + pill(est[0]), txt)
     def mod(n, nome, est, txt):
@@ -180,8 +180,8 @@ def todos():
     ], 2) + band("Por desenho, a página Central pede à Bia e não escreve direto no Agendor. Na página: Central.")
     A(slide("central", "Página Central: atendimento e a Ana", C, cen1, "dense", "central"))
     cen2 = g([
-        cat("Em implantação (ainda não no ar)", ["Prevista para 17/11 às 9h", "Botões com confirmação, que leem de volta antes de dizer que deu certo", "Selos do CRM e do início agendado; lista leve; auditoria enxuta"], "rocket"),
-        cat("Planejado (origem: levantamento de 16/11 e decisão 2)", ["Dar ganho, dar perdido com motivo e repassar ao SDR Inbound", "Editar dados do lead (nome, empresa, CNPJ, segmento, lojas, decisor), com autor registrado e a Ana enxergando", "Alertas com botão, retomada por modelo após 24 h e instrução com pré-visualização"], "clock"),
+        cat("Em implantação (ainda não no ar)", ["Prevista para 17/11/2026 às 9h", "Botões com confirmação, que leem de volta antes de dizer que deu certo", "Selos do CRM e do início agendado; lista leve; auditoria enxuta"], "rocket"),
+        cat("Planejado (origem: levantamento de 16/11/2026 e decisão 2)", ["Dar ganho, dar perdido com motivo e repassar ao SDR Inbound", "Editar dados do lead (nome, empresa, CNPJ, segmento, lojas, decisor), com autor registrado e a Ana enxergando", "Alertas com botão, retomada por modelo após 24 h e instrução com pré-visualização"], "clock"),
     ], 2) + band("O desenho dos controles manuais será mostrado antes de publicar. Na página: Central.")
     A(slide("central2", "Página Central: pacote em implantação e o planejado", C, cen2, "dense", "central"))
     outras = g([
