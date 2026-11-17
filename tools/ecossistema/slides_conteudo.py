@@ -67,12 +67,15 @@ def todos():
         for k in cols:
             if c[k]:
                 cols[k].append(f'<li><b>{c["nome"]}</b> {"; ".join(c[k])}</li>')
-    est = ('<div class="dg3 est dgx">'
-        f'<div class="ec e-ok"><h3>{pill("no ar")}</h3><ul>{"".join(cols["no_ar"])}</ul></div>'
+    est = ('<div class="dg1 est dgx">'
+        f'<div class="ec e-ok"><h3>{pill("no ar")}</h3><ul>{"".join(cols["no_ar"])}</ul></div></div>'
+        + band(f'Posição de {ATUAL}. No ar: conferido em produção. Em implantação: pronto, ainda não no ar. Planejado: futuro. Checklist completo na página.'))
+    A(slide("estado", "Estado de cada peça: no ar", C, est, "dense", "status,checklist"))
+    est2 = ('<div class="dg2 est dgx">'
         f'<div class="ec e-te"><h3>{pill("em implantação")}</h3><ul>{"".join(cols["implantacao"]) or "<li>Nada pendente de entrada neste momento.</li>"}</ul></div>'
         f'<div class="ec e-pl"><h3>{pill("planejado")}</h3><ul>{"".join(cols["planejado"])}</ul></div></div>'
-        + band(f'Posição de {ATUAL}. No ar: conferido em produção. Em implantação: pronto, ainda não no ar. Planejado: futuro. Checklist completo na página.'))
-    A(slide("estado", "Estado de cada peça", C, est, "dense", "status,checklist"))
+        + band("Em implantação: pronto, ainder não no ar. Planejado: futuro, ainda não existe. Checklist completo na página.".replace("ainder","ainda")))
+    A(slide("estado2", "Estado de cada peça: em implantação e planejado", C, est2, "dense", "status,checklist"))
 
     # ================= COMO SE CONECTA =================
     C = "Como se conecta"
