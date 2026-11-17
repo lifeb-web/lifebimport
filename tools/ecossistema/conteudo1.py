@@ -3,7 +3,8 @@ from comp import *
 from diagramas import fig
 import dados_status as S
 
-DATA = "16/11/2026"
+import json as _j0, os as _o0
+DATA = _j0.load(open(_o0.path.join(_o0.path.dirname(_o0.path.abspath(__file__)), "estado.json"), encoding="utf-8"))["atualizado_em"]
 
 def s_inicio():
     c = S.contagem()
@@ -11,13 +12,13 @@ def s_inicio():
       '<div class="hero-b"><div class="hero-t"><p class="eyebrow">Guia do projeto · Life B Importadora</p>'
       '<p class="h1" role="presentation">Ecossistema Life B</p>'
       '<p class="hero-p">O mapa completo da operação comercial: como o lead chega, como a Ana (SDR Inbound virtual no WhatsApp) e a Bia (assistente de operação) trabalham, onde cada informação é escrita e quais regras mantêm tudo em ordem. Feito para a equipe, para parceiros e para quem está conhecendo a empresa agora.</p>'
-      '<div class="chips"><span class="chip">Versão '+__import__("conteudo3").VERSAO+' · atualizado em 16/11/2026</span><span class="chip">Sem dados pessoais de clientes</span><span class="chip">Conferido no código e nos painéis</span></div>'
+      '<div class="chips"><span class="chip">Versão '+__import__("conteudo3").VERSAO+' · atualizado em '+DATA+'</span><span class="chip">Sem dados pessoais de clientes</span><span class="chip">Conferido no código e nos painéis</span></div>'
       '<div class="hero-a"><a class="btn pri" href="#status">Ver o status de hoje</a><button type="button" class="btn" data-apres>Apresentar em tela cheia</button></div></div></div>'
       + stats([(c["ok"], "entregas no ar e conferidas", "ok"), (c["te"], "prontas e em implantação (ainda não no ar)", "te"), (c["pl"] + c["of"] + c["lm"], "planejadas, desligadas de propósito ou com limite conhecido", "pl"), (c["de"], "dependem de decisão da gestão", "de")])
       + '<h3 class="mt">Em 1 minuto</h3>'
       + grid([
         card("A conversa", ul(["A <b>Ana</b> atende leads no WhatsApp, 24 horas por dia, apresenta o projeto, qualifica e passa ao time comercial.", "Quem entende o lead é a IA; quem trava o que pode ser dito e feito são regras fixas, que não dependem da IA.", "Quem some recebe toques de retomada; qualquer resposta cancela o que falta."])),
-        card("O registro", ul(["O <b>Agendor</b> (CRM) é a fonte da verdade: se está lá, é o que vale.", "A Ana decide; a <b>Bia</b> é a única que escreve no Agendor, e só diz \"feito\" depois de reler.", "Quando a Ana qualifica, o negócio dela vira Ganho e nasce um negócio no SDR Inbound (etapa \"Ana qualificou\", dono SDR). O Arena só nasce quando o SDR qualifica pela página Hoje."])),
+        card("O registro", ul(["O <b>Agendor</b> (CRM) é a fonte da verdade: se está lá, é o que vale.", "A Ana decide e pede; por desenho, a <b>Bia</b> escreve no Agendor, e só diz \"feito\" depois de reler.", "Quando a Ana qualifica, o negócio dela vira Ganho e nasce um negócio no SDR Inbound (etapa \"Ana qualificou\", dono SDR). O Arena só nasce quando o SDR qualifica pela página Hoje."])),
         card("O trabalho", ul(["O SDR trabalha na página <b>Hoje</b>; a gestão controla pela página <b>Central</b>; o representante usa o <b>Painel do Representante</b>; os números ficam no <b>Dash</b>.", "A Bia avisa a equipe pelo WhatsApp, com botões, no horário certo."])),
         card("A segurança", ul(["Nada vai ao ar sem testes, auditoria independente, cópia de segurança e o roteiro único de publicação.", "Falha de envio de aviso entra numa fila durável e é reenviada sozinha; falha de entrega recusada pela Meta ainda não (planejado).", "A gestão tem interruptores de emergência em cada regra."])),
       ]))
@@ -72,7 +73,7 @@ def s_visao():
     pecas = [
       ["Agendor", "Clientes, negócios, tarefas e funis. Fonte da verdade.", "SDR, closer, representantes e gestão"],
       ["Ana", "SDR Inbound virtual que conversa pelo WhatsApp, qualifica e registra. Serviço próprio na nuvem, 24 horas.", "Leads (quem conversa); gestão (quem controla)"],
-      ["Bia", "A única que escreve no Agendor e envia avisos. Roda o tempo todo e conversa com a equipe pelo WhatsApp.", "Gestão, SDR, closer e representantes"],
+      ["Bia", "Por desenho, quem escreve no Agendor e envia os avisos. Roda o tempo todo e conversa com a equipe pelo WhatsApp.", "Gestão, SDR, closer e representantes"],
       ["Hoje e Lista", "Mesa de trabalho do SDR e envio de listas de empresas.", "SDR"],
       ["Central", "Painel de controle com login: saúde, interruptores, atendimento da Ana, filas e calendário de folga.", "Gestão (muda tudo), administradores (risco baixo e médio), SDR (só lê)"],
       ["Painel do Representante", "Carteira ao vivo, com as ações do dia.", "Representantes e SDR que também vende"],
@@ -197,7 +198,7 @@ def s_ana2():
         card("Monitoria", "<p>Cada resposta da Ana em conversa real é lida e, se preciso, corrigida orientando a próxima resposta. Revisão independente e prova ao vivo da orientação estão na fila.</p>", p="ok"),
         card("Aprendizado supervisionado", "<p>Cada 👍 ou 👎 na página Central vira exemplo. Uma análise diária propõe melhorias e nada muda sem a aprovação da gestão.</p>", p="ok"),
         card("Treino comercial da diretoria", "<p>Frases aprovadas pela diretoria comercial, guardadas palavra por palavra, em dois níveis (leve e pleno), só para o público foco e nunca com datas ou reforma tributária. O interruptor está desligado até revisão, simulação com IA real e OK da diretoria.</p>", p="of"),
-        card("Parada de emergência", "<p>Na Central, na aba Agentes, a gestão desliga a Ana na hora e liga de novo quando quiser.</p>", p="ok"),
+        card("Parada de emergência", "<p>Na página Central, na aba Agentes, a gestão desliga a Ana na hora e liga de novo quando quiser.</p>", p="ok"),
       ], 2)
       + '<h3 class="mt">Histórico, exclusão e backup</h3>'
       + grid([
@@ -239,7 +240,7 @@ def s_destinos():
     H = ["Etapa", "O que se faz", "Avança quando"]
     corpo = (
       '<h3>O mapa dos funis</h3>' + fig("funis")
-      + '<p class="legenda">Funil é uma sequência de etapas pela qual o negócio caminha. A Bia nunca confunde um funil com outro. \"Lead\", nos números da empresa, é somente negócio do Arena; ganho no SDR é qualificação, e não venda.</p>'
+      + '<p class="legenda">Funil é uma sequência de etapas pela qual o negócio caminha. Por regra, a Bia confere o funil antes de mover uma etapa. \"Lead\", nos números da empresa, é somente negócio do Arena; ganho no SDR é qualificação, e não venda.</p>'
       + '<h3 class="mt">Os caminhos de um negócio da Ana</h3>'
       + grid([
         card("Qualificou", "<p>O negócio da Ana vira <b>Ganho</b> (qualificação, nunca venda) e nasce um negócio no <b>SDR Inbound</b>, na etapa \"Ana qualificou\", com o SDR como dono.</p><p class=\"muted\">O Arena só nasce depois, quando o SDR qualifica o lead pela página Hoje.</p>", p="ok"),

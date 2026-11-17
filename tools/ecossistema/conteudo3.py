@@ -1,6 +1,7 @@
 """Seções 16 a 22 do Ecossistema."""
-VERSAO = "2026-11-16.2"
-DATA_V = "16/11/2026"
+VERSAO = "2026-11-17.1"
+import json as _j1, os as _o1
+DATA_V = _j1.load(open(_o1.path.join(_o1.path.dirname(_o1.path.abspath(__file__)), "estado.json"), encoding="utf-8"))["atualizado_em"]
 from comp import *
 from diagramas import fig
 
@@ -139,8 +140,9 @@ def s_versoes():
       + grid([card("Atualização automática pelo deploy", "<p>O roteiro de deploy de cada sistema chama a atualização do arquivo de versões depois de publicar (versão, data e resultado de cada verificação) e remonta esta página. Hoje o comando existe; ligá-lo em cada roteiro de deploy é o próximo passo.</p>", p="pl"),
               card("Documentação de cada verificação", "<p>Cada deploy deixa registro: o que foi varrido, quais testes rodaram e o resultado, quem auditou e o veredito, o resultado da fumaça e como voltar atrás. Os registros ficam nos documentos do projeto e as linhas de resumo aparecem aqui.</p>", p="ok")], 2)
       + '<h3 class="mt">Histórico de versões desta página</h3>' + tabela(["Versão", "Data", "O que mudou"], [
-        [VERSAO, DATA_V, "Rodada 2: seção e slides \"Quem é quem\" (glossário em linguagem simples); modo apresentação com todos os capítulos da página (índice navegável pela tecla G, fluxogramas encaixados em partes, texto que se ajusta sozinho); pacote 1 da Ana e limpeza de avisos da Bia no ar; Central nova ainda em implantação; cópia automática de avisos ao gestor desligada; sem códigos técnicos e contagens voláteis."],
-        ["2026-11-16.1", DATA_V, "Página atualizada para 16/11: funis Ana, SDR Inbound e Arena (a Ana ganha ao qualificar e o SDR Inbound nasce na etapa Ana qualificou), Hoje sem travas de horário, pacote da Ana no ar, Central nova em implantação, futuros marcados como planejado; novo modo apresentação em slides (tela cheia, sem rolagem, celular em pé); estado por componente em estado.json e data de atualização na página."],
+        [VERSAO, DATA_V, "Estado atualizado para 17/11 (Ana-2a, página Hoje e pacote da página Central em implantação); versões da Ana e da Bia atualizadas; textos sobre a ponte e a página Central ajustados ao que o código garante."],
+        ["2026-11-16.2", "16/11/2026", "Rodada 2: seção e slides \"Quem é quem\" (glossário em linguagem simples); modo apresentação com todos os capítulos da página (índice navegável pela tecla G, fluxogramas encaixados em partes, texto que se ajusta sozinho); pacote 1 da Ana e limpeza de avisos da Bia no ar; Central nova ainda em implantação; cópia automática de avisos ao gestor desligada; sem códigos técnicos e contagens voláteis."],
+        ["2026-11-16.1", "16/11/2026", "Página atualizada para 16/11: funis Ana, SDR Inbound e Arena (a Ana ganha ao qualificar e o SDR Inbound nasce na etapa Ana qualificou), Hoje sem travas de horário, pacote da Ana no ar, Central nova em implantação, futuros marcados como planejado; novo modo apresentação em slides (tela cheia, sem rolagem, celular em pé); estado por componente em estado.json e data de atualização na página."],
         ["2026-11-15.1", "15/11/2026", "Versões reais de Ana, Bia e Central (lidas do servidor e do git); camada de entrega da Ana no ar; datas alinhadas a 15/11; restaurados o mapa de infraestrutura, a grade de horários dos resumos e a nota do GS Engage legado; Hoje release 1 no ar; registro de deploys e verificações."],
         ["2026-11-14.1", "14/11/2026", "Página refeita, com fluxogramas, modo apresentação, status e checklist."],
         ["2026-11-09", "09/11/2026", "Versão anterior, de 20 seções."]], "", "Histórico"))
@@ -151,14 +153,15 @@ def s_sobre():
       '<h3>Versão desta página</h3>'
       + f'<p><b>Versão {VERSAO}</b>, de {DATA_V}. A cada entrega que muda uma regra, um processo, uma automação ou o status de algo, esta página é atualizada, o número da versão sobe e uma linha é acrescentada abaixo. O histórico completo fica guardado junto do código da página.</p>'
       + tabela(["Versão", "Data", "O que mudou"], [
-        [VERSAO, DATA_V, "Rodada 2: seção e slides \"Quem é quem\" (glossário em linguagem simples); modo apresentação com todos os capítulos da página (índice navegável pela tecla G, fluxogramas encaixados em partes, texto que se ajusta sozinho); pacote 1 da Ana e limpeza de avisos da Bia no ar; Central nova ainda em implantação; cópia automática de avisos ao gestor desligada; sem códigos técnicos e contagens voláteis."],
-        ["2026-11-16.1", DATA_V, "Página atualizada para 16/11: funis Ana, SDR Inbound e Arena (a Ana ganha ao qualificar e o SDR Inbound nasce na etapa Ana qualificou), Hoje sem travas de horário, pacote da Ana no ar, Central nova em implantação, futuros marcados como planejado; novo modo apresentação em slides (tela cheia, sem rolagem, celular em pé); estado por componente em estado.json e data de atualização na página."],
+        [VERSAO, DATA_V, "Estado atualizado para 17/11 (Ana-2a, página Hoje e pacote da página Central em implantação); versões da Ana e da Bia atualizadas; textos sobre a ponte e a página Central ajustados ao que o código garante."],
+        ["2026-11-16.2", "16/11/2026", "Rodada 2: seção e slides \"Quem é quem\" (glossário em linguagem simples); modo apresentação com todos os capítulos da página (índice navegável pela tecla G, fluxogramas encaixados em partes, texto que se ajusta sozinho); pacote 1 da Ana e limpeza de avisos da Bia no ar; Central nova ainda em implantação; cópia automática de avisos ao gestor desligada; sem códigos técnicos e contagens voláteis."],
+        ["2026-11-16.1", "16/11/2026", "Página atualizada para 16/11: funis Ana, SDR Inbound e Arena (a Ana ganha ao qualificar e o SDR Inbound nasce na etapa Ana qualificou), Hoje sem travas de horário, pacote da Ana no ar, Central nova em implantação, futuros marcados como planejado; novo modo apresentação em slides (tela cheia, sem rolagem, celular em pé); estado por componente em estado.json e data de atualização na página."],
         ["2026-11-15.1", "15/11/2026", "Versões reais de Ana, Bia e Central (lidas do servidor e do git); camada de entrega da Ana no ar; datas alinhadas a 15/11; restaurados o mapa de infraestrutura, a grade de horários dos resumos e a nota do GS Engage legado; Hoje release 1 no ar; registro de deploys e verificações."],
         ["2026-11-14.1", "14/11/2026", "Página refeita: seções navegáveis, status e checklist honestos, fluxogramas com tema claro e escuro, a página Central e suas conexões, modo apresentação e tela cheia, posição preservada ao atualizar e nenhum nome de pessoa. Entra o que mudou desde 09/11: Ana com apresentação em capítulos, Bia com funil da Ana por nome, folga e vínculo de empresa, os 3 destinos, observabilidade e entrega garantida."],
         ["2026-11-09", "09/11/2026", "Versão anterior: 20 seções com vocabulário, funis etapa por etapa, cadência, Hoje e Lista, regras, voltas ao SDR, Bia, Dash, Painel do Representante, Ana, camada do Agendor, testes e segurança."],
       ], "", "Histórico de versões")
       + '<h3 class="mt">Sobre este guia</h3>'
-      + '<p>Este guia reflete o sistema em <b>16/11/2026</b>. Regras e prazos podem mudar depois. Em caso de dúvida, o que está ao vivo (aba BIA do Dash e o Agendor) vale mais do que este texto. A cada mudança de regra, esta página é atualizada junto.</p>'
+      + '<p>Este guia reflete o sistema em <b>'+DATA_V+'</b>. Regras e prazos podem mudar depois. Em caso de dúvida, o que está ao vivo (aba BIA do Dash e o Agendor) vale mais do que este texto. A cada mudança de regra, esta página é atualizada junto.</p>'
       + '<h3 class="mt">Modo apresentação e tela cheia</h3>'
       + '<p>Toque em <b>Apresentar</b> no topo da página para ver a apresentação em slides: tela cheia, sem rolagem, no computador, no projetor, no tablet e no celular (em pé ou deitado). Os slides se ajustam sozinhos a qualquer tela.</p>'
       + tabela(["Tecla ou gesto", "O que faz"], [

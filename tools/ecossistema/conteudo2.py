@@ -18,7 +18,7 @@ def s_cadencia():
             "<b>Botão Iniciar.</b> O SDR escolhe quais leads começar, na página Hoje. Ao clicar, a Bia cria as tarefas do primeiro dia. Não existe meta diária imposta pelo sistema.",
             "<b>Contagem dos dias.</b> O primeiro dia é o primeiro dia útil em que a cadência pode começar; lead iniciado depois das 17h30 começa no próximo dia útil. A etapa só avança, nunca volta."])
       + '<h3 class="mt">O fim da cadência</h3>'
-      + ul(["Passou o último dia sem resposta: o lead vai para o <b>Fim da cadência</b>. Na Hoje, a coluna se chama \"Tentativas acabaram\".",
+      + ul(["Passou o último dia sem resposta: o lead vai para o <b>Fim da cadência</b>. Na página Hoje, a coluna se chama \"Tentativas acabaram\".",
             "Três dias úteis de espera. O SDR pode marcar Ganho (respondeu e qualifica), Perdido (respondeu e não serve) ou Voltar para a cadência, escolhendo de qual etapa recomeçar.",
             "Sem ação em três dias úteis completos, a Bia relê o negócio e, se ninguém agiu, fecha como Perdido com o motivo \"Cadência esgotada\". Esse motivo é só da Bia.",
             "Se alguém leva o lead de volta para uma etapa anterior direto no Agendor, a Bia refaz a contagem a partir dali, com um limite diário."])
@@ -223,7 +223,7 @@ def s_hoje():
 
 def s_central():
     corpo = (
-      '<p>A página Central é o painel de controle da plataforma, protegido por usuário e senha. A gestão vê e muda tudo; administradores mudam só o que tem risco baixo ou médio; o SDR só lê.</p>'
+      '<p>A página Central é o painel de controle da plataforma, protegido por usuário e senha. A gestão vê e muda tudo; administradores mudam só o que tem risco baixo ou médio; o SDR hoje só lê (no plano de 09/11, depois, só o que é dele).</p>'
       + '<h3 class="mt">Como a página Central se conecta ao resto</h3>' + fig("central")
       + tabela(["Peça", "O que a página Central faz com ela", "Estado"], [
         ["Ana", "Central de atendimento (lista de conversas com selos de situação, conversa completa com histórico, áudios e fotos), assumir, responder por texto ou voz da Ana, devolver, passar ao time comercial, pausar, instruir por texto ou áudio, parada de emergência, voz, base de conhecimento editável e aprendizado por 👍/👎.", pill("ok")],

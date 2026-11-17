@@ -20,7 +20,7 @@ t("de 15 a 35 slides (deck enxuto; os detalhes ficam na página longa)", nSlides
 for (const [w, h] of TAM) {
   const touch = w < 800 || h < 500; const id = `${w}x${h}`;
   const { ctx, page, erros } = await abrirPagina(nav, { w, h, touch });
-  await page.click("#apBtn"); await page.waitForTimeout(500);
+  await page.click("#apBtn"); await page.waitForTimeout(500); await page.evaluate(() => Promise.all([...document.querySelectorAll(".dlogo img, .capa-logo")].map((i) => (i.decode ? i.decode().catch(() => {}) : null))));
   t(`${id}: Apresentar abre o deck`, await page.evaluate(() => document.documentElement.classList.contains("deck-on") && !document.getElementById("deck").hidden));
   const N = await page.evaluate(() => window.__deck.N);
   const cobre = await page.evaluate(() => { const r = document.getElementById("deck").getBoundingClientRect(); return [r.width, r.height, innerWidth, innerHeight]; });
@@ -46,14 +46,16 @@ for (const [w, h] of TAM) {
       // sobreposição de cartões irmãos
       const grupos = s.querySelectorAll(".dg2,.dg3,.dsteps,.chain,.funis,.kan,.two,.eq");
       grupos.forEach((g) => { const f = [...g.children].map((c) => c.getBoundingClientRect()); for (let a = 0; a < f.length; a++) for (let b = a + 1; b < f.length; b++) { const A = f[a], B = f[b]; if (A.width && B.width && A.left < B.right - 3 && B.left < A.right - 3 && A.top < B.bottom - 3 && B.top < A.bottom - 3) out.push("sobrepõe em " + g.className); } });
+      const logoFixa = (() => { const d = document.querySelector(".dlogo"); const i = [...d.querySelectorAll("img")].find((z) => getComputedStyle(z).display !== "none"); return { dl: getComputedStyle(d).display, ok: !!i && i.complete && i.naturalWidth > 0, w: i ? Math.round(i.getBoundingClientRect().width) : 0 }; })();
       let svgMin = null; s.querySelectorAll("svg.capa-g").forEach(() => {}); s.querySelectorAll(".dfig .svgd svg").forEach((sv) => { if (getComputedStyle(sv.parentElement).display === "none") return; sv.querySelectorAll("text").forEach((tx) => { const fs = parseFloat(getComputedStyle(tx).fontSize) * tx.getScreenCTM().a; if (svgMin === null || fs < svgMin) svgMin = fs; }); });
-      return { out: [...new Set(out)].slice(0, 6), min, svgMin, id: s.id, vis: getComputedStyle(s).visibility, n: document.querySelectorAll(".slide.on").length };
+      return { out: [...new Set(out)].slice(0, 6), min, svgMin, logoFixa, capa: s.classList.contains("s-capa"), id: s.id, vis: getComputedStyle(s).visibility, n: document.querySelectorAll(".slide.on").length };
     });
     if (process.env.ECO_ALLFLOW && await page.evaluate(() => document.querySelector(".slide.on").classList.contains("flow"))) await page.screenshot({ path: `${PRINTS}/flow_${id}_${String(i + 1).padStart(2, "0")}_${r.id.slice(3)}.png` });
     t(`${id} slide ${i + 1} (${r.id}): cabe sem rolagem, nada fora nem sobreposto`, r.out.length === 0 && r.vis === "visible" && r.n === 1, r);
     t(`${id} slide ${i + 1}: menor texto >= ${tamMin}px na tela`, r.min >= tamMin, r.min);
+    t(`${id} slide ${i + 1}: logo ${r.capa ? "fixa some na capa (a logo grande aparece)" : "da Life B visível"}`, r.capa ? r.logoFixa.dl === "none" : (r.logoFixa.dl !== "none" && r.logoFixa.ok && r.logoFixa.w > 20), r.logoFixa);
     if (r.svgMin !== null) t(`${id} slide ${i + 1}: texto do fluxograma >= ${svgMin}px na tela`, r.svgMin >= svgMin, r.svgMin);
-    if (["capa", "quem1", "estado", "mapa", "ponte", "jor", "msg", "sdrfluxo", "volta", "autom", "av", "hoje", "cenarq", "cenmod"].some((c) => r.id === "sl-" + c)) await page.screenshot({ path: `${PRINTS}/deck_${id}_${String(i + 1).padStart(2, "0")}.png` });
+    if (["capa", "ana", "quem1", "estado", "mapa", "ponte", "jor", "msg", "sdrfluxo", "volta", "autom", "av", "hoje", "cenarq", "cenmod"].some((c) => r.id === "sl-" + c)) await page.screenshot({ path: `${PRINTS}/deck_${id}_${String(i + 1).padStart(2, "0")}.png` });
   }
   // logo (A) e controles (B)
   const lgs = () => page.evaluate(() => { const vis = [...document.querySelectorAll(".dlogo img")].filter((i) => getComputedStyle(i).display !== "none"); const i = vis[0]; const r = i ? i.getBoundingClientRect() : null; const s = document.querySelector(".slide.on"); const textoRects = (el) => { const r = document.createRange(); r.selectNodeContents(el); return [...r.getClientRects()]; }; const alvo = [...[...s.querySelectorAll(".kick, h2")].flatMap(textoRects), ...[...s.querySelectorAll(".sl-b, .sl-b *")].map((e) => e.getBoundingClientRect())].filter((b) => b.width && b.height); const c = document.getElementById("dctl").getBoundingClientRect(); const ov = (a, b) => a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1; return { n: vis.length, ok: !!i && i.complete && i.naturalWidth > 0, alt: i ? i.alt : "", h: r ? Math.round(r.height) : 0, sobreConteudo: r ? alvo.some((b) => ov(r, b)) : false, sobreBarra: r ? ov(r, c) : false, dentro: r ? r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight : false, cover: getComputedStyle(document.querySelector(".dlogo")).display }; });

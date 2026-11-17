@@ -7,12 +7,12 @@ def N(i, t, s, st, c, r, span=1):
 D = {}
 
 D["mapa"] = dict(cols=4, titulo="Mapa do ecossistema: quem escreve onde",
- desc="O lead escreve no WhatsApp. A Meta entrega à Ana, que entende e decide. A Ana guarda o histórico e pede à Bia. A Bia é a única que escreve no Agendor e envia os avisos. As páginas de trabalho leem o Agendor ao vivo.",
+ desc="O lead escreve no WhatsApp. A Meta entrega à Ana, que entende e decide. A Ana guarda o histórico e pede à Bia. Por desenho, a Bia escreve no Agendor e envia os avisos. As páginas de trabalho leem o Agendor ao vivo.",
  nodes=[N("lead","Lead","Anúncio, site, lista ou WhatsApp direto","n",0,0),
   N("meta","WhatsApp (Meta)","Número da Ana, janela de 24 h e modelos aprovados","n",1,0),
   N("ana","Ana, SDR Inbound virtual","A IA entende e responde; regras fixas travam. Nunca escreve no Agendor","p",2,0,2),
   N("hist","Histórico","Toda mensagem é guardada antes de qualquer ação","n",0,1),
-  N("bia","Bia, a única que escreve","Confere as regras, escreve no Agendor, relê para confirmar e avisa a equipe","m",1,1,3),
+  N("bia","Bia, quem escreve no CRM","Confere as regras, escreve no Agendor, relê para confirmar e avisa a equipe","m",1,1,3),
   N("ag","Agendor, a fonte da verdade","Empresa, pessoa, negócio, etapa, notas e tarefas","g",0,2,2),
   N("av","Avisos no WhatsApp","Gestão, SDR, closer e representantes; muitos com botão","n",2,2,2),
   N("pag","Páginas de trabalho","Hoje, Central, Painel do Representante e Dash leem o Agendor ao vivo","n",0,3,2)],

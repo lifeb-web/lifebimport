@@ -77,7 +77,7 @@ def todos():
     # ================= COMO SE CONECTA =================
     C = "Como se conecta"
     A(slide("mapa", "Como as peças se conectam", C, fx("mapa", "A Ana pede; a Bia escreve e avisa. A Ana nunca escreve direto no Agendor nem manda aviso por conta própria. Na página: Como tudo se conecta."), "flow", "visao,entrada"))
-    A(slide("ponte", "Só a Bia escreve no CRM", C, fx("ponte", "A Ana usa pedidos fixos e só toca no funil da Ana; o repasse cria o lead no SDR Inbound pela mesma porta do formulário, sem duplicar. Na página: CRM como fonte da verdade."), "flow", "crm,visao,bia"))
+    A(slide("ponte", "Quem escreve no CRM: a Bia", C, fx("ponte", "Por desenho, a Ana pede e a Bia escreve; a ponte recusa negócios fora do funil da Ana, e repetir o pedido de repasse não cria um segundo negócio. Na página: CRM como fonte da verdade."), "flow", "crm,visao,bia"))
     A(slide("jor", "Jornada do lead", C, fx("jor", "Quem some entra nos toques de retomada. Ganho na Ana é qualificação, nunca venda. Depois da venda, o representante cuida do Pós-venda e da Reativação. Na página: Ana; Funis do Agendor."), "flow", "ana,destinos,entrada"))
 
     # ================= ANA =================
@@ -174,7 +174,7 @@ def todos():
     cen1 = g([
         cat("No ar: atendimento", ["Lista de conversas com selos de situação do lead; conversa completa com histórico, áudios e fotos", "Assumir, responder por texto ou pela voz da Ana, devolver, passar ao time comercial e pausar", "Instruir a Ana por texto ou áudio"], "chat"),
         cat("No ar: a Ana", ["Aba da Ana: modo, parada de emergência, voz e base de conhecimento editável, com versões", "Aprendizado por polegar para cima ou para baixo, com análise que a gestão aprova"], "ctrl"),
-    ], 2) + band("A página Central escreve sempre pela Bia. Na página: Central.")
+    ], 2) + band("Por desenho, a página Central pede à Bia e não escreve direto no Agendor. Na página: Central.")
     A(slide("central", "Página Central: atendimento e a Ana", C, cen1, "dense", "central"))
     cen2 = g([
         cat("Em implantação (ainda não no ar)", ["Prevista para 17/11 às 9h", "Botões com confirmação, que leem de volta antes de dizer que deu certo", "Selos do CRM e do início agendado; lista leve; auditoria enxuta"], "rocket"),
@@ -191,12 +191,12 @@ def todos():
     # ================= PROTEÇÃO =================
     C = "Segurança e testes"
     t1 = g([
-        cat("Ana", ["181 arquivos de teste, mais 14 suítes de conversa (à data 16/11/2026)", "O deploy roda tudo e aborta se algo falhar; exige as linhas Varredura e Antirregressão e faz backup do código antes", "Teste de fumaça depois de publicar, com conversas canônicas no simulador"], "chat"),
-        cat("Bia", ["96 arquivos de teste (à data 16/11/2026), incluindo o portão gates.test.mjs", "O deploy bloqueia se o portão não estiver 100% verde e exige a linha Varredura", "Se o código muda, é preciso um teste novo ou alterado com 100 ou mais verificações"], "bot"),
+        cat("Ana", ["181 arquivos de teste, mais 14 suítes de conversa (contagem em 16/11/2026)", "O deploy roda tudo e aborta se algo falhar; exige as linhas Varredura e Antirregressão e faz backup do código antes", "Teste de fumaça depois de publicar, com conversas canônicas no simulador"], "chat"),
+        cat("Bia", ["96 arquivos de teste (contagem em 16/11/2026), incluindo o portão gates.test.mjs", "O deploy bloqueia se o portão não estiver 100% verde e exige a linha Varredura", "Se o código muda, é preciso um teste novo ou alterado com 100 ou mais verificações"], "bot"),
     ], 2) + band("Na página: Segurança e engenharia.")
     A(slide("testes", "Como Ana e Bia são testadas", C, t1, "dense", "seguranca,versoes"))
     t2 = g([
-        cat("Páginas", ["Hoje: o roteiro de publicação roda os testes da página (jsdom) e o teste visual em celular e computador", "Central: 35 scripts de teste da página, com tamanhos e temas (à data 16/11/2026)", "Ecossistema: testes estático, visual, de interação, de iframe e da apresentação"], "doc"),
+        cat("Páginas", ["Hoje: o roteiro de publicação roda os testes da página (jsdom) e o teste visual em celular e computador", "Central: 35 scripts de teste da página, com tamanhos e temas (contagem em 16/11/2026)", "Ecossistema: testes estático, visual, de interação, de iframe e da apresentação"], "doc"),
         cat("Antes de subir", ["Auditor independente revisa as mudanças grandes", "Publicação só por script, nunca por atalho", "Cada deploy registra o que foi conferido e a data"], "shield"),
     ], 2) + band("Na página: Segurança e engenharia; Versões e verificações por deploy.")
     A(slide("testes2", "Como as páginas são testadas e publicadas", C, t2, "dense", "seguranca,versoes"))

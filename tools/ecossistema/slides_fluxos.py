@@ -18,16 +18,16 @@ parte("mapa", "Como as peças se conectam", "O lead escreve no WhatsApp. A Meta 
    N("bia", "Bia", "Aplica as regras, escreve no Agendor, relê para confirmar e avisa a equipe", "m", 0, 1, 3), N("ag", "Agendor (CRM)", "Empresas, negócios, funis e tarefas", "g", 0, 2), N("av", "Avisos no WhatsApp", "Gestão, SDR, closer e representantes", "n", 2, 2)],
   [("lead", "meta", ""), ("meta", "ana", ""), ("ana", "bia", "pede"), ("bia", "ag", "escreve"), ("bia", "av", "avisa")],
   nodes_n=[N("lead", "Lead e WhatsApp (Meta)", "Chega por anúncio, site, lista ou WhatsApp direto", "n", 0, 0), N("ana", "Ana", "Conversa, qualifica e guarda o histórico", "p", 0, 1), N("bia", "Bia", "Aplica as regras, escreve no Agendor, relê e avisa a equipe", "m", 0, 2),
-           N("ag", "Agendor (CRM)", "Empresas, negócios, funis e tarefas", "g", 0, 3), N("av", "Avisos no WhatsApp", "Gestão, SDR, closer e representantes", "n", 0, 4)],
-  edges_n=[("lead", "ana", ""), ("ana", "bia", "pede"), ("bia", "ag", "escreve"), ("bia", "av", "avisa")])
+           N("ag", "Agendor (CRM) e avisos", "A Bia grava empresas, negócios, funis e tarefas e envia os avisos no WhatsApp a gestão, SDR, closer e representantes", "g", 0, 3)],
+  edges_n=[("lead", "ana", ""), ("ana", "bia", "pede"), ("bia", "ag", "escreve e avisa")])
 
 # ---- a ponte: só a Bia escreve no CRM
-parte("ponte", "Só a Bia escreve no CRM", "A Ana pede à Bia por uma ponte autenticada com chave própria e nunca tem o acesso do Agendor. A página Hoje e a página Central também pedem à Bia. A Bia grava, lê de volta e só então confirma.", 4,
-  [N("ana", "Ana", "Conversa com o lead e decide o próximo passo", "p", 0, 0, 2), N("ponte", "Ponte autenticada", "Pedidos fixos: lead, etapa, nota, escalar, não contatar e contexto. Chave própria; a Ana não tem o acesso do Agendor", "m", 2, 0, 2),
+parte("ponte", "Quem escreve no CRM: a Bia", "Por desenho, a Ana pede à Bia por uma ponte autenticada com chave própria e não tem o acesso do Agendor. A ponte só aceita pedidos sobre negócios do funil da Ana. A página Hoje e a página Central também agem pela Bia. A Bia grava, lê de volta e só então confirma.", 4,
+  [N("ana", "Ana", "Conversa com o lead e decide o próximo passo", "p", 0, 0, 2), N("ponte", "Ponte autenticada", "Pedidos fixos: lead, etapa, nota, escalar, não contatar e contexto. Chave própria. Só aceita negócios do funil da Ana", "m", 2, 0, 2),
    N("pag", "Páginas Hoje e Central", "As páginas de trabalho também pedem à Bia; não escrevem direto", "n", 0, 1, 2), N("bia", "Bia", "Confere o pedido e as regras e escreve com fila e freio", "m", 2, 1, 2),
    N("ag", "Agendor", "Recebe a escrita", "g", 2, 2, 2), N("conf", "Confirmação", "A Bia relê o Agendor e só então devolve ok", "g", 0, 2, 2)],
   [("ana", "ponte", ""), ("ponte", "bia", ""), ("pag", "bia", ""), ("bia", "ag", "escreve"), ("ag", "conf", "")],
-  nodes_n=[N("ana", "Ana", "Conversa com o lead e decide o próximo passo", "p", 0, 0), N("ponte", "Ponte autenticada", "Pedidos fixos, com chave própria. A Ana não tem o acesso do Agendor", "m", 0, 1),
+  nodes_n=[N("ana", "Ana", "Conversa com o lead e decide o próximo passo", "p", 0, 0), N("ponte", "Ponte autenticada", "Pedidos fixos, com chave própria. Só aceita negócios do funil da Ana", "m", 0, 1),
            N("bia", "Bia", "Confere o pedido e escreve. As páginas Hoje e Central também pedem à Bia", "m", 0, 2), N("ag", "Agendor", "Recebe a escrita", "g", 0, 3), N("conf", "Confirmação", "A Bia relê o Agendor e só então devolve ok", "g", 0, 4)],
   edges_n=[("ana", "ponte", ""), ("ponte", "bia", ""), ("bia", "ag", "escreve"), ("ag", "conf", "relê")])
 
@@ -63,7 +63,10 @@ parte("sdr", "O SDR: da lista ao representante", "A lista do Outbound sobe pela 
 parte("volta", "Voltas ao SDR", "Três rotinas devolvem negócios ao SDR como negócio novo, na fila de espera do Outbound, com a nota de onde vieram.", 3,
   [N("o1", "Recuperação SDR", "Lead do SDR perdido: volta 14 dias depois", "n", 0, 0), N("o2", "Recuperação", "Perdido por representante no Arena: o prazo depende do motivo", "n", 1, 0), N("o3", "Reativação", "Cliente do Pós-venda que não repôs no prazo", "n", 2, 0),
    N("reg", "Regras comuns", "Uma volta por empresa a cada 180 dias; sem negócio aberto nem compra posterior; limite por dia", "m", 0, 1, 3), N("neg", "Negócio novo no SDR Outbound", "Na fila de espera, com o SDR como responsável e nota de origem. O negócio antigo nunca reabre", "p", 0, 2, 3)],
-  [("o1", "reg", ""), ("o2", "reg", ""), ("o3", "reg", ""), ("reg", "neg", "")])
+  [("o1", "reg", ""), ("o2", "reg", ""), ("o3", "reg", ""), ("reg", "neg", "")],
+  nodes_n=[N("o", "Três origens", "Recuperação SDR (lead do SDR perdido, volta em 14 dias); Recuperação (perdido por representante no Arena, prazo conforme o motivo); Reativação (cliente do Pós-venda que não repôs)", "n", 0, 0),
+           N("reg", "Regras comuns", "Uma volta por empresa a cada 180 dias; sem negócio aberto nem compra posterior; limite por dia", "m", 0, 1), N("neg", "Negócio novo no SDR Outbound", "Na fila de espera, com o SDR como responsável e nota de origem. O negócio antigo nunca reabre", "p", 0, 2)],
+  edges_n=[("o", "reg", ""), ("reg", "neg", "")])
 
 # ---- avisos
 parte("av", "Do evento ao aviso enviado", "Um evento passa pelas regras da Ana e da Bia. A Bia envia no WhatsApp e só conta como enviado se o WhatsApp aceitou. Se o envio falhar, o aviso fica numa fila e é reenviado.", 3,
@@ -76,11 +79,11 @@ parte("av", "Do evento ao aviso enviado", "Um evento passa pelas regras da Ana e
 
 # ---- Central: propósito e arquitetura (plano da Central, 09/11)
 parte("cen", "Central: como ela controla a plataforma", "Pessoas com papéis usam a página Central. A API de controle valida, pede motivo e confirmação, grava o histórico e relê. Os valores ficam num registro de configuração que a Bia, a Ana e as páginas Hoje e Lista leem a cada uso.", 4,
-  [N("pes", "Pessoas e papéis", "A gestão muda tudo; administradores só risco baixo ou médio; o SDR só lê", "n", 0, 0, 2), N("pag", "Página Central", "Atendimento, controles, histórico, filas, calendário e usuários", "p", 2, 0, 2),
+  [N("pes", "Pessoas e papéis", "A gestão muda tudo; administradores só risco baixo ou médio; SDR: hoje só lê (no plano, depois, só o que é dele)", "n", 0, 0, 2), N("pag", "Página Central", "Atendimento, controles, histórico, filas, calendário e usuários", "p", 2, 0, 2),
    N("reg", "Registro de configuração", "Chaves e valores lidos a cada uso. Chave ausente: vale o padrão seguro do código", "g", 0, 1, 2), N("api", "API de controle", "Valida valor e permissão, pede motivo, grava o histórico e relê para confirmar", "m", 2, 1, 2),
    N("sis", "Bia, Ana e páginas Hoje e Lista", "Leem os valores a cada uso. A página Central muda valores, não a lógica das regras nem segredos", "n", 0, 2, 4)],
   [("pes", "pag", ""), ("pag", "api", ""), ("api", "reg", ""), ("reg", "sis", "")],
-  nodes_n=[N("pes", "Pessoas e papéis", "Gestão muda tudo; administrador, risco baixo e médio; SDR só lê", "n", 0, 0), N("pag", "Página Central", "Atendimento, controles, histórico, filas, calendário e usuários", "p", 0, 1),
+  nodes_n=[N("pes", "Pessoas e papéis", "Gestão muda tudo; administrador, risco baixo e médio; SDR só lê hoje", "n", 0, 0), N("pag", "Página Central", "Atendimento, controles, histórico, filas, calendário e usuários", "p", 0, 1),
            N("api", "API de controle", "Valida, pede motivo, grava o histórico e relê", "m", 0, 2), N("reg", "Registro de configuração", "Valores lidos a cada uso; chave ausente: padrão seguro", "g", 0, 3), N("sis", "Bia, Ana e páginas Hoje e Lista", "Leem os valores. A página Central não muda a lógica das regras", "n", 0, 4)],
   edges_n=[("pes", "pag", ""), ("pag", "api", ""), ("api", "reg", ""), ("reg", "sis", "")])
 
