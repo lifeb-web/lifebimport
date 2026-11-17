@@ -917,7 +917,7 @@ function classe(j, imediato) { // 'ok' | 'rede' (tenta de novo) | 'recusa' (defi
   if (j.fila === true) return 'fila';   // 13/11 (auditoria 5, A1): o SERVIDOR guardou a ação na fila durável e conclui sozinho: a página NÃO repete (senão duplicava)
   if (j.ok !== false && st < 300 && j.confirmado !== false && !j._quebrado) return 'ok';
   if (st === 0 || j._disjuntor || st === 429 || st === 423 || j._quebrado || (st >= 500 && st !== 502) || (st === 409 && j.erro === 'ocupado')) return 'rede';
-  if (st === 502) return 'rede'; // 17.5: 502 também no 1º envio é repetido com a MESMA chave x-idem (o servidor não duplica); antes era recusa definitiva
+  if (st === 502) return 'rede'; // 17.5: 502 em ação IDEMPOTENTE (campos, perdido, retirar contato: valores absolutos) é repetido; para ganho/nota/tarefa/contato novo o 502 NÃO vem aqui: o servidor não guarda a resposta de um 502 e repetir reexecutaria a ação, então confirmar502() relê o lead antes
   return 'recusa';
 }
 function normCmp(campo, v) { v = String(v == null ? '' : v); if (/cnpj|cep/.test(campo)) return soDigitos(v); return semAcento(v).replace(/\s+/g, ' ').trim(); }
@@ -936,6 +936,19 @@ async function executar(e, keepalive) {
 }
 // envia já; se a rede não deixar, a ação fica guardada (devolve _enfileirado) e sai sozinha depois
 function semBase(c) { if (!c || typeof c !== 'object') return c; var o = Object.assign({}, c); delete o.base; return o; }
+function idempotente(e) { return e.tipo === 'campos' || e.tipo === 'perdido' || /\/pessoa-remover$/.test(e.caminho || ''); }
+function sintOk(ld, extra) { return Object.assign({ ok: true, _status: 200, confirmado: true, lead: ld }, extra || {}); }
+async function confirmar502(e) { // 17.5: depois de um 502 em ação NÃO idempotente, só repete se a releitura provar que a ação não saiu
+  var r; try { r = await api('/lead/' + encodeURIComponent(e.dealId), null, null, null, { uma: true }); } catch (x) { logFalha('confirmar502: leitura', x); r = { _status: 0 }; }
+  var ld = r && r.ok && r.lead ? r.lead : null; var nao = function (m) { return { c: 'recusa', j: { _status: 502, ok: false, confirmado: false, mensagem: m } }; };
+  if (!ld) return nao('O servidor falhou e não consegui confirmar se foi salvo. Confira o lead antes de tentar de novo.');
+  if (e.tipo === 'ganho') { if (ld.status === 'ganho') return { c: 'ok', j: sintOk(ld, { statusNegocio: 'ganho', arena: ld.arena || null, responsaveis: r.responsaveis || ld.responsaveis || [], mensagem: 'Qualificado ✓ (confirmado depois de uma falha do servidor)' }) }; return nao('Não confirmou: o ganho não foi registrado. Toque em Tentar de novo.'); }
+  if (e.tipo === 'nota') { var tx = String((e.corpo && e.corpo.texto) || '').trim(); var ja = !!tx && JSON.stringify(ld.notas || []).indexOf(JSON.stringify(tx).slice(1, -1)) >= 0; return ja ? { c: 'ok', j: sintOk(ld, { mensagem: 'Nota salva ✓ (confirmada depois de uma falha do servidor)' }) } : { c: 'rede', j: { _status: 502, ok: false } }; }
+  var m = /\/tarefa\/(\d+)\/(concluir|resultado)$/.exec(e.caminho || '');
+  if (m) { var tk = (ld.tarefas || []).filter(function (t) { return String(t.id) === m[1]; })[0]; if (tk && tk.feita) return { c: 'ok', j: sintOk(ld, { mensagem: 'Tarefa concluída ✓ (confirmada depois de uma falha do servidor)' }) }; return { c: 'rede', j: { _status: 502, ok: false } }; }
+  if (/\/tarefa\/\d+\/adiar$/.test(e.caminho || '')) return { c: 'rede', j: { _status: 502, ok: false } }; // data absoluta: repetir é seguro
+  return nao('O servidor falhou e não consegui confirmar se foi salvo. Confira o lead antes de tentar de novo.');
+}
 async function enviarAcao(def) {
   var e = { id: novaChave(), dealId: def.dealId, caminho: def.caminho, corpo: def.corpo, tipo: def.tipo, meta: def.meta || {}, criado: Date.now(), tent: 0, proximo: 0 };
   var a = lerSaida(); var chaveE = e.dealId + '|' + e.caminho + '|' + JSON.stringify(semBase(e.corpo)); var igual = a.filter(function (x) { return x.dealId === e.dealId && x.caminho === e.caminho && x.tipo === e.tipo && (x.dealId + '|' + x.caminho + '|' + JSON.stringify(semBase(x.corpo))) === chaveE; })[0];
@@ -944,7 +957,7 @@ async function enviarAcao(def) {
   if (atras) { S.proxTick = 0; setTimeout(processarSaida, 0); return { _status: 0, ok: false, _enfileirado: true }; } // mesma ordem por lead
   var j = await executar(e);
   if (j._status === 401) { return j; }
-  var c = classe(j, true);
+  var c; if (j._status === 502 && !idempotente(e)) { var cf = await confirmar502(e); j = cf.j; c = cf.c; } else c = classe(j, true);
   if (c === 'fila') { gravarSaida(lerSaida().filter(function (x) { return x.id !== e.id; })); try { faixa('fila', j.mensagem || 'Sincronizando…: a ação ficou na fila e conclui sozinha.', ''); setTimeout(function () { faixa('fila', ''); }, 15000); } catch (x) { logFalha('l229 faixa é só aviso', x); /* faixa é só aviso */ } return { _status: 0, ok: false, _enfileirado: true, _naFila: true }; }
   if (c === 'rede') { e.tent = 1; e.proximo = Date.now() + jitter(2000) * REDE.escala; gravarSaida(lerSaida().map(function (x) { return x.id === e.id ? e : x; })); return { _status: 0, ok: false, _enfileirado: true }; }
   gravarSaida(lerSaida().filter(function (x) { return x.id !== e.id; })); if (c === 'ok') marcaSalvo(j);
@@ -959,7 +972,7 @@ async function processarSaida(opt) {
       if (!alvo) break;
       var j = await executar(alvo, opt && opt.keepalive);
       if (j._status === 401) { sair('Senha não confere. O que estava guardado continua aqui e sai quando você entrar de novo.'); return; }
-      var c = classe(j, false);
+      var c; if (j._status === 502 && !idempotente(alvo)) { var cf2 = await confirmar502(alvo); j = cf2.j; c = cf2.c; } else c = classe(j, false);
       if (c === 'rede') { alvo.tent = (alvo.tent || 0) + 1; var espera = j._status === 429 ? 5000 : Math.min(30000, 1000 * Math.pow(2, alvo.tent)); alvo.proximo = Date.now() + jitter(espera) * REDE.escala; gravarSaida(lerSaida().map(function (x) { return x.id === alvo.id ? alvo : x; })); if (alvo.tent >= 12 && j._status !== 0) { gravarSaida(lerSaida().filter(function (x) { return x.id !== alvo.id; })); saidaRecusada(alvo, j); } break; }
       gravarSaida(lerSaida().filter(function (x) { return x.id !== alvo.id; }));
       if (c === 'fila') { soltarBase(alvo); try { faixa('fila', j.mensagem || 'Sincronizando…: a ação ficou na fila e conclui sozinha.', ''); setTimeout(function () { faixa('fila', ''); }, 15000); } catch (x) { logFalha('l246 faixa é só aviso', x); /* faixa é só aviso */ } }
