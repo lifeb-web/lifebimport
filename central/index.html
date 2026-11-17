@@ -650,7 +650,7 @@ async function carregar(avisar,primeira){
   S.carregando=false;gravarCache();tickLive();renderSoon();
   if(avisar)toast(S.erro||'Atualizado');
 }
-async function carregarSaude(){try{var r=await fetch(SAUDE);S.saude=await r.json();}catch(e){S.saude=S.saude||null;}try{if(S.saude&&S.saude.geral&&S.saude.geral!=='ok'){var q=await api('GET','/saude');if(q.status===200&&q.j&&q.j.ok)S.saudeDet=q.j.pontos||[];}else S.saudeDet=[];}catch(e){}}   // 12/11: o que é CADA ponto de atenção (a visão pública só traz o nível)
+async function carregarSaude(){try{var r=await fetch(SAUDE);S.saude=await r.json();}catch(e){S.saude=S.saude||null;}try{var _it=(S.saude&&S.saude.itens)||{};var _precisa=!!(S.saude&&((S.saude.geral&&S.saude.geral!=='ok')||Object.keys(_it).some(function(k){return _it[k]&&_it[k].nivel&&_it[k].nivel!=='ok';})));if(_precisa){var q=await api('GET','/saude');if(q.status===200&&q.j&&q.j.ok){S.saudeDet=q.j.pontos||[];S.saudeDetFim=false;}else S.saudeDetFim=true;}else{S.saudeDet=[];S.saudeDetFim=false;}}catch(e){S.saudeDetFim=true;}}   // 17/11: sem detalhe (falha/lento) o texto vira 'Detalhes indisponíveis agora (tentando de novo)'; a próxima carga (45 s) tenta de novo   // 12/11: o que é CADA ponto de atenção (a visão pública só traz o nível)
 async function carregarHist(){var r=await api('GET','/historico?dias=14').catch(function(){return {status:0,j:{}};});if(r.status===200)S.hist=r.j.itens||[];else if(!S.hist)S.hist=[];}
 async function carregarFilas(){var r=await api('GET','/filas').catch(function(){return {status:0,j:{}};});S.filas=r.status===200?(r.j.itens||[]):[];S.filasErro=r.status===200?'':((r.j&&r.j.mensagem)||('Erro '+r.status));}
 async function carregarCal(){var r=await api('GET','/calendario').catch(function(){return {status:0,j:{}};});S.cal=r.status===200?(r.j.dias||[]):[];S.calHoje=(r.j&&r.j.hoje)||'';S.calErro=r.status===200?'':((r.j&&r.j.mensagem)||('Erro '+r.status));}
@@ -777,7 +777,7 @@ function atencoes(){
   if(def('NOTIF_PAUSE'))l.push(['warn','Avisos automáticos pausados','A pausa de avisos está ativa. As rotinas seguem, mas os avisos esperam.']);
   if(def('TEST_MODE'))l.push(['warn','Modo de teste ligado','As mensagens parecem enviadas, mas nada sai de verdade.']);
   ((S.dados||{}).editaveis||[]).forEach(function(e){if((e.tipo==='liga_off'||e.tipo==='flag_off1')&&e.estado==='desligado'&&e.risco!=='baixo')l.push(['warn',e.rotulo+' desligado','Esta proteção está desligada agora.']);if(e.tipo==='modo3'&&e.estado==='off'&&e.risco==='alto'&&e.padrao!=='off')l.push(['warn',e.rotulo+' desligado','Fora do padrão ('+ROT_ESTADO[e.padrao]+').']);});
-  var sa=S.saude&&S.saude.itens;if(sa)Object.keys(sa).forEach(function(k){var n=sa[k]&&sa[k].nivel;if(n&&n!=='ok')var dp=((S.saudeDet||[]).filter(function(x){return x.k===k;})[0]);l.push([n==='falha'?'bad':'warn',(SAUDE_NOMES[k]||k)+' pede atenção',dp&&dp.texto?dp.texto:'Estado: '+(NIVEL[n]||n)+'. Carregando os detalhes…']);});
+  var sa=S.saude&&S.saude.itens;if(sa)Object.keys(sa).forEach(function(k){var n=sa[k]&&sa[k].nivel;if(n&&n!=='ok'){var dp=((S.saudeDet||[]).filter(function(x){return x.k===k;})[0]);l.push([n==='falha'?'bad':'warn',(SAUDE_NOMES[k]||k)+' pede atenção',dp&&dp.texto?dp.texto:'Estado: '+(NIVEL[n]||n)+'. '+(S.saudeDetFim?'Detalhes indisponíveis agora (tentando de novo).':'Carregando os detalhes…')]);}});   // 17/11 (#2348): antes o if sem chaves protegia só o 'var dp' e TODO item (inclusive 'ok') virava 'pede atenção'
   return l;
 }
 /* ---------- visão geral ---------- */
