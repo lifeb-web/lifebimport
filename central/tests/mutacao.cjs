@@ -36,6 +36,13 @@ const M = [
   ["dados_editaveis.cjs", "desfazer pede o campo errado", "campos:{desfazer:k}}", "campos:{desfazer:'x'}}"],
   ["dados_editaveis.cjs", "aviso da fase 2 some", "c7.appendChild(el('h4',null,'Em construção'));", "c7.appendChild(el('h4',null,'Outros'));"],
   ["nomes_curtos.cjs", "nome de pessoa não é encurtado", "return w[0]+' '+w[w.length-1];}", "return w.join(' ');}"],
+  ["acoes_manuais.cjs", "clique duplo manda 2 pedidos (sem trava de ação em voo)", "if(ACAO_VOO[chave])return {ok:false,ocupado:true,status:0,j:{}};ACAO_VOO[chave]=1;", "ACAO_VOO[chave]=1;"],
+  ["acoes_manuais.cjs", "leitura velha em voo sobrescreve o novo estado", "if(!fresco&&AT.vooC&&AT.vooC.fone===fone", "if(AT.vooC&&AT.vooC.fone===fone"],
+  ["acoes_manuais.cjs", "leitura de volta não confirma (repete mesmo já feito)", "if(cf===true){conferido=true;", "if(false){conferido=true;"],
+  ["acoes_manuais.cjs", "api sem tempo limite (servidor lento trava o botão)", "tm=setTimeout(function(){estourou=true;ac.abort();},lim);", ""],
+  ["acoes_manuais.cjs", "rede caída lança exceção (botão fica desligado)", "catch(e){if(tm)clearTimeout(tm);return {status:0,tempo:estourou,", "catch(e){if(tm)clearTimeout(tm);throw e;return {status:0,tempo:estourou,"],
+  ["acoes_manuais.cjs", "botão não volta depois da falha", "if(b){b.disabled=false;b.removeAttribute('aria-busy');if(alvo)alvo.textContent=rotOrig;}}", "if(b){b.removeAttribute('aria-busy');}}"],
+  ["acoes_manuais.cjs", "409 é repetido sem necessidade", "var incerto=q.status===0||q.status>=500;", "var incerto=true;"],
   ["nomes_curtos.cjs", "empresa corta em conector", "while(c.length>1&&NOME_CONECT[c[c.length-1].toLowerCase()])c.pop();", ""],
 ];
 const filtro = process.argv[4]; let vivos = [];
@@ -43,7 +50,7 @@ for (const [teste, nome, de, para, extra] of M) {
   if (filtro && !(teste + nome).includes(filtro)) continue;
   if (!ORIG.includes(de)) { console.log(`?? trecho não encontrado: ${nome}`); vivos.push(`${nome} (trecho não achado)`); continue; }
   const arq = path.join(RAIZ, "_mut.html"); let src = ORIG.replace(de, para); if (extra) src = src.replace(extra[0], extra[1]); fs.writeFileSync(arq, src);
-  const r = spawnSync("node", [path.join(__dirname, teste), process.argv[2], process.argv[3]], { env: { ...process.env, CENTRAL_URL: "http://localhost:8802/central/_mut.html" }, encoding: "utf8", timeout: 420000 });
+  const r = spawnSync("node", [path.join(__dirname, teste), process.argv[2], process.argv[3]], { env: { ...process.env, CENTRAL_URL: process.env.CENTRAL_MUT_URL || "http://localhost:8802/central/_mut.html" }, encoding: "utf8", timeout: 420000 });
   const falhou = r.status !== 0; console.log(`${falhou ? "MORTA " : "VIVA  "} [${teste}] ${nome}`); if (!falhou) vivos.push(`${teste}: ${nome}`);
 }
 try { fs.unlinkSync(path.join(RAIZ, "_mut.html")); } catch (e) {}
