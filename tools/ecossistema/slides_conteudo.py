@@ -129,7 +129,7 @@ def todos():
         cat("No ar (conforme a página)", ["Cadência do SDR e repasse ao Arena, desde 20/10/2026", "Guardas do SDR: ligação com resultado, perda com explicação, dono ativo", "Fechamento e garantia de tarefa; motor proativo do Arena, com aprovação da gestão", "Pós-venda e reposição, a cada 30 minutos; vigias de saúde"], "rocket"),
         cat("Em operação, com prazos em revisão", ["Recuperação SDR, Recuperação e Reativação: criam negócio novo no SDR Outbound para perdidos antigos e clientes que não repuseram", "Uma volta por empresa a cada 180 dias, com limite por dia"], "git"),
         cat("Estado ao vivo não verificado", ["Motores de Reposição e Reativação +75 (cards ao representante nos funis de Pós-venda e Reativação): a memória de 27/09/2026 os registra em sombra, com a camada de entrega construída"], "eye"),
-    ], 3) + band("Em sombra, a automação só simula e relata. Na página: Automações da Bia e da Ana; Bia: avisos, agendas e folga.") + faixa_estado("bia")
+    ], 3) + band("Em sombra, a automação só simula e relata. Na página: Automações da Bia e da Ana; Bia: avisos, agendas e folga.")
     A(slide("bia", "Automações da Bia e estado de cada uma", C, bia, "dense", "bia,automacoes"))
     ana_a = g([
         cat("Quando o lead escreve", ["Responde na hora, a qualquer hora, juntando mensagens seguidas", "Retorno combinado: volta na hora pedida, ajustada ao horário de contato", "Instrução da equipe pela página Central"], "chat"),
@@ -180,7 +180,7 @@ def todos():
     ], 2) + band("Por desenho, a página Central pede à Bia e não escreve direto no Agendor. Na página: Central.")
     A(slide("central", "Página Central: atendimento e a Ana", C, cen1, "dense", "central"))
     cen2 = g([
-        cat("Em implantação (ainda não no ar)", ["Prevista para 17/11/2026 às 9h", "Botões com confirmação, que leem de volta antes de dizer que deu certo", "Selos do CRM e do início agendado; lista leve; auditoria enxuta"], "rocket"),
+        cat("Em implantação: servidor no ar, página (9h às 19h) não", ["Botões com confirmação, que leem de volta antes de dizer que deu certo", "Selos do CRM e do início agendado; lista leve; auditoria enxuta", "Observação no modal, mensagens do erro 409 e correção do piscar da aba Ecossistema"], "rocket"),
         cat("Planejado (origem: levantamento de 16/11/2026 e decisão 2)", ["Dar ganho, dar perdido com motivo e repassar ao SDR Inbound", "Editar dados do lead (nome, empresa, CNPJ, segmento, lojas, decisor), com autor registrado e a Ana enxergando", "Alertas com botão, retomada por modelo após 24 h e instrução com pré-visualização"], "clock"),
     ], 2) + band("O desenho dos controles manuais será mostrado antes de publicar. Na página: Central.")
     A(slide("central2", "Página Central: pacote em implantação e o planejado", C, cen2, "dense", "central"))
