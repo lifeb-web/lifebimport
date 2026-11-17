@@ -1368,6 +1368,12 @@ function mesclar(j, manual) { // junta camada por camada, guardando a MAIS NOVA 
 }
 function semFoneCarrega(j) { var tel = {}; todosItens(S.dados || {}, function (i) { if (i.fone) tel[i.dealId] = i.fone; }); todosItens(j, function (i) { if (!i.fone && tel[i.dealId]) i.fone = tel[i.dealId]; }); } // o sh_ultimo não guarda telefone: o que já está na tela continua
 function aceitar(j, manual) { return !!mesclar(j, manual); }
+function leadAberto() { return !$('painelLead').classList.contains('hide') || !$('modalGanho').classList.contains('hide'); }
+function carregarAuto(modo) { // chamadas automáticas (relógio de 60 s, volta à aba, outra aba): com lead/atividade aberto a fila NÃO muda por baixo (Robert #2660); entra ao fechar, com aviso discreto
+  if (S.tem && leadAberto()) { S.atualizaPendente = true; faixa('atual', 'Há atualização da fila. Aplico quando você fechar o lead.', '', { rot: 'Atualizar agora', acao: function () { S.atualizaPendente = false; faixa('atual', ''); carregar(true, 'tarefas'); } }); return; }
+  carregar(true, modo);
+}
+function aplicaAtualizaPendente() { if (!S.atualizaPendente || leadAberto()) return; S.atualizaPendente = false; faixa('atual', ''); if (S.token && S.tem) carregar(true, 'tarefas'); }
 // ---- 17/11: carregamento blindado. Cada parte (dia, aguardando, perdas) tem o seu pedido, o seu aviso pontual e a sua nova tentativa com espera crescente (4 s, 8 s, 16 s, com jitter, no máximo 3). Uma parte que falha não derruba as outras. ----
 S.rt = {};
 function limpaRetenta(nome) { if (S.rt[nome]) { clearTimeout(S.rt[nome].tm); } delete S.rt[nome]; }
@@ -1414,7 +1420,7 @@ async function carregar(silencioso, modo) {
 }
 function agendar() {
   if (S.timer) clearInterval(S.timer);
-  S.timer = setInterval(function () { if (!document.hidden && S.token && (S.tem || !$('s-erro').classList.contains('hide'))) carregar(true, false); }, 60000);
+  S.timer = setInterval(function () { if (!document.hidden && S.token && (S.tem || !$('s-erro').classList.contains('hide'))) carregarAuto(false); }, 60000);
   if (S.verTimer) clearInterval(S.verTimer); S.verTimer = setInterval(function () { if (!document.hidden) verificarVersao(); }, 300000);
   if (S.relogio) clearInterval(S.relogio);
   S.relogio = setInterval(tickRelogio, 1000);
@@ -1422,7 +1428,7 @@ function agendar() {
 document.addEventListener('visibilitychange', function () {
   if (document.hidden) { S.ocultoDesde = Date.now(); if (S.token) processarSaida({ keepalive: true, agora: true }); return; }
   if (S.token) { if (S.versaoNova) decideVersao(); verificarVersao(); processarSaida({ agora: true }); }
-  if (S.token && S.tem && S.ocultoDesde && Date.now() - S.ocultoDesde >= 5000) carregar(true, 'tarefas'); // voltou para a aba depois de 5 s+: confere as tarefas na hora
+  if (S.token && S.tem && S.ocultoDesde && Date.now() - S.ocultoDesde >= 5000) carregarAuto('tarefas'); // voltou para a aba depois de 5 s+: confere as tarefas na hora
   S.ocultoDesde = 0;
 });
 function avisoOffline() { if (navigator.onLine === false) faixa('offline', 'Sem internet. Você continua vendo o último dado salvo e o que fizer fica guardado; volto sozinha quando a internet voltar.', 'aviso'); else faixa('offline', ''); }
@@ -1434,9 +1440,9 @@ window.addEventListener('online', function () { // internet voltou: zera o disju
 });
 function iniciarCanal() {
   if (S.canal || typeof BroadcastChannel === 'undefined') return;
-  try { S.canal = new BroadcastChannel('sh_hoje'); S.canal.onmessage = function (ev) { var t = ev && ev.data && ev.data.t; if (t === 'continuar') iniciarContinuar(); else if (t === 'saida') { atualizarSelo(); limparBaseSeVazia(); } else if (t === 'dados' && S.token && S.tem && !document.hidden) carregar(true, 'tarefas'); }; } catch (e) { logFalha('l653 catch', e);  S.canal = null; }
+  try { S.canal = new BroadcastChannel('sh_hoje'); S.canal.onmessage = function (ev) { var t = ev && ev.data && ev.data.t; if (t === 'continuar') iniciarContinuar(); else if (t === 'saida') { atualizarSelo(); limparBaseSeVazia(); } else if (t === 'dados' && S.token && S.tem && !document.hidden) carregarAuto('tarefas'); }; } catch (e) { logFalha('l653 catch', e);  S.canal = null; }
 }
-window.addEventListener('beforeunload', function (ev) { try { if (lerSaida().length || (S.L && S.L.ocupado)) { processarSaida({ keepalive: true, agora: true }); ev.preventDefault(); ev.returnValue = ''; return ''; } } catch (e) { logFalha('l655 beforeunload: melhor esforço', e); /* beforeunload: melhor esforço */ } });
+window.addEventListener('beforeunload', function (ev) { try { var haFila = lerSaida().length > 0; if (haFila || (S.L && S.L.ocupado)) processarSaida({ keepalive: true, agora: true }); /* a fila está guardada neste aparelho e sai sozinha: não precisa avisar */ var sujo = 0; try { sujo = S.L ? calcDiff(S.L).length : 0; } catch (e0) { logFalha('beforeunload: conta de alterações', e0); } /* 17/11 (Robert #2647): o aviso nativo 'alterações feitas podem não ser salvas' só aparece quando há alteração REAL (valor diferente do carregado, já normalizado) ou envio em voo; antes aparecia só porque havia item na fila ou lead 'ocupado' */ if ((S.L && S.L.ocupado && Object.keys(S.emVoo || {}).length) || sujo > 0) { ev.preventDefault(); ev.returnValue = ''; return ''; } } catch (e) { logFalha('l655 beforeunload: melhor esforço', e); /* beforeunload: melhor esforço */ } });
 window.addEventListener('storage', function (e) { if (e.key === SAIDA_KEY) { atualizarSelo(); limparBaseSeVazia(); } }); // a caixa de saída mudou em outra aba
 window.addEventListener('storage', function (e) { // outra aba leu mais novo: esta aba também mostra (só se a versão não for mais velha)
   if (e.key !== 'sh_ultimo' || !e.newValue || !S.tem) return;
@@ -2089,12 +2095,12 @@ document.addEventListener('click', function (ev) {   // clicou fora do lead aber
   if (p.contains(a) || a.closest('.faixa, #leadMini, [role=dialog], .painel, dialog, .modal')) return;   // dentro do lead, de aviso ou de outra janela aberta: não minimiza
   minimizarLead();
 });
-function fecharLead(mini) { var L = S.L; if (mini !== true) leadMiniEsconde(); $('painelLead').classList.add('hide'); try { if (/^#lead=/.test(location.hash)) { if (S.pushou) { S.pushou = false; S.ignoraPop = Date.now(); history.back(); } else history.replaceState(null, '', location.pathname + location.search); } } catch (e) { logFalha('l1255 histórico indisponível: o lead fecha do mesmo jeito', e); /* histórico indisponível: o lead fecha do mesmo jeito */ } if (L && L.opener) { try { L.opener.focus(); } catch (e) { logFalha('l1255 foco/rolagem/seleção é só conforto; se falhar a ação já foi feit', e); /* foco/rolagem/seleção é só conforto; se falhar a ação já foi feita */ } } }
+function fecharLead(mini) { var L = S.L; if (mini !== true) leadMiniEsconde(); $('painelLead').classList.add('hide'); try { if (/^#lead=/.test(location.hash)) { if (S.pushou) { S.pushou = false; S.ignoraPop = Date.now(); history.back(); } else history.replaceState(null, '', location.pathname + location.search); } } catch (e) { logFalha('l1255 histórico indisponível: o lead fecha do mesmo jeito', e); /* histórico indisponível: o lead fecha do mesmo jeito */ } if (L && L.opener) { try { L.opener.focus(); } catch (e) { logFalha('l1255 foco/rolagem/seleção é só conforto; se falhar a ação já foi feit', e); /* foco/rolagem/seleção é só conforto; se falhar a ação já foi feita */ } }  setTimeout(aplicaAtualizaPendente, 0); }
 function aoMudarHash() {
   if (S.ignoraPop && Date.now() - S.ignoraPop < 800) return; // eco do history.back() que a própria página pediu ao fechar
   var m = /^#lead=(\d+)/.exec(location.hash);
   if (m) { if (!S.token || !S.tem) return; var id = Number(m[1]); if (!S.L || S.L.dealId !== id || $('painelLead').classList.contains('hide')) abrirLead(id, null); }
-  else if (!$('painelLead').classList.contains('hide')) { S.pushou = false; $('painelLead').classList.add('hide'); } // botão Voltar do navegador fecha o painel
+  else if (!$('painelLead').classList.contains('hide')) { S.pushou = false; $('painelLead').classList.add('hide'); setTimeout(aplicaAtualizaPendente, 0); } // botão Voltar do navegador fecha o painel
 }
 window.addEventListener('hashchange', aoMudarHash); window.addEventListener('popstate', aoMudarHash);
 function acoesDe(L) { if (L.lead && L.lead.status && L.lead.status !== 'andamento') return {}; return (L.lead && L.lead.acoes) || {}; } // lead ganho ou perdido: somente leitura
@@ -2382,7 +2388,7 @@ function abrirGanho(L, faltando, marcar, chaves) {
 }
 function mostrarGanhoModal(L, semRender) { L.modalAberto = true; $('modalGanho').classList.remove('hide'); if (!semRender) renderGanho(L); }
 function reabrirGanho(L, marcar) { var est = L.estado; abrirGanho(L, L.lead.faltando, marcar, L.lead.faltandoChaves); if (est) setEstado(L, est.tipo, est.texto, est.retry); }
-function fecharGanho() { var L = S.L; $('modalGanho').classList.add('hide'); if (L) { L.modalAberto = false; L.rep = null; if (L.lead) renderLead(); } carregarAguardando(true); }
+function fecharGanho() { var L = S.L; $('modalGanho').classList.add('hide'); if (L) { L.modalAberto = false; L.rep = null; if (L.lead) renderLead(); } carregarAguardando(true); setTimeout(aplicaAtualizaPendente, 0); }
 function blocoContato(L) { // contato principal (quem decide): nome e WhatsApp já preenchidos para ele confirmar ou corrigir
   var sec = el('div', 'secao contato'); sec.appendChild(el('h3', null, 'Contato principal (quem decide)'));
   var id = L.ganhoPessoa;
@@ -3043,7 +3049,7 @@ document.addEventListener('keydown', function (e) {
 desenharTopo = seguro('desenharTopo', desenharTopo); desenharControle = seguro('desenharControle', desenharControle); desenharBlocos = seguro('desenharBlocos', desenharBlocos); desenharFila = seguro('desenharFila', desenharFila); desenharAguardando = seguro('desenharAguardando', desenharAguardando); renderLead = seguro('renderLead', renderLead); renderGanho = seguro('renderGanho', renderGanho);
 cartao = seguro('cartao', cartao, function (it) { var f = el('div', 'item'); f.appendChild(el('div', 'emp', (it && it.empresa) || 'Item')); f.appendChild(el('div', 'pas', 'Não consegui mostrar os detalhes deste item.')); return f; });
 cartaoAtrasado = seguro('cartaoAtrasado', cartaoAtrasado, function (g) { var f = el('div', 'item'); f.appendChild(el('div', 'emp', (g && g.empresa) || 'Item')); return f; });
-window.__shTeste = { contextoAuto: contextoAuto, mesAtualSP: mesAtualSP, nomeMes: nomeMes, decideVersao: decideVersao, verificarVersaoPagina: verificarVersaoPagina, salvarVista: salvarVista, aplicarVista: aplicarVista, ociosoMs: ociosoMs, retentaParte: retentaParte, logFalha: logFalha, falhas: function () { return FALHAS; }, estadoSync: estadoSync, desfazerSaida: desfazerSaida, atualizarSelo: atualizarSelo, semForn: semForn, hoje2Valido: hoje2Valido, hoje2Cartao: hoje2Cartao, processarSaida: processarSaida, tentarAgora: tentarAgora, buscarGeral: buscarGeral, bgValida: bgValida, opcoesAdiar: opcoesAdiar, enviarAcao: enviarAcao, versaoMaisNova: versaoMaisNova, iniciarContinuar: iniciarContinuar, continuarLaco: continuarLaco, fmtCampo: fmtCampo, fadeChips: fadeChips, REDE: REDE, lerSaida: lerSaida, processarSaida: processarSaida, reportarErro: reportarErro, aplicarStatus: aplicarStatus, hooks: { recarregar: null }, falhaDePagina: falhaDePagina, verificarVersao: verificarVersao, agoraMs: agoraMs, PAGINA_VERSAO: PAGINA_VERSAO, carregarAguardando: carregarAguardando, S: S, desenhar: desenhar, carregar: carregar, casaBusca: casaBusca, foneFmt: foneFmt, aceitar: aceitar, abrirLead: abrirLead, abrirGanho: abrirGanho, cnpjValido: cnpjValido, desenharFila: desenharFila, carregarFila: carregarFila, origemClasse: origemClasse, mascCnpj: mascCnpj, renderLead: renderLead, carregarLead: carregarLead, contextoAuto: contextoAuto, tipoContexto: tipoContexto, secaoOrigem: secaoOrigem, obsSdrPronta: obsSdrPronta, validarCampo: validarCampo, valorOrig: valorOrig, valorAtual: valorAtual, faltaAinda: faltaAinda, atualizarGanhoBtn: atualizarGanhoBtn };
+window.__shTeste = { carregarAuto: carregarAuto, aplicaAtualizaPendente: aplicaAtualizaPendente, contextoAuto: contextoAuto, mesAtualSP: mesAtualSP, nomeMes: nomeMes, decideVersao: decideVersao, verificarVersaoPagina: verificarVersaoPagina, salvarVista: salvarVista, aplicarVista: aplicarVista, ociosoMs: ociosoMs, retentaParte: retentaParte, logFalha: logFalha, falhas: function () { return FALHAS; }, estadoSync: estadoSync, desfazerSaida: desfazerSaida, atualizarSelo: atualizarSelo, semForn: semForn, hoje2Valido: hoje2Valido, hoje2Cartao: hoje2Cartao, processarSaida: processarSaida, tentarAgora: tentarAgora, buscarGeral: buscarGeral, bgValida: bgValida, opcoesAdiar: opcoesAdiar, enviarAcao: enviarAcao, versaoMaisNova: versaoMaisNova, iniciarContinuar: iniciarContinuar, continuarLaco: continuarLaco, fmtCampo: fmtCampo, fadeChips: fadeChips, REDE: REDE, lerSaida: lerSaida, processarSaida: processarSaida, reportarErro: reportarErro, aplicarStatus: aplicarStatus, hooks: { recarregar: null }, falhaDePagina: falhaDePagina, verificarVersao: verificarVersao, agoraMs: agoraMs, PAGINA_VERSAO: PAGINA_VERSAO, carregarAguardando: carregarAguardando, S: S, desenhar: desenhar, carregar: carregar, casaBusca: casaBusca, foneFmt: foneFmt, aceitar: aceitar, abrirLead: abrirLead, abrirGanho: abrirGanho, cnpjValido: cnpjValido, desenharFila: desenharFila, carregarFila: carregarFila, origemClasse: origemClasse, mascCnpj: mascCnpj, renderLead: renderLead, carregarLead: carregarLead, contextoAuto: contextoAuto, tipoContexto: tipoContexto, secaoOrigem: secaoOrigem, obsSdrPronta: obsSdrPronta, validarCampo: validarCampo, valorOrig: valorOrig, valorAtual: valorAtual, faltaAinda: faltaAinda, atualizarGanhoBtn: atualizarGanhoBtn };
 (async function () {
   var t = lsGet('sh_tok');
   if (t) { var ok = await entrar(t, true); if (ok) return; }
