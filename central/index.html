@@ -165,7 +165,7 @@ td{padding:12px 16px;border-bottom:1px solid var(--line);vertical-align:top}tr:l
 .lk:hover{transform:translateY(-2px);border-color:var(--mag)}
 .lk .ico{width:42px;height:42px;border-radius:12px;background:var(--purple-bg);color:var(--purple-d);display:grid;place-items:center;flex:0 0 42px}
 .lk b{color:var(--purple-d);font-size:15.5px;display:block}.lk span{font-size:13.5px;color:var(--muted)}
-.frame{display:block;width:100%;height:calc(100vh - 170px);height:calc(100dvh - 170px);min-height:560px;border:1px solid var(--line);border-radius:16px;background:var(--card);box-shadow:var(--shadow)}
+.ecoHold{overscroll-behavior:contain}body.aba-eco{overscroll-behavior:contain}.frame{overscroll-behavior:contain;display:block;width:100%;height:calc(100vh - 170px);height:calc(100dvh - 170px);min-height:560px;border:1px solid var(--line);border-radius:16px;background:var(--card);box-shadow:var(--shadow)}
 /* ---------- modal e paleta ---------- */
 .overlay:has(#simBox){padding:2vh 16px;place-items:center}.overlay{position:fixed;inset:0;background:rgba(17,13,31,.6);backdrop-filter:blur(3px);display:grid;place-items:start center;padding:12vh 20px 20px;z-index:200;overflow-y:auto;overscroll-behavior:contain}
 @media(max-width:700px){.overlay{padding:16px 12px}}
@@ -762,7 +762,8 @@ function render(op){var auto=!!(op&&op.auto);
   $('buscaBox').classList.toggle('hide',['estado','leitura','hist'].indexOf(S.aba)<0);
   // 13/11 (Robert: 'fica atualizando e tirando o scroll'): a atualização geral (a cada 45 s e a cada leitura de saúde/histórico/filas/calendário) chamava render() e REFAZIA o Atendimento inteiro (lista, busca, conversa e ficha), voltando a conversa para o fim. Agora, com o Atendimento já montado, nada é refeito aqui: a lista, a conversa e a ficha têm as próprias atualizações incrementais (atAtualizarLista/atBuscarConversa) que preservam a posição de leitura.
   if(S.aba==='atend'&&c.querySelector('.ax')&&document.getElementById('atChat'))return;
-  if(S.aba==='eco'&&c.querySelector('iframe.frame'))return;   // 16/11: o Ecossistema é um iframe; refazer a cada 45 s / carga de dados recarregava a página inteira ('piscava'). Com o iframe da aba já montado, render() não faz nada
+  ecoMostrar(S.aba==='eco');
+  if(S.aba==='eco'&&ECO.f){if(c.firstChild)c.textContent='';setTimeout(ecoFoco,0);return;}   // 17/11 (Robert #2967): o iframe do Ecossistema é criado UMA vez e fica guardado fora de #conteudo (ECO.f); trocar de aba só o esconde (display:none mantém o documento e o slide). Antes (16/11): o Ecossistema é um iframe; refazer a cada 45 s / carga de dados recarregava a página inteira ('piscava'). Com o iframe da aba já montado, render() não faz nada
   var mesma=S.abaAnt===S.aba&&S.aba!=='atend';var snap=mesma?uiSnap(c):null;
   var h0=c.offsetHeight;if(mesma&&h0>0)c.style.minHeight=h0+'px';   // segura a altura enquanto refaz: sem isso a página encolhe, o navegador joga a rolagem ao topo e a tela "pula"
   try{
@@ -1830,7 +1831,7 @@ function abrirSimulador(){simLer();SIM.vista='chat';simMontar();}
 function fbHash(s){var h=5381;s=String(s||'');for(var i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;return (h>>>0).toString(36);}
 function fbLer(chave){try{var r=localStorage.getItem('ctr_fb_'+fbHash(chave));if(!r)return null;var o=JSON.parse(r);return o&&typeof o==='object'?o:null;}catch(e){return null;}}
 function fbGravar(chave,texto){AT.fbRasc=AT.fbRasc||{};try{if(texto===null){delete AT.fbRasc[chave];localStorage.removeItem('ctr_fb_'+fbHash(chave));}else{AT.fbRasc[chave]={t:texto,a:1,ts:Date.now()};localStorage.setItem('ctr_fb_'+fbHash(chave),JSON.stringify(AT.fbRasc[chave]));}}catch(e){if(texto===null)delete AT.fbRasc[chave];else AT.fbRasc[chave]={t:texto,a:1,ts:Date.now()};}}
-if(window.__CENTRAL_TESTE)window.__centralTeste={PS:PS,psSeguir:psSeguir,desenhar:function(f){return atDesenharChat(f);},render:function(o){return render(o);},S:S,ir:function(x){return ir(x);},atSelosDe:atSelosDe,desenharLista:function(){return atDesenharLista();},AT:AT,buscar:function(f){return atBuscarConversa(f);},passar:function(f){return axPassar(f);},carregar:function(){return carregar(false);},sair:function(){return sair();},guardaConv:function(f,v){atGuardaCacheConv(f,v);},guardaLista:function(x){agGuardaCache(x);}};   // só os testes ligam este gancho
+if(window.__CENTRAL_TESTE)window.__centralTeste={get ECO(){return ECO;},PS:PS,psSeguir:psSeguir,desenhar:function(f){return atDesenharChat(f);},render:function(o){return render(o);},S:S,ir:function(x){return ir(x);},atSelosDe:atSelosDe,desenharLista:function(){return atDesenharLista();},AT:AT,buscar:function(f){return atBuscarConversa(f);},passar:function(f){return axPassar(f);},carregar:function(){return carregar(false);},sair:function(){return sair();},guardaConv:function(f,v){atGuardaCacheConv(f,v);},guardaLista:function(x){agGuardaCache(x);}};   // só os testes ligam este gancho
 function atFbOcupado(){var ta=document.querySelector('textarea.fbTa');return !!(ta&&(document.activeElement===ta||ta.value.trim()!==''));}
 // 13/11 (Robert deu 👍 sem querer e não havia como desfazer): o feedback só é ENVIADO depois de uma janela de 8 s com o botão Desfazer (nada vai ao servidor se desfizer a tempo); depois de enviado, continua dando para desfazer pela própria mensagem (rota /agentes/feedback/desfazer; enquanto o servidor não tiver a rota, a tela avisa com clareza e não finge que desfez).
 var FB_JANELA_MS=8000;
@@ -1914,7 +1915,14 @@ function telaHist(c){
 }
 var LINKS=[['Dash Geral','Vendas, LTV, RFM, SDR, anúncios e saúde da Bia','/dash/geral/','painel'],['Dash em telão','Versão para TV, com páginas que trocam sozinhas','/dash/geral/telao/','tv'],['Página Hoje','A mesa de trabalho do SDR','/hoje/','lista'],['Página Lista','Subir listas de empresas','/lista/','lista'],['Ecossistema','O guia completo da plataforma, com fluxogramas','/ecossistema/','eco'],['Saúde da Bia','Estado das rotinas em tempo real (somente leitura)','https://gs-agendor-worker.robert131196.workers.dev/bia-saude','coracao']];
 function telaAtalhos(c){var p=el('p','hint','Tudo da plataforma em um lugar. Os links abrem em uma nova aba.');p.style.marginBottom='12px';c.appendChild(p);var g=el('div','grid');LINKS.forEach(function(l){var a=el('a','card lk');a.href=l[2];a.target='_blank';a.rel='noopener noreferrer';var i=el('div','ico');i.appendChild(icon(l[3]));a.appendChild(i);var t=el('div');t.appendChild(el('b',null,l[0]));t.appendChild(el('span',null,l[1]));a.appendChild(t);g.appendChild(a);});c.appendChild(g);}
-function telaEco(c){var f=el('iframe','frame');f.src='/ecossistema/';f.title='Ecossistema Life B';f.loading='lazy';c.appendChild(f);}
+// 17/11 (Robert #2967 'fica recarregando, bugando, o scroll sai da apresentação'): (a) o iframe NÃO é recriado nem recarregado por atualização (45 s), troca de aba, tema, resize ou 'Atualizar': só se o endereço (ECO.src) mudar de verdade; (b)/(c) rolagem/teclas dentro da apresentação não vazam para a Central (overscroll-behavior: contain dentro do iframe e na página; foco vai para o iframe).
+var ECO={f:null,box:null,src:'/ecossistema/',cont:0};
+function ecoMostrar(on){if(!ECO.box)return;ECO.box.style.display=on?'block':'none';}
+function ecoFoco(){try{if(ECO.f)ECO.f.focus({preventScroll:true});}catch(e){}}
+function ecoContem(){try{var d=ECO.f.contentDocument;if(!d||!d.documentElement)return;d.documentElement.style.overscrollBehavior='contain';if(d.body)d.body.style.overscrollBehavior='contain';}catch(e){}}
+function telaEco(c){if(ECO.f&&ECO.f.getAttribute('src')!==ECO.src){ECO.f.src=ECO.src;}
+  if(!ECO.f){var box=el('div','ecoHold');box.id='ecoHold';var f=el('iframe','frame');f.src=ECO.src;f.title='Ecossistema Life B';f.setAttribute('allow','fullscreen');f.addEventListener('load',function(){ECO.cont++;ecoContem();if(S.aba==='eco')ecoFoco();});box.appendChild(f);c.parentNode.insertBefore(box,c.nextSibling);ECO.f=f;ECO.box=box;}
+  ecoMostrar(true);setTimeout(ecoFoco,0);}
 function telaUsuarios(c){
   var f=el('div','card form');
   function campo(rot,tag,id,attrs){var d=el('div');var l=el('label',null,rot);l.htmlFor=id;d.appendChild(l);var i=el(tag);i.id=id;Object.keys(attrs||{}).forEach(function(k){i.setAttribute(k,attrs[k]);});d.appendChild(i);return {d:d,i:i};}
