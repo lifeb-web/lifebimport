@@ -1114,7 +1114,8 @@ function desenharTopo(d) {
   var grp = null; function grupo(rot, titulo) { grp = el('div', 'cg'); grp.setAttribute('role', 'group'); grp.setAttribute('aria-label', titulo || rot); var l = el('span', 'gl', rot); l.setAttribute('aria-hidden', 'true'); grp.appendChild(l); chips.appendChild(grp); }
   function chip(n, t, cls, ac, quando) { var x = el(ac ? 'button' : 'div', 'chip' + (cls ? ' ' + cls : '')); x.appendChild(el('b', null, String(n))); x.appendChild(document.createTextNode(t)); if (quando) x.setAttribute('aria-label', n + ' ' + t + ' ' + quando); if (ac) { x.type = 'button'; x.onclick = ac; x.title = 'Clique para abrir a lista'; } grp.appendChild(x); return x; }
   // 17/11 (Robert #2334): cada número diz o período. Três grupos com um cabeçalho minúsculo: Hoje | Agora | Em <mês>. Não ocupa linha nova: o cabeçalho vai na mesma linha, antes dos números.
-  grupo('Hoje');
+  var _dadoAntigo = !!(S.dados && S.dados.tarefasEm && diaBRT(S.dados.tarefasEm) !== diaBRT(agoraMs()));   // 17/11 (auditor): dado de OUTRO dia não pode parecer de hoje: o cabeçalho do grupo avisa
+  grupo(_dadoAntigo ? 'Hoje (dado antigo)' : 'Hoje', _dadoAntigo ? 'Hoje, mas o dado é de outro dia: atualizando' : 'Hoje');
   if (S.funil !== 'outbound') chip(c.inboundNovo, 'Inbound novo', c.inboundNovo ? 'inbc' : '', null, 'hoje');
   chip(c.atrasadasEmpresas, c.atrasadasEmpresas === 1 ? 'empresa com tarefa atrasada' : 'empresas com tarefas atrasadas', c.atrasadasEmpresas ? 'alerta' : '', null, 'hoje');
   chip(c.empresas, 'empresas para atender hoje (' + plural(c.tarefas, 'tarefa', 'tarefas') + ')', 'forte');
@@ -2600,7 +2601,7 @@ function contextoAuto(L) {   // devolve { tipo, titulo, linhas } ou null quando 
   var tf = (lead.tarefas || []).filter(function (x) { return x.feita && /^\s*\[(Recuperacao|Reativacao)/i.test(x.texto || ''); })[0];
   if (tf) { var ls = String(tf.texto).split('\n').map(function (x) { return x.trim(); }).filter(Boolean); ls.shift(); if (ls.length) ls[0] = ls[0].replace(/^De onde veio:\s*/i, ''); ls.slice(0, 4).forEach(function (x) { linhas.push(x); }); }
   function semPrefixo(txt) { txt = String(txt).trim(); var ant; do { ant = txt; txt = txt.replace(/^\s*(Resumo da Ana|Observa[cç][aã]o da planilha|Observa[cç][aã]o j[aá] registrada|Ana)\s*:\s*/i, ''); } while (txt !== ant); return txt; } // 17/11 (Robert #2400): nunca 'Resumo da Ana: Ana: …' (tira 'Ana:' e o próprio rótulo repetido)
-  function soSegmento(t) { return t.length > 0 && t.length <= 30 && !/[.!?;\n\d]/.test(t) && t.split(/\s+/).length <= 3; } // 'farmácia', 'mercado de bairro': só o segmento, não é resumo
+  function soSegmento(t) { return t.length > 0 && t.length <= 30 && !/[.!?;\n\d]/.test(t) && t.split(/\s+/).length <= 3 && /(farm[aá]cia|drogaria|mercad|padaria|a[cç]ougue|papelaria|utilidade|pet|conveni[eê]ncia|constru[cç][aã]o|hortifruti|[oó]tica|perfumaria|variedades|armarinho|loja|rede|atacad|varejo|distribuidor|restaurante|lanchonete|bar|salão|sal[aã]o|cl[ií]nica)/i.test(t); } // 'farmácia', 'mercado de bairro': só o segmento, não é resumo
   function comRotulo(rot, txt) { var corpo = semPrefixo(txt); if (!corpo) return ''; if (rot === 'Resumo da Ana: ' && soSegmento(corpo)) return 'Segmento informado: ' + corpo; return (rot || '') + corpo; }
   var obs = obsAutoTexto(L); if (obs && !linhas.some(function (x) { return x.indexOf(obs) >= 0; })) { var lo = comRotulo(CTX_ROTULO_OBS[tipo], obs); if (lo) linhas.push(lo); }
   if (lead.resumoAna && typeof lead.resumoAna === 'string') { var lr = comRotulo('Resumo da Ana: ', lead.resumoAna); if (lr && !linhas.some(function (x) { return x === lr; })) linhas.push(lr); }
