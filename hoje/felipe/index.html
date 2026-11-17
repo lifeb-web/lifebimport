@@ -297,8 +297,6 @@ button.copiar.ok{background:var(--green-bg);color:var(--green);border-color:var(
 /* painel do lead */
 #painelLead{z-index:80}
 .hdr-bts{display:flex;gap:6px}
-#leadMiniMais{position:fixed;right:12px;bottom:64px;z-index:79;display:flex;flex-direction:column;gap:6px;align-items:flex-end}#leadMiniMais.hide{display:none}#leadMiniMais button{max-width:min(320px,calc(100vw - 24px));overflow:hidden;text-overflow:ellipsis;white-space:nowrap;box-shadow:0 3px 12px rgba(0,0,0,.3)}
-#leadMini{position:fixed;right:12px;bottom:12px;z-index:79;max-width:min(360px,calc(100vw - 24px));overflow:hidden;text-overflow:ellipsis;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.35)}
 #painelLead .secao{border:1px solid var(--border);border-radius:10px;background:var(--card);padding:10px 12px}
 #painelLead .secao h3{font-size:14px;font-weight:800;color:var(--purple);margin-bottom:6px}
 #painelLead dl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:14px}
@@ -630,13 +628,11 @@ details.sec-empresa>summary,details.dados-opcional>summary{cursor:pointer;font-w
 </section>
 
 <section id="painelLead" class="painel hide" role="dialog" aria-modal="true" aria-labelledby="leadTitulo">
-  <header><h2 id="leadTitulo" tabindex="-1">Lead</h2><span id="leadAtualiza" class="sub hide" role="status" aria-live="polite">Atualizando...</span><span class="hdr-bts"><button class="sec" id="bMinLead" type="button" title="Minimizar: guarda o lead aberto e volta à lista">Minimizar</button><button class="sec" id="bFecharLead" title="Fechar (Esc)">Fechar</button></span></header>
+  <header><h2 id="leadTitulo" tabindex="-1">Lead</h2><span id="leadAtualiza" class="sub hide" role="status" aria-live="polite">Atualizando...</span><span class="hdr-bts"><button class="sec" id="bFecharLead" title="Fechar (Esc)">Fechar</button></span></header>
   <div class="barra" id="leadBarra"></div>
   <div class="corpo" id="leadCorpo"></div>
   <div class="rodape" id="leadRodape"></div>
 </section>
-<button class="forte hide" id="leadMini" type="button" aria-label="Voltar ao lead minimizado"></button>
-<div id="leadMiniMais" class="hide" role="group" aria-label="Outros leads minimizados"></div>
 
 <section id="painelAguard" class="painel hide" role="dialog" aria-modal="true" aria-label="Aguardando representante">
   <header><h2>Aguardando representante</h2><div class="row"><button class="sec" id="bAtualizarAguard">Atualizar</button><button class="sec" id="bFecharAguard" title="Fechar (Esc)">Fechar</button></div></header>
@@ -804,7 +800,7 @@ function dormir(ms) { return new Promise(function (r) { setTimeout(r, ms * REDE.
 function jitter(ms) { return ms * (0.5 + Math.random() * 0.5); }
 function agoraMs() { return Date.now() + REDE.desvio; } // horário do servidor (o relógio do aparelho pode estar errado)
 function disjuntorAberto() { return REDE.falhas >= 5; }
-function faixasAltura() { try { var b = $('faixas'); document.documentElement.style.setProperty('--faixas-h', (b ? b.offsetHeight : 0) + 'px'); } catch (e) { logFalha('l127 só ajuste visual', e); /* só ajuste visual */ } }   // 14/11: os painéis (lead, fila) começam ABAIXO das faixas de aviso: elas nunca cobrem Minimizar/Fechar
+function faixasAltura() { try { var b = $('faixas'); document.documentElement.style.setProperty('--faixas-h', (b ? b.offsetHeight : 0) + 'px'); } catch (e) { logFalha('l127 só ajuste visual', e); /* só ajuste visual */ } }   // 14/11: os painéis (lead, fila) começam ABAIXO das faixas de aviso: elas nunca cobrem o Fechar
 // Hoje 2.0 (Robert 14/11): a tela nunca cita o fornecedor (Agendor); só o item discreto "Ver no CRM (Agendor)". Texto que vem do servidor passa por aqui antes de aparecer.
 function semForn(t) { return typeof t === 'string' ? t.replace(/O Agendor/g, 'O sistema').replace(/Agendor/g, 'sistema') : t; }
 function faixa(id, texto, tipo, botao) { // faixa discreta e única por id (rede, versão, erro)
@@ -1047,7 +1043,7 @@ S.ultAtiv = Date.now();
 ['pointerdown', 'keydown', 'wheel', 'touchstart', 'scroll'].forEach(function (ev) { window.addEventListener(ev, function () { S.ultAtiv = Date.now(); }, { passive: true, capture: true }); });
 function ociosoMs() { var ref = document.hidden && S.ocultoDesde ? Math.min(S.ocultoDesde, S.ultAtiv) : S.ultAtiv; return Date.now() - ref; }
 function temRascunho() { try { var meu = S.L ? rascKey(S.L.dealId) : null; var real = !!(S.L && calcDiff(S.L).length); for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k.indexOf('sh_rasc_') === 0) { if (k === meu && !real && Object.keys(S.L.edits).length) continue; /* só o rascunho DESTE lead gerado por campo tocado e devolvido ao original; rascunho vindo de outro lugar segura */ return true; } } } catch (e) { logFalha('l303 só pergunta se há rascunho: na dúvida a página trata como se houvesse (não recarrega sozinha)', e); return true; } return !!(S.L && (S.L.ocupado || calcDiff(S.L).length)); } // 17.5: campo tocado e devolvido ao valor original NÃO é rascunho (calcDiff), então o teto de 3 min e a recarga por versão voltam a funcionar
-function podeRecarregarSozinha() { return !temRascunho() && !lerSaida().length && !S.ocupado && !(S.L && S.L.ocupado) && !(S.mini && S.mini.length) && $('painelLead').classList.contains('hide') && $('modalGanho').classList.contains('hide'); }
+function podeRecarregarSozinha() { return !temRascunho() && !lerSaida().length && !S.ocupado && !(S.L && S.L.ocupado) && $('painelLead').classList.contains('hide') && $('modalGanho').classList.contains('hide'); }
 function parseVersao(v) { var m = /^(\d{4})-(\d{2})-(\d{2})\.(\d+)$/.exec(String(v || '')); return m ? [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4])] : null; }
 function versaoMaisNova(a, b) { var x = parseVersao(a), y = parseVersao(b); if (!x || !y) return false; for (var i = 0; i < 4; i++) { if (x[i] !== y[i]) return x[i] > y[i]; } return false; } // 'AAAA-MM-DD.N': o dia e depois o N como número ('.10' é maior que '.9')
 S.recargaMem = null;
@@ -1526,7 +1522,7 @@ async function entrar(token, silencioso) {
   if (haAbertoSemConfirmar()) iniciarPoll();
   return true;
 }
-function sair(msg) { S.mini = []; try { miniRender(); } catch (e) { logFalha('l682 só visual', e); /* só visual */ } try { bgFechar(); } catch (e) { logFalha('l682 fechar a busca que já estava fechada', e); /* fechar a busca que já estava fechada */ } S.cont.rodando = false; S.L = null; S.ag.itens = []; S.ag.total = 0; S.ag.ocultos = {}; if (S.ag.timer) { clearInterval(S.ag.timer); S.ag.timer = null; } S.ag.aberto = false; $('painelAguard').classList.add('hide'); S.ocultos = {}; $('painelLead').classList.add('hide'); $('painelFila').classList.add('hide'); lsDel('sh_tok'); lsDel('sh_ultimo'); S.token = ''; S.tem = false; S.dados = null; S.vm = null; if (S.timer) clearInterval(S.timer); if (S.relogio) clearInterval(S.relogio); if (S.pollTimer) { clearInterval(S.pollTimer); S.pollTimer = null; } $('tok').value = ''; $('loginMsg').textContent = msg || ''; mostrar('s-login'); }
+function sair(msg) { try { bgFechar(); } catch (e) { logFalha('l682 fechar a busca que já estava fechada', e); /* fechar a busca que já estava fechada */ } S.cont.rodando = false; S.L = null; S.ag.itens = []; S.ag.total = 0; S.ag.ocultos = {}; if (S.ag.timer) { clearInterval(S.ag.timer); S.ag.timer = null; } S.ag.aberto = false; $('painelAguard').classList.add('hide'); S.ocultos = {}; $('painelLead').classList.add('hide'); $('painelFila').classList.add('hide'); lsDel('sh_tok'); lsDel('sh_ultimo'); S.token = ''; S.tem = false; S.dados = null; S.vm = null; if (S.timer) clearInterval(S.timer); if (S.relogio) clearInterval(S.relogio); if (S.pollTimer) { clearInterval(S.pollTimer); S.pollTimer = null; } $('tok').value = ''; $('loginMsg').textContent = msg || ''; mostrar('s-login'); }
 
 // ---------- iniciar ----------
 function novaChave() { var a = new Uint8Array(12); try { crypto.getRandomValues(a); } catch (e) { for (var i = 0; i < 12; i++) a[i] = Math.floor(Math.random() * 256); } return 'c' + Array.prototype.map.call(a, function (x) { return ('0' + x.toString(16)).slice(-2); }).join(''); }
@@ -2017,7 +2013,7 @@ async function chamarLead(L, caminho, corpo, idAlvo, fila) {
 function copia(o) { return JSON.parse(JSON.stringify(o)); }
 function setEstado(L, tipo, texto, retry) {
   L.estado = { tipo: tipo, texto: texto, retry: retry || null }; if (S.L !== L) return;
-  if (tipo === 'erro' && texto && $('painelLead').classList.contains('hide')) msg((L.lead && L.lead.titulo || 'Lead') + ': ' + texto, 'erro');   // lead minimizado: o erro aparece também no aviso global
+  if (tipo === 'erro' && texto && $('painelLead').classList.contains('hide')) msg((L.lead && L.lead.titulo || 'Lead') + ': ' + texto, 'erro');   // lead fechado: o erro aparece também no aviso global
   var box = L.refs && L.refs.estado; if (!box) return; box.textContent = ''; box.className = 'estado' + (tipo ? ' ' + tipo : ''); if (!texto) { box.classList.add('hide'); return; }
   box.appendChild(el('span', null, semForn(texto)));
   if (retry) { var b = el('button', 'sec', 'Tentar de novo'); b.type = 'button'; b.style.marginLeft = '8px'; b.onclick = retry; box.appendChild(b); }
@@ -2090,7 +2086,7 @@ async function abrirLead(dealId, opener, item, ctx) {
   var painel = $('painelLead'); var mesmo = S.L && S.L.dealId === dealId && S.L.lead;
   var L = mesmo ? S.L : { dealId: dealId, lead: null, opcoes: (S.listas && S.listas.opcoes) || {}, motivos: (S.listas && S.listas.motivos) || [], responsaveis: (S.listas && S.listas.responsaveis) || [], edits: lerRascunho(dealId), forcar: {}, origemCampo: {}, mostrar: [], todos: false, ocupado: false, estado: null, receita: null, receitaCnpj: '', perdidoAberto: false, refs: {} };
   marcarAbertoNaLista(dealId, !!(item && (item.feito || item.estado === 'feito')));
-  if (!mesmo) limpaQualificando(); L.opener = opener || L.opener || null; L.item = item || L.item || null; L.ctx = ctx || L.ctx || null; S.L = L; painel.classList.remove('hide'); miniTira(dealId); miniRender(); S.leadAbertoEm = Date.now();
+  if (!mesmo) limpaQualificando(); L.opener = opener || L.opener || null; L.item = item || L.item || null; L.ctx = ctx || L.ctx || null; S.L = L; painel.classList.remove('hide'); S.leadAbertoEm = Date.now();
   try { if (location.hash !== '#lead=' + dealId) { history.pushState(null, '', '#lead=' + dealId); S.pushou = true; } } catch (e) { logFalha('l1202 histórico indisponível: o lead abre do mesmo jeito', e); /* histórico indisponível: o lead abre do mesmo jeito */ }
   var cache = S.pre[dealId]; var fresco = cache && Date.now() - cache.t < 3000;
   var pintouCache = false; if (!mesmo && cache) { aplicarResposta(L, cache.j); limparEditsIguais(L); recomputarMostrar(L); mesmo = true; pintouCache = true; L.revalidado = !!fresco; }
@@ -2122,33 +2118,8 @@ async function carregarLead(L, silencioso) {
 }
 function ocultaGrupoAtrasado(id) { var a = S.dados && S.dados.atrasadas; if (!a || !Array.isArray(a.grupos)) return; var ant = a.grupos.length; var tira = 0; a.grupos = a.grupos.filter(function (g) { if (String(g.dealId) === String(id)) { tira += Number(g.n) || 0; return false; } return true; }); if (a.grupos.length === ant) return; a.total = Math.max(0, (Number(a.total) || 0) - tira); desenharBlocos(); }
 function aplicarResposta(L, j) { if (j.lead) L.lead = j.lead; if (j.opcoes && typeof j.opcoes === 'object') { var op0 = Object.assign({}, L.opcoes); Object.keys(j.opcoes).forEach(function (k) { if (Array.isArray(j.opcoes[k]) && j.opcoes[k].length) op0[k] = j.opcoes[k]; }); L.opcoes = op0; } if (j.motivosPerda) L.motivos = j.motivosPerda; if (j.responsaveis) L.responsaveis = j.responsaveis; S.listas = { opcoes: L.opcoes, motivos: L.motivos, responsaveis: L.responsaveis }; if (Array.isArray(j.avisos)) L.avisos = j.avisos; } // guarda as listas do pop-up de Ganho: o próximo lead já abre com elas
-// 14/11 (#426): MINIMIZAR guarda o lead aberto (o que foi digitado fica) e mostra um botão para voltar; clicar fora do lead também minimiza. Fechar (ou Esc) continua fechando de vez.
-S.mini = [];   // leads minimizados (os mais recentes por último): "Voltar ao lead" volta a QUALQUER um deles
-function miniRender() {
-  var m = $('leadMini'), box = $('leadMiniMais'); box.textContent = '';
-  if (!S.mini.length) { m.classList.add('hide'); box.classList.add('hide'); return; }
-  var ult = S.mini[S.mini.length - 1]; m.textContent = '▲ Voltar ao lead: ' + ult.nome + (S.mini.length > 1 ? ' (+' + (S.mini.length - 1) + ')' : ''); m.classList.remove('hide'); m.onclick = function () { abrirLead(ult.dealId, ult.opener, ult.item, ult.ctx); };
-  var outros = S.mini.slice(0, -1).slice(-3).reverse(); box.classList.toggle('hide', !outros.length);
-  outros.forEach(function (x) { var b = el('button', 'sec', '▲ ' + x.nome); b.type = 'button'; b.setAttribute('aria-label', 'Voltar ao lead ' + x.nome); b.onclick = function () { abrirLead(x.dealId, x.opener, x.item, x.ctx); }; box.appendChild(b); });
-}
-function leadMiniEsconde() { miniRender(); }
-function miniTira(dealId) { S.mini = S.mini.filter(function (x) { return String(x.dealId) !== String(dealId); }); }
-function minimizarLead() {
-  var L = S.L; if (!L || $('painelLead').classList.contains('hide')) return; var nome = (L.lead && L.lead.titulo) || (L.item && L.item.empresa) || 'Lead';
-  miniTira(L.dealId); S.mini.push({ dealId: L.dealId, nome: String(nome), opener: L.opener, item: L.item, ctx: L.ctx }); if (S.mini.length > 8) S.mini.shift();
-  fecharLead(true); miniRender();
-}
-$('bMinLead').onclick = minimizarLead;
-S.pressFora = false;
-document.addEventListener('pointerdown', function (ev) { var p = $('painelLead'); S.pressFora = !!(ev.target && ev.target.closest && !p.contains(ev.target)); }, true);   // onde o dedo/mouse foi PRESSIONADO: arrastar para selecionar texto no lead e soltar fora não minimiza
-document.addEventListener('mousedown', function (ev) { var p = $('painelLead'); S.pressFora = !!(ev.target && ev.target.closest && !p.contains(ev.target)); }, true);
-document.addEventListener('click', function (ev) {   // clicou fora do lead aberto: minimiza (nunca perde o que foi digitado)
-  var p = $('painelLead'); if (p.classList.contains('hide') || !S.L) return; if (Date.now() - (S.leadAbertoEm || 0) < 500) return;   // o próprio clique que abriu o lead não conta
-  var a = ev.target; if (!a || !a.closest || !document.body.contains(a)) return; if (!S.pressFora) return;   // elemento que saiu da tela durante o clique: ignora
-  if (p.contains(a) || a.closest('.faixa, #leadMini, [role=dialog], .painel, dialog, .modal')) return;   // dentro do lead, de aviso ou de outra janela aberta: não minimiza
-  minimizarLead();
-});
-function fecharLead(mini) { var L = S.L; if (mini !== true) leadMiniEsconde(); $('painelLead').classList.add('hide'); try { if (/^#lead=/.test(location.hash)) { if (S.pushou) { S.pushou = false; S.ignoraPop = Date.now(); history.back(); } else history.replaceState(null, '', location.pathname + location.search); } } catch (e) { logFalha('l1255 histórico indisponível: o lead fecha do mesmo jeito', e); /* histórico indisponível: o lead fecha do mesmo jeito */ } if (L && L.opener) { try { L.opener.focus(); } catch (e) { logFalha('l1255 foco/rolagem/seleção é só conforto; se falhar a ação já foi feit', e); /* foco/rolagem/seleção é só conforto; se falhar a ação já foi feita */ } }  setTimeout(aplicaAtualizaPendente, 0); }
+// 17.5 (Robert #2915): a função MINIMIZAR foi removida (a bandeja de pílulas ficava por cima do cartão no celular). Fechar o lead mantém o que foi digitado: S.L e o rascunho em sh_rasc_<id> continuam e voltam ao reabrir o mesmo lead.
+function fecharLead() { var L = S.L; $('painelLead').classList.add('hide'); try { if (/^#lead=/.test(location.hash)) { if (S.pushou) { S.pushou = false; S.ignoraPop = Date.now(); history.back(); } else history.replaceState(null, '', location.pathname + location.search); } } catch (e) { logFalha('l1255 histórico indisponível: o lead fecha do mesmo jeito', e); /* histórico indisponível: o lead fecha do mesmo jeito */ } if (L && L.opener) { try { L.opener.focus(); } catch (e) { logFalha('l1255 foco/rolagem/seleção é só conforto; se falhar a ação já foi feit', e); /* foco/rolagem/seleção é só conforto; se falhar a ação já foi feita */ } }  setTimeout(aplicaAtualizaPendente, 0); }
 function aoMudarHash() {
   if (S.ignoraPop && Date.now() - S.ignoraPop < 800) return; // eco do history.back() que a própria página pediu ao fechar
   var m = /^#lead=(\d+)/.exec(location.hash);
