@@ -2340,16 +2340,28 @@ async function enviarCampos(L) {
     diff.forEach(function (d) { if (nao.indexOf(d.k.split('.').pop()) < 0 && !(j.lead && j.lead.observacaoSdr != null)) gravouNoServidor(L, d.k, d.v); }); // base de TODOS os campos salvos = o que foi gravado
     diff.forEach(function (d) { var nome = d.k.split('.').pop(); if (nao.indexOf(nome) >= 0) return; delete L.edits[d.k]; });
     gravarRascunho(L); L.receita = null; L.receitaCnpj = '';
-    if (S.L === L) { redesenhar(L); setEstado(L, nao.length ? 'erro' : 'ok', nao.length ? 'Não consegui salvar tudo: ' + nao.join(', ') + '. O que você digitou continua aqui.' : (j.telefones && j.telefones.substituidoEm && j.telefones.substituidoEm.length ? 'Telefone trocado ✓ (o novo substituiu o antigo)' : 'Salvo ✓'), nao.length ? function () { (L.modalAberto ? confirmarGanho : salvarCampos)(L); } : null); notaAvisos(L, j); }
+    if (S.L === L) { redesenhar(L); setEstado(L, nao.length ? 'erro' : 'ok', nao.length ? 'Não consegui salvar tudo: ' + nao.join(', ') + '. O que você digitou continua aqui.' : (j.empresaVinculada ? 'Salvo ✓ (o negócio foi ligado à empresa que já tinha esse CNPJ)' : (j.telefones && j.telefones.substituidoEm && j.telefones.substituidoEm.length ? 'Telefone trocado ✓ (o novo substituiu o antigo)' : 'Salvo ✓')), nao.length ? function () { (L.modalAberto ? confirmarGanho : salvarCampos)(L); } : null); notaAvisos(L, j); }
     if (!j.lead) carregarLead(L, true);
     return nao.length ? 'erro' : 'ok';
   }
   L.lead = antes; // desfaz na tela; o que ele digitou fica nos campos
   if (j._status === 409 && j.erro === 'conflito' && Array.isArray(j.conflitos) && j.conflitos.length) { if (S.L === L) { redesenhar(L); mostrarConflitos(L, j); } return 'erro'; }
   if (j._status === 409 && j.erro === 'telefone_duplicado') { if (S.L === L) { redesenhar(L); confirmarTelefoneDup(L, j); } return 'erro'; }
+  if (j._status === 409 && (j.erro === 'cnpj_duplicado' || j.erro === 'cnpj_varias_empresas' || j.erro === 'empresa_com_outro_negocio')) { if (S.L === L) { redesenhar(L); avisoEmpresaExistente(L, j); } return 'erro'; }   // 17/11 (Robert #2759): repetir o envio daria o mesmo erro para sempre: em vez de 'Tentar de novo', abre a empresa existente ou corrige o CNPJ
   var msg2 = msgErro(j) + (j.link && /^https:\/\//.test(j.link) ? ' ' + j.link : '');
   if (S.L === L) { redesenhar(L); setEstado(L, 'erro', j.ok && j.confirmado === false ? 'Não consegui salvar. Desfiz na tela. ' + (j.mensagem || '') : msg2, function () { (L.modalAberto ? confirmarGanho : salvarCampos)(L); }); }
   return 'erro';
+}
+// 17/11: o CNPJ já existe em outra empresa (ou em várias, ou ela já tem outro negócio do SDR aberto): o servidor não grava nada. O Felipe decide: abrir a empresa existente (link) ou corrigir o CNPJ. Sem botão de repetir (daria o mesmo erro).
+function avisoEmpresaExistente(L, j) {
+  setEstado(L, 'erro', j.mensagem || 'Esse CNPJ já está cadastrado em outra empresa. Nada foi salvo.');
+  var box = L.refs && L.refs.estado; if (!box || S.L !== L) return;
+  var linha = el('div', 'row'); linha.style.cssText = 'margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center'; linha.setAttribute('data-fk', 'cnpj-dup-acoes');
+  var lista = Array.isArray(j.existentes) && j.existentes.length ? j.existentes : (j.existente ? [j.existente] : []);
+  lista.forEach(function (ex) { if (ex && ex.link && /^https:\/\//.test(ex.link)) { var a = el('a', 'sec', lista.length > 1 ? 'Abrir empresa: ' + corta(ex.nome || 'sem nome', 40) : 'Abrir empresa existente'); a.href = ex.link; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.setAttribute('data-fk', 'abrir-empresa-existente'); a.style.cssText = 'display:inline-flex;align-items:center;min-height:44px;padding:0 12px;font-weight:700'; linha.appendChild(a); } });
+  if (j.outroNegocio && j.outroNegocio.link && /^https:\/\//.test(j.outroNegocio.link)) { var an = el('a', 'sec', 'Abrir o outro negócio'); an.href = j.outroNegocio.link; an.target = '_blank'; an.rel = 'noopener noreferrer'; an.setAttribute('data-fk', 'abrir-outro-negocio'); an.style.cssText = 'display:inline-flex;align-items:center;min-height:44px;padding:0 12px;font-weight:700'; linha.appendChild(an); }
+  var bc = el('button', 'sec', 'Corrigir CNPJ'); bc.type = 'button'; bc.setAttribute('data-fk', 'corrigir-cnpj'); bc.style.minHeight = '44px'; bc.onclick = function () { trocarCnpj(L); }; linha.appendChild(bc);
+  box.appendChild(linha);
 }
 // alguém alterou o campo no Agendor enquanto ele editava: nada foi gravado; ele escolhe o valor atual ou o dele, campo a campo
 function fmtCampo(campo, v) { // só para mostrar (nunca altera o que é enviado); nomes exatos, para um campo futuro com 'cep' no nome não ser mexido
