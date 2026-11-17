@@ -85,12 +85,12 @@ def todos():
     ana1 = g([
         cat("O que faz", ["Atende lojistas no WhatsApp (farmácias, supermercados, conveniências e outros) e qualifica: segmento, lojas, decisor e CNPJ ativo", "Apresenta o projeto Mega Vision USA e repassa ao time comercial", "Responde em áudio quando o lead manda áudio; mostra digitando e faz pausas", "Retoma quem some, com toques em dias úteis"], "chat"),
         cat("Como trata cada caso", ["Foco (farmácia, drogaria, supermercado): atendimento completo", "Outros segmentos e MEI: aviso educado de pedido mínimo", "Empresa nova: informa a condição de pagamento; o especialista decide", "Rede: repasse direto ao closer", "Fora do perfil, incluindo vendedor de sistema: encerra com educação"], "list"),
-    ], 2) + band("Na página: Ana; Ana: a conversa.") + faixa_estado("ana")
+    ], 2) + band("Na página: Ana; Ana: a conversa.")
     A(slide("ana", "Ana: o que faz e como trata cada caso", C, ana1, "dense", "ana"))
     ana2 = g([
         cat("O que nunca faz", ["Falar preço, desconto ou resultado garantido, ou prometer implantação na loja", "Negar ser inteligência artificial; falar com quem pediu para parar", "Escrever direto no Agendor ou marcar ganho ou perdido por conta própria", "Escrever por iniciativa própria fora de 8h a 22h"], "lock"),
         cat("Quando a equipe entra", ["Pela página Central: assume, instrui, devolve ou pausa", "A instrução da equipe pode mandar e encerrar, quando é o caso", "Parada de emergência para a Ana inteira"], "user"),
-    ], 2) + band("A IA entende e escreve; regras fixas decidem o que pode sair. Na página: Ana: entendimento, travas e monitoria.")
+    ], 2) + band("A IA entende e escreve; regras fixas decidem o que pode sair. Na página: Ana: entendimento, travas e monitoria.") + faixa_estado("ana")
     A(slide("ana_limites", "Ana: limites e intervenção da equipe", C, ana2, "dense", "ana-seguranca"))
     A(slide("msg", "O caminho de cada mensagem", C, fx("msg", "A IA entende e escreve; regras fixas decidem o que pode sair. Na página: Ana: a conversa."), "flow", "ana,ana-seguranca"))
 

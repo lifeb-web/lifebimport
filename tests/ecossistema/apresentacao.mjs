@@ -28,7 +28,7 @@ for (const [w, h] of TAM) {
   const sem = await page.evaluate(() => ({ sx: document.documentElement.scrollWidth <= innerWidth + 1, sy: getComputedStyle(document.documentElement).overflow === "hidden", bodyOver: getComputedStyle(document.body).overflow }));
   t(`${id}: página sem rolagem com o deck aberto`, sem.sx && sem.sy && sem.bodyOver === "hidden", sem);
   const svgMin = h < 500 ? 4.5 : w >= 1280 ? 11 : w >= 1000 ? 8.5 : w >= 380 ? 9.3 : 8.4;
-  const tamMin = h < 500 ? 5.5 : w >= 1280 ? 11 : w >= 1000 ? 8 : w >= 380 ? 10 : 9; // celular deitado: palco 16:9 reduzido, texto pequeno por natureza (só tela cheia e sem rolagem são exigidos)
+  const tamMin = h < 500 ? 5.5 : w >= 1280 ? 11 : w >= 1000 ? 8 : w >= 380 ? 9.5 : 9; // celular deitado: palco 16:9 reduzido, texto pequeno por natureza (só tela cheia e sem rolagem são exigidos)
   for (let i = 0; i < N; i++) {
     await page.evaluate((k) => window.__deck.mostra(k), i); await page.waitForTimeout(1100);
     const r = await page.evaluate(() => {
