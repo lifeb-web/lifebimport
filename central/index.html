@@ -1479,9 +1479,10 @@ function psSeguir(fone){var e=PS[fone];if(!e||!e.pedido)return;clearTimeout(e.ti
 async function psPedir(fone,obs,botao){
   var cur=PS[fone];if(cur&&cur.estado==='enviando')return {ocupado:true};   // clique duplo no mesmo instante
   var id=cur&&cur.estado==='passando'&&cur.pedido?cur.pedido:psId();var e={pedido:id,estado:'enviando',t0:Date.now()};PS[fone]=e;
-  var alvo=botao&&(botao.querySelector&&botao.querySelector('.bt2')||botao),rot=alvo?alvo.textContent:'';if(botao){botao.disabled=true;botao.setAttribute('aria-busy','true');if(alvo)alvo.textContent='Enviando…';}
+  var alvo=botao&&(botao.querySelector&&botao.querySelector('.bt2')||botao),rot=alvo?alvo.textContent:'';if(botao){botao.disabled=true;botao.setAttribute('aria-busy','true');if(alvo)alvo.textContent='Passando…';}
   var q={status:0,j:{}};
-  try{for(var t=0;t<2;t++){q=await api('POST','/agentes/conversa/passar-felipe',{fone:fone,observacao:obs,pedido:id},{timeout:10000});if(q.status===202||q.status===200||(q.status>0&&q.status<500))break;if(t<1)await new Promise(function(r){setTimeout(r,900);});}}   // o MESMO id na repetição: o servidor devolve o mesmo pedido, nunca cria outro
+  try{for(var t=0;t<2;t++){q=await api('POST','/agentes/conversa/passar-felipe',{fone:fone,observacao:obs,pedido:id},{timeout:10000});if(q.status===202||q.status===200||(q.status>0&&q.status<500)||(q.j&&q.j.mensagem))break;   // resposta DEFINITIVA do servidor (mesmo 5xx, com mensagem; servidor síncrono atual) não é repetida: 1 POST, erro mostrado. Só rede caída/5xx sem corpo repete (mesmo pedido, idempotente)
+    if(t<1)await new Promise(function(r){setTimeout(r,900);});}}   // o MESMO id na repetição: o servidor devolve o mesmo pedido, nunca cria outro
   finally{if(botao){botao.disabled=false;botao.removeAttribute('aria-busy');if(alvo)alvo.textContent=rot;}}
   if(q.status===202&&q.j&&q.j.ok&&q.j.aceito){e.pedido=q.j.pedido||id;e.estado=q.j.estado==='ok'?'ok':'passando';if(e.estado==='ok'){e.sdrDealId=q.j.sdrDealId||null;e.confirmado=q.j.confirmado||null;psTerminou(fone,e);}else{psDesenhar();psSeguir(fone);}return {ok:true,aceito:true,pedido:e.pedido};}
   if(q.status===200&&q.j&&q.j.ok!==false){e.estado='ok';e.sdrDealId=q.j.sdrDealId||null;e.confirmado=q.j.confirmado||null;psTerminou(fone,e);return {ok:true,aceito:false};}   // servidor antigo: já respondeu com o resultado conferido
