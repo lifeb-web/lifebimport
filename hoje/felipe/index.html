@@ -279,6 +279,13 @@ button.copiar.ok{background:var(--green-bg);color:var(--green);border-color:var(
 .chip.mes{min-width:0;padding:2px 7px;white-space:nowrap;background:transparent;border-style:dashed;cursor:pointer;font-size:13px}
 .chip.mes b{font-size:17px;display:inline;margin-right:5px}
 .chip.mes.ok b{color:var(--green)}
+.chip.mes.perd b{color:var(--red)}
+/* 17/11: grupos de números com cabeçalho minúsculo (Hoje | Agora | Em <mês>) na MESMA linha, sem ocupar altura nova */
+.cg{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;min-width:0}
+.gl{font-size:13px;font-weight:800;color:var(--purple);white-space:nowrap}
+.cg+.cg{border-left:1px solid var(--border);padding-left:10px}
+.chips{align-items:center;gap:6px 12px}
+@media(max-width:700px){.cg{gap:5px 6px}.cg+.cg{border-left:0;padding-left:0}}
 @media(min-width:701px) and (max-width:1320px){.chip.mes{padding:1px 5px;font-size:13px}.chip.mes b{font-size:15px;margin-right:3px}}
 #cab{position:sticky}
 .mespop{position:absolute;right:14px;top:100%;margin-top:6px;z-index:60;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:12px;padding:12px 14px;max-width:min(420px,calc(100vw - 28px));box-shadow:0 8px 26px rgba(0,0,0,.35)}
@@ -1004,7 +1011,19 @@ function iniciarSaida() {
 }
 
 // ---------- versão da página, relógio do servidor e telemetria ----------
-function recarregar() { if (window.__shTeste && window.__shTeste.hooks && window.__shTeste.hooks.recarregar) { window.__shTeste.hooks.recarregar(); return; } location.reload(); }
+function salvarVista() { // 17/11: antes de recarregar guarda filtros e posição, para a tela voltar igual
+  try { sessionStorage.setItem('sh_vista', JSON.stringify({ t: Date.now(), funil: S.funil, busca: ($('busca') || {}).value || '', ordem: ($('ordem') || {}).value || '', esconder: !!($('esconder') || {}).checked, y: window.scrollY || 0 })); } catch (e) { logFalha('vista: guardar filtros é conforto', e); /* guardar filtros é conforto */ }
+}
+function aplicarVista() { // devolve filtros e posição (uma vez só, e só se for de até 3 min atrás)
+  var o = null; try { o = JSON.parse(sessionStorage.getItem('sh_vista') || 'null'); sessionStorage.removeItem('sh_vista'); } catch (e) { logFalha('vista: ler filtros é conforto', e); o = null; }
+  if (!o || Date.now() - (o.t || 0) > 180000 || !S.tem) return false;
+  try { if (o.busca) $('busca').value = o.busca; if (o.ordem && $('ordem').querySelector('option[value="' + o.ordem + '"]')) $('ordem').value = o.ordem; if (typeof o.esconder === 'boolean') $('esconder').checked = o.esconder; if (o.funil && o.funil !== S.funil) setFunil(o.funil); else desenharBlocos(); if (o.y) setTimeout(function () { try { window.scrollTo(0, o.y); } catch (e2) { logFalha('vista: rolagem é conforto', e2); } }, 0); } catch (e) { logFalha('vista: aplicar filtros é conforto', e); }
+  return true;
+}
+function recarregar() { salvarVista(); if (window.__shTeste && window.__shTeste.hooks && window.__shTeste.hooks.recarregar) { window.__shTeste.hooks.recarregar(); return; } location.reload(); }
+S.ultAtiv = Date.now();
+['pointerdown', 'keydown', 'wheel', 'touchstart', 'scroll'].forEach(function (ev) { window.addEventListener(ev, function () { S.ultAtiv = Date.now(); }, { passive: true, capture: true }); });
+function ociosoMs() { var ref = document.hidden && S.ocultoDesde ? Math.min(S.ocultoDesde, S.ultAtiv) : S.ultAtiv; return Date.now() - ref; }
 function temRascunho() { try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k.indexOf('sh_rasc_') === 0) return true; } } catch (e) { logFalha('l303 só pergunta se há rascunho: na dúvida a página trata como se houv', e); /* só pergunta se há rascunho: na dúvida a página trata como se houvesse (não recarrega sozinha) */ } return !!(S.L && (Object.keys(S.L.edits).length || S.L.ocupado)); }
 function podeRecarregarSozinha() { return !temRascunho() && !lerSaida().length && !S.ocupado && !(S.L && S.L.ocupado) && $('painelLead').classList.contains('hide') && $('modalGanho').classList.contains('hide'); }
 function parseVersao(v) { var m = /^(\d{4})-(\d{2})-(\d{2})\.(\d+)$/.exec(String(v || '')); return m ? [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4])] : null; }
@@ -1014,13 +1033,26 @@ function lerRecarga() { var o = null; try { o = JSON.parse(sessionStorage.getIte
 function gravarRecarga(v) { S.recargaMem = { v: v, t: Date.now() }; var t = JSON.stringify({ v: v, t: Date.now() }); try { sessionStorage.setItem('sh_recarga', t); } catch (e) { logFalha('l309 contador de recargas é opcional', e); /* contador de recargas é opcional */ } try { localStorage.setItem('sh_recarga', t); } catch (e) { logFalha('l309 contador de recargas é opcional', e); /* contador de recargas é opcional */ } }
 function aplicarStatus(j) {
   if (j && typeof j.agora === 'number') REDE.desvio = j.agora - Date.now();
-  if (j && j.paginaVersao && versaoMaisNova(j.paginaVersao, PAGINA_VERSAO)) { // só quando o worker é MAIS NOVO que esta página (igual ou mais antigo não faz nada)
-    var ult = lerRecarga(); var recente = ult && ult.v === j.paginaVersao && Date.now() - ult.t < 180000 * REDE.escala; // trava anti-loop: não recarrega sozinho de novo para a mesma versão antes de 3 min
-    if (!recente && podeRecarregarSozinha()) { gravarRecarga(j.paginaVersao); recarregar(); return; }
-    faixa('versao', 'Há uma versão nova da página. Termine o que está fazendo e atualize.', 'aviso', { rot: 'Atualizar', acao: recarregar });
-  } else faixa('versao', '');
+  if (j && j.paginaVersao && versaoMaisNova(j.paginaVersao, PAGINA_VERSAO)) { S.versaoNova = j.paginaVersao; decideVersao(); } // só quando o worker é MAIS NOVO que esta página (igual ou mais antigo não faz nada)
+  else if (!S.versaoNova) faixa('versao', '');
 }
-async function verificarVersao() { if (!S.token) return; try { var j = await api('/status'); if (j.ok) aplicarStatus(j); } catch (e) { logFalha('l318 a conexão ruim já aparece na faixa de rede do api(); tenta de nov', e); /* a conexão ruim já aparece na faixa de rede do api(); tenta de novo em 5 min */ } }
+// 17/11: página nova no ar. NUNCA recarrega no meio de uma ação: só avisa ('Nova versão disponível: Atualizar'). Recarrega sozinha apenas se a aba está parada/oculta há 2 min+ e não há rascunho, ação pendente nem painel aberto; filtros e posição voltam.
+function decideVersao() {
+  if (!S.versaoNova) return;
+  var ult = lerRecarga(); var recente = ult && ult.v === S.versaoNova && Date.now() - ult.t < 180000 * REDE.escala; // trava anti-loop: não recarrega sozinho de novo para a mesma versão antes de 3 min
+  if (!recente && ociosoMs() >= 120000 * REDE.escala && podeRecarregarSozinha()) { gravarRecarga(S.versaoNova); recarregar(); return; }
+  faixa('versao', 'Nova versão disponível:', 'aviso', { rot: 'Atualizar', acao: recarregar });
+}
+async function verificarVersaoPagina() { // 2º canal, sem depender do worker: o arquivo da própria página mudou? (HEAD barato; só baixa se o ETag/Last-Modified mudou)
+  try {
+    var u = location.origin + location.pathname; var r = await fetch(u, { method: 'HEAD', cache: 'no-store' }); if (!r || !r.ok || !r.headers) return;
+    var tag = r.headers.get('etag') || r.headers.get('last-modified') || ''; if (!tag) return;
+    if (S.pgTag == null) { S.pgTag = tag; return; } if (tag === S.pgTag) return; S.pgTag = tag;
+    var g = await fetch(u, { cache: 'no-store' }); if (!g || !g.ok) return; var tx = await g.text(); var m = /var PAGINA_VERSAO = '([^']+)'/.exec(tx);
+    if (m && versaoMaisNova(m[1], PAGINA_VERSAO)) { S.versaoNova = m[1]; decideVersao(); }
+  } catch (e) { logFalha('l318b versão da página por arquivo: opcional, o /status também avisa', e); /* opcional */ }
+}
+async function verificarVersao() { if (!S.token) return; verificarVersaoPagina(); try { var j = await api('/status'); if (j.ok) aplicarStatus(j); } catch (e) { logFalha('l318 a conexão ruim já aparece na faixa de rede do api(); tenta de nov', e); /* a conexão ruim já aparece na faixa de rede do api(); tenta de novo em 5 min */ } }
 function reportarErro(msg, rota) {
   try {
     msg = String(msg || 'erro').slice(0, 300); var agora = Date.now(); S.errRep = S.errRep || { ult: {}, ultimoEnvio: 0, n: 0, off: 0 };
@@ -1075,20 +1107,30 @@ function contar(d) {
 }
 function totalOut(d) { return d && d.filaFunis ? d.filaFunis.outbound : 0; }
 function fadeChips() { var c = $('chips'); if (c) c.classList.toggle('tem-mais', c.scrollWidth - c.clientWidth - c.scrollLeft > 4); } // há mais totais à direita: esmaece a borda
+function mesAtualSP() { try { var p = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit' }).format(new Date(agoraMs())); return p.slice(0, 7); } catch (e) { logFalha('mes real: Intl indisponível, usa o relógio do aparelho', e); var dd = new Date(agoraMs() - 3 * 3600000); return dd.getUTCFullYear() + '-' + hh(dd.getUTCMonth() + 1); } }
+function nomeMes(m) { var k = String(m && m.mes || mesAtualSP()); var i = Number(k.slice(5, 7)) - 1; return MESES[i] || ''; } // o nome do mês vem do mês REAL (o do servidor, fuso de Brasília; sem ele, o de agora em Brasília)
 function desenharTopo(d) {
   var c = contar(d); var chips = $('chips'); chips.textContent = '';
-  function chip(n, t, cls, ac) { var x = el(ac ? 'button' : 'div', 'chip' + (cls ? ' ' + cls : '')); x.appendChild(el('b', null, String(n))); x.appendChild(document.createTextNode(t)); if (ac) { x.onclick = ac; x.title = 'Clique para abrir a lista'; } chips.appendChild(x); return x; }
-  if (S.funil !== 'outbound') chip(c.inboundNovo, 'Inbound novo', c.inboundNovo ? 'inbc' : '');
-  chip(c.atrasadasEmpresas, c.atrasadasEmpresas === 1 ? 'empresa com tarefa atrasada' : 'empresas com tarefas atrasadas', c.atrasadasEmpresas ? 'alerta' : '');
+  var grp = null; function grupo(rot, titulo) { grp = el('div', 'cg'); grp.setAttribute('role', 'group'); grp.setAttribute('aria-label', titulo || rot); var l = el('span', 'gl', rot); l.setAttribute('aria-hidden', 'true'); grp.appendChild(l); chips.appendChild(grp); }
+  function chip(n, t, cls, ac, quando) { var x = el(ac ? 'button' : 'div', 'chip' + (cls ? ' ' + cls : '')); x.appendChild(el('b', null, String(n))); x.appendChild(document.createTextNode(t)); if (quando) x.setAttribute('aria-label', n + ' ' + t + ' ' + quando); if (ac) { x.type = 'button'; x.onclick = ac; x.title = 'Clique para abrir a lista'; } grp.appendChild(x); return x; }
+  // 17/11 (Robert #2334): cada número diz o período. Três grupos com um cabeçalho minúsculo: Hoje | Agora | Em <mês>. Não ocupa linha nova: o cabeçalho vai na mesma linha, antes dos números.
+  grupo('Hoje');
+  if (S.funil !== 'outbound') chip(c.inboundNovo, 'Inbound novo', c.inboundNovo ? 'inbc' : '', null, 'hoje');
+  chip(c.atrasadasEmpresas, c.atrasadasEmpresas === 1 ? 'empresa com tarefa atrasada' : 'empresas com tarefas atrasadas', c.atrasadasEmpresas ? 'alerta' : '', null, 'hoje');
   chip(c.empresas, 'empresas para atender hoje (' + plural(c.tarefas, 'tarefa', 'tarefas') + ')', 'forte');
-  if (S.funil !== 'inbound') chip(totalOut(d), 'esperando você iniciar (Outbound)', '');
   chip((d.liberadosHoje || []).filter(visivel).length, 'iniciados hoje', 'cl', function () { S.expande.liberados = !S.expande.liberados; desenharBlocos(); });
   var m = d && d.mes; // 04/11: números do mês NO TOPO, pequenos e na mesma fileira dos outros (não tomam espaço do kanban); clicar abre o detalhe
-  if (m && typeof m.emCadencia === 'number') {
-    var nm = MESES[Number(String(m.mes).slice(5, 7)) - 1] || 'mês'; var abre = function () { mesPop(m, nm); };
-    chip(m.emCadencia, 'em cadência', 'mes', abre).title = 'Leads em cadência agora. Clique para ver o mês.';
-    chip(m.iniciados, 'iniciados', 'mes', abre).title = 'Iniciados em ' + nm + '. Clique para ver o detalhe.';
-    chip(m.finalizados, 'finalizados', 'mes ok', abre).title = 'Finalizados em ' + nm + ' (qualificados + perdidos por você). Clique para ver o detalhe.';
+  var temMes = !!(m && typeof m.emCadencia === 'number'); var nm = temMes ? nomeMes(m) : '';
+  var algumAgora = (S.funil !== 'inbound') || temMes;
+  if (algumAgora) { grupo('Agora', 'Situação agora'); if (S.funil !== 'inbound') chip(totalOut(d), 'esperando você iniciar (Outbound)', '', null, 'agora'); }
+  var abre = temMes ? function () { mesPop(m, nm); } : null;
+  if (temMes) {
+    chip(m.emCadencia, 'em cadência', 'mes', abre, 'agora').title = 'Leads em cadência agora. Clique para ver o mês de ' + nm + '.';
+    grupo('Em ' + nm, 'Mês de ' + nm);
+    chip(m.iniciados, 'iniciados', 'mes', abre, 'em ' + nm).title = 'Iniciados em ' + nm + '. Clique para ver o detalhe.';
+    chip(m.finalizados, 'finalizados', 'mes ok', abre, 'em ' + nm).title = 'Finalizados em ' + nm + ' (qualificados + perdidos por você). Clique para ver o detalhe.';
+    if (typeof m.perdidos === 'number') chip(m.perdidos, 'perdidos', 'mes perd', abre, 'em ' + nm).title = 'Perdidos em ' + nm + ' (marcados como perdidos por você). Clique para ver o detalhe.';
+    if (typeof m.qualificados === 'number') chip(m.qualificados, 'qualificados', 'mes ok', abre, 'em ' + nm).title = 'Qualificados em ' + nm + '. Clique para ver o detalhe.';
   }
   tickRelogio(); fadeChips();
 }
@@ -1100,7 +1142,9 @@ function mesPop(m, nm) { // detalhe do mês num balão que abre por cima (não e
   function ln(b, t) { var p = el('p', null); p.appendChild(el('b', null, b + ' ')); p.appendChild(document.createTextNode(t)); pop.appendChild(p); }
   ln(String(m.emCadencia), 'em cadência agora: leads iniciados que ainda estão sendo trabalhados (fora a fila de espera e o Fim da cadência).');
   ln(String(m.iniciados), 'iniciados em ' + nm + '. O Outbound só é contado desde 26/10.');
-  ln(String(m.finalizados), 'finalizados em ' + nm + ': ' + m.qualificados + ' qualificados e ' + m.perdidos + ' perdidos por você.');
+  ln(String(m.finalizados), 'finalizados em ' + nm + ': ' + (m.qualificados || 0) + ' qualificados e ' + (m.perdidos || 0) + ' perdidos por você.');
+  ln(String(m.perdidos || 0), 'perdidos em ' + nm + ' (leads que você marcou como perdidos).');
+  ln(String(m.qualificados || 0), 'qualificados em ' + nm + ' (leads que você passou para o representante).');
   var auto = m.automaticos || {}; if ((auto.esgotados || 0) + (auto.duplicados || 0)) pop.appendChild(el('p', 'sub', 'Fora da conta: ' + (auto.esgotados || 0) + ' encerrados automaticamente (cadência esgotada) e ' + (auto.duplicados || 0) + ' duplicados.'));
   if (m.parcial) pop.appendChild(el('p', 'sub', 'Atenção: parte dos dados não carregou agora. Os números podem estar um pouco menores.'));
   var fx = el('button', 'sec', 'Fechar'); fx.type = 'button'; pop.appendChild(fx);
@@ -1284,12 +1328,12 @@ function desenhar(d) {
 }
 function frescorBlocos() { Array.prototype.forEach.call(document.querySelectorAll('.conf[data-ts]'), function (c) { var min = Math.floor((agoraMs() - Number(c.getAttribute('data-ts'))) / 60000); c.classList.toggle('velho', min > 10); c.textContent = 'conferido às ' + horaBRTs(Number(c.getAttribute('data-ts'))) + (min >= 2 ? ' (há ' + min + ' min)' : ''); }); }
 function tickRelogio() {
-  S.tk = (S.tk || 0) + 1; if (S.tk % 15 === 1) frescorBlocos();
+  S.tk = (S.tk || 0) + 1; if (S.tk % 15 === 1) frescorBlocos(); if (S.versaoNova && S.tk % 10 === 0) decideVersao();
   if (S.trunc && S.dados && S.dados.truncado && !S.trunc.tm && S.trunc.desde) truncadoArma(); // leitura que falhou não desenha: sem isto a nova tentativa de lista truncada morreria
   var b = partesBRT(); $('relogio').textContent = hh(b.h) + ':' + hh(b.m);
   var a = $('atualizado');
   var seg = S.dados && S.dados.tarefasEm ? Math.max(0, Math.round((agoraMs() - S.dados.tarefasEm) / 1000)) : 0; var velho = seg > 60; var idade = seg < 90 ? seg + ' s' : Math.round(seg / 60) + ' min';
-  if (S.doCache && S.dados && S.dados.tarefasEm) { a.classList.add('velho'); a.textContent = 'Dado antigo, de ' + horaBRT(S.dados.tarefasEm) + '. Atualizando...'; return; }
+  if (S.doCache && S.dados && S.dados.tarefasEm && !(S.erroCarregar && !S.conferindo)) { a.classList.add('velho'); a.textContent = 'Dado de há ' + idade + ' (' + horaBRTs(S.dados.tarefasEm) + '), atualizando…'; return; }
   if (S.erroCarregar && !S.conferindo) { a.classList.add('velho'); a.textContent = semForn(S.erroCarregar) + (S.dados && S.dados.tarefasEm ? ' Mostrando o dado de ' + horaBRTs(S.dados.tarefasEm) + '.' : ''); return; }   // 14/11: o erro de atualização FICA na tela até uma leitura dar certo (antes o relógio apagava em 1 s)
   if (S.conferindo) { a.classList.toggle('velho', velho); a.textContent = 'Atualizando…' + (velho ? ' (mostrando dado antigo, de há ' + idade + ')' : ''); return; }
   if (S.dados && S.dados.tarefasEm) {
@@ -1320,10 +1364,23 @@ function mesclar(j, manual) { // junta camada por camada, guardando a MAIS NOVA 
 }
 function semFoneCarrega(j) { var tel = {}; todosItens(S.dados || {}, function (i) { if (i.fone) tel[i.dealId] = i.fone; }); todosItens(j, function (i) { if (!i.fone && tel[i.dealId]) i.fone = tel[i.dealId]; }); } // o sh_ultimo não guarda telefone: o que já está na tela continua
 function aceitar(j, manual) { return !!mesclar(j, manual); }
+// ---- 17/11: carregamento blindado. Cada parte (dia, aguardando, perdas) tem o seu pedido, o seu aviso pontual e a sua nova tentativa com espera crescente (4 s, 8 s, 16 s, com jitter, no máximo 3). Uma parte que falha não derruba as outras. ----
+S.rt = {};
+function limpaRetenta(nome) { if (S.rt[nome]) { clearTimeout(S.rt[nome].tm); } delete S.rt[nome]; }
+function retentaParte(nome, fn, tent) {
+  tent = tent || 0; if (tent === 0 && S.rt[nome]) return; if (tent >= 3 || !S.token) { delete S.rt[nome]; return; }
+  var esp = jitter(4000 * Math.pow(2, tent)) * REDE.escala; S.rt[nome] = { tm: setTimeout(function () { if (!S.token) { delete S.rt[nome]; return; } if (document.hidden || navigator.onLine === false) { S.rt[nome] = null; delete S.rt[nome]; return retentaParte(nome, fn, tent); } Promise.resolve().then(fn).then(function (ok) { if (ok === false) { delete S.rt[nome]; retentaParte(nome, fn, tent + 1); } else limpaRetenta(nome); }, function () { delete S.rt[nome]; retentaParte(nome, fn, tent + 1); }); }, esp) };
+}
+function vigiaCarregando() { // nunca fica em 'Carregando…' para sempre: em 12 s sem dado mostra o estado degradado útil com botão 'Tentar agora' (o pedido continua)
+  clearTimeout(S.vigiaTm); S.vigiaTm = setTimeout(function () {
+    if (S.tem || !S.token || $('s-dia').classList.contains('hide')) return; var bl = $('blocos'); if (!bl) return; var m = bl.querySelector('.carregando-msg'); if (!m) return;
+    m.textContent = (navigator.onLine === false ? 'Sem internet. ' : 'Está demorando mais que o normal. ') + 'Seguimos tentando sozinhos; assim que chegar, o seu dia aparece aqui. '; var b = el('button', 'sec', 'Tentar agora'); b.type = 'button'; b.id = 'bTentarAgora'; b.onclick = function () { try { S.ctrlCarregar.abort(); } catch (e) { logFalha('tentar agora: cancelar leitura que já terminou', e); } S.carregando = false; carregar(false, false); }; m.appendChild(b);
+  }, 12000 * REDE.escala);
+}
 async function carregar(silencioso, modo) {
   var fresco = modo === true || modo === 'fresco'; var soTarefas = modo === 'tarefas';
   if (S.carregando) { if (!fresco) return; try { S.ctrlCarregar.abort(); } catch (e) { logFalha('l617 cancelar leitura que já terminou', e); /* cancelar leitura que já terminou */ } } // o auto-refresh nunca empilha pedidos; o clique em Atualizar cancela o anterior e vale
-  var meu = ++S.reqSeq; S.carregando = meu; S.ctrlCarregar = new AbortController(); S.conferindo = !silencioso || fresco || soTarefas; tickRelogio();
+  var meu = ++S.reqSeq; S.carregando = meu; S.ctrlCarregar = new AbortController(); S.conferindo = !silencioso || fresco || soTarefas; tickRelogio(); if (!S.tem) vigiaCarregando();
   var bt = $('bAtualizar'); if (fresco) { bt.textContent = 'Atualizando...'; bt.disabled = true; }
   try {
     var j = await api('/dados' + (fresco ? '?fresco=1' : soTarefas ? '?frescoTarefas=1' : ''), null, S.ctrlCarregar);
@@ -1331,16 +1388,16 @@ async function carregar(silencioso, modo) {
     if (j._status === 401) { sair('Senha não confere.'); return; }
     if (j._status === 429) { sair('Muitas tentativas. Espere 10 minutos.'); return; }
     if (j._status === 409) { mostrar('s-off'); return; }
-    if (!j.ok) { var m = semForn(j.mensagem) || 'Não consegui atualizar agora.'; if (!S.tem) { $('erroMsg').textContent = m; mostrar('s-erro'); } else { S.conferindo = false; S.erroCarregar = m + ' Tento de novo sozinha.'; tickRelogio(); } return; }
+    if (!j.ok) { var m = semForn(j.mensagem) || 'Não consegui atualizar agora.'; if (!S.tem) { $('erroMsg').textContent = m; mostrar('s-erro'); } else { S.conferindo = false; S.erroCarregar = m + ' Tento de novo sozinha.'; tickRelogio(); } retentaParte('dados', function () { return carregar(true, false).then(function () { return !S.erroCarregar && S.tem; }); }); return; }
     var jm = mesclar(j, fresco); if (!jm) { S.conferindo = false; tickRelogio(); return; } // todas as camadas mais velhas que as já exibidas: ignora, o número nunca volta atrás
     j = jm; S.vm = j.versao ? { negocios: j.versao.negocios, atrasadas: j.versao.atrasadas, tarefas: j.versao.tarefas } : S.vm;
-    S.conferindo = false; S.doCache = false; S.erroCarregar = ''; desenhar(j); S.tem = true; mostrar('s-dia');
+    S.conferindo = false; S.doCache = false; S.erroCarregar = ''; limpaRetenta('dados'); clearTimeout(S.vigiaTm); desenhar(j); S.tem = true; mostrar('s-dia');
     try { j._fmt = 2; var tx = JSON.stringify(j, function (k2, v2) { return k2 === 'fone' ? undefined : v2; }); /* sh_ultimo SEM telefones: só ids e contagens */ if (tx.length < 1500000) lsSet('sh_ultimo', tx); } catch (e) { logFalha('l630 cache do último dado é opcional (lsSet avisa se for rascunho/saíd', e); /* cache do último dado é opcional (lsSet avisa se for rascunho/saída) */ } // último dado conhecido: aparece na hora na próxima abertura (e nas outras abas)
   } catch (e) {
     if (S.reqSeq !== meu) return;
     S.conferindo = false;
     if (e && e.name === 'AbortError' && S.tem) { tickRelogio(); return; }
-    if (!S.tem) { $('erroMsg').textContent = 'Sem conexão. Tente de novo.'; mostrar('s-erro'); } else { S.erroCarregar = 'Sem conexão. Tento de novo sozinha.'; tickRelogio(); }
+    if (!S.tem) { $('erroMsg').textContent = navigator.onLine === false ? 'Sem internet. Volto sozinha quando ela voltar.' : 'Sem conexão. Tente de novo.'; mostrar('s-erro'); } else { S.erroCarregar = 'Não consegui atualizar os números do dia (sem conexão). Tento de novo sozinha.'; tickRelogio(); } retentaParte('dados', function () { return carregar(true, false).then(function () { return !S.erroCarregar && S.tem; }); });
   } finally { if (S.carregando === meu) S.carregando = false; if (fresco && S.carregando === false) { bt.textContent = 'Atualizar'; bt.disabled = false; } if (S.carregando === false) { S.conferindo = false; tickRelogio(); } }
 }
 function agendar() {
@@ -1352,9 +1409,16 @@ function agendar() {
 }
 document.addEventListener('visibilitychange', function () {
   if (document.hidden) { S.ocultoDesde = Date.now(); if (S.token) processarSaida({ keepalive: true, agora: true }); return; }
-  if (S.token) { verificarVersao(); processarSaida({ agora: true }); }
+  if (S.token) { if (S.versaoNova) decideVersao(); verificarVersao(); processarSaida({ agora: true }); }
   if (S.token && S.tem && S.ocultoDesde && Date.now() - S.ocultoDesde >= 5000) carregar(true, 'tarefas'); // voltou para a aba depois de 5 s+: confere as tarefas na hora
   S.ocultoDesde = 0;
+});
+function avisoOffline() { if (navigator.onLine === false) faixa('offline', 'Sem internet. Você continua vendo o último dado salvo e o que fizer fica guardado; volto sozinha quando a internet voltar.', 'aviso'); else faixa('offline', ''); }
+window.addEventListener('offline', function () { avisoOffline(); try { atualizarSelo(); } catch (e) { logFalha('offline: selo', e); } });
+window.addEventListener('online', function () { // internet voltou: zera o disjuntor e confere tudo de novo, sem esperar o próximo ciclo
+  avisoOffline(); REDE.falhas = 0; faixa('rede', ''); if (!S.token) return; Object.keys(S.rt).forEach(limpaRetenta);
+  if (S.tem) carregar(true, 'tarefas'); else if (!$('s-erro').classList.contains('hide') || $('s-dia').classList.contains('hide') === false) carregar(false, false);
+  carregarAguardando(true); carregarPerdasCtx(); verificarVersao();
 });
 function iniciarCanal() {
   if (S.canal || typeof BroadcastChannel === 'undefined') return;
@@ -1367,23 +1431,30 @@ window.addEventListener('storage', function (e) { // outra aba leu mais novo: es
   try { var j = JSON.parse(e.newValue); if (j && j.ok && versaoDe(j) && S.vm && (j.versao.tarefas > S.vm.tarefas || j.versao.negocios > S.vm.negocios || j.versao.atrasadas > S.vm.atrasadas)) { var jm = mesclar(j, false); if (jm) { S.vm = { negocios: jm.versao.negocios, atrasadas: jm.versao.atrasadas, tarefas: jm.versao.tarefas }; desenhar(jm); } } } catch (er) { logFalha('l659 dado de outra aba ilegível; o próximo poll traz o certo', er); /* dado de outra aba ilegível; o próximo poll traz o certo */ }
 });
 
+function lerUltimo() { var ult = null; try { ult = JSON.parse(lsGet('sh_ultimo') || 'null'); } catch (e) { logFalha('l674 catch', e); ult = null; } return ult && ult.ok && ult._fmt === 2 ? ult : null; }
+function pintarInicial(ult) { // pinta a tela na hora: com o último dado salvo (cinza, com selo 'Dado de há X min, atualizando…') ou, sem ele, com esqueleto leve. Nunca tela vazia.
+  if (ult) { S.doCache = true; S.vm = ult.versao ? { negocios: ult.versao.negocios, atrasadas: ult.versao.atrasadas, tarefas: ult.versao.tarefas } : null; desenhar(ult); S.tem = true; mostrar('s-dia'); $('atualizado').classList.add('velho'); aplicarVista(); } // troca sozinho quando o novo chegar
+  else { S.tem = false; var bl = $('blocos'); bl.textContent = ''; bl.appendChild(el('div', 'carregando-msg', 'Carregando o seu dia... a primeira leitura pode levar alguns segundos.')); for (var q = 0; q < 4; q++) bl.appendChild(el('div', 'esq')); mostrar('s-dia'); }
+}
 async function entrar(token, silencioso) {
-  S.token = token;
+  S.token = token; avisoOffline();
+  var ult = silencioso ? lerUltimo() : null; var dadosP = null;
+  if (silencioso) { pintarInicial(ult); S.conferindo = true; dadosP = carregar(false, false); } // 17/11: com a senha já salva, pinta o dado guardado AGORA e dispara o dia em paralelo com a conferência do /status (antes: status, depois tela, depois dia)
   var j;
   try { j = await api('/status'); } catch (e) { logFalha('l665 catch', e);  j = { _status: 0 }; }
-  if (j._status === 0) { if (silencioso && lsGet('sh_ultimo')) j = { ok: true, modo: 'on', _status: 200 }; else { if (!silencioso) $('loginMsg').textContent = 'Sem conexão com a Bia. Tente de novo.'; return false; } } // sem rede mas com dado salvo: abre o painel com o que já tem
-  if (j._status === 401) { lsDel('sh_tok'); if (!silencioso) $('loginMsg').textContent = 'Senha não confere.'; return false; }
-  if (j._status === 429) { if (!silencioso) $('loginMsg').textContent = 'Muitas tentativas. Espere 10 minutos.'; return false; }
-  if (!j.ok) { if (!silencioso) $('loginMsg').textContent = 'Não consegui entrar agora.'; return false; }
+  function desfazPintura() { if (silencioso) { try { S.ctrlCarregar.abort(); } catch (e) { logFalha('entrar: cancelar leitura', e); } S.carregando = false; S.tem = false; S.doCache = false; S.dados = null; } }
+  if (j._status === 0) { if (silencioso) j = { ok: true, modo: 'on', _status: 200 }; else { $('loginMsg').textContent = 'Sem conexão com a Bia. Tente de novo.'; return false; } } // sem rede: abre o painel com o que já tem (ou o esqueleto com 'Tentar agora'), nunca volta para o login
+  if (j._status === 401) { desfazPintura(); lsDel('sh_tok'); if (!silencioso) $('loginMsg').textContent = 'Senha não confere.'; return false; }
+  if (j._status === 429) { desfazPintura(); if (!silencioso) $('loginMsg').textContent = 'Muitas tentativas. Espere 10 minutos.'; return false; }
+  if (!j.ok) { desfazPintura(); if (!silencioso) $('loginMsg').textContent = 'Não consegui entrar agora.'; return false; }
   if ($('lembrar').checked) lsSet('sh_tok', token);
-  aplicarStatus(j); iniciarCanal(); iniciarSaida();
+  aplicarStatus(j); iniciarCanal(); iniciarSaida(); verificarVersaoPagina();
   if (j.modo !== 'on') { mostrar('s-off'); return true; }
   agendar();
-  var ult = null; try { ult = JSON.parse(lsGet('sh_ultimo') || 'null'); } catch (e) { logFalha('l674 catch', e);  ult = null; }
-  if (ult && ult.ok && ult._fmt === 2) { S.doCache = true; S.vm = ult.versao ? { negocios: ult.versao.negocios, atrasadas: ult.versao.atrasadas, tarefas: ult.versao.tarefas } : null; desenhar(ult); S.tem = true; mostrar('s-dia'); $('atualizado').classList.add('velho'); } // mostra o último dado conhecido NA HORA (cinza) e troca sozinho quando o novo chegar
-  else { S.tem = false; var bl = $('blocos'); bl.textContent = ''; bl.appendChild(el('div', 'carregando-msg', 'Carregando o seu dia... a primeira leitura pode levar alguns segundos.')); for (var q = 0; q < 4; q++) bl.appendChild(el('div', 'esq')); mostrar('s-dia'); }
-  if (S.tem) aoMudarHash(); // 09/11: link direto para um lead (botão do WhatsApp): abre o lead JÁ, em paralelo com a leitura do dia (antes esperava o dia inteiro carregar)
-  await carregar(false, false); carregarAguardando(true); carregarPerdasCtx(); processarSaida({ agora: true }); aoMudarHash();
+  if (!silencioso) { pintarInicial(lerUltimo()); dadosP = carregar(false, false); }
+  if (S.tem) aoMudarHash(); // 09/11: link direto para um lead (botão do WhatsApp): abre o lead JÁ, em paralelo com a leitura do dia
+  await Promise.allSettled([dadosP, carregarAguardando(true), carregarPerdasCtx()]); // 17/11: as partes saem juntas; nenhuma espera a outra
+  processarSaida({ agora: true }); aplicarVista(); aoMudarHash();
   if (haAbertoSemConfirmar()) iniciarPoll();
   return true;
 }
@@ -2820,10 +2891,11 @@ $('bFecharLead').onclick = fecharLead; $('bFecharGanho').onclick = fecharGanho;
 // ---------- Perdas sem contexto (09/11): lead perdido direto no Agendor sem contar o que houve. Fica em vermelho no topo até o SDR contar (nunca reabre o lead) ----------
 S.pcx = { itens: [] };
 async function carregarPerdasCtx() {
-  if (!S.token) return; var j; try { j = await api('/perdas-sem-contexto'); } catch (e) { faixa('perdas', 'Não consegui conferir as perdas sem contexto agora. Tento de novo sozinha.', 'aviso'); return; }
-  faixa('perdas', '');
-  if (!j || j.ok === false || j._status >= 400 || j._status === 0) return; S.pcx.itens = j.itens || []; desenharPerdasCtx();
+  if (!S.token) return true; var j; try { j = await api('/perdas-sem-contexto'); } catch (e) { faixa('perdas', 'Não consegui atualizar as perdas sem contexto, tentando de novo.', 'aviso'); retentaParte('perdas', carregarPerdasCtx); return false; }
+  if (!j || j.ok === false || j._status >= 400 || j._status === 0) { if (j && j._status === 401) return true; faixa('perdas', 'Não consegui atualizar as perdas sem contexto, tentando de novo.', 'aviso'); retentaParte('perdas', carregarPerdasCtx); return false; }
+  faixa('perdas', ''); limpaRetenta('perdas'); S.pcx.itens = j.itens || []; desenharPerdasCtx();
   if (S.L && S.L.lead && S.L.lead.status === 'perdido') renderRodape(S.L);
+  return true;
 }
 function contaLetras(v) { try { return String(v == null ? '' : v).replace(/[^\p{L}\p{N}]/gu, '').length; } catch (e) { return String(v || '').replace(/\W/g, '').length; } } // só letras e números contam (emoji, espaço e caractere invisível não)
 window.__carregarPerdasCtx = carregarPerdasCtx; // gancho para teste automatizado
@@ -2857,10 +2929,10 @@ async function enviarContextoPerda(L) {
 S.ag = { itens: [], total: 0, responsaveis: [], ocultos: {}, timer: null, aberto: false, seq: 0 };
 function rotuloAguard() { var n = S.ag.itens.filter(function (i) { return !S.ag.ocultos[i.dealId]; }).length; var q = S.ag.total != null ? Math.max(0, S.ag.total - Object.keys(S.ag.ocultos).length) : n; $('bAguard').textContent = 'Aguardando representante (' + q + ')'; $('bAguard').classList.toggle('pisca', q > 0); $('bAguard').title = q > 0 ? q + ' lead(s) qualificado(s) esperando você escolher o representante' : 'Leads que você qualificou e ainda esperam representante'; }
 async function carregarAguardando(silencioso, fresco) {
-  if (!S.token) return; var meu = ++S.ag.seq; var j; try { j = await api('/aguardando-representante' + (fresco ? '?fresco=1' : '')); } catch (e) { logFalha('l2110 catch', e);  j = { _status: 0 }; }
-  if (j._status === 401) { sair('Senha não confere.'); return; } if (meu !== S.ag.seq) return;
-  if (j.ok === false || j._status >= 400 || j._status === 0) { if (!silencioso) $('agAviso').textContent = msgErro(j); return; }
-  S.ag.itens = j.itens || []; if (j.total == null || j.total <= S.ag.itens.length) soltaRepSumidos(S.ag.itens); S.ag.total = j.total != null ? j.total : S.ag.itens.length; S.ag.responsaveis = j.responsaveis || S.ag.responsaveis; S.ag.ocultos = {}; $('agAviso').textContent = ''; rotuloAguard(); if (S.ag.aberto) desenharAguardando();
+  if (!S.token) return true; var meu = ++S.ag.seq; var j; try { j = await api('/aguardando-representante' + (fresco ? '?fresco=1' : '')); } catch (e) { logFalha('l2110 catch', e);  j = { _status: 0 }; }
+  if (j._status === 401) { sair('Senha não confere.'); return true; } if (meu !== S.ag.seq) return true;
+  if (j.ok === false || j._status >= 400 || j._status === 0) { if (!silencioso) $('agAviso').textContent = msgErro(j); else { faixa('aguard', 'Não consegui atualizar a lista de leads esperando representante, tentando de novo.', 'aviso'); retentaParte('aguard', function () { return carregarAguardando(true); }); } return false; }
+  faixa('aguard', ''); limpaRetenta('aguard'); S.ag.itens = j.itens || []; if (j.total == null || j.total <= S.ag.itens.length) soltaRepSumidos(S.ag.itens); S.ag.total = j.total != null ? j.total : S.ag.itens.length; S.ag.responsaveis = j.responsaveis || S.ag.responsaveis; S.ag.ocultos = {}; $('agAviso').textContent = ''; rotuloAguard(); if (S.ag.aberto) desenharAguardando(); return true;
 }
 function desenharAguardando() {
   var l = $('agLista'); l.textContent = ''; var itens = S.ag.itens.filter(function (i) { return !S.ag.ocultos[i.dealId]; });
@@ -2944,7 +3016,7 @@ document.addEventListener('keydown', function (e) {
 desenharTopo = seguro('desenharTopo', desenharTopo); desenharControle = seguro('desenharControle', desenharControle); desenharBlocos = seguro('desenharBlocos', desenharBlocos); desenharFila = seguro('desenharFila', desenharFila); desenharAguardando = seguro('desenharAguardando', desenharAguardando); renderLead = seguro('renderLead', renderLead); renderGanho = seguro('renderGanho', renderGanho);
 cartao = seguro('cartao', cartao, function (it) { var f = el('div', 'item'); f.appendChild(el('div', 'emp', (it && it.empresa) || 'Item')); f.appendChild(el('div', 'pas', 'Não consegui mostrar os detalhes deste item.')); return f; });
 cartaoAtrasado = seguro('cartaoAtrasado', cartaoAtrasado, function (g) { var f = el('div', 'item'); f.appendChild(el('div', 'emp', (g && g.empresa) || 'Item')); return f; });
-window.__shTeste = { logFalha: logFalha, falhas: function () { return FALHAS; }, estadoSync: estadoSync, desfazerSaida: desfazerSaida, atualizarSelo: atualizarSelo, semForn: semForn, hoje2Valido: hoje2Valido, hoje2Cartao: hoje2Cartao, processarSaida: processarSaida, tentarAgora: tentarAgora, buscarGeral: buscarGeral, bgValida: bgValida, opcoesAdiar: opcoesAdiar, enviarAcao: enviarAcao, versaoMaisNova: versaoMaisNova, iniciarContinuar: iniciarContinuar, continuarLaco: continuarLaco, fmtCampo: fmtCampo, fadeChips: fadeChips, REDE: REDE, lerSaida: lerSaida, processarSaida: processarSaida, reportarErro: reportarErro, aplicarStatus: aplicarStatus, hooks: { recarregar: null }, falhaDePagina: falhaDePagina, verificarVersao: verificarVersao, agoraMs: agoraMs, PAGINA_VERSAO: PAGINA_VERSAO, carregarAguardando: carregarAguardando, S: S, desenhar: desenhar, carregar: carregar, casaBusca: casaBusca, foneFmt: foneFmt, aceitar: aceitar, abrirLead: abrirLead, abrirGanho: abrirGanho, cnpjValido: cnpjValido, desenharFila: desenharFila, carregarFila: carregarFila, origemClasse: origemClasse, mascCnpj: mascCnpj, renderLead: renderLead, carregarLead: carregarLead, contextoAuto: contextoAuto, tipoContexto: tipoContexto, secaoOrigem: secaoOrigem, obsSdrPronta: obsSdrPronta, validarCampo: validarCampo, valorOrig: valorOrig, valorAtual: valorAtual, faltaAinda: faltaAinda, atualizarGanhoBtn: atualizarGanhoBtn };
+window.__shTeste = { mesAtualSP: mesAtualSP, nomeMes: nomeMes, decideVersao: decideVersao, verificarVersaoPagina: verificarVersaoPagina, salvarVista: salvarVista, aplicarVista: aplicarVista, ociosoMs: ociosoMs, retentaParte: retentaParte, logFalha: logFalha, falhas: function () { return FALHAS; }, estadoSync: estadoSync, desfazerSaida: desfazerSaida, atualizarSelo: atualizarSelo, semForn: semForn, hoje2Valido: hoje2Valido, hoje2Cartao: hoje2Cartao, processarSaida: processarSaida, tentarAgora: tentarAgora, buscarGeral: buscarGeral, bgValida: bgValida, opcoesAdiar: opcoesAdiar, enviarAcao: enviarAcao, versaoMaisNova: versaoMaisNova, iniciarContinuar: iniciarContinuar, continuarLaco: continuarLaco, fmtCampo: fmtCampo, fadeChips: fadeChips, REDE: REDE, lerSaida: lerSaida, processarSaida: processarSaida, reportarErro: reportarErro, aplicarStatus: aplicarStatus, hooks: { recarregar: null }, falhaDePagina: falhaDePagina, verificarVersao: verificarVersao, agoraMs: agoraMs, PAGINA_VERSAO: PAGINA_VERSAO, carregarAguardando: carregarAguardando, S: S, desenhar: desenhar, carregar: carregar, casaBusca: casaBusca, foneFmt: foneFmt, aceitar: aceitar, abrirLead: abrirLead, abrirGanho: abrirGanho, cnpjValido: cnpjValido, desenharFila: desenharFila, carregarFila: carregarFila, origemClasse: origemClasse, mascCnpj: mascCnpj, renderLead: renderLead, carregarLead: carregarLead, contextoAuto: contextoAuto, tipoContexto: tipoContexto, secaoOrigem: secaoOrigem, obsSdrPronta: obsSdrPronta, validarCampo: validarCampo, valorOrig: valorOrig, valorAtual: valorAtual, faltaAinda: faltaAinda, atualizarGanhoBtn: atualizarGanhoBtn };
 (async function () {
   var t = lsGet('sh_tok');
   if (t) { var ok = await entrar(t, true); if (ok) return; }
