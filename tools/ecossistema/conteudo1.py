@@ -19,7 +19,7 @@ def s_inicio():
         card("A conversa", ul(["A <b>Ana</b> atende leads no WhatsApp, 24 horas por dia, apresenta o projeto, qualifica e passa ao time comercial.", "Quem entende o lead é a IA; quem trava o que pode ser dito e feito são regras fixas, que não dependem da IA.", "Quem some recebe toques de retomada; qualquer resposta cancela o que falta."])),
         card("O registro", ul(["O <b>Agendor</b> (CRM) é a fonte da verdade: se está lá, é o que vale.", "A Ana decide; a <b>Bia</b> é a única que escreve no Agendor, e só diz \"feito\" depois de reler.", "Quando a Ana qualifica, o negócio dela vira Ganho e nasce um negócio no SDR Inbound (etapa \"Ana qualificou\", dono SDR). O Arena só nasce quando o SDR qualifica pela Hoje."])),
         card("O trabalho", ul(["O SDR trabalha na página <b>Hoje</b>; a gestão controla pela <b>Central</b>; o representante usa o <b>Painel do Representante</b>; os números ficam no <b>Dash</b>.", "A Bia avisa a equipe pelo WhatsApp, com botões, no horário certo."])),
-        card("A segurança", ul(["Nada vai ao ar sem testes, auditoria independente, cópia de segurança e o roteiro único de publicação.", "Avisos que falham ficam numa fila durável e são reenviados sozinhos.", "A gestão tem interruptores de emergência em cada regra."])),
+        card("A segurança", ul(["Nada vai ao ar sem testes, auditoria independente, cópia de segurança e o roteiro único de publicação.", "Falha de envio de aviso entra numa fila durável e é reenviada sozinha; falha de entrega recusada pela Meta ainda não (planejado).", "A gestão tem interruptores de emergência em cada regra."])),
       ]))
     NAV.append(("Começar", "inicio", "Capa e resumo"))
     return (f'<section class="sec sec-capa" id="inicio" data-n="1" data-t="Capa e resumo" aria-labelledby="h-inicio"><div class="sec-in">'
@@ -27,23 +27,23 @@ def s_inicio():
 
 def s_status():
     ok = [
-      ("Ana (15/11, 10h02)", "Conversa completa, voz em áudio (ElevenLabs) quando o lead manda áudio, treinamento da diretoria aplicado desde 13/11, humanização (digitando e pausas), cadência de retomada, encerramento educado de quem está fora do perfil e instrução da equipe pela Central. Camada de entrega para falha da Meta (131049) com reenvio por modelo de utilidade (patch 1.3). Abertura, apresentação em capítulos, qualificação e repasse; voz; assumir, instruir e devolver pela Central; vigia do webhook; custo no Dash; número do time só quando o lead pede; lojista nunca descartado por engano; cadência de abertura com 4 toques."),
-      ("Bia (15/11, 04h49)", "Agente interno (WhatsApp e CRM Agendor), avisos ao time, motores proativos e painel do representante. Aviso NOVO LEAD com vigia de reenvio, pacote do Arena e servidor do Hoje 2.0 em sombra. Antes (14/11): trava de folga que não segura gestão, administradores e SDR; funil da Ana por nome de etapa; empresa existente vinculada por CNPJ; avisos da Ana ao SDR das 7h às 21h; compatível com a Ana atual."),
-      ("Central (15/11, 09h50)", "Atendimento com tela cheia, instruções, 👍/👎; pacote de hoje: link por aba, rolagem preservada, exportar conversa, simulador em chat e login que persiste."),
-      ("Hoje", "Mesa do SDR sem travas de horário, fila por listas, leitura incremental de tarefas atrasadas e qualificação que cria o negócio no funil certo. Release 1 (14/11): teto de 50 por clique, minimizar o lead, observação do SDR e balão lilás. Espelho do Hoje 2.0 em modo sombra."),
+      ("Ana", "Conversa completa, voz em áudio (ElevenLabs) quando o lead manda áudio, treinamento da diretoria aplicado desde 13/11, humanização (digitando e pausas), cadência de retomada, encerramento educado de quem está fora do perfil e instrução da equipe pela Central (a Ana guarda a instrução e usa na próxima resposta). Camada de entrega para falha da Meta (131049) com reenvio por modelo de utilidade (patch 1.3). Abertura, apresentação em capítulos, qualificação e repasse; voz; assumir, instruir e devolver pela Central; vigia do webhook; custo no Dash; número do time só quando o lead pede; lojista nunca descartado por engano; cadência de abertura em poucos toques."),
+      ("Bia", "Agente interno (WhatsApp e CRM Agendor), avisos ao time, motores proativos e painel do representante. Aviso NOVO LEAD com vigia de reenvio, pacote do Arena e servidor do Hoje 2.0 em sombra, sem uso real. Antes (14/11): trava de folga que não segura gestão, administradores e SDR; funil da Ana por nome de etapa; empresa existente vinculada por CNPJ; avisos da Ana ao SDR das 7h às 21h; compatível com a Ana atual."),
+      ("Central", "Atendimento com tela cheia, instruções, 👍/👎; pacote de hoje: link por aba, rolagem preservada, exportar conversa, simulador em chat e login que persiste."),
+      ("Hoje", "Mesa do SDR sem travas de horário, fila por listas, leitura incremental de tarefas atrasadas e qualificação que cria o negócio no funil certo. Também: limite de leads por clique, minimizar o lead, observação do SDR e balão lilás. Espelho do Hoje 2.0 em sombra, sem uso real."),
       ("SDR e cadência", "Cadência por dia útil, repasse com trava, inbound direto, Subir lista, enriquecimento por CNPJ e voltas ao SDR."),
       ("Demais", "Painel do Representante, Dash, Canal, monitoria da Ana e roteiro único de publicação."),
     ]
     te = [
       ("Ana: pacote de correções", "A instrução da equipe manda e encerra; fora do perfil passa a incluir vendedor de sistema; CNPJ baixado tratado. Pronto, ainda não no ar."),
       ("Central: pacote de botões", "Botões, selos do CRM e lista leve. Pronto, ainda não no ar."),
-      ("Painel do Representante", "Recarga só no horário comercial e só de quem abriu a página. Falta auditoria."),
+      ("Painel do Representante (nova recarga)", "O painel já está no ar; o que falta é só o pacote novo, com recarga em horário comercial e só de quem abriu a página, que aguarda auditoria."),
       ("Este Ecossistema", "Atualizado e com o modo apresentação em slides; publica depois do teste visual e do auditor independente."),
     ]
     pl = [
       ("Ana", "Cadência de 3 toques com mensagens de utilidade; juízes de IA como guarda-corpo em tempo real; texto pronto só como saudação; objeções por IA; mídia nunca vira fala; personalização pelo CNPJ."),
       ("Central", "Controles manuais completos (ganho, perdido, repasse), silenciar a Bia por pessoa e desfazer em tudo."),
-      ("Bia", "Observação do SDR só do SDR, teto de 50 no servidor, reenvio quando a Meta falha, backup fora do ambiente de trabalho."),
+      ("Bia", "Observação do SDR só do SDR, limite por clique também no servidor, reenvio quando a Meta recusa a entrega, backup fora do ambiente de trabalho."),
       ("Hoje", "Hoje 2.0 (página lendo do espelho, depois de 5 dias úteis com divergência abaixo de 0,5%), blindagem de erros, modo foco e raia do closer."),
       ("Dash", "Dash expandido com mais indicadores do SDR e da Ana."),
       ("Plataforma", "Mineração de leads, arquivar modelos antigos da Meta, revisão das cadências com dados reais."),
@@ -96,7 +96,7 @@ def s_visao():
       ["Closer", "Atende e fecha redes no Arena.", "Agendor, WhatsApp"],
       ["Representante", "Vende no Arena e cuida do Pós-venda e da Reativação.", "WhatsApp, Painel do Representante, Agendor"],
       ["Administrador", "Acompanha e muda só o que tem risco baixo ou médio.", "Central"],
-      ["Conta técnica \"Sistema\"", "Conta que a Bia usa para escrever no Agendor. Nenhuma pessoa a usa e ela nunca pode ser dona de um negócio.", "Só a Bia"],
+      ["Conta técnica \"Sistema\"", "Conta que a Bia usa para escrever no Agendor. Em regra, nenhuma pessoa a usa e ela não deve ser dona de um negócio.", "Só a Bia"],
     ]
     corpo = (grid([card("Resumo", '<p>A Life B vende para drogarias e supermercados por meio de representantes de campo. Em volta dessa venda existe um conjunto de peças que conversam entre si. Este guia mostra cada peça, o caminho do lead e as regras que mantêm tudo em ordem.</p>')], 1)
       + '<h3 class="mt">Quem escreve onde</h3>' + fig("mapa")
@@ -109,7 +109,7 @@ def s_visao():
         ["Memória", "Conhecimento, histórico das conversas e estado do dia a dia.", "Banco de dados (Supabase)"],
         ["Estado e filas", "Interruptores, filas, reservas e números do Dash.", "KV, Durable Objects e D1 (Cloudflare)"],
         ["Cópias e vigia externo", "Backups criptografados e cópia do código a cada publicação.", "Dropbox, GitHub e Drive"],
-        ["Destinos", "Agendor (fonte da verdade), WhatsApp (texto, botões e listas), representantes, SDR com cópia à gestão e gestão (alertas e relatórios).", "Agendor, Meta"],
+        ["Destinos", "Agendor (fonte da verdade), WhatsApp (texto, botões e listas), representantes, SDR e gestão (alertas e relatórios).", "Agendor, Meta"],
       ], "", "Infraestrutura")
       + '<h3 class="mt">As peças e quem usa cada uma</h3>' + tabela(["Peça", "O que é", "Quem usa"], pecas, "", "Peças do ecossistema")
       + '<h3 class="mt">Quem faz o quê, por papel</h3>' + tabela(["Papel", "O que faz", "Onde trabalha"], papeis, "", "Papéis")
@@ -130,12 +130,12 @@ def s_entrada():
       card("Outbound: lista do SDR", ul([
         "O SDR sobe a planilha na página Lista (até 300 por vez), dá um nome à lista e vê a prévia antes de criar.",
         "A Bia confere CNPJ, telefone e empresa com negócio aberto antes de criar, e guarda de qual lista cada lead veio.",
-        "Os leads do Outbound ficam na <b>fila de espera</b>: nada começa sozinho; o SDR escolhe quando Iniciar."]), p="ok"),
+        "Os leads do Outbound ficam na <b>fila de espera</b>: em regra nada começa sozinho; o SDR escolhe quando Iniciar."]), p="ok"),
       card("Volta ao SDR", ul([
         "Três rotinas devolvem negócios ao SDR: Recuperação SDR, Recuperação e Reativação (seção Recuperação e reativação).",
         "O negócio que volta nasce novo, na fila, com a nota de onde veio."]), p="ok"),
     ], 2)
-    + '<h3 class="mt">Telefones sempre padronizados</h3>'
+    + '<h3 class="mt">Telefones padronizados</h3>'
     + '<p>A Bia padroniza todo telefone do mesmo jeito: celular digitado sem o 9 ganha o 9, zero na frente e código de operadora são removidos, e só valem números com 10 ou 11 dígitos. Se o telefone já existe em um negócio aberto de outra empresa, o negócio novo é criado separado e o aviso conta isso.</p>'
     + aviso("Origem do negócio", "Cada negócio guarda de onde veio: Inbound, Outbound, Recuperação, Reativação, Recuperação SDR, SuperAgos, Nossa Rede ou Indicação. A origem da empresa e da pessoa nunca muda; a origem do negócio pertence ao negócio. As origens de volta nascem só de automações.", "n")
     + aviso("Ferramenta antiga encerrada", "A antiga ferramenta de prospecção (GS Engage) foi encerrada em 19/10/2026. Nenhuma automação cria lead nela; só o histórico dela aparece nos números.", "n"))
@@ -168,13 +168,13 @@ def s_ana():
         ["Fora de Goiás e do Distrito Federal", "O lead qualificado vai ao Arena, com o closer como dono."],
       ], "", "Portões de segmento e porte")
       + '<h3 class="mt">Quando o lead some ou pede para voltar</h3>'
-      + fluxo([("Retorno combinado", "\"Me chama amanhã às 10h\": a Ana cria a tarefa e volta no horário, ajustado para 8h a 22h."), ("Toques de retomada", "Quem para no meio da conversa: até 5 toques (farmácia) ou 4; fora do foco, 2. O 1º vem 2 h depois (em dia útil), o 2º no dia seguinte às 9h e os próximos 2, 4 e 6 dias úteis depois, às 15h, 10h e 14h. Quem se cadastrou e nunca escreveu: abertura de 4 toques (abertura, caso ou pergunta, valor e encerramento). Retorno combinado: até 3.", "m"), ("Sem resposta", "Qualquer resposta do lead cancela o que falta. No fim, o negócio vai para a etapa de encerramento por silêncio.", "x")])
+      + fluxo([("Retorno combinado", "\"Me chama amanhã às 10h\": a Ana cria a tarefa e volta no horário, ajustado para 8h a 22h."), ("Toques de retomada", "Quem para no meio da conversa recebe toques de retomada em dias úteis, espaçados, e o número varia conforme o perfil (quem está fora do foco recebe menos). O primeiro vem poucas horas depois e os seguintes em dias úteis, em horários comerciais. Quem se cadastrou e nunca escreveu: abertura em poucos toques (abertura, caso ou pergunta, valor e encerramento). Retorno combinado: poucas tentativas.", "m"), ("Sem resposta", "Qualquer resposta do lead cancela o que falta. No fim, o negócio vai para a etapa de encerramento por silêncio.", "x")])
       + '<p class="legenda">Quando o lead escreve, a Ana responde a qualquer hora e dia. Quando a iniciativa é dela, só entre 8h e 22h (horário de Brasília), todos os dias. Fora da janela de 24 horas da Meta ela usa um modelo aprovado. Tudo cancela sozinho se o lead voltou, se a equipe assumiu ou se a Ana está pausada. ' + '</p>'
       + '<h3 class="mt">Quando uma pessoa entra na conversa</h3>'
       + fluxo([("Gatilhos", "Lead pede uma pessoa, mídia ilegível, resposta bloqueada, dúvida fora da base, irritação ou insistência depois do repasse."), ("Equipe assume ou instrui", "Pela Central, no mesmo número. Assumir faz a Ana se calar; instruir faz ela agir sem a equipe assumir.", "m"), ("Devolve à Ana", "Com um clique. Ela relê tudo, inclusive o que a equipe escreveu, e segue.", "g")])
       + grid([
-        card("Instrução não é mensagem", "<p>Há dois botões: \"Só orientar\" (a Ana guarda e usa na próxima resposta) e \"Orientar e mandar agora\" (age na hora, uma única vez). A instrução pode ser digitada ou gravada em áudio, e o lead nunca vê que ela existiu.</p>", p="ok"),
-        card("Ficha do lead na Central", "<p>Mostra onde o lead está: etapa do funil, momento da conversa e cadência (por exemplo, \"toque 2 de 5\"), progresso da qualificação (segmento, CNPJ, empresa, projeto apresentado, quem decide), sinais, dúvidas e anotações.</p>", p="ok"),
+        card("Instrução não é mensagem", "<p>Há dois botões: \"Só orientar\" (a Ana guarda e usa na próxima resposta) e \"Orientar e mandar agora\" (age na hora, uma única vez). A instrução pode ser digitada ou gravada em áudio, e, em regra, o lead não percebe que ela existiu.</p>", p="ok"),
+        card("Ficha do lead na Central", "<p>Mostra onde o lead está: etapa do funil, momento da conversa e cadência (por exemplo, \"toque 2\"), progresso da qualificação (segmento, CNPJ, empresa, projeto apresentado, quem decide), sinais, dúvidas e anotações.</p>", p="ok"),
       ], 2))
     return sec("ana", "Ana, a SDR virtual", "Ana: a conversa", "Fluxo, apresentação, qualificação, portões, retomada e intervenção da equipe.", corpo)
 
@@ -213,7 +213,7 @@ def s_ana2():
       + grid([
         card("Histórico para sempre", "<p>Toda mensagem, nota e decisão fica num arquivo permanente que só cresce, com fila de segurança se o banco falhar e conferência de hora em hora.</p>"),
         card("Excluir conversa, só com controle", "<p>Só a gestão e quem ela autorizar. Ocultar é reversível; excluir pede motivo, os 4 últimos dígitos do telefone e a senha, e vai para uma lixeira por 30 dias.</p>"),
-        card("Backup na nuvem, com repetição", "<p>Todo dia, com repetição automática se a execução falhar. Os dados da Ana e da Bia vão criptografados para a nuvem, e cada pacote é aberto de volta para provar que dá para restaurar. Se alguma parte ficar mais de 30 horas sem sucesso, a gestão é avisada. A chave de criptografia fica guardada em um cofre separado, nunca junto dos pacotes.</p>"),
+        card("Backup na nuvem", "<p>Diariamente, com nova tentativa automática se a execução falhar. Os dados da Ana e da Bia vão criptografados para a nuvem, e cada pacote é aberto de volta para provar que dá para restaurar. Se alguma parte ficar mais de 30 horas sem sucesso, a gestão é avisada. A chave de criptografia fica guardada em um cofre separado, nunca junto dos pacotes.</p>"),
       ], 3))
     return sec("ana-seguranca", "Ana, a SDR virtual", "Ana: entendimento, travas e monitoria", "Onde a IA decide e onde as regras fixas mandam. O que a Ana nunca faz.", corpo)
 

@@ -14,7 +14,7 @@ def s_cadencia():
       ], 2)
       + aviso("Horário das tarefas", "Toda tarefa da cadência vence às 18h, em dia útil. O texto começa com a etapa, por exemplo \"[OUT D3]\", e termina com o nome da loja.", "n")
       + '<h3 class="mt">Como o lead começa</h3>'
-      + ul(["<b>Fila de espera (Outbound).</b> O lead da lista chega sem nenhuma tarefa. Nada começa sozinho.",
+      + ul(["<b>Fila de espera (Outbound).</b> O lead da lista chega sem nenhuma tarefa. Em regra, nada começa sozinho.",
             "<b>Botão Iniciar.</b> O SDR escolhe quais leads começar, na Hoje. Ao clicar, a Bia cria as tarefas do primeiro dia. Não existe meta diária imposta pelo sistema.",
             "<b>Contagem dos dias.</b> O primeiro dia é o primeiro dia útil em que a cadência pode começar; lead iniciado depois das 17h30 começa no próximo dia útil. A etapa só avança, nunca volta."])
       + '<h3 class="mt">O fim da cadência</h3>'
@@ -47,7 +47,7 @@ def s_recuperacao():
       ], "", "As três voltas")
       + aviso("Segunda onda da Reativação", "Cliente perdido na Reativação por motivo que pode voltar volta ao SDR depois de 30 dias, com limite de 2 por rodada e 5 por dia.", "n")
       + '<h3 class="mt">O que é igual nas três</h3>'
-      + ul(["O lead volta como <b>negócio novo</b> no SDR Outbound, na fila de espera, com o SDR como responsável. Nada começa sozinho: o SDR clica Iniciar.",
+      + ul(["O lead volta como <b>negócio novo</b> no SDR Outbound, na fila de espera, com o SDR como responsável. Em regra, nada começa sozinho: o SDR clica Iniciar.",
             "A cadência é curta e só de WhatsApp: retomar a conversa, novo contato e última tentativa.",
             "A nota do negócio conta de onde veio: quem perdeu, quando, o motivo e o link do negócio antigo. O negócio antigo nunca é reaberto.",
             "Uma empresa não recebe outra volta por 180 dias, nem outro cadastro com o mesmo CNPJ.",
@@ -55,7 +55,7 @@ def s_recuperacao():
             "Um lead perdido sem explicação do SDR espera ele contar o que houve.",
             "O aviso ao SDR é agrupado e só sai em dia útil, das 8h às 18h."])
       + '<h3 class="mt">Voltas encadeadas</h3>'
-      + '<p>Se o negócio que voltou for perdido de novo por um motivo que pode voltar, ele pode voltar outra vez, com espera maior a cada tentativa sem resposta: 60 dias, depois 90, depois 180 para quem nunca respondeu em três voltas seguidas. Se o lead respondeu em alguma volta, a contagem recomeça. O lead nunca é esquecido, só espaçado.</p>'
+      + '<p>Se o negócio que voltou for perdido de novo por um motivo que pode voltar, ele pode voltar outra vez, com espera cada vez maior a cada tentativa sem resposta. Se o lead respondeu em alguma volta, a contagem recomeça. Em regra, o lead não é esquecido, só espaçado.</p>'
       + '<h3 class="mt">Como a Reativação nasce</h3>'
       + passos([("O Pós-venda conta os dias", "60 dias de espera mais 15 de janela para o representante repor: 75 nas drogarias; 45 nos supermercados (30 mais 15)."),
                 ("Passou do prazo sem reposição", "A Bia cria o negócio novo no SDR Outbound, na fila, com a origem Reativação e a nota de onde veio."),
@@ -69,7 +69,7 @@ def s_bia():
       '<p>A Bia é o conjunto de rotinas automáticas que opera o dia a dia comercial. Tem duas metades que trabalham juntas: um programa que roda continuamente na nuvem, verificando o Agendor a cada minuto e executando as regras no horário certo, e uma conversa por WhatsApp, em que a equipe pede informações e ações em linguagem natural.</p>'
       + grid([
         card("Escreve no Agendor", "<p>Cria tarefas, move etapas, distribui leads qualificados e fecha ciclos. Só diz \"feito\" depois de reler.</p>"),
-        card("Avisa a equipe", "<p>WhatsApp para gestão, SDR, closer e representantes, com botões, cada um com o que lhe cabe.</p>"),
+        card("Avisa a equipe", "<p>WhatsApp para gestão, SDR, closer e representantes, cada um com o que lhe cabe; muitos avisos trazem botões.</p>"),
         card("Confere", "<p>Compara o que foi feito com o Agendor e mantém o combinado, sem apagar histórico.</p>"),
         card("Tem modo e interruptor", "<p>Cada automação é desligada, só observa (simulação) ou vale de verdade, e pode ser pausada individualmente.</p>"),
       ], 4)
@@ -78,11 +78,11 @@ def s_bia():
         card("Funil da Ana por nome", "<p>A Bia identifica as etapas do funil da Ana pelo <b>nome</b>, e não por código. Se alguém renomear ou apagar uma etapa, ela não escreve em uma etapa errada. Há uma chave de emergência: desligada, a Bia só grava nota e não move nada.</p>", p="ok"),
         card("Vínculo de empresa", "<p>Se a empresa já existe no Agendor (mesmo CNPJ), a Bia vincula o negócio à empresa existente, em vez de dar erro ou duplicar.</p>", p="ok"),
         card("Reabertura e lead repetido", "<p>Lead que volta é tratado por status e nome: ganho é duplicata (avisa o SDR); perdido reabre; encerrado e sem resposta reabrem e a Ana retoma. Falha ao reabrir é erro com nova tentativa; nunca cria um segundo negócio da Ana.</p>", p="ok"),
-        card("Fila durável de avisos", "<p>Aviso que falha entra em uma fila que dura 24 horas e é reenviada a cada 5 minutos, até 5 por rodada. Só conta como enviado quando o WhatsApp aceitou.</p>", p="ok"),
+        card("Fila durável de avisos", "<p>Aviso cujo envio falha entra em uma fila que dura 24 horas e é reenviada a cada 5 minutos, até 5 por rodada. Só conta como enviado quando o WhatsApp aceitou.</p>", p="ok"),
       ], 2)
       + '<h3 class="mt">Folga e horários: quem nunca é segurado</h3>'
       + ul(["Mensagem proativa a <b>representante</b> só sai em dia útil, das 8h às 18h (cobranças a partir das 9h). Feriados e dias extras de folga, marcados na Central, valem para o envio.",
-            "A <b>gestão, os administradores e o SDR nunca são segurados pela trava de folga</b>: avisos de lead e da Ana chegam sempre.",
+            "A <b>gestão, os administradores e o SDR nunca são segurados pela trava de folga</b>: avisos de lead e da Ana chegam em regra.",
             "A cutucada para manter a janela do WhatsApp aberta respeita o horário de cada um: o SDR nunca recebe de madrugada (0h às 6h); administradores entre 6h e 20h; a gestão sem limite.",
             "Quando o WhatsApp de alguém está com a janela fechada, as mensagens esperam em uma fila, visível na Central por pessoa, com cópia guardada por 7 dias."])
       + '<h3 class="mt">Agendas e resumos</h3>'
@@ -104,7 +104,7 @@ def s_bia():
         ["Mudança direto no Agendor (dono, etapa, valor, tarefa da cadência apagada)", "Nada", "Nada", "Resumo agrupado, no máximo a cada 30 minutos"],
         ["Lead congelado", "Nada", "Nada", "Aviso com funil, etapa, motivo e data para descongelar"],
       ], "", "Quem recebe cada aviso")
-      + '<p class="legenda">Todo aviso enviado ao SDR também chega à gestão em cópia. Falha de automação vai só para a gestão, nunca para o time.</p>')
+      + '<p class="legenda">Falha de automação vai só para a gestão, em regra nunca para o time.</p>')
     return sec("bia", "Bia e automações", "Bia: avisos, agendas e folga", "O que a Bia faz, para quem avisa, quando avisa e quem nunca é segurado.", corpo)
 
 def s_automacoes():
@@ -186,7 +186,7 @@ def s_hoje():
       + grid([
         card("No topo", ul(["Números do dia e do mês.", "Busca geral por nome da loja ou da pessoa, CNPJ, telefone, número do negócio ou cidade, nos dois funis do SDR.", "Filtro por origem e opção de esconder o que já foi feito.", "Atalhos para Subir lista, Dash Geral, Como funciona e Meu painel.", "Aviso vermelho quando algum lead foi perdido sem explicação."]), p="ok"),
         card("As colunas do dia", ul(["Inbound novo: lead quente que acabou de chegar.", "Aberturas novas e 2º, 3º e 4º contato; Última tentativa.", "Tentativas acabaram: leads no fim da cadência.", "Atrasadas e Iniciados hoje.", "Começar leads novos: a fila de espera, com os botões Iniciar."]), p="ok"),
-        card("Fila completa em linhas por lista", "<p>Mostra a contagem real da fila (por exemplo \"1.243 esperando\"), lê 300 rápido e a fila inteira por trás (até 2.000), 50 por página com \"Mostrar mais\". Cada lista é uma linha que abre e fecha. Sem \"Iniciar TODOS\" e com teto de 50 por clique; quem acabou de ser iniciado some da fila na hora.</p>", p="ok"),
+        card("Fila completa em linhas por lista", "<p>Mostra a contagem real da fila, carrega rápido e traz o restante por trás, com \"Mostrar mais\". Cada lista é uma linha que abre e fecha. Sem \"Iniciar TODOS\" e com limite de leads por clique; quem acabou de ser iniciado some da fila na hora.</p>", p="ok"),
         card("Hoje 2.0", "<p>Nova geração da página, lendo de um espelho dos dados (hoje em modo sombra, só copiando e comparando). Futuro: ainda não existe para o SDR.</p>", p="pl"),
         card("Raia do closer e modo foco", "<p>Negócios do Arena em que o closer atende, em uma raia no topo, recolhida por padrão e aberta sozinha quando há ação vencida ou do dia; o ganho do closer exige valor e data. Modo foco: tela cheia da página, só com o kanban.</p>", p="pl"),
       ], 2)
@@ -222,7 +222,7 @@ def s_central():
       + grid([
         card("Atendimento da Ana", ul(["Conversa da Ana com cada lead, com ficha e sinais.", "Assumir, instruir (texto ou áudio), devolver e pausar; 👍 ou 👎 em cada resposta.", "Tela cheia e link direto para cada conversa.", "Atalho para o Life B Solicita."]), p="ok"),
         card("Controle", ul(["Visão geral da saúde da plataforma.", "Interruptores de cada proteção e automação, em três níveis de risco. Cada mudança pede um motivo, aparece no histórico com quem fez e <b>pode ser desfeita</b>.", "Aba Agentes: parada de emergência da Ana e custo.", "Filas de mensagens por pessoa e calendário de folga."]), p="ok"),
-        card("Pacote de 15/11 (commit 01666f08)", ul(["Link por aba e rolagem preservada ao atualizar.", "Exportar conversa.", "Simulador em formato de chat.", "Login que persiste no celular."]), p="ok"),
+        card("Pacote de 15/11", ul(["Link por aba e rolagem preservada ao atualizar.", "Exportar conversa.", "Simulador em formato de chat.", "Login que persiste no celular."]), p="ok"),
         card("A conferir", ul(["Arquivar conversas (volta quando o lead escreve) com desfazer.", "Cancelar toques da Ana com justificativa.", "Áudio da equipe ouvível.", "Sinal \"Fora do foco\" pela mesma regra da Ana.", "Não consta na lista de entregas de 15/11: conferir antes de afirmar."]), p="pl"),
         card("Na fila", ul(["Controles manuais completos por conversa: dar ganho, dar perdido (com motivo) e repassar ao SDR Inbound. O painel mostra o estado.", "Dados editáveis (segmento, CNPJ, lojas, decisor, UF, origem) com limpar, \"editado por\" e desfazer; a Ana vê a edição.", "Desfazer e apagar em tudo.", "Silenciar a Bia por pessoa."]), p="pl"),
       ], 2)
@@ -250,6 +250,6 @@ def s_meta():
       card("Modelos aprovados", "<p>Aberturas usam modelos de marketing, com texto humano; modelos utilitários só para retorno com data. Os modelos de \"cadastro recebido\" ficam como reserva, sem uso. Arquivar modelos antigos só depois de os novos estarem estáveis.</p>", p="pl"),
       card("Ritmo e limites", "<p>Conservador de propósito, para proteger a qualidade do número: aviso da Bia a representantes, no máximo 1 a cada 20 minutos por pessoa e 30 por hora no total; a Ana só toma a iniciativa entre 8h e 22h; cada aviso tem regra de não repetir; nada vai a um lead real em teste.</p>"),
       card("Entrega", "<p>A Bia só considera \"enviado\" quando o WhatsApp aceitou. Qualquer outro retorno vira erro e o aviso entra na fila durável.</p>", p="ok"),
-      card("Falha de entrega da própria Meta", "<p>Nos avisos da Bia, a falha fica registrada, mas não gera reenvio automático. Para a abertura da Ana a Ana tem, desde 15/11 às 10h02 (patch 1.3), uma camada de entrega: se a Meta recusar o modelo de marketing (código 131049), a Ana faz um único reenvio por um modelo de utilidade (aprovado na Meta); se falhar de novo, espera o lead escrever e cria uma tarefa humana com alerta. O primeiro caso real já gerou o reenvio agendado; o resultado do envio ainda será confirmado.</p>", p="ok"),
+      card("Falha de entrega da própria Meta", "<p>Nos avisos da Bia, a falha de ENTREGA recusada pela Meta fica registrada, mas ainda não gera reenvio automático (planejado); a falha de ENVIO entra na fila e é reenviada. Para a abertura da Ana a Ana tem, desde 15/11 às 10h02 (patch 1.3), uma camada de entrega: se a Meta recusar o modelo de marketing (código 131049), a Ana faz um único reenvio por um modelo de utilidade (aprovado na Meta); se falhar de novo, espera o lead escrever e cria uma tarefa humana com alerta. O primeiro caso real já gerou o reenvio agendado; o resultado do envio ainda será confirmado.</p>", p="ok"),
     ], 2))
     return sec("meta", "Plataforma", "WhatsApp e Meta", "Modelos, janela de 24 horas e limites que protegem o número.", corpo)

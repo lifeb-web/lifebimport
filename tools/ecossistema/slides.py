@@ -126,18 +126,18 @@ def slides():
         "Humaniza: mostra digitando e faz pausas",
         "Retoma quem some e encerra com educação quem está fora do perfil",
         "Usa mensagens modelo aprovadas na Meta; a equipe a instrui pela Central"]) + faixa_estado("ana") + '</div>' + chat + '</div>')
-    S.append(slide(6, "ana", "Ana: SDR inbound por WhatsApp", "Atendimento", ana))
+    S.append(slide(6, "ana", "Ana: SDR inbound por WhatsApp", "Atendimento", ana, "dense"))
     # 7 bia
     bia = ('<div class="dg2">'
         + card("bot", "Agente interno", "Conversa com o time pelo WhatsApp e age no CRM Agendor.")
-        + card("bell", "Avisos ao time", "Lead novo, retorno combinado, tarefa vencida: com botão para abrir.")
+        + card("bell", "Avisos ao time", "Lead novo, retorno combinado, tarefa vencida. Muitos avisos trazem botão para abrir a conversa.")
         + card("rocket", "Motores proativos", "Cobram o que está parado, no horário certo de cada pessoa.")
         + card("user", "Painel do representante", "A carteira ao vivo e as ações do dia, no celular.")
         + '</div><div class="band"><b>Regra de ouro:</b> a Bia é a única que escreve no CRM e só confirma depois de ler de volta.</div>')
     S.append(slide(7, "bia", "Bia: o agente interno", "Operação", bia))
     # 7b avisos
-    av = ('<div class="chain c5">' + no("Evento", "Lead novo, qualificou, pediu pessoa") + '<i class="dar">→</i>' + no("Regras da Ana", "Sem repetir, limite por hora, silêncio da noite", "n-p") + '<i class="dar">→</i>' + no("Regras da Bia", "Destino permitido, sem repetir", "n-p") + '<i class="dar">→</i>' + no("WhatsApp", "Aviso com botão para abrir a conversa", "n-g") + '<i class="dar">→</i>' + no("Confirmação", "Só conta como enviado se saiu de verdade", "n-g") + '</div>'
-        '<div class="band"><b>Se o envio falhar:</b> o aviso fica numa fila durável e um vigia reenvia sozinho. Aviso à noite e não urgente vai para o resumo.</div>')
+    av = ('<div class="chain c5">' + no("Evento", "Lead novo, qualificou, pediu pessoa") + '<i class="dar">→</i>' + no("Regras da Ana", "Sem repetir, limite por hora, silêncio da noite", "n-p") + '<i class="dar">→</i>' + no("Regras da Bia", "Destino permitido, sem repetir", "n-p") + '<i class="dar">→</i>' + no("WhatsApp", "Muitos avisos trazem botão para abrir a conversa", "n-g") + '<i class="dar">→</i>' + no("Confirmação", "Só conta como enviado se saiu de verdade", "n-g") + '</div>'
+        '<div class="band"><b>Se o envio falhar:</b> se o envio falha, o aviso entra numa fila e é reenviado sozinho. Se a Meta recusar a entrega, ainda não há reenvio automático (planejado). Aviso à noite e não urgente vai para o resumo.</div>')
     S.append(slide(0, "avisos", "Avisos que não se perdem", "Fluxo", av))
     # 8 hoje
     kan = ('<div class="kan" role="img" aria-label="Ilustração de colunas da página Hoje">' + "".join(
@@ -192,7 +192,7 @@ def slides():
         f'<div class="ec e-te"><h3>{pill("em implantação")}</h3><ul>{"".join(cols["implantacao"])}</ul></div>'
         f'<div class="ec e-pl"><h3>{pill("planejado")}</h3><ul>{"".join(cols["planejado"])}</ul></div></div>'
         f'<div class="band">Posição de {ATUAL}. "No ar" foi conferido em produção; "em implantação" está pronto, mas ainda não no ar; "planejado" é futuro.</div>')
-    S.append(slide(13, "estado", "O que está no ar e o que vem", "Situação", est))
+    S.append(slide(13, "estado", "O que está no ar e o que vem", "Situação", est, "dense"))
     # 14 encerramento
     fim = ('<div class="capa"><div class="capa-t"><span class="kick">Em resumo</span><h2 class="big">Uma operação conectada, do primeiro contato à venda</h2>'
         '<ul class="resumo"><li>IA atende e qualifica, pessoas decidem e vendem</li><li>Regras fixas e auditoria independente protegem a operação</li><li>Tudo registrado no CRM e medido no Dash</li></ul>'

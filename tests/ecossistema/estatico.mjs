@@ -36,6 +36,8 @@ t("o HTML bruto (atributos, scripts) também está limpo", ruins2.length === 0, 
 t("sem linguagem que a regra de projeto proíbe (burlar, fingir, pego, foge da regra)", !/\b(burlar|burla|fingir|foge da regra|pego)\b/i.test(texto));
 t("sem termos internos operacionais (Mac, 11h backup, chaves, rotas)", !/\b(Mac |Keychain|wrangler|worker\.dev|KV |SDR_[A-Z_]+|ENFORCE_|ANA_[A-Z_]+)/.test(texto));
 t("datas no formato dia/mês/ano (sem AAAA-MM-DD no texto, exceto a versão)", !/\b\d{4}-\d{2}-\d{2}\b/.test(texto.replace(/\d{4}-\d{2}-\d{2}\.\d+/g, "").replace("2026-11-09", "")));
+t("sem hashes de commit nem versões técnicas na página pública", !/(?<![\w-])(?=[0-9a-f]*\d)(?=[0-9a-f]*[a-f])[0-9a-f]{8}(?![\w-])/.test(texto), texto.match(/.{20}(?<![\w-])(?=[0-9a-f]*\d)(?=[0-9a-f]*[a-f])[0-9a-f]{8}(?![\w-]).{5}/)?.[0]);
+t("sem a afirmação de cópia à gestão nem absolutos sobre botões/reenvio", !/em cópia|com cópia à gestão|chegam sempre/.test(texto));
 // ---- comportamento no jsdom (deck) ----
 const w = dom.window; w.document.getElementById("apBtn").click();
 t("jsdom: clicar em Apresentar abre o deck com UM slide visível", w.document.documentElement.classList.contains("deck-on") && D.querySelectorAll(".slide.on").length === 1);

@@ -17,6 +17,7 @@
     stage.classList.toggle('port', port);
     var k = Math.min(w / sw, h / sh);
     stage.style.transform = 'translate(' + Math.round((w - sw * k) / 2) + 'px,' + Math.round((h - sh * k) / 2) + 'px) scale(' + k + ')';
+    stage.style.setProperty('--ctl', Math.ceil(84 / k) + 'px');
     deck.setAttribute('data-escala', k.toFixed(3));
   }
   function mostra(i, dir) {

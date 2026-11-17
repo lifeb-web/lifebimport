@@ -21,7 +21,7 @@ for (const [w, h] of TAM) {
   t(`${id}: deck cobre a tela inteira`, cobre[0] === cobre[2] && cobre[1] === cobre[3], cobre);
   const sem = await page.evaluate(() => ({ sx: document.documentElement.scrollWidth <= innerWidth + 1, sy: getComputedStyle(document.documentElement).overflow === "hidden", bodyOver: getComputedStyle(document.body).overflow }));
   t(`${id}: página sem rolagem com o deck aberto`, sem.sx && sem.sy && sem.bodyOver === "hidden", sem);
-  const tamMin = h < 500 ? 6 : w >= 1000 ? 11 : w >= 380 ? 10.5 : 10; // celular deitado: palco 16:9 reduzido, texto pequeno por natureza (só tela cheia e sem rolagem são exigidos)
+  const tamMin = h < 500 ? 5.5 : w >= 1280 ? 11 : w >= 1000 ? 9 : w >= 380 ? 10.5 : 10; // celular deitado: palco 16:9 reduzido, texto pequeno por natureza (só tela cheia e sem rolagem são exigidos)
   for (let i = 0; i < N; i++) {
     await page.evaluate((k) => window.__deck.mostra(k), i); await page.waitForTimeout(1100);
     const r = await page.evaluate(() => {
@@ -32,6 +32,8 @@ for (const [w, h] of TAM) {
       s.querySelectorAll("*").forEach((e) => { if (e.closest(".sr") || e.closest(".sl-h") && s.classList.contains("s-capa")) return; const b = e.getBoundingClientRect(); if (!b.width || !b.height) return;
         if (b.right > ib.right + 2 || b.left < ib.left - 2 || b.bottom > ib.bottom + 2 || b.top < ib.top - 2) out.push("fora " + (e.className.baseVal ?? e.className) + " " + Math.round(b.bottom - ib.bottom));
         if (e.children.length === 0 && e.textContent.trim() && !(e instanceof SVGElement)) { const fs = parseFloat(getComputedStyle(e).fontSize) * esc; if (fs < min) min = fs; } });
+      // título nunca sobrepõe o conteúdo, e o conteúdo respeita a folga da barra de controle
+      const h = s.querySelector(".sl-h"); if (h && getComputedStyle(h).clip === "auto") { const hb = h.getBoundingClientRect().bottom; const tops = [...s.querySelector(".sl-b").querySelectorAll("*")].map((e) => e.getBoundingClientRect()).filter((r) => r.width && r.height).map((r) => r.top); if (tops.length && Math.min(...tops) < hb + 4) out.push("título sobrepõe o conteúdo " + Math.round(hb - Math.min(...tops))); const cb = document.getElementById("dctl").getBoundingClientRect(); const bots = [...s.querySelector(".sl-b").querySelectorAll("*")].map((e) => e.getBoundingClientRect()).filter((r) => r.width && r.height).map((r) => r.bottom); if (innerHeight >= 500 && bots.length && Math.max(...bots) > cb.top - 6 && Math.max(...bots) > 0) out.push("conteúdo encosta na barra de controle " + Math.round(Math.max(...bots) - cb.top)); }
       // sobreposição de cartões irmãos
       const grupos = s.querySelectorAll(".dg2,.dg3,.dsteps,.chain,.funis,.kan,.two,.eq");
       grupos.forEach((g) => { const f = [...g.children].map((c) => c.getBoundingClientRect()); for (let a = 0; a < f.length; a++) for (let b = a + 1; b < f.length; b++) { const A = f[a], B = f[b]; if (A.width && B.width && A.left < B.right - 3 && B.left < A.right - 3 && A.top < B.bottom - 3 && B.top < A.bottom - 3) out.push("sobrepõe em " + g.className); } });

@@ -8,6 +8,15 @@ from comp import NAV, e
 import conteudo1 as c1, conteudo2 as c2, conteudo3 as c3
 VERSAO = c3.VERSAO
 
+HEX = r'(?=[0-9a-f]*\d)(?=[0-9a-f]*[a-f])[0-9a-f]{8}'
+def sem_hashes(h):
+    """A página pública não mostra identificadores técnicos de commit ou versão (ficam só em HISTORICO.md e versoes.json)."""
+    h = re.sub(r'\s*\((?:commit |versão )?' + HEX + r'\b[^)]*\)', '', h)
+    h = re.sub(r'(?:versão anterior|anterior|commit|versão)\s+' + HEX + r'\b( guardada| no git)?', lambda x: 'versão anterior guardada' if ('anterior' in x.group(0) or x.group(1)) else '', h)
+    h = re.sub(r'(?<![\w-])' + HEX + r'\b', '', h)
+    h = re.sub(r'\s*\(\s*\)', '', h)
+    return h
+
 def montar():
     NAV.clear()
     corpo = [c1.s_inicio(), c1.s_status(), c1.s_checklist(), c1.s_visao(), c1.s_entrada(), c1.s_ana(), c1.s_ana2(), c1.s_destinos(),
@@ -19,6 +28,7 @@ def montar():
     nav = [d[i] for i in ordem]
     # números das seções = posição real
     html_corpo = "".join(corpo)
+    html_corpo = sem_hashes(html_corpo)
     for pos, i in enumerate(ordem, 1):
         html_corpo = re.sub(r'(<section class="sec[^"]*" id="%s" data-n=")\d+(")' % re.escape(i), r'\g<1>%d\g<2>' % pos, html_corpo)
         html_corpo = re.sub(r'(<section class="sec" id="%s" data-n="%d"[^>]*>.*?<span class="num">)\d+(</span>)' % (re.escape(i), pos), r'\g<1>%d\g<2>' % pos, html_corpo, count=1, flags=re.S) if i != "inicio" else html_corpo
