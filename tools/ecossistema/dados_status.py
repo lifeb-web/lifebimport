@@ -30,6 +30,7 @@ CHECK = [
  ("Bia", "Observação do SDR só do SDR (Lista, repasse da Ana, Recuperação e webhook param de gravar texto automático)", "pl", "Próximo deploy da Bia."),
  ("Bia", "Servidor do Hoje 2.0 (rota da fila do espelho) e limite por clique", "of", "Código no ar na Bia de 15/11/2026 às 04h49; o limite no servidor está DESLIGADO e o espelho segue em sombra, sem uso real."),
  ("Bia", "Nota de handoff nova", "ok", "No ar desde 17/11/2026 (~03h)."),
+ ("Ana", "Ana-2b: compreensão da conversa (sim só após convite; pergunta de produto respondida com honestidade; CNPJ dito sem número; áudio com 3 tentativas)", "ok", "No ar desde 17/11/2026 (03h11)."),
  ("Ana", "Ana-2a: horário de contato (8h às 22h em dia útil; 9h às 20h em fim de semana e feriado), alerta de conferência sem repetição e início agendado no servidor", "ok", "No ar desde 16/11/2026 (~23h)."),
  ("Hoje", "Nova página Hoje: rótulos Hoje, Agora e Em [mês], e perdidos", "ok", "No ar desde 17/11/2026 (~02h)."),
  ("Bia", "Limpeza de avisos (menos ruído); cópia automática de avisos ao gestor desligada", "ok", "No ar desde a noite de 16/11/2026."),

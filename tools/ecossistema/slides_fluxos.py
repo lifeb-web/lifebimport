@@ -83,7 +83,7 @@ parte("cen", "Central: como ela controla a plataforma", "Pessoas com papéis usa
    N("reg", "Registro de configuração", "Chaves e valores lidos a cada uso. Chave ausente: vale o padrão seguro do código", "g", 0, 1, 2), N("api", "API de controle", "Valida valor e permissão, pede motivo, grava o histórico e relê para confirmar", "m", 2, 1, 2),
    N("sis", "Bia, Ana e páginas Hoje e Lista", "Leem os valores a cada uso. A página Central muda valores, não a lógica das regras nem segredos", "n", 0, 2, 4)],
   [("pes", "pag", ""), ("pag", "api", ""), ("api", "reg", ""), ("reg", "sis", "")],
-  nodes_n=[N("pes", "Pessoas e papéis", "Gestão muda tudo; administrador, risco baixo e médio; SDR só lê", "n", 0, 0), N("pag", "Página Central", "Atendimento, controles, histórico, filas, calendário e usuários", "p", 0, 1),
+  nodes_n=[N("pes", "Pessoas e papéis", "Gestão muda tudo; administrador, risco baixo e médio; SDR hoje só lê, depois só o que é dele", "n", 0, 0), N("pag", "Página Central", "Atendimento, controles, histórico, filas, calendário e usuários", "p", 0, 1),
            N("api", "API de controle e registro", "Valida, pede motivo, grava o histórico, relê; chave ausente: padrão seguro", "m", 0, 2), N("sis", "Bia, Ana e páginas Hoje e Lista", "Leem os valores; a página Central não muda a lógica", "n", 0, 3)],
   edges_n=[("pes", "pag", ""), ("pag", "api", ""), ("api", "sis", "")])
 
