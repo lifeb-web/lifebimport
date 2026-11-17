@@ -790,7 +790,7 @@ function casaBusca(it, q) {
 })();
 // ---------- chamadas ----------
 // ---------- resiliência: rede com retry, disjuntor, caixa de saída, versão, relógio do servidor, telemetria ----------
-var PAGINA_VERSAO = '2026-11-15.3';
+var PAGINA_VERSAO = '2026-11-17.1';
 var REDE = { escala: 1, falhas: 0, ultima: 0, desvio: 0 };
 function dormir(ms) { return new Promise(function (r) { setTimeout(r, ms * REDE.escala); }); }
 function jitter(ms) { return ms * (0.5 + Math.random() * 0.5); }
@@ -1327,13 +1327,15 @@ function desenhar(d) {
   desenharBlocos();
 }
 function frescorBlocos() { Array.prototype.forEach.call(document.querySelectorAll('.conf[data-ts]'), function (c) { var min = Math.floor((agoraMs() - Number(c.getAttribute('data-ts'))) / 60000); c.classList.toggle('velho', min > 10); c.textContent = 'conferido às ' + horaBRTs(Number(c.getAttribute('data-ts'))) + (min >= 2 ? ' (há ' + min + ' min)' : ''); }); }
+function diaBRT(ms) { try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms)); } catch (e) { logFalha('diaBRT: Intl indisponível', e); return new Date(ms - 3 * 3600000).toISOString().slice(0, 10); } }
+function idadeTxt(seg) { if (seg < 90) return seg + ' s'; var m = Math.round(seg / 60); if (m < 90) return m + ' min'; var h = Math.round(seg / 3600); if (h < 36) return h + ' h'; return Math.round(seg / 86400) + ' dias'; } // nunca 'há 2880 min'
 function tickRelogio() {
   S.tk = (S.tk || 0) + 1; if (S.tk % 15 === 1) frescorBlocos(); if (S.versaoNova && S.tk % 10 === 0) decideVersao();
   if (S.trunc && S.dados && S.dados.truncado && !S.trunc.tm && S.trunc.desde) truncadoArma(); // leitura que falhou não desenha: sem isto a nova tentativa de lista truncada morreria
   var b = partesBRT(); $('relogio').textContent = hh(b.h) + ':' + hh(b.m);
   var a = $('atualizado');
-  var seg = S.dados && S.dados.tarefasEm ? Math.max(0, Math.round((agoraMs() - S.dados.tarefasEm) / 1000)) : 0; var velho = seg > 60; var idade = seg < 90 ? seg + ' s' : Math.round(seg / 60) + ' min';
-  if (S.doCache && S.dados && S.dados.tarefasEm && !(S.erroCarregar && !S.conferindo)) { a.classList.add('velho'); a.textContent = 'Dado de há ' + idade + ' (' + horaBRTs(S.dados.tarefasEm) + '), atualizando…'; return; }
+  var seg = S.dados && S.dados.tarefasEm ? Math.max(0, Math.round((agoraMs() - S.dados.tarefasEm) / 1000)) : 0; var velho = seg > 60; var idade = idadeTxt(seg);
+  if (S.doCache && S.dados && S.dados.tarefasEm && !(S.erroCarregar && !S.conferindo)) { a.classList.add('velho'); var dDado = diaBRT(S.dados.tarefasEm), dHoje = diaBRT(agoraMs()); var quando = dDado === dHoje ? horaBRTs(S.dados.tarefasEm) : (dDado === diaBRT(agoraMs() - 86400000) ? 'de ontem, ' : 'de ' + dataBR(dDado) + ', ') + horaBRT(S.dados.tarefasEm); a.textContent = 'Dado de há ' + idade + ' (' + quando + '), atualizando…'; return; }
   if (S.erroCarregar && !S.conferindo) { a.classList.add('velho'); a.textContent = semForn(S.erroCarregar) + (S.dados && S.dados.tarefasEm ? ' Mostrando o dado de ' + horaBRTs(S.dados.tarefasEm) + '.' : ''); return; }   // 14/11: o erro de atualização FICA na tela até uma leitura dar certo (antes o relógio apagava em 1 s)
   if (S.conferindo) { a.classList.toggle('velho', velho); a.textContent = 'Atualizando…' + (velho ? ' (mostrando dado antigo, de há ' + idade + ')' : ''); return; }
   if (S.dados && S.dados.tarefasEm) {
@@ -1367,9 +1369,17 @@ function aceitar(j, manual) { return !!mesclar(j, manual); }
 // ---- 17/11: carregamento blindado. Cada parte (dia, aguardando, perdas) tem o seu pedido, o seu aviso pontual e a sua nova tentativa com espera crescente (4 s, 8 s, 16 s, com jitter, no máximo 3). Uma parte que falha não derruba as outras. ----
 S.rt = {};
 function limpaRetenta(nome) { if (S.rt[nome]) { clearTimeout(S.rt[nome].tm); } delete S.rt[nome]; }
-function retentaParte(nome, fn, tent) {
-  tent = tent || 0; if (tent === 0 && S.rt[nome]) return; if (tent >= 3 || !S.token) { delete S.rt[nome]; return; }
-  var esp = jitter(4000 * Math.pow(2, tent)) * REDE.escala; S.rt[nome] = { tm: setTimeout(function () { if (!S.token) { delete S.rt[nome]; return; } if (document.hidden || navigator.onLine === false) { S.rt[nome] = null; delete S.rt[nome]; return retentaParte(nome, fn, tent); } Promise.resolve().then(fn).then(function (ok) { if (ok === false) { delete S.rt[nome]; retentaParte(nome, fn, tent + 1); } else limpaRetenta(nome); }, function () { delete S.rt[nome]; retentaParte(nome, fn, tent + 1); }); }, esp) };
+S.rtRod = {};
+function retentaParte(nome, fn, tent, esgotou) {
+  tent = tent || 0; if (tent === 0 && (S.rt[nome] || S.rtRod[nome])) return; if (!S.token) { delete S.rt[nome]; return; }
+  if (tent >= 3) { delete S.rt[nome]; if (esgotou) esgotou(); return; } // esgotou as 3 tentativas: o aviso vira 'Não consegui… [Tentar agora]' (nada fica 'tentando' para sempre)
+  var esp = jitter(4000 * Math.pow(2, tent)) * REDE.escala;
+  S.rt[nome] = { tm: setTimeout(function () {
+    if (!S.token) { delete S.rt[nome]; return; }
+    if (document.hidden || navigator.onLine === false) { delete S.rt[nome]; return retentaParte(nome, fn, tent, esgotou); }
+    S.rtRod[nome] = true; // enquanto a tentativa roda, a própria função não agenda outra cadeia
+    Promise.resolve().then(fn).then(function (ok) { S.rtRod[nome] = false; delete S.rt[nome]; if (ok === false) retentaParte(nome, fn, tent + 1, esgotou); }, function () { S.rtRod[nome] = false; delete S.rt[nome]; retentaParte(nome, fn, tent + 1, esgotou); });
+  }, esp) };
 }
 function vigiaCarregando() { // nunca fica em 'Carregando…' para sempre: em 12 s sem dado mostra o estado degradado útil com botão 'Tentar agora' (o pedido continua)
   clearTimeout(S.vigiaTm); S.vigiaTm = setTimeout(function () {
@@ -1442,7 +1452,7 @@ async function entrar(token, silencioso) {
   if (silencioso) { pintarInicial(ult); S.conferindo = true; dadosP = carregar(false, false); } // 17/11: com a senha já salva, pinta o dado guardado AGORA e dispara o dia em paralelo com a conferência do /status (antes: status, depois tela, depois dia)
   var j;
   try { j = await api('/status'); } catch (e) { logFalha('l665 catch', e);  j = { _status: 0 }; }
-  function desfazPintura() { if (silencioso) { try { S.ctrlCarregar.abort(); } catch (e) { logFalha('entrar: cancelar leitura', e); } S.carregando = false; S.tem = false; S.doCache = false; S.dados = null; } }
+  function desfazPintura() { if (silencioso) { try { S.ctrlCarregar.abort(); } catch (e) { logFalha('entrar: cancelar leitura', e); } S.carregando = false; S.tem = false; S.doCache = false; S.dados = null; S.token = ''; S.reqSeq++; } } // zera o token e invalida o pedido em voo: o catch do carregar vê que não é mais o atual e não escreve 'Sem conexão' por cima do login
   if (j._status === 0) { if (silencioso) j = { ok: true, modo: 'on', _status: 200 }; else { $('loginMsg').textContent = 'Sem conexão com a Bia. Tente de novo.'; return false; } } // sem rede: abre o painel com o que já tem (ou o esqueleto com 'Tentar agora'), nunca volta para o login
   if (j._status === 401) { desfazPintura(); lsDel('sh_tok'); if (!silencioso) $('loginMsg').textContent = 'Senha não confere.'; return false; }
   if (j._status === 429) { desfazPintura(); if (!silencioso) $('loginMsg').textContent = 'Muitas tentativas. Espere 10 minutos.'; return false; }
@@ -2589,9 +2599,11 @@ function contextoAuto(L) {   // devolve { tipo, titulo, linhas } ou null quando 
   var lead = (L && L.lead) || {}; var tipo = tipoContexto(L); var linhas = [];
   var tf = (lead.tarefas || []).filter(function (x) { return x.feita && /^\s*\[(Recuperacao|Reativacao)/i.test(x.texto || ''); })[0];
   if (tf) { var ls = String(tf.texto).split('\n').map(function (x) { return x.trim(); }).filter(Boolean); ls.shift(); if (ls.length) ls[0] = ls[0].replace(/^De onde veio:\s*/i, ''); ls.slice(0, 4).forEach(function (x) { linhas.push(x); }); }
-  function comRotulo(rot, txt) { txt = String(txt); return rot && txt.toLowerCase().indexOf(rot.toLowerCase().trim()) === 0 ? txt : rot + txt; }   // sem prefixo duplicado
-  var obs = obsAutoTexto(L); if (obs && !linhas.some(function (x) { return x.indexOf(obs) >= 0; })) linhas.push(comRotulo(CTX_ROTULO_OBS[tipo], obs));
-  if (lead.resumoAna && typeof lead.resumoAna === 'string') linhas.push(comRotulo('Resumo da Ana: ', lead.resumoAna));
+  function semPrefixo(txt) { txt = String(txt).trim(); var ant; do { ant = txt; txt = txt.replace(/^\s*(Resumo da Ana|Observa[cç][aã]o da planilha|Observa[cç][aã]o j[aá] registrada|Ana)\s*:\s*/i, ''); } while (txt !== ant); return txt; } // 17/11 (Robert #2400): nunca 'Resumo da Ana: Ana: …' (tira 'Ana:' e o próprio rótulo repetido)
+  function soSegmento(t) { return t.length > 0 && t.length <= 30 && !/[.!?;\n\d]/.test(t) && t.split(/\s+/).length <= 3; } // 'farmácia', 'mercado de bairro': só o segmento, não é resumo
+  function comRotulo(rot, txt) { var corpo = semPrefixo(txt); if (!corpo) return ''; if (rot === 'Resumo da Ana: ' && soSegmento(corpo)) return 'Segmento informado: ' + corpo; return (rot || '') + corpo; }
+  var obs = obsAutoTexto(L); if (obs && !linhas.some(function (x) { return x.indexOf(obs) >= 0; })) { var lo = comRotulo(CTX_ROTULO_OBS[tipo], obs); if (lo) linhas.push(lo); }
+  if (lead.resumoAna && typeof lead.resumoAna === 'string') { var lr = comRotulo('Resumo da Ana: ', lead.resumoAna); if (lr && !linhas.some(function (x) { return x === lr; })) linhas.push(lr); }
   var ori = (lead.origemDeal && lead.origemDeal.nome) || lead.origemMae || ''; if (ori && tipo !== 'recuperacao' && tipo !== 'reativacao' && tipo !== 'manual') linhas.unshift('Origem: ' + ori);
   if (tipo === 'lista' && L && L.item && L.item.fonte) linhas.splice(1, 0, 'Lista: ' + L.item.fonte);
   linhas = linhas.map(function (x) { x = String(x); return x.length > 400 ? x.slice(0, 397) + '…' : x; });
@@ -2891,8 +2903,8 @@ $('bFecharLead').onclick = fecharLead; $('bFecharGanho').onclick = fecharGanho;
 // ---------- Perdas sem contexto (09/11): lead perdido direto no Agendor sem contar o que houve. Fica em vermelho no topo até o SDR contar (nunca reabre o lead) ----------
 S.pcx = { itens: [] };
 async function carregarPerdasCtx() {
-  if (!S.token) return true; var j; try { j = await api('/perdas-sem-contexto'); } catch (e) { faixa('perdas', 'Não consegui atualizar as perdas sem contexto, tentando de novo.', 'aviso'); retentaParte('perdas', carregarPerdasCtx); return false; }
-  if (!j || j.ok === false || j._status >= 400 || j._status === 0) { if (j && j._status === 401) return true; faixa('perdas', 'Não consegui atualizar as perdas sem contexto, tentando de novo.', 'aviso'); retentaParte('perdas', carregarPerdasCtx); return false; }
+  if (!S.token) return true; var j; try { j = await api('/perdas-sem-contexto'); } catch (e) { faixa('perdas', 'Não consegui atualizar as perdas sem contexto, tentando de novo.', 'aviso'); retentaParte('perdas', carregarPerdasCtx, 0, function () { faixa('perdas', 'Não consegui atualizar as perdas sem contexto.', 'aviso', { rot: 'Tentar agora', acao: function () { carregarPerdasCtx(); } }); }); return false; }
+  if (!j || j.ok === false || j._status >= 400 || j._status === 0) { if (j && j._status === 401) return true; faixa('perdas', 'Não consegui atualizar as perdas sem contexto, tentando de novo.', 'aviso'); retentaParte('perdas', carregarPerdasCtx, 0, function () { faixa('perdas', 'Não consegui atualizar as perdas sem contexto.', 'aviso', { rot: 'Tentar agora', acao: function () { carregarPerdasCtx(); } }); }); return false; }
   faixa('perdas', ''); limpaRetenta('perdas'); S.pcx.itens = j.itens || []; desenharPerdasCtx();
   if (S.L && S.L.lead && S.L.lead.status === 'perdido') renderRodape(S.L);
   return true;
@@ -2931,7 +2943,7 @@ function rotuloAguard() { var n = S.ag.itens.filter(function (i) { return !S.ag.
 async function carregarAguardando(silencioso, fresco) {
   if (!S.token) return true; var meu = ++S.ag.seq; var j; try { j = await api('/aguardando-representante' + (fresco ? '?fresco=1' : '')); } catch (e) { logFalha('l2110 catch', e);  j = { _status: 0 }; }
   if (j._status === 401) { sair('Senha não confere.'); return true; } if (meu !== S.ag.seq) return true;
-  if (j.ok === false || j._status >= 400 || j._status === 0) { if (!silencioso) $('agAviso').textContent = msgErro(j); else { faixa('aguard', 'Não consegui atualizar a lista de leads esperando representante, tentando de novo.', 'aviso'); retentaParte('aguard', function () { return carregarAguardando(true); }); } return false; }
+  if (j.ok === false || j._status >= 400 || j._status === 0) { if (!silencioso) $('agAviso').textContent = msgErro(j); else { faixa('aguard', 'Não consegui atualizar a lista de leads esperando representante, tentando de novo.', 'aviso'); retentaParte('aguard', function () { return carregarAguardando(true); }, 0, function () { faixa('aguard', 'Não consegui atualizar a lista de leads esperando representante.', 'aviso', { rot: 'Tentar agora', acao: function () { carregarAguardando(true); } }); }); } return false; }
   faixa('aguard', ''); limpaRetenta('aguard'); S.ag.itens = j.itens || []; if (j.total == null || j.total <= S.ag.itens.length) soltaRepSumidos(S.ag.itens); S.ag.total = j.total != null ? j.total : S.ag.itens.length; S.ag.responsaveis = j.responsaveis || S.ag.responsaveis; S.ag.ocultos = {}; $('agAviso').textContent = ''; rotuloAguard(); if (S.ag.aberto) desenharAguardando(); return true;
 }
 function desenharAguardando() {
@@ -3016,7 +3028,7 @@ document.addEventListener('keydown', function (e) {
 desenharTopo = seguro('desenharTopo', desenharTopo); desenharControle = seguro('desenharControle', desenharControle); desenharBlocos = seguro('desenharBlocos', desenharBlocos); desenharFila = seguro('desenharFila', desenharFila); desenharAguardando = seguro('desenharAguardando', desenharAguardando); renderLead = seguro('renderLead', renderLead); renderGanho = seguro('renderGanho', renderGanho);
 cartao = seguro('cartao', cartao, function (it) { var f = el('div', 'item'); f.appendChild(el('div', 'emp', (it && it.empresa) || 'Item')); f.appendChild(el('div', 'pas', 'Não consegui mostrar os detalhes deste item.')); return f; });
 cartaoAtrasado = seguro('cartaoAtrasado', cartaoAtrasado, function (g) { var f = el('div', 'item'); f.appendChild(el('div', 'emp', (g && g.empresa) || 'Item')); return f; });
-window.__shTeste = { mesAtualSP: mesAtualSP, nomeMes: nomeMes, decideVersao: decideVersao, verificarVersaoPagina: verificarVersaoPagina, salvarVista: salvarVista, aplicarVista: aplicarVista, ociosoMs: ociosoMs, retentaParte: retentaParte, logFalha: logFalha, falhas: function () { return FALHAS; }, estadoSync: estadoSync, desfazerSaida: desfazerSaida, atualizarSelo: atualizarSelo, semForn: semForn, hoje2Valido: hoje2Valido, hoje2Cartao: hoje2Cartao, processarSaida: processarSaida, tentarAgora: tentarAgora, buscarGeral: buscarGeral, bgValida: bgValida, opcoesAdiar: opcoesAdiar, enviarAcao: enviarAcao, versaoMaisNova: versaoMaisNova, iniciarContinuar: iniciarContinuar, continuarLaco: continuarLaco, fmtCampo: fmtCampo, fadeChips: fadeChips, REDE: REDE, lerSaida: lerSaida, processarSaida: processarSaida, reportarErro: reportarErro, aplicarStatus: aplicarStatus, hooks: { recarregar: null }, falhaDePagina: falhaDePagina, verificarVersao: verificarVersao, agoraMs: agoraMs, PAGINA_VERSAO: PAGINA_VERSAO, carregarAguardando: carregarAguardando, S: S, desenhar: desenhar, carregar: carregar, casaBusca: casaBusca, foneFmt: foneFmt, aceitar: aceitar, abrirLead: abrirLead, abrirGanho: abrirGanho, cnpjValido: cnpjValido, desenharFila: desenharFila, carregarFila: carregarFila, origemClasse: origemClasse, mascCnpj: mascCnpj, renderLead: renderLead, carregarLead: carregarLead, contextoAuto: contextoAuto, tipoContexto: tipoContexto, secaoOrigem: secaoOrigem, obsSdrPronta: obsSdrPronta, validarCampo: validarCampo, valorOrig: valorOrig, valorAtual: valorAtual, faltaAinda: faltaAinda, atualizarGanhoBtn: atualizarGanhoBtn };
+window.__shTeste = { contextoAuto: contextoAuto, mesAtualSP: mesAtualSP, nomeMes: nomeMes, decideVersao: decideVersao, verificarVersaoPagina: verificarVersaoPagina, salvarVista: salvarVista, aplicarVista: aplicarVista, ociosoMs: ociosoMs, retentaParte: retentaParte, logFalha: logFalha, falhas: function () { return FALHAS; }, estadoSync: estadoSync, desfazerSaida: desfazerSaida, atualizarSelo: atualizarSelo, semForn: semForn, hoje2Valido: hoje2Valido, hoje2Cartao: hoje2Cartao, processarSaida: processarSaida, tentarAgora: tentarAgora, buscarGeral: buscarGeral, bgValida: bgValida, opcoesAdiar: opcoesAdiar, enviarAcao: enviarAcao, versaoMaisNova: versaoMaisNova, iniciarContinuar: iniciarContinuar, continuarLaco: continuarLaco, fmtCampo: fmtCampo, fadeChips: fadeChips, REDE: REDE, lerSaida: lerSaida, processarSaida: processarSaida, reportarErro: reportarErro, aplicarStatus: aplicarStatus, hooks: { recarregar: null }, falhaDePagina: falhaDePagina, verificarVersao: verificarVersao, agoraMs: agoraMs, PAGINA_VERSAO: PAGINA_VERSAO, carregarAguardando: carregarAguardando, S: S, desenhar: desenhar, carregar: carregar, casaBusca: casaBusca, foneFmt: foneFmt, aceitar: aceitar, abrirLead: abrirLead, abrirGanho: abrirGanho, cnpjValido: cnpjValido, desenharFila: desenharFila, carregarFila: carregarFila, origemClasse: origemClasse, mascCnpj: mascCnpj, renderLead: renderLead, carregarLead: carregarLead, contextoAuto: contextoAuto, tipoContexto: tipoContexto, secaoOrigem: secaoOrigem, obsSdrPronta: obsSdrPronta, validarCampo: validarCampo, valorOrig: valorOrig, valorAtual: valorAtual, faltaAinda: faltaAinda, atualizarGanhoBtn: atualizarGanhoBtn };
 (async function () {
   var t = lsGet('sh_tok');
   if (t) { var ok = await entrar(t, true); if (ok) return; }
