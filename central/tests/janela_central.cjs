@@ -99,7 +99,7 @@ async function cena(b, vp, tema, nome) {
   await p.evaluate((f) => { location.hash = "#atendimento-" + f; }, F.C); await p.waitForTimeout(700); if (mob) await p.click("#atChat .hd .ib.fx").catch(() => {});
   await p.waitForTimeout(300);
   const fc2 = await p.evaluate(() => { const f = document.getElementById("atFicha"); return { heads: [...f.querySelectorAll(".fgh")].map((e) => e.textContent), txt: f.innerText }; });
-  S.ok(/REPASSADA AO FELIPE por Robert, 16\/11 23:55/.test(fc2.txt), nome + ": Diego: selo do repasse na ficha"); S.ok(/Janela FECHADA há 2 dias/.test(fc2.txt) && /modelo aprovada/.test(fc2.txt), nome + ": Diego: janela fechada + 'só modelo aprovado'");
+  S.ok(/REPASSADA AO FELIPE por Robert, 16\/11 23:55/.test(fc2.txt), nome + ": Diego: selo do repasse na ficha"); S.ok(/Janela FECHADA há 2 dias/.test(fc2.txt) && /modelo aprovado/.test(fc2.txt), nome + ": Diego: janela fechada + 'só modelo aprovado'");
   S.ok(fc2.heads.join("|") === "Janela e entrada|Repasse ao Felipe|Instrução da equipe|Dados qualificados|Histórico", nome + ": Diego: os 5 blocos na ordem pedida " + JSON.stringify(fc2.heads));
   S.ok(/Não oferecer desconto/.test(fc2.txt), nome + ": Diego: instrução da equipe no bloco certo");
   const hd2 = await p.$$eval("#atChat .selosHd .tg", (x) => x.map((e) => e.textContent)); S.ok(hd2.some((t) => /REPASSADA AO FELIPE/.test(t)) && hd2.some((t) => /Janela FECHADA/.test(t)), nome + ": Diego: topo com repasse e janela " + JSON.stringify(hd2));
