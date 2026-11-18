@@ -35,7 +35,7 @@ function novoMock(extra = {}) {
   return B.criarMock({ agentes: () => { const a = B.agentesPadrao(); a.agentes[0].conversas = estado.conv; a.agentes[0].auditoria = []; return a; }, conversa: (url) => fichaDe(url.searchParams.get("fone")), ...extra });
 }
 async function abrirPagina(b, vp, tema, mock, hash = "#atendimento", relogio) {
-  const ctx = await b.newContext({ viewport: vp, colorScheme: tema, hasTouch: vp.width < 700 }); await ctx.addInitScript(() => { window.__CENTRAL_TESTE = true; window.__PS_INTERVALO_TESTE = 150; window.__cls = 0; try { new PerformanceObserver((l) => { for (const e of l.getEntries()) window.__cls += e.value; }).observe({ type: "layout-shift", buffered: true }); } catch (e) {} }); 
+  const ctx = await b.newContext({ viewport: vp, colorScheme: tema, hasTouch: vp.width < 700 }); await ctx.addInitScript(() => { try { localStorage.setItem("central_at_filtros:robert@x.com", "1"); } catch (e) {} });   // #3143: no celular a barra de filtros nasce recolhida; estes testes usam os chips await ctx.addInitScript(() => { window.__CENTRAL_TESTE = true; window.__PS_INTERVALO_TESTE = 150; window.__cls = 0; try { new PerformanceObserver((l) => { for (const e of l.getEntries()) window.__cls += e.value; }).observe({ type: "layout-shift", buffered: true }); } catch (e) {} }); 
   const p = await B.novaPagina(ctx, mock); if (relogio) await p.clock.install({ time: new Date() }); await B.entrar(p, hash); return { ctx, p };
 }
 async function cena(b, vp, tema, nome) {

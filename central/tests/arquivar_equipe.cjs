@@ -46,7 +46,7 @@ function mensagem(E, fone, de, texto, quando) {
   if (E.srv !== "antigo") { it.ultimaAtividade = quando; if (it.arquivada && quando > it.arquivada.ts) { delete it.arquivada; it.voltouEm = quando + 5; it.voltouMotivo = "nova_mensagem"; it.voltouDe = "arquivada"; it.voltouOrigem = "mensagem"; } }
 }
 async function abrir(b, E, vp, hash) {
-  const ctx = await b.newContext({ viewport: vp, hasTouch: vp.width < 700 }); await ctx.addInitScript(() => { window.__CENTRAL_TESTE = true; });
+  const ctx = await b.newContext({ viewport: vp, hasTouch: vp.width < 700 }); await ctx.addInitScript(() => { try { localStorage.setItem("central_at_filtros:robert@x.com", "1"); } catch (e) {} });   // #3143: barra de filtros aberta (no celular nasce recolhida) await ctx.addInitScript(() => { window.__CENTRAL_TESTE = true; });
   const p = await B.novaPagina(ctx, novoMock(E)); await p.clock.install({ time: new Date() }); await B.entrar(p, hash || "#atendimento"); await p.waitForSelector("#atItens .ri", { timeout: 10000 }); await p.waitForTimeout(300);
   await p.clock.fastForward(20000); await p.waitForTimeout(400);   // 1ª atualização da lista (registra o que viu)
   return { ctx, p };
