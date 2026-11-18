@@ -4,7 +4,7 @@ const B = require("./_base.cjs"); const { chromium } = require(process.argv[2]);
 const fs = require("fs"); const PR = process.env.PRINTS || "/tmp/central_prints"; fs.mkdirSync(PR, { recursive: true });
 const NOW = Date.now(), H = 3600000, M = 60000, D = 24 * H;
 const T_REP = Date.UTC(2026, 10, 17, 2, 55);   // 16/11 23:55 em Brasília
-const F = { A: "5562900000001", B: "5562900000002", C: "5544999777680", D: "5562900000004", E: "5562900000005", N: "559992320998", G: "5562900000007", X: "5562900000008" };
+const F = { M: "5562900000019", A: "5562900000001", B: "5562900000002", C: "5544999777680", D: "5562900000004", E: "5562900000005", N: "559992320998", G: "5562900000007", X: "5562900000008" };
 const HOSTIL = '<img src=x onerror="window.__xss=1">';
 function conversas() {
   const c = [
@@ -15,6 +15,7 @@ function conversas() {
     { fone: F.E, nome: "Número Ruim", estagio: "novo", humano: false, pausado: false, ts: NOW - 4 * D, previa: "Oi", ultimaDe: "ana", numeroInvalido: true, numeroInvalidoCodigo: 131026, janela: { aberta: false, fechouEm: NOW - 4 * D } },
     { fone: F.N, nome: "", estagio: "novo", humano: false, pausado: false, ts: NOW - 2 * H, previa: "Oi, tudo bem?", ultimaDe: "ana", janela: { aberta: true, fechaEm: NOW + 10 * H + 5 * M, ultimaDoLead: NOW - 13 * H } },
     { fone: F.G, nome: "Arquivada Teste", estagio: "perguntou_cnpj", humano: false, pausado: false, ts: NOW - 4 * H, previa: "tchau", ultimaDe: "lead", arquivada: { ts: NOW - 3 * H } },
+    { fone: F.M, nome: "Meta Limitou", estagio: "novo", humano: false, pausado: false, ts: NOW - 7 * H, previa: "Oi", ultimaDe: "ana", entrega: { estado: "limitada_meta", codigo: 130472, texto: "A Meta limitou esse número (experimento): reenviando por modelo de utilidade", fase: "reenviando", tentativas: 1, ts: NOW - 7 * H } },
     { fone: F.X, nome: HOSTIL, estagio: "novo", humano: false, pausado: false, ts: NOW - 6 * H, previa: HOSTIL, ultimaDe: "lead", repasse: { repassada: true, quem: HOSTIL, quando: T_REP, motivo: null } },
   ];
   for (let k = 0; k < 40; k++) c.push({ fone: "55629" + String(10000000 + k), nome: "Fila " + k, estagio: "perguntou_cnpj", humano: false, pausado: false, ts: NOW - (30 + k) * M, previa: "msg " + k, ultimaDe: "lead" });
@@ -25,6 +26,7 @@ function fichaDe(f) {
   if (f === F.A) return base({ nome: "Maria Silva", hist: [{ de: "lead", ts: NOW - (20 * H + 48 * M), texto: "Pode ser amanhã?" }, { de: "ana", ts: NOW - (20 * H + 40 * M), texto: "Claro!" }] });
   if (f === F.C) return base({ nome: "Diego Alves", estagio: "aguardando_humano", repasse: { repassada: true, quem: "Robert", quando: T_REP, motivo: "handoff_manual" }, janela: { aberta: false, fechouEm: NOW - 2 * D, ultimaDoLead: NOW - 3 * D }, notas: [{ texto: "Passada manualmente ao Felipe (negócio 4242)", ts: T_REP, quem: "Robert" }], instrucoes: [{ texto: "Não oferecer desconto", ts: NOW - H, quem: "Robert" }], hist: [{ de: "lead", ts: NOW - 3 * D, texto: "quero falar com alguém" }] });
   if (f === F.N) return base({ nome: "", hist: [{ de: "ana", ts: NOW - 2 * H, texto: "Oi, tudo bem?" }], janela: { aberta: true, fechaEm: NOW + 10 * H + 5 * M, ultimaDoLead: NOW - 13 * H }, formulario: { nome: "Natália", telefone: "559992320998", origem: "rede_farma", campanha: null, entrouEm: NOW - 13 * H, campos: { empresaCadastro: "Farma Bem", cnpj: "00.000.000/0001-00", segmentoProvavel: { valor: "farmacia", fonte: "cnpj" }, tentouEm: NOW - 13 * H, origemPagina: "rede_farma", primeiraMensagemDoLead: "Quero saber do projeto", modeloDeAbertura: { modelo: "abertura_v2", texto: "Oi, tudo bem?", ts: NOW - 2 * H }, jaCliente: false, emAtendimento: null } } });
+  if (f === F.M) return base({ nome: "Meta Limitou", hist: [{ de: "ana", ts: NOW - 7 * H, tipo: "modelo", texto: "Oi", ent: "failed" }], entrega: { estado: "limitada_meta", codigo: 130472, texto: "A Meta limitou esse número (experimento): reenviando por modelo de utilidade", fase: "reenviando", tentativas: 1, ts: NOW - 7 * H } });
   if (f === F.X) return base({ nome: HOSTIL, hist: [{ de: "lead", ts: NOW - 6 * H, texto: HOSTIL }], repasse: { repassada: true, quem: HOSTIL, quando: T_REP, motivo: null }, formulario: { nome: HOSTIL, origem: HOSTIL, campanha: HOSTIL, campos: { cnpj: HOSTIL, primeiraMensagemDoLead: HOSTIL } } });
   return base({ nome: "Lead", hist: [{ de: "lead", ts: NOW - 3 * D, texto: "oi" }] });
 }
@@ -55,6 +57,8 @@ async function cena(b, vp, tema, nome) {
   S.ok(/Janela ABERTA, fecha em (10h0\d|9h5\d)/.test(await txt(F.N)), nome + ": N (servidor): aberta 10h05");
   S.ok(/Janela/.test(await txt("55629" + String(10000000 + 5))), nome + ": linha comum também tem janela");
   S.ok((await p.$$(`#atItens .ri[data-fone="${F.G}"]`)).length === 0, nome + ": arquivada fora da lista principal");
+  // ---- 1c. entrega: selo limitadaMeta na lista e texto na ficha ----
+  S.ok(/Meta limitou: reenviando por utilidade/.test(await txt(F.M)), nome + ": M: selo 'Meta limitou: reenviando por utilidade' na lista | " + (await txt(F.M)).replace(/\n/g, " / "));
   // ---- 2. repasse ----
   S.ok(/REPASSADA AO FELIPE por Robert, 16\/11 23:55/.test(await txt(F.C)), nome + ": C: selo REPASSADA AO FELIPE por Robert, 16/11 23:55 | " + (await txt(F.C)).replace(/\n/g, " / "));
   S.ok(/Precisa de você/.test(await txt(F.C)), nome + ": C: 'precisa de você' continua");
@@ -89,6 +93,8 @@ async function cena(b, vp, tema, nome) {
   const faixaN = await p.$$eval("#atChat .selosHd .tg", (x) => x.map((e) => e.textContent)); S.ok(faixaN.some((t) => /^Janela ABERTA/.test(t)), nome + ": topo da conversa tem o selo da janela " + JSON.stringify(faixaN));
   await p.screenshot({ path: `${PR}/2_ficha_formulario_${nome}.png` });
   const sc = await p.evaluate(() => ({ w: document.documentElement.scrollWidth, c: document.documentElement.clientWidth, fw: document.getElementById("atFicha") ? document.getElementById("atFicha").scrollWidth - document.getElementById("atFicha").clientWidth : 0 })); S.ok(sc.w <= sc.c + 1 && sc.fw <= 1, nome + ": sem rolagem lateral (página " + sc.w + "/" + sc.c + ", ficha +" + sc.fw + ")");
+  await p.evaluate((f) => { location.hash = "#atendimento-" + f; }, F.M); await p.waitForSelector("#atChat .hd", { timeout: 8000 }); await p.waitForTimeout(500); if (mob) await p.click("#atChat .hd .ib.fx").catch(() => {}); await p.waitForTimeout(300);
+  { const fm = await p.$eval("#atFicha", (e) => e.innerText); S.ok(/Entrega da mensagem/i.test(fm) && /A Meta limitou esse número \(experimento\)/.test(fm) && /130472/.test(fm), nome + ": M: ficha mostra o texto da entrega e o código"); const topo = await p.$$eval("#atChat .selosHd .tg", (x) => x.map((e) => e.textContent)); S.ok(topo.some((t) => /Meta limitou/.test(t)), nome + ": M: topo da conversa tem o selo " + JSON.stringify(topo)); }
   // ---- 9. ficha do Diego: repasse + janela fechada + instrução da equipe ----
   await p.evaluate((f) => { location.hash = "#atendimento-" + f; }, F.C); await p.waitForTimeout(700); if (mob) await p.click("#atChat .hd .ib.fx").catch(() => {});
   await p.waitForTimeout(300);
