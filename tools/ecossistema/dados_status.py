@@ -10,7 +10,7 @@ CHECK = [
  ("Ana", "Monitoria: leitura de cada resposta em conversa real, com correção orientando a próxima", "ok", "Ligada. Revisão independente e prova ao vivo da orientação estão na fila."),
  ("Ana", "Vigia do webhook do número da Ana na Meta (confere a cada 5 minutos e recoloca se sumir)", "ok", "No ar. Nasceu do desaparecimento do webhook ocorrido em 12/11/2026: se sumir de novo, o vigia recoloca e avisa."),
  ("Ana", "Primeiros ajustes de conversa: número do time só quando o lead pede, lojista nunca descartado por engano, pergunta direta de compra barrada, toques sem repetir modelo, CNPJ inexistente avisa uma vez", "ok", "No ar desde 15/11/2026."),
- ("Ana", "Camada de entrega para falha da Meta na abertura: um reenvio por modelo de utilidade; se falhar, espera o lead e cria tarefa humana com alerta", "ok", "Construída em 15/11/2026; não funcionou no caso real de 17/11/2026 (a cadência de abertura cancelou o reenvio agendado); corrigida e no ar desde 17/11/2026 (23h40), agora com tarefa humana em 24 h. O resultado do caso real será conferido na manhã de 18/11/2026."),
+ ("Ana", "Camada de entrega para falha da Meta na abertura: um reenvio por modelo de utilidade; se falhar, espera o lead e cria tarefa humana com alerta", "ap", "No ar desde 17/11/2026 (23h40); resultado em caso real ainda a provar (18/11/2026). Construída em 15/11/2026; não funcionou no caso real de 17/11/2026 (a cadência de abertura cancelou o reenvio agendado); corrigida, agora com tarefa humana em 24 h."),
  ("Ana", "Pacote 1: instrução da equipe que manda e encerra; fora do perfil inclui vendedor de sistema; CNPJ baixado ou inapta tratado", "ok", "No ar desde a noite de 16/11/2026."),
  ("Ana", "Cadência de 3 toques com mensagens de utilidade", "pl", "Planejado: ainda não existe."),
  ("Ana", "Juízes de IA como guarda-corpo em tempo real", "pl", "Planejado: ainda não existe."),
@@ -87,7 +87,7 @@ DEPENDE = [
 ]
 
 def contagem():
-    c = {"ok": 0, "te": 0, "pl": 0, "de": 0, "lm": 0, "of": 0}
+    c = {"ok": 0, "te": 0, "pl": 0, "de": 0, "lm": 0, "of": 0, "ap": 0}   # ap = no ar, resultado em caso real ainda a provar
     for g, i, s, p in CHECK:
         c[s] += 1
     return c

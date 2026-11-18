@@ -72,7 +72,7 @@ def s_observ():
         ["Nova tentativa", "Falha temporária é repetida com pausa crescente, com teto de tentativas. Aviso cujo envio falhou volta a cada 5 minutos por até 24 horas.", "Fila durável"],
         ["Plano B", "IA falhou: texto padrão seguro. Voz falhou: voz reserva e depois a da Bia, e por fim texto. Rota de saída do Agendor bloqueada: rota alternativa.", "Dentro da própria conversa"],
         ["Só conta se saiu", "\"Enviado\" só quando o WhatsApp aceitou.", "Registro de cada tentativa"],
-        ["Falha da Meta na abertura da Ana", "Reenvio por utilidade e tarefa humana em 24 h: construído em 15/11/2026, não funcionou no caso real de 17/11/2026 e corrigido no pacote da Ana de 17/11/2026 (23h40); o resultado do caso real será conferido na manhã de 18/11/2026.", "Central e alerta à gestão"],
+        ["Falha da Meta na abertura da Ana", "Reenvio por utilidade e tarefa humana em 24 h: construído em 15/11/2026, não funcionou no caso real de 17/11/2026 e corrigido no pacote da Ana de 17/11/2026 (23h40): no ar; resultado em caso real ainda a provar (18/11/2026).", "Central e alerta à gestão"],
         ["Status visível", "Fila por pessoa, avisos pendentes e saúde das rotinas.", "Central e aba BIA do Dash"],
         ["Alerta sem barulho", "Se esgotar, a rotina para de insistir e avisa a gestão; falha passageira só alerta na segunda ocorrência seguida.", "WhatsApp da gestão"],
       ], "", "Camadas de entrega")
@@ -83,7 +83,7 @@ def s_observ():
         card("Coerência", ul(["Auditor de coerência: lê o que a Bia disse e confere no Agendor se foi feito de verdade; divergência vai à gestão.", ])),
         card("Custo", ul(["Dash, aba Agentes: gasto por modelo, por lead novo, por qualificado e projeção do mês.", "Alerta de custo diário e mensal."])),
       ], 2)
-      + aviso("Limites declarados", "Falha de ENVIO entra na fila e é reenviada; falha de ENTREGA recusada pela Meta, nos avisos da Bia, ainda não gera reenvio automático (planejado). O reenvio por utilidade da abertura da Ana foi corrigido em 17/11/2026 (23h40); o resultado do caso real será conferido na manhã de 18/11/2026. O custo real da Bia ainda não é medido por completo. A conferência do Agendor só enxerga tarefas abertas há menos de 31 dias nas buscas por filtro.", "w"))
+      + aviso("Limites declarados", "Falha de ENVIO entra na fila e é reenviada; falha de ENTREGA recusada pela Meta, nos avisos da Bia, ainda não gera reenvio automático (planejado). O reenvio por utilidade da abertura da Ana foi corrigido em 17/11/2026 (23h40): no ar; resultado em caso real ainda a provar (18/11/2026). O custo real da Bia ainda não é medido por completo. A conferência do Agendor só enxerga tarefas abertas há menos de 31 dias nas buscas por filtro.", "w"))
     return sec("observ", "Plataforma", "Observabilidade e entrega de avisos", "Vigias, nova tentativa, plano B e status visível na página Central.", corpo)
 
 def s_duvidas():

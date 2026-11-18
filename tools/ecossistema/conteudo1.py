@@ -14,7 +14,7 @@ def s_inicio():
       '<p class="hero-p">O mapa completo da operação comercial: como o lead chega, como a Ana (SDR Inbound virtual no WhatsApp) e a Bia (assistente de operação) trabalham, onde cada informação é escrita e quais regras mantêm tudo em ordem. Feito para a equipe, para parceiros e para quem está conhecendo a empresa agora.</p>'
       '<div class="chips"><span class="chip">Versão '+__import__("conteudo3").VERSAO+' · atualizado em '+DATA+'</span><span class="chip">Sem dados pessoais de clientes</span><span class="chip">Conferido no código e nos painéis</span></div>'
       '<div class="hero-a"><a class="btn pri" href="#status">Ver o status de hoje</a><button type="button" class="btn" data-apres>Apresentar em tela cheia</button></div></div></div>'
-      + stats([(c["ok"], "entregas no ar e conferidas", "ok"), (c["te"], "prontas e em implantação (ainda não no ar)", "te"), (c["pl"] + c["of"] + c["lm"], "planejadas, desligadas de propósito ou com limite conhecido", "pl"), (c["de"], "dependem de decisão da gestão", "de")])
+      + stats([(c["ok"], "entregas no ar e conferidas", "ok"), (c["te"], "prontas e em implantação (ainda não no ar)", "te"), (c["pl"] + c["of"] + c["lm"] + c["ap"], "planejadas, desligadas de propósito, com limite conhecido ou no ar com resultado a provar", "pl"), (c["de"], "dependem de decisão da gestão", "de")])
       + '<h3 class="mt">Em 1 minuto</h3>'
       + grid([
         card("A conversa", ul(["A <b>Ana</b> atende leads no WhatsApp, 24 horas por dia, apresenta o projeto, qualifica e passa ao time comercial.", "Quem entende o lead é a IA; quem trava o que pode ser dito e feito são regras fixas, que não dependem da IA.", "Quem some recebe toques de retomada; qualquer resposta cancela o que falta."])),

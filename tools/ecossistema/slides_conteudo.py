@@ -223,7 +223,7 @@ def todos():
     outras = g([
         cat("Dash Geral", ["Abas: Vendas, LTV, RFM, SDR, anúncios, GA4 e saúde da Bia", "Lê o Agendor; a data do ganho é a do evento real; lead é negócio do Arena", "Faixa vermelha quando os dados congelam e rosca sem corte (17/11/2026). Dash expandido: planejado"], "dash"),
         cat("Painel do Representante", ["Carteira ao vivo, ações do dia e valor vendido", "Cada ação confere o dono do negócio e relê o Agendor", "Nova recarga em horário comercial: aguarda auditoria"], "user"),
-        cat("WhatsApp e Meta", ["A Ana e a Bia usam números diferentes", "Janela de 24 horas: fora dela, só modelos aprovados", "A Bia só conta como enviado se o WhatsApp aceitou", "Reenvio por utilidade da abertura da Ana: corrigido em 17/11/2026 (23h40); resultado do caso real a conferir na manhã de 18/11/2026"], "chat"),
+        cat("WhatsApp e Meta", ["A Ana e a Bia usam números diferentes", "Janela de 24 horas: fora dela, só modelos aprovados", "A Bia só conta como enviado se o WhatsApp aceitou", "Reenvio por utilidade da abertura da Ana: no ar desde 17/11/2026 (23h40); resultado em caso real ainda a provar (18/11/2026)"], "chat"),
     ], 3) + band("Também: Canal (conversa da gestão com o assistente de engenharia) e Life B Solicita (pedidos de material). Na página: Painel, Dash e demais sistemas; WhatsApp e Meta.")
     A(slide("outras", "Dash, painel do representante e Meta", C, outras, "dense", "outras,meta"))
 
