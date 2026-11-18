@@ -298,6 +298,7 @@ button.copiar.ok{background:var(--green-bg);color:var(--green);border-color:var(
 /* painel do lead */
 #painelLead{z-index:80}
 .hdr-bts{display:flex;gap:6px}
+#bFecharLead{position:relative} #bFecharLead.fila-nova::after{content:'';position:absolute;top:-4px;right:-4px;width:11px;height:11px;border-radius:50%;background:var(--magenta);border:2px solid var(--head)} /* 17.5 (#3047): ponto discreto = há atualização da fila retida */
 #painelLead .secao{border:1px solid var(--border);border-radius:10px;background:var(--card);padding:10px 12px}
 #painelLead .secao h3{font-size:14px;font-weight:800;color:var(--purple);margin-bottom:6px}
 #painelLead dl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:14px}
@@ -1373,7 +1374,7 @@ function tickRelogio() {
   if (S.conferindo) { a.classList.toggle('velho', velho); a.textContent = 'Atualizando…' + (velho ? ' (mostrando dado antigo, de há ' + idade + ')' : ''); return; }
   if (S.dados && S.dados.tarefasEm) {
     a.classList.toggle('velho', velho);
-    a.textContent = 'Conferido às ' + horaBRTs(S.dados.tarefasEm) + (velho && !(S.atualizaPendente && S.filaMudou) ? ' (dado antigo, há ' + idade + ')' : '') + (S.atualizaPendente && S.filaMudou ? '. Fila retida enquanto o lead está aberto (entra ao fechar).' : '. Confere sozinho a cada 60 s.');
+    a.textContent = 'Conferido às ' + horaBRTs(S.dados.tarefasEm) + (velho ? ' (dado antigo, há ' + idade + ')' : '') + '. Confere sozinho a cada 60 s.'; // 17.5: o topo não muda com a fila retida (o ponto no Fechar é o único indicador)
   }
 }
 
@@ -1404,18 +1405,19 @@ function sessaoCaiu(m) { // 17/11 (.3): com lead aberto a tela não cai: guarda 
   if (S.tem && leadAberto()) { try { if (S.L && Object.keys(S.L.edits || {}).length) gravarRascunho(S.L); } catch (e) { logFalha('sessão: rascunho', e); } faixa('sessao', 'Entre de novo: ' + m + ' O que você digitou fica guardado.', 'erro', { rot: 'Entrar de novo', acao: function () { sair(m); } }); return; }
   sair(m);
 }
-function carregarAuto(modo) { // chamadas automáticas (relógio de 60 s, volta à aba, outra aba): com lead/atividade aberto a fila NÃO muda por baixo (Robert #2660); entra ao fechar, com aviso discreto
-  if (S.tem && leadAberto()) { S.atualizaPendente = true; tickRelogio(); return; } // 17/11 (.3): com lead aberto: nenhum pedido e nenhum aviso a cada ciclo; só marca 'pendente'. O aviso 'Há atualização da fila' só vem quando uma leitura (poll de 10 s do 'abri no Agendor', outra aba) mostra versão mais nova de verdade
+function carregarAuto(modo) { // chamadas automáticas (relógio de 60 s, volta à aba, outra aba): com lead/atividade aberto a fila NÃO muda por baixo (Robert #2660); entra ao fechar (sem faixa; só o ponto no botão Fechar)
+  if (S.tem && leadAberto()) { S.atualizaPendente = true; tickRelogio(); return; } // 17/11 (.3): com lead aberto: nenhum pedido e nenhum aviso a cada ciclo; só marca 'pendente'. O ponto no Fechar só acende quando uma leitura (poll de 10 s do 'abri no Agendor', outra aba) mostra versão mais nova de verdade
   carregar(true, modo);
 }
-function avisaFilaMudou() { S.filaMudou = true; faixa('atual', 'Há atualização da fila. Aplico quando você fechar o lead.', '', { rot: 'Atualizar agora', acao: function () { S.atualizaPendente = false; S.filaMudou = false; faixa('atual', ''); carregarTudo(); } }); }
+function pontoFila(on) { try { var b = $('bFecharLead'); if (!b) return; b.classList.toggle('fila-nova', !!on); b.title = on ? 'Fechar (Esc). Há atualização da fila: entra quando você fechar.' : 'Fechar (Esc)'; } catch (e) { logFalha('ponto da fila: só visual', e); } } // 17.5 (Robert #3047): indicador discreto (pseudo-elemento, não mexe no layout)
+function avisaFilaMudou() { S.filaMudou = true; pontoFila(true); } // 17.5 (Robert #3047): a faixa 'Há atualização da fila' SAIU (aparecia a cada tarefa, inclusive as do próprio Felipe). Com lead aberto a mudança só fica marcada; a fila entra ao fechar o lead ou pelo teto de 3 min
 function carregarTudo() { S.aplicaTudo = true; var fim = function () { S.aplicaTudo = false; }; return carregar(true, 'tarefas').then(fim, fim); } // aplica a fila inteira mesmo com lead aberto (teto de 3 min ou 'Atualizar agora')
 function tetoAtualiza() { // fila retida por lead aberto: passou 3 min sem digitar, sem rascunho/alteração/envio em voo e sem pop-up de ganho => aplica e avisa
   if (!S.atualizaPendente || !leadAberto() || !$('modalGanho').classList.contains('hide')) return; if (Date.now() - (S.ultAtiv || 0) < 180000 * REDE.escala) return;
   try { if (temRascunho() || (S.L && (S.L.ocupado || calcDiff(S.L).length)) || Object.keys(S.emVoo || {}).length || lerSaida().length) return; } catch (e) { logFalha('teto da fila retida: na dúvida não aplica', e); return; }
-  S.atualizaPendente = false; S.filaMudou = false; faixa('atual', ''); carregarTudo(); // aplica em silêncio (.3)
+  S.atualizaPendente = false; S.filaMudou = false; pontoFila(false); carregarTudo(); // aplica em silêncio (.3)
 }
-function aplicaAtualizaPendente() { if (!S.atualizaPendente || leadAberto()) return; S.atualizaPendente = false; S.filaMudou = false; faixa('atual', ''); if (S.token && S.tem) carregar(true, 'tarefas'); }
+function aplicaAtualizaPendente() { if (!S.atualizaPendente || leadAberto()) return; S.atualizaPendente = false; S.filaMudou = false; pontoFila(false); if (S.token && S.tem) carregar(true, 'tarefas'); }
 // ---- 17/11: carregamento blindado. Cada parte (dia, aguardando, perdas) tem o seu pedido, o seu aviso pontual e a sua nova tentativa com espera crescente (4 s, 8 s, 16 s, com jitter, no máximo 3). Uma parte que falha não derruba as outras. ----
 S.rt = {};
 function limpaRetenta(nome) { if (S.rt[nome]) { clearTimeout(S.rt[nome].tm); } delete S.rt[nome]; }
