@@ -80,7 +80,7 @@ def todos():
     A(slide("estadob", "Estado de cada peça: no ar (Bia)", C, estb, "dense", "status,checklist"))
     estc = ('<div class="dg1 est dgx">'
         f'<div class="ec e-ok"><h3>{pill("no ar")}</h3><ul>{no_ar(["hoje", "central", "dash"])}</ul></div></div>'
-        + band("No ar: conferido em produção. Checklist completo na página."))
+        + band("No ar: conferido em produção. Checklist na página."))
     A(slide("estadoc", "Estado de cada peça: no ar (páginas e Dash)", C, estc, "dense", "status,checklist"))
     est2 = ('<div class="dg1 est dgx">'
         f'<div class="ec e-te"><h3>{pill("em implantação")}</h3><ul>{"".join(cols["implantacao"]) or "<li>Nada pendente de entrada neste momento.</li>"}</ul></div></div>'
