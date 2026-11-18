@@ -149,6 +149,7 @@ header{background:#fff;border-bottom:1px solid var(--border);padding:0 18px;heig
 #dados-banner.show{display:block}
 #dados-banner.stale{background:#fffbeb;border:1.5px solid #fcd34d;color:#78350f}
 #dados-banner.emerg{background:#fef2f2;border:2px solid #dc2626;color:#7f1d1d}
+#dados-banner.codigo{background:#f5f3ff;border:2px solid #7c3aed;color:#3b0764}
 #dados-banner .err-retry{font:inherit;font-weight:800;color:inherit;background:#fff;border:1.5px solid currentColor;border-radius:8px;padding:6px 12px;margin-left:4px;cursor:pointer;min-height:32px;position:relative}
 #dados-banner .err-retry::after{content:'';position:absolute;left:0;right:0;top:-6px;bottom:-6px}
 body.modo-emerg #main{filter:grayscale(.55)}
@@ -693,6 +694,7 @@ footer strong{color:#fff}
 <script>if (true) document.write('<script src="sdr2.js?v=20261111a"><\/script>');</script>
 <script>if (true) document.write('<script src="agentes.js?v=20261111a"><\/script>');</script>
 <script>if (true) document.write('<script src="rfm.js?v=20261109a"><\/script>');</script>
+<script src="dados.js?v=20261117a"></script><!-- 17/11: política de dados compartilhada com o telão (retentativas, faixa de estado, recuperação) -->
 </head>
 <body>
 <div id="lb"></div>
@@ -2310,7 +2312,16 @@ function origemAjustar_(donut) {
   } catch (e) { console.warn('origemAjustar_ falhou (rosca fica como desenhada):', e && e.message); }
 }
 // fonte web (Montserrat) chega depois da 1ª pintura e muda a largura dos textos: reajusta quando ela chegar
-if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { try { if (typeof _origemData !== 'undefined' && _origemData) paintOrigem_(); } catch (_) {} });
+// 17/11 (auditoria): a Montserrat entra por <link media="print" onload="media='all'"> — em cache frio, fonts.ready pode
+// resolver ANTES de a fonte ser pedida (nenhum carregamento pendente naquele instante) e a rosca ficaria medida com a
+// fonte de reserva. Reajusta a cada lote de fontes que termina (loadingdone) e força o pedido da família usada quando a
+// página termina de carregar (aí a folha já virou media=all e a @font-face existe).
+function _reajustaRosca_() { try { if (typeof _origemData !== 'undefined' && _origemData) paintOrigem_(); } catch (_) {} }
+if (document.fonts) {
+  if (document.fonts.ready) document.fonts.ready.then(_reajustaRosca_);
+  if (document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', _reajustaRosca_);
+  window.addEventListener('load', () => { try { document.fonts.load('800 12px Montserrat').then(_reajustaRosca_, () => {}); } catch (_) {} });
+}
 
 // Chamada de dentro de render(d) — sempre a partir do período JÁ resolvido em d
 // (nunca recalcula o filtro por conta própria). Falha aqui nunca derruba o resto
@@ -2652,85 +2663,9 @@ function _mergeById_(existing, incoming, keyField) {
   incoming.forEach(r => byKey.set(r[keyField], r));
   return Array.from(byKey.values());
 }
-// Ponte de emergência (08-09/09) — worker isolado (dash-geral-bridge) só lê
-// de um KV Cloudflare, nunca fala com Postgres/Supabase direto. Quem
-// alimenta o KV é um script à parte (refresh-snapshot.mjs, roda fora do
-// site), lendo pelo login travado dash_bridge_reader (só leitura). Ver
-// [[project_dash_geral_egress_incidente_0709]].
-const BRIDGE_URL_ = 'https://dash-geral-bridge.robert131196.workers.dev/api/table';
-async function _fetchViaStaticBridge_(table, query) {
-  // dash_ads_daily serve 2 propósitos com filtros diferentes: card de
-  // Investimento em Vendas (só entity_type=campaign) e a aba ADS/hierarquia
-  // (tudo) — nunca misturar os dois (somar todos os níveis juntos
-  // dobra/triplica o gasto real), por isso vira uma 2ª chave no KV.
-  let key = table;
-  if (table === 'dash_ads_daily' && !(query || '').includes('entity_type=eq.campaign')) key = 'dash_ads_daily_all';
-  const res = await fetch(BRIDGE_URL_ + '?name=' + key + '&_=' + Date.now(), { cache: 'no-store' });
-  if (!res.ok) throw new Error('ponte HTTP ' + res.status);
-  const payload = await res.json();
-  const rows = payload.rows || [];
-  if (payload.syncedAt) _bridgeSyncedAt_ = payload.syncedAt; // carimbo REAL do snapshot da ponte (mostrado na faixa de emergência)
-  // dash_ads_daily vem do Postgres direto (não do PostgREST) nesse caminho —
-  // coluna `date` chega como timestamp completo em vez de só a data; corta
-  // pro mesmo formato YYYY-MM-DD que o resto do painel espera.
-  if (table === 'dash_ads_daily') rows.forEach(r => { if (r.date) r.date = String(r.date).slice(0, 10); });
-  return rows;
-}
-// 🔴 FIX 17/11 (Robert: números "diferentes toda hora" + erros intermitentes). ANTES: qualquer falha do REST da D1
-// (rede/HTTP) caía em silêncio na ponte KV (/api/table), um snapshot CONGELADO (sem origem_especial, mês corrente
-// vazio), e o painel calculava KPIs com ele sem avisar. AGORA: (1) retenta o REST 3x com espera crescente;
-// (2) se ainda falhar, NÃO cai mais na ponte aqui — lança o erro e o loadData() decide: mantém o último dado bom
-// (memória ou localStorage) com a faixa "dados de HH:MM"; (3) só usa a ponte se NÃO houver NENHUM dado bom
-// (_forceBridge_), sempre com a faixa vermelha de emergência e sem gravar esse dado como "último bom".
-let _bridgeSyncedAt_ = null;
-let _forceBridge_ = false;
-function _retryWaits_() { return (typeof window !== 'undefined' && window.__DASH_RETRY_MS__) || [1000, 2500, 6000]; }
-async function _fetchRestAll_(table, query) {
-  const PAGE = 1000;
-  let all = [];
-  let from = 0;
-  while (true) {
-    const res = await fetch(SUPABASE_URL + '/rest/v1/' + table + '?' + query, {
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
-        Range: from + '-' + (from + PAGE - 1),
-        Prefer: 'count=exact'
-      }
-    });
-    if (!res.ok) { const er = new Error('Supabase HTTP ' + res.status + ' (' + table + ')'); er.status = res.status; throw er; }
-    const chunk = await res.json();
-    all = all.concat(chunk);
-    const cr = res.headers.get('content-range');
-    const total = (cr && cr.indexOf('/') !== -1) ? parseInt(cr.split('/')[1], 10) : chunk.length;
-    if (all.length >= total || chunk.length < PAGE) break;
-    from += PAGE;
-  }
-  return all;
-}
-async function _fetchTablePage_(table, query) {
-  if (_forceBridge_) return _fetchViaStaticBridge_(table, query);
-  const waits = _retryWaits_();
-  let lastErr;
-  for (let a = 0; a <= waits.length; a++) {
-    try { return await _fetchRestAll_(table, query); }
-    catch (e) {
-      lastErr = e;
-      // erro de pedido (400/401/403/404...) não melhora tentando de novo; rede, 408, 429 e 5xx sim
-      const st = e && e.status;
-      if (st && st < 500 && st !== 408 && st !== 429) break;
-      if (a < waits.length) { console.warn('D1 REST falhou (' + table + '), nova tentativa ' + (a + 1) + '/' + waits.length + ':', e.message); await new Promise(r => setTimeout(r, waits[a])); }
-    }
-  }
-  throw lastErr;
-}
-
+// 17/11: ponte KV, retentativas da D1, _needCold_, faixa de estado e recuperação vivem em dados.js (compartilhado
+// com o telão). Nada disso é mais declarado aqui — declarar de novo (let/const) quebraria o script inteiro.
 let _lastDealsSyncedAt_ = null;
-// 17/11: depois de um período em fallback (último dado bom velho ou ponte de emergência) o dado em memória NÃO é confiável
-// pra merge incremental — cada tabela volta a ser buscada INTEIRA (cold) quando o REST voltar. Por tabela, pra uma falha
-// parcial não repetir a busca inteira das outras.
-let _needCold_ = { deals: false, ads: false, leads: false };
-function _markAllCold_() { _needCold_ = { deals: true, ads: true, leads: true }; }
 async function fetchRawDeals() {
   const cold = !_rawDeals || _needCold_.deals;
   const query = (cold || !_lastDealsSyncedAt_)
@@ -3175,55 +3110,28 @@ function prevRangeOf(period) {
   return { from: fmt(prevFrom), to: fmt(prevTo) };
 }
 
-// ── FAIXA DE ESTADO DOS DADOS (17/11) ──
-let _dadosEstado_ = null;   // null = dados de hoje (D1) | 'stale' = último dado bom | 'emergencia' = ponte KV congelada
-let _staleSince_ = null;    // quando foi o último dado bom (ms)
-let _lastGoodAt_ = null;
-let _partialFail_ = [];     // tabelas secundárias que não atualizaram (anúncios/leads)
-let _recTimer_ = null, _recN_ = 0;
-const _MESES_PT_ = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
-function _p2_(n) { return String(n).padStart(2, '0'); }
-function _stampBR_(ms) {
-  const d = new Date(ms), hoje = new Date();
-  const hm = _p2_(d.getHours()) + ':' + _p2_(d.getMinutes());
-  return d.toDateString() === hoje.toDateString() ? hm : _p2_(d.getDate()) + '/' + _p2_(d.getMonth() + 1) + ' às ' + hm;
-}
-function renderDadosBanner_() {
-  const b = document.getElementById('dados-banner'); if (!b) return;
-  let txt = '', cls = '';
-  if (_dadosEstado_ === 'emergencia') {
-    const t = _bridgeSyncedAt_ ? new Date(_bridgeSyncedAt_) : null;
-    const dia = t && !isNaN(t) ? _p2_(t.getDate()) + '/' + _p2_(t.getMonth() + 1) : 'data antiga';
-    txt = 'Sem conexão com os dados de hoje. Mostrando dados de ' + dia + ' (modo emergência). Os números NÃO são de ' + _MESES_PT_[new Date().getMonth()] + '.';
-    cls = 'emerg';
-  } else if (_dadosEstado_ === 'stale') {
-    txt = 'Sem conexão com os dados de hoje. Mostrando o último dado bom: dados de ' + _stampBR_(_staleSince_ || Date.now()) + '. Tentando de novo automaticamente.';
-    cls = 'stale';
-  } else if (_partialFail_.length) {
-    txt = 'Não deu para atualizar: ' + _partialFail_.join(' e ') + '. Investimento/CPL podem estar desatualizados.';
-    cls = 'stale';
-  }
-  document.body.classList.toggle('modo-emerg', cls === 'emerg');
-  if (!txt) { b.className = ''; b.textContent = ''; return; }
-  b.className = 'show ' + cls; b.textContent = '';
-  const t = document.createElement('span'); t.textContent = '⚠ ' + txt + ' ';
-  const bt = document.createElement('button'); bt.type = 'button'; bt.className = 'err-retry'; bt.textContent = 'Tentar de novo';
-  bt.onclick = function () { loadData(true); };
-  b.appendChild(t); b.appendChild(bt);
-}
-// retentativa automática enquanto estiver em fallback/erro: espera crescente (15s, 30s, 60s, teto 2min) — volta sozinho quando a D1 volta
-function armaRecuperacao_() {
-  if (_recTimer_) return;
-  const d = window.__DASH_RECOVER_MS__ || Math.min(15000 * Math.pow(2, _recN_), 120000);
-  _recN_++;
-  _recTimer_ = setTimeout(async () => {
-    _recTimer_ = null;
-    await loadData(true, true);
-    if (_dadosEstado_ || _partialFail_.length || window.__lbErr) armaRecuperacao_(); else _recN_ = 0;
-  }, d);
-}
-
 async function loadData(force, silent) {
+  // 17/11 (auditoria): atualização parcial no deploy — a página nova pode chegar sem o dados.js (404/rede). Sem ele não há
+  // política de dados: avisa na faixa, não deixa a tela congelada e recarrega sozinha. Contagem em sessionStorage
+  // (dash_dados_reload {n,ts,next}): 3 recargas a cada 60 s; depois só a cada 5 min (não martela o servidor). Zera quando o dados.js aparece.
+  if (typeof _fetchTablePage_ !== 'function') {
+    try {
+      const b = document.getElementById('dados-banner');
+      if (b) { b.className = 'show codigo'; b.textContent = '⚠ dados.js não carregou (atualização parcial). Recarregando automaticamente.'; }
+      if (typeof showErr === 'function') showErr('dados.js não carregou (atualização parcial). Recarregando automaticamente');
+    } catch (_) {}
+    if (!window.__dadosJsReload) {
+      let n = 0; try { n = (JSON.parse(sessionStorage.getItem('dash_dados_reload') || 'null') || {}).n || 0; } catch (_) {}
+      const wait = n < 3 ? (window.__DADOS_JS_RELOAD_MS__ || 60000) : (window.__DADOS_JS_RELOAD_LONGO_MS__ || 300000);
+      try { sessionStorage.setItem('dash_dados_reload', JSON.stringify({ n, ts: Date.now(), next: wait })); } catch (_) {}
+      window.__dadosJsReload = setTimeout(() => {
+        try { sessionStorage.setItem('dash_dados_reload', JSON.stringify({ n: n + 1, ts: Date.now(), next: wait })); } catch (_) {}
+        location.reload();
+      }, wait);
+    }
+    return;
+  }
+  if (!window.__dadosJsOk) { window.__dadosJsOk = 1; try { sessionStorage.removeItem('dash_dados_reload'); } catch (_) {} } // dados.js presente: zera a contagem
   const mySeq = ++_reqSeq;
   // Só precisa tocar a rede em duas situações: cold start (ainda não tem
   // snapshot cru nenhum) ou pedido explícito de refresh (force=true, botão
@@ -3251,7 +3159,7 @@ async function loadData(force, silent) {
       try { _leadsRawDaily = await fetchLeadsRawDaily(); } catch (eLeads) { console.warn('fetchLeadsRawDaily falhou:', eLeads.message); _partialFail_.push('leads'); }
       // 17/11: de onde vieram os dados deste carregamento? REST da D1 = bom; ponte KV (só se não havia NADA) = emergência.
       if (_forceBridge_) { _dadosEstado_ = 'emergencia'; _markAllCold_(); }
-      else { _dadosEstado_ = null; _lastGoodAt_ = Date.now(); }
+      else dadosMarcarBom_();
     } else if (!silent) {
       await new Promise(r => setTimeout(r, 150)); // respiro mínimo pro pulso ser visível
     }
@@ -3297,6 +3205,7 @@ async function loadData(force, silent) {
     refreshAdsHierarchyIfActive_();
     refreshGa4IfActive_();
     refreshBiaIfActive_();
+    if (_dadosEstado_ === 'codigo') _dadosEstado_ = null; // montou a tela sem erro: o erro de código passou (dados.js)
     renderDadosBanner_();
     if (_dadosEstado_ || _partialFail_.length) armaRecuperacao_(); else _recN_ = 0;
     flashDot();
@@ -3307,17 +3216,17 @@ async function loadData(force, silent) {
     // normalmente (antes, só reexibia o MESMO recorte congelado que estava
     // ativo no momento em que o snapshot foi salvo).
     // 17/11: dado de emergência (ponte KV) ou velho restaurado NUNCA vira "último dado bom" (senão apagava o bom com o congelado)
-    if (!_dadosEstado_) try { localStorage.setItem('geral_snapshot', JSON.stringify({ data: curr, rawDeals: _rawDeals, adsRawDaily: _adsRawDaily, leadsRawDaily: _leadsRawDaily, savedAt: Date.now() })); } catch(_) {}
+    if (!_dadosEstado_) dadosSalvarSnapshot_('geral_snapshot', () => ({ data: curr, rawDeals: _rawDeals, adsRawDaily: _adsRawDaily, leadsRawDaily: _leadsRawDaily, savedAt: Date.now() }), () => ({ data: curr, savedAt: Date.now(), compacto: true }));
   } catch(e) {
-    // 🔴 FIX 17/11 — falha de dados em 3 degraus, sempre com faixa (#dados-banner), NUNCA calculando com a ponte KV
-    // se existir qualquer dado bom:
-    //  1) dado bom em memória (esta sessão): mantém tudo como está + faixa "dados de HH:MM";
-    //  2) último dado bom salvo (localStorage): restaura (com os dados crus, recalcula pelos filtros de agora) + faixa;
-    //  3) NADA salvo: só então a ponte KV (modo emergência), com a faixa vermelha dizendo de que dia são os números.
+    // 🔴 17/11 — falha em 3 degraus, sempre com a faixa #dados-banner (política em dados.js, igual no telão):
+    //  1) dado bom em memória: mantém + faixa "dados de HH:MM";  2) último dado bom salvo: restaura e recalcula pelos
+    //  filtros de agora;  3) NADA salvo: só então a ponte KV (modo emergência, faixa vermelha, nunca vira "último bom").
+    // Erro de CÓDIGO (compute/render) é separado do erro de REDE: faixa própria, sem recuperação em loop.
     if (mySeq !== _reqSeq) return; // um pedido mais novo já está em voo e trata a própria falha
+    if (!dadosErroDeRede_(e)) { dadosErroDeCodigo_(e); return; }
     console.warn('loadData: falha ao buscar dados:', e && e.message);
     if (_rawDeals) {
-      if (!_dadosEstado_) { _dadosEstado_ = 'stale'; _staleSince_ = _lastGoodAt_ || Date.now(); }
+      if (!_dadosEstado_ || _dadosEstado_ === 'codigo') { _dadosEstado_ = 'stale'; _staleSince_ = _lastGoodAt_ || Date.now(); }
       renderDadosBanner_(); armaRecuperacao_();
     } else {
       let snap = null;
@@ -3331,7 +3240,7 @@ async function loadData(force, silent) {
           _markAllCold_();
           await loadData(false, true); // recalcula em cima do dado cru restaurado, pelo período/origem de agora (zero rede)
         } else {
-          _data = snap.data; render(_data); renderDadosBanner_();
+          _data = snap.data; render(_data); renderDadosBanner_(); // snapshot compacto (sem dado cru): só reexibe
         }
         armaRecuperacao_();
       } else if (!_forceBridge_) {

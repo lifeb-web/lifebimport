@@ -76,6 +76,15 @@
 html{width:100%;height:100vh;overflow:hidden;background:var(--bg)}
 body{width:100%;height:100vh;overflow:hidden;font-family:var(--font);font-weight:600;background:var(--bg);color:var(--text);display:flex;flex-direction:column}
 
+/* 17/11: faixa de estado dos dados no telão (último dado bom / modo emergência / erro na tela). NÃO é sobreposta: o body é uma coluna flex de
+   altura fixa, então a faixa (item flex no topo, antes do header) empurra o resto, que encolhe — nada fica coberto (nem a última fileira). */
+#dados-banner{display:none;flex-shrink:0;padding:7px 20px;font-size:16px;font-weight:800;line-height:1.3;text-align:center}
+#dados-banner.show{display:block}
+#dados-banner.stale{background:#fde68a;color:#78350f;border-top:4px solid #d97706}
+#dados-banner.emerg{background:#dc2626;color:#fff;border-top:4px solid #7f1d1d}
+#dados-banner.codigo{background:#5b21b6;color:#fff;border-top:4px solid #2e1065}
+#dados-banner .err-retry{font:inherit;font-size:14px;font-weight:800;color:inherit;background:rgba(255,255,255,.25);border:2px solid currentColor;border-radius:8px;padding:3px 12px;margin-left:10px;cursor:pointer}
+body.modo-emerg #body{filter:grayscale(.55)}
 #lb{position:fixed;top:0;left:0;height:2px;width:0;background:linear-gradient(90deg,var(--purple),var(--magenta));z-index:9999;pointer-events:none;transition:width .2s,opacity .4s}
 /* Telão fica sozinho na sala — erro precisa ser VISÍVEL, não só no console
    que ninguém olha. Fica preso enquanto o erro persistir; some ao recuperar. */
@@ -1037,9 +1046,11 @@ body.tv-grande .rv-k-val{font-size:19px}
 <script>if (true) document.write('<script src="../sdr2.js?v=20261111a"><\/script>');</script>
 <script>if (true) document.write('<script src="../agentes.js?v=20261111a"><\/script>');</script>
 <script>if (true) document.write('<script src="../rfm.js?v=20261109a"><\/script>');</script>
+<script src="../dados.js?v=20261117a"></script><!-- 17/11: política de dados compartilhada com o painel (retentativas, faixa de estado, recuperação) -->
 </head>
 <body>
 <div id="lb"></div>
+<div id="dados-banner" role="alert"></div>
 
 <header>
   <div class="h-brand">
@@ -2661,6 +2672,15 @@ function origemCenter_(bd, mode, hoverKey) {
   return ['Sem vendas', '—', 'no período'];
 }
 
+// 17/11: texto do centro num grupo próprio (<g class="orig-ctr">): o hover troca SÓ ele (antes trocava "os 3 primeiros <text>" por posição,
+// o que quebra quando "Filtro · X" vira 2 linhas). Depois de trocar, origemAjustar_() mede e encaixa de novo no aro.
+function origemCenterSVG_(l1, l2, l3) {
+  return (/^Filtro · /.test(l1)
+    ? `<text x="100" y="74" text-anchor="middle" class="orig-t1">Filtro</text><text x="100" y="86" text-anchor="middle" class="orig-t1">${escHtml(l1.slice(9))}</text>`
+    : `<text x="100" y="86" text-anchor="middle" class="orig-t1">${escHtml(l1)}</text>`) +
+    `<text x="100" y="108" text-anchor="middle" class="orig-t2" style="font-size:${l2.length > 11 ? 15 : (l2.length > 9 ? 18 : 21)}px">${escHtml(l2)}</text>` +
+    `<text x="100" y="126" text-anchor="middle" class="orig-t3">${escHtml(l3)}</text>`;
+}
 // Rosca em SVG (viewBox fixo 200x200 — tudo, inclusive o texto central, escala
 // junto com o tamanho real do contêiner: nunca corta nem sobrepõe em telas
 // diferentes). Fatias por stroke-dasharray: funciona igual com 1 fatia (100%),
@@ -2725,9 +2745,7 @@ function origemDonutSVG_(bd, mode, hoverKey, animate) {
   }
   return `<svg viewBox="${VB.join(' ')}" class="orig-svg" style="aspect-ratio:${VB[2]}/${VB[3]}" role="group" aria-label="Vendas do período (rosca)">
     <g class="${animate ? 'orig-anim' : ''}"><g transform="rotate(-90 100 100)">${segs}</g></g>
-    <text x="100" y="86" text-anchor="middle" class="orig-t1">${escHtml(l1)}</text>
-    <text x="100" y="108" text-anchor="middle" class="orig-t2" style="font-size:${l2.length > 11 ? 15 : (l2.length > 9 ? 18 : 21)}px">${escHtml(l2)}</text>
-    <text x="100" y="126" text-anchor="middle" class="orig-t3">${escHtml(l3)}</text>
+    <g class="orig-ctr">${origemCenterSVG_(l1, l2, l3)}</g>
     ${lbHTML}
   </svg>`;
 }
@@ -2825,8 +2843,8 @@ function origemHover_(key) {
   });
   svg.querySelectorAll('.orig-lb').forEach(g => { if (foco && !origemAtivo_(foco, g.dataset.k, _origemHover)) g.setAttribute('opacity', '.3'); else g.removeAttribute('opacity'); });
   const [l1, l2, l3] = origemCenter_(pzAtual_(), _origemMode, _origemHover);
-  const t = svg.querySelectorAll('text');
-  if (t.length >= 3) { t[0].textContent = l1; t[1].textContent = l2; t[1].style.fontSize = (l2.length > 11 ? 15 : (l2.length > 9 ? 18 : 21)) + 'px'; t[2].textContent = l3; }
+  const ctr = svg.querySelector('.orig-ctr');
+  if (ctr) { ctr.innerHTML = origemCenterSVG_(l1, l2, l3); origemAjustar_(donut); }
   document.querySelectorAll('#origem-legend .orig-item').forEach(it => it.classList.toggle('hl', !!_origemHover && it.dataset.k === _origemHover));
 }
 
@@ -2846,6 +2864,66 @@ function origemBindSegs_() {
   });
 }
 
+// 🔴 FIX 17/11 (Robert: "o gráfico de pizza às vezes corta nomes como SuperAgos"; texto central "FILTRO · OUTBOUND" passava do aro):
+// o desenho em unidades fixas não sabe a largura real do texto (fonte Montserrat, nomes longos, largura do contêiner).
+// Depois de pintar, MEDE (getBBox) e corrige: (1) cada linha do centro cabe na corda do aro (fonte menor, depois reticências
+// com o texto inteiro no title); (2) rótulos de fatia que ainda se sobreponham são afastados (pra longe do centro, nunca
+// pra dentro do aro); (3) a janela do SVG (viewBox) cresce o necessário pra NADA ficar cortado. Não muda dado nem cor.
+function origemAjustar_(donut) {
+  try {
+    const svg = donut && donut.querySelector('svg'); if (!svg) return;
+    if (!donut.getBoundingClientRect().width) return; // aba escondida: sem medida, a próxima pintura ajusta
+    const NS = 'http://www.w3.org/2000/svg';
+    const RIN = 55; // raio interno útil do aro (61 normal, 58 com fatia em destaque, menos folga)
+    svg.querySelectorAll('.orig-t1,.orig-t2,.orig-t3').forEach(t => {
+      const full = t.textContent; if (!full.trim()) return;
+      let bb = t.getBBox(), fs = parseFloat(getComputedStyle(t).fontSize) || 10;
+      const lim = () => { const d = Math.max(Math.abs(bb.y - 100), Math.abs(bb.y + bb.height - 100)); return 2 * Math.sqrt(Math.max(RIN * RIN - d * d, 400)); };
+      let g = 0;
+      while (bb.width > lim() && fs > 6 && g++ < 60) { fs -= 0.5; t.style.fontSize = fs + 'px'; bb = t.getBBox(); }
+      if (bb.width > lim()) {
+        let s = full; g = 0;
+        while (s.length > 3 && bb.width > lim() && g++ < 80) { s = s.slice(0, -1); t.textContent = s.replace(/\s+$/, '') + '…'; bb = t.getBBox(); }
+        const ti = document.createElementNS(NS, 'title'); ti.textContent = full; t.appendChild(ti);
+      }
+    });
+    // rótulos de fatia: afasta sobreposições medidas (cada lado, do centro pra fora)
+    const gs = [...svg.querySelectorAll('.orig-lb')].map(g => ({ g, t: g.querySelector('text'), pl: g.querySelector('polyline') })).filter(o => o.t);
+    const mv = (o, dy) => {
+      o.t.setAttribute('y', (parseFloat(o.t.getAttribute('y')) + dy).toFixed(1));
+      const pts = o.pl.getAttribute('points').trim().split(/\s+/); const last = pts[pts.length - 1].split(',');
+      pts[pts.length - 1] = last[0] + ',' + (parseFloat(last[1]) + dy).toFixed(1); o.pl.setAttribute('points', pts.join(' '));
+    };
+    [['r', 1], ['l', -1]].forEach(([, dir]) => {
+      const lado = gs.filter(o => (o.t.getAttribute('text-anchor') === 'start') === (dir > 0));
+      [lado.filter(o => parseFloat(o.t.getAttribute('y')) >= 100).sort((a, b) => a.t.getBBox().y - b.t.getBBox().y), lado.filter(o => parseFloat(o.t.getAttribute('y')) < 100).sort((a, b) => b.t.getBBox().y - a.t.getBBox().y)].forEach((arr, metade) => {
+        for (let i = 1; i < arr.length; i++) {
+          const a = arr[i - 1].t.getBBox(), b = arr[i].t.getBBox();
+          const dy = metade === 0 ? (a.y + a.height + 2) - b.y : (a.y - 2) - (b.y + b.height); // metade de baixo desce, de cima sobe
+          if (metade === 0 ? dy > 0 : dy < 0) mv(arr[i], dy);
+        }
+      });
+    });
+    const vb = svg.viewBox.baseVal; let x0 = vb.x, y0 = vb.y, x1 = vb.x + vb.width, y1 = vb.y + vb.height; const M = 3;
+    gs.forEach(o => { const b = o.t.getBBox(); x0 = Math.min(x0, b.x - M); x1 = Math.max(x1, b.x + b.width + M); y0 = Math.min(y0, b.y - M); y1 = Math.max(y1, b.y + b.height + M); });
+    if (x0 < vb.x || y0 < vb.y || x1 > vb.x + vb.width || y1 > vb.y + vb.height) {
+      svg.setAttribute('viewBox', [x0, y0, x1 - x0, y1 - y0].map(v => +v.toFixed(1)).join(' '));
+      svg.style.aspectRatio = (x1 - x0).toFixed(1) + '/' + (y1 - y0).toFixed(1);
+    }
+  } catch (e) { console.warn('origemAjustar_ falhou (rosca fica como desenhada):', e && e.message); }
+}
+// fonte web (Montserrat) chega depois da 1ª pintura e muda a largura dos textos: reajusta quando ela chegar
+// 17/11 (auditoria): a Montserrat entra por <link media="print" onload="media='all'"> — em cache frio, fonts.ready pode
+// resolver ANTES de a fonte ser pedida (nenhum carregamento pendente naquele instante) e a rosca ficaria medida com a
+// fonte de reserva. Reajusta a cada lote de fontes que termina (loadingdone) e força o pedido da família usada quando a
+// página termina de carregar (aí a folha já virou media=all e a @font-face existe).
+function _reajustaRosca_() { try { if (typeof _origemData !== 'undefined' && _origemData) paintOrigem_(); } catch (_) {} }
+if (document.fonts) {
+  if (document.fonts.ready) document.fonts.ready.then(_reajustaRosca_);
+  if (document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', _reajustaRosca_);
+  window.addEventListener('load', () => { try { document.fonts.load('800 12px Montserrat').then(_reajustaRosca_, () => {}); } catch (_) {} });
+}
+
 function paintOrigem_(hoverKey, animate) {
   const vis = pzVis_();
   const pz = vis === 'orig' ? null : pzBd_();
@@ -2861,6 +2939,7 @@ function paintOrigem_(hoverKey, animate) {
   const ae = document.activeElement;
   const focoK = ae && ae.dataset && ae.dataset.k && (ae.classList.contains('orig-seg') ? 'seg' : (ae.classList.contains('orig-item') ? 'item' : null)) ? { t: ae.classList.contains('orig-seg') ? 'seg' : 'item', k: ae.dataset.k } : null;
   donut.innerHTML = origemDonutSVG_(bd, _origemMode, _origemHover, !!animate);
+  origemAjustar_(donut);
   origemBindSegs_();
   const leg = document.getElementById('origem-legend');
   leg.classList.toggle('pz-on', !!pz);
@@ -4380,65 +4459,16 @@ function _mergeById_(existing, incoming, keyField) {
   incoming.forEach(r => byKey.set(r[keyField], r));
   return Array.from(byKey.values());
 }
-// Ponte de emergência (08-09/09) — worker isolado (dash-geral-bridge) só lê
-// de um KV Cloudflare, nunca fala com Postgres/Supabase direto. Quem
-// alimenta o KV é um script à parte (refresh-snapshot.mjs, roda fora do
-// site), lendo pelo login travado dash_bridge_reader (só leitura). Ver
-// [[project_dash_geral_egress_incidente_0709]].
-const BRIDGE_URL_ = 'https://dash-geral-bridge.robert131196.workers.dev/api/table';
-async function _fetchViaStaticBridge_(table, query) {
-  // dash_ads_daily serve 2 propósitos com filtros diferentes: card de
-  // Investimento em Vendas (só entity_type=campaign) e a aba ADS/hierarquia
-  // (tudo) — nunca misturar os dois (somar todos os níveis juntos
-  // dobra/triplica o gasto real), por isso vira uma 2ª chave no KV.
-  let key = table;
-  if (table === 'dash_ads_daily' && !(query || '').includes('entity_type=eq.campaign')) key = 'dash_ads_daily_all';
-  const res = await fetch(BRIDGE_URL_ + '?name=' + key + '&_=' + Date.now(), { cache: 'no-store' });
-  if (!res.ok) throw new Error('ponte HTTP ' + res.status);
-  const payload = await res.json();
-  const rows = payload.rows || [];
-  // dash_ads_daily vem do Postgres direto (não do PostgREST) nesse caminho —
-  // coluna `date` chega como timestamp completo em vez de só a data; corta
-  // pro mesmo formato YYYY-MM-DD que o resto do painel espera.
-  if (table === 'dash_ads_daily') rows.forEach(r => { if (r.date) r.date = String(r.date).slice(0, 10); });
-  return rows;
-}
-async function _fetchTablePage_(table, query) {
-  try {
-    const PAGE = 1000;
-    let all = [];
-    let from = 0;
-    while (true) {
-      const res = await fetch(SUPABASE_URL + '/rest/v1/' + table + '?' + query, {
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
-          Range: from + '-' + (from + PAGE - 1),
-          Prefer: 'count=exact'
-        }
-      });
-      if (!res.ok) throw new Error('Supabase HTTP ' + res.status + ' (' + table + ')');
-      const chunk = await res.json();
-      all = all.concat(chunk);
-      const cr = res.headers.get('content-range');
-      const total = (cr && cr.indexOf('/') !== -1) ? parseInt(cr.split('/')[1], 10) : chunk.length;
-      if (all.length >= total || chunk.length < PAGE) break;
-      from += PAGE;
-    }
-    return all;
-  } catch (e) {
-    console.warn('Supabase REST falhou (' + table + '), tentando ponte estática de emergência:', e.message);
-    return await _fetchViaStaticBridge_(table, query);
-  }
-}
-
+// 17/11: ponte KV, retentativas da D1, _needCold_, faixa de estado e recuperação vivem em dados.js (compartilhado
+// com o painel index.html). Nada disso é mais declarado aqui — declarar de novo (let/const) quebraria o script inteiro.
 let _lastDealsSyncedAt_ = null;
 async function fetchRawDeals() {
-  const cold = !_rawDeals;
+  const cold = !_rawDeals || _needCold_.deals; // 17/11: depois de fallback, busca inteira de novo (ver dados.js)
   const query = (cold || !_lastDealsSyncedAt_)
     ? 'select=*'
     : 'select=*&synced_at=gt.' + encodeURIComponent(_lastDealsSyncedAt_);
   const fresh = await _fetchTablePage_('dash_geral_deals', query);
+  if (cold) { _lastDealsSyncedAt_ = null; _needCold_.deals = false; }
   fresh.forEach(d => {
     if (espOrigem_(d)) d.origin = 'outbound'; // 🆕 03/10: SuperAgos conta como OUTBOUND em tudo (destaque só na rosca de Vendas)
     d.closed_at = _effectiveClosedAt(d);
@@ -4600,8 +4630,7 @@ async function fetchAdsRawDaily() {
     if (campRes.ok) validIds = (await campRes.json()).map(c => c.id);
   } catch (e) { /* segue sem o filtro extra */ }
 
-  const cold = !_adsRawDailyMap_;
-  if (cold) _adsRawDailyMap_ = new Map();
+  const cold = !_adsRawDailyMap_ || _needCold_.ads;
   // 29/09: desde este dia o bridge D1 APLICA in.()/not.in.() de verdade (antes ignorava em
   // silêncio) — e recusa (HTTP 400) filtro com mais de 90 valores (limite de 100 parâmetros
   // do D1). Com muitas campanhas a lista estouraria; acima de 60 não manda o in.() e confia
@@ -4611,6 +4640,7 @@ async function fetchAdsRawDaily() {
   const base = 'select=entity_id,date,spend,synced_at&entity_type=eq.campaign&' + excludeFilter;
   const query = (!cold && _lastAdsRawSyncedAt_) ? base + '&synced_at=gt.' + encodeURIComponent(_lastAdsRawSyncedAt_) : base;
   const rows = await _fetchTablePage_('dash_ads_daily', query);
+  if (cold) { _adsRawDailyMap_ = new Map(); _lastAdsRawSyncedAt_ = null; _needCold_.ads = false; } // só troca depois da busca dar certo
   rows.forEach(r => {
     _adsRawDailyMap_.set(r.entity_id + '|' + r.date, parseFloat(r.spend) || 0);
     if (r.synced_at && (!_lastAdsRawSyncedAt_ || r.synced_at > _lastAdsRawSyncedAt_)) _lastAdsRawSyncedAt_ = r.synced_at;
@@ -4658,9 +4688,10 @@ async function fetchAdsRawDaily() {
 let _leadsRawDaily = null;
 let _lastLeadsRawSyncedAt_ = null;
 async function fetchLeadsRawDaily() {
-  const cold = !_leadsRawDaily;
+  const cold = !_leadsRawDaily || _needCold_.leads;
   const query = (!cold && _lastLeadsRawSyncedAt_) ? 'select=*&synced_at=gt.' + encodeURIComponent(_lastLeadsRawSyncedAt_) : 'select=*';
   const fresh = await _fetchTablePage_('dash_geral_leads_daily', query);
+  if (cold) { _lastLeadsRawSyncedAt_ = null; _needCold_.leads = false; }
   fresh.forEach(r => { if (r.synced_at && (!_lastLeadsRawSyncedAt_ || r.synced_at > _lastLeadsRawSyncedAt_)) _lastLeadsRawSyncedAt_ = r.synced_at; });
   // Append-only por natureza (1 linha por lead válido, gravada uma única vez,
   // nunca reescrita) — sem necessidade de merge-by-id nem checagem de
@@ -4941,6 +4972,27 @@ function prevRangeOf(period) {
 }
 
 async function loadData(force, silent) {
+  // 17/11 (auditoria): atualização parcial no deploy — a página nova pode chegar sem o dados.js (404/rede). Sem ele não há
+  // política de dados: avisa na faixa, não deixa a tela congelada e recarrega sozinha. Contagem em sessionStorage
+  // (dash_dados_reload {n,ts,next}): 3 recargas a cada 60 s; depois só a cada 5 min (não martela o servidor). Zera quando o dados.js aparece.
+  if (typeof _fetchTablePage_ !== 'function') {
+    try {
+      const b = document.getElementById('dados-banner');
+      if (b) { b.className = 'show codigo'; b.textContent = '⚠ dados.js não carregou (atualização parcial). Recarregando automaticamente.'; }
+      if (typeof showErr === 'function') showErr('dados.js não carregou (atualização parcial). Recarregando automaticamente');
+    } catch (_) {}
+    if (!window.__dadosJsReload) {
+      let n = 0; try { n = (JSON.parse(sessionStorage.getItem('dash_dados_reload') || 'null') || {}).n || 0; } catch (_) {}
+      const wait = n < 3 ? (window.__DADOS_JS_RELOAD_MS__ || 60000) : (window.__DADOS_JS_RELOAD_LONGO_MS__ || 300000);
+      try { sessionStorage.setItem('dash_dados_reload', JSON.stringify({ n, ts: Date.now(), next: wait })); } catch (_) {}
+      window.__dadosJsReload = setTimeout(() => {
+        try { sessionStorage.setItem('dash_dados_reload', JSON.stringify({ n: n + 1, ts: Date.now(), next: wait })); } catch (_) {}
+        location.reload();
+      }, wait);
+    }
+    return;
+  }
+  if (!window.__dadosJsOk) { window.__dadosJsOk = 1; try { sessionStorage.removeItem('dash_dados_reload'); } catch (_) {} } // dados.js presente: zera a contagem
   const mySeq = ++_reqSeq;
   // Só precisa tocar a rede em duas situações: cold start (ainda não tem
   // snapshot cru nenhum) ou pedido explícito de refresh (force=true, botão
@@ -4958,13 +5010,17 @@ async function loadData(force, silent) {
   try {
     if (needsFetch) {
       _rawDeals = await fetchRawDeals();
+      _partialFail_ = [];
       // best-effort: falha aqui nunca derruba o carregamento principal do CRM
       // (que já terminou acima) — loadAdsSection() simplesmente mostra "—"
       // se _adsRawDaily continuar null. achado 30/07 (auditoria): catch era
       // 100% silencioso (zero console.warn) — card de Ads sumia sem nenhuma
       // pista de por quê, nem no console. Logado igual ao catch do CPL.
-      try { _adsRawDaily = await fetchAdsRawDaily(); } catch (eAds) { console.warn('fetchAdsRawDaily falhou:', eAds.message); }
-      try { _leadsRawDaily = await fetchLeadsRawDaily(); } catch (eLeads) { console.warn('fetchLeadsRawDaily falhou:', eLeads.message); }
+      try { _adsRawDaily = await fetchAdsRawDaily(); } catch (eAds) { console.warn('fetchAdsRawDaily falhou:', eAds.message); _partialFail_.push('anúncios'); }
+      try { _leadsRawDaily = await fetchLeadsRawDaily(); } catch (eLeads) { console.warn('fetchLeadsRawDaily falhou:', eLeads.message); _partialFail_.push('leads'); }
+      // 17/11: de onde vieram os dados deste carregamento? REST da D1 = bom; ponte KV (só se não havia NADA) = emergência.
+      if (_forceBridge_) { _dadosEstado_ = 'emergencia'; _markAllCold_(); }
+      else dadosMarcarBom_();
     } else if (!silent) {
       await new Promise(r => setTimeout(r, 150)); // respiro mínimo pro pulso ser visível
     }
@@ -5009,6 +5065,9 @@ async function loadData(force, silent) {
     refreshAdsHierarchyIfActive_();
     refreshGa4IfActive_();
     refreshBiaIfActive_();
+    if (_dadosEstado_ === 'codigo') _dadosEstado_ = null; // montou a tela sem erro: o erro de código passou (dados.js)
+    renderDadosBanner_();
+    if (_dadosEstado_ || _partialFail_.length) armaRecuperacao_(); else _recN_ = 0;
     flashDot();
     // 07/09 (rede de segurança, mesmo incidente do estouro de egress): salva
     // também os dados CRUS (não só o resultado já calculado) — se o Supabase
@@ -5016,34 +5075,42 @@ async function loadData(force, silent) {
     // snapshot velho e continua respondendo a troca de filtro/período/aba
     // normalmente (antes, só reexibia o MESMO recorte congelado que estava
     // ativo no momento em que o snapshot foi salvo).
-    try { localStorage.setItem('geral_telao_snapshot', JSON.stringify({ data: curr, rawDeals: _rawDeals, adsRawDaily: _adsRawDaily, leadsRawDaily: _leadsRawDaily, savedAt: Date.now() })); } catch(_) {}
+    // 17/11: dado de emergência (ponte KV) ou velho restaurado NUNCA vira "último dado bom"; cota estourada guarda ao menos o resumo (dados.js)
+    if (!_dadosEstado_) dadosSalvarSnapshot_('geral_telao_snapshot', () => ({ data: curr, rawDeals: _rawDeals, adsRawDaily: _adsRawDaily, leadsRawDaily: _leadsRawDaily, savedAt: Date.now() }), () => ({ data: curr, savedAt: Date.now(), compacto: true }));
   } catch(e) {
-    console.error('Erro:', e.message);
-    // Telão sozinho na sala não pode ficar de tela vazia/erro a madrugada
-    // toda. Se ainda não carregou nada NESTA sessão (ex: recarregou a página
-    // durante o erro, ou durante um bloqueio de cota do Supabase), restaura o
-    // último snapshot bom — velho, mas muito melhor que nada — e com os
-    // dados CRUS de volta o resto do painel (troca de filtro/aba) continua
-    // funcionando em vez de ficar congelado no recorte salvo.
-    if (!_data) {
-      try {
-        const snap = JSON.parse(localStorage.getItem('geral_telao_snapshot') || 'null');
-        if (snap && snap.data) {
-          _data = snap.data;
-          if (snap.rawDeals) _rawDeals = snap.rawDeals;
+    // 🔴 17/11 — falha em 3 degraus, sempre com a faixa #dados-banner (política em dados.js, igual no telão):
+    //  1) dado bom em memória: mantém + faixa "dados de HH:MM";  2) último dado bom salvo: restaura e recalcula pelos
+    //  filtros de agora;  3) NADA salvo: só então a ponte KV (modo emergência, faixa vermelha, nunca vira "último bom").
+    // Erro de CÓDIGO (compute/render) é separado do erro de REDE: faixa própria, sem recuperação em loop.
+    if (mySeq !== _reqSeq) return; // um pedido mais novo já está em voo e trata a própria falha
+    if (!dadosErroDeRede_(e)) { dadosErroDeCodigo_(e); return; }
+    console.warn('loadData: falha ao buscar dados:', e && e.message);
+    if (_rawDeals) {
+      if (!_dadosEstado_ || _dadosEstado_ === 'codigo') { _dadosEstado_ = 'stale'; _staleSince_ = _lastGoodAt_ || Date.now(); }
+      renderDadosBanner_(); armaRecuperacao_();
+    } else {
+      let snap = null;
+      try { snap = JSON.parse(localStorage.getItem('geral_telao_snapshot') || 'null'); } catch(_) {}
+      if (snap && snap.data) {
+        _dadosEstado_ = 'stale'; _staleSince_ = snap.savedAt || Date.now();
+        if (snap.rawDeals) {
+          _rawDeals = snap.rawDeals;
           if (snap.adsRawDaily) _adsRawDaily = snap.adsRawDaily;
           if (snap.leadsRawDaily) _leadsRawDaily = snap.leadsRawDaily;
-          render(_data);
-          const mins = Math.round((Date.now() - snap.savedAt) / 60000);
-          showErr('Dados de ' + mins + 'min atrás (atualização falhando: ' + friendlyErr(e) + ')');
+          _markAllCold_();
+          await loadData(false, true); // recalcula em cima do dado cru restaurado, pelo período/origem de agora (zero rede)
         } else {
-          if (mySeq === _reqSeq) showErr('Erro ao atualizar: ' + friendlyErr(e));
+          _data = snap.data; render(_data); renderDadosBanner_(); // snapshot compacto (sem dado cru): só reexibe
         }
-      } catch(_) {
-        if (mySeq === _reqSeq) showErr('Erro ao atualizar: ' + friendlyErr(e));
+        armaRecuperacao_();
+      } else if (!_forceBridge_) {
+        _forceBridge_ = true;
+        try { await loadData(true, silent); } finally { _forceBridge_ = false; }
+        return;
+      } else {
+        showErr('Erro ao carregar: ' + friendlyErr(e));
+        armaRecuperacao_();
       }
-    } else {
-      if (mySeq === _reqSeq) showErr('Erro ao atualizar: ' + friendlyErr(e));
     }
   } finally {
     // achado 28/07 (Robert: "quando tem um ganho precisa dar F5 pra atualizar"):
