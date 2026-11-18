@@ -44,7 +44,8 @@ def montar():
     djs = open(os.path.join(AQUI, "deck.js"), encoding="utf-8").read()
     import slides as SL
     deck = SL.deck()
-    estado_json = json.dumps(SL.ESTADO, ensure_ascii=False).replace("</", "<\\/")
+    # o bloco "aguardam_deploy_ana" (marcação interna do que vira "no ar" depois de um deploy) não vai para a página
+    estado_json = json.dumps({k: v for k, v in SL.ESTADO.items() if k != "aguardam_deploy_ana"}, ensure_ascii=False).replace("</", "<\\/")
     N = len(nav)
     ic_menu = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>'
     ic_tema = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4v16"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg>'
