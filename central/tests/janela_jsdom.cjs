@@ -255,6 +255,7 @@ const poe = (c, ficha) => { sandbox.S.ag.conversas = c; sandbox.AT.fone = ficha 
   poe(LE, { fone: "e4", v: { ok: true, hist: [], entrega: { estado: "limitada_meta", codigo: 131049, texto: "A Meta não aceitou nem o modelo de utilidade: chamar pelo WhatsApp manualmente" } } }); eq(SD("e4").map((g) => g.rot), ["Meta limitou: chamar manualmente"], "atSelosDe: a ficha aberta manda (mais fresca)"); poe(LE); sandbox.S.selos = {};
   // XSS: texto hostil entra por textContent
   const LH = [{ fone: "h1", ts: 1, entrega: { estado: "nao_entregue", texto: "<img src=x onerror=alert(1)>" } }]; poe(LH); sandbox.S.ag.conversas = LH; const eh = J("atSelosEl")("h1", 2, ""); ok(eh.length === 1 && eh[0].children.length === 0 && eh[0].title === "<img src=x onerror=alert(1)>", "texto de entrega hostil: título como texto, sem elemento");
+  ["so_orientar", "equipe_atendendo", "pausada", "encerrada", "ja_respondendo", "lead_nunca_escreveu", "janela_24h_fechada", "horario_de_silencio", "intervalo_minimo"].forEach((m) => ok(new RegExp("INS_MOTIVOS=\\{[^;]*" + m + ":").test(html), "texto da instrução para o motivo '" + m + "' (todos os motivos do servidor atual)"));
   ok(/Entrega da mensagem/.test(html) && /data-card','entrega'|setAttribute\('data-card','entrega'\)/.test(html), "ficha tem o cartão 'Entrega da mensagem'"); }
 // ---------- 10. varredura estática da página ----------
 ok(/data-b|dataset\.b/.test(html) && html.indexOf("AX_BLOCOS") > 0, "blocos da ficha presentes");
