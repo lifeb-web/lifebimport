@@ -4,7 +4,7 @@ const nav = await abrirNavegador();
 const TAM0 = [[1920, 1080], [1366, 768], [1024, 768], [390, 844], [360, 640], [844, 390]]; const TAM = process.env.ECO_TAM ? TAM0.filter(([w]) => String(w) === process.env.ECO_TAM) : TAM0;
 const est = (page) => page.evaluate(() => window.__deck.estado());
 const nSlides = await (async () => { const { ctx, page } = await abrirPagina(nav, { w: 1440, h: 900 }); const n = await page.evaluate(() => window.__deck.N); await ctx.close(); return n; })();
-t("de 15 a 35 slides (deck enxuto; os detalhes ficam na página longa)", nSlides >= 15 && nSlides <= 35, nSlides);
+t("de 15 a 40 slides (deck enxuto; os detalhes ficam na página longa; 17/11/2026: teto de 35 para 40 porque o estado foi dividido em 4 slides para caber legível no celular em pé)", nSlides >= 15 && nSlides <= 40, nSlides);
 { // nunca nomes de pessoas no HTML do deck nem da página
   const deckHtml = HTML.slice(HTML.indexOf('<div id="deck"'), HTML.indexOf("</body>"));
   t("HTML do deck existe", deckHtml.length > 2000);

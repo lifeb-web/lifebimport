@@ -4,7 +4,7 @@ O Ecossistema é uma APRESENTAÇÃO de como tudo funciona. Ele só pode dizer "n
 ## Onde editar (1 lugar por tipo de mudança)
 | Mudou... | Edite | Efeito |
 |---|---|---|
-| Estado de um componente (no ar, em implantação, planejado) e a data | `tools/ecossistema/estado.json` (campos `no_ar`, `implantacao`, `planejado`, `estado`, `data`; e `atualizado_em` no topo) | Os slides (selos, slide "No ar e o que vem", capa), o "Atualizado em dd/mm/aaaa" da página e o rodapé |
+| Estado de um componente (no ar, em implantação, planejado) e a data | `tools/ecossistema/estado.json` (campos `no_ar`, `implantacao`, `planejado`, `estado`, `data`; e `atualizado_em` no topo). Item que começa com `Em voo: ` (deploy em andamento) ou `Em correção: ` (publicação abortou ou defeito achado) ganha selo próprio na página e nos slides; nenhum dos dois é "no ar" | Os slides (selos, slide "No ar e o que vem", capa), o "Atualizado em dd/mm/aaaa" da página e o rodapé |
 | Versão, data e verificações de um deploy | `tools/ecossistema/pos_deploy.sh <sistema> <versão> "<data>" varredura=.. testes=.. auditor=.. fumaca=.. rollback=..` | `versoes.json`, seção "Versões", marcador PENDENTE |
 | Regra, texto ou fluxo | `conteudo1.py`, `conteudo2.py`, `conteudo3.py`, `diagramas.py` (fluxogramas), `dados_status.py` (checklist) | Seções e fluxogramas da página longa |
 | Texto dos slides | `tools/ecossistema/slides_conteudo.py` (cada slide tem `sec=` com as seções da página que cobre) | Modo apresentação |

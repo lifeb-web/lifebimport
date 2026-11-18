@@ -4,6 +4,7 @@ Estado (no ar, em implantação, planejado) vem de estado.json. Terminologia: p�
 from comp import e
 import slides_base as B
 from slides_base import slide, card, li, pill, ic, faixa_estado, COMP, ESTADO, ATUAL
+from comp import selo
 import slides_fluxos as F
 
 def g(items, n=3):
@@ -66,16 +67,25 @@ def todos():
     for c in ESTADO["componentes"]:
         for k in cols:
             if c[k]:
-                cols[k].append(f'<li><b>{c["nome"]}</b> {"; ".join(c[k])}</li>')
+                cols[k].append(f'<li><b>{c["nome"]}</b> {"; ".join(selo(x, deck=True) for x in c[k])}</li>')
+    def no_ar(ids):   # no ar por componente; dividido em 2 slides para caber legível no celular em pé
+        return "".join(f'<li><b>{COMP[i]["nome"]}</b> {"; ".join(selo(x, deck=True) for x in COMP[i]["no_ar"])}</li>' for i in ids if COMP[i]["no_ar"])
     est = ('<div class="dg1 est dgx">'
-        f'<div class="ec e-ok"><h3>{pill("no ar")}</h3><ul>{"".join(cols["no_ar"])}</ul></div></div>'
+        f'<div class="ec e-ok"><h3>{pill("no ar")}</h3><ul>{no_ar(["ana", "bia", "agendor"])}</ul></div></div>'
         + band(f'Posição de {ATUAL}. No ar: conferido em produção. Em implantação: pronto, ainda não no ar. Planejado: futuro. Checklist completo na página.'))
-    A(slide("estado", "Estado de cada peça: no ar", C, est, "dense", "status,checklist"))
-    est2 = ('<div class="dg2 est dgx">'
-        f'<div class="ec e-te"><h3>{pill("em implantação")}</h3><ul>{"".join(cols["implantacao"]) or "<li>Nada pendente de entrada neste momento.</li>"}</ul></div>'
+    A(slide("estado", "Estado de cada peça: no ar (Ana, Bia e Agendor)", C, est, "dense", "status,checklist"))
+    estb = ('<div class="dg1 est dgx">'
+        f'<div class="ec e-ok"><h3>{pill("no ar")}</h3><ul>{no_ar(["hoje", "central", "dash"])}</ul></div></div>'
+        + band("No ar: conferido em produção. Checklist completo na página."))
+    A(slide("estadob", "Estado de cada peça: no ar (páginas e Dash)", C, estb, "dense", "status,checklist"))
+    est2 = ('<div class="dg1 est dgx">'
+        f'<div class="ec e-te"><h3>{pill("em implantação")}</h3><ul>{"".join(cols["implantacao"]) or "<li>Nada pendente de entrada neste momento.</li>"}</ul></div></div>'
+        + band("Em implantação: pronto, ainda não no ar. " + '<span class="dp dp-corr">Em correção</span>' + " a publicação abortou ou achou-se defeito; não no ar. Checklist na página."))
+    A(slide("estado2", "Estado de cada peça: em implantação", C, est2, "dense", "status,checklist"))
+    est3 = ('<div class="dg1 est dgx">'
         f'<div class="ec e-pl"><h3>{pill("planejado")}</h3><ul>{"".join(cols["planejado"])}</ul></div></div>'
-        + band("Em implantação: pronto, ainder não no ar. Planejado: futuro, ainda não existe. Checklist completo na página.".replace("ainder","ainda")))
-    A(slide("estado2", "Estado de cada peça: em implantação e planejado", C, est2, "dense", "status,checklist"))
+        + band("Planejado: futuro, ainda não existe. Checklist completo na página."))
+    A(slide("estado3", "Estado de cada peça: planejado", C, est3, "dense", "status,checklist"))
 
     # ================= COMO SE CONECTA =================
     C = "Como se conecta"
@@ -93,7 +103,7 @@ def todos():
     ana2 = g([
         cat("O que nunca faz", ["Falar preço, desconto ou resultado garantido, ou prometer implantação na loja", "Negar ser inteligência artificial; falar com quem pediu para parar", "Escrever direto no Agendor ou marcar ganho ou perdido por conta própria", "Escrever por iniciativa própria fora do horário de contato"], "lock"),
         cat("Quando a equipe entra", ["Pela página Central: assume, instrui, devolve ou pausa", "A instrução da equipe pode mandar e encerrar, quando é o caso", "Parada de emergência para a Ana inteira"], "user"),
-    ], 2) + band("A IA entende e escreve; regras fixas decidem o que pode sair. Na página: Ana: entendimento, travas e monitoria.") + faixa_estado("ana")
+    ], 2) + band("A IA entende e escreve; regras fixas decidem o que pode sair. Estado da Ana: slides de estado. Na página: Ana: entendimento, travas e monitoria.")   # sem faixa_estado aqui: não cabe legível no celular em pé
     A(slide("ana_limites", "Ana: limites e intervenção da equipe", C, ana2, "dense", "ana-seguranca"))
     A(slide("msg", "O caminho de cada mensagem", C, fx("msg", "A IA entende e escreve; regras fixas decidem o que pode sair. Na página: Ana: a conversa."), "flow", "ana,ana-seguranca"))
 
@@ -142,15 +152,27 @@ def todos():
     # ================= PÁGINAS =================
     C = "Páginas de trabalho"
     hoje1 = g([
-        cat("Fila e kanban", ["Números do dia, busca geral (nome, CNPJ, telefone, negócio ou cidade) e filtro por origem", "Colunas: Inbound novo, aberturas e follow-ups, última tentativa, tentativas que acabaram, atrasadas e iniciados hoje", "Fila de espera em linhas por lista; sem travas de horário"], "list"),
-        cat("Lead e ações", ["Cartão com empresa, origem, etapa, próxima tarefa e selos", "Dados, pessoas, telefones e CNPJ; observação do SDR e notas livres", "Concluir tarefas, marcar perdido com motivo e explicação, qualificar e escolher o representante, reabrir"], "doc"),
+        cat("Fila e kanban", ["Números do dia, busca geral (nome, CNPJ, telefone, negócio ou cidade) e filtro por origem", "Colunas: Inbound novo, aberturas e follow-ups, última tentativa, tentativas que acabaram, atrasadas e iniciados hoje", "Fila de espera em linhas por lista; sem travas de horário; lead novo aparece em até 30 segundos"], "list"),
+        cat("Lead e ações", ["Cartão com empresa, origem, etapa, próxima tarefa e selos", "Dados, pessoas, telefones e CNPJ; observação do SDR (grava exatamente o que ele escreveu) e notas livres", "Concluir tarefas, marcar perdido com motivo e explicação, qualificar e escolher o representante, reabrir"], "doc"),
     ], 2) + band("Na página: Página Hoje.") + faixa_estado("hoje")
     A(slide("hoje", "Página Hoje: fila, kanban e lead", C, hoje1, "dense", "hoje"))
+    def no(t, s, cls=""):
+        return f'<div class="dno {cls}"><b>{t}</b><span>{s}</span></div>'
+    seta = '<i class="dar" aria-hidden="true">→</i>'
+    hoje3 = ('<div class="chain c5">' + seta.join([
+        no("1. Abre o lead", "Cartão com empresa, origem, etapa e próxima tarefa", "n-p"),
+        no("2. Trabalha", "Liga, anota, conclui tarefas e completa dados. Sem Minimizar: Fechar guarda o rascunho por 3 dias"),
+        no("3. Fechar", "Se a fila mudou, um ponto discreto acende no botão. Nada se move com o lead aberto"),
+        no("4. A fila entra", "Ao fechar o lead, ou no teto de 3 minutos. A faixa de aviso saiu de vez", "n-g"),
+        no("5. Se der erro", "Limite do Agendor não desloga; 502 confirma por releitura antes de repetir; botão de repetir"),
+    ]) + '</div>'
+        + band("Versão 2026-11-17.5, no ar em 17/11/2026 às 21h36. No celular: topo solto, alvos de toque de 44 px e tela estável ao abrir o lead. Na página: Página Hoje."))
+    A(slide("hoje3", "Página Hoje 17.5: o que o SDR vê", C, hoje3, "dense", "hoje"))
     hoje2 = g([
-        cat("Cuidados", ["Clique repetido nunca duplica", "Ação que bate no limite do Agendor fica numa fila e é tentada de novo, com teto de tentativas e alerta", "Chave de emergência desliga a gravação pela página"], "shield"),
-        cat("Qualificar e o que vem", ["Qualificar pela página Hoje cria o negócio no funil certo, pela Bia", "A leitura de tarefas atrasadas é incremental", "Planejado: versão 2.0, lendo de um espelho dos dados (hoje só em teste)"], "rocket"),
-    ], 2) + band("Na página: Página Hoje.")
-    A(slide("hoje2", "Página Hoje: cuidados e o que vem", C, hoje2, "dense", "hoje"))
+        cat("Cuidados", ["Clique repetido nunca duplica; sem internet, a ação espera numa caixa de saída", "Ação que bate no limite do Agendor fica numa fila e é tentada de novo, com teto de tentativas e alerta", "Chave de emergência desliga a gravação pela página"], "shield"),
+        cat("Regras da gestão (17/11/2026)", ["Ação do SDR instantânea e nunca revertida na tela; erro só com confirmação do servidor e botão de repetir (17.6, em construção)", "Distribuição continua manual, pelo SDR: nenhuma regra automática por cidade ou região", "Topo recolhível e de largura total; no celular, solto e recolhido (prévia antes de construir)"], "lock"),
+    ], 2) + band("Qualificar pela página Hoje cria o negócio no funil certo, pela Bia. Planejado: Hoje 2.0, lendo de um espelho dos dados (hoje só em teste). Na página: Página Hoje.")
+    A(slide("hoje2", "Página Hoje: cuidados, regras da gestão e o que vem", C, hoje2, "dense", "hoje"))
     A(slide("cenarq", "Central: propósito e arquitetura", C, fx("cen", "Objetivo: operar a Bia, as automações, as páginas Hoje e Lista e o time sem abrir o terminal. Por desenho, pede à Bia. Na página: Central."), "flow", "central"))
     def mod(n, nome, est, txt):
         return (f"{n}. {nome} " + pill(est[0]), txt)
@@ -179,15 +201,25 @@ def todos():
         cat("No ar: a Ana", ["Aba da Ana: modo, parada de emergência, voz e base de conhecimento editável, com versões", "Aprendizado por polegar para cima ou para baixo, com análise que a gestão aprova"], "ctrl"),
     ], 2) + band("Por desenho, a página Central pede à Bia e não escreve direto no Agendor. Na página: Central.")
     A(slide("central", "Página Central: atendimento e a Ana", C, cen1, "dense", "central"))
+    cen3 = kv([
+        ("ABERTA, fecha em 3h 20m", "Selo fixo em cada conversa: dentro de 24 h da última mensagem do lead, resposta livre."),
+        ("FECHADA há 2 d", "Fora da janela, só modelo aprovado. O filtro Janela fechando mostra quem fecha em menos de 2 h."),
+        ("Veio do formulário", "Lead que chegou pelo formulário do site, com o que preencheu."),
+        ("Repassado ao time comercial", "Conversa já passada ao SDR, com quem e quando."),
+        ("Passar ao SDR → Passando…", "A tela não trava; o servidor responde e a página consulta o resultado. Repetir é seguro."),
+        ("Ocultar e Arquivar", "Qualquer mensagem nova, do lead ou da equipe, traz a conversa de volta: voltou, nova mensagem."),
+    ], 2) + band("Página publicada em 17/11/2026 e compatível com o servidor atual. Os dados novos da janela, do formulário e do repasse e a volta automática dependem do servidor da Ana, em correção (o deploy abortou). Na página: Central.")
+    A(slide("central3", "Página Central: a conversa como a equipe vê", C, cen3, "dense", "central"))
     cen2 = g([
-        cat("Em implantação: servidor no ar, página (9h às 19h) não", ["Botões com confirmação, que leem de volta antes de dizer que deu certo", "Selos do CRM e do início agendado; lista leve; auditoria enxuta", "Observação no modal, mensagens do erro 409 e correção do piscar da aba Ecossistema"], "rocket"),
-        cat("Planejado (origem: levantamento de 16/11/2026 e decisão 2)", ["Dar ganho, dar perdido com motivo e repassar ao SDR Inbound", "Editar dados do lead (nome, empresa, CNPJ, segmento, lojas, decisor), com autor registrado e a Ana enxergando", "Alertas com botão, retomada por modelo após 24 h e instrução com pré-visualização"], "clock"),
-    ], 2) + band("O desenho dos controles manuais será mostrado antes de publicar. Na página: Central.")
-    A(slide("central2", "Página Central: pacote em implantação e o planejado", C, cen2, "dense", "central"))
+        cat("No ar: pacote de 17/11/2026 (página)", ["Botões com confirmação, que leem de volta antes de dizer que deu certo", "Selos do CRM e do início agendado; lista leve; erro 409 explicado", "Aba Ecossistema sem recarregar; saúde sem alerta falso"], "rocket"),
+        cat("Em correção, não no ar: servidor da Ana", ["Dados da janela, do formulário e do repasse; volta automática de conversa arquivada", "Passar ao SDR em segundo plano; resumo do dia com \"esperando uma pessoa\" só sem prova", "O deploy de 17/11/2026 abortou; nada mudou no ar"], "clock"),
+        cat("Planejado (levantamento de 16/11/2026)", ["Dar ganho, dar perdido com motivo e repassar ao SDR Inbound", "Editar dados do lead, com autor registrado e a Ana enxergando", "Alertas com botão, retomada por modelo após 24 h e instrução com pré-visualização"], "list"),
+    ], 3) + band("Regra da gestão: arquivar vale para qualquer conversa; qualquer mensagem nova traz de volta. Na página: Central.")
+    A(slide("central2", "Página Central: no ar, em correção e planejado", C, cen2, "dense", "central"))
     outras = g([
-        cat("Dash Geral", ["Abas: Vendas, LTV, RFM, SDR, anúncios, GA4 e saúde da Bia", "Lê o Agendor; a data do ganho é a do evento real; lead é negócio do Arena", "Dash expandido: planejado"], "dash"),
+        cat("Dash Geral", ["Abas: Vendas, LTV, RFM, SDR, anúncios, GA4 e saúde da Bia", "Lê o Agendor; a data do ganho é a do evento real; lead é negócio do Arena", "Faixa vermelha quando os dados congelam e rosca sem corte (17/11/2026). Dash expandido: planejado"], "dash"),
         cat("Painel do Representante", ["Carteira ao vivo, ações do dia e valor vendido", "Cada ação confere o dono do negócio e relê o Agendor", "Nova recarga em horário comercial: aguarda auditoria"], "user"),
-        cat("WhatsApp e Meta", ["A Ana e a Bia usam números diferentes", "Janela de 24 horas: fora dela, só modelos aprovados", "A Bia só conta como enviado se o WhatsApp aceitou"], "chat"),
+        cat("WhatsApp e Meta", ["A Ana e a Bia usam números diferentes", "Janela de 24 horas: fora dela, só modelos aprovados", "A Bia só conta como enviado se o WhatsApp aceitou", "Reenvio da Ana por utilidade após recusa da Meta: correção em andamento"], "chat"),
     ], 3) + band("Também: Canal (conversa da gestão com o assistente de engenharia) e Life B Solicita (pedidos de material). Na página: Painel, Dash e demais sistemas; WhatsApp e Meta.")
     A(slide("outras", "Dash, painel do representante e Meta", C, outras, "dense", "outras,meta"))
 

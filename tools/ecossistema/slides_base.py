@@ -3,7 +3,7 @@
 Cada slide é uma <section class="slide"> dentro de #deck > .stage (1920x1080 na horizontal, 1080x1920 na vertical; o JS escala sem rolagem).
 Sem nomes de pessoas: só papéis (time comercial, SDR, representantes, diretoria)."""
 import json, os
-from comp import e
+from comp import e, selo
 AQUI = os.path.dirname(os.path.abspath(__file__))
 ESTADO = json.load(open(os.path.join(AQUI, "estado.json"), encoding="utf-8"))
 COMP = {c["id"]: c for c in ESTADO["componentes"]}
@@ -63,8 +63,8 @@ def estado_barra(*ids):
 def faixa_estado(i):
     c = COMP[i]; out = []
     if c["implantacao"]:
-        out.append('<div class="dfx dfx-te">' + pill("em implantação") + "<span>" + "; ".join(c["implantacao"]) + ". Ainda não está no ar.</span></div>")
+        out.append('<div class="dfx dfx-te">' + pill("em implantação") + "<span>" + "; ".join(selo(x, deck=True) for x in c["implantacao"]) + ". Ainda não está no ar.</span></div>")
     if c["planejado"]:
-        out.append('<div class="dfx dfx-pl">' + pill("planejado") + "<span>" + "; ".join(c["planejado"]) + ".</span></div>")
+        out.append('<div class="dfx dfx-pl">' + pill("planejado") + "<span>" + "; ".join(selo(x, deck=True) for x in c["planejado"]) + ".</span></div>")
     return '<div class="dfxs">' + "".join(out) + "</div>"
 

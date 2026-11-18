@@ -31,12 +31,12 @@ def s_status():
     est = _j.load(open(_o.path.join(_o.path.dirname(_o.path.abspath(__file__)), "estado.json"), encoding="utf-8"))["componentes"]
     ok = [(c["nome"], "; ".join(c["no_ar"]) + ".") for c in est if c["no_ar"]]
     ok.append(("SDR e cadência", "Cadência por dia útil, repasse com trava, inbound direto, Subir lista, enriquecimento por CNPJ e voltas ao SDR."))
-    te = [(c["nome"], "; ".join(c["implantacao"]) + ".") for c in est if c["implantacao"]] + [
+    te = [(c["nome"], "; ".join(selo(x) for x in c["implantacao"]) + ".") for c in est if c["implantacao"]] + [
       ("Painel do Representante (nova recarga)", "O painel já está no ar; falta só o pacote novo, com recarga em horário comercial, que aguarda auditoria."),
       ("Este Ecossistema", "Atualizado, com apresentação em slides; publica depois do teste visual e do auditor independente."),
     ]
-    pl = [(c["nome"], "; ".join(c["planejado"]) + ".") for c in est if c["planejado"]] + [
-      ("Bia", "Observação do SDR só do SDR, limite por clique no servidor, reenvio quando a Meta recusa a entrega, backup fora do ambiente de trabalho."),
+    pl = [(c["nome"], "; ".join(selo(x) for x in c["planejado"]) + ".") for c in est if c["planejado"]] + [
+      ("Bia", "Limite por clique no servidor, reenvio quando a Meta recusa a entrega, backup fora do ambiente de trabalho."),
       ("Plataforma", "Mineração de leads, arquivar modelos antigos da Meta, revisão das cadências com dados reais."),
     ]
     def col(tit, k, itens):
@@ -44,7 +44,7 @@ def s_status():
         return f'<div class="col col-{k}"><h3>{pill(k)} {tit}</h3><ul class="plain">{lis}</ul></div>'
     corpo = (f'<div class="cols3">{col("O que está valendo agora", "ok", ok)}{col("Pronto, em implantação", "te", te)}{col("Na fila", "pl", pl)}</div>'
       + '<h3 class="mt">Depende de decisão da gestão</h3>' + ul(S.DEPENDE)
-      + aviso("Como ler este status", "\"No ar\" só aparece quando foi conferido em produção e não tem pendência declarada. Se existe pendência, ela aparece escrita ao lado, no checklist. \"Em implantação\" quer dizer pronto, mas ainda não no ar. \"Planejado\" é futuro: ainda não existe.", "n"))
+      + aviso("Como ler este status", "\"No ar\" só aparece quando foi conferido em produção e não tem pendência declarada. Se existe pendência, ela aparece escrita ao lado, no checklist. \"Em implantação\" quer dizer pronto, mas ainda não no ar. Dois selos detalham esse estado: \"Em voo\", quando a publicação está acontecendo neste momento, e \"Em correção\", quando a publicação abortou ou um defeito foi encontrado; nenhum dos dois é no ar. \"Planejado\" é futuro: ainda não existe.", "n"))
     return sec("status", "Começar", "Status: no ar, em teste e planejado", f"Posição de {DATA}. O que está no ar, o que está pronto e em implantação (ainda não no ar) e o que é futuro planejado, em ordem.", corpo)
 
 def s_checklist():
