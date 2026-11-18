@@ -71,13 +71,17 @@ def todos():
     def no_ar(ids):   # no ar por componente; dividido em 2 slides para caber legível no celular em pé
         return "".join(f'<li><b>{COMP[i]["nome"]}</b> {"; ".join(selo(x, deck=True) for x in COMP[i]["no_ar"])}</li>' for i in ids if COMP[i]["no_ar"])
     est = ('<div class="dg1 est dgx">'
-        f'<div class="ec e-ok"><h3>{pill("no ar")}</h3><ul>{no_ar(["ana", "bia", "agendor"])}</ul></div></div>'
+        f'<div class="ec e-ok"><h3>{pill("no ar")}</h3><ul>{no_ar(["ana", "agendor"])}</ul></div></div>'
         + band(f'Posição de {ATUAL}. No ar: conferido em produção. Em implantação: pronto, ainda não no ar. Planejado: futuro. Checklist completo na página.'))
-    A(slide("estado", "Estado de cada peça: no ar (Ana, Bia e Agendor)", C, est, "dense", "status,checklist"))
+    A(slide("estado", "Estado de cada peça: no ar (Ana e Agendor)", C, est, "dense", "status,checklist"))
     estb = ('<div class="dg1 est dgx">'
+        f'<div class="ec e-ok"><h3>{pill("no ar")}</h3><ul>{no_ar(["bia"])}</ul></div></div>'
+        + band("No ar: conferido em produção. Checklist completo na página."))
+    A(slide("estadob", "Estado de cada peça: no ar (Bia)", C, estb, "dense", "status,checklist"))
+    estc = ('<div class="dg1 est dgx">'
         f'<div class="ec e-ok"><h3>{pill("no ar")}</h3><ul>{no_ar(["hoje", "central", "dash"])}</ul></div></div>'
         + band("No ar: conferido em produção. Checklist completo na página."))
-    A(slide("estadob", "Estado de cada peça: no ar (páginas e Dash)", C, estb, "dense", "status,checklist"))
+    A(slide("estadoc", "Estado de cada peça: no ar (páginas e Dash)", C, estc, "dense", "status,checklist"))
     est2 = ('<div class="dg1 est dgx">'
         f'<div class="ec e-te"><h3>{pill("em implantação")}</h3><ul>{"".join(cols["implantacao"]) or "<li>Nada pendente de entrada neste momento.</li>"}</ul></div></div>'
         + band("Em implantação: pronto, ainda não no ar. " + '<span class="dp dp-corr">Em correção</span>' + " a publicação abortou ou achou-se defeito; não no ar. Checklist na página."))
@@ -170,7 +174,7 @@ def todos():
     A(slide("hoje3", "Página Hoje 17.5: o que o SDR vê", C, hoje3, "dense", "hoje"))
     hoje2 = g([
         cat("Cuidados", ["Clique repetido nunca duplica; sem internet, a ação espera numa caixa de saída", "Ação que bate no limite do Agendor fica numa fila e é tentada de novo, com teto de tentativas e alerta", "Chave de emergência desliga a gravação pela página"], "shield"),
-        cat("Regras da gestão (17/11/2026)", ["Ação do SDR instantânea e nunca revertida na tela; erro só com confirmação do servidor e botão de repetir (17.6, em construção)", "Distribuição continua manual, pelo SDR: nenhuma regra automática por cidade ou região", "Topo recolhível e de largura total; no celular, solto e recolhido (prévia antes de construir)"], "lock"),
+        cat("Regras da gestão (17/11/2026)", ["Ação do SDR instantânea e nunca revertida na tela; erro só com confirmação do servidor e botão de repetir (17.6, em construção)", "Distribuição continua manual, pelo SDR: nenhuma regra automática por cidade ou região", "Topo recolhível e de largura total, sem rolagem lateral, com as 13 raias; raia do closer (17.6, em construção, sem data)"], "lock"),
     ], 2) + band("Qualificar pela página Hoje cria o negócio no funil certo, pela Bia. Planejado: Hoje 2.0, lendo de um espelho dos dados (hoje só em teste). Na página: Página Hoje.")
     A(slide("hoje2", "Página Hoje: cuidados, regras da gestão e o que vem", C, hoje2, "dense", "hoje"))
     A(slide("cenarq", "Central: propósito e arquitetura", C, fx("cen", "Objetivo: operar a Bia, as automações, as páginas Hoje e Lista e o time sem abrir o terminal. Por desenho, pede à Bia. Na página: Central."), "flow", "central"))
@@ -208,18 +212,18 @@ def todos():
         ("Repassado ao time comercial", "Conversa já passada ao SDR, com quem e quando."),
         ("Passar ao SDR → Passando…", "A tela não trava; o servidor responde e a página consulta o resultado. Repetir é seguro."),
         ("Ocultar e Arquivar", "Qualquer mensagem nova, do lead ou da equipe, traz a conversa de volta: voltou, nova mensagem."),
-    ], 2) + band("Página publicada em 17/11/2026 e compatível com o servidor atual. Os dados novos da janela, do formulário e do repasse e a volta automática dependem do servidor da Ana, em correção (o deploy abortou). Na página: Central.")
+    ], 2) + band("Página publicada em 17/11/2026 (20h48); o servidor da Ana que entrega janela, formulário, repasse e a volta automática está no ar desde 23h40. Na página: Central.")
     A(slide("central3", "Página Central: a conversa como a equipe vê", C, cen3, "dense", "central"))
     cen2 = g([
         cat("No ar: pacote de 17/11/2026 (página)", ["Botões com confirmação, que leem de volta antes de dizer que deu certo", "Selos do CRM e do início agendado; lista leve; erro 409 explicado", "Aba Ecossistema sem recarregar; saúde sem alerta falso"], "rocket"),
-        cat("Em correção, não no ar: servidor da Ana", ["Dados da janela, do formulário e do repasse; volta automática de conversa arquivada", "Passar ao SDR em segundo plano; resumo do dia com \"esperando uma pessoa\" só sem prova", "O deploy de 17/11/2026 abortou; nada mudou no ar"], "clock"),
-        cat("Planejado (levantamento de 16/11/2026)", ["Dar ganho, dar perdido com motivo e repassar ao SDR Inbound", "Editar dados do lead, com autor registrado e a Ana enxergando", "Alertas com botão, retomada por modelo após 24 h e instrução com pré-visualização"], "list"),
+        cat("No ar desde 17/11/2026 (23h40): servidor da Ana", ["Dados da janela, do formulário e do repasse; volta automática de conversa arquivada, também com a equipe", "Passar ao SDR em segundo plano; resumo do dia com \"esperando uma pessoa\" só sem prova", "Vácuo corrigido; alertas com DDD e número"], "clock"),
+        cat("Planejado (levantamento de 16/11/2026)", ["Dar ganho, dar perdido com motivo e repassar ao SDR Inbound", "Editar dados do lead, com autor registrado e a Ana enxergando", "Alertas com botão, retomada por modelo após 24 h, instrução com pré-visualização e filtros recolhíveis (sem data)"], "list"),
     ], 3) + band("Regra da gestão: arquivar vale para qualquer conversa; qualquer mensagem nova traz de volta. Na página: Central.")
-    A(slide("central2", "Página Central: no ar, em correção e planejado", C, cen2, "dense", "central"))
+    A(slide("central2", "Página Central: no ar e planejado", C, cen2, "dense", "central"))
     outras = g([
         cat("Dash Geral", ["Abas: Vendas, LTV, RFM, SDR, anúncios, GA4 e saúde da Bia", "Lê o Agendor; a data do ganho é a do evento real; lead é negócio do Arena", "Faixa vermelha quando os dados congelam e rosca sem corte (17/11/2026). Dash expandido: planejado"], "dash"),
         cat("Painel do Representante", ["Carteira ao vivo, ações do dia e valor vendido", "Cada ação confere o dono do negócio e relê o Agendor", "Nova recarga em horário comercial: aguarda auditoria"], "user"),
-        cat("WhatsApp e Meta", ["A Ana e a Bia usam números diferentes", "Janela de 24 horas: fora dela, só modelos aprovados", "A Bia só conta como enviado se o WhatsApp aceitou", "Reenvio por utilidade da abertura da Ana: foi construído em 15/11/2026, mas não funcionou no caso real de 17/11/2026; correção pronta, entra no pacote da Ana; não está no ar"], "chat"),
+        cat("WhatsApp e Meta", ["A Ana e a Bia usam números diferentes", "Janela de 24 horas: fora dela, só modelos aprovados", "A Bia só conta como enviado se o WhatsApp aceitou", "Reenvio por utilidade da abertura da Ana: corrigido em 17/11/2026 (23h40); resultado do caso real a conferir na manhã de 18/11/2026"], "chat"),
     ], 3) + band("Também: Canal (conversa da gestão com o assistente de engenharia) e Life B Solicita (pedidos de material). Na página: Painel, Dash e demais sistemas; WhatsApp e Meta.")
     A(slide("outras", "Dash, painel do representante e Meta", C, outras, "dense", "outras,meta"))
 
