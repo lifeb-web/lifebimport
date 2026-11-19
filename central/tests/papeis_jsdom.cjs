@@ -24,7 +24,7 @@ async function mundo(opts = {}) {
     if (metodo === "POST" && caminho === "/papeis") { if (corpo.acao === "salvar") { const i = m.custom.findIndex((x) => x.id === corpo.id); const it = { id: corpo.id, nome: corpo.nome, abas: ["inicio", "conta", ...corpo.abas], areas: corpo.areas, embutido: false }; if (i >= 0) m.custom[i] = it; else m.custom.push(it); return { status: 200, j: { ok: true, v: m.custom.length + 1 } }; } if (corpo.acao === "remover") { m.custom = m.custom.filter((x) => x.id !== corpo.id); return { status: 200, j: { ok: true } }; } }
     return { status: 404, j: {} }; };
   sb.render = () => { m.renders++; const c = document.getElementById("c"); c.textContent = ""; sb.telaUsuarios(c); };
-  vm.createContext(sb); vm.runInContext(["el", "fmtData", "erroTxt", "cartoesMovel"].map(fn).join("\n") + "\n" + bloco("/*USUARIOS-INI*/", "/*USUARIOS-FIM*/") + "\n" + bloco("/*PAPEIS-INI*/", "/*PAPEIS-FIM*/") + "\n" + bloco("/*HUB-INI*/", "/*HUB-FIM*/").match(/var PAPEIS_PADRAO=.*$/m)[0], sb);
+  vm.createContext(sb); vm.runInContext(["el", "fmtData", "erroTxt", "cartoesMovel", "vazioErro"].map(fn).join("\n") + "\n" + bloco("/*USUARIOS-INI*/", "/*USUARIOS-FIM*/") + "\n" + bloco("/*PAPEIS-INI*/", "/*PAPEIS-FIM*/") + "\n" + bloco("/*HUB-INI*/", "/*HUB-FIM*/").match(/var PAPEIS_PADRAO=.*$/m)[0], sb);
   await sb.carregarUsuarios(); sb.render();
   const $ = (s) => document.querySelector(s), $$ = (s) => [...document.querySelectorAll(s)];
   const clica = async (s) => { const e = typeof s === "string" ? $(s) : s; e.click(); await tick(); };

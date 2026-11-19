@@ -507,11 +507,13 @@ nav .grp{font-family:var(--mono);font-weight:500;letter-spacing:.18em}
 /* alvos de toque de 44 px no celular (a largura estreita, não só o toque) */
 @media (max-width:620px){
   .iconbtn{width:44px;height:44px}
+  aside{flex-wrap:nowrap;align-content:flex-start;gap:8px 10px}.userbox{flex:none;gap:8px}.userbox .avatar{display:none}.brand{min-width:0}
   .search input,#busca{min-height:44px;height:44px}
   .seg button{min-height:44px}
   .switch{height:44px;border-style:solid;border-color:transparent;border-width:6px 0;background-clip:padding-box;box-sizing:border-box}
   .ax .cp2{min-height:44px}.ax .ri .rc .ib.cmb{min-width:44px;min-height:44px;width:44px}
   select.usuPapelSel,.usuPapelSel{min-height:44px}
+  .hbusca{flex:1 1 100%}
   .htop .btn.ghost{display:none}   /* o Atualizar do topo da página já serve ao Início */
   /* tabelas viram cartões empilhados */
   .tw.cartoes{overflow-x:visible}
@@ -525,6 +527,7 @@ nav .grp{font-family:var(--mono);font-weight:500;letter-spacing:.18em}
   .cartoes select{width:100%}
 }
 code{overflow-wrap:normal;word-break:keep-all}
+@media (max-width:1180px){#app{grid-template-rows:auto minmax(0,1fr)}}   /* o cabeçalho não estica nem desce quando a tela tem pouco conteúdo */
 /* celular: navegacao inferior, tudo em 1 coluna, alvos de 44 px */
 @media (max-width:620px){
   html{scroll-padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
@@ -825,7 +828,7 @@ async function carregarPapeis(){   // 19/11: matriz papel x aba e papéis novos 
   if(!S.eu||S.eu.trocarSenha)return;var r=await api('GET','/papeis').catch(function(){return {status:0,j:{}};});
   if(r.status===200&&r.j&&Array.isArray(r.j.papeis)){S.papeis=r.j;if(r.j.meuPapelNome)$('quemPapel').textContent=r.j.meuPapelNome;if(!abaPermitida(S.aba)){S.aba='inicio';hashGravar('inicio',null,true);}montarNav();renderSoon();if(!PAPEIS_PADRAO[S.eu.papel]&&!S.papeisCarregouOp){S.papeisCarregouOp=true;carregar(false);}}   // papel novo: só agora se sabe o que ele pode ler; carrega uma vez
 }
-async function carregarUsuarios(){var r=await api('GET','/usuarios');S.usuarios=(r.j&&r.j.itens)||[];await carregarPapeis();}
+async function carregarUsuarios(){var r=await api('GET','/usuarios');if(r.status===200){S.usuarios=(r.j&&r.j.itens)||[];S.usuErro='';}else{S.usuarios=S.usuarios||[];S.usuErro=r.status===0?erroTxt(r):'Não consegui carregar os usuários ('+erroTxt(r)+').';}await carregarPapeis();}
 function agoraSrv(){return Date.now()+(S.skew||0);}   // hora do servidor (corrige relógio errado do aparelho)
 function sessaoTexto(){if(!S.ate)return S.persist?'Conectado neste aparelho (validade não informada pelo servidor)':'Conectado (validade não informada pelo servidor)';return 'Conectado até '+fmtAte(S.ate)+(S.persist?' · salvo neste aparelho':' · só nesta aba');}
 function tickSessao(){if(!S.eu||!S.tok)return;if(S.ate&&agoraSrv()>=S.ate){sessaoVenceu('A sua sessão acabou '+fmtAte(S.ate)+'. Entre de novo para continuar.');return;}var qa=$('quemAte');if(qa){var t=S.ate?('Conectado até '+fmtAte(S.ate)):'Conectado';if(qa.textContent!==t)qa.textContent=t;qa.title=sessaoTexto();var perto=S.ate&&S.ate-agoraSrv()<3600e3;qa.style.color=perto?'var(--warn,#9a5a06)':'';}var sb=$('stAteBox');if(sb){sb.classList.toggle('hide',!S.ate);if(S.ate)$('stAte').textContent=fmtAte(S.ate);}}
@@ -2101,7 +2104,7 @@ var HUB_HOSTS=['projetojlbv.com.br','www.projetojlbv.com.br','n8n-production-c46
 var HUB_RE_ID=/^[a-z0-9][a-z0-9_-]{1,39}$/;
 function hubNorm(t){return String(t==null?'':t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');}
 function dataBR(iso){var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso||''));return m?m[3]+'/'+m[2]+'/'+m[1]:'';}
-// Só endereços do projeto: caminho do próprio site, *.robert131196.workers.dev (workers da Life B), o domínio do projeto e o n8n. Nunca endereço de artefato de trabalho (o domínio dele é barrado abaixo).
+// Só endereços do projeto: caminho do próprio site, *.robert131196.workers.dev (workers da Life B), o domínio do projeto e o n8n. Links só de páginas do projeto (o domínio de trabalho externo é barrado abaixo).
 function hubUrlPermitida(u){
   if(typeof u!=='string'||!u||u.length>300||/[\u0000-\u001f\s]/.test(u))return false;
   if(u.charAt(0)==='/')return u.charAt(1)!=='/'&&u.indexOf('\\')<0;
@@ -2333,7 +2336,7 @@ function igQuando(ms){if(!ms)return '';var d=new Date(ms);return d.toLocaleDateS
 function igResumoDias(itens,hoje,n,teto){var out=[];for(var i=0;i<n;i++){var d=igSomaDias(hoje,i);var l=itens.filter(function(p){return p.agendarPara===d;});var ocupa=l.filter(function(p){return p.status!=='rejeitado'&&p.status!=='falhou';}).length;out.push({dia:d,br:dataBR(d),semana:igDiaSemana(d),itens:l,ocupa:ocupa,cheio:ocupa>=teto,hoje:i===0});}return out;}
 function igFiltrar(itens,f){return f==='todos'?itens.slice():itens.filter(function(p){return p.status===f;});}
 function igPodeAprovar(p){return IG.euPosso===true&&p.status==='aguardando';}
-// 19/11 (auditoria): mesma lista de hosts do validador do Início (HUB_HOSTS e *.workers.dev do projeto) + hosts de mídia/permalink do Instagram. Rejeita artefatos, javascript:, data:, porta e credencial.
+// 19/11 (auditoria): mesma lista de hosts do validador do Início (HUB_HOSTS e *.workers.dev do projeto) + hosts de mídia/permalink do Instagram. Rejeita domínios de trabalho externos, javascript:, data:, porta e credencial.
 var IG_HOSTS_MIDIA=/(^|\.)(cdninstagram\.com|fbcdn\.net)$/;var IG_HOSTS_PAG=['instagram.com','www.instagram.com'];
 function igUrlHttps(u){try{if(typeof u!=='string'||!u||u.length>2000||/[\u0000-\u001f\s]/.test(u))return false;var x=new URL(u);if(x.protocol!=='https:'||x.username||x.password||x.port)return false;var h=x.hostname.toLowerCase();if(/(^|\.)claude\.ai$/.test(h))return false;return HUB_HOSTS.indexOf(h)>=0||/^[a-z0-9-]+\.robert131196\.workers\.dev$/.test(h)||IG_HOSTS_PAG.indexOf(h)>=0||IG_HOSTS_MIDIA.test(h);}catch(e){return false;}}
 function igUrlCurta(u){try{var x=new URL(u);var s=x.hostname+x.pathname;return s.length>52?s.slice(0,49)+'...':s;}catch(e){return String(u).slice(0,52);}}
@@ -2543,6 +2546,7 @@ function telaUsuarios(c){
   var rw=el('div');rw.appendChild(bt2);f.appendChild(rw);f.appendChild(er2);c.appendChild(f);
   var dica=el('p','hint','A senha é você quem passa à pessoa (WhatsApp, pessoalmente). Ela é obrigada a trocar na primeira entrada. Papéis: SDR (somente leitura), Administrador (muda controles de risco baixo e médio), Robert (tudo).');dica.id='usuDica';dica.style.marginBottom='12px';c.appendChild(dica);
   // ── lista ──
+  if(S.usuErro&&!lista.length){vazioErro(c,S.usuErro,carregarUsuarios);if(typeof usuPapeisSecao==='function')usuPapeisSecao(c);return;}
   var w=el('div','card tw cartoes');w.id='usuLista';var t=el('table');var h=el('tr');['Usuário','Nome','Papel','Último acesso','Situação','Ações'].forEach(function(x){h.appendChild(el('th',null,x));});t.appendChild(h);
   lista.forEach(function(u){var eu=S.eu.usuario===u.usuario;var r=el('tr');r.setAttribute('data-usuario',u.usuario);r.appendChild(el('td','k',u.usuario+(eu?' (você)':'')));r.appendChild(el('td',null,u.nome||''));
     var tp=el('td');var sp=el('select');sp.className='usuPapelSel';sp.setAttribute('aria-label','Papel de '+usuNome(u));papeis(sp,u.papel);if(eu)sp.disabled=true;sp.onchange=function(){if(sp.value===u.papel)return;USU.acao={tipo:'papel',usuario:u.usuario,nome:u.nome,de:u.papel,papel:sp.value};render();};tp.appendChild(sp);r.appendChild(tp);
