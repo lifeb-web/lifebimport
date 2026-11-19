@@ -17,6 +17,7 @@ Fonte da regra: servidor (`src/central_papeis.js`, `MATRIZ_BASE`) e página (`PA
 | Histórico | sim | sim | sim | se marcada |
 | Instagram | sim | sim | não | nunca |
 | Ecossistema | sim | sim | sim | se marcada |
+| Playbook comercial | sim | sim | sim | se marcada |
 | Usuários | sim | não | não | nunca |
 | Minha conta | sim | sim | sim | sempre |
 

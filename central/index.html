@@ -168,8 +168,8 @@ td{padding:12px 16px;border-bottom:1px solid var(--line);vertical-align:top}tr:l
 .lk b{color:var(--purple-d);font-size:15.5px;display:block}.lk span{font-size:13.5px;color:var(--muted)}
 .ecoHold{overscroll-behavior:contain}body.aba-eco{overscroll-behavior:contain}
 /* 19/11 (Robert #3476): na tela Ecossistema a faixa de cima da Central (título, Ir para, Atualizar, PRODUÇÃO, sessão) some; o cabeçalho da própria página Ecossistema fica. O atalho Ctrl K e o menu lateral continuam. */
-body.aba-eco .top,body.aba-eco .strip{display:none}
-body.aba-eco .frame{height:calc(100vh - 32px);height:calc(100dvh - 32px)}.frame{overscroll-behavior:contain;display:block;width:100%;height:calc(100vh - 170px);height:calc(100dvh - 170px);min-height:560px;border:1px solid var(--line);border-radius:16px;background:var(--card);box-shadow:var(--shadow)}
+body.aba-eco .top,body.aba-eco .strip,body.aba-playbook .top,body.aba-playbook .strip{display:none}
+body.aba-eco .frame,body.aba-playbook .frame{height:calc(100vh - 32px);height:calc(100dvh - 32px)}.frame{overscroll-behavior:contain;display:block;width:100%;height:calc(100vh - 170px);height:calc(100dvh - 170px);min-height:560px;border:1px solid var(--line);border-radius:16px;background:var(--card);box-shadow:var(--shadow)}
 /* ---------- modal e paleta ---------- */
 .overlay:has(#simBox){padding:2vh 16px;place-items:center}.overlay{position:fixed;inset:0;background:rgba(17,13,31,.6);backdrop-filter:blur(3px);display:grid;place-items:start center;padding:12vh 20px 20px;z-index:200;overflow-y:auto;overscroll-behavior:contain}
 @media(max-width:700px){.overlay{padding:16px 12px}}
@@ -858,7 +858,7 @@ window.addEventListener('storage',function(e){if(e.key===SESS_P&&!e.newValue&&S.
 function tickLive(){tickSessao();if(S.aba==='inicio')hubTick();var s=Math.round((Date.now()-S.ult)/1000);$('liveTxt').textContent=S.carregando?'atualizando...':(S.cache?'dados salvos':(!S.ult?'sem dados':s<8?'agora':('há '+(s<60?s+' s':Math.round(s/60)+' min'))));$('liveDot').className='dot '+(S.carregando?'warn':(s<120?'ok':s<600?'warn':'bad'));var st=$('stLat');if(st)st.textContent=S.lat?S.lat+' ms':'...';var sa=$('stSync');if(sa)sa.textContent=S.ult?new Date(S.ult).toLocaleTimeString('pt-BR'):'...';}
 
 /* ---------- navegação ---------- */
-var ABAS=[['inicio','Início e atalhos','atalhos','Atalhos de tudo o que a Life B usa, por área, e a situação dos sistemas'],['visao','Visão geral','visao','Saúde da plataforma e atenção do dia'],['estado','Bia e automações','controles','Controles da Bia e das automações: cadência, Motor, avisos, filas e escritas no Agendor. Os da Ana ficam na aba Ana'],['leitura','Todas as chaves','chaves','Somente leitura'],['filas','Filas de mensagens','filas','Mensagens esperando para sair, por pessoa'],['cal','Calendário','cal','Dias de folga marcados à mão'],['atend','Atendimento','filas','Converse com os leads ao vivo: assuma, responda por texto ou pela voz da Ana'],['agentes','Ana','controles','Controles da Ana (SDR do WhatsApp): modo, parada de emergência, conversa, mesma pessoa em dois números, voz, conhecimento e aprendizado'],['hist','Histórico','hist','Quem mudou o quê, com desfazer'],['instagram','Instagram','cap','Fila de aprovação, calendário e resultados do @lifebimport'],['eco','Ecossistema','eco','O guia completo da plataforma'],['usuarios','Usuários','usuarios','Acessos e papéis'],['conta','Minha conta','conta','Senha e perfil']];
+var ABAS=[['inicio','Início e atalhos','atalhos','Atalhos de tudo o que a Life B usa, por área, e a situação dos sistemas'],['visao','Visão geral','visao','Saúde da plataforma e atenção do dia'],['estado','Bia e automações','controles','Controles da Bia e das automações: cadência, Motor, avisos, filas e escritas no Agendor. Os da Ana ficam na aba Ana'],['leitura','Todas as chaves','chaves','Somente leitura'],['filas','Filas de mensagens','filas','Mensagens esperando para sair, por pessoa'],['cal','Calendário','cal','Dias de folga marcados à mão'],['atend','Atendimento','filas','Converse com os leads ao vivo: assuma, responda por texto ou pela voz da Ana'],['agentes','Ana','controles','Controles da Ana (SDR do WhatsApp): modo, parada de emergência, conversa, mesma pessoa em dois números, voz, conhecimento e aprendizado'],['hist','Histórico','hist','Quem mudou o quê, com desfazer'],['instagram','Instagram','cap','Fila de aprovação, calendário e resultados do @lifebimport'],['eco','Ecossistema','eco','O guia completo da plataforma'],['playbook','Playbook comercial','cap','Manual de venda do SDR e do representante: etapas, roteiros, objeções, combos e treino'],['usuarios','Usuários','usuarios','Acessos e papéis'],['conta','Minha conta','conta','Senha e perfil']];
 var SOLICITA_URL='https://lifeb-solicita-staging.robert131196.workers.dev';
 function montarNav(){
   var n=$('nav');n.textContent='';
@@ -876,8 +876,8 @@ function montarNav(){
 }
 /* ---------- link por aba ----------
    Cada aba tem o seu endereço (#visao, #bia, #chaves, #filas, #calendario, #atendimento, #ana, #historico, #atalhos, #ecossistema, #usuarios, #conta). #atendimento-<fone> abre a conversa. Apelidos antigos/curtos (#estado, #agentes, #leitura, #cal, #hist, #atend, #config) também abrem a aba certa. O botão voltar do navegador percorre as abas. */
-var HASH_ABA={inicio:'inicio',visao:'visao',estado:'bia',leitura:'chaves',filas:'filas',cal:'calendario',atend:'atendimento',agentes:'ana',hist:'historico',instagram:'instagram',eco:'ecossistema',usuarios:'usuarios',conta:'conta'};
-var HASH_APELIDO={estado:'estado',config:'estado',configuracoes:'estado',automacoes:'estado',leitura:'leitura',cal:'cal',agentes:'agentes',hist:'hist',atend:'atend',eco:'eco',home:'inicio',atalhos:'inicio',hub:'inicio',ig:'instagram',social:'instagram'};
+var HASH_ABA={inicio:'inicio',visao:'visao',estado:'bia',leitura:'chaves',filas:'filas',cal:'calendario',atend:'atendimento',agentes:'ana',hist:'historico',instagram:'instagram',eco:'ecossistema',playbook:'playbook',usuarios:'usuarios',conta:'conta'};
+var HASH_APELIDO={estado:'estado',config:'estado',configuracoes:'estado',automacoes:'estado',leitura:'leitura',cal:'cal',agentes:'agentes',hist:'hist',atend:'atend',eco:'eco',playbook:'playbook',playbooks:'playbook',home:'inicio',atalhos:'inicio',hub:'inicio',ig:'instagram',social:'instagram'};
 function hashLer(){   // {aba,fone} | {aba:'?'} (hash não vazio e desconhecido) | null (sem hash)
   var h=String(location.hash||'');if(h==='#'||h==='')return null;var t;try{t=decodeURIComponent(h.slice(1));}catch(e){return {aba:'?'};}t=t.trim().toLowerCase();
   var m=t.match(/^atendimento-(55\d{10,11})$/);if(m)return {aba:'atend',fone:m[1]};
@@ -956,14 +956,15 @@ function render(op){var auto=!!(op&&op.auto);
   // 13/11 (Robert: 'fica atualizando e tirando o scroll'): a atualização geral (a cada 45 s e a cada leitura de saúde/histórico/filas/calendário) chamava render() e REFAZIA o Atendimento inteiro (lista, busca, conversa e ficha), voltando a conversa para o fim. Agora, com o Atendimento já montado, nada é refeito aqui: a lista, a conversa e a ficha têm as próprias atualizações incrementais (atAtualizarLista/atBuscarConversa) que preservam a posição de leitura.
   if(S.aba==='atend'&&c.querySelector('.ax')&&document.getElementById('atChat'))return;
   if(auto&&((S.aba==='inicio'&&c.querySelector('.hub'))||(S.aba==='instagram'&&c.querySelector('.ig'))))return;   // 19/11: Início e Instagram se atualizam sozinhos por dentro (sem refazer a tela a cada 45 s: nada pisca, a busca e a rolagem ficam)
-  ecoMostrar(S.aba==='eco');
+  ecoMostrar(S.aba==='eco');pbMostrar(S.aba==='playbook');
+  if(S.aba==='playbook'&&PB.f){if(c.firstChild)c.textContent='';setTimeout(pbFoco,0);return;}   // 19/11: o Playbook também é um iframe guardado (criado uma vez)
   if(S.aba==='eco'&&ECO.f){if(c.firstChild)c.textContent='';setTimeout(ecoFoco,0);return;}   // 17/11 (Robert #2967): o iframe do Ecossistema é criado UMA vez e fica guardado fora de #conteudo (ECO.f); trocar de aba só o esconde (display:none mantém o documento e o slide). Antes (16/11): o Ecossistema é um iframe; refazer a cada 45 s / carga de dados recarregava a página inteira ('piscava'). Com o iframe da aba já montado, render() não faz nada
   var mesma=S.abaAnt===S.aba&&S.aba!=='atend';var snap=mesma?uiSnap(c):null;
   var h0=c.offsetHeight;if(mesma&&h0>0)c.style.minHeight=h0+'px';   // segura a altura enquanto refaz: sem isso a página encolhe, o navegador joga a rolagem ao topo e a tela "pula"
   try{
     c.textContent='';
     if(!S.dados&&['visao','estado','leitura'].indexOf(S.aba)>=0){if(S.erro&&!S.carregando){vazioErro(c,S.erro,function(){return carregar(false);});return;}esqueleto(c);return;}
-    ({visao:telaVisao,estado:telaEstado,leitura:telaLeitura,filas:telaFilas,cal:telaCal,agentes:telaAgentes,atend:telaAtend,hist:telaHist,inicio:telaInicio,instagram:telaInstagram,eco:telaEco,usuarios:telaUsuarios,conta:telaConta})[S.aba](c);
+    ({visao:telaVisao,estado:telaEstado,leitura:telaLeitura,filas:telaFilas,cal:telaCal,agentes:telaAgentes,atend:telaAtend,hist:telaHist,inicio:telaInicio,instagram:telaInstagram,eco:telaEco,playbook:telaPlaybook,usuarios:telaUsuarios,conta:telaConta})[S.aba](c);
     if(snap)uiRepor(c,snap,auto);
   }finally{c.style.minHeight='';if(snap&&Math.abs(window.pageYOffset-snap.y)>2)window.scrollTo(snap.x,snap.y);S.abaAnt=S.aba;}
 }
@@ -2226,7 +2227,7 @@ function hubMontarOverrides(cards,roles,marcas,ocultos,areasPorPapel){areasPorPa
     if(Object.keys(item).length)out[c.id]=item;});
   return out;
 }
-var PAPEIS_PADRAO={robert:['inicio','visao','estado','leitura','filas','cal','atend','agentes','hist','instagram','eco','usuarios','conta'],admin:['inicio','visao','estado','leitura','filas','cal','atend','agentes','hist','instagram','eco','conta'],sdr:['inicio','visao','estado','leitura','filas','cal','atend','agentes','hist','eco','conta']};
+var PAPEIS_PADRAO={robert:['inicio','visao','estado','leitura','filas','cal','atend','agentes','hist','instagram','eco','playbook','usuarios','conta'],admin:['inicio','visao','estado','leitura','filas','cal','atend','agentes','hist','instagram','eco','playbook','conta'],sdr:['inicio','visao','estado','leitura','filas','cal','atend','agentes','hist','eco','playbook','conta']};
 var AREAS_PADRAO=['vendas','atendimento','marketing','dados','sistemas','documentos'];
 function hubContexto(){var eu=S.eu||{};var p=S.papeis;var abas=(p&&p.minhasAbas)||PAPEIS_PADRAO[eu.papel]||['inicio','conta'];var areas=(p&&p.minhasAreas)||(PAPEIS_PADRAO[eu.papel]?AREAS_PADRAO:[]);return {papel:eu.papel,abas:abas,areas:areas,cfg:HUB.cfg};}
 function hubVisiveis(){var ctx=hubContexto();return HUB.cards.filter(function(c){return hubVisivel(c,ctx);});}
@@ -2542,6 +2543,13 @@ function ecoContem(){try{var d=ECO.f.contentDocument;if(!d||!d.documentElement)r
 function telaEco(c){if(ECO.f&&ECO.f.getAttribute('src')!==ECO.src){ECO.f.src=ECO.src;}
   if(!ECO.f){var box=el('div','ecoHold');box.id='ecoHold';var f=el('iframe','frame');f.src=ECO.src;f.title='Ecossistema Life B';f.setAttribute('allow','fullscreen');f.addEventListener('load',function(){ECO.cont++;ecoContem();if(S.aba==='eco')ecoFoco();});box.appendChild(f);c.parentNode.insertBefore(box,c.nextSibling);ECO.f=f;ECO.box=box;}
   ecoMostrar(true);setTimeout(ecoFoco,0);}
+// 19/11 (Robert #3636 'tudo deve estar na Central'): o Playbook comercial vira aba da Central, no mesmo domínio e com a MESMA sessão (as chaves central_t* são compartilhadas); iframe criado uma vez e guardado.
+var PB={f:null,box:null,src:'/playbook/'};
+function pbMostrar(on){if(!PB.box)return;PB.box.style.display=on?'block':'none';}
+function pbFoco(){try{if(PB.f)PB.f.focus({preventScroll:true});}catch(e){}}
+function telaPlaybook(c){if(PB.f&&PB.f.getAttribute('src')!==PB.src){PB.f.src=PB.src;}
+  if(!PB.f){var box=el('div','ecoHold');box.id='pbHold';var f=el('iframe','frame');f.src=PB.src;f.title='Playbook comercial Life B';f.setAttribute('allow','fullscreen');f.addEventListener('load',function(){if(S.aba==='playbook')pbFoco();});box.appendChild(f);c.parentNode.insertBefore(box,c.nextSibling);PB.f=f;PB.box=box;}
+  pbMostrar(true);setTimeout(pbFoco,0);}
 /*USUARIOS-INI*/
 // 18/11 (pedido do Robert #3407): tela Usuários completa. Só o papel Robert vê (o servidor também recusa os outros com 403).
 // Criar (padrão SDR), redefinir senha (a pessoa troca no próximo acesso: o servidor marca), mudar papel, ativar/desativar. Tudo com confirmação na própria tela. A senha nunca fica na tela nem em variável depois de salvar; hash e sal nunca chegam aqui.
