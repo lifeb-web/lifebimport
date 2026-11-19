@@ -501,6 +501,30 @@ nav .grp{font-family:var(--mono);font-weight:500;letter-spacing:.18em}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}}
 .hstate{display:flex;flex-direction:column;align-items:center;gap:10px}
 @media (min-width:1181px){nav a{min-height:38px;padding:7px 12px}nav .grp{margin:12px 10px 4px}}
+/* campos dentro de janelas (modal) seguem os tokens do tema */
+#modal textarea,#modal input:not([type=checkbox]):not([type=radio]):not([type=range]),#modal select{background:var(--card2);color:var(--fg);border:1.5px solid var(--line2);border-radius:var(--rd);padding:10px 12px;font-family:inherit}
+#modal textarea::placeholder,#modal input::placeholder{color:var(--faint)}
+/* alvos de toque de 44 px no celular (a largura estreita, não só o toque) */
+@media (max-width:620px){
+  .iconbtn{width:44px;height:44px}
+  .search input,#busca{min-height:44px;height:44px}
+  .seg button{min-height:44px}
+  .switch{height:44px;border-style:solid;border-color:transparent;border-width:6px 0;background-clip:padding-box;box-sizing:border-box}
+  .ax .cp2{min-height:44px}.ax .ri .rc .ib.cmb{min-width:44px;min-height:44px;width:44px}
+  select.usuPapelSel,.usuPapelSel{min-height:44px}
+  .htop .btn.ghost{display:none}   /* o Atualizar do topo da página já serve ao Início */
+  /* tabelas viram cartões empilhados */
+  .tw.cartoes{overflow-x:visible}
+  .cartoes table,.cartoes tbody,.cartoes tr,.cartoes td{display:block;width:100%}
+  .cartoes tr:first-child{display:none}
+  .cartoes tr{padding:12px 14px;border-bottom:1px solid var(--line)}
+  .cartoes td{border:0;padding:4px 0}
+  .cartoes td[data-l]::before{content:attr(data-l);display:block;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-bottom:2px}
+  .cartoes td.k{font-weight:700}.cartoes td.k code{display:block;white-space:nowrap;overflow-x:auto;max-width:100%;overflow-wrap:normal;word-break:keep-all;padding-bottom:2px}
+  .cartoes .usuAcoes{display:flex;gap:8px;flex-wrap:wrap;white-space:normal;padding-top:8px}.cartoes .usuAcoes .btn{flex:1 1 140px;margin:0}
+  .cartoes select{width:100%}
+}
+code{overflow-wrap:normal;word-break:keep-all}
 /* celular: navegacao inferior, tudo em 1 coluna, alvos de 44 px */
 @media (max-width:620px){
   html{scroll-padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
@@ -1032,10 +1056,10 @@ function telaLeitura(c){
   var d=((S.dados||{}).leitura||[]).filter(function(e){return casa(e.k+' '+e.g+' '+e.d);});
   var p=el('p','hint','Chaves que a plataforma lê e que ainda não têm edição na Central (entram nas próximas fases). Somente leitura.');p.style.marginBottom='12px';c.appendChild(p);
   if(!d.length){c.appendChild(el('div','vazio','Nenhuma chave encontrada.'));return;}
-  var w=el('div','card tw');var t=el('table');var h=el('tr');['Chave','O que faz','Padrão','Valor gravado','Risco'].forEach(function(x){h.appendChild(el('th',null,x));});t.appendChild(h);
+  var w=el('div','card tw cartoes');var t=el('table');var h=el('tr');['Chave','O que faz','Padrão','Valor gravado','Risco'].forEach(function(x){h.appendChild(el('th',null,x));});t.appendChild(h);
   d.sort(function(a,b){return a.g===b.g?a.k.localeCompare(b.k):a.g.localeCompare(b.g);});
   d.forEach(function(e){var r=el('tr');var k=el('td','k');k.appendChild(el('code',null,e.k));k.appendChild(el('div','d',ptRep(e.g)));r.appendChild(k);r.appendChild(el('td',null,ptRep(e.d)));r.appendChild(el('td',null,ptRep(e.p)));var v=el('td');if(e.ok===false)v.textContent='falha na leitura';else if(e.definida)v.appendChild(el('span','vv',e.cru==null?'':e.cru));else v.appendChild(el('span','hint','vazio'));r.appendChild(v);var rk=el('td');rk.appendChild(el('span','pill '+e.r,RISCO[e.r]||e.r));r.appendChild(rk);t.appendChild(r);});
-  w.appendChild(t);c.appendChild(w);
+  cartoesMovel(t);w.appendChild(t);c.appendChild(w);
 }
 function telaFilas(c){
   if(S.filasErro){vazioErro(c,S.filasErro,carregarFilas);return;}
@@ -1076,6 +1100,8 @@ function agValorBool(cfg,k){var v=agGet(cfg,k[0]);return v===undefined||v===null
 // 19/11: valor ausente nunca vira 'undefined'/'null' na tela: mostra travessão.
 // 19/11: 'rep' é gíria interna; o time lê 'representante' (vale para textos que vêm do servidor).
 function ptRep(t){return typeof t==='string'?t.replace(/\breps\b/g,'representantes').replace(/\brep\b/g,'representante').replace(/\bReps\b/g,'Representantes').replace(/\bRep\b/g,'Representante'):t;}
+// 19/11: tabelas viram cartões empilhados no celular: cada célula leva o rótulo da coluna (lido do cabeçalho).
+function cartoesMovel(t){var tr=t.querySelectorAll('tr');if(!tr.length)return;var hs=[].map.call(tr[0].children,function(x){return x.textContent;});for(var i=1;i<tr.length;i++){[].forEach.call(tr[i].children,function(td,k){if(hs[k])td.setAttribute('data-l',hs[k]);});}}
 function agTxt(v){return v==null||v===''||(typeof v==='number'&&isNaN(v))?'—':String(v);}
 function agGet(o,c){return c.split('.').reduce(function(a,k){return a==null?a:a[k];},o);}
 function telaAgentes(c){
@@ -2374,7 +2400,7 @@ function igDecidir(p,dec){
       else{ok.disabled=false;cx.disabled=false;ok.textContent=rot;er.textContent=(r.j&&(r.j.mensagem||r.j.rede))||erroTxt(r);if(r.status===409){igCarregar();}}};
     ac.appendChild(cx);ac.appendChild(ok);b.appendChild(ac);
     var libera=null;var pv=dec==='aprovar'?b.querySelector('#igPrevAprov'):null;   // 19/11: Aprovar só libera depois de rolar até o fim do que a aprovação cobre (ou se tudo já cabe na tela)
-    if(pv){pv.style.maxHeight='34vh';pv.style.overflowY='auto';var vistoFim=function(){return pv.scrollHeight-pv.scrollTop-pv.clientHeight<=4;};ok.disabled=true;var dica=el('div','hint','Role até o fim para liberar o botão Aprovar.');dica.id='igDicaRolar';b.insertBefore(dica,ac);libera=function(){if(ok.disabled&&vistoFim()){ok.disabled=false;dica.hidden=true;}};pv.addEventListener('scroll',libera);}
+    if(pv){pv.style.maxHeight='34vh';pv.style.overflowY='auto';var vistoFim=function(){return pv.scrollHeight-pv.scrollTop-pv.clientHeight<=4;};ok.disabled=true;var dica=el('div','hint','Role até o fim para liberar o botão Aprovar.');dica.id='igDicaRolar';b.insertBefore(dica,ac);libera=function(){if(ok.disabled&&vistoFim()){ok.disabled=false;dica.hidden=true;}};pv.addEventListener('scroll',libera);var rz=function(){if(!document.body.contains(ok)){window.removeEventListener('resize',rz);window.removeEventListener('orientationchange',rz);return;}if(ok.textContent==='Registrando...')return;var fim=vistoFim();ok.disabled=!fim;dica.hidden=fim;};window.addEventListener('resize',rz);window.addEventListener('orientationchange',rz);}   // 19/11: girar o celular ou redimensionar recalcula se o fim foi visto
     setTimeout(function(){if(pv){libera();(ok.disabled?pv:ok).focus();}else ta.focus();},0);});
 }
 async function igReabrir(p,bt){bt.disabled=true;var r=await api('POST','/instagram/reabrir',{id:p.id,v:p.v});if(r.status===200&&r.j.ok){igSubstituir(r.j.post);toast('Post voltou para a fila de aprovação.');igDesenhar();}else{bt.disabled=false;toast((r.j&&(r.j.mensagem||r.j.rede))||'Não consegui reabrir.');if(r.status===409)igCarregar();}}
@@ -2517,7 +2543,7 @@ function telaUsuarios(c){
   var rw=el('div');rw.appendChild(bt2);f.appendChild(rw);f.appendChild(er2);c.appendChild(f);
   var dica=el('p','hint','A senha é você quem passa à pessoa (WhatsApp, pessoalmente). Ela é obrigada a trocar na primeira entrada. Papéis: SDR (somente leitura), Administrador (muda controles de risco baixo e médio), Robert (tudo).');dica.id='usuDica';dica.style.marginBottom='12px';c.appendChild(dica);
   // ── lista ──
-  var w=el('div','card tw');w.id='usuLista';var t=el('table');var h=el('tr');['Usuário','Nome','Papel','Último acesso','Situação','Ações'].forEach(function(x){h.appendChild(el('th',null,x));});t.appendChild(h);
+  var w=el('div','card tw cartoes');w.id='usuLista';var t=el('table');var h=el('tr');['Usuário','Nome','Papel','Último acesso','Situação','Ações'].forEach(function(x){h.appendChild(el('th',null,x));});t.appendChild(h);
   lista.forEach(function(u){var eu=S.eu.usuario===u.usuario;var r=el('tr');r.setAttribute('data-usuario',u.usuario);r.appendChild(el('td','k',u.usuario+(eu?' (você)':'')));r.appendChild(el('td',null,u.nome||''));
     var tp=el('td');var sp=el('select');sp.className='usuPapelSel';sp.setAttribute('aria-label','Papel de '+usuNome(u));papeis(sp,u.papel);if(eu)sp.disabled=true;sp.onchange=function(){if(sp.value===u.papel)return;USU.acao={tipo:'papel',usuario:u.usuario,nome:u.nome,de:u.papel,papel:sp.value};render();};tp.appendChild(sp);r.appendChild(tp);
     r.appendChild(el('td',null,u.ultimoAcesso?fmtData(u.ultimoAcesso):'nunca'));var st=el('td');st.appendChild(el('span','pill '+(u.ativo?'on':'offp'),u.ativo?'Ativo':'Desativado'));r.appendChild(st);
@@ -2526,7 +2552,7 @@ function telaUsuarios(c){
     var b2=el('button','btn ghost sm usuAtivo',u.ativo?'Desativar':'Reativar');b2.type='button';if(eu){b2.disabled=true;b2.title='Você não pode desativar a si mesmo.';}b2.onclick=function(){USU.acao={tipo:'ativo',usuario:u.usuario,nome:u.nome,ativo:!u.ativo};render();};ac.appendChild(b2);
     r.appendChild(ac);t.appendChild(r);});
   if(!lista.length){var rv=el('tr');var tv=el('td','hint','Nenhum usuário carregado.');tv.colSpan=6;rv.appendChild(tv);t.appendChild(rv);}
-  w.appendChild(t);c.appendChild(w);
+  cartoesMovel(t);w.appendChild(t);c.appendChild(w);
   if(typeof usuPapeisSecao==='function')usuPapeisSecao(c);
 }
 /*USUARIOS-FIM*/
