@@ -31,8 +31,15 @@
     urlNegocio: 'https://web.agendor.com.br/sistema/negocios/historico.php?id=',
     refreshMs: 5 * 60 * 1000,
     atrasoMin: 30,                        // dado da rota mais velho que isso = "atrasado"
-    etapas: ['Novo lead', 'Em conversa', 'Qualificado', 'Repassado', 'Sem resposta', 'Encerrado'],
-    corEtapa: { 'Novo lead': '#b09bd6', 'Em conversa': '#9260c8', 'Qualificado': '#1baf7a', 'Repassado': '#0e9aa0', 'Sem resposta': '#b8b3c8', 'Encerrado': '#dc2626' },
+    // 19/11: nomes REAIS das etapas do funil Ana SDR IA no Agendor (renomeadas em 15/11). Ganho e Perdido são o STATUS do negócio, não etapa.
+    etapas: ['Novo lead', 'Abertura enviada', 'Qualificando', 'Apresentação', 'Deal breaker', 'Retorno combinado'],
+    corEtapa: { 'Novo lead': '#b09bd6', 'Abertura enviada': '#a085cf', 'Qualificando': '#9260c8', 'Apresentação': '#7a4fb0', 'Deal breaker': '#5a3a80', 'Retorno combinado': '#0e9aa0', 'Ganho (qualificou)': '#1baf7a', 'Perdido': '#dc2626' },
+    ganho: 'Ganho (qualificou)', perdido: 'Perdido',
+    sdrFunil: '916713',                   // SDR Inbound: onde o negócio da Ana vira "Ana qualificou" (qualificado) ou "Repasse da Ana" (repassado sem qualificar)
+    sdrEtapas: { qualificou: 'Ana qualificou', repasse: 'Repasse da Ana' },
+    REPASSE_DESDE: '2026-11-16',          // 1º negócio visto na etapa "Repasse da Ana": 16/11 23:54 (Brasília); antes disso o Agendor não tem como conferir
+    FONTE_CONTADOR: ' Fonte: contador por evento da Ana (KV); conta cada ação, inclusive de números de teste.',
+    FONTE_LEAD: 'Contado por contato (conversa): o mesmo telefone vale um, com ou sem o 9 e o 55, e DDD diferente nunca junta; sem números de teste. Teste = os números da lista de teste da Sentinela e as conversas que o dono ocultou ou excluiu com a palavra "teste" no motivo (texto livre: a lista por motivo está na linha de cobertura). Fonte: histórico da Ana (D1).',
     modelos: [
       { k: 'claude-sonnet', nome: 'Claude Sonnet 5.5', cor: '#704B9B' },
       { k: 'claude-haiku', nome: 'Claude Haiku 5.5', cor: '#0e9aa0' },
@@ -48,7 +55,8 @@
   };
 
   // ---------- Estado ----------
-  var S = { ana: null, anaErr: null, anaLoading: false, anaTs: 0, deals: null, dealsErr: null, dealsLoading: false, gran: '',
+  var LS_BOM = 'ag_ana_ultimo_bom_v1';
+  var S = { anaCongelado: false, sdr: null, sdrErr: null, ana: null, anaErr: null, anaLoading: false, anaTs: 0, deals: null, dealsErr: null, dealsLoading: false, gran: '',
             bridge: null, key: null, cbs: [], inited: false, timer: null };
   var H = { root: null, mode: 'm', cfg: null, w: 'p', inited: false };
 
@@ -140,11 +148,11 @@
     for (var i = 0; i < CFG.etapas.length; i++) if (semAcento(CFG.etapas[i]) === k) return CFG.etapas[i];
     return nome || 'Sem etapa';
   }
-  function prepDeals(rows) {
+  function prepDeals(rows, funil) {
     var out = [];
     (rows || []).forEach(function (d) {
-      if (String(d.funnel_id) !== CFG.funil) return;
-      var e = { id: d.id, titulo: d.title || ('Negócio ' + d.id), etapa: normEtapa(d.stage_name), status: d.status, criada: dataBRT(d.created_at), origem: d.origem_especial || d.origin || '' };
+      if (String(d.funnel_id) !== String(funil || CFG.funil)) return;
+      var e = { id: d.id, titulo: d.title || ('Negócio ' + d.id), etapa: normEtapa(d.stage_name), status: d.status, aberto: d.status !== 'won' && d.status !== 'lost', criada: dataBRT(d.created_at), origem: d.origem_especial || d.origin || '' };
       var fim = d.data_real_evento ? String(d.data_real_evento).slice(0, 10) : dataBRT(d.end_time || d.closed_at || d.lost_at);
       e.fim = fim || null;                  // data explícita de fechamento (pode não existir)
       e.data = fim || e.criada;             // data usada para pôr o negócio num período
@@ -153,22 +161,49 @@
     });
     return out;
   }
-  function ehQualificado(d) { return d.etapa === 'Qualificado' || d.etapa === 'Repassado' || d.status === 'won'; }
-  function ehDispensado(d) { return d.etapa === 'Encerrado' || d.status === 'lost'; }
+  // 19/11: pela verdade do Agendor, o STATUS manda (as etapas Qualificado/Repassado/Encerrado não existem mais no funil da Ana)
+  function ehQualificado(d) { return d.status === 'won'; }
+  function ehDispensado(d) { return d.status === 'lost'; }
   function noPer(iso, from, to) { return !!iso && iso >= from && iso <= to; }
 
-  // Negócios do funil por etapa: "agora" (onde estão hoje) e "criados no período"
+  // Negócios do funil por etapa: "agora" (abertos, onde estão hoje) e "criados no período". Ganho e Perdido são linhas de STATUS (negócio fechado).
   function funilEtapas(deals, from, to) {
     var m = {};
     function get(n) { return m[n] || (m[n] = { nome: n, agora: [], criados: [] }); }
     CFG.etapas.forEach(get);
-    (deals || []).forEach(function (d) { get(d.etapa).agora.push(d); if (noPer(d.criada, from, to)) get(d.etapa).criados.push(d); });
-    var extra = Object.keys(m).filter(function (k) { return CFG.etapas.indexOf(k) < 0; }).sort();
-    return CFG.etapas.concat(extra).map(function (k) { return m[k]; });
+    (deals || []).forEach(function (d) {
+      var k = d.status === 'won' ? CFG.ganho : (d.status === 'lost' ? CFG.perdido : d.etapa);
+      get(k).agora.push(d); if (noPer(d.criada, from, to)) get(k).criados.push(d);
+    });
+    get(CFG.ganho); get(CFG.perdido);
+    var fixas = CFG.etapas.concat([CFG.ganho, CFG.perdido]);
+    var extra = Object.keys(m).filter(function (k) { return fixas.indexOf(k) < 0; }).sort();
+    return CFG.etapas.concat(extra, [CFG.ganho, CFG.perdido]).map(function (k) { return m[k]; });
+  }
+
+  // 19/11: números POR LEAD, sem testes, do bloco porLead que o worker da Ana manda em /ana-painel (histórico D1). null = sem esse bloco (worker antigo ou erro): a página cai nos contadores por evento, rotulados.
+  function leadDe(ana, from, to) {
+    var pl = ana && ana.porLead; if (!pl || pl.erro || !Array.isArray(pl.dias) || !pl.primeiroDia) return null;
+    var ini = from > pl.primeiroDia ? from : pl.primeiroDia, r = { v: { ini: 0, resp: 0, qual: 0, desp: 0, rep: 0, semResp: 0, humano: 0, tQual: 0, tDesp: 0, tRep: 0 }, resp: [], de: ini, ate: to, parcial: from < pl.primeiroDia, primeiroDia: pl.primeiroDia, testes: pl.testesExcluidos || 0, motivos: pl.testesPorMotivo || null, ds: [] };
+    if (to < ini) { r.vazio = true; return r; }
+    pl.dias.forEach(function (d) {
+      if (d.dia < ini || d.dia > to) return; r.ds.push(d);
+      r.v.ini += numOuZero(d.iniciados); r.v.resp += numOuZero(d.responderam); r.v.qual += numOuZero(d.qualificados); r.v.desp += numOuZero(d.dispensados); r.v.rep += numOuZero(d.repassados);
+      r.v.semResp += numOuZero(d.semResposta); r.v.humano += numOuZero(d.humano); r.v.tQual += numOuZero(d.tQualificados); r.v.tDesp += numOuZero(d.tDispensados); r.v.tRep += numOuZero(d.tRepassados);
+      (d.respostas || []).forEach(function (x) { r.resp.push(numOuZero(x)); });
+    });
+    r.resp.sort(function (a, b) { return a - b; });
+    var n = r.resp.length; r.tempo = n ? { n: n, med: n % 2 ? r.resp[(n - 1) / 2] : (r.resp[n / 2 - 1] + r.resp[n / 2]) / 2, p90: r.resp[Math.min(n - 1, Math.max(0, Math.ceil(0.9 * n) - 1))] } : null;
+    return r;
+  }
+  function segTxt(sg) { // 12 s, 2 min 6 s, 1 h 5 min
+    if (sg == null || !isFinite(sg)) return 'n/d'; sg = Math.round(sg);
+    if (sg < 60) return sg + ' s'; if (sg < 3600) { var m = Math.floor(sg / 60), x = sg % 60; return m + ' min' + (x ? ' ' + x + ' s' : ''); }
+    var h = Math.floor(sg / 3600), mm = Math.round((sg % 3600) / 60); return h + ' h' + (mm ? ' ' + mm + ' min' : '');
   }
 
   // Baldes por dia, semana ou mês dentro da janela coberta
-  function serie(ana, j, gran) {
+  function serie(ana, j, gran, lead) {
     if (!j.n || !j.ds.length) return { baldes: [], gran: gran || 'd', de: j.ini, ate: j.fim };
     var nDias = j.n;
     gran = gran || (nDias <= 31 ? 'd' : (nDias <= 150 ? 's' : 'm'));
@@ -179,8 +214,13 @@
     if (gran === 'd') { for (var t = de; t <= ate; t = addDays(t, 1)) mk(t); }
     else if (gran === 's') { for (var s = mondayOf(de); s <= ate; s = addDays(s, 7)) mk(s); }
     else { var y = +de.slice(0, 4), mo = +de.slice(5, 7), fim = ate.slice(0, 7); while (true) { var k = y + '-' + pad(mo); mk(k); if (k >= fim) break; mo++; if (mo > 12) { mo = 1; y++; } } }
+    var leadDia = {}; if (lead && lead.ds) lead.ds.forEach(function (x) { leadDia[x.dia] = x; });
     j.ds.forEach(function (d) {
       var b = idx[chave(d.dia)]; if (!b) return;
+      if (lead && d.dia >= lead.primeiroDia) {   // 19/11: dia coberto pelo histórico por lead: vale ele (por lead, sem testes); dia sem lead é zero de verdade
+        var x = leadDia[d.dia]; if (x) { b.ini += numOuZero(x.iniciados); b.qual += numOuZero(x.qualificados); b.desp += numOuZero(x.dispensados); }
+        b.tem = true; return;
+      }
       if (d.dia >= NOVOS_DESDE) { b.ini += numOuZero(d.leads_novos); b.desp += numOuZero(d.descartados); b.tem = true; }
       b.qual += numOuZero(d.qualificados);
       if (temDado(d)) b.tem = true;
@@ -200,6 +240,17 @@
     r.ini = par('leads_novos', 'novo');
     r.qual = par('qualificados', 'antigo');
     r.desp = par('descartados', 'novo');
+    // 19/11: por lead, sem testes (quando o worker manda porLead); os contadores acima ficam como reserva rotulada
+    r.lead = leadDe(ana, pe.from, pe.to);
+    r.leadAnt = pa ? leadDe(ana, pa.from, pa.to) : null;
+    if (r.leadAnt && (r.leadAnt.parcial || r.leadAnt.vazio)) r.leadAnt = null;   // a seta só aparece com o período anterior inteiro coberto
+    if (r.lead && !r.lead.vazio) {
+      var L = r.lead.v, LA = r.leadAnt ? r.leadAnt.v : null, pc = r.lead.parcial;
+      r.ini = { v: L.ini, ant: LA ? LA.ini : null, parcial: pc, lead: true };
+      r.qual = { v: L.qual, ant: LA ? LA.qual : null, parcial: pc, lead: true };
+      r.desp = { v: L.desp, ant: LA ? LA.desp : null, parcial: pc, lead: true };
+      r.rep = { v: L.rep, ant: LA ? LA.rep : null, parcial: pc, lead: true };
+    } else { r.rep = { v: null, ant: null, parcial: false, lead: false }; }
     r.interv = par('intervencoes', 'novo');
     r.assumiu = par('assumiu', 'novo'); r.pediu = par('pediram_humano', 'novo'); r.devolveu = par('devolveu', 'novo'); r.pausou = par('pausou', 'novo');
     r.redes = par('redes', 'novo'); r.escalados = par('escalados', 'novo');
@@ -211,15 +262,18 @@
     r.taxa = (r.ini.v != null && r.qual.v != null && r.ini.v > 0) ? r.qual.v / r.ini.v : null;
     r.taxaAnt = (r.ini.ant != null && r.qual.ant != null && r.ini.ant > 0) ? r.qual.ant / r.ini.ant : null;
     r.agora = ana && ana.agora ? ana.agora : null;
-    r.serie = serie(ana, j, S.gran);
+    r.serie = serie(ana, j, S.gran, r.lead && !r.lead.vazio ? r.lead : null);
     // negócios do Agendor
     r.deals = deals || null;
     if (deals) {
       r.dIni = deals.filter(function (d) { return noPer(d.criada, pe.from, pe.to); });
       r.dQual = deals.filter(function (d) { return ehQualificado(d) && noPer(d.data, pe.from, pe.to); });
       r.dDesp = deals.filter(function (d) { return ehDispensado(d) && noPer(d.data, pe.from, pe.to); });
-      r.dConv = deals.filter(function (d) { return d.etapa === 'Novo lead' || d.etapa === 'Em conversa'; });
+      r.dConv = deals.filter(function (d) { return d.aberto; });   // 19/11: negócio ABERTO em qualquer etapa do funil da Ana (antes só 'Novo lead')
       r.funil = funilEtapas(deals, pe.from, pe.to);
+      var sd = S.sdr || null;   // SDR Inbound (916713): "Ana qualificou" e "Repasse da Ana"
+      r.sdrQual = sd ? sd.qualificou.filter(function (d) { return noPer(d.data, pe.from, pe.to); }) : null;
+      r.sdrRep = sd ? sd.repasse.filter(function (d) { return noPer(d.criada, pe.from, pe.to); }) : null;
       var tq = r.dQual.filter(function (d) { return d.dias != null; }).map(function (d) { return d.dias; }).sort(function (a, b) { return a - b; });
       r.tempo = tq.length ? { n: tq.length, media: tq.reduce(function (s, x) { return s + x; }, 0) / tq.length, med: tq.length % 2 ? tq[(tq.length - 1) / 2] : (tq[tq.length / 2 - 1] + tq[tq.length / 2]) / 2 } : null;
     }
@@ -307,7 +361,8 @@
     if (!S.ana) return { txt: 'sem leitura', warn: true };
     var t = Number(S.ana.geradoEm), min = isFinite(t) ? (Date.now() - t) / 60000 : null;
     var txt = 'Ana · lido em ' + (isFinite(t) ? instBRT(t) : 'n/d');
-    if (S.anaErr) return { txt: txt + ' · a última atualização falhou', warn: true, falha: true };
+    if (S.anaCongelado) return { txt: txt + ' · dado salvo (congelado)' + (S.anaErr ? '; a atualização falhou, tentando de novo' : ', atualizando...'), warn: true, falha: !!S.anaErr };
+    if (S.anaErr) return { txt: txt + ' · a última atualização falhou (mostrando o último dado bom)', warn: true, falha: true };
     return { txt: txt, warn: min != null && min > CFG.atrasoMin, atrasado: min != null && min > CFG.atrasoMin };
   }
 
@@ -347,24 +402,40 @@
   // ---- aba SDR (Ana) ----
   function kpisSdr(r) {
     var j = r.j, h = '';
-    var tipIni = 'Conversas novas que a Ana começou no período (a pessoa mandou a primeira mensagem). Contador novo: só existe desde ' + dm(NOVOS_DESDE) + '. Clique para ver os negócios criados no período no Agendor.';
-    h += chip('Iniciados ⓘ', nv(r.ini.v), r.ini.v == null ? semDadoSub(j, 'novo') : (r.dIni ? num(r.dIni.length) + ' com negócio no Agendor' : 'conversas novas') + parcialTxt(r.ini, j), { tip: tipIni, go: 'ini', delta: delta(r.ini.v, r.ini.ant), cinza: r.ini.v == null });
-    var tipQ = 'Conversas que a Ana qualificou e passou para a equipe (handoffs) no período. Clique para ver os negócios nas etapas Qualificado e Repassado.';
-    h += chip('Qualificados ⓘ', nv(r.qual.v), r.qual.v == null ? semDadoSub(j, 'antigo') : 'passados à equipe (handoffs)' + (r.dQual ? ' · ' + num(r.dQual.length) + ' no Agendor' : ''), { tip: tipQ, go: 'qual', delta: delta(r.qual.v, r.qual.ant), cinza: r.qual.v == null });
-    h += chip('Dispensados ⓘ', nv(r.desp.v), r.desp.v == null ? semDadoSub(j, 'novo') : 'conversas encerradas sem qualificar' + parcialTxt(r.desp, j), { tip: 'Conversas que a Ana encerrou sem qualificar (fora do perfil, sem interesse e parecidos). Contador novo desde ' + dm(NOVOS_DESDE) + '.', go: 'desp', delta: delta(r.desp.v, r.desp.ant), cinza: r.desp.v == null });
+    var Lz = r.lead && !r.lead.vazio ? r.lead : null, V = Lz ? Lz.v : null;
+    var desdeTxt = Lz && Lz.parcial ? ' · por contato só desde ' + dm(Lz.primeiroDia) : '';
+    var agIni = r.dIni ? num(r.dIni.length) + ' negócios criados no Agendor' : 'Agendor indisponível';
+    var tipIni = Lz ? 'Conversas que a Ana abriu no período (a 1ª mensagem, da Ana ou do contato, caiu no período). ' + CFG.FONTE_LEAD + ' Conferência: negócios criados no funil Ana SDR IA no Agendor (a lista abre ao clicar). ' + num(Lz.testes) + ' números de teste ficam de fora.'
+      : 'Conversas novas que a Ana começou no período. ' + CFG.FONTE_CONTADOR + ' Contador novo: só existe desde ' + dm(NOVOS_DESDE) + '. Clique para ver os negócios criados no período no Agendor.';
+    h += chip('Iniciados ⓘ', nv(r.ini.v), r.ini.v == null ? semDadoSub(j, 'novo') : (Lz ? 'por contato, sem testes · ' + num(V.resp) + ' responderam · ' + agIni + desdeTxt : (r.dIni ? num(r.dIni.length) + ' com negócio no Agendor' : 'conversas novas') + ' · por evento, inclui testes' + parcialTxt(r.ini, j)), { tip: tipIni, go: 'ini', delta: delta(r.ini.v, r.ini.ant), cinza: r.ini.v == null });
+    var tipQ = Lz ? 'Contatos que a Ana qualificou e passou para a equipe, contados uma vez cada (reenvio do mesmo contato não soma). ' + CFG.FONTE_LEAD + ' Conferência: negócios GANHOS no funil Ana SDR IA no Agendor e negócios em "Ana qualificou" no SDR Inbound (a lista abre ao clicar). O Agendor não separa teste: ' + num(V.tQual) + ' contato(s) de teste qualificado(s) no período ficaram fora do número, então o Agendor pode mostrar mais.'
+      : 'Conversas que a Ana qualificou e passou para a equipe (handoffs) no período. ' + CFG.FONTE_CONTADOR + ' Clique para ver os negócios ganhos no Agendor.';
+    var agQual = r.dQual ? 'Agendor: ' + num(r.dQual.length) + ' ganho' + (r.dQual.length === 1 ? '' : 's') + (r.sdrQual ? ' · ' + num(r.sdrQual.length) + ' em Ana qualificou' : '') : 'Agendor indisponível';
+    var notaQ = ''; if (Lz && r.dQual && r.dQual.length !== r.qual.v) { var dq = r.dQual.length - r.qual.v; notaQ = '<br><b>Nota:</b> o Agendor tem ' + num(r.dQual.length) + ' ganho' + (r.dQual.length === 1 ? '' : 's') + '; ' + (dq > 0 ? num(dq) + ' a mais que aqui, por teste (o Agendor não separa teste)' : num(-dq) + ' a menos que aqui: conferir'); }
+    h += chip('Qualificados ⓘ', nv(r.qual.v), r.qual.v == null ? semDadoSub(j, 'antigo') : (Lz ? 'por contato, sem testes · ' + agQual + desdeTxt + notaQ : 'por evento, inclui testes' + (r.dQual ? ' · Agendor: ' + num(r.dQual.length) + ' ganhos' : '')), { tip: tipQ, go: 'qual', delta: delta(r.qual.v, r.qual.ant), cinza: r.qual.v == null });
+    var agDesp = r.dDesp ? 'Agendor: ' + num(r.dDesp.length) + ' perdido' + (r.dDesp.length === 1 ? '' : 's') : 'Agendor indisponível';
+    h += chip('Dispensados ⓘ', nv(r.desp.v), r.desp.v == null ? semDadoSub(j, 'novo') : (Lz ? 'por contato, sem testes · ' + agDesp + desdeTxt : 'conversas encerradas sem qualificar · por evento, inclui testes' + parcialTxt(r.desp, j)), { tip: (Lz ? 'Contatos que a Ana encerrou sem qualificar (fora do perfil, sem interesse e parecidos), um por contato mesmo que a Ana tenha encerrado mais de uma vez. ' + CFG.FONTE_LEAD + ' Conferência: negócios PERDIDOS no funil Ana SDR IA no Agendor.' : 'Conversas que a Ana encerrou sem qualificar. ' + CFG.FONTE_CONTADOR + ' Contador novo desde ' + dm(NOVOS_DESDE) + '.'), go: 'desp', delta: delta(r.desp.v, r.desp.ant), cinza: r.desp.v == null });
+    if (Lz) {
+      var agRep = r.sdrRep ? 'Agendor "Repasse da Ana": ' + num(r.sdrRep.length) + (Lz.de < CFG.REPASSE_DESDE ? ' (a etapa existe desde ' + dm(CFG.REPASSE_DESDE) + ')' : '') : 'Agendor indisponível';
+      h += chip('Repasse da Ana ⓘ', nv(r.rep.v), 'sem qualificar, por contato · ' + agRep + desdeTxt, { tip: 'Contatos que a Ana passou ao Felipe SEM qualificar (rede, pediu uma pessoa, fora de GO/DF, passada à mão pela equipe). Quem qualificou não entra aqui. ' + CFG.FONTE_LEAD + ' Conferência: negócios na etapa "Repasse da Ana" do SDR Inbound (a lista abre ao clicar); o 1º negócio dela é de ' + dm(CFG.REPASSE_DESDE) + ', então antes disso o Agendor não tem como conferir.', go: 'rep', delta: delta(r.rep.v, r.rep.ant) });
+    }
     h += chip('Taxa de qualificação ⓘ', r.taxa == null ? 'n/d' : pct(r.qual.v, r.ini.v), r.taxa == null ? (r.ini.v === 0 ? 'nenhuma conversa nova no período' : SEM) : num(r.qual.v) + ' qualificados de ' + num(r.ini.v) + ' iniciados', { tip: 'Qualificados ÷ iniciados do mesmo período. Como uma conversa pode ser qualificada dias depois de iniciada, a taxa de períodos curtos oscila.', delta: deltaPct(r.taxa, r.taxaAnt), cinza: r.taxa == null });
     var ag = r.agora;
-    h += chip('Em conversa agora ⓘ', ag ? num(ag.conversas || 0) : 'n/d', ag ? (num(ag.aguardandoPessoa || 0) + ' aguardando pessoa · ' + num(ag.comHumano || 0) + ' com a equipe') : SEM, { tip: 'Conversas abertas neste momento (não depende do período). Clique para ver os negócios nas etapas Novo lead e Em conversa.', go: 'conv' });
-    var intervSub = r.interv.v == null ? semDadoSub(j, 'novo') : 'equipe assumiu ' + nv(r.assumiu.v) + ' · pediu pessoa ' + nv(r.pediu.v) + (r.midia.v != null ? ' · mídia não entendida ' + num(r.midia.v) : (r.alerta.v != null ? ' · alertas à equipe ' + num(r.alerta.v) : '')) + parcialTxt(r.interv, j);
-    h += chip('Intervenções humanas ⓘ', nv(r.interv.v), intervSub, { tip: 'Vezes em que a equipe precisou entrar na conversa: a equipe assumiu, a pessoa pediu para falar com alguém ou a Ana não entendeu uma mídia. Contador novo desde ' + dm(NOVOS_DESDE) + '.', delta: delta(r.interv.v, r.interv.ant), cinza: r.interv.v == null });
+    h += chip('Em conversa agora ⓘ', ag ? num(ag.conversas || 0) : 'n/d', ag ? (num(ag.aguardandoPessoa || 0) + ' aguardando pessoa · ' + num(ag.comHumano || 0) + ' com a equipe') : SEM, { tip: 'Conversas abertas neste momento (não depende do período). Clique para ver os negócios abertos do funil Ana SDR IA no Agendor (todas as etapas, exceto Ganho e Perdido). Fonte da contagem de conversas: estado vivo da Ana (KV).', go: 'conv' });
+    var intervSub = r.interv.v == null ? semDadoSub(j, 'novo') : 'equipe assumiu ' + nv(r.assumiu.v) + ' · pediu pessoa ' + nv(r.pediu.v) + (r.midia.v != null ? ' · mídia não entendida ' + num(r.midia.v) : (r.alerta.v != null ? ' · alertas à equipe ' + num(r.alerta.v) : '')) + parcialTxt(r.interv, j) + (Lz ? ' · por evento, inclui testes' : '');
+    h += chip('Intervenções humanas ⓘ', nv(r.interv.v), intervSub, { tip: 'Vezes em que a equipe precisou entrar na conversa: a equipe assumiu, a pessoa pediu para falar com alguém ou a Ana não entendeu uma mídia. Contador novo desde ' + dm(NOVOS_DESDE) + '.' + CFG.FONTE_CONTADOR, delta: delta(r.interv.v, r.interv.ant), cinza: r.interv.v == null });
     var enc = r.escalados.v != null ? r.escalados.v : r.redes.v;
-    var encSub = enc == null ? semDadoSub(j, 'novo') : 'redes ' + nv(r.redes.v) + (r.escalados.v != null && r.redes.v != null && r.escalados.v >= r.redes.v ? ' · fora de GO/DF e outros ' + num(r.escalados.v - r.redes.v) : '') + parcialTxt(r.escalados.v != null ? r.escalados : r.redes, j);
-    h += chip('Encaminhados ao Felipe ⓘ', nv(enc), encSub, { tip: 'Redes de supermercado e contatos de fora de GO e DF não são atendidos pela Ana: ela encaminha direto ao Felipe. Contador novo desde ' + dm(NOVOS_DESDE) + '.', delta: delta(enc, r.escalados.v != null ? r.escalados.ant : r.redes.ant), cinza: enc == null });
-    h += chip('Sem resposta ⓘ', nv(r.pararam.v), r.pararam.v == null ? semDadoSub(j, 'novo') : 'pararam de responder' + parcialTxt(r.pararam, j), { tip: 'Conversas em que a pessoa parou de responder à Ana.', delta: delta(r.pararam.v, r.pararam.ant), cinza: r.pararam.v == null });
+    var encSub = enc == null ? semDadoSub(j, 'novo') : 'redes ' + nv(r.redes.v) + (r.escalados.v != null && r.redes.v != null && r.escalados.v >= r.redes.v ? ' · fora de GO/DF e outros ' + num(r.escalados.v - r.redes.v) : '') + parcialTxt(r.escalados.v != null ? r.escalados : r.redes, j) + (Lz ? ' · por evento, inclui testes; não é o Repasse da Ana (por contato, sem testes)' : '');
+    h += chip('Encaminhados ao Felipe ⓘ', nv(enc), encSub, { tip: 'Redes de supermercado e contatos de fora de GO e DF não são atendidos pela Ana: ela encaminha direto ao Felipe. Contador novo desde ' + dm(NOVOS_DESDE) + '.' + CFG.FONTE_CONTADOR, delta: delta(enc, r.escalados.v != null ? r.escalados.ant : r.redes.ant), cinza: enc == null });
+    h += chip('Sem resposta ⓘ', nv(r.pararam.v), r.pararam.v == null ? semDadoSub(j, 'novo') : 'pararam de responder' + parcialTxt(r.pararam, j) + (Lz ? ' · por evento, inclui testes' : ''), { tip: 'Conversas em que a pessoa parou de responder à Ana.' + CFG.FONTE_CONTADOR, delta: delta(r.pararam.v, r.pararam.ant), cinza: r.pararam.v == null });
+    if (Lz) {
+      var tr = Lz.tempo;
+      h += chip('Tempo de resposta ⓘ', tr ? segTxt(tr.med) : 'n/d', tr ? 'mediana · 9 em 10 em até ' + segTxt(tr.p90) + ' · ' + num(tr.n) + ' respostas' + (V.semResp ? ' · ' + num(V.semResp) + ' sem resposta' : '') + desdeTxt : 'nenhuma resposta no período', { tip: 'Do primeiro recado de um bloco de falas do contato até a primeira resposta da Ana. Blocos respondidos pela equipe e reações/figurinhas ficam de fora; "sem resposta" = esperando há mais de 10 minutos. ' + CFG.FONTE_LEAD, cinza: !tr });
+    }
     var t = r.tempo;
     h += chip('Tempo até qualificar ⓘ', t ? dec1(t.media) + ' d' : 'n/d', t ? 'mediana ' + dec1(t.med) + ' d · ' + t.n + (t.n === 1 ? ' negócio' : ' negócios') : (r.deals ? 'sem negócio qualificado com data de fechamento' : SEM), { tip: 'Do primeiro contato (criação do negócio no Agendor) até a qualificação, nos negócios qualificados no período que têm data de fechamento. Só aparece quando houver esse dado.', cinza: !t });
     var tu = r.turnos.v, tia = r.turnosIa.v;
-    h += chip('Turnos da Ana ⓘ', nv(tu), tu == null ? semDadoSub(j, 'antigo') : (tia != null ? num(tia) + ' escritos pela IA' : '') + (r.turnosPadrao.v != null ? ' · ' + num(r.turnosPadrao.v) + ' texto padrão' : ''), { tip: 'Cada resposta da Ana a uma mensagem da pessoa é um turno. Texto padrão = a IA não respondeu e entrou uma mensagem pronta.', delta: delta(tu, r.turnos.ant), cinza: tu == null });
+    h += chip('Turnos da Ana ⓘ', nv(tu), tu == null ? semDadoSub(j, 'antigo') : (tia != null ? num(tia) + ' escritos pela IA' : '') + (r.turnosPadrao.v != null ? ' · ' + num(r.turnosPadrao.v) + ' texto padrão' : ''), { tip: 'Cada resposta da Ana a uma mensagem da pessoa é um turno. Texto padrão = a IA não respondeu e entrou uma mensagem pronta.' + CFG.FONTE_CONTADOR, delta: delta(tu, r.turnos.ant), cinza: tu == null });
     return h;
   }
   function graficoSdr(r, tv, cw) {
@@ -375,7 +446,8 @@
     var gl = sr.gran === 'd' ? 'dia' : sr.gran === 's' ? 'semana' : 'mês';
     return granBtns(sr.gran, tv) + barras(b, series, { tv: tv, cw: cw, gran: sr.gran, aria: 'Iniciados, qualificados e dispensados pela Ana por ' + gl, eixo: function (v) { return num(v); }, h: tv ? 330 : 160 }) +
       '<div class="s2-lg"><span><i style="background:' + CFG.corIni + '"></i>Iniciados</span><span><i style="background:' + CFG.corQual + '"></i>Qualificados</span><span><i style="background:' + CFG.corDesp + ';opacity:.8"></i>Dispensados</span></div>' +
-      (novos && r.j.novos < r.j.n ? '<div class="s2-nt s2-xs">Iniciados e dispensados só existem desde ' + dm(NOVOS_DESDE) + '; antes disso a barra fica vazia por falta de contador, não por zero.</div>' : (!novos ? '<div class="s2-nt s2-xs">Iniciados e dispensados só existem desde ' + dm(NOVOS_DESDE) + ': neste período só os qualificados têm dado.</div>' : ''));
+      (r.lead && !r.lead.vazio ? '<div class="s2-nt s2-xs">Barras por contato, sem testes, desde ' + dm(r.lead.primeiroDia) + ' (histórico da Ana). Antes disso só os qualificados existem, pelo contador por evento (inclui testes).</div>' : '') +
+      (r.lead && !r.lead.vazio ? '' : novos && r.j.novos < r.j.n ? '<div class="s2-nt s2-xs">Iniciados e dispensados só existem desde ' + dm(NOVOS_DESDE) + '; antes disso a barra fica vazia por falta de contador, não por zero.</div>' : (!novos ? '<div class="s2-nt s2-xs">Iniciados e dispensados só existem desde ' + dm(NOVOS_DESDE) + ': neste período só os qualificados têm dado.</div>' : ''));
   }
   function funilSdr(r) {
     if (!r.deals) return S.dealsErr ? '<div class="s2-empty">Não consegui ler os negócios do funil da Ana.<br><button class="s2-c" data-ag-retry="deals" style="margin-top:6px">Tentar de novo</button></div>' : '<div class="s2-empty">Carregando negócios do funil Ana SDR IA…</div>';
@@ -386,7 +458,7 @@
       function c(v) { return '<td class="' + (v ? '' : 'z') + '">' + (v ? num(v) : '·') + '</td>'; }
       h += '<tr data-ag-go="et:' + i + '" title="Clique para ver os negócios desta etapa"><td class="s2-etbar" style="--w:' + Math.round(l.agora.length / max * 100) + '%"><i class="s2-dot" style="background:' + cor + ';margin-right:6px"></i>' + esc(l.nome) + '</td>' + c(l.agora.length) + c(l.criados.length) + '</tr>';
     });
-    h += '</tbody></table><div class="s2-nt s2-xs">Funil "Ana SDR IA" no Agendor (' + num(r.deals.length) + ' negócios). Agora = onde estão hoje; Criados = negócios novos no período. Origem dos negócios: WhatsApp (Ana).</div>';
+    h += '</tbody></table><div class="s2-nt s2-xs">Funil "Ana SDR IA" no Agendor (' + num(r.deals.length) + ' negócios; fonte: Agendor). Etapas = negócios ABERTOS hoje; Ganho = qualificado (o Agendor não separa teste: pode ter mais ganhos que o cartão Qualificados); Perdido = dispensado. Criados = negócios novos no período. Obs.: a Ana ainda não move o negócio de "Abertura enviada" enquanto conversa, então essa etapa acumula conversas em andamento.</div>';
     return h;
   }
   function agoraSdr(r) {
@@ -436,11 +508,13 @@
     partes.push('Ana: ' + (j.n ? num(j.comDado) + ' de ' + num(j.n) + ' dias com registro (' + dm(j.ini) + ' a ' + dm(j.fim) + ')' : 'o período não tem dias cobertos pela rota'));
     partes.push('contadores novos desde ' + dm(NOVOS_DESDE) + (j.novos ? ': ' + num(j.novos) + ' de ' + num(j.n) + ' dias com registro' : ': nenhum dia deste período com registro'));
     if (j.recortado) partes.push('a rota guarda só os últimos ' + CFG.diasApi + ' dias');
+    if (r.lead && !r.lead.vazio) partes.push('por contato (histórico) desde ' + dm(r.lead.primeiroDia) + ', ' + num(r.lead.testes) + ' testes fora' + (r.lead.motivos ? ' (' + Object.keys(r.lead.motivos).map(function (k) { return esc(k) + ': ' + num(r.lead.motivos[k]); }).join('; ') + ')' : '')); else partes.push('<b>por contato indisponível: contadores por evento (inclui testes)</b>');
     if (r.deals) partes.push(num(r.deals.length) + ' negócios no funil Ana SDR IA'); else if (S.dealsErr) partes.push('<b>negócios do funil indisponíveis</b>');
-    return { txt: partes.join(' · '), warn: !j.n || !!S.dealsErr };
+    return { txt: partes.join(' · '), warn: !j.n || !!S.dealsErr || !(r.lead && !r.lead.vazio) };
   }
   function notasSdr() {
-    return '<p><b>Iniciados</b> = conversas novas que a Ana começou. <b>Qualificados</b> = conversas que a Ana passou para a equipe (handoffs). <b>Dispensados</b> = encerradas sem qualificar.</p>' +
+    return '<p>Desde 19/11 os números da Ana são contados <b>por contato</b> (o mesmo telefone, com ou sem o 9, vale um) e <b>sem números de teste</b>, a partir do histórico da Ana; cada cartão diz a fonte e mostra a conferência com o Agendor. Antes do histórico (até ' + dm(NOVOS_DESDE) + ') ou se ele falhar, o cartão usa o contador por evento e avisa que inclui testes.</p>' +
+      '<p><b>Iniciados</b> = conversas que a Ana abriu. <b>Qualificados</b> = contatos que a Ana passou como qualificados. <b>Repasse da Ana</b> = passou ao Felipe sem qualificar. <b>Dispensados</b> = encerrados sem qualificar. <b>Tempo de resposta</b> = do recado do lead até a resposta da Ana.</p>' +
       '<p><b>Taxa de qualificação</b> = qualificados ÷ iniciados do período. <b>Em conversa agora</b> e o funil por etapa mostram o momento atual e não mudam com o período.</p>' +
       '<p>Contadores novos só existem desde ' + dm(NOVOS_DESDE) + ': antes disso aparece "n/d", nunca zero. A seta de comparação só aparece quando o período anterior está completo.</p>' +
       '<p>A Ana atende o lado Inbound (WhatsApp). Com o filtro do topo em Outbound não há números dela.</p>';
@@ -490,9 +564,10 @@
     var r = S.last; if (!r) return null;
     if (!r.deals) return { t: 'Negócios', l: [], cor: C_CINZA, aviso: S.dealsErr ? 'Não consegui ler os negócios do funil da Ana agora.' : 'Os negócios do funil ainda estão carregando.' };
     if (go === 'ini') return { t: 'Iniciados (negócios criados no período)', l: r.dIni, cor: CFG.corIni };
-    if (go === 'qual') return { t: 'Qualificados e repassados', l: r.dQual, cor: C_GANHO };
+    if (go === 'qual') return { t: 'Ganhos da Ana no Agendor (qualificados)', l: r.dQual, cor: C_GANHO };
     if (go === 'desp') return { t: 'Dispensados', l: r.dDesp, cor: C_PERDA };
     if (go === 'conv') return { t: 'Em conversa agora', l: r.dConv, cor: CFG.corIni };
+    if (go === 'rep') return { t: 'Repasse da Ana (SDR Inbound)', l: r.sdrRep || [], cor: '#0e9aa0', aviso: r.sdrRep ? null : 'Não consegui ler o SDR Inbound agora.' };
     var m = /^et:(\d+)$/.exec(go); if (m && r.funil[+m[1]]) return { t: r.funil[+m[1]].nome + ' (agora)', l: r.funil[+m[1]].agora, cor: CFG.corEtapa[r.funil[+m[1]].nome] || C_CINZA };
     return null;
   }
@@ -521,7 +596,7 @@
     var h = '';
     h += chip('Situação ⓘ', '<span style="color:' + (mo.cor === 'ok' ? '#15803d' : mo.cor === 'crit' ? '#b91c1c' : '#b45309') + '">' + esc(mo.t) + '</span>', mo.sub + ' · voz ' + (ana && ana.vozLigada ? 'ligada' : 'desligada'), { tip: 'Modo da Ana: ao vivo (responde), sombra (só observa) ou parada de emergência. A voz é o áudio falado nas respostas.' });
     h += chip('Custo no período ⓘ', r.temCusto ? usd(r.usd) : 'n/d', r.temCusto ? (semUso ? 'sem uso da IA neste período' : 'em reais (IA e voz)') : 'sem dado de custo', { tip: 'Soma do custo da IA e da voz no período. Em reais; a IA é cobrada em dólar e o Dash converte pela cotação de R$ ' + String(CFG.cotacao).replace('.', ',') + '.', cinza: !r.temCusto || semUso });
-    h += chip('Por lead novo ⓘ', r.usdLead == null ? 'n/d' : usd(r.usdLead), r.usdLead == null ? (j.novos === 0 ? 'contador de leads novo, existe desde ' + dm(NOVOS_DESDE) : 'nenhum lead novo no período') : '' +  + num(r.leads) + ' leads' + (j.novos < j.n ? ' (em ' + j.novos + ' de ' + j.n + ' dias com registro)' : ''), { tip: 'Custo ÷ conversas novas, contando só os dias em que o contador de leads novos existe (desde ' + dm(NOVOS_DESDE) + ').', cinza: r.usdLead == null });
+    h += chip('Por conversa nova ⓘ', r.usdLead == null ? 'n/d' : usd(r.usdLead), r.usdLead == null ? (j.novos === 0 ? 'contador de conversas novas, existe desde ' + dm(NOVOS_DESDE) : 'nenhuma conversa nova no período') : '' +  + num(r.leads) + ' conversas' + (j.novos < j.n ? ' (em ' + j.novos + ' de ' + j.n + ' dias com registro)' : ''), { tip: 'Custo ÷ conversas novas, contando só os dias em que o contador de leads novos existe (desde ' + dm(NOVOS_DESDE) + ').', cinza: r.usdLead == null });
     h += chip('Por qualificado ⓘ', r.usdQual == null ? 'n/d' : usd(r.usdQual), r.usdQual == null ? 'nenhum qualificado no período' : '' +  + num(r.qual) + ' qualificados', { tip: 'Custo ÷ conversas qualificadas (handoffs) no período.', cinza: r.usdQual == null });
     h += chip('Por turno ⓘ', r.usdTurno == null ? 'n/d' : usd(r.usdTurno), r.usdTurno == null ? 'nenhum turno no período' : '' +  + num(r.turnos) + ' turnos', { tip: 'Custo ÷ turnos (respostas da Ana).', cinza: r.usdTurno == null });
     h += chip('Projeção do mês ⓘ', r.projecao == null ? 'n/d' : usd(r.projecao), r.projecao == null ? 'sem projeção' : brl(brlDe(r.projecao)) + ' est. · não muda com o período', { tip: 'Quanto o mês corrente deve custar no ritmo atual. Não muda com o período escolhido.', cinza: r.projecao == null });
@@ -654,21 +729,22 @@
   function lerAna() {
     if (S.anaLoading) return Promise.resolve();
     S.anaLoading = true;
+    if (!S.ana) { try { var b = JSON.parse(w.localStorage.getItem(LS_BOM) || 'null'); if (b && b.ana && Array.isArray(b.ana.dias)) { S.ana = b.ana; S.anaTs = b.ts; S.anaCongelado = true; } } catch (e) { /* sem dado salvo */ } }   // 19/11: mesma política do dados.js: último dado bom salvo aparece na hora, com faixa
     return fetchT(CFG.worker + '/ana-painel?dias=' + CFG.diasApi, {}, 25000).then(function (res) {
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return res.json();
     }).then(function (j) {
       if (!j || j.ok !== true || !Array.isArray(j.dias)) throw new Error('resposta inesperada');
-      S.ana = j; S.anaErr = null; S.anaTs = Date.now();
+      S.ana = j; S.anaErr = null; S.anaTs = Date.now(); S.anaCongelado = false;
+      try { w.localStorage.setItem(LS_BOM, JSON.stringify({ ts: Date.now(), ana: j })); } catch (e) { /* sem cota: segue sem o último dado bom salvo */ }
     }).catch(function (e) { S.anaErr = e; console.warn('AGENTES: Ana falhou', e && e.message); })
       .then(function () { S.anaLoading = false; avisa(); });
   }
-  function lerDeals() {
-    if (S.dealsLoading || !S.bridge || !S.key) return Promise.resolve();
-    S.dealsLoading = true;
+  // lê uma lista de negócios da ponte (paginado, com retentativa); filtro = trecho da consulta, ex.: 'funnel_id=eq.919856'
+  function lerLista(filtro) {
     var COLS = 'id,title,stage_name,funnel_id,status,origin,origem_especial,created_at,end_time,closed_at,lost_at,data_real_evento', PAGE = 1000, all = [], vistos = {}, total = null;
     function pagina(from, tent) {
-      return fetchT(S.bridge + '/rest/v1/dash_geral_deals?select=' + COLS + '&funnel_id=eq.' + CFG.funil + '&order=id.asc', { headers: { apikey: S.key, Authorization: 'Bearer ' + S.key, Range: from + '-' + (from + PAGE - 1), Prefer: 'count=exact' } }).then(function (res) {
+      return fetchT(S.bridge + '/rest/v1/dash_geral_deals?select=' + COLS + '&' + filtro + '&order=id.asc', { headers: { apikey: S.key, Authorization: 'Bearer ' + S.key, Range: from + '-' + (from + PAGE - 1), Prefer: 'count=exact' } }).then(function (res) {
         if (!res.ok) throw new Error('HTTP ' + res.status);
         var m = /\/(\d+)\s*$/.exec(res.headers.get('content-range') || ''); if (m) total = +m[1];
         return res.json();
@@ -678,8 +754,16 @@
         if (rows.length && (total == null ? rows.length >= PAGE : from + rows.length < total)) return pagina(from + rows.length, 0);
       }, function (e) { if (tent < 2) return new Promise(function (ok) { setTimeout(ok, 800 * (tent + 1)); }).then(function () { return pagina(from, tent + 1); }); throw e; });
     }
-    return pagina(0, 0).then(function () { S.deals = prepDeals(all); S.dealsErr = null; }).catch(function (e) { S.dealsErr = e; console.warn('AGENTES: negócios falharam', e && e.message); })
-      .then(function () { S.dealsLoading = false; avisa(); });
+    return pagina(0, 0).then(function () { return all; });
+  }
+  function lerDeals() {
+    if (S.dealsLoading || !S.bridge || !S.key) return Promise.resolve();
+    S.dealsLoading = true;
+    var sdr = Promise.all([lerLista('funnel_id=eq.' + CFG.sdrFunil + '&stage_name=eq.' + encodeURIComponent(CFG.sdrEtapas.qualificou)), lerLista('funnel_id=eq.' + CFG.sdrFunil + '&stage_name=eq.' + encodeURIComponent(CFG.sdrEtapas.repasse))])
+      .then(function (r) { S.sdr = { qualificou: prepDeals(r[0], CFG.sdrFunil), repasse: prepDeals(r[1], CFG.sdrFunil) }; S.sdrErr = null; })
+      .catch(function (e) { S.sdrErr = e; console.warn('AGENTES: SDR Inbound (Ana qualificou / Repasse) falhou', e && e.message); });   // não derruba o resto: o cartão só diz "Agendor indisponível"
+    return lerLista('funnel_id=eq.' + CFG.funil).then(function (all) { S.deals = prepDeals(all); S.dealsErr = null; }).catch(function (e) { S.dealsErr = e; console.warn('AGENTES: negócios falharam', e && e.message); })
+      .then(function () { return sdr; }).then(function () { S.dealsLoading = false; avisa(); });
   }
   function carregar(force) {
     if (!force && S.ana && Date.now() - S.anaTs < 60000) return Promise.resolve();
@@ -746,7 +830,7 @@
     renderSaude: desenhaSaude,
     state: S,
     // núcleo puro, exposto para teste
-    _core: { janela: janela, soma: soma, calcSdr: calcSdr, calcSaude: calcSaude, prepDeals: prepDeals, serie: serie, periodoAnterior: periodoAnterior, funilEtapas: funilEtapas, setAna: function (a) { S.ana = a; }, setDeals: function (d) { S.deals = d; }, ehQualificado: ehQualificado, ehDispensado: ehDispensado, usd: usd, brl: brl, rotuloEstagio: rotuloEstagio }
+    _core: { janela: janela, soma: soma, calcSdr: calcSdr, calcSaude: calcSaude, prepDeals: prepDeals, serie: serie, periodoAnterior: periodoAnterior, funilEtapas: funilEtapas, leadDe: leadDe, segTxt: segTxt, setSdr: function (x) { S.sdr = x; }, kpisSdr: kpisSdr, setAna: function (a) { S.ana = a; }, setDeals: function (d) { S.deals = d; }, ehQualificado: ehQualificado, ehDispensado: ehDispensado, usd: usd, brl: brl, rotuloEstagio: rotuloEstagio }
   };
   w.AGENTES = API;
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
