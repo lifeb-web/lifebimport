@@ -1,7 +1,7 @@
 # Integração das 5 branches de páginas (19/11/2026) — NADA publicado
 
 Base: origin/gh-pages 70df1546 (Hoje 17.6B no ar). Branch de integração: `paginas-integracao` (worktree /tmp/pg_integ).
-Ordem (merge --no-ff): D painel-rep-refino c92403e4, E dash-ana ead58ccc, B playbook-pagina bf7bb734, C ecossistema-cards de9f1054 (HEAD no momento da mescla; havia mudança NÃO commitada em tools/ecossistema/conteudo3.py no worktree /tmp/pg_eco, que ficou de fora), A central-hub-visual cf50f4be.
+Ordem (merge --no-ff): D painel-rep-refino c92403e4, E dash-ana ead58ccc, B playbook-pagina bf7bb734, C ecossistema-cards de9f1054 (HEAD no momento da mescla; havia mudança NÃO commitada em tools/ecossistema/conteudo3.py no worktree /tmp/pg_eco, que ficou de fora), A central-hub-visual 34769548 (HEAD final; antes cf50f4be).
 
 ## Arquivos tocados por branch (git diff --name-only origin/gh-pages <branch>)
 - D: rep/dash/<10 reps>/index.html, source/ (molde, resync, PUBLICAR, tests-rep)
@@ -25,5 +25,5 @@ Só C x A: tools/ecossistema/conteudo2.py, slides_conteudo.py, estado.json. Nenh
 ## Correção feita na integração (commit próprio)
 Após a mescla o teste `tests/ecossistema/estatico.mjs` falhou (41/1): o texto vindo da Central trazia nomes de pessoas ("só Robert", "Hoje do Felipe"), proibidos no HTML do Ecossistema. Trocado por "só o dono" e "Hoje do SDR" em conteudo2.py, slides_conteudo.py, estado.json; página regenerada; 42/0.
 
-## Pendência achada (NÃO corrigida aqui: é da branch A)
-`central/tests/sem_artefatos.cjs` falha 1 (a palavra "artefato" em central/index.html, na regra de links do hub: "Nunca endereço de artefato de trabalho"). Falha igual em /tmp/pg_hub isolado; no gh-pages atual passa (4/0). Regressão da branch A.
+## Remesclagem final (Central 34769548)
+A Central final foi mesclada por cima (sem conflito). sem_artefatos agora 4/0 (a pendência acima foi corrigida pela branch A). Ecossistema 32a7f95c confirmado como ancestral do HEAD; página regenerada confere com montar.py (sem diferença). Placar na árvore integrada: boot 47/0, hub 484/0, hub_mutacao 66/0 vivas, papeis 81/0, janela 606/0, sem_artefatos 4/0, usuarios 274/0, usuarios_mutacao 23/0 vivas, eco estatico 42/0, painel_jsdom 1819/0, t_ana_lead 222/0. hoje/felipe: diff 0; 0 arquivos D/R. cards.json: painel-rep 'Painel do Representante' a_confirmar sem url; playbook-comercial 'Playbook comercial' em_publicacao sem url.
