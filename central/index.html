@@ -465,7 +465,7 @@ nav .grp{font-family:var(--mono);font-weight:500;letter-spacing:.18em}
 .hsm::after,.hstrip::after,.hfeat::after,.igt::after{bottom:-1px;right:-1px;border-bottom-width:2px;border-right-width:2px;border-bottom-right-radius:var(--rd)}
 .hcard{transition:border-color .15s,box-shadow .15s,transform .15s}
 .hcard:hover{box-shadow:0 0 0 1px color-mix(in srgb,var(--mag) 60%,transparent)}
-.hmain{flex:1;align-items:center}.hgrid{gap:10px}
+.hmain{flex:1;align-items:center}.hfoot .hpill:has(+ .hconf){margin-right:0}.hconf{margin-right:auto}.hgrid{gap:10px}
 .hmain:focus-visible,.hbtn:focus-visible,.hfeatl:focus-visible{outline-offset:-3px}
 .hbtn,.hfav,.igtab,.chip,.btn.sm{transition:background-color .15s,border-color .15s,color .15s}
 /* semaforo: forma + cor + texto (nunca so cor) */
@@ -597,7 +597,7 @@ nav .grp{font-family:var(--mono);font-weight:500;letter-spacing:.18em}
       <div class="live"><span class="dot ok" id="liveDot"></span><span id="liveTxt">agora</span></div>
       <button class="btn ghost sm" id="btnAtualizar" type="button">Atualizar</button>
     </div>
-    <div class="strip" id="strip"><span class="led"><span class="pulse" aria-hidden="true"></span>PRODUÇÃO</span><span>worker <b>gs-agendor</b></span><span>latência <b id="stLat">...</b></span><span>última sincronização <b id="stSync">...</b></span><span>sessão <b id="stUser"></b></span><span id="stAteBox" class="hide">conectado até <b id="stAte"></b></span></div>
+    <div class="strip" id="strip"><span class="led"><span class="pulse" aria-hidden="true"></span>PRODUÇÃO</span><span>worker <b id="stWorker">gs-agendor</b></span><span>latência <b id="stLat">...</b></span><span>última sincronização <b id="stSync">...</b></span><span>sessão <b id="stUser"></b></span><span id="stAteBox" class="hide">conectado até <b id="stAte"></b></span></div>
     <div class="content" id="conteudo"></div>
   </main>
 </div>
@@ -767,7 +767,7 @@ async function abrirApp(){
   var h0=hashLer();if(S.eu.trocarSenha){S.aba='conta';hashGravar('conta',null,true);}else if(h0&&abaPermitida(h0.aba)){S.aba=h0.aba;if(h0.aba==='atend'&&h0.fone)AT.fone=h0.fone;}else if(h0){hashGravar(S.aba,null,true);}   // link da Bia (#atendimento ou #atendimento-<fone>) e o link de cada aba (#ana, #historico...) abrem direto na tela certa; hash desconhecido é corrigido para a tela atual
   if(!S.eu.trocarSenha&&!abaPermitida(S.aba)){S.aba='inicio';hashGravar('inicio',null,true);}   // 19/11: papel sem a Visão geral cai no Início
   $('login').classList.add('hide');$('app').classList.remove('hide');
-  $('stUser').textContent=S.eu.usuario;$('quemNome').textContent=S.eu.nome||S.eu.usuario;$('quemPapel').textContent=PAPEL[S.eu.papel]||S.eu.papel;$('avatar').textContent=inicial(S.eu.nome||S.eu.usuario);
+  $('stUser').textContent=S.eu.usuario;try{$('stWorker').textContent=new URL(API).hostname.split('.')[0];}catch(e){}$('quemNome').textContent=S.eu.nome||S.eu.usuario;$('quemPapel').textContent=PAPEL[S.eu.papel]||S.eu.papel;$('avatar').textContent=inicial(S.eu.nome||S.eu.usuario);
   var ch=lerCache();if(ch){S.dados=ch.dados;S.saude=ch.saude;S.hist=ch.hist;S.ult=ch.t;S.cache=true;}
   montarNav();render();tickLive();
   carregarPapeis();
@@ -2160,6 +2160,8 @@ function hubCarregar(forcar){
   return HUB.carregando;
 }
 function hubLed(st){var s=HUB_STATUS[st]||HUB_STATUS.a_confirmar;var e=el('span','hpill '+s[1]);e.appendChild(el('i','hled'));e.appendChild(document.createTextNode(s[0]));return e;}
+// 19/11: texto de hesitação ("a confirmar", "memória do projeto"...) nunca aparece na tela do time: vira selo discreto 'A confirmar' e dica ao passar o mouse.
+function hubNotaHesita(n){return typeof n==='string'&&/confirm|mem[óo]ria|conferir|n[ãa]o sei|n[ãa]o consta/i.test(n);}
 function hubCartao(c,eu){
   var w=el('div','hcard '+c.status);w.setAttribute('data-card',c.id);
   var corpo;var ativo=!!(c.url||c.aba);
@@ -2167,8 +2169,8 @@ function hubCartao(c,eu){
   else if(c.aba){corpo=el('button','hmain');corpo.type='button';corpo.onclick=function(){ir(c.aba);};corpo.setAttribute('aria-label',c.nome+' (abre a tela na Central)');}
   else{corpo=el('div','hmain off');corpo.setAttribute('role','group');corpo.setAttribute('aria-label',c.nome+': '+HUB_STATUS[c.status][0]);}
   var ic=el('div','hico');ic.appendChild(icon(c.icone));corpo.appendChild(ic);
-  var t=el('div','htxt');t.appendChild(el('b',null,c.nome));t.appendChild(el('span',null,c.desc));if(c.nota)t.appendChild(el('em',null,c.nota));corpo.appendChild(t);w.appendChild(corpo);
-  var rod=el('div','hfoot');rod.appendChild(hubLed(c.status));
+  var t=el('div','htxt');t.appendChild(el('b',null,c.nome));t.appendChild(el('span',null,c.desc));var hes=hubNotaHesita(c.nota);if(c.nota&&!hes)t.appendChild(el('em',null,c.nota));if(hes)corpo.title=c.nota;corpo.appendChild(t);w.appendChild(corpo);
+  var rod=el('div','hfoot');rod.appendChild(hubLed(c.status));if(hes&&c.status!=='a_confirmar'){var sc=el('span','hpill off hconf','A confirmar');sc.title=c.nota;sc.setAttribute('data-selo','a-confirmar');rod.appendChild(sc);}
   if(c.url&&c.url.charAt(0)==='/'&&c.apresenta){var ap=el('button','hbtn','Apresentar');ap.type='button';ap.setAttribute('aria-label','Apresentar '+c.nome+' em tela cheia');ap.onclick=function(){hubApresentar(c.id);};rod.appendChild(ap);}
   var fv=el('button','hfav');fv.type='button';var on=HUB.favs.indexOf(c.id)>=0;fv.setAttribute('aria-pressed',on?'true':'false');fv.setAttribute('aria-label',(on?'Tirar dos favoritos: ':'Favoritar: ')+c.nome);fv.title=on?'Tirar dos favoritos':'Favoritar';fv.textContent=on?'★':'☆';
   fv.onclick=function(){var r=hubFavAlternar(eu,c.id);HUB.favs=r.lista;if(!r.gravou)toast('Não consegui guardar o favorito neste aparelho (navegação privada?). Vale só enquanto a página estiver aberta.');hubDesenhar();};
@@ -2326,7 +2328,7 @@ function igCartao(p){
   var lg=el('details','igleg');var sm=el('summary',null,(p.legenda||'').slice(0,140)+((p.legenda||'').length>140?'...':''));lg.appendChild(sm);var pre=el('div','iglegt');pre.textContent=p.legenda||'';lg.appendChild(pre);b.appendChild(lg);
   var alt=el('div','igalt'+(p.alt?'':' sem'));alt.appendChild(el('b',null,'Texto alternativo: '));alt.appendChild(document.createTextNode(p.alt||'não preenchido (acessibilidade)'));b.appendChild(alt);
   if(p.midias&&p.midias.length)b.appendChild(el('div','hint',p.midias.length+' mídia(s)'));
-  if(p.aprovacao){b.appendChild(el('div','igap','Aprovado pelo dono: '+p.aprovacao.por+' em '+igQuando(p.aprovacao.ts)+'. A publicação segue só pelo agente local.'));}
+  if(p.aprovacao){b.appendChild(el('div','igap','Aprovado pelo dono: '+p.aprovacao.por+(p.aprovacao.ts?' em '+igQuando(p.aprovacao.ts):'')+'. A publicação segue só pelo agente local.'));}
   if(p.publicacao&&p.status==='publicado'){var pb=el('div','igap','Publicado em '+igQuando(p.publicacao.ts)+'. ');if(p.publicacao.permalink&&igUrlHttps(p.publicacao.permalink)){var l=el('a',null,'Abrir no Instagram');l.href=p.publicacao.permalink;l.target='_blank';l.rel='noopener noreferrer';pb.appendChild(l);}b.appendChild(pb);}
   if(p.status==='falhou'&&p.publicacao)b.appendChild(el('div','igap bad','Falhou em '+igQuando(p.publicacao.ts)+': '+(p.publicacao.erro||'motivo não informado')));
   (p.comentarios||[]).slice(-3).forEach(function(c){var d=el('div','igc');d.appendChild(el('b',null,c.por+' · '+igQuando(c.ts)+': '));d.appendChild(document.createTextNode(c.texto));b.appendChild(d);});
