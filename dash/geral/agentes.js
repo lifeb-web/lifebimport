@@ -361,7 +361,7 @@
     if (!S.ana) return { txt: 'sem leitura', warn: true };
     var t = Number(S.ana.geradoEm), min = isFinite(t) ? (Date.now() - t) / 60000 : null;
     var txt = 'Ana · lido em ' + (isFinite(t) ? instBRT(t) : 'n/d');
-    if (S.anaCongelado) return { txt: txt + ' · dado salvo (congelado), atualizando...', warn: true, falha: !!S.anaErr };
+    if (S.anaCongelado) return { txt: txt + ' · dado salvo (congelado)' + (S.anaErr ? '; a atualização falhou, tentando de novo' : ', atualizando...'), warn: true, falha: !!S.anaErr };
     if (S.anaErr) return { txt: txt + ' · a última atualização falhou (mostrando o último dado bom)', warn: true, falha: true };
     return { txt: txt, warn: min != null && min > CFG.atrasoMin, atrasado: min != null && min > CFG.atrasoMin };
   }
