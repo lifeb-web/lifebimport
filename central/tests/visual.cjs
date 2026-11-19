@@ -35,7 +35,7 @@ const MEDIDA = () => {
 (async () => {
   const b = await chromium.launch({ executablePath: process.argv[3] });
   const users = [{ usuario: "robert@x.com", nome: "Robert", papel: "robert", ativo: true, ultimoAcesso: Date.now() }, { usuario: "luiz", nome: "Luiz", papel: "admin", ativo: false, ultimoAcesso: null }];
-  const TELAS = ["Visão geral", "Bia e automações", "Todas as chaves", "Filas de mensagens", "Calendário", "Atendimento", "Ana", "Histórico", "Atalhos", "Usuários", "Minha conta"];
+  const TELAS = ["Visão geral", "Bia e automações", "Todas as chaves", "Filas de mensagens", "Calendário", "Atendimento", "Ana", "Histórico", "Início e atalhos", "Instagram", "Usuários", "Minha conta"];
   const COMBOS = [[1920, 1080, "light"], [1440, 900, "light"], [1440, 900, "dark"], [1280, 800, "light"], [1024, 768, "light"], [768, 1024, "light"], [390, 844, "light"], [390, 844, "dark"], [360, 740, "dark"]];
   for (const [w, h, tema] of COMBOS.filter((c) => !process.env.ONLY || String(c[0]) === process.env.ONLY)) {
     const ctx = await b.newContext({ viewport: { width: w, height: h }, colorScheme: tema }); const p = await ctx.newPage(); const tag = `${w}x${h}-${tema}`; let erroApi = null;

@@ -2,7 +2,7 @@
 // Rodar: node central/tests/scroll_redesenho.cjs <playwright-core> <chromium>
 const { chromium } = require(process.argv[2]); const B = require("./_base.cjs"); const T = B.suite("scroll_redesenho");
 const atualizar = (p) => p.evaluate(() => document.getElementById("btnAtualizar").click());   // clique por script: o clique do Playwright rola a página até o botão e embaralharia a medida
-const ABAS = ["visao", "bia", "chaves", "filas", "calendario", "atendimento", "ana", "historico", "atalhos", "ecossistema", "usuarios", "conta"];
+const ABAS = ["visao", "bia", "chaves", "filas", "calendario", "atendimento", "ana", "historico", "inicio", "instagram", "ecossistema", "usuarios", "conta"];
 (async () => {
   const b = await chromium.launch({ executablePath: process.argv[3] });
   let rolaveis = 0, abasRolaveis = 0;

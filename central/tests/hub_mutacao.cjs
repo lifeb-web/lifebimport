@@ -15,7 +15,7 @@ const M = [
   ["área ignorada", "if(ctx.areas&&ctx.areas.indexOf(card.area)<0)return false;}", "}"],
   ["aba do cartão ignorada", "if(card.aba&&ctx.abas&&ctx.abas.indexOf(card.aba)<0)return false;", ""],
   ["@area vale para embutidos", "var base=papel==='robert'||papel==='admin'||papel==='sdr';", "var base=false;"],
-  ["busca sem normalizar acento", "function hubNorm(t){return String(t==null?'':t).toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'');}", "function hubNorm(t){return String(t==null?'':t).toLowerCase();}"],
+  ["busca sem normalizar acento", "function hubNorm(t){return String(t==null?'':t).toLowerCase().normalize('NFD').replace(/[" + String.fromCharCode(0x300) + "-" + String.fromCharCode(0x36f) + "]/g,'');}", "function hubNorm(t){return String(t==null?'':t).toLowerCase();}"],
   ["busca com OU em vez de E", "return ts.every(function(t){return h.indexOf(t)>=0;});", "return ts.some(function(t){return h.indexOf(t)>=0;});"],
   ["favorito sem try/catch", "try{var v=JSON.parse(localStorage.getItem(hubChaveFav(usuario))||'[]');return Array.isArray(v)?v.filter(function(x){return typeof x==='string';}).slice(0,60):[];}catch(e){return [];}", "var v=JSON.parse(localStorage.getItem(hubChaveFav(usuario))||'[]');return v;"],
   ["favorito de outra pessoa", "return 'central_hub_fav_'+hubNorm(usuario)", "return 'central_hub_fav_'+hubNorm('x')"],

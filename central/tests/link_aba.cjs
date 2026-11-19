@@ -1,7 +1,7 @@
 // Central: LINK POR ABA (17/11). Cada aba tem hash próprio; abrir o link abre a aba; botão voltar/avançar funciona; hashchange tratado; hash estranho/aba proibida não quebra nada.
 // Rodar: node central/tests/link_aba.cjs <playwright-core> <chromium>
 const { chromium } = require(process.argv[2]); const B = require("./_base.cjs"); const T = B.suite("link_aba");
-const ABAS = { visao: ["visao", "Visão geral"], estado: ["bia", "Bia e automações"], leitura: ["chaves", "Todas as chaves"], filas: ["filas", "Filas de mensagens"], cal: ["calendario", "Calendário"], atend: ["atendimento", "Atendimento"], agentes: ["ana", "Ana"], hist: ["historico", "Histórico"], atalhos: ["atalhos", "Atalhos"], eco: ["ecossistema", "Ecossistema"], usuarios: ["usuarios", "Usuários"], conta: ["conta", "Minha conta"] };
+const ABAS = { visao: ["visao", "Visão geral"], estado: ["bia", "Bia e automações"], leitura: ["chaves", "Todas as chaves"], filas: ["filas", "Filas de mensagens"], cal: ["calendario", "Calendário"], atend: ["atendimento", "Atendimento"], agentes: ["ana", "Ana"], hist: ["historico", "Histórico"], inicio: ["inicio", "Início e atalhos"], instagram: ["instagram", "Instagram"], eco: ["ecossistema", "Ecossistema"], usuarios: ["usuarios", "Usuários"], conta: ["conta", "Minha conta"] };
 const titulo = (p) => p.evaluate(() => document.getElementById("titulo").firstChild.nodeValue);
 const hash = (p) => p.evaluate(() => location.hash);
 (async () => {

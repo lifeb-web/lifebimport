@@ -721,7 +721,7 @@ async function carregarFilas(){var r=await api('GET','/filas').catch(function(){
 async function carregarCal(){var r=await api('GET','/calendario').catch(function(){return {status:0,j:{}};});S.cal=r.status===200?(r.j.dias||[]):[];S.calHoje=(r.j&&r.j.hoje)||'';S.calErro=r.status===200?'':((r.j&&r.j.mensagem)||('Erro '+r.status));}
 async function carregarPapeis(){   // 19/11: matriz papel x aba e papéis novos vêm do servidor; sem resposta vale a matriz embutida
   if(!S.eu||S.eu.trocarSenha)return;var r=await api('GET','/papeis').catch(function(){return {status:0,j:{}};});
-  if(r.status===200&&r.j&&Array.isArray(r.j.papeis)){S.papeis=r.j;if(r.j.meuPapelNome)$('quemPapel').textContent=r.j.meuPapelNome;if(!abaPermitida(S.aba)){S.aba='inicio';hashGravar('inicio',null,true);}montarNav();renderSoon();}
+  if(r.status===200&&r.j&&Array.isArray(r.j.papeis)){S.papeis=r.j;if(r.j.meuPapelNome)$('quemPapel').textContent=r.j.meuPapelNome;if(!abaPermitida(S.aba)){S.aba='inicio';hashGravar('inicio',null,true);}montarNav();renderSoon();if(!PAPEIS_PADRAO[S.eu.papel]&&!S.papeisCarregouOp){S.papeisCarregouOp=true;carregar(false);}}   // papel novo: só agora se sabe o que ele pode ler; carrega uma vez
 }
 async function carregarUsuarios(){var r=await api('GET','/usuarios');S.usuarios=(r.j&&r.j.itens)||[];await carregarPapeis();}
 function agoraSrv(){return Date.now()+(S.skew||0);}   // hora do servidor (corrige relógio errado do aparelho)
