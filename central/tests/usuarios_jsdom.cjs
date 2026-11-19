@@ -41,7 +41,7 @@ const linha = (W, u) => W.$(`tr[data-usuario="${u}"]`);
   // a aba só aparece para robert (menu) e o hash é barrado: guardas reais no arquivo
   ok((html.match(/if\(a\[0\]==='usuarios'&&S\.eu\.papel!=='robert'\)return;/g) || []).length === 2, "menu e busca global escondem Usuários para quem não é robert (2 guardas)");
   ok(html.includes("if(aba==='usuarios'&&!(S.eu&&S.eu.papel==='robert'))return false;"), "hash #usuarios barrado para quem não é robert");
-  ok(html.includes("if(a[0]==='usuarios'&&S.eu.papel!=='robert')return;itens.push"), "busca global também esconde Usuários");
+  ok(html.includes("if(a[0]==='usuarios'&&S.eu.papel!=='robert')return;if(!abaPermitida(a[0],true))return;itens.push"), "busca global também esconde Usuários (e o que a matriz do papel não libera)");
   // ---- 2. lista ----
   { const W = await mundo();
     eq(W.$$("#usuLista tr").length, 3, "cabeçalho + 2 linhas");
