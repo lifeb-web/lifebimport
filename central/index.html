@@ -444,6 +444,8 @@ body.aba-atend .strip,body.aba-agentes .strip{display:none}body.aba-atend .top{p
 .igtiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:10px}.igt{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:12px}.igt .mono{display:block;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}.igt b{display:block;font-size:26px;font-family:var(--mono);margin-top:4px}.igt b.nd{font-size:15px;color:var(--faint)}.igt small{display:block;color:var(--faint);font-size:12px;margin-top:4px}
 .iglinks{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 @media (max-width:560px){.igp{flex-direction:column}.igth{width:100%;flex-basis:auto;height:140px}.igth img{width:100%;height:140px}.hgrid{grid-template-columns:minmax(0,1fr)}.hstrip .hora{margin-left:0;width:100%}.htop .btn{flex:1}}
+.papBox .tw{overflow-x:auto}.papMatriz td{padding:8px 14px;border-bottom:1px solid var(--line);font-size:13.5px}.papSim{color:var(--ok);font-weight:800}.papNao{color:var(--faint)}
+.papChecks{display:flex;flex-wrap:wrap;gap:6px 16px;margin:6px 0 12px}.papChk{display:inline-flex;align-items:center;gap:6px;font-weight:600;min-height:36px}.papChk input{width:20px;height:20px}.papForm{border-top:1px solid var(--line);margin-top:14px;padding-top:12px}.papLista{margin-top:12px}
 </style>
 </head>
 <body>
@@ -721,7 +723,7 @@ async function carregarPapeis(){   // 19/11: matriz papel x aba e papéis novos 
   if(!S.eu||S.eu.trocarSenha)return;var r=await api('GET','/papeis').catch(function(){return {status:0,j:{}};});
   if(r.status===200&&r.j&&Array.isArray(r.j.papeis)){S.papeis=r.j;if(r.j.meuPapelNome)$('quemPapel').textContent=r.j.meuPapelNome;if(!abaPermitida(S.aba)){S.aba='inicio';hashGravar('inicio',null,true);}montarNav();renderSoon();}
 }
-async function carregarUsuarios(){var r=await api('GET','/usuarios');S.usuarios=(r.j&&r.j.itens)||[];}
+async function carregarUsuarios(){var r=await api('GET','/usuarios');S.usuarios=(r.j&&r.j.itens)||[];await carregarPapeis();}
 function agoraSrv(){return Date.now()+(S.skew||0);}   // hora do servidor (corrige relógio errado do aparelho)
 function sessaoTexto(){if(!S.ate)return S.persist?'Conectado neste aparelho (validade não informada pelo servidor)':'Conectado (validade não informada pelo servidor)';return 'Conectado até '+fmtAte(S.ate)+(S.persist?' · salvo neste aparelho':' · só nesta aba');}
 function tickSessao(){if(!S.eu||!S.tok)return;if(S.ate&&agoraSrv()>=S.ate){sessaoVenceu('A sua sessão acabou '+fmtAte(S.ate)+'. Entre de novo para continuar.');return;}var qa=$('quemAte');if(qa){var t=S.ate?('Conectado até '+fmtAte(S.ate)):'Conectado';if(qa.textContent!==t)qa.textContent=t;qa.title=sessaoTexto();var perto=S.ate&&S.ate-agoraSrv()<3600e3;qa.style.color=perto?'var(--warn,#9a5a06)':'';}var sb=$('stAteBox');if(sb){sb.classList.toggle('hide',!S.ate);if(S.ate)$('stAte').textContent=fmtAte(S.ate);}}
@@ -1990,7 +1992,7 @@ var HUB_HOSTS=['projetojlbv.com.br','www.projetojlbv.com.br','n8n-production-c46
 var HUB_RE_ID=/^[a-z0-9][a-z0-9_-]{1,39}$/;
 function hubNorm(t){return String(t==null?'':t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');}
 function dataBR(iso){var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso||''));return m?m[3]+'/'+m[2]+'/'+m[1]:'';}
-// Só endereços do projeto: caminho do próprio site, *.robert131196.workers.dev (workers da Life B), o domínio do projeto e o n8n. Nunca claude.ai.
+// Só endereços do projeto: caminho do próprio site, *.robert131196.workers.dev (workers da Life B), o domínio do projeto e o n8n. Nunca endereço de artefato de trabalho (o domínio dele é barrado abaixo).
 function hubUrlPermitida(u){
   if(typeof u!=='string'||!u||u.length>300||/[\u0000-\u001f\s]/.test(u))return false;
   if(u.charAt(0)==='/')return u.charAt(1)!=='/'&&u.indexOf('\\')<0;
@@ -2027,10 +2029,12 @@ function hubValidar(d,abasConhecidas){
 }
 function hubPapeis(card,cfg){var o=cfg&&cfg.cards&&cfg.cards[card.id];return o&&Array.isArray(o.papeis)?o.papeis:card.papeis;}
 function hubOculto(card,cfg){var o=cfg&&cfg.cards&&cfg.cards[card.id];return !!(o&&o.oculto===true);}
+// '@area' na lista de papéis = qualquer papel NOVO que tenha a área do cartão. '*' = todos (ainda sujeitos às áreas do papel).
+function hubPapelEntra(lista,papel,area,areas){var base=papel==='robert'||papel==='admin'||papel==='sdr';return lista.indexOf('*')>=0||lista.indexOf(papel)>=0||(!base&&lista.indexOf('@area')>=0&&!!areas&&areas.indexOf(area)>=0);}   // '@area' vale só para papéis NOVOS; robert, admin e sdr seguem a lista explícita
 // ctx: {papel, abas (abas que o papel tem), areas (áreas que o papel vê), cfg}. O Robert nunca fica de fora pela lista de papéis.
 function hubVisivel(card,ctx){
   if(hubOculto(card,ctx.cfg))return false;
-  if(ctx.papel!=='robert'){var p=hubPapeis(card,ctx.cfg);if(p.indexOf('*')<0&&p.indexOf(ctx.papel)<0)return false;if(ctx.areas&&ctx.areas.indexOf(card.area)<0)return false;}
+  if(ctx.papel!=='robert'){var p=hubPapeis(card,ctx.cfg);if(!hubPapelEntra(p,ctx.papel,card.area,ctx.areas))return false;if(ctx.areas&&ctx.areas.indexOf(card.area)<0)return false;}
   if(card.aba&&ctx.abas&&ctx.abas.indexOf(card.aba)<0)return false;
   return true;
 }
@@ -2045,9 +2049,9 @@ function hubFavGravar(usuario,lista){try{localStorage.setItem(hubChaveFav(usuari
 function hubFavAlternar(usuario,id){var l=hubFavLer(usuario);var i=l.indexOf(id);if(i>=0)l.splice(i,1);else l.unshift(id);var ok=hubFavGravar(usuario,l);return {lista:l,gravou:ok};}
 function hubAgrupar(cards,areas){var por={};cards.forEach(function(c){(por[c.area]=por[c.area]||[]).push(c);});return areas.filter(function(a){return por[a.id]&&por[a.id].length;}).map(function(a){return {area:a,cards:por[a.id]};});}
 // monta o ajuste que o Robert grava: só o que difere do cartão. marcas[idCard][papel]=true/false; ocultos[idCard]=true
-function hubMontarOverrides(cards,roles,marcas,ocultos){
+function hubMontarOverrides(cards,roles,marcas,ocultos,areasPorPapel){areasPorPapel=areasPorPapel||{};
   var out={};cards.forEach(function(c){var m=marcas[c.id]||{};var item={};
-    var padrao={};roles.forEach(function(r){padrao[r]=c.papeis.indexOf('*')>=0||c.papeis.indexOf(r)>=0;});
+    var padrao={};roles.forEach(function(r){padrao[r]=hubPapelEntra(c.papeis,r,c.area,areasPorPapel[r]);});
     var difere=roles.some(function(r){return (m[r]===undefined?padrao[r]:!!m[r])!==padrao[r];});
     if(difere){var lista=['robert'];roles.forEach(function(r){if(m[r]===undefined?padrao[r]:!!m[r])lista.push(r);});item.papeis=lista;}
     if(ocultos[c.id])item.oculto=true;
@@ -2140,16 +2144,16 @@ function hubGerenciar(){
   var wrap=el('div','hgwrap');var tb=el('table','hgt');var th=el('tr');th.appendChild(el('th',null,'Atalho'));roles.forEach(function(r){th.appendChild(el('th',null,r.nome));});th.appendChild(el('th',null,'Ocultar'));tb.appendChild(th);
   var marcas={},ocultos={},cbs=[];
   HUB.cards.forEach(function(c){var tr=el('tr');tr.setAttribute('data-card',c.id);var td=el('td');td.appendChild(el('b',null,c.nome));td.appendChild(el('small',null,' '+c.area));tr.appendChild(td);
-    roles.forEach(function(r){var on=hubPapeis(c,HUB.cfg).indexOf('*')>=0||hubPapeis(c,HUB.cfg).indexOf(r.id)>=0;var ar=r.areas&&r.areas.indexOf(c.area)<0;var td2=el('td');var cb=el('input');cb.type='checkbox';cb.checked=on;cb.setAttribute('aria-label',c.nome+' para '+r.nome);cb.setAttribute('data-papel',r.id);if(ar){cb.title='A área '+c.area+' não está liberada para este papel';}cb.onchange=function(){(marcas[c.id]=marcas[c.id]||{})[r.id]=cb.checked;};td2.appendChild(cb);tr.appendChild(td2);});
+    roles.forEach(function(r){var on=hubPapelEntra(hubPapeis(c,HUB.cfg),r.id,c.area,r.areas);var ar=r.areas&&r.areas.indexOf(c.area)<0;var td2=el('td');var cb=el('input');cb.type='checkbox';cb.checked=on;cb.setAttribute('aria-label',c.nome+' para '+r.nome);cb.setAttribute('data-papel',r.id);if(ar){cb.title='A área '+c.area+' não está liberada para este papel';}cb.onchange=function(){(marcas[c.id]=marcas[c.id]||{})[r.id]=cb.checked;};td2.appendChild(cb);tr.appendChild(td2);});
     var td3=el('td');var oc=el('input');oc.type='checkbox';oc.checked=hubOculto(c,HUB.cfg);ocultos[c.id]=oc.checked;oc.setAttribute('aria-label','Ocultar '+c.nome+' para todos');oc.setAttribute('data-oculto','1');oc.onchange=function(){ocultos[c.id]=oc.checked;};td3.appendChild(oc);tr.appendChild(td3);tb.appendChild(tr);});
   wrap.appendChild(tb);b.appendChild(wrap);
   var er=el('div','erro');er.setAttribute('role','alert');b.appendChild(er);
   var ac=el('div','acoes');var cx=el('button','btn ghost','Cancelar');cx.type='button';cx.onclick=fecharModal;var ok=el('button','btn','Salvar');ok.type='button';ok.id='hubSalvar';
   ok.onclick=async function(){
     // marcas iniciais: os checkboxes que o Robert não tocou valem o estado atual (efetivo)
-    var base={};HUB.cards.forEach(function(c){base[c.id]={};roles.forEach(function(r){var l=hubPapeis(c,HUB.cfg);base[c.id][r.id]=l.indexOf('*')>=0||l.indexOf(r.id)>=0;});});
+    var base={};HUB.cards.forEach(function(c){base[c.id]={};roles.forEach(function(r){base[c.id][r.id]=hubPapelEntra(hubPapeis(c,HUB.cfg),r.id,c.area,r.areas);});});
     var efet={};HUB.cards.forEach(function(c){efet[c.id]={};roles.forEach(function(r){efet[c.id][r.id]=(marcas[c.id]&&marcas[c.id][r.id]!==undefined)?marcas[c.id][r.id]:base[c.id][r.id];});});
-    var corpo={v:HUB.cfg.v,cards:hubMontarOverrides(HUB.cards,roles.map(function(r){return r.id;}),efet,ocultos)};
+    var corpo={v:HUB.cfg.v,cards:hubMontarOverrides(HUB.cards,roles.map(function(r){return r.id;}),efet,ocultos,(function(){var o={};roles.forEach(function(r){o[r.id]=r.areas;});return o;})())};
     ok.disabled=true;cx.disabled=true;ok.textContent='Salvando...';er.textContent='';var r;try{r=await api('POST','/hub/config',corpo);}catch(e){r={status:0,j:{mensagem:'Falha de conexão.'}};}
     if(r.status===200&&r.j.ok){fecharModal();toast('Visibilidade salva e registrada.');await hubCarregar(true);}
     else{ok.disabled=false;cx.disabled=false;ok.textContent='Salvar';er.textContent=(r.j&&(r.j.mensagem||r.j.rede))||('Erro '+r.status);if(r.status===409)er.textContent+=' Feche e abra de novo.';}
@@ -2347,6 +2351,8 @@ function telaEco(c){if(ECO.f&&ECO.f.getAttribute('src')!==ECO.src){ECO.f.src=ECO
 // 18/11 (pedido do Robert #3407): tela Usuários completa. Só o papel Robert vê (o servidor também recusa os outros com 403).
 // Criar (padrão SDR), redefinir senha (a pessoa troca no próximo acesso: o servidor marca), mudar papel, ativar/desativar. Tudo com confirmação na própria tela. A senha nunca fica na tela nem em variável depois de salvar; hash e sal nunca chegam aqui.
 var USU={acao:null,gerada:false};
+function usuPapelNome(x){return typeof papelNome==='function'?papelNome(x):(PAPEL[x]||x);}   // 19/11: inclui os papéis novos configurados
+function usuPapeisLista(){var base=[['sdr','SDR'],['admin','Administrador'],['robert','Robert']];var l=(typeof S!=='undefined'&&S.papeis&&S.papeis.papeis)||[];l.forEach(function(p){if(!p.embutido&&base.every(function(b){return b[0]!==p.id;}))base.push([p.id,p.nome]);});return base;}
 function usuRegraSenha(s){s=String(s||'');if(s.length<10)return 'A senha precisa ter pelo menos 10 caracteres.';if(s.length>128)return 'Senha longa demais.';if(!/[a-zA-Z]/.test(s)||!/[0-9]/.test(s))return 'Use letras e números na senha.';if(/^(.)\1+$/.test(s))return 'Senha fraca demais.';return null;}
 function usuGerarSenha(){var c=window.crypto;if(!c||!c.getRandomValues)return '';var L='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz',N='23456789',T=L+N;
   function r(m){var b=new Uint32Array(1),lim=Math.floor(4294967296/m)*m;do{c.getRandomValues(b);}while(b[0]>=lim);return b[0]%m;}
@@ -2359,7 +2365,7 @@ function telaUsuarios(c){
   if(!S.eu||S.eu.papel!=='robert')return;
   var lista=S.usuarios||[];
   function campo(pai,rot,tag,id,attrs){var d=el('div');var l=el('label',null,rot);l.htmlFor=id;d.appendChild(l);var i=el(tag);i.id=id;Object.keys(attrs||{}).forEach(function(k){i.setAttribute(k,attrs[k]);});d.appendChild(i);pai.appendChild(d);return i;}
-  function papeis(sel,atual){[['sdr','SDR'],['admin','Administrador'],['robert','Robert']].forEach(function(a){var o=el('option',null,a[1]);o.value=a[0];sel.appendChild(o);});sel.value=atual;}
+  function papeis(sel,atual){var l=usuPapeisLista();if(!l.some(function(x){return x[0]===atual;}))l.push([atual,usuPapelNome(atual)]);l.forEach(function(a){var o=el('option',null,a[1]);o.value=a[0];sel.appendChild(o);});sel.value=atual;}
   function senhaBlocos(pai,id){var rw=el('div','usuSenhaRow');var i=campo(rw,'Senha (mínimo 10 caracteres, com letras e números)','input',id,{type:'password',autocomplete:'new-password',autocapitalize:'none',spellcheck:'false'});
     var g=el('button','btn ghost sm','Gerar senha forte');g.type='button';g.id=id+'Gerar';var cp=el('button','btn ghost sm','Copiar');cp.type='button';cp.id=id+'Copiar';cp.style.display='none';
     var av=el('div','hint');av.id=id+'Aviso';
@@ -2376,14 +2382,14 @@ function telaUsuarios(c){
     box.appendChild(el('h4',null,tt));var er=el('div','erro');er.id='usuConfErro';er.setAttribute('role','alert');var bt=el('button','btn','Confirmar');bt.type='button';bt.id='usuConfOk';var cn=el('button','btn ghost','Cancelar');cn.type='button';cn.id='usuConfCancelar';
     var campoSenha=null;
     if(A.tipo==='senha'){box.appendChild(el('p','hint','Defina uma senha nova e passe para a pessoa. No próximo acesso o sistema pede para ela trocar por uma só dela. A senha antiga deixa de valer agora.'));campoSenha=senhaBlocos(box,'uRedSenha');}
-    else if(A.tipo==='papel')box.appendChild(el('p','hint','De '+(PAPEL[A.de]||A.de)+' para '+(PAPEL[A.papel]||A.papel)+'. Vale no próximo pedido que a pessoa fizer.'));
+    else if(A.tipo==='papel')box.appendChild(el('p','hint','De '+usuPapelNome(A.de)+' para '+usuPapelNome(A.papel)+'. Vale no próximo pedido que a pessoa fizer.'));
     else box.appendChild(el('p','hint',A.ativo?'A pessoa volta a poder entrar com a senha que já tem.':'A pessoa perde o acesso na hora (sessões abertas caem). Dá para reativar depois.'));
     var bx=el('div','usuBtns');bx.appendChild(bt);bx.appendChild(cn);box.appendChild(bx);box.appendChild(er);
     cn.onclick=function(){limparSenha(campoSenha);USU.acao=null;render();};
     bt.onclick=function(){
       if(A.tipo==='senha'){var e=usuRegraSenha(campoSenha.value);if(e){er.textContent=e;return;}var s=campoSenha.value;
         enviar({usuario:A.usuario,senha:s},'/usuarios',er,bt,function(){s='';limparSenha(campoSenha);USU.acao=null;toast('Senha de '+usuNome(A)+' redefinida. Ela troca no próximo acesso.');carregarUsuarios().then(function(){render();});});}
-      else if(A.tipo==='papel')enviar({usuario:A.usuario,nome:A.nome,papel:A.papel},'/usuarios',er,bt,function(){USU.acao=null;toast('Papel de '+usuNome(A)+' agora é '+(PAPEL[A.papel]||A.papel)+'.');carregarUsuarios().then(function(){render();});});
+      else if(A.tipo==='papel')enviar({usuario:A.usuario,nome:A.nome,papel:A.papel},'/usuarios',er,bt,function(){USU.acao=null;toast('Papel de '+usuNome(A)+' agora é '+usuPapelNome(A.papel)+'.');carregarUsuarios().then(function(){render();});});
       else enviar({usuario:A.usuario,ativo:!!A.ativo},'/usuarios/ativo',er,bt,function(){USU.acao=null;toast(usuNome(A)+(A.ativo?' reativado.':' desativado.'));carregarUsuarios().then(function(){render();});});};
     c.appendChild(box);}
   // ── novo usuário ──
@@ -2411,8 +2417,58 @@ function telaUsuarios(c){
     r.appendChild(ac);t.appendChild(r);});
   if(!lista.length){var rv=el('tr');var tv=el('td','hint','Nenhum usuário carregado.');tv.colSpan=6;rv.appendChild(tv);t.appendChild(rv);}
   w.appendChild(t);c.appendChild(w);
+  if(typeof usuPapeisSecao==='function')usuPapeisSecao(c);
 }
 /*USUARIOS-FIM*/
+/*PAPEIS-INI*/
+// 19/11: PAPÉIS POR ÁREA. O Robert cria papéis novos (comercial, marketing, representante...) escolhendo as ABAS e as ÁREAS do hub que o papel vê. Papel novo é SOMENTE LEITURA e o servidor barra o que não está liberado (a tela só espelha). Robert, Administrador e SDR são fixos.
+var PAP={editando:null,msg:'',msgErro:false,ocupado:false};
+function papelNome(id){var l=(S.papeis&&S.papeis.papeis)||[];for(var i=0;i<l.length;i++)if(l[i].id===id)return l[i].nome;return PAPEL[id]||id;}
+function papelListaTodos(){var l=(S.papeis&&S.papeis.papeis)||[];return l.length?l:[{id:'sdr',nome:'SDR'},{id:'admin',nome:'Administrador'},{id:'robert',nome:'Robert'}];}
+var PAP_ABAS_FIXAS=['inicio','conta'];
+function papAbasEscolhiveis(){var l=(S.papeis&&S.papeis.abas)||[];return l.filter(function(a){return a.id!=='usuarios'&&a.id!=='instagram'&&PAP_ABAS_FIXAS.indexOf(a.id)<0;});}
+function papMatriz(){   // [{aba,nome,por:{papelId:true/false}}]
+  var ps=papelListaTodos();var abas=(S.papeis&&S.papeis.abas)||[];
+  return abas.map(function(a){var por={};ps.forEach(function(p){por[p.id]=!!(p.abas&&p.abas.indexOf(a.id)>=0);});return {aba:a.id,nome:a.nome,por:por};});
+}
+function usuPapeisSecao(c){
+  if(!S.eu||S.eu.papel!=='robert')return;
+  var sec=el('div','sec');sec.appendChild(el('h3',null,'Papéis e áreas'));sec.appendChild(el('span',null,'quem vê o quê'));c.appendChild(sec);
+  var box=el('div','card form papBox');box.id='papBox';box.style.gridTemplateColumns='minmax(0,1fr)';
+  if(!S.papeis||!S.papeis.papeis){var e=el('div','vazio');e.setAttribute('role','alert');e.appendChild(el('p',null,'Não consegui carregar os papéis.'));var b=el('button','btn','Tentar de novo');b.type='button';b.id='papRetry';b.onclick=function(){b.disabled=true;carregarPapeis().then(function(){render();});};e.appendChild(b);box.appendChild(e);c.appendChild(box);return;}
+  box.appendChild(el('p','hint','Matriz papel x aba. Robert, Administrador e SDR são fixos. Papéis novos são sempre somente leitura e só veem as abas e as áreas marcadas. Início e Minha conta todos têm. Instagram e Usuários nunca vão para papel novo.'));
+  var w=el('div','card tw');var t=el('table','papMatriz');t.setAttribute('aria-label','Matriz de papéis por aba');var h=el('tr');h.appendChild(el('th',null,'Aba'));var ps=papelListaTodos();ps.forEach(function(p){h.appendChild(el('th',null,p.nome));});t.appendChild(h);
+  papMatriz().forEach(function(l){var r=el('tr');r.setAttribute('data-aba',l.aba);r.appendChild(el('td',null,l.nome));ps.forEach(function(p){var td=el('td',null,l.por[p.id]?'sim':'não');td.setAttribute('data-papel',p.id);td.className=l.por[p.id]?'papSim':'papNao';r.appendChild(td);});t.appendChild(r);});
+  w.appendChild(t);box.appendChild(w);
+  var novos=ps.filter(function(p){return !p.embutido;});
+  var lt=el('div','papLista');novos.forEach(function(p){var r=el('div','row-i');r.setAttribute('data-papel',p.id);var tx=el('div','t');tx.appendChild(document.createTextNode(p.nome+' '));tx.appendChild(el('small',null,'('+p.id+') · áreas: '+((p.areas||[]).join(', ')||'nenhuma')));r.appendChild(tx);var ed=el('button','btn ghost sm','Editar');ed.type='button';ed.setAttribute('data-acao','editar');ed.onclick=function(){PAP.editando=p;PAP.msg='';render();};r.appendChild(ed);var rm=el('button','btn ghost sm','Remover');rm.type='button';rm.setAttribute('data-acao','remover');rm.onclick=function(){papRemover(p,rm);};r.appendChild(rm);lt.appendChild(r);});
+  if(!novos.length)lt.appendChild(el('div','hint','Nenhum papel novo ainda.'));box.appendChild(lt);
+  var ed=PAP.editando;var f=el('div','papForm');f.appendChild(el('h4',null,ed?'Editar papel '+ed.nome:'Novo papel'));
+  var li=el('label',null,'Código do papel (letras minúsculas, números e _; não muda depois)');li.htmlFor='papId';f.appendChild(li);var ii=el('input');ii.id='papId';ii.maxLength=20;ii.value=ed?ed.id:'';ii.disabled=!!ed;ii.autocomplete='off';f.appendChild(ii);
+  var ln=el('label',null,'Nome que aparece na tela');ln.htmlFor='papNome';f.appendChild(ln);var inn=el('input');inn.id='papNome';inn.maxLength=40;inn.value=ed?ed.nome:'';f.appendChild(inn);
+  f.appendChild(el('div','hint','Abas que o papel vê:'));var ga=el('div','papChecks');papAbasEscolhiveis().forEach(function(a){var l=el('label','papChk');var cb=el('input');cb.type='checkbox';cb.value=a.id;cb.setAttribute('data-aba',a.id);cb.checked=!!(ed&&ed.abas&&ed.abas.indexOf(a.id)>=0);l.appendChild(cb);l.appendChild(document.createTextNode(' '+a.nome));ga.appendChild(l);});f.appendChild(ga);
+  f.appendChild(el('div','hint','Áreas do hub que o papel vê:'));var gr=el('div','papChecks');((S.papeis&&S.papeis.areas)||[]).forEach(function(a){var l=el('label','papChk');var cb=el('input');cb.type='checkbox';cb.value=a.id;cb.setAttribute('data-area',a.id);cb.checked=!!(ed&&ed.areas&&ed.areas.indexOf(a.id)>=0);l.appendChild(cb);l.appendChild(document.createTextNode(' '+a.nome));gr.appendChild(l);});f.appendChild(gr);
+  var er=el('div','erro');er.id='papMsg';er.setAttribute('role','alert');er.textContent=PAP.msg||'';if(PAP.msg&&!PAP.msgErro){er.style.color='var(--ok)';}f.appendChild(er);
+  var ac=el('div','usuBtns');var sv=el('button','btn',ed?'Salvar alterações':'Criar papel');sv.type='button';sv.id='papSalvar';
+  sv.onclick=async function(){
+    var id=ii.value.trim().toLowerCase();var nome=inn.value.trim();
+    if(!ed&&!/^[a-z][a-z0-9_]{2,19}$/.test(id)){er.style.color='';er.textContent='O código usa letras minúsculas, números e _ (3 a 20, começando por letra).';ii.focus();return;}
+    if(nome.length<2){er.style.color='';er.textContent='Dê um nome ao papel.';inn.focus();return;}
+    var abas=[].slice.call(ga.querySelectorAll('input:checked')).map(function(x){return x.value;});var areas=[].slice.call(gr.querySelectorAll('input:checked')).map(function(x){return x.value;});
+    sv.disabled=true;var rot=sv.textContent;sv.textContent='Salvando...';er.textContent='';
+    var r;try{r=await api('POST','/papeis',{acao:'salvar',id:id,nome:nome,abas:abas,areas:areas,v:S.papeis.v});}catch(e){r={status:0,j:{mensagem:'Falha de conexão.'}};}
+    if(r.status===200&&r.j.ok){PAP.editando=null;PAP.msg='';await carregarPapeis();toast('Papel salvo.');render();}
+    else{sv.disabled=false;sv.textContent=rot;er.style.color='';er.textContent=(r.j&&(r.j.mensagem||r.j.rede))||('Erro '+r.status);if(r.status===409)carregarPapeis();}
+  };
+  ac.appendChild(sv);if(ed){var cn=el('button','btn ghost','Cancelar edição');cn.type='button';cn.onclick=function(){PAP.editando=null;PAP.msg='';render();};ac.appendChild(cn);}f.appendChild(ac);box.appendChild(f);c.appendChild(box);
+}
+async function papRemover(p,bt){
+  if(bt.getAttribute('data-confirma')!=='1'){bt.setAttribute('data-confirma','1');bt.textContent='Confirmar remoção';setTimeout(function(){if(bt.parentNode){bt.removeAttribute('data-confirma');bt.textContent='Remover';}},6000);return;}
+  bt.disabled=true;var r;try{r=await api('POST','/papeis',{acao:'remover',id:p.id,v:S.papeis.v});}catch(e){r={status:0,j:{mensagem:'Falha de conexão.'}};}
+  if(r.status===200&&r.j.ok){await carregarPapeis();toast('Papel removido.');render();}else{bt.disabled=false;bt.removeAttribute('data-confirma');bt.textContent='Remover';toast((r.j&&(r.j.mensagem||r.j.rede))||('Erro '+r.status));}
+}
+/*PAPEIS-FIM*/
+
 function telaConta(c){
   if(S.eu.trocarSenha){var av=el('div','alerta','Esta é uma senha provisória. Troque agora por uma senha só sua (mínimo 10, com letras e números).');av.style.marginBottom='16px';c.appendChild(av);}
   var d=el('div','card it');d.style.marginBottom='18px';var hd=el('div','row');var a=el('div','avatar',inicial(S.eu.nome||S.eu.usuario));hd.appendChild(a);var tt=el('div');tt.appendChild(el('h4',null,S.eu.nome||S.eu.usuario));tt.appendChild(el('p',null,'Usuário: '+S.eu.usuario+' · Perfil: '+(PAPEL[S.eu.papel]||S.eu.papel)));var ps=el('p','hint',sessaoTexto()+'.');ps.id='contaSessao';tt.appendChild(ps);hd.appendChild(tt);d.appendChild(hd);c.appendChild(d);
