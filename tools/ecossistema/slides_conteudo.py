@@ -73,7 +73,9 @@ def todos():
     A(slide("estado", "Estado das peças: atendimento, SDR e Central", C, pg(["ana", "hoje", "central"]) + band(f"Posição de {ATUAL}. No ar: conferido em produção. Em implantação: pronto, ainda não no ar. Checklist completo na página."), "dense", "status,checklist"))
     A(slide("estadob", "Estado das peças: agentes, números e CRM", C, pg(["bia", "dash", "agendor"]) + band("No ar: conferido em produção. Checklist completo na página."), "dense", "status,checklist"))
     impl = [c for c in ESTADO["componentes"] if c["implantacao"]]
-    est2 = ('<div class="dg3 dgx pecas">' + "".join(f'<div class="peca"><div class="peca-h"><b>{c["nome"]}</b>{pill("em implantação")}</div><ul class="peca-t">' + "".join(f"<li>{e(P.palavras(x, 14))}</li>" for x in c["implantacao"]) + "</ul></div>" for c in impl) + "</div>"
+    def selo_impl(c):
+        return '<span class="dp dp-corr">Em correção</span>' if any(x.startswith("Em correção") for x in c["implantacao"]) else pill("em implantação")
+    est2 = ('<div class="dg3 dgx pecas">' + "".join('<div class="peca"><div class="peca-h"><b>' + c["nome"] + "</b>" + selo_impl(c) + '</div><ul class="peca-t">' + "".join(f"<li>{e(P.palavras(x, 14))}</li>" for x in c["implantacao"]) + "</ul></div>" for c in impl) + "</div>"
             + band("Em implantação: pronto, ainda não no ar. " + '<span class="dp dp-corr">Em correção</span>' + " a publicação abortou ou achou-se defeito; não no ar."))
     A(slide("estado2", "Em implantação (ainda não no ar)", C, est2, "dense", "status,checklist"))
     plan = [c for c in ESTADO["componentes"] if c["planejado"]]
@@ -104,7 +106,7 @@ def todos():
     # ================= SDR =================
     C = "O SDR"
     sdr1 = g([
-        cat("Quem é e o que recebe", ["Profissional de pré-venda do time comercial: trabalha as listas do Outbound e qualifica o Inbound repassado pela Ana, pela página Hoje", "Recebe leads qualificados pela Ana, leads de anúncio e site, listas do Outbound e negócios que voltam por Recuperação ou Reativação", "Decide: qualificar e escolher o representante, perder com motivo e explicação, ou congelar com data e motivo"], "user"),
+        cat("Quem é e o que recebe", ["Profissional de pré-venda do time comercial: trabalha as listas do Outbound e qualifica o Inbound repassado pela Ana, pela página Hoje", "Recebe os leads que a Ana qualifica ou repassa, trabalha as listas do Outbound e os negócios que voltam por Recuperação ou Reativação", "Decide: qualificar e escolher o representante, perder com motivo e explicação, ou congelar com data e motivo"], "user"),
         cat("Inbound e Outbound", ["Inbound: o lead chega sozinho (anúncio, site, WhatsApp). É atendido na hora, fora da fila e da cota", "Outbound: a Life B vai atrás, a partir de listas. O lead fica na fila de espera até o SDR clicar em Iniciar", "A página Hoje filtra por origem"], "mix"),
     ], 2) + band("Na página: Como o lead entra; Cadência do SDR; Página Hoje.")
     A(slide("sdr", "O SDR: papel, Inbound e Outbound", C, sdr1, "dense", "entrada,hoje,cadencia"))
@@ -160,7 +162,7 @@ def todos():
         no("4. A fila entra", "Ao fechar o lead, ou no teto de 3 minutos. A faixa de aviso saiu de vez", "n-g"),
         no("5. Se der erro", "Limite do Agendor não desloga; 502 confirma por releitura antes de repetir; botão de repetir"),
     ]) + '</div>'
-        + band("Versão 2026-11-17.5, no ar em 17/11/2026 às 21h36. No celular: topo solto, alvos de toque de 44 px e tela estável ao abrir o lead. Na página: Página Hoje."))
+        + band("Versão 2026-11-17.5 (17/11/2026, 21h36); a 17.6B entrou no ar em 19/11/2026 (informado, ainda não detalhado aqui). No celular: topo solto, alvos de toque de 44 px e tela estável ao abrir o lead. Na página: Página Hoje."))
     A(slide("hoje3", "Página Hoje 17.5: o que o SDR vê", C, hoje3, "dense", "hoje"))
     hoje2 = g([
         cat("Cuidados", ["Clique repetido nunca duplica; sem internet, a ação espera numa caixa de saída", "Ação que bate no limite do Agendor fica numa fila e é tentada de novo, com teto de tentativas e alerta", "Chave de emergência desliga a gravação pela página"], "shield"),

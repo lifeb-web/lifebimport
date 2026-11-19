@@ -15,7 +15,7 @@ def parte(chave, titulo, desc, cols, nodes, edges, nodes_n=None, edges_n=None):
 # ---- mapa
 parte("mapa", "Como as peças se conectam", "O lead escreve no WhatsApp. A Meta entrega à Ana, que conversa e pede à Bia. A Bia escreve no Agendor e envia os avisos.", 3,
   [N("lead", "Lead", "Anúncio, site, lista ou WhatsApp direto", "n", 0, 0), N("meta", "WhatsApp (Meta)", "Número da Ana, janela de 24 horas e modelos aprovados", "n", 1, 0), N("ana", "Ana", "Conversa, qualifica e guarda o histórico", "p", 2, 0),
-   N("bia", "Bia", "Aplica as regras, escreve no Agendor, relê para confirmar e avisa a equipe", "m", 0, 1, 3), N("ag", "Agendor (CRM)", "Empresas, negócios, funis e tarefas", "g", 0, 2), N("av", "Avisos no WhatsApp", "Gestão, SDR, closer e representantes", "n", 2, 2)],
+   N("bia", "Bia", "Aplica as regras, escreve no Agendor, relê para confirmar e avisa a equipe", "m", 0, 1, 3), N("ag", "Agendor (CRM)", "Empresas, negócios, funis e tarefas", "g", 0, 2), N("av", "Avisos no WhatsApp", "Gestão, SDR e representantes", "n", 2, 2)],
   [("lead", "meta", ""), ("meta", "ana", ""), ("ana", "bia", "pede"), ("bia", "ag", "escreve"), ("bia", "av", "avisa")],
   nodes_n=[N("lead", "Lead e WhatsApp (Meta)", "Chega por anúncio, site, lista ou WhatsApp direto", "n", 0, 0), N("ana", "Ana", "Conversa, qualifica e guarda o histórico", "p", 0, 1), N("bia", "Bia", "Aplica as regras, escreve no Agendor, relê e avisa a equipe", "m", 0, 2),
            N("ag", "Agendor (CRM) e avisos", "A Bia grava empresas, negócios, funis e tarefas e envia os avisos no WhatsApp a gestão, SDR e representantes", "g", 0, 3)],
