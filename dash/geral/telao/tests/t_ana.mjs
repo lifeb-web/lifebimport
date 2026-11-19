@@ -32,6 +32,7 @@ async function abrir(W, H, tv, opts = {}) {
     if (p.fx.modo === 'err500') return r.fulfill({ status: 500, headers: cors, body: 'erro' });
     return r.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify(p.fx.ana) });
   });
+  await p.route(/dash_geral_deals.*funnel_id=eq\.916713/, r => r.fulfill({ status: 200, headers: { ...cors, 'content-range': '0-0/0', 'access-control-expose-headers': 'content-range' }, contentType: 'application/json', body: '[]' }));
   await p.route(/dash_geral_deals.*funnel_id=eq\.919856/, r => {
     if (p.fx.modo === 'dealserr') return r.fulfill({ status: 500, headers: cors, body: 'erro' });
     return r.fulfill({ status: 200, headers: { ...cors, 'content-range': '0-' + (p.fx.deals.length - 1) + '/' + p.fx.deals.length, 'access-control-expose-headers': 'content-range' }, contentType: 'application/json', body: JSON.stringify(p.fx.deals) });
@@ -179,7 +180,7 @@ for (const [W, H, tv] of [[390, 844, false], [1800, 1012, true]]) {
   // lista com link do Agendor (periodo mes)
   await per(f, 'month'); await p.waitForTimeout(1500);
   const pm = await periodo(f);
-  for (const [go, filtro] of [['ini', d => d.created_at.slice(0, 10) >= pm.from && d.created_at.slice(0, 10) <= pm.to], ['qual', d => ['Qualificado', 'Repassado'].includes(d.stage_name) && (d.end_time || d.created_at).slice(0, 10) >= pm.from && (d.end_time || d.created_at).slice(0, 10) <= pm.to], ['conv', d => ['Novo lead', 'Em conversa'].includes(d.stage_name)]]) {
+  for (const [go, filtro] of [['ini', d => d.created_at.slice(0, 10) >= pm.from && d.created_at.slice(0, 10) <= pm.to], ['qual', d => d.status === 'won' && (d.end_time || d.created_at).slice(0, 10) >= pm.from && (d.end_time || d.created_at).slice(0, 10) <= pm.to], ['conv', d => d.status !== 'won' && d.status !== 'lost']]) {
     await f().evaluate(() => document.getElementById('modal-overlay') && document.getElementById('modal-overlay').classList.remove('show'));
     await f().evaluate(g => { const k = document.querySelector('#s2-root .s2-k[data-ag-go="' + g + '"]'); if (k) k.click(); }, go); await p.waitForTimeout(500);
     const m = await f().evaluate(() => ({ show: document.getElementById('modal-overlay').classList.contains('show'), hrefs: [...document.querySelectorAll('#modal-body a.mdeal-row')].map(a => a.getAttribute('href')), title: document.getElementById('modal-title').textContent }));
@@ -191,11 +192,12 @@ for (const [W, H, tv] of [[390, 844, false], [1800, 1012, true]]) {
   await f().evaluate(() => document.getElementById('modal-overlay').classList.remove('show'));
   // funil por etapa: contagens e clique na etapa
   const funil = await f().evaluate(() => [...document.querySelectorAll('#s2-root tr[data-ag-go^="et:"]')].map(tr => ({ nome: tr.children[0].textContent.trim(), agora: tr.children[1].textContent.trim(), criados: tr.children[2].textContent.trim() })));
-  const ETAPAS = ['Novo lead', 'Em conversa', 'Qualificado', 'Repassado', 'Sem resposta', 'Encerrado'];
-  ok(funil.length === 6 && ETAPAS.every((n, i) => funil[i] && funil[i].nome === n), nome + ': funil por etapa fora de ordem/incompleto ' + JSON.stringify(funil.map(x => x.nome)));
-  ETAPAS.forEach((n, i) => { const ag = FX.deals.filter(d => d.stage_name === n).length; const cr = FX.deals.filter(d => d.stage_name === n && d.created_at.slice(0, 10) >= pm.from && d.created_at.slice(0, 10) <= pm.to).length; if (funil[i]) { ok((funil[i].agora === '·' ? 0 : nint(funil[i].agora)) === ag, nome + ': funil ' + n + ' agora ' + funil[i].agora + ' esperado ' + ag); ok((funil[i].criados === '·' ? 0 : nint(funil[i].criados)) === cr, nome + ': funil ' + n + ' criados ' + funil[i].criados + ' esperado ' + cr); } });
+  const ETAPAS = ['Novo lead', 'Abertura enviada', 'Qualificando', 'Apresentação', 'Deal breaker', 'Retorno combinado', 'Ganho (qualificou)', 'Perdido'];
+  const naEtapa = (d, n) => n === 'Ganho (qualificou)' ? d.status === 'won' : n === 'Perdido' ? d.status === 'lost' : (d.status !== 'won' && d.status !== 'lost' && d.stage_name === n);
+  ok(funil.length === 8 && ETAPAS.every((n, i) => funil[i] && funil[i].nome === n), nome + ': funil por etapa fora de ordem/incompleto ' + JSON.stringify(funil.map(x => x.nome)));
+  ETAPAS.forEach((n, i) => { const ag = FX.deals.filter(d => naEtapa(d, n)).length; const cr = FX.deals.filter(d => naEtapa(d, n) && d.created_at.slice(0, 10) >= pm.from && d.created_at.slice(0, 10) <= pm.to).length; if (funil[i]) { ok((funil[i].agora === '·' ? 0 : nint(funil[i].agora)) === ag, nome + ': funil ' + n + ' agora ' + funil[i].agora + ' esperado ' + ag); ok((funil[i].criados === '·' ? 0 : nint(funil[i].criados)) === cr, nome + ': funil ' + n + ' criados ' + funil[i].criados + ' esperado ' + cr); } });
   // tempo ate qualificar: deals qualificados no periodo com data de fechamento
-  const tq = FX.deals.filter(d => ['Qualificado', 'Repassado'].includes(d.stage_name) && d.end_time && d.end_time.slice(0, 10) >= pm.from && d.end_time.slice(0, 10) <= pm.to).map(d => diff(d.created_at.slice(0, 10), d.end_time.slice(0, 10)));
+  const tq = FX.deals.filter(d => d.status === 'won' && d.end_time && d.end_time.slice(0, 10) >= pm.from && d.end_time.slice(0, 10) <= pm.to).map(d => diff(d.created_at.slice(0, 10), d.end_time.slice(0, 10)));
   ka = await kpisEm(f, '#s2-root');
   ok(tq.length ? ka['Tempo até qualificar'].v.trim() === dec1(tq.reduce((a, b) => a + b, 0) / tq.length) + ' d' : /n\/d/.test(ka['Tempo até qualificar'].v), nome + ': tempo ate qualificar ' + ka['Tempo até qualificar'].v + ' esperado media de ' + JSON.stringify(tq));
   // filtro de origem do topo
