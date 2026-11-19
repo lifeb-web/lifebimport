@@ -53,17 +53,16 @@ export function makeAna(opts = {}) {
 // negocios do funil 919856 (linhas como a ponte devolve)
 export function makeDeals() {
   const mk = (id, titulo, etapa, status, criada, fim) => ({ id, title: titulo, stage_name: etapa, funnel_id: 919856, status, origin: 'WhatsApp (Ana)', origem_especial: 'WhatsApp (Ana)', created_at: criada + 'T15:00:00.000Z', end_time: fim ? fim + 'T15:00:00.000Z' : null, closed_at: null, lost_at: null, data_real_evento: null });
-  return [   // 19/11: nomes REAIS das etapas do funil Ana SDR IA (Ganho e Perdido sao o status do negocio)
+  return [
     mk(9001, 'Mercadinho Alfa', 'Novo lead', 'ongoing', '2026-11-19'),
-    mk(9002, 'Padaria Beta', 'Abertura enviada', 'ongoing', '2026-11-18'),
-    mk(9003, 'Empório Gama com um nome bem comprido para testar quebra de linha na lista', 'Qualificando', 'ongoing', '2026-11-12'),
-    mk(9004, 'Casa Delta', 'Abertura enviada', 'won', '2026-11-12', '2026-11-14'),
-    mk(9005, 'Loja Épsilon', 'Novo lead', 'won', '2026-11-13', '2026-11-17'),
-    mk(9006, 'Bar Zeta', 'Apresentação', 'ongoing', '2026-11-11'),
-    mk(9007, 'Rede Eta', 'Qualificando', 'lost', '2026-11-10', '2026-11-12'),
-    mk(9008, 'Mini Theta', 'Abertura enviada', 'lost', '2026-11-15', '2026-11-16'),
-    mk(9009, 'Mercado Iota', 'Abertura enviada', 'won', '2026-10-30', '2026-11-02'),
-    mk(9010, 'Armazém Kappa', 'Deal breaker', 'ongoing', '2026-11-20'),
-    mk(9011, 'Super Lambda', 'Retorno combinado', 'ongoing', '2026-11-16')
+    mk(9002, 'Padaria Beta', 'Em conversa', 'ongoing', '2026-11-18'),
+    mk(9003, 'Empório Gama com um nome bem comprido para testar quebra de linha na lista', 'Em conversa', 'ongoing', '2026-11-12'),
+    mk(9004, 'Casa Delta', 'Qualificado', 'won', '2026-11-12', '2026-11-14'),
+    mk(9005, 'Loja Épsilon', 'Repassado', 'won', '2026-11-13', '2026-11-17'),
+    mk(9006, 'Bar Zeta', 'Sem resposta', 'ongoing', '2026-11-11'),
+    mk(9007, 'Rede Eta', 'Encerrado', 'lost', '2026-11-10', '2026-11-12'),
+    mk(9008, 'Mini Theta', 'Encerrado', 'lost', '2026-11-15', '2026-11-16'),
+    mk(9009, 'Mercado Iota', 'Qualificado', 'won', '2026-10-30', '2026-11-02'),
+    mk(9010, 'Armazém Kappa', 'Novo lead', 'ongoing', '2026-11-20')
   ];
 }
