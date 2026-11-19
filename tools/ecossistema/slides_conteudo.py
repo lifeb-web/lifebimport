@@ -4,7 +4,7 @@ Estado (no ar, em implantação, planejado) vem de estado.json. Terminologia: p�
 from comp import e
 import slides_base as B
 from slides_base import slide, card, li, pill, ic, faixa_estado, COMP, ESTADO, ATUAL
-from comp import selo
+from comp import selo, item_estado
 import slides_fluxos as F
 
 def g(items, n=3):
@@ -20,6 +20,10 @@ def fx(chave, nota=None):
     w, n, p = F.svgs(chave)
     d = f'<figure class="dfig" role="img" aria-label="{e(p["titulo"])}. {e(p["desc"])}"><div class="svgd dw">{w}</div><div class="svgd dn">{n}</div></figure>'
     return d + (band(nota) if nota else "")
+
+def sub_estado(nome, itens):
+    """19/11/2026: componente com um título curto por item (uma linha cada); o texto completo fica na sanfona inline do item."""
+    return f'<li><b>{nome}</b><ul class="sub">' + "".join(f"<li>{item_estado(x, deck=True)}</li>" for x in itens) + "</ul></li>"
 
 def cat(titulo, itens, icone="check"):
     return f'<div class="dcard"><div class="dcardh">{ic(icone)}<h3>{titulo}</h3></div>{li(itens)}</div>'
@@ -67,9 +71,9 @@ def todos():
     for c in ESTADO["componentes"]:
         for k in cols:
             if c[k]:
-                cols[k].append(f'<li><b>{c["nome"]}</b> {"; ".join(selo(x, deck=True) for x in c[k])}</li>')
+                cols[k].append(sub_estado(c["nome"], c[k]))
     def no_ar(ids):   # no ar por componente; dividido em 2 slides para caber legível no celular em pé
-        return "".join(f'<li><b>{COMP[i]["nome"]}</b> {"; ".join(selo(x, deck=True) for x in COMP[i]["no_ar"])}</li>' for i in ids if COMP[i]["no_ar"])
+        return "".join(sub_estado(COMP[i]["nome"], COMP[i]["no_ar"]) for i in ids if COMP[i]["no_ar"])
     est = ('<div class="dg1 est dgx">'
         f'<div class="ec e-ok"><h3>{pill("no ar")}</h3><ul>{no_ar(["ana", "agendor"])}</ul></div></div>'
         + band(f'Posição de {ATUAL}. No ar: conferido em produção. Em implantação: pronto, ainda não no ar. Planejado: futuro. Checklist completo na página.'))

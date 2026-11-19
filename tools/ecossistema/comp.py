@@ -83,3 +83,135 @@ def sec(id_, grupo, titulo, lead, corpo, extra=""):
     ld = f'<p class="lead">{lead}</p>' if lead else ""
     return (f'<section class="sec" id="{id_}" data-n="{n}" data-t="{e(titulo)}" aria-labelledby="h-{id_}">'
             f'<div class="sec-in"><h2 id="h-{id_}"><span class="num">{n}</span><span class="tt">{titulo}</span>{extra}</h2>{ld}{corpo}</div></section>')
+
+
+# ---------------------------------------------------------------------------
+# 19/11/2026: textos curtos. Nenhum parágrafo, item de lista ou célula passa de ~25 palavras sem virar
+# "resumo + Ver mais": o começo fica visível (frase curta) e o restante vai para uma sanfona com
+# marcadores. Nada é apagado: o texto completo continua na página (e na busca). Só afeta a página longa.
+# ---------------------------------------------------------------------------
+_TAGRE = re.compile(r"<[^>]+>")
+_PARES = ("b", "strong", "em", "i", "code", "span", "a", "sup", "small")
+MAX_PAL = 25
+
+def n_palavras(h):
+    return len(_TAGRE.sub("", h).split())
+
+def _balanceado(h):
+    for t in _PARES:
+        if len(re.findall(r"<%s[\s>]" % t, h)) != len(re.findall(r"</%s>" % t, h)):
+            return False
+    return True
+
+def _fragmentos(h):
+    """Quebra o HTML em frases/orações (após '. ' ou '; '), só onde as marcações estão fechadas e fora de parênteses."""
+    pos, ini, prof, out, i = [], 0, 0, [], 0
+    for m in re.finditer(r"[.;]\s+(?=[A-ZÁÉÍÓÚÂÊÔÃÕÇ0-9\"“(<a-záéíóúâêôãõç])", h):
+        corte = m.end()
+        pre = h[ini:m.start() + 1]
+        if pre.count("(") != pre.count(")") or not _balanceado(pre):
+            continue
+        if m.group(0)[0] == "." and re.search(r"(\b\d|\bp|\bex|\bnº|\bSr|\bDr)\.$", pre) and n_palavras(pre) < 3:
+            continue
+        out.append(pre.strip()); ini = corte
+    out.append(h[ini:].strip())
+    return [f for f in out if f]
+
+def _virgulas(h):
+    """Fallback: oração única longa, quebra em vírgulas fora de parênteses (só se marcações fechadas)."""
+    out, ini, prof = [], 0, 0
+    for k, ch in enumerate(h):
+        if ch == "(": prof += 1
+        elif ch == ")": prof -= 1
+        elif ch == "," and prof == 0 and k + 1 < len(h) and h[k + 1] == " ":
+            pre = h[ini:k + 1]
+            if _balanceado(pre) and n_palavras(pre) >= 6:
+                out.append(pre.strip()); ini = k + 2
+    out.append(h[ini:].strip())
+    return [f for f in out if f]
+
+def _fim(f):
+    f = f.rstrip()
+    return f[:-1] + "." if f.endswith((";", ",")) else f
+
+def _por_br(frs):
+    """Quebra também em <br>, só onde as marcações estão fechadas."""
+    out = []
+    for f in frs:
+        parts, acc = re.split(r"<br\s*/?>", f), ""
+        for p_ in parts:
+            acc = (acc + "<br>" + p_) if acc else p_
+            if _balanceado(acc) and acc.strip():
+                out.append(acc.strip()); acc = ""
+        if acc.strip():
+            out.append(acc.strip())
+    return out
+
+def dividir(h, maximo=MAX_PAL):
+    """Devolve (inicio_html, [restos_html]) ou None se não precisa/der para dividir."""
+    if n_palavras(h) <= maximo + 4:
+        return None
+    fr = _por_br(_fragmentos(h))
+    fr = [y for f in fr for y in (_virgulas(f) if n_palavras(f) > maximo else [f])]
+    if len(fr) == 1:
+        return None
+    lead, k = [], 0
+    for f in fr:
+        if lead and n_palavras(" ".join(lead + [f])) > maximo:
+            break
+        lead.append(f); k += 1
+    if k == len(fr):          # coube tudo: só passou pouco do limite
+        return None
+    ini = _fim(" ".join(lead))
+    resto = [_fim(f) for f in fr[k:]]
+    return ini, resto
+
+def _sanfona(resto):
+    itens = "".join(f"<li>{r}</li>" for r in resto)
+    return (f'<details class="mais"><summary><span>Ver mais</span></summary><ul class="mais-l">{itens}</ul></details>')
+
+_BLOCO = re.compile(r"<(p|li|td)((?:\s[^>]*)?)>((?:(?!</?(?:p|li|ul|ol|td|tr|table|div|details|h[1-6]|section|figure|svg)[\s>]).)*)</\1>", re.S)
+
+def encurtar(corpo):
+    def troca(m):
+        t, attrs, inner = m.group(1), m.group(2), m.group(3)
+        if 'class="sr"' in attrs or 'class="full"' in attrs or "<details" in inner:
+            return m.group(0)
+        r = dividir(inner)
+        if not r:
+            return m.group(0)
+        ini, resto = r
+        if t == "p":
+            return f"<{t}{attrs}>{ini}</{t}>{_sanfona(resto)}"
+        return f"<{t}{attrs}>{ini}{_sanfona(resto)}</{t}>"
+    return _BLOCO.sub(troca, corpo)
+
+def curto(txt, maximo=12):
+    """Título curto de um item de estado (texto puro): até o primeiro '(', ':' ou ';'; no máximo `maximo` palavras."""
+    base = txt
+    for pref in SELOS:
+        if base.startswith(pref):
+            base = base[len(pref):]
+    cut = len(base)
+    for s in (" (", ": ", "; ", " — "):
+        k = base.find(s)
+        if 0 < k < cut:
+            cut = k
+    h = base[:cut].strip().rstrip(",.:;")
+    p = h.split()
+    if len(p) > maximo:
+        h = " ".join(p[:maximo]).rstrip(",.:;") + "…"
+    return h
+
+def item_estado(txt, deck=False):
+    """Item de estado: título curto visível + texto completo na sanfona (o texto completo nunca some)."""
+    c = curto(txt)
+    sel = ""
+    for pref, k in SELOS.items():
+        if txt.startswith(pref):
+            cls = f"dp dp-{k}" if deck else f"pill p-{k}"
+            sel = f'<span class="{cls}">{PILL[k]}</span><span class="sr">:</span> '
+    if curto(txt, 999) == c and n_palavras(txt) <= len(c.split()) + 2:
+        return f"{sel}{c}" if sel else txt
+    return (f'<span class="it">{sel}{c}</span><details class="mais"><summary><span>Ver o texto completo</span></summary>'
+            f'<p class="full">{selo(txt, deck)}</p></details>')

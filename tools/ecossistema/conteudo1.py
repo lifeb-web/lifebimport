@@ -29,18 +29,21 @@ def s_inicio():
 def s_status():
     import json as _j, os as _o
     est = _j.load(open(_o.path.join(_o.path.dirname(_o.path.abspath(__file__)), "estado.json"), encoding="utf-8"))["componentes"]
-    ok = [(c["nome"], "; ".join(c["no_ar"]) + ".") for c in est if c["no_ar"]]
-    ok.append(("SDR e cadência", "Cadência por dia útil, repasse com trava, inbound direto, Subir lista, enriquecimento por CNPJ e voltas ao SDR."))
-    te = [(c["nome"], "; ".join(selo(x) for x in c["implantacao"]) + ".") for c in est if c["implantacao"]] + [
-      ("Painel do Representante (nova recarga)", "O painel já está no ar; falta só o pacote novo, com recarga em horário comercial, que aguarda auditoria."),
-      ("Este Ecossistema", "Atualizado, com apresentação em slides; publica depois do teste visual e do auditor independente."),
+    # 19/11/2026: cada componente vira um cartão com título curto por item; o texto completo fica na sanfona de cada item
+    def itens(c, chave):
+        return [item_estado(x) for x in c[chave]]
+    ok = [(c["nome"], itens(c, "no_ar")) for c in est if c["no_ar"]]
+    ok.append(("SDR e cadência", ["Cadência por dia útil", "Repasse com trava", "Inbound direto", "Subir lista", "Enriquecimento por CNPJ", "Voltas ao SDR"]))
+    te = [(c["nome"], itens(c, "implantacao")) for c in est if c["implantacao"]] + [
+      ("Painel do Representante (nova recarga)", ["Painel no ar; falta o pacote novo, com recarga em horário comercial, que aguarda auditoria"]),
+      ("Este Ecossistema", ["Atualizado, com apresentação em slides; publica depois do teste visual e do auditor independente"]),
     ]
-    pl = [(c["nome"], "; ".join(selo(x) for x in c["planejado"]) + ".") for c in est if c["planejado"]] + [
-      ("Bia", "Limite por clique no servidor, reenvio quando a Meta recusa a entrega, backup fora do ambiente de trabalho."),
-      ("Plataforma", "Mineração de leads, arquivar modelos antigos da Meta, revisão das cadências com dados reais."),
+    pl = [(c["nome"], itens(c, "planejado")) for c in est if c["planejado"]] + [
+      ("Bia", ["Limite por clique no servidor", "Reenvio quando a Meta recusa a entrega", "Backup fora do ambiente de trabalho"]),
+      ("Plataforma", ["Mineração de leads", "Arquivar modelos antigos da Meta", "Revisão das cadências com dados reais"]),
     ]
-    def col(tit, k, itens):
-        lis = "".join(f"<li><b>{a}</b>{b}</li>" for a, b in itens)
+    def col(tit, k, itens_):
+        lis = "".join(f'<li class="comp"><b>{a}</b><ul class="sub">' + "".join(f"<li>{x}</li>" for x in b) + "</ul></li>" for a, b in itens_)
         return f'<div class="col col-{k}"><h3>{pill(k)} {tit}</h3><ul class="plain">{lis}</ul></div>'
     corpo = (f'<div class="cols3">{col("O que está valendo agora", "ok", ok)}{col("Pronto, em implantação", "te", te)}{col("Na fila", "pl", pl)}</div>'
       + '<h3 class="mt">Depende de decisão da gestão</h3>' + ul(S.DEPENDE)
