@@ -2102,7 +2102,7 @@ var HUB_HOSTS=['projetojlbv.com.br','www.projetojlbv.com.br','n8n-production-c46
 var HUB_RE_ID=/^[a-z0-9][a-z0-9_-]{1,39}$/;
 function hubNorm(t){return String(t==null?'':t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');}
 function dataBR(iso){var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso||''));return m?m[3]+'/'+m[2]+'/'+m[1]:'';}
-// Só endereços do projeto: caminho do próprio site, *.robert131196.workers.dev (workers da Life B), o domínio do projeto e o n8n. Nunca endereço de artefato de trabalho (o domínio dele é barrado abaixo).
+// Só endereços do projeto: caminho do próprio site, *.robert131196.workers.dev (workers da Life B), o domínio do projeto e o n8n. Links só de páginas do projeto (o domínio de trabalho externo é barrado abaixo).
 function hubUrlPermitida(u){
   if(typeof u!=='string'||!u||u.length>300||/[\u0000-\u001f\s]/.test(u))return false;
   if(u.charAt(0)==='/')return u.charAt(1)!=='/'&&u.indexOf('\\')<0;
@@ -2334,7 +2334,7 @@ function igQuando(ms){if(!ms)return '';var d=new Date(ms);return d.toLocaleDateS
 function igResumoDias(itens,hoje,n,teto){var out=[];for(var i=0;i<n;i++){var d=igSomaDias(hoje,i);var l=itens.filter(function(p){return p.agendarPara===d;});var ocupa=l.filter(function(p){return p.status!=='rejeitado'&&p.status!=='falhou';}).length;out.push({dia:d,br:dataBR(d),semana:igDiaSemana(d),itens:l,ocupa:ocupa,cheio:ocupa>=teto,hoje:i===0});}return out;}
 function igFiltrar(itens,f){return f==='todos'?itens.slice():itens.filter(function(p){return p.status===f;});}
 function igPodeAprovar(p){return IG.euPosso===true&&p.status==='aguardando';}
-// 19/11 (auditoria): mesma lista de hosts do validador do Início (HUB_HOSTS e *.workers.dev do projeto) + hosts de mídia/permalink do Instagram. Rejeita artefatos, javascript:, data:, porta e credencial.
+// 19/11 (auditoria): mesma lista de hosts do validador do Início (HUB_HOSTS e *.workers.dev do projeto) + hosts de mídia/permalink do Instagram. Rejeita domínios de trabalho externos, javascript:, data:, porta e credencial.
 var IG_HOSTS_MIDIA=/(^|\.)(cdninstagram\.com|fbcdn\.net)$/;var IG_HOSTS_PAG=['instagram.com','www.instagram.com'];
 function igUrlHttps(u){try{if(typeof u!=='string'||!u||u.length>2000||/[\u0000-\u001f\s]/.test(u))return false;var x=new URL(u);if(x.protocol!=='https:'||x.username||x.password||x.port)return false;var h=x.hostname.toLowerCase();if(/(^|\.)claude\.ai$/.test(h))return false;return HUB_HOSTS.indexOf(h)>=0||/^[a-z0-9-]+\.robert131196\.workers\.dev$/.test(h)||IG_HOSTS_PAG.indexOf(h)>=0||IG_HOSTS_MIDIA.test(h);}catch(e){return false;}}
 function igUrlCurta(u){try{var x=new URL(u);var s=x.hostname+x.pathname;return s.length>52?s.slice(0,49)+'...':s;}catch(e){return String(u).slice(0,52);}}
