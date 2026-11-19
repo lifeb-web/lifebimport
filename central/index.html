@@ -105,6 +105,7 @@ main{min-width:0;display:flex;flex-direction:column}
 /* ---------- componentes ---------- */
 .pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:3px 10px;border-radius:999px;background:var(--gray-bg);color:var(--muted);white-space:nowrap}
 .pill.alto{background:var(--bad-bg);color:var(--bad)}.pill.medio{background:var(--warn-bg);color:var(--warn)}.pill.baixo{background:var(--ok-bg);color:var(--ok)}
+.usuBtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.usuAcoes{white-space:nowrap}.usuAcoes .btn{margin-right:6px}.usuPapelSel{min-height:38px;padding:0 8px;border:1.5px solid var(--line2);border-radius:10px;background:var(--card2)}.usuConf{border:1.5px solid var(--warn)}@media (max-width:620px){#usuNovo>div[style*="span 2"]{grid-column:1/-1!important}.usuAcoes{white-space:normal}}
 .pill.on{background:var(--ok-bg);color:var(--ok)}.pill.offp{background:var(--gray-bg);color:var(--muted)}.pill.sh{background:var(--purple-bg);color:var(--purple-d)}
 .dot{width:9px;height:9px;border-radius:50%;background:var(--faint);flex:0 0 9px}.dot.ok{background:#22c55e}.dot.warn{background:#f59e0b}.dot.bad{background:#ef4444}
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
@@ -1924,20 +1925,74 @@ function ecoContem(){try{var d=ECO.f.contentDocument;if(!d||!d.documentElement)r
 function telaEco(c){if(ECO.f&&ECO.f.getAttribute('src')!==ECO.src){ECO.f.src=ECO.src;}
   if(!ECO.f){var box=el('div','ecoHold');box.id='ecoHold';var f=el('iframe','frame');f.src=ECO.src;f.title='Ecossistema Life B';f.setAttribute('allow','fullscreen');f.addEventListener('load',function(){ECO.cont++;ecoContem();if(S.aba==='eco')ecoFoco();});box.appendChild(f);c.parentNode.insertBefore(box,c.nextSibling);ECO.f=f;ECO.box=box;}
   ecoMostrar(true);setTimeout(ecoFoco,0);}
+/*USUARIOS-INI*/
+// 18/11 (pedido do Robert #3407): tela Usuários completa. Só o papel Robert vê (o servidor também recusa os outros com 403).
+// Criar (padrão SDR), redefinir senha (a pessoa troca no próximo acesso: o servidor marca), mudar papel, ativar/desativar. Tudo com confirmação na própria tela. A senha nunca fica na tela nem em variável depois de salvar; hash e sal nunca chegam aqui.
+var USU={acao:null,gerada:false};
+function usuRegraSenha(s){s=String(s||'');if(s.length<10)return 'A senha precisa ter pelo menos 10 caracteres.';if(s.length>128)return 'Senha longa demais.';if(!/[a-zA-Z]/.test(s)||!/[0-9]/.test(s))return 'Use letras e números na senha.';if(/^(.)\1+$/.test(s))return 'Senha fraca demais.';return null;}
+function usuGerarSenha(){var c=window.crypto;if(!c||!c.getRandomValues)return '';var L='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz',N='23456789',T=L+N;
+  function r(m){var b=new Uint32Array(1),lim=Math.floor(4294967296/m)*m;do{c.getRandomValues(b);}while(b[0]>=lim);return b[0]%m;}
+  var a=[L.charAt(r(L.length)),N.charAt(r(N.length))];while(a.length<16)a.push(T.charAt(r(T.length)));
+  for(var i=a.length-1;i>0;i--){var j=r(i+1),t=a[i];a[i]=a[j];a[j]=t;}return a.join('');}
+async function usuCopiar(txt){try{if(navigator.clipboard&&navigator.clipboard.writeText){await navigator.clipboard.writeText(txt);return true;}}catch(e){}return false;}
+function usuNome(u){return u.nome||u.usuario;}
 function telaUsuarios(c){
-  var f=el('div','card form');
-  function campo(rot,tag,id,attrs){var d=el('div');var l=el('label',null,rot);l.htmlFor=id;d.appendChild(l);var i=el(tag);i.id=id;Object.keys(attrs||{}).forEach(function(k){i.setAttribute(k,attrs[k]);});d.appendChild(i);return {d:d,i:i};}
-  var cu=campo('Usuário (pode ser e-mail)','input','uUsuario',{autocapitalize:'none',autocomplete:'off'});var cn=campo('Nome','input','uNome',{autocomplete:'off'});
-  var cp=campo('Papel','select','uPapel');[['admin','Administrador'],['sdr','SDR'],['robert','Robert']].forEach(function(a){var o=el('option',null,a[1]);o.value=a[0];cp.i.appendChild(o);});
-  var cs=campo('Senha inicial (mínimo 10, letras e números)','input','uSenha',{type:'password',autocomplete:'new-password'});
-  [cu,cn,cp,cs].forEach(function(x){f.appendChild(x.d);});var bt=el('button','btn','Criar ou atualizar');bt.type='button';var er=el('div','erro');er.style.gridColumn='1/-1';
-  bt.onclick=async function(){er.textContent='';bt.disabled=true;var r=await api('POST','/usuarios',{usuario:cu.i.value,nome:cn.i.value,papel:cp.i.value,senha:cs.i.value||undefined});bt.disabled=false;if(r.status===200){toast(r.j.criado?'Usuário criado':'Usuário atualizado');cu.i.value=cn.i.value=cs.i.value='';await carregarUsuarios();render();}else er.textContent=r.j.mensagem||('Erro '+r.status);};
-  var rw=el('div');rw.appendChild(bt);f.appendChild(rw);f.appendChild(er);c.appendChild(f);
-  var p=el('p','hint','A senha é você quem digita. Peça para a pessoa trocar na primeira entrada (Minha conta).');p.style.marginBottom='12px';c.appendChild(p);
-  var w=el('div','card tw');var t=el('table');var h=el('tr');['Usuário','Nome','Papel','Último acesso','Situação',''].forEach(function(x){h.appendChild(el('th',null,x));});t.appendChild(h);
-  (S.usuarios||[]).forEach(function(u){var r=el('tr');r.appendChild(el('td','k',u.usuario));r.appendChild(el('td',null,u.nome));r.appendChild(el('td',null,PAPEL[u.papel]||u.papel));r.appendChild(el('td',null,u.ultimoAcesso?fmtData(u.ultimoAcesso):'nunca'));var st=el('td');st.appendChild(el('span','pill '+(u.ativo?'on':'offp'),u.ativo?'Ativo':'Desativado'));r.appendChild(st);var ac=el('td');var b2=el('button','btn ghost sm',u.ativo?'Desativar':'Reativar');b2.type='button';b2.onclick=async function(){var x=await api('POST','/usuarios/ativo',{usuario:u.usuario,ativo:!u.ativo});if(x.status===200){await carregarUsuarios();render();}else toast(x.j.mensagem||('Erro '+x.status));};ac.appendChild(b2);r.appendChild(ac);t.appendChild(r);});
+  if(!S.eu||S.eu.papel!=='robert')return;
+  var lista=S.usuarios||[];
+  function campo(pai,rot,tag,id,attrs){var d=el('div');var l=el('label',null,rot);l.htmlFor=id;d.appendChild(l);var i=el(tag);i.id=id;Object.keys(attrs||{}).forEach(function(k){i.setAttribute(k,attrs[k]);});d.appendChild(i);pai.appendChild(d);return i;}
+  function papeis(sel,atual){[['sdr','SDR'],['admin','Administrador'],['robert','Robert']].forEach(function(a){var o=el('option',null,a[1]);o.value=a[0];sel.appendChild(o);});sel.value=atual;}
+  function senhaBlocos(pai,id){var rw=el('div','usuSenhaRow');var i=campo(rw,'Senha (mínimo 10 caracteres, com letras e números)','input',id,{type:'password',autocomplete:'new-password',autocapitalize:'none',spellcheck:'false'});
+    var g=el('button','btn ghost sm','Gerar senha forte');g.type='button';g.id=id+'Gerar';var cp=el('button','btn ghost sm','Copiar');cp.type='button';cp.id=id+'Copiar';cp.style.display='none';
+    var av=el('div','hint');av.id=id+'Aviso';
+    g.onclick=async function(){var s=usuGerarSenha();if(!s){av.textContent='Este navegador não gera senha aleatória. Digite uma senha.';return;}i.type='text';i.value=s;cp.style.display='';var ok=await usuCopiar(s);av.textContent=ok?'Senha gerada e copiada. Ela aparece só agora: passe para a pessoa antes de salvar (depois de salvar não dá para ver de novo).':'Senha gerada. Não consegui copiar sozinho: toque em Copiar ou selecione o campo. Ela aparece só agora.';};
+    cp.onclick=async function(){var ok=await usuCopiar(i.value);toast(ok?'Senha copiada':'Não consegui copiar: selecione o campo e copie.');};
+    var bx=el('div','usuBtns');bx.appendChild(g);bx.appendChild(cp);rw.appendChild(bx);pai.appendChild(rw);pai.appendChild(av);return i;}
+  function limparSenha(i){if(i){i.value='';i.type='password';}}
+  async function enviar(corpo,caminho,er,bt,ok){er.textContent='';bt.disabled=true;var r=await api('POST',caminho||'/usuarios',corpo);bt.disabled=false;
+    if(r.status===200&&r.j&&r.j.ok!==false){ok(r.j);return;}
+    er.textContent=(r.j&&r.j.mensagem)||(r.status===403?'Só o Robert gerencia usuários.':r.status===0?((r.j&&r.j.rede)||'Sem conexão com o servidor.'):('Erro '+r.status));}
+  // ── confirmação na própria tela ──
+  var A=USU.acao;
+  if(A){var box=el('div','card form usuConf');box.id='usuConf';box.style.gridTemplateColumns='minmax(0,1fr)';var tt={senha:'Redefinir a senha de '+usuNome(A),papel:'Mudar o papel de '+usuNome(A),ativo:(A.ativo?'Reativar ':'Desativar ')+usuNome(A)}[A.tipo];
+    box.appendChild(el('h4',null,tt));var er=el('div','erro');er.id='usuConfErro';er.setAttribute('role','alert');var bt=el('button','btn','Confirmar');bt.type='button';bt.id='usuConfOk';var cn=el('button','btn ghost','Cancelar');cn.type='button';cn.id='usuConfCancelar';
+    var campoSenha=null;
+    if(A.tipo==='senha'){box.appendChild(el('p','hint','Defina uma senha nova e passe para a pessoa. No próximo acesso o sistema pede para ela trocar por uma só dela. A senha antiga deixa de valer agora.'));campoSenha=senhaBlocos(box,'uRedSenha');}
+    else if(A.tipo==='papel')box.appendChild(el('p','hint','De '+(PAPEL[A.de]||A.de)+' para '+(PAPEL[A.papel]||A.papel)+'. Vale no próximo pedido que a pessoa fizer.'));
+    else box.appendChild(el('p','hint',A.ativo?'A pessoa volta a poder entrar com a senha que já tem.':'A pessoa perde o acesso na hora (sessões abertas caem). Dá para reativar depois.'));
+    var bx=el('div','usuBtns');bx.appendChild(bt);bx.appendChild(cn);box.appendChild(bx);box.appendChild(er);
+    cn.onclick=function(){limparSenha(campoSenha);USU.acao=null;render();};
+    bt.onclick=function(){
+      if(A.tipo==='senha'){var e=usuRegraSenha(campoSenha.value);if(e){er.textContent=e;return;}var s=campoSenha.value;
+        enviar({usuario:A.usuario,nome:A.nome,papel:A.papelAtual,senha:s},'/usuarios',er,bt,function(){s='';limparSenha(campoSenha);USU.acao=null;toast('Senha de '+usuNome(A)+' redefinida. Ela troca no próximo acesso.');carregarUsuarios().then(function(){render();});});}
+      else if(A.tipo==='papel')enviar({usuario:A.usuario,nome:A.nome,papel:A.papel},'/usuarios',er,bt,function(){USU.acao=null;toast('Papel de '+usuNome(A)+' agora é '+(PAPEL[A.papel]||A.papel)+'.');carregarUsuarios().then(function(){render();});});
+      else enviar({usuario:A.usuario,ativo:!!A.ativo},'/usuarios/ativo',er,bt,function(){USU.acao=null;toast(usuNome(A)+(A.ativo?' reativado.':' desativado.'));carregarUsuarios().then(function(){render();});});};
+    c.appendChild(box);}
+  // ── novo usuário ──
+  var f=el('div','card form');f.id='usuNovo';var h4=el('h4',null,'Novo usuário');h4.style.gridColumn='1/-1';f.appendChild(h4);
+  var cu=campo(f,'Usuário (pode ser e-mail)','input','uUsuario',{autocapitalize:'none',autocomplete:'off',spellcheck:'false'});var cn2=campo(f,'Nome','input','uNome',{autocomplete:'off'});var cp=campo(f,'Papel','select','uPapel');papeis(cp,'sdr');
+  var sw=el('div');sw.style.gridColumn='span 2';var cs=senhaBlocos(sw,'uSenha');f.appendChild(sw);
+  var bt2=el('button','btn','Criar usuário');bt2.type='button';bt2.id='uCriar';var er2=el('div','erro');er2.id='uErro';er2.setAttribute('role','alert');er2.style.gridColumn='1/-1';
+  bt2.onclick=function(){var u=String(cu.value||'').trim();var e=null;
+    if(u.replace(/[^a-zA-Z0-9]/g,'').length<3)e='Use um usuário com pelo menos 3 letras ou números.';
+    else if(lista.some(function(x){return String(x.usuario).toLowerCase()===u.toLowerCase();}))e='Esse usuário já existe. Para trocar a senha use Redefinir senha na lista.';
+    else e=usuRegraSenha(cs.value);
+    if(e){er2.textContent=e;return;}var s=cs.value;
+    enviar({usuario:u,nome:cn2.value,papel:cp.value,senha:s},'/usuarios',er2,bt2,function(){s='';cu.value=cn2.value='';limparSenha(cs);cp.value='sdr';var av=document.getElementById('uSenhaAviso');if(av)av.textContent='';toast('Usuário criado. Na primeira entrada a pessoa troca a senha.');carregarUsuarios().then(function(){render();});});};
+  var rw=el('div');rw.appendChild(bt2);f.appendChild(rw);f.appendChild(er2);c.appendChild(f);
+  var dica=el('p','hint','A senha é você quem passa à pessoa (WhatsApp, pessoalmente). Ela é obrigada a trocar na primeira entrada. Papéis: SDR (somente leitura), Administrador (muda controles de risco baixo e médio), Robert (tudo).');dica.id='usuDica';dica.style.marginBottom='12px';c.appendChild(dica);
+  // ── lista ──
+  var w=el('div','card tw');w.id='usuLista';var t=el('table');var h=el('tr');['Usuário','Nome','Papel','Último acesso','Situação','Ações'].forEach(function(x){h.appendChild(el('th',null,x));});t.appendChild(h);
+  lista.forEach(function(u){var eu=S.eu.usuario===u.usuario;var r=el('tr');r.setAttribute('data-usuario',u.usuario);r.appendChild(el('td','k',u.usuario+(eu?' (você)':'')));r.appendChild(el('td',null,u.nome||''));
+    var tp=el('td');var sp=el('select');sp.className='usuPapelSel';sp.setAttribute('aria-label','Papel de '+usuNome(u));papeis(sp,u.papel);if(eu)sp.disabled=true;sp.onchange=function(){if(sp.value===u.papel)return;USU.acao={tipo:'papel',usuario:u.usuario,nome:u.nome,de:u.papel,papel:sp.value};render();};tp.appendChild(sp);r.appendChild(tp);
+    r.appendChild(el('td',null,u.ultimoAcesso?fmtData(u.ultimoAcesso):'nunca'));var st=el('td');st.appendChild(el('span','pill '+(u.ativo?'on':'offp'),u.ativo?'Ativo':'Desativado'));r.appendChild(st);
+    var ac=el('td','usuAcoes');
+    var b1=el('button','btn ghost sm usuRed','Redefinir senha');b1.type='button';if(eu){b1.disabled=true;b1.title='A sua senha é trocada em Minha conta.';}b1.onclick=function(){USU.acao={tipo:'senha',usuario:u.usuario,nome:u.nome,papelAtual:u.papel};render();};ac.appendChild(b1);
+    var b2=el('button','btn ghost sm usuAtivo',u.ativo?'Desativar':'Reativar');b2.type='button';if(eu){b2.disabled=true;b2.title='Você não pode desativar a si mesmo.';}b2.onclick=function(){USU.acao={tipo:'ativo',usuario:u.usuario,nome:u.nome,ativo:!u.ativo};render();};ac.appendChild(b2);
+    r.appendChild(ac);t.appendChild(r);});
+  if(!lista.length){var rv=el('tr');var tv=el('td','hint','Nenhum usuário carregado.');tv.colSpan=6;rv.appendChild(tv);t.appendChild(rv);}
   w.appendChild(t);c.appendChild(w);
 }
+/*USUARIOS-FIM*/
 function telaConta(c){
   if(S.eu.trocarSenha){var av=el('div','alerta','Esta é uma senha provisória. Troque agora por uma senha só sua (mínimo 10, com letras e números).');av.style.marginBottom='16px';c.appendChild(av);}
   var d=el('div','card it');d.style.marginBottom='18px';var hd=el('div','row');var a=el('div','avatar',inicial(S.eu.nome||S.eu.usuario));hd.appendChild(a);var tt=el('div');tt.appendChild(el('h4',null,S.eu.nome||S.eu.usuario));tt.appendChild(el('p',null,'Usuário: '+S.eu.usuario+' · Perfil: '+(PAPEL[S.eu.papel]||S.eu.papel)));var ps=el('p','hint',sessaoTexto()+'.');ps.id='contaSessao';tt.appendChild(ps);hd.appendChild(tt);d.appendChild(hd);c.appendChild(d);
