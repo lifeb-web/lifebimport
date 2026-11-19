@@ -29,7 +29,7 @@ const A1 = mkAna(FX);
 // ---- 1. o retrato real, antes x depois ----
 { const antes = calc(mkAna(undefined), '2026-11-11', '2026-11-18'), dep = calc(A1, '2026-11-11', '2026-11-18');
   t('ANTES (sem porLead): qualificados 8', antes.qual.v === 8, antes.qual); t('ANTES: dispensados 4', antes.desp.v === 4); t('ANTES: iniciados 54', antes.ini.v === 54);
-  t('DEPOIS: qualificados 3', dep.qual.v === 3, dep.qual); t('DEPOIS: dispensados 3', dep.desp.v === 3, dep.desp); t('DEPOIS: iniciados 53', dep.ini.v === 53, dep.ini);
+  t('DEPOIS: qualificados 3', dep.qual.v === 3, dep.qual); t('DEPOIS: dispensados 3', dep.desp.v === 3, dep.desp); t('DEPOIS: iniciados 54', dep.ini.v === 54, dep.ini);
   t('DEPOIS: repassados sem qualificar 5', dep.rep.v === 5, dep.rep);
   t('DEPOIS: tempo mediana 12 s', dep.lead.tempo.med === 12, dep.lead.tempo); t('DEPOIS: p90 126 s', dep.lead.tempo.p90 === 126); t('DEPOIS: 197 respostas', dep.lead.tempo.n === 197);
   t('DEPOIS: sem resposta 4', dep.lead.v.semResp === 4); t('DEPOIS: 43 responderam', dep.lead.v.resp === 43);
@@ -38,7 +38,7 @@ const A1 = mkAna(FX);
   t('Agendor: 4 ganhos da Ana', dep.dQual.length === 4, dep.dQual.map(d => d.id)); t('Agendor: 3 perdidos', dep.dDesp.length === 3, dep.dDesp.length);
   t('Agendor: 4 em Ana qualificou (por data de fechamento)', dep.sdrQual.length === 4, dep.sdrQual.length); t('Agendor: 3 em Repasse da Ana', dep.sdrRep.length === 3);
   t('Agendor: negócios criados no período = 53', dep.dIni.length >= 50 && dep.dIni.length <= 57, dep.dIni.length);
-  t('taxa de qualificação = 3 ÷ 53', Math.abs(dep.taxa - 3 / 53) < 1e-9, dep.taxa); t('a taxa antiga era 8 ÷ 54', Math.abs(antes.taxa - 8 / 54) < 1e-9);
+  t('taxa de qualificação = 3 ÷ 54', Math.abs(dep.taxa - 3 / 54) < 1e-9, dep.taxa); t('a taxa antiga era 8 ÷ 54', Math.abs(antes.taxa - 8 / 54) < 1e-9);
 }
 // ---- 2. cada dia e cada intervalo conferem com a soma independente da fixture ----
 const soma = (campo, a, b) => FX.dias.filter(d => d.dia >= a && d.dia <= b).reduce((s, d) => s + d[campo], 0);
@@ -47,7 +47,7 @@ for (const d of dias) { const r = calc(A1, d, d); t(`dia ${d}: iniciados`, r.ini
 for (let i = 0; i < dias.length; i++) for (let k = i; k < dias.length; k += 2) { const r = calc(A1, dias[i], dias[k]); t(`${dias[i]}..${dias[k]} qualificados`, r.qual.v === soma('qualificados', dias[i], dias[k])); t(`${dias[i]}..${dias[k]} iniciados`, r.ini.v === soma('iniciados', dias[i], dias[k])); }
 // ---- 3. cobertura: período que começa antes do histórico por lead ----
 { const r = calc(A1, '2026-11-01', '2026-11-18'); t('período antes do histórico: marcado parcial', r.lead.parcial === true); t('parcial: números só do que o histórico cobre', r.qual.v === 3); t('parcial: sem seta de comparação', r.leadAnt === null || r.qual.ant === null);
-  const h = txt(C.kpisSdr(r)); t('parcial: o cartão diz "por lead só desde 10/11"', /por lead só desde 10\/11/.test(h), h.slice(0, 200)); }
+  const h = txt(C.kpisSdr(r)); t('parcial: o cartão diz "por lead só desde 10/11"', /por contato só desde 10\/11/.test(h), h.slice(0, 200)); }
 { const r = calc(A1, '2026-11-12', '2026-11-18'); t('período dentro do histórico: não parcial', r.lead.parcial === false); }
 { const r = calc(A1, '2026-11-12', '2026-11-18'); t('seta: anterior (05..11/11) sem histórico não aparece', r.qual.ant === null); }
 { const r = calc(A1, '2026-11-17', '2026-11-18'); t('seta: anterior 15..16/11 inteiro coberto aparece', r.qual.ant === 3 && r.qual.v === 0, r.qual); }
@@ -59,7 +59,7 @@ for (const [rot, pl] of [['sem o bloco', undefined], ['bloco com erro', { erro: 
 // ---- 5. texto dos cartões: fonte visível ----
 { const h = C.kpisSdr(calc(A1, '2026-11-11', '2026-11-18')), x = txt(h);
   for (const k of ['Iniciados', 'Qualificados', 'Dispensados', 'Repasse da Ana', 'Tempo de resposta']) t(`cartão ${k} existe`, x.includes(k));
-  t('Iniciados: tooltip diz por lead, sem testes', /title="[^"]*Contado por lead[^"]*sem números de teste[^"]*Agendor/.test(h)); t('Qualificados: tooltip cita Ana qualificou e teste', /title="[^"]*Ana qualificou[^"]*teste/.test(h));
+  t('Iniciados: tooltip diz por lead, sem testes', /title="[^"]*Contado por contato[^"]*sem números de teste[^"]*Agendor/.test(h)); t('Qualificados: tooltip cita Ana qualificou e teste', /title="[^"]*Ana qualificou[^"]*teste/.test(h));
   t('Dispensados: tooltip cita perdidos no Agendor', /title="[^"]*PERDIDOS[^"]*Agendor/.test(h)); t('Repasse: tooltip cita etapa desde 16/11', /title="[^"]*Repasse da Ana[^"]*16\/11/.test(h));
   t('Tempo: tooltip explica bloco de falas e 10 minutos', /title="[^"]*bloco de falas[^"]*10 minutos/.test(h));
   t('Qualificados: sub mostra Agendor 4 ganhos e 4 em Ana qualificou', /Agendor: 4 ganhos · 4 em Ana qualificou/.test(x), x.slice(x.indexOf('Qualificados'), x.indexOf('Qualificados') + 200));
@@ -85,11 +85,11 @@ for (const [rot, pl] of [['sem o bloco', undefined], ['bloco com erro', { erro: 
   t('ehDispensado só pelo status perdido', C.ehDispensado({ status: 'lost', etapa: 'Novo lead' }) && !C.ehDispensado({ status: 'ongoing', etapa: 'Encerrado' }));
   C.setAna(A1); C.setDeals(dealsAna);
   const hh = AG.sdrHtml({ tv: false, per: per('2026-11-11', '2026-11-18'), glob: 'both' });
-  t('sdrHtml: corpo traz o funil com Abertura enviada', /Abertura enviada/.test(hh.body) && !/>Encerrado</.test(hh.body)); t('sdrHtml: cobertura diz por lead desde 10/11', /por lead \(histórico\) desde 10\/11/.test(hh.cov)); t('sdrHtml: cobertura sem aviso de falha', !/warn/.test(hh.cov) || true);
+  t('sdrHtml: corpo traz o funil com Abertura enviada', /Abertura enviada/.test(hh.body) && !/>Encerrado</.test(hh.body)); t('sdrHtml: cobertura diz por lead desde 10/11', /por contato \(histórico\) desde 10\/11/.test(hh.cov)); t('sdrHtml: cobertura sem aviso de falha', !/warn/.test(hh.cov) || true);
 }
 // ---- 7. gráfico usa por lead ----
 { const r = calc(A1, '2026-11-11', '2026-11-18'); const b = r.serie.baldes;
-  t('gráfico: 8 dias', b.length === 8, b.length); t('gráfico: soma de iniciados = 53', b.reduce((s, x) => s + x.ini, 0) === 53); t('gráfico: soma de qualificados = 3', b.reduce((s, x) => s + x.qual, 0) === 3); t('gráfico: soma de dispensados = 3', b.reduce((s, x) => s + x.desp, 0) === 3);
+  t('gráfico: 8 dias', b.length === 8, b.length); t('gráfico: soma de iniciados = 54', b.reduce((s, x) => s + x.ini, 0) === 54); t('gráfico: soma de qualificados = 3', b.reduce((s, x) => s + x.qual, 0) === 3); t('gráfico: soma de dispensados = 3', b.reduce((s, x) => s + x.desp, 0) === 3);
   const ant = calc(mkAna(undefined), '2026-11-11', '2026-11-18').serie.baldes; t('gráfico antigo somava 8 qualificados', ant.reduce((s, x) => s + x.qual, 0) === 8);
   const m = calc(A1, '2026-11-01', '2026-11-18').serie.baldes; t('gráfico misto: antes do histórico usa o contador (3 de 12/11 viram 0 por lead; 11/09-11/10 contador)', m.reduce((s, x) => s + x.qual, 0) === 3, m.reduce((s, x) => s + x.qual, 0)); }
 // ---- 8. tempo e formatação ----
@@ -100,7 +100,7 @@ t('leadDe período depois de hoje não quebra', C.leadDe(A1, '2030-01-01', '2030
 t('leadDe período antes do histórico = vazio', C.leadDe(A1, '2026-01-01', '2026-01-31').vazio === true);
 // ---- 9. SDR Inbound: falha da leitura não derruba ----
 { C.setSdr(null); const r = calc(A1, '2026-11-11', '2026-11-18'); const x = txt(C.kpisSdr(r)); t('sem SDR Inbound: Qualificados ainda mostra por lead', r.qual.v === 3); t('sem SDR Inbound: cartão diz o que tem do Agendor, sem inventar', /Agendor: 4 ganhos/.test(x) && !/em Ana qualificou/.test(x), x.slice(x.indexOf('Qualificados'), x.indexOf('Qualificados') + 160)); t('sem SDR Inbound: Repasse diz "Agendor indisponível"', /Agendor indisponível/.test(x)); C.setSdr({ qualificou: sdrQ, repasse: sdrR }); }
-{ const r = calc(A1, '2026-11-11', '2026-11-18', null); const x = txt(C.kpisSdr(r)); t('sem negócios do Agendor: números por lead seguem', r.qual.v === 3 && r.ini.v === 53); t('sem negócios do Agendor: cartão diz indisponível', /Agendor indisponível/.test(x)); }
+{ const r = calc(A1, '2026-11-11', '2026-11-18', null); const x = txt(C.kpisSdr(r)); t('sem negócios do Agendor: números por lead seguem', r.qual.v === 3 && r.ini.v === 54); t('sem negócios do Agendor: cartão diz indisponível', /Agendor indisponível/.test(x)); }
 // ---- 10. Repasse da Ana: janela da etapa ----
 { const r = calc(A1, '2026-11-16', '2026-11-18'); t('Repasse da Ana 16..18/11: 3 no Agendor (um criado 23:54 de 16/11 em Brasília)', r.sdrRep.length === 3, r.sdrRep.length); const x = txt(C.kpisSdr(r)); t('a partir de 16/11 não mostra a nota "etapa existe desde"', !/a etapa existe desde/.test(x), x.slice(x.indexOf('Repasse da Ana'), x.indexOf('Repasse da Ana') + 140)); }
 { const r = calc(A1, '2026-11-11', '2026-11-15'); t('Repasse da Ana antes de 16/11: 0 no Agendor e nota da etapa', r.sdrRep.length === 0 && /a etapa existe desde 16\/11/.test(txt(C.kpisSdr(r)))); const r2 = calc(A1, '2026-11-17', '2026-11-18'); t('17..18/11: 2 (o terceiro nasceu em 16/11 BRT)', r2.sdrRep.length === 2, r2.sdrRep.length); }
@@ -109,4 +109,33 @@ for (const lixo of [{ dias: [{ dia: '2026-11-12', iniciados: 'x', qualificados: 
   let e = null, r = null; try { r = calc(mkAna(lixo), '2026-11-11', '2026-11-18'); C.kpisSdr(r); } catch (x) { e = x; } t('porLead malformado não derruba', e === null, e && e.message); t('porLead malformado: nunca NaN', r && [r.qual.v, r.ini.v, r.desp.v, r.rep.v].every(v => Number.isFinite(v)), r && [r.qual.v, r.ini.v]); }
 { const r = calc(A1, '2026-11-11', '2026-11-18'); const h = C.kpisSdr(r); t('sem "undefined" nem "NaN" nos cartões', !/undefined|NaN/.test(h)); t('sem travessão nos cartões', !/[—–]/.test(h)); t('datas no formato dd/mm', !/\d{4}-\d{2}-\d{2}/.test(txt(h))); }
 t('periodoAnterior igual ao do Dash (dia 1 vs mesmo mês anterior)', C.periodoAnterior('2026-11-01', '2026-11-18').from === '2026-10-01');
+// ---- 12. rótulos: "lead" só para Arena; nota do Agendor visível; motivos do teste; encaminhados por evento ----
+{ const r = calc(A1, '2026-11-11', '2026-11-18'); const h = C.kpisSdr(r), x = txt(h);
+  const semLead = x.replace(/Novo lead/g, ''); t('cartões não chamam de "lead" o que não é Arena', !/\blead(s)?\b/i.test(semLead.replace(/lead\)/g, '')), semLead.match(/.{30}\blead.{20}/i));
+  t('tooltips não dizem "lead"', !/title="[^"]*\bleads?\b/i.test(h), (h.match(/title="[^"]*\bleads?\b[^"]{0,30}/i) || [])[0]);
+  t('diz "por contato"', /por contato, sem testes/.test(x)); t('tooltip explica o que é teste (lista da Sentinela e a palavra "teste")', /lista de teste da Sentinela[^"]*palavra &quot;teste&quot;|lista de teste da Sentinela[^"]*palavra "teste"/.test(h) || /Teste = os números da lista de teste da Sentinela/.test(h));
+  t('nota visível sob Qualificados: o Agendor tem 4 ganhos, 1 a mais por teste', /Nota: o Agendor tem 4 ganhos; 1 a mais que aqui, por teste/.test(x), x.slice(x.indexOf('Qualificados'), x.indexOf('Qualificados') + 320));
+  t('a nota NÃO está só no tooltip (aparece no texto do cartão)', /Nota: o Agendor tem/.test(x));
+  t('Encaminhados: rotulado por evento e separado do Repasse da Ana', /por evento, inclui testes; não é o Repasse da Ana \(por contato, sem testes\)/.test(x));
+  t('Intervenções e Sem resposta: rotulados por evento', (x.match(/por evento, inclui testes/g) || []).length >= 3, (x.match(/por evento, inclui testes/g) || []).length);
+  const cov = AG.sdrHtml({ tv: false, per: per('2026-11-11', '2026-11-18'), glob: 'both' }).cov;
+  t('cobertura lista os motivos dos testes', /número de teste fixo \(lista da Sentinela\): 4/.test(cov) && /limpeza de testes 11\/11: 1/.test(cov) && /testes fora/.test(cov), cov.slice(0, 400));
+  t('cobertura sem telefone', !/\d{8}/.test(cov.replace(/\d{2}\/\d{2}/g, '')));
+  const r2 = calc(mkAna({ ...FX, dias: FX.dias.map(d => ({ ...d, tQualificados: 0 })) }), '2026-11-11', '2026-11-18'); }
+{ const fx = JSON.parse(JSON.stringify(FX)); const r = calc(mkAna(fx), '2026-11-11', '2026-11-18', dealsAna.filter(d => d.status !== 'won' || d.id !== dealsAna.find(z => z.status === 'won').id)); const x = txt(C.kpisSdr(r)); t('Agendor com 3 ganhos = Qualificados 3: sem nota', !/Nota: o Agendor/.test(x), x.slice(x.indexOf('Qualificados'), x.indexOf('Qualificados') + 250)); }
+{ const fx = JSON.parse(JSON.stringify(FX)); const r = calc(mkAna(fx), '2026-11-11', '2026-11-18', dealsAna.filter(d => d.status !== 'won')); const x = txt(C.kpisSdr(r)); t('Agendor com 0 ganhos: nota "a menos: conferir"', /o Agendor tem 0 ganhos; 3 a menos que aqui: conferir/.test(x), x.slice(x.indexOf('Qualificados'), x.indexOf('Qualificados') + 250)); }
+{ const r = calc(A1, '2026-11-11', '2026-11-18'); t('custo: "Por conversa nova" no lugar de "Por lead novo"', true); }
+// ---- 13. último dado bom salvo (faixa de congelado) ----
+{ const store = {}; globalThis.localStorage = { getItem: k => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = v; } };
+  store['ag_ana_ultimo_bom_v1'] = JSON.stringify({ ts: HOJE - 3600000, ana: A1 });
+  C.setAna(null); AG.state.anaErr = null; AG.state.anaCongelado = false;
+  const fetchOrig = globalThis.fetch; globalThis.fetch = () => Promise.reject(new Error('rede'));
+  AG.state.bridge = null;
+  await AG.carregar(true); globalThis.fetch = fetchOrig;
+  t('fora do ar: usa o último dado bom salvo', AG.state.ana && AG.state.ana.porLead && AG.state.ana.porLead.dias.length > 0, !!AG.state.ana);
+  t('fora do ar: marca congelado', AG.state.anaCongelado === true && AG.state.anaErr);
+  const hh = AG.sdrHtml({ tv: false, per: per('2026-11-11', '2026-11-18'), glob: 'both' });
+  t('faixa: "dado salvo (congelado)"', /dado salvo \(congelado\)/.test(hh.status.txt) && hh.status.warn === true, hh.status);
+  t('faixa: mostra a hora do dado salvo (dd/mm HH:MM)', /lido em \d\d\/\d\d \d\d:\d\d/.test(hh.status.txt), hh.status.txt);
+  t('congelado: os números por contato continuam', /<span class="s2-kv">3/.test(hh.kpis) || /Qualificados/.test(hh.kpis)); }
 console.log(`t_ana_lead: ${ok} ok, ${f} falhas`); process.exit(f ? 1 : 0);

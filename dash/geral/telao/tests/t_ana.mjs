@@ -235,7 +235,7 @@ for (const [W, H, tv] of [[390, 844, false], [1800, 1012, true]]) {
     ok(kk['Custo no período'].v.trim() === fU(e.usd), tag + ': custo ' + kk['Custo no período'].v + ' esperado ' + fU(e.usd));
     ok(e.sTurnos > 0 ? kk['Por turno'].v.trim() === fU(e.usd / e.sTurnos) : /n\/d/.test(kk['Por turno'].v), tag + ': por turno ' + kk['Por turno'].v);
     ok(e.sQual > 0 ? kk['Por qualificado'].v.trim() === fU(e.usd / e.sQual) : /n\/d/.test(kk['Por qualificado'].v), tag + ': por qualificado ' + kk['Por qualificado'].v);
-    ok(e.nNovos > 0 && e.leadsN > 0 ? kk['Por lead novo'].v.trim() === fU(e.usdN / e.leadsN) : /n\/d/.test(kk['Por lead novo'].v), tag + ': por lead ' + kk['Por lead novo'].v);
+    ok(e.nNovos > 0 && e.leadsN > 0 ? kk['Por conversa nova'].v.trim() === fU(e.usdN / e.leadsN) : /n\/d/.test(kk['Por lead novo'].v), tag + ': por lead ' + kk['Por lead novo'].v);
     ok(kk['Projeção do mês'].v.trim() === fU(12.3456), tag + ': projecao ' + kk['Projeção do mês'].v);
     ok(e.cache == null ? /n\/d/.test(kk['Acerto de cache'].v) : kk['Acerto de cache'].v.trim() === dec1(e.cache * 100) + '%', tag + ': cache ' + kk['Acerto de cache'].v + ' esperado ' + (e.cache && dec1(e.cache * 100)));
     ok(e.turnos > 0 ? kk['Escritos pela IA'].v.trim() === (Math.round(e.turnosIa / e.turnos * 1000) / 10).toString().replace('.', ',') + '%' : /n\/d/.test(kk['Escritos pela IA'].v), tag + ': escritos pela IA ' + kk['Escritos pela IA'].v);
@@ -319,7 +319,7 @@ for (const [W, H, tv] of [[390, 844, false], [1800, 1012, true]]) {
   await mede(f, '#s2-root', nome + ' sem dado SDR');
   await ir(f, 'bia'); await aba(f, 'ana'); await per(f, 'month'); await p.waitForTimeout(2000);
   kk = await kpisEm(f, '#ag-root'); ok(/sem uso/.test(kk['Custo no período'].t) || /US\$ 0,0000/.test(kk['Custo no período'].v), nome + ': custo sem uso ' + JSON.stringify(kk['Custo no período']));
-  ok(['Por lead novo', 'Por qualificado', 'Por turno'].every(k => /n\/d/.test(kk[k].v)), nome + ': divisao por zero deveria ser n/d: ' + JSON.stringify(['Por lead novo', 'Por qualificado', 'Por turno'].map(k => kk[k].v)));
+  ok(['Por conversa nova', 'Por qualificado', 'Por turno'].every(k => /n\/d/.test(kk[k].v)), nome + ': divisao por zero deveria ser n/d: ' + JSON.stringify(['Por lead novo', 'Por qualificado', 'Por turno'].map(k => kk[k].v)));
   await mede(f, '#ag-root', nome + ' sem dado saude');
   ok([...new Set(p.errs)].length === 0, nome + ': erros JS ' + [...new Set(p.errs)].slice(0, 3).join(' | '));
   await s.ctx.close();

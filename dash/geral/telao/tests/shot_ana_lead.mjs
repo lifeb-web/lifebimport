@@ -23,6 +23,15 @@ for (const [W, H, nome, tv] of [[390, 844, 'celular390', false], [1280, 900, 'de
   console.log(nome, 'rolagem lateral', info.hs, '\n  ' + info.kpis.join('\n  '), '\n  erros:', JSON.stringify(errs));
   await p.screenshot({ path: `${OUT}/ana_${nome}_topo.png`, fullPage: false });
   await p.evaluate(() => { const r = document.querySelector('#s2-root'); if (r) r.scrollIntoView(); }); await p.screenshot({ path: `${OUT}/ana_${nome}_cheio.png`, fullPage: true });
+
+  // 19/11: FAIXA DE DADO CONGELADO: /ana-painel fora do ar depois de uma leitura boa (o último dado bom salvo aparece com a faixa)
+  await p.unroute(/gs-agendor-worker.*\/ana-painel/); await p.route(/gs-agendor-worker.*\/ana-painel/, r => r.abort());
+  await p.reload({ waitUntil: 'commit' }); await p.waitForTimeout(8000);
+  await p.evaluate(() => { const b = document.querySelector('.ochip[data-v="sdr"]'); if (b) b.click(); }); await p.waitForTimeout(1500);
+  await p.evaluate(() => { const b = document.querySelector('button[data-ag="ana"]'); if (b) b.click(); }); await p.waitForTimeout(3500);
+  const fz = await p.evaluate(() => ({ cov: (document.querySelector('#s2-root .s2-cov') || {}).innerText, status: [...document.querySelectorAll('#s2-root *')].map(e => e.children.length ? '' : e.textContent).filter(t => /congelad|falhou|dado salvo/.test(t)).slice(0, 3), qual: (document.querySelector('#s2-root .s2-k') || {}).innerText }));
+  console.log(nome, 'CONGELADO:', JSON.stringify(fz));
+  await p.screenshot({ path: `${OUT}/ana_${nome}_congelado.png`, fullPage: false });
   await ctx.close();
 }
 await browser.close();
