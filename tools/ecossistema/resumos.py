@@ -3,7 +3,7 @@ Chave = começo do texto puro do bloco. Conteúdo fiel ao original (nada novo)."
 R = {
  "No ar desde 17/11/2026 (23h40). Resultado em caso real": "No ar desde 17/11/2026, corrigida depois de falhar no caso real; resultado em caso real ainda a provar.",
  "Página Hoje 17.1 a 17.4": "Rótulos novos, fila congelada com lead aberto e tratamento de troca de telefone e de CNPJ de empresa existente.",
- "Página Hoje (até a 17.5):": "Sem Minimizar nem faixa de atualização; tela estável ao abrir o lead; rascunho válido por 3 dias.",
+ "Página Hoje (mudanças de 17/11/2026):": "Sem Minimizar nem faixa de atualização; tela estável ao abrir o lead; rascunho válido por 3 dias.",
  "Servidor da página Hoje:": "Lead novo aparece em até 30 s; tarefa concluída ou adiada sai na hora.",
  "Hoje 17.6B:": "Ações instantâneas e nunca revertidas na tela; topo recolhível e de largura total; raia Closer.",
  "Se o lead está escrevendo": "A Ana espera 8 s sem mensagem nova (no máximo 20 s) e responde tudo de uma vez.",
@@ -32,7 +32,7 @@ R = {
  "Página atualizada para 16/11/2026": "Funis Ana, SDR Inbound e Arena; Hoje sem travas de horário; novo modo apresentação em slides.",
  "Versões reais de Ana, Bia e Central": "Versões reais lidas do servidor; camada de entrega da Ana no ar; registro de deploys.",
  "Falha de ENVIO entra na fila": "Envio com falha é reenviado; entrega recusada pela Meta ainda não; o custo real da Bia não é medido por completo.",
- "Estado ao vivo não verificado: a memória de 27/09/2026": "Reposição e Reativação +75: registrados em sombra em 27/09/2026; sem leitura de produção posterior.",
+ "Estado ao vivo não verificado:": "Reposição e Reativação +75: registrados em sombra em 27/09/2026; sem leitura de produção posterior.",
  "Ana (assistente de IA no WhatsApp), Bia": "Ana, Bia, páginas Hoje e Central e Dash, todas ligadas ao Agendor, o CRM da empresa.",
  "Mesa de trabalho do SDR sem travas": "Mesa do SDR sem travas de horário, fila por listas e qualificação que cria o negócio no funil certo.",
 }

@@ -10,7 +10,7 @@ AREAS = [
   ("Atendimento", ["ana"]), ("SDR e Hoje", ["hoje"]), ("Central", ["central"]), ("Agentes", ["bia"]), ("Números e CRM", ["dash", "agendor"]),
 ]
 TOPICOS = {
-  "ana": ["Atende lojistas do inbound no WhatsApp", "Qualifica e repassa ao SDR", "Retoma quem some; encerra fora do perfil com educação", "Responde áudio com áudio"],
+  "ana": ["Atende lojistas do inbound no WhatsApp", "Qualifica e repassa ao SDR", "Retoma quem some; encerra fora do perfil com educação", "Deploy de 19/11/2026 (00h58): reação do lead nunca vira fala"],
   "bia": ["Avisa a equipe no WhatsApp, muitos com botão", "Escreve no Agendor e relê para confirmar", "Motores proativos e painel do representante", "Repasse manual e nota de handoff"],
   "hoje": ["Mesa do SDR sem travas de horário", "Fila por listas; atrasadas lidas aos poucos", "Qualificação cria o negócio no funil certo", "Livro local de ações e raia Closer (19/11/2026)"],
   "central": ["Atendimento: conversas com selos, histórico e áudios", "Assumir, devolver, repassar, pausar, instruir", "Controles da Bia com desfazer, filas, folga e custo", "Selo da janela de 24 h e filtros"],
@@ -84,7 +84,7 @@ def figura_papeis():
       '<div class="fp-r fp-sdr"><b>SDR (humano)</b><span>Lista (outbound) e continua o que a Ana qualifica ou repassa</span></div></div>'
       '<div class="fp-a" aria-hidden="true">→</div>'
       '<div class="fp-c"><h4>Quem fecha</h4><div class="fp-r fp-rep"><b>Representante (closer)</b><span>Vendedor de campo: atende a carteira e fecha a venda</span></div></div>'
-      '</div><figcaption class="sr">Anúncio, site e WhatsApp direto entram pela Ana. Lista entra pelo SDR humano. O SDR continua o que a Ana qualifica ou repassa. O representante, que é o closer, fecha a venda.</figcaption></figure>')
+      '</div><figcaption class="sr">Anúncio, site e WhatsApp direto entram pela Ana; lista, pelo SDR humano. O SDR continua o que a Ana qualifica ou repassa; o representante (closer) fecha.</figcaption></figure>')
 
 CSS = '''
 .peca{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px;min-width:0;box-shadow:var(--shadow)}

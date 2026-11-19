@@ -92,7 +92,7 @@ def todos():
 
     # ================= COMO SE CONECTA =================
     C = "Como se conecta"
-    A(slide("mapa", "Como as peças se conectam", C, fx("mapa", "A Ana pede; a Bia escreve e avisa. A Ana nunca escreve direto no Agendor nem manda aviso por conta própria. Na página: Como tudo se conecta.") + MAPA_PASSOS, "flow", "visao,entrada"))
+    A(slide("mapa", "Como as peças se conectam", C, fx("mapa") + MAPA_PASSOS + band("A Ana pede; a Bia escreve e avisa. A Ana nunca escreve direto no Agendor nem manda aviso por conta própria. Na página: Como tudo se conecta."), "flow", "visao,entrada"))
     A(slide("ponte", "Quem escreve no CRM: a Bia", C, fx("ponte", "A ponte recusa negócios fora do funil da Ana; repetir o repasse não cria outro negócio. Na página: CRM como fonte da verdade."), "flow", "crm,visao,bia"))
     A(slide("jor", "Jornada do lead", C, fx("jor", "Ganho na Ana é qualificação, nunca venda. Depois da venda, o representante cuida do Pós-venda. Na página: Ana; Funis do Agendor."), "flow", "ana,destinos,entrada"))
 
@@ -139,9 +139,9 @@ def todos():
     C = "Bia"
     A(slide("autom", "Automações no CRM: quem dispara e com que regra", C, fx("autom", "Em sombra, a automação só simula e relata. Na página: Automações da Bia e da Ana."), "flow", "automacoes,bia"))
     bia_i = [
-        cat("No ar (conforme a página)", ["Cadência do SDR e repasse ao Arena, desde 20/10/2026", "Guardas do SDR: ligação com resultado, perda com explicação, dono ativo", "Fechamento e garantia de tarefa; motor proativo do Arena, com aprovação da gestão", "Pós-venda e reposição, a cada 30 minutos; vigias de saúde"], "rocket"),
+        cat("No ar hoje", ["Cadência do SDR e repasse ao Arena, desde 20/10/2026", "Guardas do SDR: ligação com resultado, perda com explicação, dono ativo", "Fechamento e garantia de tarefa; motor proativo do Arena, com aprovação da gestão", "Pós-venda e reposição, a cada 30 minutos; vigias de saúde"], "rocket"),
         cat("Em operação, com prazos em revisão", ["Recuperação SDR, Recuperação e Reativação: criam negócio novo no SDR Outbound para perdidos antigos e clientes que não repuseram", "Uma volta por empresa a cada 180 dias, com limite por dia"], "git"),
-        cat("Estado ao vivo não verificado", ["Motores de Reposição e Reativação +75 (cards ao representante nos funis de Pós-venda e Reativação): a memória de 27/09/2026 os registra em sombra, com a camada de entrega construída"], "eye"),
+        cat("Estado ao vivo não verificado", ["Motores de Reposição e Reativação +75 (cards ao representante nos funis de Pós-venda e Reativação): estavam em modo sombra (só simulavam) em 27/09/2026, com a camada de entrega construída; não verificado desde então"], "eye"),
     ]
     A(slide("bia", "Automações da Bia e estado de cada uma", C, g(bia_i[:1], 1), "dense", "bia,automacoes", parte=(1, 2)))
     A(slide("bia_b", "Automações da Bia e estado de cada uma", C, g(bia_i[1:], 2) + band("Em sombra, a automação só simula e relata. Na página: Automações da Bia e da Ana; Bia: avisos, agendas e folga."), "dense", "bia,automacoes", parte=(2, 2)))
