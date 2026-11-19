@@ -19,13 +19,19 @@ TOPICOS = {
 }
 VERSAO = {"ana": "pacote de 17/11/2026", "bia": "atualização de 17/11/2026", "hoje": "página 2026-11-17.5", "central": "publicada em 17/11/2026", "dash": "página de 17/11/2026", "agendor": "sem versão própria"}
 
+def palavras(x, n):
+    for pref in ("Em voo: ", "Em correção: "):
+        if x.startswith(pref): x = x[len(pref):]
+    w = x.split()
+    return " ".join(w[:n]).rstrip(",.:;") + ("…" if len(w) > n else "")
+
 def peca(c, deck=False, area=None):
     i = c["id"]; nome = c["nome"]
     tops = "".join(f"<li>{e(t)}</li>" for t in TOPICOS[i])
     extra = ""
     for k, rot, cl in (("implantacao", "Em implantação", "te"), ("planejado", "Planejado", "pl")):
         if c[k]:
-            extra += f'<div class="pc-x"><span class="pill p-{cl}">{rot}</span><ul>' + "".join(f"<li>{e(curto(x, 10))}</li>" for x in c[k][:3]) + "</ul></div>"
+            extra += f'<div class="pc-x"><span class="pill p-{cl}">{rot}</span><ul>' + "".join(f"<li>{e(palavras(x, 12))}</li>" for x in c[k][:3]) + "</ul></div>"
     PK = {"no_ar": ("ok", "No ar"), "implantacao": ("te", "Em implantação"), "planejado": ("pl", "Planejado")}
     linha = "".join(f'<li class="full"><span class="pill p-{PK[k][0]}">{PK[k][1]}</span> {selo(x, deck)}</li>' for k in ("no_ar", "implantacao", "planejado") for x in c[k])
     tl = f'<details class="mais pc-tl"><summary><span>Histórico de versões (linha do tempo)</span></summary><ol class="tl">{linha}</ol></details>'
@@ -59,6 +65,7 @@ def figura_papeis():
 
 CSS = '''
 .peca{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px;min-width:0;box-shadow:var(--shadow)}
+.peca-h .pill{white-space:nowrap;flex:none}
 .peca-h{display:flex;align-items:center;justify-content:space-between;gap:8px}.peca-h b{font-size:19px;color:var(--purple-d)}
 .peca-k{display:block;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);font-weight:800;margin-bottom:2px}
 .peca-m{margin:2px 0 8px;font-size:13.5px;color:var(--muted)}

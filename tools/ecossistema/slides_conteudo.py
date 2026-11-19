@@ -73,11 +73,11 @@ def todos():
     A(slide("estado", "Estado das peças: atendimento, SDR e Central", C, pg(["ana", "hoje", "central"]) + band(f"Posição de {ATUAL}. No ar: conferido em produção. Em implantação: pronto, ainda não no ar. Checklist completo na página."), "dense", "status,checklist"))
     A(slide("estadob", "Estado das peças: agentes, números e CRM", C, pg(["bia", "dash", "agendor"]) + band("No ar: conferido em produção. Checklist completo na página."), "dense", "status,checklist"))
     impl = [c for c in ESTADO["componentes"] if c["implantacao"]]
-    est2 = ('<div class="dg3 dgx pecas">' + "".join(f'<div class="peca"><div class="peca-h"><b>{c["nome"]}</b>{pill("em implantação")}</div><ul class="peca-t">' + "".join(f"<li>{e(P.curto(x, 14))}</li>" for x in c["implantacao"]) + "</ul></div>" for c in impl) + "</div>"
+    est2 = ('<div class="dg3 dgx pecas">' + "".join(f'<div class="peca"><div class="peca-h"><b>{c["nome"]}</b>{pill("em implantação")}</div><ul class="peca-t">' + "".join(f"<li>{e(P.palavras(x, 14))}</li>" for x in c["implantacao"]) + "</ul></div>" for c in impl) + "</div>"
             + band("Em implantação: pronto, ainda não no ar. " + '<span class="dp dp-corr">Em correção</span>' + " a publicação abortou ou achou-se defeito; não no ar."))
     A(slide("estado2", "Em implantação (ainda não no ar)", C, est2, "dense", "status,checklist"))
     plan = [c for c in ESTADO["componentes"] if c["planejado"]]
-    est3 = ('<div class="dg3 dgx pecas">' + "".join(f'<div class="peca"><div class="peca-h"><b>{c["nome"]}</b>{pill("planejado")}</div><ul class="peca-t">' + "".join(f"<li>{e(P.curto(x, 14))}</li>" for x in c["planejado"][:3]) + "</ul></div>" for c in plan) + "</div>"
+    est3 = ('<div class="dg3 dgx pecas">' + "".join(f'<div class="peca"><div class="peca-h"><b>{c["nome"]}</b>{pill("planejado")}</div><ul class="peca-t">' + "".join(f"<li>{e(P.palavras(x, 14))}</li>" for x in c["planejado"][:3]) + "</ul></div>" for c in plan) + "</div>"
             + band("Planejado: futuro, ainda não existe. Checklist completo na página."))
     A(slide("estado3", "Planejado", C, est3, "dense", "status,checklist"))
 

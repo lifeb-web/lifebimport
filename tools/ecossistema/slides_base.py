@@ -63,8 +63,8 @@ def estado_barra(*ids):
 def faixa_estado(i):
     c = COMP[i]; out = []
     if c["implantacao"]:
-        out.append('<div class="dfx dfx-te">' + pill("em implantação") + "<span>" + "; ".join(selo(x, deck=True) for x in c["implantacao"]) + ". Ainda não está no ar.</span></div>")
+        out.append('<div class="dfx dfx-te">' + pill("em implantação") + "<span>" + "; ".join(selo(__import__("pecas").palavras(x, 16), deck=True) for x in c["implantacao"]) + ". Ainda não está no ar.</span></div>")
     if c["planejado"]:
-        out.append('<div class="dfx dfx-pl">' + pill("planejado") + "<span>" + "; ".join(selo(x, deck=True) for x in c["planejado"]) + ".</span></div>")
+        out.append('<div class="dfx dfx-pl">' + pill("planejado") + "<span>" + "; ".join(selo(__import__("pecas").palavras(x, 16), deck=True) for x in c["planejado"]) + ".</span></div>")
     return '<div class="dfxs">' + "".join(out) + "</div>"
 

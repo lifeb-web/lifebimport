@@ -172,11 +172,33 @@ def _sanfona(resto):
 
 _BLOCO = re.compile(r"<(p|li|td)((?:\s[^>]*)?)>((?:(?!</?(?:p|li|ul|ol|td|tr|table|div|details|h[1-6]|section|figure|svg)[\s>]).)*)</\1>", re.S)
 
+def _topicos(h):
+    """Texto corrido com 3 ou mais orações separadas por ';' vira introdução + lista de tópicos (visível, sem esconder nada)."""
+    if n_palavras(h) <= 18 or h.count("; ") < 2:
+        return None
+    fr = []
+    for f in re.split(r";\s+", h):
+        if fr and not _balanceado(fr[-1]):
+            fr[-1] += "; " + f
+        else:
+            fr.append(f)
+    if len(fr) < 3 or not all(_balanceado(f) for f in fr):
+        return None
+    intro = ""
+    k = fr[0].find(": ")
+    if 0 < k and n_palavras(fr[0][:k]) <= 14 and fr[0][:k].count("(") == fr[0][:k].count(")"):
+        intro = fr[0][:k + 1]; fr[0] = fr[0][k + 2:]
+    fr = [f.strip().rstrip(".") + "." if not f.strip().endswith(("?", "!")) else f.strip() for f in fr if f.strip()]
+    return (f'<span class="pts-i">{intro}</span>' if intro else "") + '<ul class="pts">' + "".join(f"<li>{f[0].upper() + f[1:] if f[0].islower() else f}</li>" for f in fr) + "</ul>"
+
 def encurtar(corpo):
     def troca(m):
         t, attrs, inner = m.group(1), m.group(2), m.group(3)
         if 'class="sr"' in attrs or 'class="full"' in attrs or "<details" in inner:
             return m.group(0)
+        pts = _topicos(inner)
+        if pts:
+            return f"<{t}{attrs}>{pts}</{t}>"
         r = dividir(inner)
         if not r:
             return m.group(0)
