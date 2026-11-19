@@ -191,11 +191,18 @@ def _topicos(h):
     fr = [f.strip().rstrip(".") + "." if not f.strip().endswith(("?", "!")) else f.strip() for f in fr if f.strip()]
     return (f'<span class="pts-i">{intro}</span>' if intro else "") + '<ul class="pts">' + "".join(f"<li>{f[0].upper() + f[1:] if f[0].islower() else f}</li>" for f in fr) + "</ul>"
 
+from resumos import R as _RES
+
 def encurtar(corpo):
     def troca(m):
         t, attrs, inner = m.group(1), m.group(2), m.group(3)
         if 'class="sr"' in attrs or 'class="full"' in attrs or "<details" in inner:
             return m.group(0)
+        plano = "".join(_TAGRE.sub("", inner).split())
+        for chave, resumo in _RES.items():
+            if plano.lower().startswith("".join(chave.split()).lower()) and n_palavras(inner) > n_palavras(resumo) + 3:
+                full = f'<details class="mais"><summary><span>Ver detalhes</span></summary><p class="full">{inner}</p></details>'
+                return f"<{t}{attrs}>{resumo}{full}</{t}>" if t != "p" else f"<{t}{attrs}>{resumo}</{t}>{full}"
         pts = _topicos(inner)
         if pts:
             return f"<{t}{attrs}>{pts}</{t}>"

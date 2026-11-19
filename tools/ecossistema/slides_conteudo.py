@@ -38,7 +38,7 @@ def todos():
     orb = ''.join(f'<g class="orb o{k}"><circle cx="{x}" cy="{y}" r="50"/><text x="{x}" y="{y+6}" text-anchor="middle">{t}</text></g>' for k, (x, y, t) in enumerate([(300, 70, "Ana"), (500, 200, "Bia"), (460, 420, "Hoje"), (140, 440, "Central"), (100, 210, "Dash")]))
     capa = ('<div class="capa"><div class="capa-t">' + LG + '<span class="kick">Life B Importadora</span><h1>Ecossistema <em>Life B</em></h1>'
             '<p class="sub">Como o lead chega, é atendido pela Ana (SDR Inbound), qualificado pelo SDR e passa aos representantes de campo, que vendem.</p>'
-            '<p class="sub2">Ana (assistente de IA no WhatsApp), Bia (agente interno), página Hoje (mesa do SDR), página Central (atendimento e controle da Ana) e Dash (números), todas ligadas ao Agendor (o CRM da empresa).</p>'
+            '<p class="sub2">Ana, Bia, página Hoje, página Central e Dash, todas ligadas ao Agendor (o CRM da empresa).</p>'
             f'<div class="dchips"><span class="dchip">Atualizado em {ATUAL}</span><span class="dchip">{pill("no ar")}</span><span class="dchip">{pill("em implantação")}</span><span class="dchip">{pill("planejado")}</span></div>'
             '<p class="dica">Setas, toque ou clique para avançar. G abre o índice. Esc sai.</p></div>'
             '<svg class="capa-g" viewBox="0 0 600 520" role="img" aria-label="Ana no centro, ligada à Bia, Hoje, Central e Dash"><g class="lnk">'

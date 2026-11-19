@@ -31,9 +31,17 @@ def peca(c, deck=False, area=None):
     extra = ""
     for k, rot, cl in (("implantacao", "Em implantação", "te"), ("planejado", "Planejado", "pl")):
         if c[k]:
-            extra += f'<div class="pc-x"><span class="pill p-{cl}">{rot}</span><ul>' + "".join(f"<li>{e(palavras(x, 12))}</li>" for x in c[k][:3]) + "</ul></div>"
+            for x in c[k][:3]:
+                if x.startswith("Em correção: "):
+                    extra += f'<div class="pc-x"><span class="pill p-corr">Em correção</span><ul><li>{e(palavras(x, 12))}</li></ul></div>'
+                else:
+                    extra += f'<div class="pc-x"><span class="pill p-{cl}">{rot}</span><ul><li>{e(palavras(x, 12))}</li></ul></div>'
     PK = {"no_ar": ("ok", "No ar"), "implantacao": ("te", "Em implantação"), "planejado": ("pl", "Planejado")}
-    linha = "".join(f'<li class="full"><span class="pill p-{PK[k][0]}">{PK[k][1]}</span> {selo(x, deck)}</li>' for k in ("no_ar", "implantacao", "planejado") for x in c[k])
+    def selo_item(k, x):
+        if x.startswith("Em correção: "):
+            return '<span class="pill p-corr">Em correção</span>'
+        return '<span class="pill p-' + PK[k][0] + '">' + PK[k][1] + '</span>'
+    linha = "".join('<li class="full">' + selo_item(k, x) + " " + selo(x, deck) + "</li>" for k in ("no_ar", "implantacao", "planejado") for x in c[k])
     tl = f'<details class="mais pc-tl"><summary><span>Histórico de versões (linha do tempo)</span></summary><ol class="tl">{linha}</ol></details>'
     kick = f'<span class="peca-k">{e(area)}</span>' if area else ""
     return (f'<div class="peca">{kick}<div class="peca-h"><b>{nome}</b>{pill("ok" if c["estado"] == "no ar" else "te")}</div>'
