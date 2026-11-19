@@ -27,7 +27,8 @@ const MEDIDA = () => {
     item.vazaPai = (() => { const p = e.parentElement; if (!p) return false; const pr = p.getBoundingClientRect(); return r.right > pr.right + 1.5 && getComputedStyle(p).overflowX === "visible" && p.scrollWidth > p.clientWidth + 1; })();
     const cx = r.left + r.width / 2, cy = r.top + r.height / 2; const topo = document.elementFromPoint(Math.min(cx, innerWidth - 1), Math.min(cy, innerHeight - 1));
     const recortado = (() => { for (let a = e.parentElement; a && a !== document.body; a = a.parentElement) { const o = getComputedStyle(a).overflowY; if (o === "auto" || o === "scroll" || o === "hidden") { const ar = a.getBoundingClientRect(); if (cy < ar.top || cy > ar.bottom) return true; } } return false; })();   // fora da área visível de uma lista com rolagem: não conta como coberto
-    item.coberto = !recortado && cy >= 0 && cy <= innerHeight && cx >= 0 && cx <= innerWidth && topo && !(e === topo || e.contains(topo) || topo.contains(e));
+    const sobBarraFixa = !!(topo && topo.closest && topo.closest("aside nav") && getComputedStyle(document.querySelector("aside nav")).position === "fixed");   // 19/11: a barra de navegação inferior do celular é fixa de propósito; o que passa por baixo dela fica alcançável ao rolar (o rodapé da página reserva o espaço)
+    item.coberto = !recortado && !sobBarraFixa && cy >= 0 && cy <= innerHeight && cx >= 0 && cx <= innerWidth && topo && !(e === topo || e.contains(topo) || topo.contains(e));
     out.push(item);
   }
   return { itens: out, sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth };
