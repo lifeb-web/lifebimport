@@ -543,6 +543,7 @@ html{overflow-x:hidden}
 /* 17.6A (QA CLS, dono: 1 linha de 1600 px em diante): de 1600 a 1699 px o conteudo real somava ~1700 px e quebrava em 2 linhas (85 px). Espacos menores so na barra recolhida nessa faixa (so o espaco entre itens e a busca mais estreita; nada some) */
 @media(min-width:1600px) and (max-width:1699px){ #cab.rec{gap:4px 4px;padding:4px 6px} #cab.rec .cab2 input[type=search]{min-width:70px;flex-basis:70px} #cab.rec .chips{gap:4px} }
 @media(max-width:700px){ #bTopo{order:1} }
+.obs-sdr-closer { border-left: 4px solid var(--accent, #564B99); background: var(--surface, #fff); } .obs-sdr-closer p { white-space: pre-wrap; margin: 4px 0 0; font-size: 15px; line-height: 1.4; }
 </style>
 </head>
 <body>
@@ -2396,6 +2397,8 @@ function renderLead() {
   corpo.textContent = ''; L.refs = L.refs || {}; var ac = acoesDe(L);
   if (lead.somenteLeitura) { var nl = el('div', 'secao'); nl.appendChild(el('p', 'sub', 'Negócio do Arena: aqui você só consulta. Para agir, use "Ver no CRM" no fim da tela.')); corpo.appendChild(nl); }
   if (lead.status && lead.status !== 'andamento') { var st = el('div', 'secao'); st.appendChild(el('strong', null, lead.status === 'ganho' ? 'Este negócio já está Ganho.' : 'Este negócio está Perdido.')); corpo.appendChild(st); }
+  // 19/11 (Robert #3623, lead 46044521): no negócio do ARENA (raia Closer) a OBSERVAÇÃO DO SDR é o que o SDR escreveu para o representante: aparece em destaque, inteira, logo no topo (antes só aparecia 'Resumo da Ana: Origem INBOUND')
+  if (lead.somenteLeitura && String(lead.observacaoSdr || '').trim()) { var ob = el('div', 'secao obs-sdr-closer'); ob.setAttribute('data-fk', 'obs-sdr-closer'); ob.appendChild(el('h3', null, 'Observação do SDR (vai para o representante)')); ob.appendChild(el('p', null, String(lead.observacaoSdr).trim())); corpo.appendChild(ob); }
   // 1) pessoas e telefones (o que o SDR mais usa)
   var s4 = el('div', 'secao'); s4.appendChild(el('h3', null, 'Pessoas e telefones'));
   if (!(lead.pessoas || []).length) s4.appendChild(el('p', 'sub', 'Nenhuma pessoa cadastrada.'));
