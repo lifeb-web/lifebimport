@@ -2366,7 +2366,7 @@ function igDecidir(p,dec){
       else{ok.disabled=false;cx.disabled=false;ok.textContent=rot;er.textContent=(r.j&&(r.j.mensagem||r.j.rede))||('Erro '+r.status);if(r.status===409){igCarregar();}}};
     ac.appendChild(cx);ac.appendChild(ok);b.appendChild(ac);
     var libera=null;var pv=dec==='aprovar'?b.querySelector('#igPrevAprov'):null;   // 19/11: Aprovar só libera depois de rolar até o fim do que a aprovação cobre (ou se tudo já cabe na tela)
-    if(pv){pv.style.maxHeight='50vh';pv.style.overflowY='auto';var vistoFim=function(){return pv.scrollHeight-pv.scrollTop-pv.clientHeight<=4;};ok.disabled=true;var dica=el('div','hint','Role até o fim para liberar o botão Aprovar.');dica.id='igDicaRolar';b.insertBefore(dica,ac);libera=function(){if(ok.disabled&&vistoFim()){ok.disabled=false;dica.hidden=true;}};pv.addEventListener('scroll',libera);}
+    if(pv){pv.style.maxHeight='34vh';pv.style.overflowY='auto';var vistoFim=function(){return pv.scrollHeight-pv.scrollTop-pv.clientHeight<=4;};ok.disabled=true;var dica=el('div','hint','Role até o fim para liberar o botão Aprovar.');dica.id='igDicaRolar';b.insertBefore(dica,ac);libera=function(){if(ok.disabled&&vistoFim()){ok.disabled=false;dica.hidden=true;}};pv.addEventListener('scroll',libera);}
     setTimeout(function(){if(pv){libera();(ok.disabled?pv:ok).focus();}else ta.focus();},0);});
 }
 async function igReabrir(p,bt){bt.disabled=true;var r=await api('POST','/instagram/reabrir',{id:p.id,v:p.v});if(r.status===200&&r.j.ok){igSubstituir(r.j.post);toast('Post voltou para a fila de aprovação.');igDesenhar();}else{bt.disabled=false;toast((r.j&&(r.j.mensagem||r.j.rede))||'Não consegui reabrir.');if(r.status===409)igCarregar();}}
