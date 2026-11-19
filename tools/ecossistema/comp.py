@@ -172,6 +172,8 @@ def _sanfona(resto):
 
 _BLOCO = re.compile(r"<(p|li|td)((?:\s[^>]*)?)>((?:(?!</?(?:p|li|ul|ol|td|tr|table|div|details|h[1-6]|section|figure|svg)[\s>]).)*)</\1>", re.S)
 
+_re_li = re.compile(r'<li>(.*?)</li>', re.S)
+
 def _topicos(h):
     """Texto corrido com 3 ou mais orações separadas por ';' vira introdução + lista de tópicos (visível, sem esconder nada)."""
     if n_palavras(h) <= 18 or h.count("; ") < 2:
@@ -205,6 +207,8 @@ def encurtar(corpo):
                 return f"<{t}{attrs}>{resumo}{full}</{t}>" if t != "p" else f"<{t}{attrs}>{resumo}</{t}>{full}"
         pts = _topicos(inner)
         if pts:
+            if t == "li" and pts.startswith('<ul class="pts">'):
+                return "".join(f"<li{attrs}>{x}</li>" for x in _re_li.findall(pts))
             return f"<{t}{attrs}>{pts}</{t}>"
         r = dividir(inner)
         if not r:
@@ -244,3 +248,10 @@ def item_estado(txt, deck=False):
         return f"{sel}{c}" if sel else txt
     return (f'<span class="it">{sel}{c}</span><details class="mais"><summary><span>Ver o texto completo</span></summary>'
             f'<p class="full">{selo(txt, deck)}</p></details>')
+
+
+def tabela_curta(heads, rows, cls="", cap="", n=5):
+    """19/11/2026: mostra as n linhas mais recentes (a lista já vem do mais novo ao mais antigo) e guarda o resto em 'Ver todas'."""
+    if len(rows) <= n:
+        return tabela(heads, rows, cls, cap)
+    return tabela(heads, rows[:n], cls, cap) + det(f"Ver todas ({len(rows)})", tabela(heads, rows[n:], cls, cap + " (anteriores)"))

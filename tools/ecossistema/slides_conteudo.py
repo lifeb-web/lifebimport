@@ -140,8 +140,8 @@ def todos():
     ana_a = g([
         cat("Quando o lead escreve", ["Responde na hora, a qualquer hora, juntando mensagens seguidas", "Retorno combinado: volta na hora pedida, ajustada ao horário de contato", "Instrução da equipe pela página Central"], "chat"),
         cat("Quando a Ana toma a iniciativa", ["Só dentro do horário de contato: 8h às 22h em dia útil; 9h às 20h em fim de semana e feriado", "Abertura: 5 minutos depois do cadastro, se o lead não escreveu antes", "Retomada por abandono: toques em dias úteis; qualquer resposta cancela o que falta", "Lead que escreveu e ficou sem resposta: um vigia a cada 5 minutos faz a Ana voltar"], "clock"),
-        cat("Vigias e planejado", ["Webhook do número da Ana, conversas sem resposta e custo diário e mensal", "Avisos à equipe de 7h às 21h; à noite viram resumo", "Planejado: cadência de 3 toques com mensagens de utilidade"], "eye"),
-    ], 3) + band("Fonte: horários e regras da Ana (docs do agente, 11/11/2026) e página. O número exato de toques de retomada não é citado aqui. Na página: Automações da Bia e da Ana; Ana: a conversa.")
+        cat("Vigias e planejado", ["Webhook do número da Ana, conversas sem resposta e custo diário e mensal", "Avisos à equipe em silêncio das 21h às 7h (urgentes passam); a representantes, só em dia útil das 8h às 18h", "Planejado: cadência de 3 toques com mensagens de utilidade"], "eye"),
+    ], 3) + band("Horários e regras da Ana e da Bia, como na página. O número exato de toques de retomada não é citado aqui. Na página: Automações da Bia e da Ana; Ana: a conversa.")
     A(slide("autom_ana", "Automações da Ana", C, ana_a, "dense", "automacoes,ana"))
     A(slide("av", "Do evento ao aviso enviado", C, fx("av", "Falha de envio entra na fila; entrega recusada pela Meta ainda não é reenviada (planejado). Na página: Observabilidade e entrega de avisos."), "flow", "bia,observ"))
 
@@ -162,8 +162,8 @@ def todos():
         no("4. A fila entra", "Ao fechar o lead, ou no teto de 3 minutos. A faixa de aviso saiu de vez", "n-g"),
         no("5. Se der erro", "Limite do Agendor não desloga; 502 confirma por releitura antes de repetir; botão de repetir"),
     ]) + '</div>'
-        + band("Versão 2026-11-17.5 (17/11/2026, 21h36); a 17.6B entrou no ar em 19/11/2026 (informado, ainda não detalhado aqui). No celular: topo solto, alvos de toque de 44 px e tela estável ao abrir o lead. Na página: Página Hoje."))
-    A(slide("hoje3", "Página Hoje 17.5: o que o SDR vê", C, hoje3, "dense", "hoje"))
+        + band("Versão 2026-11-18.6B, no ar desde 19/11/2026 (01h14). No celular: topo solto, alvos de toque de 44 px e tela estável ao abrir o lead. Na página: Página Hoje."))
+    A(slide("hoje3", "Página Hoje: o que o SDR vê", C, hoje3, "dense", "hoje"))
     hoje2 = g([
         cat("Cuidados", ["Clique repetido nunca duplica; sem internet, a ação espera numa caixa de saída", "Ação que bate no limite do Agendor fica numa fila e é tentada de novo, com teto de tentativas e alerta", "Chave de emergência desliga a gravação pela página"], "shield"),
         cat("Regras da gestão (17/11/2026)", ["Ação do SDR instantânea e nunca revertida na tela; erro só com confirmação do servidor e botão de repetir (17.6, em construção)", "Distribuição continua manual, pelo SDR: nenhuma regra automática por cidade ou região", "Topo recolhível e de largura total, sem rolagem lateral, com as 13 raias; raia do closer (17.6, em construção, sem data)"], "lock"),
@@ -179,7 +179,7 @@ def todos():
         mod(2, "Interruptores", ("no ar",), "Aba da Bia: desligado, só observa ou ao vivo, com motivo. Planejado (fase 3): aprovar avisos por tipo pela página Central."),
         mod(3, "Números e prazos", ("no ar",), "Números com limite nos controles. Planejado (fase 2): prazos de reposição e cota do SDR."),
         mod(4, "Calendário e horários", ("no ar",), "Dias de folga. Planejado (fase 2): horários por pessoa e por tipo de aviso."),
-        mod(5, "Time e permissões", ("no ar",), "Usuários e papéis. Planejado (fase 3): lista única de SDRs e representantes."),
+        mod(5, "Time e permissões", ("no ar",), "Aba de acessos: já no ar. Tela nova de Usuários e papéis, Instagram e hub: em construção, NÃO no ar."),
         mod(6, "Mensagens e botões", ("planejado",), "Fase 4: editar textos, botões e listas dos avisos, com prévia, aprovação e versão."),
     ], 2) + band("Os 12 módulos vêm do plano da página Central de 09/11/2026. Fora dos módulos, já no ar: atendimento da Ana e aba da Ana. Na página: Central.")
     A(slide("cenmod", "Central: módulos 1 a 6 do plano e o estado de cada um", C, m1, "dense", "central"))
@@ -209,7 +209,7 @@ def todos():
     cen2 = g([
         cat("No ar: pacote de 17/11/2026 (página)", ["Botões com confirmação, que leem de volta antes de dizer que deu certo", "Selos do CRM e do início agendado; lista leve; erro 409 explicado", "Aba Ecossistema sem recarregar; saúde sem alerta falso"], "rocket"),
         cat("No ar desde 17/11/2026 (23h40): servidor da Ana", ["Dados da janela, do formulário e do repasse; volta automática de conversa arquivada, também com a equipe", "Passar ao SDR em segundo plano; resumo do dia com \"esperando uma pessoa\" só sem prova", "Vácuo corrigido; alertas com DDD e número"], "clock"),
-        cat("Planejado (levantamento de 16/11/2026)", ["Dar ganho, dar perdido com motivo e repassar ao SDR Inbound", "Editar dados do lead, com autor registrado e a Ana enxergando", "Alertas com botão, retomada por modelo após 24 h, instrução com pré-visualização e filtros recolhíveis (sem data)"], "list"),
+        cat("Planejado (levantamento de 16/11/2026)", ["Dar ganho, dar perdido com motivo e repassar ao SDR Inbound", "Editar dados do lead, com autor registrado e a Ana enxergando", "Alertas com botão, retomada por modelo após 24 h e instrução com pré-visualização"], "list"),
     ], 3) + band("Regra da gestão: arquivar vale para qualquer conversa; qualquer mensagem nova traz de volta. Na página: Central.")
     A(slide("central2", "Página Central: no ar e planejado", C, cen2, "dense", "central"))
     outras = g([

@@ -34,11 +34,11 @@ def s_status():
     return sec("status", "Começar", "Status: no ar, em teste e planejado", f"Posição de {DATA}. Uma ficha por peça, em ordem por área; a linha do tempo de cada ficha guarda o texto completo.", corpo)
 
 def s_checklist():
-    rows = []
-    for g, i, s, p in S.CHECK:
-        rows.append([g, i, pill(s), p])
-    corpo = (aviso("Checklist honesto", "Uma entrega só entra como \"No ar\" quando foi conferida em produção. Quando existe pendência, ela é escrita na última coluna e o item não é tratado como concluído.", "n")
-      + tabela(["Área", "Entrega", "Estado", "Prova ou pendência"], rows, "ck", "Checklist de entregas com estado e prova"))
+    grupos = {}
+    for g, i, st, p in S.CHECK:
+        grupos.setdefault(g, []).append([g, i, pill(st), p])
+    blocos = "".join(det(f"{g} ({len(rows)} itens)", tabela(["Área", "Entrega", "Estado", "Prova ou pendência"], rows, "ck", f"Checklist de entregas: {g}"), aberto=(k == 0)) for k, (g, rows) in enumerate(grupos.items()))
+    corpo = (aviso("Checklist honesto", "Uma entrega só entra como \"No ar\" quando foi conferida em produção. Quando existe pendência, ela é escrita na última coluna e o item não é tratado como concluído. Cada área abre e fecha.", "n") + blocos)
     return sec("checklist", "Começar", "Checklist de entregas", f"Cada entrega, o estado dela em {DATA} e o que ainda falta. Atualizado a cada publicação.", corpo)
 
 def s_visao():

@@ -3,9 +3,9 @@ Chave = começo do texto puro do bloco. Conteúdo fiel ao original (nada novo)."
 R = {
  "No ar desde 17/11/2026 (23h40). Resultado em caso real": "No ar desde 17/11/2026, corrigida depois de falhar no caso real; resultado em caso real ainda a provar.",
  "Página Hoje 17.1 a 17.4": "Rótulos novos, fila congelada com lead aberto e tratamento de troca de telefone e de CNPJ de empresa existente.",
- "Página Hoje 17.5:": "Sem Minimizar nem faixa de atualização; tela estável ao abrir o lead; rascunho válido por 3 dias.",
+ "Página Hoje (até a 17.5):": "Sem Minimizar nem faixa de atualização; tela estável ao abrir o lead; rascunho válido por 3 dias.",
  "Servidor da página Hoje:": "Lead novo aparece em até 30 s; tarefa concluída ou adiada sai na hora.",
- "Hoje 17.6:": "Ações instantâneas e nunca revertidas na tela; topo recolhível e de largura total; raia Closer.",
+ "Hoje 17.6B:": "Ações instantâneas e nunca revertidas na tela; topo recolhível e de largura total; raia Closer.",
  "Se o lead está escrevendo": "A Ana espera 8 s sem mensagem nova (no máximo 20 s) e responde tudo de uma vez.",
  "Todos podem comprar, mas": "Todos podem comprar; no fim a Ana avisa que o pedido começa em R$ 2 mil e pergunta se o interesse é real.",
  "Falar preço de produto": "Nunca fala preço, desconto, bonificação ou resultado garantido (exceções: mínimo de R$ 2 mil e condição de pagamento da empresa nova).",
@@ -14,7 +14,6 @@ R = {
  "Só dentro do horário de contato": "Só 8h às 22h em dia útil e 9h às 20h em fim de semana e feriado; cancela se o lead escrever antes.",
  "Toda ação do SDR é instantânea": "Toda ação do SDR é instantânea e nunca parece revertida por uma leitura atrasada.",
  "O topo vai ganhar largura total": "O topo ganha largura total (13 raias, sem rolagem lateral) e um botão Recolher, lembrado por usuário.",
- "Em construção, sem data, por regra": "Regra da gestão de 17/11/2026: a prévia do topo é mostrada antes de construir. [A CONFIRMAR] o que entrou na 17.6B.",
  "O botão Minimizar saiu": "Sem Minimizar: Fechar guarda o rascunho por 3 dias e um ponto no Fechar avisa que a fila mudou.",
  "Clique repetido nunca duplica": "Clique repetido não duplica; sem internet a ação espera numa caixa de saída; uma chave de emergência desliga a gravação.",
  "A página Central é o painel de controle": "Painel de controle com usuário e senha: a gestão muda tudo, administradores só risco baixo ou médio, o SDR só lê.",
@@ -33,7 +32,7 @@ R = {
  "Página atualizada para 16/11/2026": "Funis Ana, SDR Inbound e Arena; Hoje sem travas de horário; novo modo apresentação em slides.",
  "Versões reais de Ana, Bia e Central": "Versões reais lidas do servidor; camada de entrega da Ana no ar; registro de deploys.",
  "Falha de ENVIO entra na fila": "Envio com falha é reenviado; entrega recusada pela Meta ainda não; o custo real da Bia não é medido por completo.",
- "Estado ao vivo não verificado: a memória de 27/09/2026": "Reposição e Reativação +75: em sombra em 27/09/2026; estado atual [A CONFIRMAR].",
+ "Estado ao vivo não verificado: a memória de 27/09/2026": "Reposição e Reativação +75: registrados em sombra em 27/09/2026; sem leitura de produção posterior.",
  "Ana (assistente de IA no WhatsApp), Bia": "Ana, Bia, páginas Hoje e Central e Dash, todas ligadas ao Agendor, o CRM da empresa.",
  "Mesa de trabalho do SDR sem travas": "Mesa do SDR sem travas de horário, fila por listas e qualificação que cria o negócio no funil certo.",
 }

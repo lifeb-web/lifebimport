@@ -12,14 +12,28 @@ AREAS = [
 TOPICOS = {
   "ana": ["Atende lojistas do inbound no WhatsApp", "Qualifica e repassa ao SDR", "Retoma quem some; encerra fora do perfil com educação", "Responde áudio com áudio"],
   "bia": ["Avisa a equipe no WhatsApp, muitos com botão", "Escreve no Agendor e relê para confirmar", "Motores proativos e painel do representante", "Repasse manual e nota de handoff"],
-  "hoje": ["Mesa do SDR sem travas de horário", "Fila por listas; atrasadas lidas aos poucos", "Qualificação cria o negócio no funil certo", "Servidor traz lead novo em até 30 s"],
+  "hoje": ["Mesa do SDR sem travas de horário", "Fila por listas; atrasadas lidas aos poucos", "Qualificação cria o negócio no funil certo", "Livro local de ações e raia Closer (19/11/2026)"],
   "central": ["Atendimento: conversas com selos, histórico e áudios", "Assumir, devolver, repassar, pausar, instruir", "Controles da Bia com desfazer, filas, folga e custo", "Selo da janela de 24 h e filtros"],
   "dash": ["Vendas, SDR, anúncios e agentes", "Faixa vermelha quando os dados congelam", "Rosca sem corte"],
   "agendor": ["Funis: Ana, SDR Inbound e Arena", "A Ana ganha ao qualificar", "O Arena só nasce quando o SDR qualifica pela página Hoje"],
 }
-VERSAO = {"ana": "pacote de 17/11/2026", "bia": "atualização de 17/11/2026", "hoje": "página 2026-11-17.5", "central": "publicada em 17/11/2026", "dash": "página de 17/11/2026", "agendor": "sem versão própria"}
+VERSAO = {"ana": "pacote de 17/11/2026", "bia": "deploy de 18/11/2026 (19h05)", "hoje": "página 2026-11-18.6B", "central": "publicada em 17/11/2026", "dash": "página de 17/11/2026", "agendor": "sem versão própria"}
+
+RES_ITEM = {
+ "Preparados e desligados por chave": "Contador de chamadas ao Agendor e nota única de repasse (desligados por chave)",
+ "Em código e desligada por chave": "Recuperação SDR só com sinal (em código, desligada)",
+ "Em correção: fase 2 do Dash": "Fase 2 do Dash (ajustes depois da faixa de dados congelados)",
+ "Cadência de 3 toques": "Cadência de 3 toques com mensagens de utilidade",
+ "Juízes de IA": "Juízes de IA como guarda-corpo em tempo real",
+ "Controles manuais completos": "Controles manuais: ganho, perdido, repasse e edição de dados do lead",
+ "Calendário real": "Calendário real, alertas com botão e retomada por modelo após 24 h",
+ "Tela de Usuários e Instagram": "Tela de Usuários e papéis, Instagram e hub: em construção, NÃO no ar",
+}
 
 def palavras(x, n):
+    for k, v in RES_ITEM.items():
+        if x.startswith(k):
+            return v
     for pref in ("Em voo: ", "Em correção: "):
         if x.startswith(pref): x = x[len(pref):]
     w = x.split()
@@ -51,7 +65,7 @@ def extras():
     return [
       ("Painel do Representante (nova recarga)", "ok", "Painel no ar; o pacote novo (recarga em horário comercial) aguarda auditoria", "09/11/2026"),
       ("Este Ecossistema", "te", "Atualizado, com apresentação em slides; publica depois do teste visual e do auditor", "19/11/2026"),
-      ("Plataforma", "pl", "Mineração de leads; arquivar modelos antigos da Meta; revisão das cadências com dados reais", "[A CONFIRMAR]"),
+      ("Plataforma", "pl", "Mineração de leads; arquivar modelos antigos da Meta; revisão das cadências com dados reais", "sem data"),
     ]
 
 def peca_extra(n, k, t, d):
