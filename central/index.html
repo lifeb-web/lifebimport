@@ -658,6 +658,9 @@ function avisoLogin(msg){try{if(msg)sessionStorage.setItem(SESS_AVISO,msg);else 
 function fmtAte(ms){if(!ms)return '';var k=function(x){return new Date(x).toLocaleDateString('pt-BR',{timeZone:TZ_BR});};var h=new Date(ms).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:TZ_BR});return k(ms)===k(Date.now())?('hoje às '+h):(k(ms)===k(Date.now()+864e5)?('amanhã às '+h):(k(ms).slice(0,5)+' às '+h));}
 function getTema(){try{return localStorage.getItem('central_tema');}catch(e){return null;}}
 (function(){var t=getTema();document.documentElement.setAttribute('data-theme',t==='light'||t==='dark'?t:'dark');})();   // 19/11: modo escuro é o principal (quem escolheu claro continua claro)
+// 19/11 (auditoria): erro de rede NUNCA aparece como 'Erro 0'; toda aba com falha de carga mostra a mensagem em português e o botão 'Tentar de novo'.
+function erroTxt(r){if(r&&r.status===0)return (r.tempo&&r.j&&r.j.rede)?r.j.rede:'Não consegui carregar. Verifique a conexão.';return 'Erro '+(r&&r.status);}
+function vazioErro(c,msg,fn){var d=el('div','vazio');d.setAttribute('role','alert');d.appendChild(el('p',null,msg));var b=el('button','btn','Tentar de novo');b.type='button';b.setAttribute('data-retry','1');b.onclick=async function(){b.disabled=true;b.textContent='Tentando...';try{await fn();}catch(e){}render();};d.appendChild(b);c.appendChild(d);}
 async function api(metodo,caminho,corpo,op){
   // 16/11 (Robert: "os botões travam"): TODA chamada tem tempo limite (padrão 30 s leitura / 25 s escrita) e NUNCA lança: rede caída ou tempo esgotado voltam como status 0 com mensagem em português (antes a exceção deixava o botão desligado para sempre).
   var h={'Content-Type':'application/json'};if(S.tok)h['x-central-token']=S.tok;
@@ -733,17 +736,17 @@ $('fEntrar').addEventListener('submit',async function(ev){ev.preventDefault();va
   var r;try{var manter=$('manter').checked;gravarManterPref(manter);r=await api('POST','/acesso/entrar',{usuario:$('usuario').value,senha:$('senha').value,manter:manter});}catch(e){r={status:0,j:{mensagem:'Sem conexão com o servidor.'}};}
   b.disabled=false;
   if(r.status===200&&r.j.token){S.tok=r.j.token;S.ate=Number(r.j.expiraEm)||0;var gravou=setTok(r.j.token,S.ate,manter);if(!gravou)toast('Não consegui guardar o acesso neste aparelho (navegação privada?). Você fica conectado só enquanto esta aba estiver aberta.');S.eu={usuario:r.j.usuario,nome:r.j.nome,papel:r.j.papel,trocarSenha:!!r.j.trocarSenha};try{sessionStorage.setItem('central_eu',JSON.stringify(S.eu));}catch(e){}$('senha').value='';abrirApp();}
-  else $('loginErro').textContent=r.j.mensagem||('Erro '+r.status);});
+  else $('loginErro').textContent=r.j.mensagem||erroTxt(r);});
 $('btnCodigo').onclick=async function(){var b=this;b.disabled=true;$('codigoErro').textContent='';
   var r;try{r=await api('POST','/acesso/codigo');}catch(e){r={status:0,j:{mensagem:'Sem conexão com o servidor.'}};}
   if(r.status===200){$('fCriar').classList.remove('hide');$('codigoErro').style.color='var(--ok)';$('codigoErro').textContent='Código enviado. Veja o WhatsApp.';$('codigo').focus();setTimeout(function(){b.disabled=false;},20000);}
-  else{$('codigoErro').style.color='var(--bad)';$('codigoErro').textContent=r.j.mensagem||('Erro '+r.status);b.disabled=false;}};
+  else{$('codigoErro').style.color='var(--bad)';$('codigoErro').textContent=r.j.mensagem||erroTxt(r);b.disabled=false;}};
 $('fCriar').addEventListener('submit',async function(ev){ev.preventDefault();$('criarErro').textContent='';
   if($('nSenha').value!==$('nSenha2').value){$('criarErro').textContent='As senhas não conferem.';return;}
   var b=$('btnCriar');b.disabled=true;var r;try{r=await api('POST','/acesso/primeiro',{codigo:$('codigo').value.trim(),usuario:$('nUsuario').value,nome:$('nUsuario').value,senha:$('nSenha').value});}catch(e){r={status:0,j:{mensagem:'Sem conexão com o servidor.'}};}
   b.disabled=false;
   if(r.status===200){var l=await api('POST','/acesso/entrar',{usuario:$('nUsuario').value,senha:$('nSenha').value});if(l.status===200){S.tok=l.j.token;S.ate=Number(l.j.expiraEm)||0;setTok(l.j.token,S.ate,$('manter').checked);S.eu={usuario:l.j.usuario,nome:l.j.nome,papel:l.j.papel};try{sessionStorage.setItem('central_eu',JSON.stringify(S.eu));}catch(e){}toast('Acesso criado');return abrirApp();}}
-  $('criarErro').textContent=r.j.mensagem||('Erro '+r.status);});
+  $('criarErro').textContent=r.j.mensagem||erroTxt(r);});
 function limparTudoLocal(manterRascunhos){   // Sair (ação da pessoa) apaga também os rascunhos com dado de lead; sessão vencida/401 mantém o rascunho da instrução para ela não perder o que escreveu (volta ao entrar de novo)
   try{var ks=[];for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&(manterRascunhos?/^ctr_sim_/:/^(ctr_sim_|ctr_ins_|ctr_susp_nao_|ctr_fb_|ctr_fbok_)/).test(k))ks.push(k);}ks.forEach(function(k){localStorage.removeItem(k);});}catch(e){}SIM.carregou=false;SIM.atual=null;SIM.hist=[];if(!manterRascunhos){AT.rasc={};AT.fbRasc={};}S.tok=null;S.eu=null;S.ate=0;limparSessaoGravada();try{atLimpaCaches();}catch(e){}try{sessionStorage.removeItem('central_eu');sessionStorage.removeItem('central_cache_v2');try{localStorage.removeItem('central_cache_v2');}catch(e){}}catch(e){}}
 async function sair(){   // revoga no servidor (com prazo de 5 s) e limpa o aparelho de qualquer jeito; se o servidor não confirmou, diz isso na tela de login
@@ -779,8 +782,8 @@ async function carregar(avisar,primeira){
   var _op=function(l){return l.some(function(a){return abasDoEu().indexOf(a)>=0;});};   // 19/11: papel novo só lê o que a matriz libera (o servidor também barra)
   var pEstado=(!_op(['visao','estado','leitura'])?Promise.resolve({status:0,pular:true,j:{}}):api('GET','/estado')).then(function(r){if(r.pular){renderSoon();return;}
     if(r.status===200&&r.j.ok){if(Number(r.j.agora)&&Math.abs(Number(r.j.agora)-Date.now())<864e5)S.skew=Number(r.j.agora)-Date.now();S.dados=r.j;S.ult=Date.now();S.lat=Math.round(performance.now()-t0);S.cache=false;S.erro='';}
-    else if(r.status!==401&&!(r.j&&r.j.erro==='trocar_senha')){S.erro='Não consegui atualizar ('+r.status+')';}
-    renderSoon();}).catch(function(){S.erro='Sem conexão com o servidor.';renderSoon();});
+    else if(r.status!==401&&!(r.j&&r.j.erro==='trocar_senha')){S.erro=r.status===0?erroTxt(r):'Não consegui atualizar ('+r.status+').';}
+    renderSoon();}).catch(function(){S.erro='Não consegui carregar. Verifique a conexão.';renderSoon();});
   var pOut=[carregarSaude().then(renderSoon)];if(_op(['hist','visao']))pOut.push(carregarHist().then(renderSoon));
   if(S.eu.papel!=='sdr'&&_op(['filas','visao']))pOut.push(carregarFilas().then(renderSoon));
   if(_op(['cal','visao']))pOut.push(carregarCal().then(renderSoon));
@@ -791,9 +794,9 @@ async function carregar(avisar,primeira){
   if(avisar)toast(S.erro||'Atualizado');
 }
 async function carregarSaude(){try{var r=await fetch(SAUDE);S.saude=await r.json();}catch(e){S.saude=S.saude||null;}try{var _it=(S.saude&&S.saude.itens)||{};var _precisa=!!(S.saude&&((S.saude.geral&&S.saude.geral!=='ok')||Object.keys(_it).some(function(k){return _it[k]&&_it[k].nivel&&_it[k].nivel!=='ok';})));if(_precisa){var q=await api('GET','/saude');if(q.status===200&&q.j&&q.j.ok){S.saudeDet=q.j.pontos||[];S.saudeDetFim=false;}else S.saudeDetFim=true;}else{S.saudeDet=[];S.saudeDetFim=false;}}catch(e){S.saudeDetFim=true;}}   // 17/11: sem detalhe (falha/lento) o texto vira 'Detalhes indisponíveis agora (tentando de novo)'; a próxima carga (45 s) tenta de novo   // 12/11: o que é CADA ponto de atenção (a visão pública só traz o nível)
-async function carregarHist(){var r=await api('GET','/historico?dias=14').catch(function(){return {status:0,j:{}};});if(r.status===200)S.hist=r.j.itens||[];else if(!S.hist)S.hist=[];}
-async function carregarFilas(){var r=await api('GET','/filas').catch(function(){return {status:0,j:{}};});S.filas=r.status===200?(r.j.itens||[]):[];S.filasErro=r.status===200?'':((r.j&&r.j.mensagem)||('Erro '+r.status));}
-async function carregarCal(){var r=await api('GET','/calendario').catch(function(){return {status:0,j:{}};});S.cal=r.status===200?(r.j.dias||[]):[];S.calHoje=(r.j&&r.j.hoje)||'';S.calErro=r.status===200?'':((r.j&&r.j.mensagem)||('Erro '+r.status));}
+async function carregarHist(){var r=await api('GET','/historico?dias=14').catch(function(){return {status:0,j:{}};});if(r.status===200){S.hist=r.j.itens||[];S.histErro='';}else{if(!S.hist)S.hist=[];S.histErro=r.status===0?erroTxt(r):'Não consegui carregar o histórico ('+erroTxt(r)+').';}}
+async function carregarFilas(){var r=await api('GET','/filas').catch(function(){return {status:0,j:{}};});S.filas=r.status===200?(r.j.itens||[]):[];S.filasErro=r.status===200?'':((r.j&&r.j.mensagem)||erroTxt(r));}
+async function carregarCal(){var r=await api('GET','/calendario').catch(function(){return {status:0,j:{}};});S.cal=r.status===200?(r.j.dias||[]):[];S.calHoje=(r.j&&r.j.hoje)||'';S.calErro=r.status===200?'':((r.j&&r.j.mensagem)||erroTxt(r));}
 async function carregarPapeis(){   // 19/11: matriz papel x aba e papéis novos vêm do servidor; sem resposta vale a matriz embutida
   if(!S.eu||S.eu.trocarSenha)return;var r=await api('GET','/papeis').catch(function(){return {status:0,j:{}};});
   if(r.status===200&&r.j&&Array.isArray(r.j.papeis)){S.papeis=r.j;if(r.j.meuPapelNome)$('quemPapel').textContent=r.j.meuPapelNome;if(!abaPermitida(S.aba)){S.aba='inicio';hashGravar('inicio',null,true);}montarNav();renderSoon();if(!PAPEIS_PADRAO[S.eu.papel]&&!S.papeisCarregouOp){S.papeisCarregouOp=true;carregar(false);}}   // papel novo: só agora se sabe o que ele pode ler; carrega uma vez
@@ -910,13 +913,13 @@ function render(op){var auto=!!(op&&op.auto);
   var h0=c.offsetHeight;if(mesma&&h0>0)c.style.minHeight=h0+'px';   // segura a altura enquanto refaz: sem isso a página encolhe, o navegador joga a rolagem ao topo e a tela "pula"
   try{
     c.textContent='';
-    if(!S.dados&&['visao','estado','leitura'].indexOf(S.aba)>=0){esqueleto(c);return;}
+    if(!S.dados&&['visao','estado','leitura'].indexOf(S.aba)>=0){if(S.erro&&!S.carregando){vazioErro(c,S.erro,function(){return carregar(false);});return;}esqueleto(c);return;}
     ({visao:telaVisao,estado:telaEstado,leitura:telaLeitura,filas:telaFilas,cal:telaCal,agentes:telaAgentes,atend:telaAtend,hist:telaHist,inicio:telaInicio,instagram:telaInstagram,eco:telaEco,usuarios:telaUsuarios,conta:telaConta})[S.aba](c);
     if(snap)uiRepor(c,snap,auto);
   }finally{c.style.minHeight='';if(snap&&Math.abs(window.pageYOffset-snap.y)>2)window.scrollTo(snap.x,snap.y);S.abaAnt=S.aba;}
 }
 function esqueleto(c){var g=el('div','ov');[[12,110],[3,92],[3,92],[3,92],[3,92],[8,300],[4,300],[4,200],[4,200],[4,200]].forEach(function(x){var b=el('div','sk c'+x[0]);b.style.height=x[1]+'px';g.appendChild(b);});c.appendChild(g);}
-function estadoRotulo(e){if(e.tipo==='numero')return e.estado+' '+(e.un||'');return ROT_ESTADO[e.estado]||String(e.estado);}
+function estadoRotulo(e){if(e.tipo==='numero')return agTxt(e.estado)+' '+(e.un||'');return ROT_ESTADO[e.estado]||agTxt(e.estado);}
 function pillEstado(e){var p=el('span','pill',estadoRotulo(e));if(e.tipo==='modo3')p.className='pill '+(e.estado==='live'?'on':e.estado==='shadow'?'sh':'offp');else if(e.tipo==='numero')p.className='pill sh';else p.className='pill '+(e.estado==='ligado'?'on':'offp');return p;}
 function atencoes(){
   var l=[];var leit=(S.dados||{}).leitura||[];
@@ -1014,7 +1017,7 @@ function telaEstado(c){
 }
 function cartao(e){
   var it=el('div','card it '+e.risco);var liberado=pode(e.risco);
-  var head=el('div','head');var tx=el('div');tx.style.minWidth='0';tx.appendChild(el('h4',null,e.rotulo));tx.appendChild(el('p',null,e.desc));head.appendChild(tx);
+  var head=el('div','head');var tx=el('div');tx.style.minWidth='0';tx.appendChild(el('h4',null,ptRep(e.rotulo)));tx.appendChild(el('p',null,ptRep(e.desc)));head.appendChild(tx);
   var dir=el('div','row');dir.style.flexShrink='0';dir.style.justifyContent='flex-end';
   if(e.tipo==='liga_off'||e.tipo==='flag_off1'){var sw=el('button','switch');sw.type='button';sw.setAttribute('role','switch');sw.setAttribute('aria-checked',e.estado==='ligado'?'true':'false');sw.setAttribute('aria-label',e.rotulo);sw.disabled=!liberado;if(!liberado)sw.title='Seu perfil não pode mudar este controle';sw.onclick=function(){abrirConfirmacao(e,e.estado==='ligado'?'desligado':'ligado');};dir.appendChild(sw);}
   head.appendChild(dir);it.appendChild(head);
@@ -1031,11 +1034,11 @@ function telaLeitura(c){
   if(!d.length){c.appendChild(el('div','vazio','Nenhuma chave encontrada.'));return;}
   var w=el('div','card tw');var t=el('table');var h=el('tr');['Chave','O que faz','Padrão','Valor gravado','Risco'].forEach(function(x){h.appendChild(el('th',null,x));});t.appendChild(h);
   d.sort(function(a,b){return a.g===b.g?a.k.localeCompare(b.k):a.g.localeCompare(b.g);});
-  d.forEach(function(e){var r=el('tr');var k=el('td','k');k.appendChild(el('code',null,e.k));k.appendChild(el('div','d',e.g));r.appendChild(k);r.appendChild(el('td',null,e.d));r.appendChild(el('td',null,e.p));var v=el('td');if(e.ok===false)v.textContent='falha na leitura';else if(e.definida)v.appendChild(el('span','vv',e.cru==null?'':e.cru));else v.appendChild(el('span','hint','vazio'));r.appendChild(v);var rk=el('td');rk.appendChild(el('span','pill '+e.r,RISCO[e.r]||e.r));r.appendChild(rk);t.appendChild(r);});
+  d.forEach(function(e){var r=el('tr');var k=el('td','k');k.appendChild(el('code',null,e.k));k.appendChild(el('div','d',ptRep(e.g)));r.appendChild(k);r.appendChild(el('td',null,ptRep(e.d)));r.appendChild(el('td',null,ptRep(e.p)));var v=el('td');if(e.ok===false)v.textContent='falha na leitura';else if(e.definida)v.appendChild(el('span','vv',e.cru==null?'':e.cru));else v.appendChild(el('span','hint','vazio'));r.appendChild(v);var rk=el('td');rk.appendChild(el('span','pill '+e.r,RISCO[e.r]||e.r));r.appendChild(rk);t.appendChild(r);});
   w.appendChild(t);c.appendChild(w);
 }
 function telaFilas(c){
-  if(S.filasErro){c.appendChild(el('div','vazio',S.filasErro));return;}
+  if(S.filasErro){vazioErro(c,S.filasErro,carregarFilas);return;}
   var d=(S.filas||[]);var p=el('p','hint','Mensagens que a Bia guardou porque a janela do WhatsApp da pessoa estava fechada. Ao limpar, uma cópia fica 7 dias e a ação entra no histórico.');p.style.marginBottom='14px';c.appendChild(p);
   if(!d.length){c.appendChild(el('div','vazio','Nenhuma fila com mensagem agora.'));return;}
   var gr=el('div','grid');c.appendChild(gr);
@@ -1047,13 +1050,13 @@ function telaFilas(c){
 }
 function abrirLimpar(f,m){painel(m?'Remover esta mensagem':'Limpar a fila inteira',function(b){b.appendChild(el('p','hint',m?m.texto:(f.total+' mensagens de '+(f.nome||f.fone)+' serão removidas.')));},m?'Remover':'Limpar tudo',function(motivo){return api('POST','/filas/limpar',m?{fone:f.fone,ts:m.ts,motivo:motivo}:{fone:f.fone,todas:true,motivo:motivo});},'medio');}
 function telaCal(c0){var c=el('div','cols2e');c0.appendChild(c);var L=el('div'),R=el('div');c.appendChild(L);c.appendChild(R);
-  if(S.calErro){c.appendChild(el('div','vazio',S.calErro));return;}
+  if(S.calErro){vazioErro(c,S.calErro,carregarCal);return;}
   var p=el('p','hint','Fim de semana e feriados nacionais já ficam de folga sozinhos. Aqui você marca dias extras (ex.: recesso da equipe). Nesses dias vale a mesma regra de folga dos feriados: avisos de rotina ao time esperam o próximo dia útil.');p.style.marginBottom='14px';L.appendChild(p);
   var f=el('div','card form');f.style.gridTemplateColumns='repeat(2,minmax(0,1fr))';
   var d1=el('div');var l1=el('label',null,'Dia de folga');l1.htmlFor='calDia';d1.appendChild(l1);var i1=el('input');i1.id='calDia';i1.type='date';i1.min=S.calHoje||'';d1.appendChild(i1);f.appendChild(d1);
   var d2=el('div');var l2=el('label',null,'Motivo');l2.htmlFor='calMot';d2.appendChild(l2);var i2=el('input');i2.id='calMot';i2.type='text';i2.maxLength=200;i2.placeholder='Ex.: recesso da equipe';d2.appendChild(i2);f.appendChild(d2);
   var bt=el('button','btn','Marcar folga');bt.type='button';bt.disabled=S.eu.papel==='sdr';var er=el('div','erro');er.style.gridColumn='1/-1';
-  bt.onclick=async function(){er.textContent='';bt.disabled=true;var r=await api('POST','/calendario',{dia:i1.value,motivo:i2.value});bt.disabled=false;if(r.status===200){toast('Dia marcado como folga');await carregarCal();render();}else er.textContent=r.j.mensagem||('Erro '+r.status);};
+  bt.onclick=async function(){er.textContent='';bt.disabled=true;var r=await api('POST','/calendario',{dia:i1.value,motivo:i2.value});bt.disabled=false;if(r.status===200){toast('Dia marcado como folga');await carregarCal();render();}else er.textContent=r.j.mensagem||erroTxt(r);};
   var rw=el('div');rw.appendChild(bt);f.appendChild(rw);f.appendChild(er);L.appendChild(f);
   var sec=el('div','sec');sec.appendChild(el('h3',null,'Dias marcados'));R.appendChild(sec);
   if(!(S.cal||[]).length){R.appendChild(el('div','vazio','Nenhum dia extra marcado.'));return;}
@@ -1062,7 +1065,7 @@ function telaCal(c0){var c=el('div','cols2e');c0.appendChild(c);var L=el('div'),
     var b=el('button','btn ghost sm','Remover');b.type='button';b.disabled=S.eu.papel==='sdr';b.onclick=function(){painel('Remover dia de folga',function(bb){bb.appendChild(el('p','hint',pt[2]+'/'+pt[1]+'/'+pt[0]+' volta a ser dia normal.'));},'Remover',function(motivo){return api('POST','/calendario',{acao:'remover',dia:dia,motivo:motivo});},'medio');};r.appendChild(b);lst.appendChild(r);});
   R.appendChild(lst);
 }
-async function carregarAgentes(){/* 13/11: as métricas (só servem à aba Ana) NÃO seguram mais a lista de conversas: antes eram 2 chamadas em sequência e a tela ficava em 'Carregando as conversas...' até a mais lenta terminar */ var pm=api('GET','/agentes/metricas?dias=7').catch(function(){return {status:0,j:{}};});var r=await api('GET',S.aba==='agentes'?'/agentes':'/agentes?leve=1').catch(function(){return {status:0,j:{}};});var _aud0=S.ag&&S.ag.auditoria;S.ag=r.status===200&&r.j.agentes?r.j.agentes[0]:null;if(S.ag&&_aud0&&(!S.ag.auditoria||!S.ag.auditoria.length))S.ag.auditoria=_aud0;S.agErro=S.ag?'':((r.j&&r.j.mensagem)||('Erro '+r.status));if(S.ag){S.agCache=false;agGuardaCache(S.ag);atRefrescaLista();}pm.then(function(mt){S.agMet=mt.status===200&&mt.j&&mt.j.dias?mt.j.dias:(S.agMet||[]);if(S.aba==='agentes')renderSoon();});}
+async function carregarAgentes(){/* 13/11: as métricas (só servem à aba Ana) NÃO seguram mais a lista de conversas: antes eram 2 chamadas em sequência e a tela ficava em 'Carregando as conversas...' até a mais lenta terminar */ var pm=api('GET','/agentes/metricas?dias=7').catch(function(){return {status:0,j:{}};});var r=await api('GET',S.aba==='agentes'?'/agentes':'/agentes?leve=1').catch(function(){return {status:0,j:{}};});var _aud0=S.ag&&S.ag.auditoria;S.ag=r.status===200&&r.j.agentes?r.j.agentes[0]:null;if(S.ag&&_aud0&&(!S.ag.auditoria||!S.ag.auditoria.length))S.ag.auditoria=_aud0;S.agErro=S.ag?'':((r.j&&r.j.mensagem)||erroTxt(r));if(S.ag){S.agCache=false;agGuardaCache(S.ag);atRefrescaLista();}pm.then(function(mt){S.agMet=mt.status===200&&mt.j&&mt.j.dias?mt.j.dias:(S.agMet||[]);if(S.aba==='agentes')renderSoon();});}
 var AG_MODOS={off:'Desligado',sombra:'Sombra (só registra, não envia)',ao_vivo:'Ao vivo (responde de verdade)'};
 var AG_ETAPAS={novo:'Novo',perguntou_segmento:'Perguntou o segmento',perguntou_cnpj:'Perguntou o CNPJ',perguntou_faturamento:'Perguntou o faturamento',perguntou_decisor:'Perguntou se decide',pediu_contato_decisor:'Pediu contato do decisor',convite:'Convidou para falar com o vendedor',aguardando_humano:'Aguardando o vendedor',encerrado:'Encerrado',confirmando_empresa:'Confirmando a empresa',apresentando:'Apresentando o projeto'};
 var AG_CAMPOS=[['qualificacao.minimoFarmacia','Público ideal: farmácia (R$)',1],['qualificacao.minimoSupermercado','Público ideal: supermercado (R$)',1],['ritmo.inicial','Contatos novos por dia (início)',1],['ritmo.teto','Teto de contatos por dia',1],['cadencia.maxContatos','Máximo de contatos por lead',1],['cadencia.janelaDias','Janela da cadência (dias)',1],['cadencia.horaIni','Acompanhamento: a partir de (hora)',1],['cadencia.horaFim','Acompanhamento: até (hora)',1],['humano.debounceMs','Espera para juntar mensagens (ms)',1],['qualificacao.apresentacaoTurnosMax','Apresentação do projeto: máximo de mensagens',1],['qualificacao.capitulosPorTurno','Apresentação: assuntos por mensagem',1],['identidade.janelaH','Mesma pessoa em dois números: janela de comparação (horas)',1],['identidade.ativoH','Mesma pessoa em dois números: horas de silêncio para reabrir a abertura',1]];
@@ -1070,9 +1073,13 @@ var AG_CAMPOS=[['qualificacao.minimoFarmacia','Público ideal: farmácia (R$)',1
 var AG_BOOLS=[['qualificacao.perguntarFaturamento','Perguntar o faturamento ao lead','Desligado (de fábrica): a Ana não pergunta quanto a loja fatura. Se o lead disser sozinho, ela guarda sem comentar.',false],['qualificacao.lojasSoRedes','Perguntar quantas lojas só na campanha de Redes','Ligado (de fábrica): a pergunta de lojas só existe para quem veio da campanha de Redes. Nos outros, a Ana presume uma loja.',true],['identidade.ligada','Reconhecer a mesma pessoa em dois números','Ligado (de fábrica): quando alguém se cadastra com um número e chama de outro, a Ana liga os dois cadastros.',true],['identidade.alerta','Avisar o Robert quando achar a mesma pessoa','Ligado (de fábrica): manda o aviso com os dois números para confirmar.',true],['identidade.central','Mostrar o aviso da mesma pessoa na Central','Ligado (de fábrica): aparece o aviso e o link para a outra conversa.',true],['identidade.cancelarAbertura','Cancelar a abertura fria do número do cadastro (só com sinal forte)','Ligado (de fábrica): evita mandar a primeira mensagem para quem já está conversando em outro número.',true]];
 var AG_GRUPOS=[['Conversa e apresentação do projeto',['qualificacao.apresentacaoTurnosMax','qualificacao.capitulosPorTurno','qualificacao.perguntarFaturamento','qualificacao.lojasSoRedes']],['Público ideal','qualificacao.minimoFarmacia,qualificacao.minimoSupermercado'.split(',')],['Ritmo e acompanhamento',['ritmo.inicial','ritmo.teto','cadencia.maxContatos','cadencia.janelaDias','cadencia.horaIni','cadencia.horaFim','humano.debounceMs']],['Mesma pessoa em dois números (formulário e WhatsApp)',['identidade.ligada','identidade.alerta','identidade.central','identidade.cancelarAbertura','identidade.janelaH','identidade.ativoH']]];
 function agValorBool(cfg,k){var v=agGet(cfg,k[0]);return v===undefined||v===null?k[3]:v!==false;}
+// 19/11: valor ausente nunca vira 'undefined'/'null' na tela: mostra travessão.
+// 19/11: 'rep' é gíria interna; o time lê 'representante' (vale para textos que vêm do servidor).
+function ptRep(t){return typeof t==='string'?t.replace(/\breps\b/g,'representantes').replace(/\brep\b/g,'representante').replace(/\bReps\b/g,'Representantes').replace(/\bRep\b/g,'Representante'):t;}
+function agTxt(v){return v==null||v===''||(typeof v==='number'&&isNaN(v))?'—':String(v);}
 function agGet(o,c){return c.split('.').reduce(function(a,k){return a==null?a:a[k];},o);}
 function telaAgentes(c){
-  if(S.agErro||!S.ag){c.appendChild(el('div','vazio',S.agErro||'Carregando o agente...'));return;}
+  if(S.agErro){vazioErro(c,S.agErro,carregarAgentes);return;}if(!S.ag){c.appendChild(el('div','vazio','Carregando o agente...'));return;}
   var a=S.ag,cfg=a.config||{},sa=a.saude||{},pode=S.eu.papel!=='sdr',robert=S.eu.papel==='robert';
   var modoEf=sa.killSwitch?'off':(cfg.modo||'off');
   var ban=el('div','aviso');ban.setAttribute('data-sep','ana');ban.style.cssText='display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px';var bt=el('span',null,'Esta tela é só da Ana, a assistente que conversa com os leads novos no WhatsApp. Os controles da Bia e das automações (cadência, Motor Proativo, avisos, filas) ficam na aba Bia e automações.');bt.style.flex='1 1 280px';ban.appendChild(bt);var bir=el('button','btn ghost sm','Ir para Bia e automações');bir.type='button';bir.onclick=function(){ir('estado');};ban.appendChild(bir);c.appendChild(ban);
@@ -1088,9 +1095,9 @@ function telaAgentes(c){
   var sc=el('div','sec');sc.appendChild(el('h3',null,'Controles da Ana'));L.appendChild(sc);var cf=el('div','card list');
   var agRot={};AG_CAMPOS.forEach(function(k){agRot[k[0]]=k;});AG_BOOLS.forEach(function(k){agRot[k[0]]=k;});
   AG_GRUPOS.forEach(function(g){var gh=el('div','row-i');gh.setAttribute('data-ag-grupo',g[0]);var gt=el('div','t');var gb=el('b',null,g[0]);gt.appendChild(gb);gh.appendChild(gt);gh.style.background='rgba(112,75,155,.08)';cf.appendChild(gh);
-    g[1].forEach(function(ch){var k=agRot[ch];if(!k)return;var r=el('div','row-i');var t=el('div','t');t.appendChild(document.createTextNode(k[1]));var bo=typeof k[3]==='boolean';t.appendChild(el('small',null,bo?(agValorBool(cfg,k)?'Ligado':'Desligado'):String(agGet(cfg,k[0]))));if(bo&&k[2])t.appendChild(el('small',null,k[2]));r.appendChild(t);cf.appendChild(r);});});
+    g[1].forEach(function(ch){var k=agRot[ch];if(!k)return;var r=el('div','row-i');var t=el('div','t');t.appendChild(document.createTextNode(k[1]));var bo=typeof k[3]==='boolean';t.appendChild(el('small',null,bo?(agValorBool(cfg,k)?'Ligado':'Desligado'):agTxt(agGet(cfg,k[0]))));if(bo&&k[2])t.appendChild(el('small',null,k[2]));r.appendChild(t);cf.appendChild(r);});});
   var d=cfg.destino||{};var r2=el('div','row-i');var t2=el('div','t');t2.appendChild(document.createTextNode('Quem recebe o lead qualificado'));t2.appendChild(el('small',null,(d.sdrNome||'')+' · '+(d.sdrFone||'')));r2.appendChild(t2);cf.appendChild(r2);L.appendChild(cf);
-  var be=el('button','btn ghost sm','Editar configuração');be.type='button';be.style.marginTop='10px';be.disabled=!pode;be.onclick=function(){var ins={};var insB={};var inLib,inVoz,inVN,inTx;painel('Editar configuração da Ana',function(b){b.appendChild(el('p','hint','Só os campos que você mudar são enviados. Ninguém é descartado por faturamento: os valores de público ideal só marcam o perfil.'));AG_CAMPOS.forEach(function(k){var l=el('label',null,k[1]);l.htmlFor='ag_'+k[0];b.appendChild(l);var i=el('input');i.id='ag_'+k[0];i.type='number';i.value=agGet(cfg,k[0]);ins[k[0]]=i;b.appendChild(i);});AG_BOOLS.forEach(function(k){var l=el('label',null,k[1]);l.htmlFor='agb_'+k[0];b.appendChild(l);var sl=el('select');sl.id='agb_'+k[0];[['true','Ligado'],['false','Desligado']].forEach(function(o){var op=el('option',null,o[1]);op.value=o[0];if(String(agValorBool(cfg,k))===o[0])op.selected=true;sl.appendChild(op);});insB[k[0]]=sl;b.appendChild(sl);b.appendChild(el('p','hint',k[2]));});var l1=el('label',null,'Telefones liberados para resposta ao vivo (só eles; deixe vazio para todos). Ex.: 5562999990000, 5562988887777');l1.htmlFor='ag_lib';b.appendChild(l1);inLib=el('input');inLib.id='ag_lib';inLib.type='text';inLib.value=(cfg.liberados||[]).join(', ');b.appendChild(inLib);var l2=el('label',null,'Resposta em áudio (quando o lead manda áudio)');l2.htmlFor='ag_voz';b.appendChild(l2);inVoz=el('select');inVoz.id='ag_voz';[['true','Ligada'],['false','Desligada']].forEach(function(o){var op=el('option',null,o[1]);op.value=o[0];if(String(!(cfg.voz&&cfg.voz.ligada===false))===o[0])op.selected=true;inVoz.appendChild(op);});b.appendChild(inVoz);var l3=el('label',null,'Voz da Ana (Google Chirp 3 HD, vozes femininas)');l3.htmlFor='ag_vn';b.appendChild(l3);inVN=el('select');inVN.id='ag_vn';['Aoede','Callirrhoe','Kore','Leda','Zephyr','Despina','Erinome','Laomedeia','Achernar','Autonoe','Gacrux','Pulcherrima','Sulafat','Vindemiatrix'].forEach(function(n){var op=el('option',null,n);op.value='pt-BR-Chirp3-HD-'+n;if((cfg.voz&&cfg.voz.voz||'pt-BR-Chirp3-HD-Aoede')===op.value)op.selected=true;inVN.appendChild(op);});b.appendChild(inVN);var l4=el('label',null,'Velocidade da voz (0,8 a 1,3; 1,05 é o padrão)');l4.htmlFor='ag_tx';b.appendChild(l4);inTx=el('input');inTx.id='ag_tx';inTx.type='number';inTx.step='0.05';inTx.min='0.8';inTx.max='1.3';inTx.value=(cfg.voz&&cfg.voz.taxa)||1.05;b.appendChild(inTx);},'Salvar',function(motivo){var m={};var vnv=inVN.value;if(vnv!==((cfg.voz&&cfg.voz.voz)||'pt-BR-Chirp3-HD-Aoede'))m['voz.voz']=vnv;var txv=Number(inTx.value);if(inTx.value!==''&&txv!==((cfg.voz&&cfg.voz.taxa)||1.05))m['voz.taxa']=txv;var lib=inLib.value.split(/[,\s]+/).filter(Boolean);if(lib.join(',')!==(cfg.liberados||[]).join(','))m.liberados=lib;var vz=inVoz.value==='true';if(vz!==!(cfg.voz&&cfg.voz.ligada===false))m['voz.ligada']=vz;AG_CAMPOS.forEach(function(k){var v=Number(ins[k[0]].value);if(ins[k[0]].value!==''&&v!==agGet(cfg,k[0]))m[k[0]]=v;});AG_BOOLS.forEach(function(k){var v=insB[k[0]].value==='true';if(v!==agValorBool(cfg,k))m[k[0]]=v;});if(!Object.keys(m).length)return Promise.resolve({status:422,j:{mensagem:'Você não mudou nenhum valor.'}});return api('POST','/agentes/config',{mudancas:m,motivo:motivo});},'medio');};L.appendChild(be);
+  var be=el('button','btn ghost sm','Editar configuração');be.type='button';be.style.marginTop='10px';be.disabled=!pode;be.onclick=function(){var ins={};var insB={};var inLib,inVoz,inVN,inTx;painel('Editar configuração da Ana',function(b){b.appendChild(el('p','hint','Só os campos que você mudar são enviados. Ninguém é descartado por faturamento: os valores de público ideal só marcam o perfil.'));AG_CAMPOS.forEach(function(k){var l=el('label',null,k[1]);l.htmlFor='ag_'+k[0];b.appendChild(l);var i=el('input');i.id='ag_'+k[0];i.type='number';i.value=agGet(cfg,k[0])==null?'':agGet(cfg,k[0]);ins[k[0]]=i;b.appendChild(i);});AG_BOOLS.forEach(function(k){var l=el('label',null,k[1]);l.htmlFor='agb_'+k[0];b.appendChild(l);var sl=el('select');sl.id='agb_'+k[0];[['true','Ligado'],['false','Desligado']].forEach(function(o){var op=el('option',null,o[1]);op.value=o[0];if(String(agValorBool(cfg,k))===o[0])op.selected=true;sl.appendChild(op);});insB[k[0]]=sl;b.appendChild(sl);b.appendChild(el('p','hint',k[2]));});var l1=el('label',null,'Telefones liberados para resposta ao vivo (só eles; deixe vazio para todos). Ex.: 5562999990000, 5562988887777');l1.htmlFor='ag_lib';b.appendChild(l1);inLib=el('input');inLib.id='ag_lib';inLib.type='text';inLib.value=(cfg.liberados||[]).join(', ');b.appendChild(inLib);var l2=el('label',null,'Resposta em áudio (quando o lead manda áudio)');l2.htmlFor='ag_voz';b.appendChild(l2);inVoz=el('select');inVoz.id='ag_voz';[['true','Ligada'],['false','Desligada']].forEach(function(o){var op=el('option',null,o[1]);op.value=o[0];if(String(!(cfg.voz&&cfg.voz.ligada===false))===o[0])op.selected=true;inVoz.appendChild(op);});b.appendChild(inVoz);var l3=el('label',null,'Voz da Ana (Google Chirp 3 HD, vozes femininas)');l3.htmlFor='ag_vn';b.appendChild(l3);inVN=el('select');inVN.id='ag_vn';['Aoede','Callirrhoe','Kore','Leda','Zephyr','Despina','Erinome','Laomedeia','Achernar','Autonoe','Gacrux','Pulcherrima','Sulafat','Vindemiatrix'].forEach(function(n){var op=el('option',null,n);op.value='pt-BR-Chirp3-HD-'+n;if((cfg.voz&&cfg.voz.voz||'pt-BR-Chirp3-HD-Aoede')===op.value)op.selected=true;inVN.appendChild(op);});b.appendChild(inVN);var l4=el('label',null,'Velocidade da voz (0,8 a 1,3; 1,05 é o padrão)');l4.htmlFor='ag_tx';b.appendChild(l4);inTx=el('input');inTx.id='ag_tx';inTx.type='number';inTx.step='0.05';inTx.min='0.8';inTx.max='1.3';inTx.value=(cfg.voz&&cfg.voz.taxa)||1.05;b.appendChild(inTx);},'Salvar',function(motivo){var m={};var vnv=inVN.value;if(vnv!==((cfg.voz&&cfg.voz.voz)||'pt-BR-Chirp3-HD-Aoede'))m['voz.voz']=vnv;var txv=Number(inTx.value);if(inTx.value!==''&&txv!==((cfg.voz&&cfg.voz.taxa)||1.05))m['voz.taxa']=txv;var lib=inLib.value.split(/[,\s]+/).filter(Boolean);if(lib.join(',')!==(cfg.liberados||[]).join(','))m.liberados=lib;var vz=inVoz.value==='true';if(vz!==!(cfg.voz&&cfg.voz.ligada===false))m['voz.ligada']=vz;AG_CAMPOS.forEach(function(k){var v=Number(ins[k[0]].value);if(ins[k[0]].value!==''&&v!==agGet(cfg,k[0]))m[k[0]]=v;});AG_BOOLS.forEach(function(k){var v=insB[k[0]].value==='true';if(v!==agValorBool(cfg,k))m[k[0]]=v;});if(!Object.keys(m).length)return Promise.resolve({status:422,j:{mensagem:'Você não mudou nenhum valor.'}});return api('POST','/agentes/config',{mudancas:m,motivo:motivo});},'medio');};L.appendChild(be);
   // análise dos últimos dias (contadores do agente)
   var sm=el('div','sec');sm.appendChild(el('h3',null,'Análise dos últimos 7 dias'));L.appendChild(sm);var mt=S.agMet||[];
   if(mt.length){var hj=mt[0];var kp=el('div','kpis4');[['Mensagens hoje',hj.mensagens||0],['Respostas',hj.turnos||0],['Qualificados',hj.qualificados||0],['Escalados',hj.escalados||0]].forEach(function(k){var d=el('div','k4');d.appendChild(el('b',null,String(k[1])));d.appendChild(el('small',null,k[0]));kp.appendChild(d);});L.appendChild(kp);}
@@ -1657,7 +1664,7 @@ function telaAtend(c){
   var hm0=(location.hash||'').match(/^#atendimento-(55\d{10,11})$/);if(hm0&&!AT.fone)AT.fone=hm0[1];
   if(AT.fone&&!AT.conv){var c0=atLerCacheConv(AT.fone);if(c0)AT.conv=atMontaConv(c0);atBuscarConversa();}   // 13/11: o histórico da conversa começa a carregar JÁ (antes só depois de a lista inteira chegar) e abre na hora com o que já foi visto
   if(!S.ag){var ca=agLerCache();if(ca){S.ag=ca;S.agCache=true;S.agErro='';}}   // abre na hora com a última lista vista neste navegador; a atualização chega em seguida
-  if(S.agErro||!S.ag){c.appendChild(el('div','vazio',S.agErro||'Carregando as conversas...'));return;}
+  if(S.agErro){vazioErro(c,S.agErro,carregarAgentes);return;}if(!S.ag){c.appendChild(el('div','vazio','Carregando as conversas...'));return;}
   var a=el('div','ax'+(AT.fone?' chatAberto':''));
   var tb=el('div','tcbar');tb.appendChild(el('span',null,'Tela cheia'));var tbs=el('button',null,'Sair da tela cheia');tbs.type='button';tbs.onclick=function(){atTelaCheia(false);};tb.appendChild(tbs);a.appendChild(tb);
   var l=el('div','lst');var lh=el('div','lh');var lt=el('div','lt');lt.appendChild(el('h3',null,'Conversas'));var ct=el('span','cnt');ct.id='atContagem';lt.appendChild(ct);
@@ -2052,6 +2059,7 @@ async function abrirConhecimento(){
 }
 function telaHist(c){
   var h=(S.hist||[]).filter(function(x){return casa((x.rotulo||'')+' '+x.chave+' '+(x.motivo||'')+' '+(x.quem||''));});
+  if(S.histErro&&!(S.hist||[]).length){vazioErro(c,S.histErro,carregarHist);return;}
   if(!h.length){c.appendChild(el('div','vazio','Nenhuma mudança registrada nos últimos 14 dias.'));return;}
   var tl=el('div','tl');
   h.forEach(function(x){var ev=el('div','card ev'+(x.desfeito?' des':''));var av=el('div','av',inicial(x.quem));ev.appendChild(av);
@@ -2243,7 +2251,7 @@ function hubGerenciar(){
     var corpo={v:HUB.cfg.v,cards:hubMontarOverrides(HUB.cards,roles.map(function(r){return r.id;}),efet,ocultos,(function(){var o={};roles.forEach(function(r){o[r.id]=r.areas;});return o;})())};
     ok.disabled=true;cx.disabled=true;ok.textContent='Salvando...';er.textContent='';var r;try{r=await api('POST','/hub/config',corpo);}catch(e){r={status:0,j:{mensagem:'Falha de conexão.'}};}
     if(r.status===200&&r.j.ok){fecharModal();toast('Visibilidade salva e registrada.');await hubCarregar(true);}
-    else{ok.disabled=false;cx.disabled=false;ok.textContent='Salvar';er.textContent=(r.j&&(r.j.mensagem||r.j.rede))||('Erro '+r.status);if(r.status===409)er.textContent+=' Feche e abra de novo.';}
+    else{ok.disabled=false;cx.disabled=false;ok.textContent='Salvar';er.textContent=(r.j&&(r.j.mensagem||r.j.rede))||erroTxt(r);if(r.status===409)er.textContent+=' Feche e abra de novo.';}
   };
   ac.appendChild(cx);ac.appendChild(ok);b.appendChild(ac);m.appendChild(b);m.classList.remove('hide');cx.focus();m.onkeydown=function(e){if(e.key==='Escape')fecharModal();};m.onclick=function(e){if(e.target===m)fecharModal();};
 }
@@ -2309,7 +2317,7 @@ async function igCarregar(){
     if(IG.estado!=='ok')IG.estado='carregando';
     var rs=await Promise.all([api('GET','/instagram/fila'),api('GET','/instagram/metricas')]);var f=rs[0],m=rs[1];
     if(f.status===200&&f.j&&f.j.ok){IG.itens=f.j.itens||[];IG.contagem=f.j.contagem||{};IG.hoje=f.j.hoje||'';IG.teto=f.j.teto||2;IG.euPosso=f.j.euPossoAprovar===true;IG.estado='ok';IG.erro='';IG.ult=Date.now();}
-    else if(IG.estado!=='ok'){IG.estado='erro';IG.erro=(f.j&&(f.j.mensagem||f.j.rede))||('Erro '+f.status);}else toast((f.j&&(f.j.mensagem||f.j.rede))||'Não consegui atualizar a fila do Instagram.');
+    else if(IG.estado!=='ok'){IG.estado='erro';IG.erro=(f.j&&(f.j.mensagem||f.j.rede))||erroTxt(f);}else toast((f.j&&(f.j.mensagem||f.j.rede))||'Não consegui atualizar a fila do Instagram.');
     if(m.status===200&&m.j&&m.j.metricas){IG.metricas=m.j.metricas;IG.exemplo=false;}
     else if(m.status===200){var s=await igSemente();if(s){IG.metricas=s;IG.exemplo=true;}}
     IG.carregando=null;if(S.aba==='instagram')igDesenhar();
@@ -2363,7 +2371,7 @@ function igDecidir(p,dec){
       var corpo={id:p.id,v:p.v,decisao:dec,comentario:com};if(dec==='aprovar')corpo.hash=p.hash;
       var r;try{r=await api('POST','/instagram/decisao',corpo);}catch(e){r={status:0,j:{mensagem:'Falha de conexão.'}};}
       if(r.status===200&&r.j.ok){igSubstituir(r.j.post);fecharModal();toast(dec==='aprovar'?'Aprovação registrada. A publicação segue pelo agente local.':'Decisão registrada.');igDesenhar();}
-      else{ok.disabled=false;cx.disabled=false;ok.textContent=rot;er.textContent=(r.j&&(r.j.mensagem||r.j.rede))||('Erro '+r.status);if(r.status===409){igCarregar();}}};
+      else{ok.disabled=false;cx.disabled=false;ok.textContent=rot;er.textContent=(r.j&&(r.j.mensagem||r.j.rede))||erroTxt(r);if(r.status===409){igCarregar();}}};
     ac.appendChild(cx);ac.appendChild(ok);b.appendChild(ac);
     var libera=null;var pv=dec==='aprovar'?b.querySelector('#igPrevAprov'):null;   // 19/11: Aprovar só libera depois de rolar até o fim do que a aprovação cobre (ou se tudo já cabe na tela)
     if(pv){pv.style.maxHeight='34vh';pv.style.overflowY='auto';var vistoFim=function(){return pv.scrollHeight-pv.scrollTop-pv.clientHeight<=4;};ok.disabled=true;var dica=el('div','hint','Role até o fim para liberar o botão Aprovar.');dica.id='igDicaRolar';b.insertBefore(dica,ac);libera=function(){if(ok.disabled&&vistoFim()){ok.disabled=false;dica.hidden=true;}};pv.addEventListener('scroll',libera);}
@@ -2390,7 +2398,7 @@ function igEditar(p){   // p===null: novo post
       if(p){corpo.id=p.id;corpo.v=p.v;corpo.links=p.links||[];}
       ok.disabled=true;cx.disabled=true;ok.textContent='Salvando...';er.textContent='';var r;try{r=await api('POST','/instagram/post',corpo);}catch(e){r={status:0,j:{mensagem:'Falha de conexão.'}};}
       if(r.status===200&&r.j.ok){igSubstituir(r.j.post);fecharModal();toast(r.j.aprovacaoInvalidada?'Salvo. A aprovação anterior caiu: o post voltou para a fila.':'Post salvo.');igDesenhar();}
-      else{ok.disabled=false;cx.disabled=false;ok.textContent='Salvar';er.textContent=(r.j&&(r.j.mensagem||r.j.rede))||('Erro '+r.status);if(r.status===409&&r.j&&r.j.erro==='versao_antiga')igCarregar();}};
+      else{ok.disabled=false;cx.disabled=false;ok.textContent='Salvar';er.textContent=(r.j&&(r.j.mensagem||r.j.rede))||erroTxt(r);if(r.status===409&&r.j&&r.j.erro==='versao_antiga')igCarregar();}};
     ac.appendChild(cx);ac.appendChild(ok);b.appendChild(ac);setTimeout(function(){campos.igTitulo.focus();},0);});
 }
 function igFila(box){
@@ -2477,7 +2485,7 @@ function telaUsuarios(c){
   function limparSenha(i){if(i){i.value='';i.type='password';}}
   async function enviar(corpo,caminho,er,bt,ok){er.textContent='';bt.disabled=true;var r=await api('POST',caminho||'/usuarios',corpo);bt.disabled=false;
     if(r.status===200&&r.j&&r.j.ok!==false){ok(r.j);return;}
-    er.textContent=(r.j&&r.j.mensagem)||(r.status===403?'Só o Robert gerencia usuários.':r.status===0?((r.j&&r.j.rede)||'Sem conexão com o servidor.'):('Erro '+r.status));}
+    er.textContent=(r.j&&r.j.mensagem)||(r.status===403?'Só o Robert gerencia usuários.':r.status===0?((r.j&&r.j.rede)||'Sem conexão com o servidor.'):erroTxt(r));}
   // ── confirmação na própria tela ──
   var A=USU.acao;
   if(A){var box=el('div','card form usuConf');box.id='usuConf';box.style.gridTemplateColumns='minmax(0,1fr)';var tt={senha:'Redefinir a senha de '+usuNome(A),papel:'Mudar o papel de '+usuNome(A),ativo:(A.ativo?'Reativar ':'Desativar ')+usuNome(A)}[A.tipo];
@@ -2560,14 +2568,14 @@ function usuPapeisSecao(c){
     sv.disabled=true;var rot=sv.textContent;sv.textContent='Salvando...';er.textContent='';
     var r;try{r=await api('POST','/papeis',{acao:'salvar',id:id,nome:nome,abas:abas,areas:areas,v:S.papeis.v});}catch(e){r={status:0,j:{mensagem:'Falha de conexão.'}};}
     if(r.status===200&&r.j.ok){PAP.editando=null;PAP.msg='';await carregarPapeis();toast('Papel salvo.');render();}
-    else{sv.disabled=false;sv.textContent=rot;er.style.color='';er.textContent=(r.j&&(r.j.mensagem||r.j.rede))||('Erro '+r.status);if(r.status===409)carregarPapeis();}
+    else{sv.disabled=false;sv.textContent=rot;er.style.color='';er.textContent=(r.j&&(r.j.mensagem||r.j.rede))||erroTxt(r);if(r.status===409)carregarPapeis();}
   };
   ac.appendChild(sv);if(ed){var cn=el('button','btn ghost','Cancelar edição');cn.type='button';cn.onclick=function(){PAP.editando=null;PAP.msg='';render();};ac.appendChild(cn);}f.appendChild(ac);box.appendChild(f);c.appendChild(box);
 }
 async function papRemover(p,bt){
   if(bt.getAttribute('data-confirma')!=='1'){bt.setAttribute('data-confirma','1');bt.textContent='Confirmar remoção';setTimeout(function(){if(bt.parentNode){bt.removeAttribute('data-confirma');bt.textContent='Remover';}},6000);return;}
   bt.disabled=true;var r;try{r=await api('POST','/papeis',{acao:'remover',id:p.id,v:S.papeis.v});}catch(e){r={status:0,j:{mensagem:'Falha de conexão.'}};}
-  if(r.status===200&&r.j.ok){await carregarPapeis();toast('Papel removido.');render();}else{bt.disabled=false;bt.removeAttribute('data-confirma');bt.textContent='Remover';toast((r.j&&(r.j.mensagem||r.j.rede))||('Erro '+r.status));}
+  if(r.status===200&&r.j.ok){await carregarPapeis();toast('Papel removido.');render();}else{bt.disabled=false;bt.removeAttribute('data-confirma');bt.textContent='Remover';toast((r.j&&(r.j.mensagem||r.j.rede))||erroTxt(r));}
 }
 /*PAPEIS-FIM*/
 
@@ -2578,7 +2586,7 @@ function telaConta(c){
   function campo(rot,id){var dd=el('div');var l=el('label',null,rot);l.htmlFor=id;dd.appendChild(l);var i=el('input');i.id=id;i.type='password';i.autocomplete='off';dd.appendChild(i);f.appendChild(dd);return i;}
   var a1=campo('Senha atual','cAtual'),n=campo('Nova senha (mínimo 10, letras e números)','cNova'),n2=campo('Repita a nova senha','cNova2');
   var bt=el('button','btn','Trocar senha');bt.type='button';var er=el('div','erro');er.style.gridColumn='1/-1';
-  bt.onclick=async function(){er.textContent='';if(n.value!==n2.value){er.textContent='As senhas novas não conferem.';return;}bt.disabled=true;var r=await api('POST','/acesso/senha',{atual:a1.value,nova:n.value});bt.disabled=false;if(r.status===200){toast('Senha trocada');a1.value=n.value=n2.value='';S.eu.trocarSenha=false;render();carregar(false);}else er.textContent=r.j.mensagem||('Erro '+r.status);};
+  bt.onclick=async function(){er.textContent='';if(n.value!==n2.value){er.textContent='As senhas novas não conferem.';return;}bt.disabled=true;var r=await api('POST','/acesso/senha',{atual:a1.value,nova:n.value});bt.disabled=false;if(r.status===200){toast('Senha trocada');a1.value=n.value=n2.value='';S.eu.trocarSenha=false;render();carregar(false);}else er.textContent=r.j.mensagem||erroTxt(r);};
   var rw=el('div');rw.appendChild(bt);f.appendChild(rw);f.appendChild(er);c.appendChild(f);
 }
 
@@ -2593,7 +2601,7 @@ function painel(titulo,corpoFn,textoBtn,acaoFn,risco){
   ok.onclick=async function(){var motivo=im.value.trim();if(motivo.length<5){er.textContent='Escreva o motivo (mínimo 5 letras).';im.focus();return;}
     if(ic&&ic.value.trim().toUpperCase()!=='CONFIRMO'){er.textContent='Digite CONFIRMO para continuar.';ic.focus();return;}
     ok.disabled=true;cx.disabled=true;ok.textContent='Aplicando...';er.textContent='';var r;try{r=await acaoFn(motivo,ic?ic.value.trim():'');}catch(e){r={status:0,j:{mensagem:'Falha de conexão.'}};}
-    if(r.status===200&&r.j.ok){fecharModal();toast('Mudança aplicada e registrada');if(S.aba==='filas')await carregarFilas();if(S.aba==='cal')await carregarCal();if(S.aba==='agentes')await carregarAgentes();await carregar(false);}else{ok.disabled=false;cx.disabled=false;ok.textContent=textoBtn;er.textContent=(r.j&&r.j.mensagem)||('Erro '+r.status);}};
+    if(r.status===200&&r.j.ok){fecharModal();toast('Mudança aplicada e registrada');if(S.aba==='filas')await carregarFilas();if(S.aba==='cal')await carregarCal();if(S.aba==='agentes')await carregarAgentes();await carregar(false);}else{ok.disabled=false;cx.disabled=false;ok.textContent=textoBtn;er.textContent=(r.j&&r.j.mensagem)||erroTxt(r);}};
   ac.appendChild(cx);ac.appendChild(ok);b.appendChild(ac);m.appendChild(b);m.classList.remove('hide');im.focus();m.onkeydown=function(e){if(e.key==='Escape')fecharModal();};m.onclick=function(e){if(e.target===m)fecharModal();};
 }
 function abrirConfirmacao(e,valor){var rot=function(v){return typeof v==='number'?String(v):(ROT_ESTADO[v]||String(v));};

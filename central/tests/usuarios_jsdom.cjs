@@ -25,7 +25,7 @@ async function mundo(opts = {}) {
   sb.carregarUsuarios = async () => { sb.S.usuarios = JSON.parse(JSON.stringify(m.usuarios)); };
   sb.render = () => { const c = document.getElementById("c"); c.textContent = ""; sb.telaUsuarios(c); };
   vm.createContext(sb);
-  vm.runInContext(["el", "fmtData"].map(fn).join("\n") + "\n" + bloco, sb);
+  vm.runInContext(["el", "fmtData", "erroTxt"].map(fn).join("\n") + "\n" + bloco, sb);
   await sb.carregarUsuarios(); sb.render();
   const $ = (s) => document.querySelector(s), $$ = (s) => [...document.querySelectorAll(s)];
   const set = (s, v) => { const e = $(s); e.value = v; };
