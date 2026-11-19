@@ -225,7 +225,7 @@ async function rodar(htmlTpl) {
   {
     const { w } = boot(html); await sleep(300);
     const V = (v, p) => w.eval(`_valorSuspeito(${v}, ${p})`);
-    [[52, 5200, true], [99, 0, true], [100, 0, true], [150, 0, true], [499, 0, true], [500, 0, false], [5200, 5200, false], [8000, 8000, false], [60000, 5200, true], [52000, 5200, true], [51999, 5200, false], [30000, 5200, false], [520, 5200, true], [521, 5200, false], [0, 5200, false], [-5, 100, false], [NaN, 100, false], [1e6, 0, false], [100, 100000, true], [99, 150, true], [100, 150, false]].forEach(([v, p, e], i) => eq('C2 suspeito ' + i + ' (' + v + ' / ' + p + ')', V(v, p), e));
+    [[52, 5200, true], [99, 0, true], [100, 0, true], [150, 0, true], [499, 0, true], [500, 0, false], [5200, 5200, false], [8000, 8000, false], [60000, 5200, true], [52000, 5200, true], [51999, 5200, false], [30000, 5200, false], [520, 5200, true], [521, 5200, false], [0, 5200, false], [-5, 100, false], [NaN, 100, false], [1e6, 0, false], [100, 100000, true], [99, 150, true], [100, 150, false], [1000001, 0, true], [1000000, 0, false], [99999999, 0, true], [5200000, 0, true], [5200000, 5000000, true], [1000000, 900000, false], [20000, 1000, true], [1100000, 1000000, true]].forEach(([v, p, e], i) => eq('C2 suspeito ' + i + ' (' + v + ' / ' + p + ')', V(v, p), e));
     w.close();
   }
   await ganhar({}, 102, 52, async c => {
@@ -454,6 +454,25 @@ async function rodar(htmlTpl) {
     const c = boot(html, { leads: () => { throw new Error('rede'); } }); await sleep(14000); const e = c.w.document.getElementById('error-banner');
     chk('K erro de rede: mensagem em português', /Não foi possível carregar os dados/.test(e.textContent)); chk('K erro de rede: botão "Tentar de novo"', !!e.querySelector('button') && /Tentar de novo/.test(e.textContent)); c.w.close();
   }
+
+  {   // funil indefinido: a página PERGUNTA (senão, com a trava ligada no servidor, o representante ficaria preso no 409)
+    const lista = () => F.carteira().concat([F.lead(201, { empresa: 'Negócio Sem Tipo', tipoNegocio: 'indefinido', funil: 'SDR Inbound', valorPotencial: 4000, bucket: 'aguardando' })]);
+    const mod = (l) => 0;
+    const c = boot(html, { leads: lista }); await sleep(450); c.w._confirmarComJanela = (k, o) => o.executar();
+    eq('L modo indefinido', c.w.eval("_tipoGanhoModo(_rawLeads.find(l=>l.row===201))"), 'indefinido'); eq('L cache velho sem tipo e sem funil_tag não pergunta', c.w.eval("_tipoGanhoModo({row:1})"), null);
+    clk(c.w, '.lead-card[data-row="201"] .lc-status-btn.ganho'); c.w.document.getElementById('sp-valor-201').value = '4000'; clk(c.w, '#sp-save-201'); await sleep(150);
+    const m = c.w.document.getElementById('tipo-modal'); chk('L quadro para tipo indefinido', m && /Não consegui identificar o tipo deste negócio/.test(m.textContent));
+    chk('L 2 botões grandes de peso igual', m && m.querySelectorAll('.tm-btn.igual').length === 2); chk('L nada enviado antes da resposta', c.posts.length === 0);
+    clk(c.w, '#tipo-modal [data-acao="venda_nova"]'); await sleep(200);
+    const p = c.posts.find(x => x.p === '/status'); eq('L indefinido + venda nova → envia (NÃO bloqueia)', p && p.body.tipoConfirmado, 'venda_nova'); c.w.close();
+  }
+  await (async () => {
+    const lista = () => [F.lead(201, { empresa: 'Negócio Sem Tipo', tipoNegocio: 'indefinido', valorPotencial: 4000 })];
+    const c = boot(html, { leads: lista }); await sleep(450); c.w._confirmarComJanela = (k, o) => o.executar();
+    clk(c.w, '.lead-card[data-row="201"] .lc-status-btn.ganho'); c.w.document.getElementById('sp-valor-201').value = '4000'; clk(c.w, '#sp-save-201'); await sleep(150);
+    clk(c.w, '#tipo-modal [data-acao="reposicao"]'); await sleep(200);
+    eq('L indefinido + reposição → envia reposicao', (c.posts.find(x => x.p === '/status') || { body: {} }).body.tipoConfirmado, 'reposicao'); c.w.close();
+  })();
 
   // ───────── I. texto simples / português ─────────
   {

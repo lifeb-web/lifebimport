@@ -48,6 +48,9 @@ const M = [
   ['outra aba não é ouvida', "if (e.key === REC_KEY) { try { _recMesclar(JSON.parse(e.newValue || '[]')); } catch (_) {} }", ""],
   ['rótulo abreviado volta', '<div class="sum-label">Aguardando</div>', '<div class="sum-label">Aguard.</div>'],
   ['preview do valor some', "el.textContent = r.ok ? 'Valor entendido: ' + fmtReais(r.valor) : r.erro;", "el.textContent = '';"],
+  ['tipo indefinido não pergunta', "if (tipo === 'indefinido') return 'indefinido';", ''],
+  ['indefinido + venda nova bloqueia', "modo !== 'jacomprou' && modo !== 'indefinido') return { tela: 'nada' };", "modo !== 'jacomprou') return { tela: 'nada' };"],
+  ['teto de R$ 1 milhão some', "if (v > 1000000) return true;", ''],
   ['banner Próximo some', "const _proxRow = _renderProximo(_allLeads);", "const _proxRow = null;"],
   ['reativação tratada como venda', "if (tipo === 'reativacao') return 'reativacao';", ''],
 ];

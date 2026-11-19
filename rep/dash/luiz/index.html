@@ -3753,6 +3753,7 @@ function _tipoGanhoModo(l) {
   const tipo = l.tipo_negocio || (l.funil_tag === 'reposicao' ? 'reposicao' : (l.funil_tag === 'reativacao75' ? 'reativacao' : ''));
   if (tipo === 'reposicao') return 'reposicao';
   if (tipo === 'reativacao') return 'reativacao';
+  if (tipo === 'indefinido') return 'indefinido';   // funil nulo/novo/SDR: o servidor não sabe; pergunta em vez de assumir venda
   if (l.ja_comprou === true) return 'jacomprou';
   return null;
 }
@@ -3764,6 +3765,13 @@ function _tipoModalHtml(modo, f, tela) {
     return fecha + '<span class="tm-selo alerta">Nada foi marcado</span><div class="tm-titulo" id="tm-titulo">Então não marque ganho aqui</div>' +
       '<div class="tm-nada">Este negócio é de ' + (modo === 'reativacao' ? 'REATIVAÇÃO' : 'REPOSIÇÃO') + ' de um cliente que já comprou. Se for uma venda nova (outro cliente ou outro assunto), avise o escritório para abrir o negócio certo.</div>' + fatos +
       '<button type="button" class="tm-btn sim" data-acao="entendi">Entendi</button>';
+  }
+  if (modo === 'indefinido') {
+    return fecha + '<span class="tm-selo alerta">Atenção</span><div class="tm-titulo" id="tm-titulo">Não consegui identificar o tipo deste negócio</div>' +
+      '<div class="tm-sub">Para o ganho não ser contado errado, diga o que é:</div>' + fatos +
+      '<div class="tm-pergunta">Este ganho é uma reposição ou uma venda nova?</div>' +
+      '<button type="button" class="tm-btn igual" data-acao="reposicao">É reposição (cliente que já comprou)</button>' +
+      '<button type="button" class="tm-btn igual" data-acao="venda_nova">É venda nova</button>';
   }
   if (modo === 'jacomprou') {
     return fecha + '<span class="tm-selo alerta">Atenção</span><div class="tm-titulo" id="tm-titulo">Este cliente já comprou antes</div>' +
@@ -3817,7 +3825,7 @@ function _perguntarTipoGanho(l, valor) {
   const f = { cliente: toTitleCase((l.empresa || l.nome || '').trim()) || 'Cliente', valor: fmtReais(valor), data: _dataHojeBR() };
   return _quadro(tela => _tipoModalHtml(modo, f, tela), (a, tela) => {
     if (a === 'entendi') return { resolve: 'bloqueado' };
-    if (a === 'venda_nova' && modo !== 'jacomprou') return { tela: 'nada' };   // reposição dita "venda nova": nada é gravado
+    if (a === 'venda_nova' && modo !== 'jacomprou' && modo !== 'indefinido') return { tela: 'nada' };   // reposição dita "venda nova": nada é gravado
     return { resolve: a };
   });
 }
@@ -3825,6 +3833,7 @@ function _perguntarTipoGanho(l, valor) {
 function _valorSuspeito(valor, pot) {
   const v = Number(valor) || 0, p = Number(pot) || 0;
   if (!(v > 0)) return false;
+  if (v > 1000000) return true;   // acima de R$ 1.000.000 sempre pergunta (com ou sem estimado)
   if (p > 0) return v < 100 || v * 10 <= p || v >= p * 10;
   return v < 500;   // sem valor estimado antes: abaixo de R$ 500 também pergunta
 }
