@@ -77,10 +77,12 @@ const linha = (W, u) => W.$(`tr[data-usuario="${u}"]`);
     ok(/pelo menos 10/.test(await tenta("maria", "curta1")), "senha curta"); ok(/letras e números/.test(await tenta("maria", "somenteletrasaqui")), "só letras"); ok(/letras e números/.test(await tenta("maria", "1234567890123")), "só números");
     ok(/letras e números/.test(await tenta("maria", "aaaaaaaaaaaa")), "repetida (sem número): mesma mensagem do servidor"); ok(/longa demais/.test(await tenta("maria", "a1" + "x".repeat(130))), "longa demais");
     ok(/já existe/.test(await tenta("FELIPE", "Senha2026forte")), "usuário que já existe (sem diferença de maiúscula) é barrado: não sobrescreve por engano");
+    ok(/já existe/.test(await tenta("  Félipe ", "Senha2026forte")), "com acento e espaços também é o mesmo usuário (normaliza como o servidor)"); ok(/já existe/.test(await tenta("fe lipe", "Senha2026forte")), "caracteres que o servidor descarta também normalizam");
+    ok(/pelo menos 3/.test(await tenta("é!", "Senha2026forte")), "usuário que vira vazio na normalização é barrado");
     eq(W.m.chamadas.length, 0, "nenhuma chamada ao servidor com dado inválido"); }
   // ---- 5. criar SDR (fluxo feliz) ----
   { const W = await mundo(); W.set("#uUsuario", " Maria.Souza@x.com "); W.set("#uNome", "Maria Souza"); await W.clica("#uSenhaGerar"); const s = W.$("#uSenha").value; await W.clica("#uCriar");
-    eq(W.m.chamadas.length, 1, "uma chamada"); const c = W.m.chamadas[0]; ok(c.metodo === "POST" && c.caminho === "/usuarios", "POST /usuarios"); eq([c.corpo.usuario, c.corpo.nome, c.corpo.papel, c.corpo.senha], ["Maria.Souza@x.com", "Maria Souza", "sdr", s], "corpo com papel SDR padrão");
+    eq(W.m.chamadas.length, 1, "uma chamada"); const c = W.m.chamadas[0]; ok(c.metodo === "POST" && c.caminho === "/usuarios", "POST /usuarios"); eq([c.corpo.usuario, c.corpo.nome, c.corpo.papel, c.corpo.senha, c.corpo.criar], ["Maria.Souza@x.com", "Maria Souza", "sdr", s, true], "corpo com papel SDR padrão e criar:true");
     ok(W.m.toasts.some((t) => /Usuário criado/.test(t) && /troca a senha/.test(t)), "mensagem de sucesso em português");
     ok(!!linha(W, "maria.souza@x.com"), "linha nova na lista"); ok(W.$("#uUsuario").value === "" && W.$("#uNome").value === "" && W.$("#uSenha").value === "", "campos limpos");
     ok(W.$("#uSenha").type === "password", "senha volta a ficar escondida"); ok(W.$("#uPapel").value === "sdr", "papel volta ao padrão");
@@ -92,6 +94,7 @@ const linha = (W, u) => W.$(`tr[data-usuario="${u}"]`);
   { const W = await mundo({ resp: (m, c) => (c === "/usuarios" ? { status: 422, j: { ok: false, mensagem: "Use letras e números na senha." } } : null) }); W.set("#uUsuario", "pessoa"); W.set("#uSenha", "Senha2026forte"); await W.clica("#uCriar");
     ok(W.$("#uErro").textContent === "Use letras e números na senha.", "mostra a mensagem do servidor"); ok(!W.$("#uCriar").disabled, "botão volta a funcionar"); ok(W.$("#uSenha").value === "Senha2026forte", "em erro, mantém o que foi digitado"); }
   for (const [st, esp] of [[403, /Só o Robert/], [500, /Erro 500/], [0, /Sem conexão/]]) { const W = await mundo({ resp: () => ({ status: st, j: st === 0 ? { rede: "Sem conexão com o servidor. Confira a internet." } : {} }) }); W.set("#uUsuario", "pessoa"); W.set("#uSenha", "Senha2026forte"); await W.clica("#uCriar"); ok(esp.test(W.$("#uErro").textContent), "erro " + st + " -> " + W.$("#uErro").textContent); }
+  { const W = await mundo({ resp: (m, c) => (c === "/usuarios" ? { status: 409, j: { ok: false, erro: "usuario_ja_existe", mensagem: "Esse usuário já existe. Para trocar a senha use Redefinir senha na lista." } } : null) }); W.set("#uUsuario", "novinho"); W.set("#uSenha", "Senha2026forte"); await W.clica("#uCriar"); ok(/já existe/.test(W.$("#uErro").textContent), "409 usuario_ja_existe do servidor aparece na tela"); }
   // ---- 7. redefinir senha ----
   { const W = await mundo(); ok(!W.$("#usuConf"), "sem confirmação aberta no início");
     await W.clica(linha(W, "felipe").querySelector(".usuRed")); ok(!!W.$("#usuConf"), "abre o painel de confirmação"); ok(/Redefinir a senha de Felipe/.test(W.$("#usuConf").textContent), "título com o nome"); ok(/trocar/.test(W.$("#usuConf").textContent), "avisa que a pessoa troca no próximo acesso");
@@ -100,7 +103,7 @@ const linha = (W, u) => W.$(`tr[data-usuario="${u}"]`);
     W.set("#uRedSenha", "fraca1"); await W.clica("#usuConfOk"); ok(/pelo menos 10/.test(W.$("#usuConfErro").textContent), "senha fraca barrada no cliente");
     W.set("#uRedSenha", "somenteletrasaqui"); await W.clica("#usuConfOk"); ok(/letras e números/.test(W.$("#usuConfErro").textContent), "só letras barrada"); eq(W.m.chamadas.length, 0, "nada enviado com senha fraca");
     await W.clica("#uRedSenhaGerar"); const s = W.$("#uRedSenha").value; eq(W.copias, [s], "redefinir: gera e copia"); ok(W.$("#uRedSenha").type === "text", "visível ao gerar");
-    await W.clica("#usuConfOk"); eq(W.m.chamadas.length, 1, "uma chamada"); eq(W.m.chamadas[0].corpo, { usuario: "felipe", nome: "Felipe", papel: "sdr", senha: s }, "corpo: mantém nome e papel e leva a senha nova");
+    await W.clica("#usuConfOk"); eq(W.m.chamadas.length, 1, "uma chamada"); eq(W.m.chamadas[0].corpo, { usuario: "felipe", senha: s }, "corpo: SÓ usuário e senha (não leva papel nem nome, para não reverter mudança de outra aba)");
     ok(!W.$("#usuConf"), "painel fecha"); ok(W.m.toasts.some((t) => /Senha de Felipe redefinida/.test(t) && /troca no próximo acesso/.test(t)), "toast claro"); ok(!W.document.documentElement.outerHTML.includes(s), "senha redefinida some do DOM"); ok(!W.m.toasts.some((t) => t.includes(s)), "e do toast");
     ok(W.$("#uRedSenha") === null, "campo da senha não existe mais"); }
   { const W = await mundo(); await W.clica(linha(W, "felipe").querySelector(".usuRed")); await W.clica("#usuConfCancelar"); ok(!W.$("#usuConf"), "cancelar fecha"); eq(W.m.chamadas.length, 0, "cancelar não chama o servidor"); }
@@ -108,7 +111,7 @@ const linha = (W, u) => W.$(`tr[data-usuario="${u}"]`);
   { // senha do admin e do robert (outra pessoa) também redefine, mantendo o papel
     const W = await mundo({ usuarios: [{ usuario: "eu", nome: "Eu", papel: "robert", ativo: true }, { usuario: "adm", nome: "Adm", papel: "admin", ativo: true }, { usuario: "socio", nome: "Sócio", papel: "robert", ativo: true }] }); W.sb.S.eu.usuario = "eu";
     await W.sb.carregarUsuarios(); W.sb.render(); for (const u of ["adm", "socio"]) { await W.clica(linha(W, u).querySelector(".usuRed")); W.set("#uRedSenha", "Senha2026forte"); await W.clica("#usuConfOk"); }
-    eq(W.m.chamadas.map((c) => c.corpo.papel), ["admin", "robert"], "redefinir mantém o papel de cada um"); }
+    ok(W.m.chamadas.length === 2 && W.m.chamadas.every((c) => !("papel" in c.corpo) && !("nome" in c.corpo) && c.corpo.senha), "redefinir de admin e de robert: sem papel no corpo"); }
   // ---- 8. mudar papel ----
   { const W = await mundo(); const sel = linha(W, "felipe").querySelector(".usuPapelSel"); sel.value = "admin"; sel.dispatchEvent(new W.win.Event("change")); await tick();
     ok(/Mudar o papel de Felipe/.test(W.$("#usuConf").textContent) && /De SDR para Administrador/.test(W.$("#usuConf").textContent), "pede confirmação mostrando de/para"); eq(W.m.chamadas.length, 0, "ainda não chamou");
@@ -144,6 +147,11 @@ const linha = (W, u) => W.$(`tr[data-usuario="${u}"]`);
   { const W = await mundo(); const f = W.sb.usuRegraSenha; const casos = [["", 1], ["curta1", 1], ["123456789", 1], ["abcdefghij", 1], ["1234567890", 1], ["aaaaaaaaaa", 1], ["a1aaaaaaaa", 0], ["Boa2026senha", 0], ["x".repeat(129) + "1", 1], ["a1" + "x".repeat(126), 0], ["senha com espaço 1", 0], ["Ação2026forte!", 0]];
     casos.forEach(([s, e]) => ok(!!f(s) === !!e, "regra de senha: " + JSON.stringify(s).slice(0, 20) + " erro=" + e));
     const srv = process.env.CENTRAL_ACESSO_JS || "/tmp/bia_usuarios/src/central_acesso.js"; if (fs.existsSync(srv)) { const { senhaForte } = await import(srv); casos.forEach(([s]) => ok(!!f(s) === !!senhaForte(s), "cliente e servidor concordam: " + JSON.stringify(s).slice(0, 20))); for (let i = 0; i < 100; i++) { const g = W.sb.usuGerarSenha(); ok(senhaForte(g) === null, "senha gerada passa no senhaForte do servidor: " + g); } } }
+  // ---- 14b. troca obrigatória exigida pelo SERVIDOR (403 trocar_senha) ----
+  ok(html.includes("r.status===403&&j&&j.erro==='trocar_senha'&&S.eu&&!S.eu.trocarSenha){S.eu.trocarSenha=true;S.aba='conta';"), "api(): 403 trocar_senha leva para Minha conta");
+  ok(html.includes("!(r.j&&r.j.erro==='trocar_senha')){S.erro="), "carregar(): 403 trocar_senha não vira 'Não consegui atualizar'");
+  ok(html.includes("S.eu.trocarSenha=false;render();carregar(false);"), "depois de trocar a senha, os dados são recarregados");
+  { const apiSrc = html.slice(html.indexOf("async function api(metodo"), html.indexOf("// 16/11: ação manual")); const dom = new JSDOM("<!doctype html><body></body>"); const sb = { S: { tok: "t", eu: { papel: "admin", trocarSenha: false }, aba: "visao" }, API: "x", fetch: async () => ({ status: 403, json: async () => ({ ok: false, erro: "trocar_senha" }) }), AbortController, setTimeout, clearTimeout, console, JSON, hashGravar() { sb.hg = 1; }, renderSoon() { sb.rs = 1; }, sessaoVenceu() { sb.sv = 1; }, fmtAte: () => "", window: {} }; vm.createContext(sb); vm.runInContext(apiSrc, sb); const r = await sb.api("GET", "/estado"); ok(r.status === 403 && sb.S.eu.trocarSenha === true && sb.S.aba === "conta" && sb.rs === 1 && !sb.sv, "api() real: 403 trocar_senha marca a conta e manda para a troca"); void dom; }
   // ---- 15. a página: chama as rotas certas com o cabeçalho certo ----
   ok(/function api\(|async function api\(/.test(html) && html.includes("h['x-central-token']=S.tok"), "api() manda x-central-token");
   ok(html.includes("api('GET','/usuarios')"), "carregarUsuarios lê GET /usuarios"); ok(!/fetch\(/.test(bloco), "a tela usa api() (nunca fetch solto)");

@@ -538,6 +538,7 @@ async function api(metodo,caminho,corpo,op){
   var j=null;try{j=await r.json();}catch(e){}
   if(tm)clearTimeout(tm);
   if(r.status===401&&S.tok&&caminho.indexOf('/acesso/')<0){sessaoVenceu('O servidor encerrou a sua sessão'+(S.ate?' (ela ia até '+fmtAte(S.ate)+')':'')+'. Entre de novo para continuar.');}
+  if(r.status===403&&j&&j.erro==='trocar_senha'&&S.eu&&!S.eu.trocarSenha){S.eu.trocarSenha=true;S.aba='conta';try{hashGravar('conta',null,true);}catch(e){}renderSoon();}   // 18/11: o SERVIDOR exige a troca da senha provisória (403 trocar_senha): manda para Minha conta
   return {status:r.status,j:j||{}};
 }
 // 16/11: ação manual da Central (assumir, devolver, pausar, retomar, passar ao Felipe...). Mostra "fazendo...", não deixa clicar duas vezes, tem tempo limite, confere no servidor se o efeito aconteceu quando a resposta se perde, repete UMA vez as ações que podem repetir e diz em português o que houve.
@@ -645,7 +646,7 @@ async function carregar(avisar,primeira){
   S.carregando=true;tickLive();var t0=performance.now();
   var pEstado=api('GET','/estado').then(function(r){
     if(r.status===200&&r.j.ok){if(Number(r.j.agora)&&Math.abs(Number(r.j.agora)-Date.now())<864e5)S.skew=Number(r.j.agora)-Date.now();S.dados=r.j;S.ult=Date.now();S.lat=Math.round(performance.now()-t0);S.cache=false;S.erro='';}
-    else if(r.status!==401){S.erro='Não consegui atualizar ('+r.status+')';}
+    else if(r.status!==401&&!(r.j&&r.j.erro==='trocar_senha')){S.erro='Não consegui atualizar ('+r.status+')';}
     renderSoon();}).catch(function(){S.erro='Sem conexão com o servidor.';renderSoon();});
   var pOut=[carregarSaude().then(renderSoon),carregarHist().then(renderSoon)];
   if(S.eu.papel!=='sdr')pOut.push(carregarFilas().then(renderSoon));
@@ -1935,6 +1936,7 @@ function usuGerarSenha(){var c=window.crypto;if(!c||!c.getRandomValues)return ''
   var a=[L.charAt(r(L.length)),N.charAt(r(N.length))];while(a.length<16)a.push(T.charAt(r(T.length)));
   for(var i=a.length-1;i>0;i--){var j=r(i+1),t=a[i];a[i]=a[j];a[j]=t;}return a.join('');}
 async function usuCopiar(txt){try{if(navigator.clipboard&&navigator.clipboard.writeText){await navigator.clipboard.writeText(txt);return true;}}catch(e){}return false;}
+function usuNorm(u){return String(u||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9._@-]/g,'').slice(0,64);}   // igual ao normUsuario do servidor
 function usuNome(u){return u.nome||u.usuario;}
 function telaUsuarios(c){
   if(!S.eu||S.eu.papel!=='robert')return;
@@ -1963,7 +1965,7 @@ function telaUsuarios(c){
     cn.onclick=function(){limparSenha(campoSenha);USU.acao=null;render();};
     bt.onclick=function(){
       if(A.tipo==='senha'){var e=usuRegraSenha(campoSenha.value);if(e){er.textContent=e;return;}var s=campoSenha.value;
-        enviar({usuario:A.usuario,nome:A.nome,papel:A.papelAtual,senha:s},'/usuarios',er,bt,function(){s='';limparSenha(campoSenha);USU.acao=null;toast('Senha de '+usuNome(A)+' redefinida. Ela troca no próximo acesso.');carregarUsuarios().then(function(){render();});});}
+        enviar({usuario:A.usuario,senha:s},'/usuarios',er,bt,function(){s='';limparSenha(campoSenha);USU.acao=null;toast('Senha de '+usuNome(A)+' redefinida. Ela troca no próximo acesso.');carregarUsuarios().then(function(){render();});});}
       else if(A.tipo==='papel')enviar({usuario:A.usuario,nome:A.nome,papel:A.papel},'/usuarios',er,bt,function(){USU.acao=null;toast('Papel de '+usuNome(A)+' agora é '+(PAPEL[A.papel]||A.papel)+'.');carregarUsuarios().then(function(){render();});});
       else enviar({usuario:A.usuario,ativo:!!A.ativo},'/usuarios/ativo',er,bt,function(){USU.acao=null;toast(usuNome(A)+(A.ativo?' reativado.':' desativado.'));carregarUsuarios().then(function(){render();});});};
     c.appendChild(box);}
@@ -1973,11 +1975,12 @@ function telaUsuarios(c){
   var sw=el('div');sw.style.gridColumn='span 2';var cs=senhaBlocos(sw,'uSenha');f.appendChild(sw);
   var bt2=el('button','btn','Criar usuário');bt2.type='button';bt2.id='uCriar';var er2=el('div','erro');er2.id='uErro';er2.setAttribute('role','alert');er2.style.gridColumn='1/-1';
   bt2.onclick=function(){var u=String(cu.value||'').trim();var e=null;
-    if(u.replace(/[^a-zA-Z0-9]/g,'').length<3)e='Use um usuário com pelo menos 3 letras ou números.';
-    else if(lista.some(function(x){return String(x.usuario).toLowerCase()===u.toLowerCase();}))e='Esse usuário já existe. Para trocar a senha use Redefinir senha na lista.';
+    var un=usuNorm(u);
+    if(un.replace(/[^a-z0-9]/g,'').length<3)e='Use um usuário com pelo menos 3 letras ou números.';
+    else if(lista.some(function(x){return usuNorm(x.usuario)===un;}))e='Esse usuário já existe. Para trocar a senha use Redefinir senha na lista.';
     else e=usuRegraSenha(cs.value);
     if(e){er2.textContent=e;return;}var s=cs.value;
-    enviar({usuario:u,nome:cn2.value,papel:cp.value,senha:s},'/usuarios',er2,bt2,function(){s='';cu.value=cn2.value='';limparSenha(cs);cp.value='sdr';var av=document.getElementById('uSenhaAviso');if(av)av.textContent='';toast('Usuário criado. Na primeira entrada a pessoa troca a senha.');carregarUsuarios().then(function(){render();});});};
+    enviar({usuario:u,nome:cn2.value,papel:cp.value,senha:s,criar:true},'/usuarios',er2,bt2,function(){s='';cu.value=cn2.value='';limparSenha(cs);cp.value='sdr';var av=document.getElementById('uSenhaAviso');if(av)av.textContent='';toast('Usuário criado. Na primeira entrada a pessoa troca a senha.');carregarUsuarios().then(function(){render();});});};
   var rw=el('div');rw.appendChild(bt2);f.appendChild(rw);f.appendChild(er2);c.appendChild(f);
   var dica=el('p','hint','A senha é você quem passa à pessoa (WhatsApp, pessoalmente). Ela é obrigada a trocar na primeira entrada. Papéis: SDR (somente leitura), Administrador (muda controles de risco baixo e médio), Robert (tudo).');dica.id='usuDica';dica.style.marginBottom='12px';c.appendChild(dica);
   // ── lista ──
@@ -2000,7 +2003,7 @@ function telaConta(c){
   function campo(rot,id){var dd=el('div');var l=el('label',null,rot);l.htmlFor=id;dd.appendChild(l);var i=el('input');i.id=id;i.type='password';i.autocomplete='off';dd.appendChild(i);f.appendChild(dd);return i;}
   var a1=campo('Senha atual','cAtual'),n=campo('Nova senha (mínimo 10, letras e números)','cNova'),n2=campo('Repita a nova senha','cNova2');
   var bt=el('button','btn','Trocar senha');bt.type='button';var er=el('div','erro');er.style.gridColumn='1/-1';
-  bt.onclick=async function(){er.textContent='';if(n.value!==n2.value){er.textContent='As senhas novas não conferem.';return;}bt.disabled=true;var r=await api('POST','/acesso/senha',{atual:a1.value,nova:n.value});bt.disabled=false;if(r.status===200){toast('Senha trocada');a1.value=n.value=n2.value='';S.eu.trocarSenha=false;render();}else er.textContent=r.j.mensagem||('Erro '+r.status);};
+  bt.onclick=async function(){er.textContent='';if(n.value!==n2.value){er.textContent='As senhas novas não conferem.';return;}bt.disabled=true;var r=await api('POST','/acesso/senha',{atual:a1.value,nova:n.value});bt.disabled=false;if(r.status===200){toast('Senha trocada');a1.value=n.value=n2.value='';S.eu.trocarSenha=false;render();carregar(false);}else er.textContent=r.j.mensagem||('Erro '+r.status);};
   var rw=el('div');rw.appendChild(bt);f.appendChild(rw);f.appendChild(er);c.appendChild(f);
 }
 
