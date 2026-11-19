@@ -832,7 +832,7 @@ function casaBusca(it, q) {
 })();
 // ---------- chamadas ----------
 // ---------- resiliência: rede com retry, disjuntor, caixa de saída, versão, relógio do servidor, telemetria ----------
-var PAGINA_VERSAO = '2026-11-19.7';
+var PAGINA_VERSAO = '2026-11-19.8';
 var REDE = { escala: 1, falhas: 0, ultima: 0, desvio: 0 };
 function dormir(ms) { return new Promise(function (r) { setTimeout(r, ms * REDE.escala); }); }
 function jitter(ms) { return ms * (0.5 + Math.random() * 0.5); }
@@ -872,7 +872,8 @@ async function api(path, corpo, ext, base, opt) {
       if (opt.keepalive) init.keepalive = true;
       if (corpo) { init.headers['Content-Type'] = 'application/json'; init.body = JSON.stringify(corpo); }
       if (opt.idem) init.headers['x-idem'] = opt.idem;
-      var agoraPf = function () { return (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now(); }; var tIni = agoraPf(); var r = await fetch((base || API) + path, init); var quebrado = false; try { perfRegistra(path, agoraPf() - tIni, r); } catch (ePf) { logFalha('l161 medir nunca atrapalha', ePf); /* medir nunca atrapalha */ }
+      var pathF = path; if (corpo) { var mC = /^\/lead\/(\d+)\/(campos|perdido|ganho|nota|tarefa|representante)/.exec(path); if (mC && S.closerIds[mC[1]]) { var hC = (S.hint && S.hint[mC[1]]) || {}; pathF = path + (path.indexOf('?') < 0 ? '?' : '&') + 'c=1&p=' + (hC.p || 0) + '&o=' + (hC.o || 0); } }
+      var agoraPf = function () { return (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now(); }; var tIni = agoraPf(); var r = await fetch((base || API) + pathF, init); var quebrado = false; try { perfRegistra(path, agoraPf() - tIni, r); } catch (ePf) { logFalha('l161 medir nunca atrapalha', ePf); /* medir nunca atrapalha */ }
       j = await r.json().catch(function () { quebrado = true; return {}; }); if (!j || typeof j !== 'object') { j = {}; quebrado = true; }
       j._status = r.status; try { if (j.erro === 'agendor_ocupado') faixa('agendor', 'O sistema está ocupado. Tentando de novo sozinho…', ''); else if (!quebrado && r.status < 500 && r.status !== 429) faixa('agendor', ''); } catch (e) { logFalha('l163 faixa de aviso é opcional; o resultado da chamada é tratado logo ', e); /* faixa de aviso é opcional; o resultado da chamada é tratado logo abaixo */ } if (quebrado) { j._quebrado = true; if (r.status < 300) { j.ok = false; j.mensagem = j.mensagem || 'O servidor respondeu algo que não entendi.'; } }
       try { if (r.headers && r.headers.get('x-idem-replay')) j._replay = true; } catch (e) { logFalha('l164 cabeçalho opcional: sem ele a resposta é tratada como nova', e); /* cabeçalho opcional: sem ele a resposta é tratada como nova */ }
@@ -2152,6 +2153,8 @@ var OBS_MAX = 150;
 function campoDe(k) { for (var i = 0; i < CAMPOS.length; i++) if (CAMPOS[i].k === k) return CAMPOS[i]; return null; }
 function pessoaPrincipal(lead) { var ps = (lead && lead.pessoas) || []; for (var i = 0; i < ps.length; i++) if (ps[i].principal === true) return ps[i]; return null; } // nunca usa a primeira pessoa como substituta
 function chavesPessoa(lead) { var p = pessoaPrincipal(lead); return p ? [{ k: 'p.' + p.id + '.nome', rot: 'Nome do contato', tipo: 'nome', tok: [] }, { k: 'p.' + p.id + '.whatsapp', rot: 'WhatsApp do contato', tipo: 'fone', tok: [] }, { k: 'p.' + p.id + '.cargo', rot: 'Cargo do contato', tipo: 'texto', tok: ['cargo'] }] : []; }
+var CAMPOS_CLOSER = ['e.nome', 'e.razao_social', 'e.end.cep', 'e.end.rua', 'e.end.numero', 'e.end.complemento', 'e.end.bairro', 'e.end.cidade', 'e.end.uf', 'n.observacao_sdr']; // 17.8: o servidor recusa CNPJ e as perguntas de qualificação no negócio do Arena
+function camposVisiveis(lead) { var t = todosCampos(lead); if (!lead || lead.funil !== 'closer') return t; return t.filter(function (f) { return CAMPOS_CLOSER.indexOf(f.k) >= 0 || /^p\./.test(f.k); }); }
 function todosCampos(lead) { return CAMPOS.concat(chavesPessoa(lead)); }
 function campoDeK(lead, k) { return campoDe(k) || chavesPessoa(lead).filter(function (c) { return c.k === k; })[0] || null; }
 function valorOrig(lead, k) {
@@ -2271,6 +2274,8 @@ function recomputarMostrar(L) { L.mostrar = todosCampos(L.lead).map(function (f)
 function limparEditsIguais(L) { Object.keys(L.edits).forEach(function (k) { var f = campoDeK(L.lead, k); if (f && normVal(k, L.edits[k]) === normVal(k, valorOrig(L.lead, k))) delete L.edits[k]; }); }
 
 // ---- leitura do lead: cache em memória (stale-while-revalidate), uma leitura por lead, pré-carga no toque ----
+S.closerIds = (function () { var o = {}; try { JSON.parse(lsGet('sh_closerids') || '[]').forEach(function (i) { o[i] = true; }); } catch (e) { logFalha('closerIds: sem memória guardada', e); } return o; })();
+function closerMarcaId(id) { if (!id || S.closerIds[id]) return; S.closerIds[id] = true; try { lsSet('sh_closerids', JSON.stringify(Object.keys(S.closerIds).slice(-150))); } catch (e) { logFalha('closerIds: guardar é conforto', e); } } // 17.8: negócio do Arena (raia Closer): as ações vão com ?c=1 (o servidor só aceita Arena do Felipe nesse modo)
 S.preProm = {}; S.inval = {}; S.qualif = {}; S.leadReal = 0; S.preUlt = 0;
 function invalidaLead(id) { delete S.pre[id]; delete S.preProm[id]; S.inval[id] = Date.now(); } // houve gravação ou conflito: o que está guardado não vale mais
 function guardaPre(id, j) { S.pre[id] = { t: Date.now(), j: j }; var ks = Object.keys(S.pre); if (ks.length > 30) { ks.sort(function (a, b) { return S.pre[a].t - S.pre[b].t; }); delete S.pre[ks[0]]; } }
@@ -2316,7 +2321,7 @@ function renderCardInfo(L) { // o que o cartão já sabe + esqueleto onde ainda 
   var bar = $('leadBarra'); bar.textContent = ''; var so = seloOrigem(it.origem, true); if (so) bar.appendChild(so); if (it.etiqueta) bar.appendChild(el('span', 'etq', it.etiqueta));
   if (h && h.pendenteOp) { var pt = el('span', 'pend-tag', 'Sincronizando…'); pt.setAttribute('role', 'status'); bar.appendChild(pt); }
   if (pessoa || fone) { var s1 = el('div', 'secao'); s1.appendChild(el('h3', null, 'Pessoas e telefones')); if (pessoa) s1.appendChild(el('div', 'emp', pessoa)); var fl = foneLinha(fone, 'pessoa-tel', null, null, true); if (fl) s1.appendChild(fl); if (cidade) s1.appendChild(el('div', 'sub', cidade)); corpo.appendChild(s1); }
-  if (it._closer) { var sc = el('div', 'secao secao-closer'); sc.appendChild(el('h3', null, 'Negócio no Arena (somente leitura)')); var linhaC = function (rot, v) { if (v) sc.appendChild(el('div', 'sub', rot + ': ' + v)); };
+  if (it._closer) { var sc = el('div', 'secao secao-closer'); sc.appendChild(el('h3', null, 'Negócio no Arena')); var linhaC = function (rot, v) { if (v) sc.appendChild(el('div', 'sub', rot + ': ' + v)); };
     linhaC('Etapa', it.etapa); linhaC('Valor', (typeof it.valor === 'number' && it.valor > 0) ? 'R$ ' + it.valor.toLocaleString('pt-BR') : ''); linhaC('Última atividade', it.ultimaAtividadeEm ? dataBR(it.ultimaAtividadeEm) : ''); linhaC(it.vencida ? 'Tarefa vencida' : 'Tarefa', it.tarefa && it.tarefa.texto ? (it.tarefa.texto + (it.venceEm ? ' · ' + dataBR(it.venceEm) : '')) : '');
     if (it.link && /^https:\/\//.test(it.link)) { var pc = el('p', 'sub'); var ac0 = el('a', null, 'Ver no CRM'); ac0.setAttribute('data-crm', '1'); ac0.href = it.link; ac0.target = '_blank'; ac0.rel = 'noopener noreferrer'; pc.appendChild(ac0); sc.appendChild(pc); } corpo.appendChild(sc); }
   if (it.passoPendente) { var px = el('div', 'proxima'); var hx = el('h3', null, 'Próxima ação'); hx.appendChild(el('span', 'rotulo-cache', 'do cartão')); px.appendChild(hx); px.appendChild(el('div', 'proxima-txt', it.passoPendente)); corpo.appendChild(px); }
@@ -2343,6 +2348,7 @@ async function abrirLead(dealId, opener, item, ctx) {
   marcarAbertoNaLista(dealId, !!(item && (item.feito || item.estado === 'feito')));
   if (!mesmo) limpaQualificando(); L.opener = opener || L.opener || null; L.item = item || L.item || null; L.ctx = ctx || L.ctx || null; S.L = L; painel.classList.remove('hide'); S.leadAbertoEm = Date.now();
   try { if (location.hash !== '#lead=' + dealId) { history.pushState(null, '', '#lead=' + dealId); S.pushou = true; } } catch (e) { logFalha('l1202 histórico indisponível: o lead abre do mesmo jeito', e); /* histórico indisponível: o lead abre do mesmo jeito */ }
+  if (item && item._closer) closerMarcaId(dealId);
   var cache = S.pre[dealId]; var fresco = cache && Date.now() - cache.t < 3000;
   var pintouCache = false; if (!mesmo && cache) { aplicarResposta(L, cache.j, 'S.pre'); limparEditsIguais(L); recomputarMostrar(L); mesmo = true; pintouCache = true; L.revalidado = !!fresco; }
   $('leadTitulo').textContent = mesmo ? (L.lead.titulo || 'Lead') : ((L.item && L.item.empresa) || 'Carregando o lead...'); $('leadRodape').textContent = ''; if (!mesmo && !(L.item && L.item._closer)) rodapeEsqueleto();
@@ -2373,7 +2379,7 @@ async function carregarLead(L, silencioso) {
   try { var it = L.item; S.atrasFant = S.atrasFant || {}; if (it && typeof it.n === 'number' && it.n > 0 && Array.isArray(it.passos) && L.lead && L.lead.status === 'andamento' && !(L.lead.tarefas || []).some(function (t) { return !t.feita; }) && !S.atrasFant[L.dealId]) { S.atrasFant[L.dealId] = true; ocultaGrupoAtrasado(L.dealId); S.atualizaPendente = true; } } catch (e) { logFalha('l1226 grupo atrasado já resolvido: só tira da tela', e); }
 }
 function ocultaGrupoAtrasado(id) { var a = S.dados && S.dados.atrasadas; if (!a || !Array.isArray(a.grupos)) return; var ant = a.grupos.length; var tira = 0; a.grupos = a.grupos.filter(function (g) { if (String(g.dealId) === String(id)) { tira += Number(g.n) || 0; return false; } return true; }); if (a.grupos.length === ant) return; a.total = Math.max(0, (Number(a.total) || 0) - tira); desenharBlocos(); }
-function aplicarResposta(L, j, onde) { if (j.lead) L.lead = livroLead(j.lead, L.dealId, onde, j._t0); if (j.opcoes && typeof j.opcoes === 'object') { var op0 = Object.assign({}, L.opcoes); Object.keys(j.opcoes).forEach(function (k) { if (Array.isArray(j.opcoes[k]) && j.opcoes[k].length) op0[k] = j.opcoes[k]; }); L.opcoes = op0; } if (j.motivosPerda) L.motivos = j.motivosPerda; if (j.responsaveis) L.responsaveis = j.responsaveis; S.listas = { opcoes: L.opcoes, motivos: L.motivos, responsaveis: L.responsaveis }; if (Array.isArray(j.avisos)) L.avisos = j.avisos; } // guarda as listas do pop-up de Ganho: o próximo lead já abre com elas
+function aplicarResposta(L, j, onde) { if (j.lead && j.lead.funil === 'closer') closerMarcaId(L.dealId); if (j.lead) L.lead = livroLead(j.lead, L.dealId, onde, j._t0); if (j.opcoes && typeof j.opcoes === 'object') { var op0 = Object.assign({}, L.opcoes); Object.keys(j.opcoes).forEach(function (k) { if (Array.isArray(j.opcoes[k]) && j.opcoes[k].length) op0[k] = j.opcoes[k]; }); L.opcoes = op0; } if (j.motivosPerda) L.motivos = j.motivosPerda; if (j.responsaveis) L.responsaveis = j.responsaveis; S.listas = { opcoes: L.opcoes, motivos: L.motivos, responsaveis: L.responsaveis }; if (Array.isArray(j.avisos)) L.avisos = j.avisos; } // guarda as listas do pop-up de Ganho: o próximo lead já abre com elas
 // 17.5 (Robert #2915): a função MINIMIZAR foi removida (a bandeja de pílulas ficava por cima do cartão no celular). Fechar o lead mantém o que foi digitado: S.L e o rascunho em sh_rasc_<id> continuam e voltam ao reabrir o mesmo lead.
 function fecharLead() { var L = S.L; $('painelLead').classList.add('hide'); try { if (/^#lead=/.test(location.hash)) { if (S.pushou) { S.pushou = false; S.ignoraPop = Date.now(); history.back(); } else history.replaceState(null, '', location.pathname + location.search); } } catch (e) { logFalha('l1255 histórico indisponível: o lead fecha do mesmo jeito', e); /* histórico indisponível: o lead fecha do mesmo jeito */ } if (L && L.opener) { try { L.opener.focus(); } catch (e) { logFalha('l1255 foco/rolagem/seleção é só conforto; se falhar a ação já foi feit', e); /* foco/rolagem/seleção é só conforto; se falhar a ação já foi feita */ } }  setTimeout(aplicaAtualizaPendente, 0); }
 function aoMudarHash() {
@@ -2395,10 +2401,10 @@ function renderLead() {
   if (lead.tipoRetorno) bar.appendChild(el('span', 'etq', String(lead.tipoRetorno)));
   bar.appendChild(el('span', 'sub', [lead.funilNome, lead.etapa].filter(Boolean).join(' · ') + (lead.status && lead.status !== 'andamento' ? ' · ' + (lead.status === 'ganho' ? 'GANHO' : 'PERDIDO') : '')));
   corpo.textContent = ''; L.refs = L.refs || {}; var ac = acoesDe(L);
-  if (lead.somenteLeitura) { var nl = el('div', 'secao'); nl.appendChild(el('p', 'sub', 'Negócio do Arena: aqui você só consulta. Para agir, use "Ver no CRM" no fim da tela.')); corpo.appendChild(nl); }
+  if (lead.reativacao && lead.status === 'andamento') { var nr = el('div', 'secao reativacao-aviso'); nr.setAttribute('data-fk', 'reativacao-aviso'); nr.appendChild(el('p', 'sub', lead.completo ? 'Reativação: o Serasa já está conferido.' : 'Reativação: só falta consultar o Serasa.')); corpo.appendChild(nr); } // 17.8 (Robert #3642): cliente que já teve projeto; os outros dados já foram preenchidos antes
   if (lead.status && lead.status !== 'andamento') { var st = el('div', 'secao'); st.appendChild(el('strong', null, lead.status === 'ganho' ? 'Este negócio já está Ganho.' : 'Este negócio está Perdido.')); corpo.appendChild(st); }
   // 19/11 (Robert #3623, lead 46044521): no negócio do ARENA (raia Closer) a OBSERVAÇÃO DO SDR é o que o SDR escreveu para o representante: aparece em destaque, inteira, logo no topo (antes só aparecia 'Resumo da Ana: Origem INBOUND')
-  if (lead.somenteLeitura && String(lead.observacaoSdr || '').trim()) { var ob = el('div', 'secao obs-sdr-closer'); ob.setAttribute('data-fk', 'obs-sdr-closer'); ob.appendChild(el('h3', null, 'Observação do SDR (vai para o representante)')); ob.appendChild(el('p', null, String(lead.observacaoSdr).trim())); corpo.appendChild(ob); }
+  if (lead.funil === 'closer' && String(lead.observacaoSdr || '').trim()) { var ob = el('div', 'secao obs-sdr-closer'); ob.setAttribute('data-fk', 'obs-sdr-closer'); ob.appendChild(el('h3', null, 'Observação do SDR (vai para o representante)')); ob.appendChild(el('p', null, String(lead.observacaoSdr).trim())); corpo.appendChild(ob); }
   // 1) pessoas e telefones (o que o SDR mais usa)
   var s4 = el('div', 'secao'); s4.appendChild(el('h3', null, 'Pessoas e telefones'));
   if (!(lead.pessoas || []).length) s4.appendChild(el('p', 'sub', 'Nenhuma pessoa cadastrada.'));
@@ -2411,11 +2417,11 @@ function renderLead() {
     if (tels.length > 1) { var dt = el('details', 'outros-fones'); dt.setAttribute('data-fk', 'outros-fones'); dt.appendChild(el('summary', 'sub', 'Outros números (' + (tels.length - 1) + ')')); tels.slice(1).forEach(function (t) { var l = foneLinha(t.e164 || t.bonito, 'pessoa-tel', t.whatsapp, t.bonito, true); if (l) { if (t.tipo) l.appendChild(el('span', 'sub', t.tipo)); dt.appendChild(l); } }); bx.appendChild(dt); }
     if (!tels.length) bx.appendChild(el('div', 'sub', 'Sem telefone.'));
     if (p.principal && ac.campos) { var bt = el('button', 'sec trocar-contato', 'Trocar contato / telefone'); bt.type = 'button'; bt.setAttribute('data-fk', 'trocar-contato'); bt.title = 'Use quando você está falando com o decisor e o cadastro tem o telefone da loja'; bt.onclick = function () { trocarContato(L, p); }; bx.appendChild(bt); }
-    if (!p.principal && ac.campos) { var br = el('button', 'lixo-contato', ''); br.type = 'button'; br.setAttribute('data-fk', 'retirar-contato'); br.setAttribute('aria-label', 'Retirar o contato ' + (p.nome || 'sem nome')); br.title = 'Retirar este contato'; br.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3"/></svg>'; br.onclick = function () { retirarContato(L, p); }; bx.appendChild(br); }   // lixeirinha (Robert 11/11); o contato principal fica sempre: o negócio nunca fica sem contato
-    if (p.principal && ac.campos) { var bp = el('button', 'lixo-contato lixo-principal', ''); bp.type = 'button'; bp.setAttribute('data-fk', 'retirar-principal'); bp.setAttribute('aria-label', 'Retirar o contato principal ' + (p.nome || 'sem nome')); bp.title = 'Este é o contato principal'; bp.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3"/></svg>'; bp.onclick = function () { explicarPrincipal(L, p); }; bx.appendChild(bp); }   // 12/11 (Robert): a lixeira aparece em TODO contato; no principal ela explica e leva ao "Trocar contato" (o Agendor não deixa tirar o principal)
-    if (p.principal && ac.campos && (lead.pessoas || []).length > 1) bx.appendChild(el('div', 'sub dica-principal', 'Contato principal: não pode ser retirado (o negócio sempre fica com ao menos 1 contato).'));
+    if (!p.principal && ac.campos && ac.contatos !== false) { var br = el('button', 'lixo-contato', ''); br.type = 'button'; br.setAttribute('data-fk', 'retirar-contato'); br.setAttribute('aria-label', 'Retirar o contato ' + (p.nome || 'sem nome')); br.title = 'Retirar este contato'; br.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3"/></svg>'; br.onclick = function () { retirarContato(L, p); }; bx.appendChild(br); }   // lixeirinha (Robert 11/11); o contato principal fica sempre: o negócio nunca fica sem contato
+    if (p.principal && ac.campos && ac.contatos !== false) { var bp = el('button', 'lixo-contato lixo-principal', ''); bp.type = 'button'; bp.setAttribute('data-fk', 'retirar-principal'); bp.setAttribute('aria-label', 'Retirar o contato principal ' + (p.nome || 'sem nome')); bp.title = 'Este é o contato principal'; bp.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3"/></svg>'; bp.onclick = function () { explicarPrincipal(L, p); }; bx.appendChild(bp); }   // 12/11 (Robert): a lixeira aparece em TODO contato; no principal ela explica e leva ao "Trocar contato" (o Agendor não deixa tirar o principal)
+    if (p.principal && ac.campos && ac.contatos !== false && (lead.pessoas || []).length > 1) bx.appendChild(el('div', 'sub dica-principal', 'Contato principal: não pode ser retirado (o negócio sempre fica com ao menos 1 contato).'));
     s4.appendChild(bx);
-  }); if (ac.campos) { var ba = el('button', 'sec trocar-contato', '+ Adicionar contato'); ba.type = 'button'; ba.setAttribute('data-fk', 'adicionar-contato'); ba.onclick = function () { adicionarContato(L, s4, ba); }; s4.appendChild(ba); } if (ac.campos) { var lc = el('div', 'linha-cnpj'); var cj = (lead.empresa || {}).cnpj; lc.appendChild(el('span', 'sub', cj ? 'CNPJ ' + fmtCnpj(cj) : 'Sem CNPJ cadastrado')); var bc = el('button', 'sec trocar-contato', cj ? 'Trocar CNPJ' : 'Adicionar CNPJ'); bc.type = 'button'; bc.setAttribute('data-fk', 'trocar-cnpj'); bc.onclick = function () { trocarCnpj(L); }; lc.appendChild(bc); lc.style.cssText = 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px'; s4.appendChild(lc); } corpo.appendChild(s4);
+  }); if (ac.campos && ac.contatos !== false) { var ba = el('button', 'sec trocar-contato', '+ Adicionar contato'); ba.type = 'button'; ba.setAttribute('data-fk', 'adicionar-contato'); ba.onclick = function () { adicionarContato(L, s4, ba); }; s4.appendChild(ba); } if (ac.campos && ac.contatos !== false) { var lc = el('div', 'linha-cnpj'); var cj = (lead.empresa || {}).cnpj; lc.appendChild(el('span', 'sub', cj ? 'CNPJ ' + fmtCnpj(cj) : 'Sem CNPJ cadastrado')); var bc = el('button', 'sec trocar-contato', cj ? 'Trocar CNPJ' : 'Adicionar CNPJ'); bc.type = 'button'; bc.setAttribute('data-fk', 'trocar-cnpj'); bc.onclick = function () { trocarCnpj(L); }; lc.appendChild(bc); lc.style.cssText = 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px'; s4.appendChild(lc); } corpo.appendChild(s4);
   var pxa = proximaAcaoEl(L); if (pxa) corpo.appendChild(pxa);
   var ob = secaoOrigem(L); if (ob) corpo.appendChild(ob);
   corpo.appendChild(secaoTarefas(L)); // o que fazer agora vem logo depois de quem ligar
@@ -2434,7 +2440,7 @@ function renderLead() {
     dt.appendChild(el('p', 'sub', 'Se já souber, pode ir completando. Nada aqui é obrigatório.'));
     L.refs.receita = el('div'); dt.appendChild(L.refs.receita); renderReceita(L);
     autoReceita(L);
-    var grade = null; todosCampos(lead).forEach(function (f) { if (f.par) { if (!grade) { grade = el('div', 'grade2'); dt.appendChild(grade); } grade.appendChild(campoEl(L, f, 'lf_', false)); } else { grade = null; dt.appendChild(campoEl(L, f, 'lf_', false)); } });
+    var grade = null; camposVisiveis(lead).forEach(function (f) { if (f.par) { if (!grade) { grade = el('div', 'grade2'); dt.appendChild(grade); } grade.appendChild(campoEl(L, f, 'lf_', false)); } else { grade = null; dt.appendChild(campoEl(L, f, 'lf_', false)); } });
     corpo.appendChild(dt);
   }
   // 5) ganho e representante (só se o servidor liga)
@@ -2556,9 +2562,10 @@ function renderRodape(L) {
   var row = el('div', 'row');
   if (ac.campos && andamento) { L.refs.salvar = el('button', 'forte', 'Salvar'); L.refs.salvar.type = 'button'; L.refs.salvar.onclick = function () { salvarCampos(L); }; row.appendChild(L.refs.salvar); atualizarSalvar(L); }
   if (ac.ganho && andamento) { var bg = el('button', 'sec', 'Marcar como Ganho / Qualificado'); bg.type = 'button'; bg.onclick = function () { abrirGanho(L, L.lead.faltando, false, L.lead.faltandoChaves); }; row.appendChild(bg); }
+  if (ac.ganhoVenda && andamento) { var bv = el('button', 'sec', 'Registrar venda fechada (Ganho)'); bv.type = 'button'; bv.setAttribute('data-fk', 'venda-abrir'); bv.setAttribute('aria-expanded', L.vendaAberta ? 'true' : 'false'); bv.onclick = function () { L.vendaAberta = !L.vendaAberta; if (L.vendaAberta) L.perdidoAberto = false; renderRodape(L); }; row.appendChild(bv); } // 17.8: no Arena, Ganho = VENDA FECHADA (valor + confirmação)
   if (lead.status === 'ganho' && S.repPend[L.dealId]) { var br = el('button', 'forte', 'Escolher representante'); br.type = 'button'; br.onclick = function () { var pd = S.repPend[L.dealId]; L.rep = { arenaId: pd.arenaId, link: pd.link, responsaveis: pd.responsaveis, mensagem: pd.mensagem, dono: null }; mostrarGanhoModal(L); }; row.appendChild(br); }
   if (!andamento && lead.acoes && lead.acoes.reabrir && S.repPend[L.dealId] == null) { var bre = el('button', 'forte', lead.status === 'ganho' ? 'Tirar o Ganho e reabrir' : 'Reabrir lead'); bre.type = 'button'; bre.disabled = !!L.ocupado; bre.onclick = function () { reabrirLead(L); }; row.appendChild(bre); var dre = el('p', 'sub', lead.status === 'ganho' ? 'Volta para Em andamento. Só dá se ainda não foi para o time de vendas.' : 'Volta para Em andamento, na mesma etapa da cadência.'); rd.appendChild(dre); }
-  if (ac.perdido && andamento) { var bp = el('button', 'sec', 'Marcar como Perdido'); bp.type = 'button'; bp.setAttribute('aria-expanded', L.perdidoAberto ? 'true' : 'false'); bp.onclick = function () { L.perdidoAberto = !L.perdidoAberto; renderRodape(L); }; row.appendChild(bp); }
+  if (ac.perdido && andamento) { var bp = el('button', 'sec', 'Marcar como Perdido'); bp.type = 'button'; bp.setAttribute('aria-expanded', L.perdidoAberto ? 'true' : 'false'); bp.onclick = function () { L.perdidoAberto = !L.perdidoAberto; if (L.perdidoAberto) L.vendaAberta = false; renderRodape(L); }; row.appendChild(bp); }
   if (L.perdidoAberto && ac.perdido && andamento) {
     var f = el('div', 'secao'); f.style.marginTop = '8px'; f.appendChild(el('h3', null, 'Por que perdeu?'));
     var sm = el('select'); sm.setAttribute('aria-label', 'Motivo da perda'); var o0 = el('option', null, 'Escolha o motivo...'); o0.value = ''; sm.appendChild(o0);
@@ -2569,8 +2576,42 @@ function renderRodape(L) {
     var bc = el('button', 'perigo', 'Confirmar Perdido'); bc.type = 'button'; bc.style.marginTop = '6px'; bc.onclick = function () { marcarPerdido(L); };
     f.appendChild(sm); f.appendChild(nota); f.appendChild(cont); f.appendChild(bc); rd.appendChild(f);
   }
+  if (L.vendaAberta && ac.ganhoVenda && andamento) rd.appendChild(painelVenda(L));
+  if (L.perdidoAberto && ac.perdido && andamento && lead.funil === 'closer' && !(L.motivos || []).length) carregarMotivosCloser(L);
   if (lead.status === 'perdido' && perdaSemCtx(L.dealId)) formContextoPerda(L, rd);
   rd.appendChild(row);
+}
+// ---- 17.8 (Robert #3640): VENDA FECHADA no negócio do Arena (raia Closer) ----
+function parseValorBR(v) { var x = String(v == null ? '' : v).replace(/R\$/g, '').trim(); if (!x || /\s/.test(x)) return null; if (x.indexOf(',') >= 0) x = x.replace(/\./g, '').replace(',', '.'); else if (/^\d{1,3}(\.\d{3})+$/.test(x)) x = x.replace(/\./g, ''); if (!/^\d{1,9}(\.\d{1,2})?$/.test(x)) return null; var n = Number(x); return (isFinite(n) && n > 0 && n <= 5000000) ? Math.round(n * 100) / 100 : null; }
+function fmtBRL(n) { try { return 'R$ ' + Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); } catch (e) { return 'R$ ' + String(n); } }
+function painelVenda(L) {
+  var f = el('div', 'secao painel-venda'); f.setAttribute('data-fk', 'painel-venda'); f.style.marginTop = '8px'; f.appendChild(el('h3', null, 'Venda fechada'));
+  var av = el('p', 'sub'); av.appendChild(el('strong', null, 'Ganho no Arena é venda de verdade: ')); av.appendChild(document.createTextNode('entra no Dash e na comissão e não dá para desfazer por aqui.')); f.appendChild(av);
+  var lb = el('label', null, 'Valor da venda (R$)'); lb.setAttribute('for', 'gv_valor'); var iv = el('input'); iv.id = 'gv_valor'; iv.type = 'text'; iv.setAttribute('inputmode', 'decimal'); iv.setAttribute('autocomplete', 'off'); iv.setAttribute('aria-label', 'Valor da venda em reais');
+  if (L.vendaValor == null) L.vendaValor = (L.lead && Number(L.lead.valor) > 0) ? Number(L.lead.valor).toFixed(2).replace('.', ',') : ''; iv.value = L.vendaValor;
+  var wv = el('div', 'campo'); wv.appendChild(lb); wv.appendChild(iv); f.appendChild(wv); var er = el('div', 'campo-erro hide'); er.setAttribute('role', 'alert'); f.appendChild(er);
+  f.appendChild(el('p', 'sub', 'Data da venda: hoje, ' + dataBR(hojeISO(), true) + ' (o Agendor registra sempre a data de hoje).'));
+  var ck = el('label', 'fixo-op'); ck.style.cssText = 'display:flex;gap:8px;align-items:center;min-height:44px;font-weight:600'; var cx = el('input'); cx.type = 'checkbox'; cx.checked = !!L.vendaOk; cx.style.cssText = 'width:22px;height:22px'; cx.setAttribute('data-fk', 'venda-confirmo'); ck.appendChild(cx); ck.appendChild(document.createTextNode('Confirmo: é uma venda fechada, com este valor')); f.appendChild(ck);
+  var bc = el('button', 'perigo', 'Confirmar venda fechada'); bc.type = 'button'; bc.setAttribute('data-fk', 'venda-confirmar'); bc.style.marginTop = '6px'; f.appendChild(bc);
+  function atual() { var n = parseValorBR(iv.value); er.textContent = iv.value.trim() && n == null ? 'Digite o valor em reais, maior que zero (ex.: 4200 ou 4.200,50).' : ''; er.classList.toggle('hide', !er.textContent); iv.setAttribute('aria-invalid', er.textContent ? 'true' : 'false'); bc.disabled = !!L.ocupado || n == null || !cx.checked; }
+  iv.oninput = function () { L.vendaValor = iv.value; atual(); }; cx.onchange = function () { L.vendaOk = cx.checked; atual(); }; bc.onclick = function () { confirmarVenda(L); }; atual();
+  return f;
+}
+async function confirmarVenda(L) {
+  if (L.ocupado || S.L !== L) return; var v = parseValorBR(L.vendaValor); var nome = L.lead.titulo || 'este negócio';
+  if (v == null) { setEstado(L, 'erro', 'Digite o valor da venda em reais (maior que zero).'); return; } if (!L.vendaOk) { setEstado(L, 'erro', 'Marque a confirmação de que é uma venda fechada.'); return; }
+  if (!window.confirm('Registrar VENDA FECHADA de ' + fmtBRL(v) + ' em ' + dataBR(hojeISO(), true) + '?\n\nNo Arena isso é venda de verdade: entra no Dash e na comissão e NÃO dá para desfazer por aqui.')) return;
+  L.ocupado = true; setEstado(L, 'salvando', 'Registrando a venda no Agendor…'); renderRodape(L);
+  var j = await chamarLead(L, '/ganho', { valor: v, confirmaVenda: true }, null, null); L.ocupado = false; if (!j) return;   // sem fila: venda fechada nunca é repetida sozinha
+  if (j.ok && j.confirmado !== false) { L.lead.status = 'ganho'; L.lead.acoes = {}; L.estado = null; L.vendaAberta = false; L.vendaOk = false; S.ocultos[L.dealId] = true; lsDel(rascKey(L.dealId)); L.edits = {}; msg(nome + ': venda de ' + fmtBRL(v) + ' registrada ✓ (Ganho confirmado no Agendor).' + (j.notaPendente ? ' Atenção: ' + (j.avisoNota || 'a nota ainda está sincronizando.') : ''), j.notaPendente ? 'aviso' : 'ok'); fecharLead(); redesenharTudo(); carregar(true, 'tarefas'); return; }
+  if (j.statusNegocio === 'ganho') { L.lead.status = 'ganho'; L.lead.acoes = {}; L.vendaAberta = false; S.ocultos[L.dealId] = true; if (S.L === L) { renderLead(); setEstado(L, 'erro', j.mensagem || msgErro(j)); } return; }   // fechou mas o valor divergiu: sem 'tentar de novo'
+  var retentavel = j.retentavel === true || j._status === 0 || j._status === 503; var t0 = j._status === 0 ? 'Sem conexão: a venda NÃO foi registrada. Confira a internet e tente de novo.' : (j.mensagem || msgErro(j));
+  if (S.L === L) { renderRodape(L); setEstado(L, 'erro', t0, retentavel ? function () { confirmarVenda(L); } : null); }
+}
+async function carregarMotivosCloser(L) {
+  if (L.motivosPedido || S.L !== L) return; L.motivosPedido = true; var hh = (S.hint && S.hint[L.dealId]) || {};
+  var j = await api('/lead/' + encodeURIComponent(L.dealId) + '?c=1&m=1&p=' + (hh.p || 0) + '&o=' + (hh.o || 0)); if (S.L !== L) return;
+  if (j && j.ok && Array.isArray(j.motivosPerda) && j.motivosPerda.length) { L.motivos = j.motivosPerda; S.listas = S.listas || {}; S.listas.motivos = L.motivos; renderRodape(L); } else { L.motivosPedido = false; setEstado(L, 'erro', 'Não consegui carregar os motivos de perda agora.', function () { carregarMotivosCloser(L); }); }
 }
 // ---- salvar campos (otimista) ----
 async function salvarCampos(L) { // botão Salvar do painel
@@ -2666,10 +2707,11 @@ async function marcarPerdido(L) {
   // 09/11: contar o que aconteceu é obrigatório (o servidor confere de novo); 10/11: motivos que se explicam sozinhos (m.dispensa, vindo do servidor) não pedem texto
   if (mot && /duplicad/i.test(mot.nome) && !temOriginalDuplicado(L.notaPerda)) { setEstado(L, 'erro', 'Duplicado: cole o link ou o número do negócio original.'); return; }
   if (contaLetras(L.notaPerda) < 5 && !(mot && mot.dispensa)) { setEstado(L, 'erro', 'Conte, em poucas palavras, o que aconteceu com este lead antes de confirmar.'); return; }
-  if (!window.confirm('Marcar "' + nome + '" como PERDIDO (' + (mot ? mot.nome : 'motivo') + ')? As tarefas abertas da cadência serão encerradas.')) return;
-  var corpo = { motivoId: mid }; if (String(L.notaPerda || '').trim()) corpo.nota = String(L.notaPerda).trim();
+  var ehC = L.lead && L.lead.funil === 'closer';
+  if (!window.confirm(ehC ? 'Marcar "' + nome + '" como PERDIDO (' + (mot ? mot.nome : 'motivo') + ')?\n\nNão dá para desfazer por aqui.' : 'Marcar "' + nome + '" como PERDIDO (' + (mot ? mot.nome : 'motivo') + ')? As tarefas abertas da cadência serão encerradas.')) return;
+  var corpo = { motivoId: mid }; if (ehC) corpo.confirmaPerda = true; if (String(L.notaPerda || '').trim()) corpo.nota = String(L.notaPerda).trim();
   L.ocupado = true; S.ocultos[L.dealId] = true; redesenharTudo(); fecharLead(); msg(nome + ': marcando como Perdido… (já saiu da tela; Sincronizando…)', 'aviso');
-  var j = await chamarLead(L, '/perdido', corpo, null, { tipo: 'perdido', meta: { titulo: nome } }); if (!j) return; L.ocupado = false;
+  var j = await chamarLead(L, '/perdido', corpo, null, ehC ? null : { tipo: 'perdido', meta: { titulo: nome } }); if (!j) return; L.ocupado = false;
   if (j._enfileirado) { msg(nome + ': sem conexão. Guardei o Perdido e envio sozinho quando a rede voltar.', 'aviso'); return; }
   if (j.ok && j.confirmado !== false) { L.lead.status = 'perdido'; lsDel(rascKey(L.dealId)); L.edits = {}; if (j.notaPendente) msg(nome + ' marcado como Perdido ✓, mas ATENÇÃO: ' + (j.avisoNota || 'a nota ainda está sincronizando; ela será gravada sozinha em instantes.'), 'aviso'); else msg(nome + ' marcado como Perdido. Salvo ✓', 'ok'); carregar(true, 'tarefas'); }
   else { delete S.ocultos[L.dealId]; redesenharTudo(); msg(nome + ' voltou para a tela: ' + (j.ok && j.confirmado === false ? 'não consegui salvar o Perdido.' : msgErro(j)), 'erro'); S.L = L; $('painelLead').classList.remove('hide'); renderLead(); setEstado(L, 'erro', j.ok && j.confirmado === false ? 'Não consegui salvar o Perdido. Nada mudou. Tente de novo.' : msgErro(j), function () { marcarPerdido(L); }); }
@@ -2681,7 +2723,7 @@ function secaoGanho(L) {
   var b = el('button', 'forte', 'Marcar como Ganho / Qualificado'); b.type = 'button'; b.onclick = function () { abrirGanho(L, L.lead.faltando, false, L.lead.faltandoChaves); }; s.appendChild(b); return s;
 }
 function abrirGanho(L, faltando, marcar, chaves) {
-  var r = reqDe(L, faltando, chaves); L.ganhoReq = r.req; L.ganhoReq['n.observacao_sdr'] = true; L.ganhoSoltos = r.soltos; L.ganhoVinculo = r.vinculo; L.ganhoMarcar = !!marcar; L.modalAberto = true; L.rep = null;
+  var r = reqDe(L, faltando, chaves); L.ganhoReq = r.req; if (!(L.lead && L.lead.reativacao)) L.ganhoReq['n.observacao_sdr'] = true; L.ganhoSoltos = r.soltos; L.ganhoVinculo = r.vinculo; L.ganhoMarcar = !!marcar; L.modalAberto = true; L.rep = null;
   var pp = pessoaPrincipal(L.lead); L.ganhoPessoa = pp ? pp.id : null; if (pp) { L.ganhoReq['p.' + pp.id + '.nome'] = true; if (!(L.ganhoFixo && (pp.telefones || []).length)) L.ganhoReq['p.' + pp.id + '.whatsapp'] = true; else L.ganhoFixo = true; } // contato principal: sempre confirmado no Ganho
   $('gTitulo').textContent = 'Marcar como Ganho / Qualificado'; $('modalGanho').classList.remove('hide'); renderGanho(L); try { $('gTitulo').focus({ preventScroll: true }); } catch (e) { logFalha('l1536 foco/rolagem/seleção é só conforto; se falhar a ação já foi feit', e); /* foco/rolagem/seleção é só conforto; se falhar a ação já foi feita */ }
 }
@@ -2721,13 +2763,13 @@ function renderGanho(L) {
   $('bFecharGanho').textContent = 'Cancelar';
   var c = $('gCorpo'); var rol = c.scrollTop; c.textContent = ''; L.refs = L.refs || {}; var lead = L.lead;
   c.appendChild(blocoContato(L));
-  c.appendChild(el('p', 'sub', 'Confirme as respostas de qualificação e os dados da empresa. Campos com * são obrigatórios; o que já existe vem preenchido.'));
+  c.appendChild(lead.reativacao ? el('p', 'sub reativacao-aviso', 'Reativação: só falta consultar o Serasa. Os outros dados da empresa já foram preenchidos no projeto anterior.') : el('p', 'sub', 'Confirme as respostas de qualificação e os dados da empresa. Campos com * são obrigatórios; o que já existe vem preenchido.'));
   if (L.ganhoVinculo) c.appendChild(el('p', 'pend', 'Esta empresa ainda não está vinculada ao negócio (isso não trava o resto).'));
   if ((L.ganhoSoltos || []).length) c.appendChild(el('p', 'pend', 'Também falta (precisa ser resolvido fora desta tela): ' + L.ganhoSoltos.join('; ') + '.'));
   L.refs.receita = el('div'); c.appendChild(L.refs.receita); renderReceita(L);
   autoReceita(L);
   var grade = null;
-  var ordemG = GANHO_ORDEM.filter(function (k) { return (L.ganhoReq || {})[k]; }).concat(GANHO_ORDEM.filter(function (k) { return !(L.ganhoReq || {})[k]; })); // o que falta vem primeiro
+  var ordemG = lead.reativacao ? ['e.aprovado_serasa'] : GANHO_ORDEM.filter(function (k) { return (L.ganhoReq || {})[k]; }).concat(GANHO_ORDEM.filter(function (k) { return !(L.ganhoReq || {})[k]; })); // 17.8: Reativação mostra só o Serasa // o que falta vem primeiro
   L.refs.gFalta = el('p', 'pend falta-topo'); L.refs.gFalta.setAttribute('role', 'status'); c.appendChild(L.refs.gFalta);
   ordemG.forEach(function (k) { var f = campoDe(k); if (!f) return; var req = !!(L.ganhoReq || {})[k]; if (f.par) { if (!grade) { grade = el('div', 'grade2'); c.appendChild(grade); } grade.appendChild(campoEl(L, f, 'gf_', req, L.ganhoMarcar && req)); } else { grade = null; c.appendChild(campoEl(L, f, 'gf_', req, L.ganhoMarcar && req)); } });
   try { var cw = $('gf_e_cnpj'); if (cw && cw.parentNode && L.refs.receita) cw.parentNode.appendChild(L.refs.receita); } catch (e) { logFalha('receita embaixo do CNPJ: só posição', e); } // 17/11: a consulta da Receita aparece logo abaixo do CNPJ e não empurra os campos de cima
@@ -2862,7 +2904,7 @@ function aguardarArena(L) { // repasse ainda rodando: confere sozinho a cada 4 s
   var n = 0; (function tick() { if (!L.rep || !L.rep.pendente) return; if (n++ >= 20) { msg((L.lead && L.lead.titulo || 'Lead') + ': o servidor ainda não confirmou a qualificação. Atualize a página; nada foi perdido.', 'aviso'); return; } setTimeout(async function () { if (!L.rep || !L.rep.pendente) return; var j = null; try { j = await api('/lead/' + L.dealId + '/ganho', {}, null, null, { idem: novaChave() }); } catch (e) { logFalha('l1711 tenta de novo em 4 s (até 20 vezes) e depois avisa', e);  j = null; /* seguro: tenta de novo em 4 s (até 20 vezes) e depois avisa */ } if (j && j._status === 401) return; if (j && j.ok !== false && j._status < 300 && j.arena && j.arena.dealId) resolverGanho(L, j); else tick(); }, 4000); })();
 }
 function secaoRep(L) {
-  var s = el('div', 'secao'); s.appendChild(el('h3', null, 'Representante')); var sel = el('select'); sel.setAttribute('aria-label', 'Escolher quem recebe'); var o0 = el('option', null, 'Escolha quem recebe...'); o0.value = ''; sel.appendChild(o0);
+  var s = el('div', 'secao secao-rep'); s.setAttribute('data-fk', 'secao-rep'); s.appendChild(el('h3', null, (L.lead && L.lead.funil === 'closer') ? 'Passar para representante' : 'Representante')); if (L.lead && L.lead.funil === 'closer') s.appendChild(el('p', 'sub', 'O representante escolhido vira o dono do negócio e recebe o aviso. Você deixa de ser o dono.')); var sel = el('select'); sel.setAttribute('aria-label', 'Escolher quem recebe'); var o0 = el('option', null, 'Escolha quem recebe...'); o0.value = ''; sel.appendChild(o0);
   (L.responsaveis || []).forEach(function (r, i) { var o = el('option', null, r.nome); o.value = String(i); sel.appendChild(o); });
   var b = el('button', null, 'Passar para a pessoa escolhida'); b.type = 'button'; b.style.marginTop = '6px'; b.onclick = function () { var r = (L.responsaveis || [])[Number(sel.value)]; if (sel.value === '' || !r) { setEstado(L, 'erro', 'Escolha quem recebe.'); return; } acaoRep(L, r); };
   s.appendChild(sel); s.appendChild(b); return s;
@@ -2871,6 +2913,7 @@ async function acaoRep(L, r) {
   if (L.ocupado) return; if (semAcaoRep(r)) { setEstado(L, '', 'Fica com a Bia distribuir. Nada mudou.'); return; } if (!confirmaRep(L.lead.titulo, r)) return;
   L.ocupado = true; setEstado(L, 'salvando', 'Passando para ' + r.nome + '...'); var j = await postRep(L.dealId, r); if (!j) return; L.ocupado = false;
   if (j.cancelado) { setEstado(L, '', 'Cancelado. Nada mudou.'); return; }
+  if (j.ok !== false && j._status < 300 && j.confirmado !== false && L.lead && L.lead.funil === 'closer') { var nomeC = (j.dono && j.dono.nome) || r.nome; S.ocultos[L.dealId] = true; L.estado = null; msg((L.lead.titulo || 'Negócio') + ': agora é de ' + nomeC + '. A pessoa foi avisada ✓ (conferido no Agendor).', 'ok'); fecharLead(); redesenharTudo(); carregar(true, 'tarefas'); return; } // 17.8: no Closer o negócio sai da sua raia (já não é seu)
   if (j.ok !== false && j._status < 300 && j.confirmado !== false) { var nome = (j.dono && j.dono.nome) || r.nome; await carregarLead(L, false); setEstado(L, 'ok', 'Agora é de ' + nome + (r.tipo === 'rep' ? '. A pessoa foi avisada.' : '.') + ' ✓'); carregarAguardando(true); }
   else setEstado(L, 'erro', j.ok !== false && j.confirmado === false ? 'Não consegui salvar a troca. Nada mudou.' : msgErro(j), function () { acaoRep(L, r); });
 }
