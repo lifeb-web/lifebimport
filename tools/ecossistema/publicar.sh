@@ -9,6 +9,9 @@ cd "$RAIZ"
 # 16/11: a branch gh-pages pode estar ocupada por outro worktree; vale a branch gh-pages OU um HEAD solto que DESCENDE de origin/gh-pages (o push é sempre HEAD:gh-pages sem force, então só avança)
 git fetch -q origin gh-pages 2>/dev/null || true
 if [ "$(git rev-parse --abbrev-ref HEAD)" != "gh-pages" ]; then git merge-base --is-ancestor origin/gh-pages HEAD || { echo "❌ ABORTADO: nem a branch gh-pages nem um HEAD que descende de origin/gh-pages"; exit 1; }; fi
+# 19/11/2026: trava de caminhos. O diff contra a gh-pages atual só pode tocar o Ecossistema (evita reverter a Hoje, a Central etc.)
+OUTROS=$(git diff --name-only origin/gh-pages HEAD | grep -v -E '^(ecossistema/|tools/ecossistema/|tests/ecossistema/)' || true)
+[ -z "$OUTROS" ] || { echo "❌ ABORTADO: o HEAD difere da gh-pages atual em caminhos fora do Ecossistema (rebaseie sobre origin/gh-pages):"; echo "$OUTROS" | head; exit 1; }
 echo "🔧 0/4 a página em disco é a que o montador gera (nada editado à mão)"
 python3 tools/ecossistema/montar.py /tmp/eco_conferencia.html >/dev/null; cmp -s /tmp/eco_conferencia.html "$PAG" || { echo "❌ ABORTADO: ecossistema/index.html não bate com o montador. Rode python3 tools/ecossistema/montar.py e refaça os testes."; exit 1; }
 roda() { local n="$1" f="$2" out; echo "$n"; out="$(node "tests/ecossistema/$f" 2>&1)" || true; echo "$out" | tail -3; echo "$out" | grep -q "TOTAL: .* 0 falhou" || { echo "❌ ABORTADO: $f falhou (prints em /tmp/ecossistema_prints)"; exit 1; }; }
@@ -40,4 +43,5 @@ commita "$MSG" "$REL"
 git push -q origin HEAD:gh-pages || { echo "❌ ABORTADO: push falhou (os commits ficaram só locais)"; exit 1; }
 FIM=$(git ls-tree -r HEAD --name-only | wc -l | tr -d ' '); [ "$FIM" -ge "$ANTES" ] || { echo "❌❌❌ ALERTA MÁXIMO: depois do push a contagem caiu ($ANTES -> $FIM). Avise a gestão agora."; exit 1; }
 rm -f "${ECO_MARCADOR:-$HOME/.lifeb/ecossistema_pendente.json}"   # publicou: a pendência de versão acabou
+echo "↩️  Rollback (se precisar): git checkout 70df1546 -- ecossistema/ tools/ecossistema tests/ecossistema, commitar e publicar de novo (70df1546 = gh-pages de 19/11/2026 com a Hoje 17.6B, antes desta página)."
 echo "✅ Ecossistema publicado (testes + visual + interação passaram; $FIM arquivos no repositório, nenhum a menos). Agora: fumaça (abrir a página no ar, conferir a versão e o modo apresentação)."
