@@ -175,7 +175,7 @@ def todos():
     A(slide("hoje3", "Página Hoje: o que o SDR vê", C, hoje3, "dense", "hoje"))
     hoje2 = g([
         cat("Cuidados", ["Clique repetido nunca duplica; sem internet, a ação espera numa caixa de saída", "Ação que bate no limite do Agendor fica numa fila e é tentada de novo, com teto de tentativas e alerta", "Chave de emergência desliga a gravação pela página"], "shield"),
-        cat("Regras da gestão (17/11/2026)", ["Ação do SDR instantânea e nunca revertida na tela; erro só com confirmação do servidor e botão de repetir (17.6, em construção)", "Distribuição continua manual, pelo SDR: nenhuma regra automática por cidade ou região", "Topo recolhível e de largura total, sem rolagem lateral, com as 13 raias; raia do closer (17.6, em construção, sem data)"], "lock"),
+        cat("Regras da gestão (17/11/2026)", ["Ação do SDR instantânea e nunca revertida na tela; erro só com confirmação do servidor e botão de repetir (livro local de ações, no ar na versão 2026-11-18.6B)", "Distribuição continua manual, pelo SDR: nenhuma regra automática por cidade ou região", "Cabeçalho recolhível e colunas que se ajustam à tela; raia Closer (no ar na versão 2026-11-18.6B)"], "lock"),
     ], 2) + band("Qualificar pela página Hoje cria o negócio no funil certo, pela Bia. Planejado: Hoje 2.0, lendo de um espelho dos dados (hoje só em teste). Na página: Página Hoje.")
     A(slide("hoje2", "Página Hoje: cuidados, regras da gestão e o que vem", C, hoje2, "dense", "hoje"))
     A(slide("cenarq", "Central: propósito e arquitetura", C, fx("cen", "Objetivo: operar a Bia, as automações, as páginas Hoje e Lista e o time sem abrir o terminal. Por desenho, pede à Bia. Na página: Central."), "flow", "central"))
