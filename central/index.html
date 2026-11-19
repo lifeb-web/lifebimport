@@ -442,6 +442,7 @@ body.aba-atend .strip,body.aba-agentes .strip{display:none}body.aba-atend .top{p
 .igcal{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}.igdia{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:10px}.igdia.hoje{border-color:var(--mag)}.igdia.cheio{border-color:var(--warn)}
 .igdh{display:flex;justify-content:space-between;align-items:baseline;text-transform:capitalize}.igbar{display:flex;gap:4px;margin:6px 0}.igbar i{flex:1;height:6px;border-radius:3px;background:var(--gray-bg)}.igbar i.on{background:var(--ok)}.igli{font-size:13px;margin:4px 0;overflow-wrap:anywhere}
 .igtiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:10px}.igt{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:12px}.igt .mono{display:block;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}.igt b{display:block;font-size:26px;font-family:var(--mono);margin-top:4px}.igt b.nd{font-size:15px;color:var(--faint)}.igt small{display:block;color:var(--faint);font-size:12px;margin-top:4px}
+.igmid{display:flex;gap:10px;align-items:center;margin:6px 0;padding:6px;border:1px solid var(--line);border-radius:10px}.igmth{flex:0 0 56px;width:56px;height:56px;border-radius:8px;background:var(--gray-bg);display:grid;place-items:center;overflow:hidden;font-size:11px;color:var(--muted)}.igmth img{width:56px;height:56px;object-fit:cover}.igmtx{min-width:0;display:flex;flex-direction:column;overflow-wrap:anywhere}#igPrevAprov{border:1px solid var(--line2)}
 .iglinks{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 @media (max-width:560px){.igp{flex-direction:column}.igth{width:100%;flex-basis:auto;height:140px}.igth img{width:100%;height:140px}.hgrid{grid-template-columns:minmax(0,1fr)}.hstrip .hora{margin-left:0;width:100%}.htop .btn{flex:1}}
 .papBox .tw{overflow-x:auto}.papMatriz td{padding:8px 14px;border-bottom:1px solid var(--line);font-size:13.5px}.papSim{color:var(--ok);font-weight:800}.papNao{color:var(--faint)}
@@ -2212,7 +2213,10 @@ function igQuando(ms){if(!ms)return '';var d=new Date(ms);return d.toLocaleDateS
 function igResumoDias(itens,hoje,n,teto){var out=[];for(var i=0;i<n;i++){var d=igSomaDias(hoje,i);var l=itens.filter(function(p){return p.agendarPara===d;});var ocupa=l.filter(function(p){return p.status!=='rejeitado'&&p.status!=='falhou';}).length;out.push({dia:d,br:dataBR(d),semana:igDiaSemana(d),itens:l,ocupa:ocupa,cheio:ocupa>=teto,hoje:i===0});}return out;}
 function igFiltrar(itens,f){return f==='todos'?itens.slice():itens.filter(function(p){return p.status===f;});}
 function igPodeAprovar(p){return IG.euPosso===true&&p.status==='aguardando';}
-function igUrlHttps(u){try{var x=new URL(String(u));return x.protocol==='https:'&&!x.username&&!x.password;}catch(e){return false;}}
+// 19/11 (auditoria): mesma lista de hosts do validador do Início (HUB_HOSTS e *.workers.dev do projeto) + hosts de mídia/permalink do Instagram. Rejeita artefatos, javascript:, data:, porta e credencial.
+var IG_HOSTS_MIDIA=/(^|\.)(cdninstagram\.com|fbcdn\.net)$/;var IG_HOSTS_PAG=['instagram.com','www.instagram.com'];
+function igUrlHttps(u){try{if(typeof u!=='string'||!u||u.length>2000||/[\u0000-\u001f\s]/.test(u))return false;var x=new URL(u);if(x.protocol!=='https:'||x.username||x.password||x.port)return false;var h=x.hostname.toLowerCase();if(/(^|\.)claude\.ai$/.test(h))return false;return HUB_HOSTS.indexOf(h)>=0||/^[a-z0-9-]+\.robert131196\.workers\.dev$/.test(h)||IG_HOSTS_PAG.indexOf(h)>=0||IG_HOSTS_MIDIA.test(h);}catch(e){return false;}}
+function igUrlCurta(u){try{var x=new URL(u);var s=x.hostname+x.pathname;return s.length>52?s.slice(0,49)+'...':s;}catch(e){return String(u).slice(0,52);}}
 async function igCarregar(){
   if(IG.carregando)return IG.carregando;
   IG.carregando=(async function(){
@@ -2255,7 +2259,16 @@ function igSubstituir(post){var i=IG.itens.map(function(x){return x.id;}).indexO
 function igDecidir(p,dec){
   var tit={aprovar:'Aprovar este post',ajuste:'Pedir ajuste',rejeitar:'Rejeitar este post'}[dec];var ta;var er;
   igAbrirModal(tit,function(b){
-    if(dec==='aprovar'){b.appendChild(el('p','hint','Você está aprovando EXATAMENTE este texto. Se alguém editar depois, a aprovação cai. A Central só registra a sua decisão: quem publica é o agente local.'));var q=el('div','igprev');q.appendChild(el('b',null,p.titulo));var l=el('div','iglegt');l.textContent=p.legenda;q.appendChild(l);q.appendChild(el('div','igalt',  'Texto alternativo: '+(p.alt||'não preenchido')));q.appendChild(el('div','mono hint','conteúdo #'+igHashCurto(p.hash)+' · '+(p.agendarPara?dataBR(p.agendarPara):'sem dia')));b.appendChild(q);}
+    if(dec==='aprovar'){b.appendChild(el('p','hint','Você está aprovando EXATAMENTE este texto. Se alguém editar depois, a aprovação cai. A Central só registra a sua decisão: quem publica é o agente local.'));b.appendChild(el('div','aviso','Qualquer edição derruba a aprovação e o post volta para "Aguardando". Aprove só o que você viu inteiro abaixo.'));var q=el('div','igprev');q.id='igPrevAprov';q.tabIndex=0;q.setAttribute('role','region');q.setAttribute('aria-label','Tudo o que esta aprovação cobre. Role até o fim para liberar o botão Aprovar.');
+      q.appendChild(el('b',null,p.titulo));
+      function lin(r,v){var d=el('div','igalt');d.appendChild(el('b',null,r+': '));d.appendChild(document.createTextNode(v));q.appendChild(d);return d;}
+      lin('Tipo',p.tipo||'não informado');lin('Dia',p.agendarPara?dataBR(p.agendarPara):'sem dia marcado');lin('Hora',p.hora||'sem hora marcada');
+      var rl=el('div','igalt');rl.appendChild(el('b',null,'Legenda completa:'));q.appendChild(rl);var l=el('div','iglegt');l.textContent=p.legenda||'';q.appendChild(l);
+      lin('Texto alternativo geral',p.alt||'não preenchido');
+      var ms=p.midias||[];q.appendChild(el('div','igalt',ms.length?('Mídias ('+ms.length+'):'):'Mídias: nenhuma'));
+      ms.forEach(function(m,i){var li=el('div','igmid');var th=el('div','igmth');if(m&&igUrlHttps(m.url)){var im=el('img');im.src=m.url;im.alt=(m.alt||'')||('Mídia '+(i+1)+' sem texto alternativo');im.loading='lazy';im.width=56;im.height=56;im.onerror=function(){th.textContent='sem imagem';};th.appendChild(im);}else th.textContent='bloqueada';li.appendChild(th);var tx=el('div','igmtx');tx.appendChild(el('b',null,(i+1)+' de '+ms.length));var u=el('span','mono',m&&m.url?igUrlCurta(m.url):'sem endereço');u.title=m&&m.url?String(m.url):'';tx.appendChild(u);tx.appendChild(el('span','igalt'+(m&&m.alt?'':' sem'),'Alt: '+(m&&m.alt?m.alt:'não preenchido')));if(m&&m.url&&!igUrlHttps(m.url))tx.appendChild(el('span','igalt sem','Endereço fora da lista permitida: não será exibido.'));li.appendChild(tx);q.appendChild(li);});
+      var ln=p.links||[];if(ln.length){q.appendChild(el('div','igalt','Links ('+ln.length+'):'));ln.forEach(function(k){var u=typeof k==='string'?k:(k&&(k.url||k.href))||'';q.appendChild(el('div','mono hint',igUrlCurta(u)));});}
+      q.appendChild(el('div','mono hint','conteúdo #'+igHashCurto(p.hash)+' · v'+p.v));b.appendChild(q);}
     var lb=el('label',null,dec==='ajuste'?'O que precisa mudar (obrigatório)':'Comentário (opcional)');lb.htmlFor='igCom';b.appendChild(lb);ta=el('textarea');ta.id='igCom';ta.rows=3;ta.maxLength=600;b.appendChild(ta);
     er=el('div','erro');er.setAttribute('role','alert');b.appendChild(er);
     var ac=el('div','acoes');var cx=el('button','btn ghost','Cancelar');cx.type='button';cx.onclick=fecharModal;var ok=el('button','btn',dec==='aprovar'?'Aprovar este texto':dec==='ajuste'?'Enviar pedido de ajuste':'Rejeitar');ok.type='button';ok.id='igConfirmar';
@@ -2265,7 +2278,10 @@ function igDecidir(p,dec){
       var r;try{r=await api('POST','/instagram/decisao',corpo);}catch(e){r={status:0,j:{mensagem:'Falha de conexão.'}};}
       if(r.status===200&&r.j.ok){igSubstituir(r.j.post);fecharModal();toast(dec==='aprovar'?'Aprovação registrada. A publicação segue pelo agente local.':'Decisão registrada.');igDesenhar();}
       else{ok.disabled=false;cx.disabled=false;ok.textContent=rot;er.textContent=(r.j&&(r.j.mensagem||r.j.rede))||('Erro '+r.status);if(r.status===409){igCarregar();}}};
-    ac.appendChild(cx);ac.appendChild(ok);b.appendChild(ac);setTimeout(function(){(dec==='aprovar'?ok:ta).focus();},0);});
+    ac.appendChild(cx);ac.appendChild(ok);b.appendChild(ac);
+    var libera=null;var pv=dec==='aprovar'?b.querySelector('#igPrevAprov'):null;   // 19/11: Aprovar só libera depois de rolar até o fim do que a aprovação cobre (ou se tudo já cabe na tela)
+    if(pv){pv.style.maxHeight='50vh';pv.style.overflowY='auto';var vistoFim=function(){return pv.scrollHeight-pv.scrollTop-pv.clientHeight<=4;};ok.disabled=true;var dica=el('div','hint','Role até o fim para liberar o botão Aprovar.');dica.id='igDicaRolar';b.insertBefore(dica,ac);libera=function(){if(ok.disabled&&vistoFim()){ok.disabled=false;dica.hidden=true;}};pv.addEventListener('scroll',libera);}
+    setTimeout(function(){if(pv){libera();(ok.disabled?pv:ok).focus();}else ta.focus();},0);});
 }
 async function igReabrir(p,bt){bt.disabled=true;var r=await api('POST','/instagram/reabrir',{id:p.id,v:p.v});if(r.status===200&&r.j.ok){igSubstituir(r.j.post);toast('Post voltou para a fila de aprovação.');igDesenhar();}else{bt.disabled=false;toast((r.j&&(r.j.mensagem||r.j.rede))||'Não consegui reabrir.');if(r.status===409)igCarregar();}}
 function igEditar(p){   // p===null: novo post
