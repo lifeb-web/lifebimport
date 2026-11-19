@@ -21,6 +21,13 @@ def fx(chave, nota=None):
     d = f'<figure class="dfig" role="img" aria-label="{e(p["titulo"])}. {e(p["desc"])}"><div class="svgd dw">{w}</div><div class="svgd dn">{n}</div></figure>'
     return d + (band(nota) if nota else "")
 
+MAPA_PASSOS = ('<ol class="mstep"><li><b>1. Lead</b> chega por anúncio, site, lista ou WhatsApp direto.</li>'
+  '<li><b>2. WhatsApp (Meta)</b> número da Ana, janela de 24 h, modelos aprovados.</li>'
+  '<li><b>3. Ana</b> conversa, qualifica e guarda o histórico.</li>'
+  '<li><b>4. Bia</b> aplica as regras, escreve no Agendor, relê e avisa a equipe.</li>'
+  '<li><b>5. Agendor (CRM)</b> empresas, negócios, funis e tarefas.</li>'
+  '<li><b>6. Avisos no WhatsApp</b> para gestão, SDR e representantes.</li></ol>')
+
 def sub_estado(nome, itens):
     """19/11/2026: componente com um título curto por item (uma linha cada); o texto completo fica na sanfona inline do item."""
     return f'<li><b>{nome}</b><ul class="sub">' + "".join(f"<li>{item_estado(x, deck=True)}</li>" for x in itens) + "</ul></li>"
@@ -85,7 +92,7 @@ def todos():
 
     # ================= COMO SE CONECTA =================
     C = "Como se conecta"
-    A(slide("mapa", "Como as peças se conectam", C, fx("mapa", "A Ana pede; a Bia escreve e avisa. A Ana nunca escreve direto no Agendor nem manda aviso por conta própria. Na página: Como tudo se conecta."), "flow", "visao,entrada"))
+    A(slide("mapa", "Como as peças se conectam", C, fx("mapa", "A Ana pede; a Bia escreve e avisa. A Ana nunca escreve direto no Agendor nem manda aviso por conta própria. Na página: Como tudo se conecta.") + MAPA_PASSOS, "flow", "visao,entrada"))
     A(slide("ponte", "Quem escreve no CRM: a Bia", C, fx("ponte", "A ponte recusa negócios fora do funil da Ana; repetir o repasse não cria outro negócio. Na página: CRM como fonte da verdade."), "flow", "crm,visao,bia"))
     A(slide("jor", "Jornada do lead", C, fx("jor", "Ganho na Ana é qualificação, nunca venda. Depois da venda, o representante cuida do Pós-venda. Na página: Ana; Funis do Agendor."), "flow", "ana,destinos,entrada"))
 
@@ -131,18 +138,20 @@ def todos():
     # ================= BIA =================
     C = "Bia"
     A(slide("autom", "Automações no CRM: quem dispara e com que regra", C, fx("autom", "Em sombra, a automação só simula e relata. Na página: Automações da Bia e da Ana."), "flow", "automacoes,bia"))
-    bia = g([
+    bia_i = [
         cat("No ar (conforme a página)", ["Cadência do SDR e repasse ao Arena, desde 20/10/2026", "Guardas do SDR: ligação com resultado, perda com explicação, dono ativo", "Fechamento e garantia de tarefa; motor proativo do Arena, com aprovação da gestão", "Pós-venda e reposição, a cada 30 minutos; vigias de saúde"], "rocket"),
         cat("Em operação, com prazos em revisão", ["Recuperação SDR, Recuperação e Reativação: criam negócio novo no SDR Outbound para perdidos antigos e clientes que não repuseram", "Uma volta por empresa a cada 180 dias, com limite por dia"], "git"),
         cat("Estado ao vivo não verificado", ["Motores de Reposição e Reativação +75 (cards ao representante nos funis de Pós-venda e Reativação): a memória de 27/09/2026 os registra em sombra, com a camada de entrega construída"], "eye"),
-    ], 3) + band("Em sombra, a automação só simula e relata. Na página: Automações da Bia e da Ana; Bia: avisos, agendas e folga.")
-    A(slide("bia", "Automações da Bia e estado de cada uma", C, bia, "dense", "bia,automacoes"))
-    ana_a = g([
+    ]
+    A(slide("bia", "Automações da Bia e estado de cada uma", C, g(bia_i[:1], 1), "dense", "bia,automacoes", parte=(1, 2)))
+    A(slide("bia_b", "Automações da Bia e estado de cada uma", C, g(bia_i[1:], 2) + band("Em sombra, a automação só simula e relata. Na página: Automações da Bia e da Ana; Bia: avisos, agendas e folga."), "dense", "bia,automacoes", parte=(2, 2)))
+    ana_a_i = [
         cat("Quando o lead escreve", ["Responde na hora, a qualquer hora, juntando mensagens seguidas", "Retorno combinado: volta na hora pedida, ajustada ao horário de contato", "Instrução da equipe pela página Central"], "chat"),
         cat("Quando a Ana toma a iniciativa", ["Só dentro do horário de contato: 8h às 22h em dia útil; 9h às 20h em fim de semana e feriado", "Abertura: 5 minutos depois do cadastro, se o lead não escreveu antes", "Retomada por abandono: toques em dias úteis; qualquer resposta cancela o que falta", "Lead que escreveu e ficou sem resposta: um vigia a cada 5 minutos faz a Ana voltar"], "clock"),
         cat("Vigias e planejado", ["Webhook do número da Ana, conversas sem resposta e custo diário e mensal", "Avisos à equipe em silêncio das 21h às 7h (urgentes passam); a representantes, só em dia útil das 8h às 18h", "Planejado: cadência de 3 toques com mensagens de utilidade"], "eye"),
-    ], 3) + band("Horários e regras da Ana e da Bia, como na página. O número exato de toques de retomada não é citado aqui. Na página: Automações da Bia e da Ana; Ana: a conversa.")
-    A(slide("autom_ana", "Automações da Ana", C, ana_a, "dense", "automacoes,ana"))
+    ]
+    A(slide("autom_ana", "Automações da Ana", C, g(ana_a_i[:1], 1), "dense", "automacoes,ana", parte=(1, 2)))
+    A(slide("autom_ana_b", "Automações da Ana", C, g(ana_a_i[1:], 2) + band("Horários e regras da Ana e da Bia, como na página. O número exato de toques de retomada não é citado aqui. Na página: Automações da Bia e da Ana; Ana: a conversa."), "dense", "automacoes,ana", parte=(2, 2)))
     A(slide("av", "Do evento ao aviso enviado", C, fx("av", "Falha de envio entra na fila; entrega recusada pela Meta ainda não é reenviada (planejado). Na página: Observabilidade e entrega de avisos."), "flow", "bia,observ"))
 
     # ================= PÁGINAS =================
@@ -174,24 +183,26 @@ def todos():
         return (f"{n}. {nome} " + pill(est[0]), txt)
     def mod(n, nome, est, txt):
         return (f"{n}. {nome} " + pill(est[0]), txt)
-    m1 = kv([
+    m1_i = [
         mod(1, "Estado ao vivo", ("no ar",), "Aba Visão geral: saúde da Bia e da Ana ao vivo."),
         mod(2, "Interruptores", ("no ar",), "Aba da Bia: desligado, só observa ou ao vivo, com motivo. Planejado (fase 3): aprovar avisos por tipo pela página Central."),
         mod(3, "Números e prazos", ("no ar",), "Números com limite nos controles. Planejado (fase 2): prazos de reposição e cota do SDR."),
         mod(4, "Calendário e horários", ("no ar",), "Dias de folga. Planejado (fase 2): horários por pessoa e por tipo de aviso."),
         mod(5, "Time e permissões", ("no ar",), "Aba de acessos: já no ar. Tela nova de Usuários e papéis, Instagram e hub: em construção, NÃO no ar."),
         mod(6, "Mensagens e botões", ("planejado",), "Fase 4: editar textos, botões e listas dos avisos, com prévia, aprovação e versão."),
-    ], 2) + band("Os 12 módulos vêm do plano da página Central de 09/11/2026. Fora dos módulos, já no ar: atendimento da Ana e aba da Ana. Na página: Central.")
-    A(slide("cenmod", "Central: módulos 1 a 6 do plano e o estado de cada um", C, m1, "dense", "central"))
-    m2 = kv([
+    ]
+    A(slide("cenmod", "Central: módulos 1 a 6 do plano e o estado de cada um", C, kv(m1_i[:3], 2), "dense", "central", parte=(1, 2)))
+    A(slide("cenmod_b", "Central: módulos 1 a 6 do plano e o estado de cada um", C, kv(m1_i[3:], 2) + band("Os 12 módulos vêm do plano da página Central de 09/11/2026. Fora dos módulos, já no ar: atendimento da Ana e aba da Ana. Na página: Central."), "dense", "central", parte=(2, 2)))
+    m2_i = [
         mod(7, "Histórico e desfazer", ("no ar",), "Cada mudança com autor, motivo e desfazer."),
         mod(8, "Saúde e alertas", ("no ar",), "Visão geral e filas por pessoa. Planejado (fase 2): absorver a aba da Bia no Dash."),
         mod(9, "Cadência e funis", ("planejado",), "Fase 5: dias, passos e textos da cadência do SDR."),
         mod(10, "Hoje e Lista", ("planejado",), "Fase 3: editar colunas, cota, textos e regras das páginas. Hoje há o interruptor de escrita da página Hoje."),
         mod(11, "Intensidade de cobrança", ("planejado",), "Fase 2: semanas em que a Bia aumenta a cobrança."),
         mod(12, "Dias off e feriados", ("no ar",), "Dias de folga marcados à mão. Planejado (fase 2): por empresa, cidade ou pessoa."),
-    ], 2) + band("A página Central controla valores, não a lógica das regras, segredos nem limites de terceiros. Na página: Central.")
-    A(slide("cenmod2", "Central: módulos 7 a 12 do plano e o estado de cada um", C, m2, "dense", "central"))
+    ]
+    A(slide("cenmod2", "Central: módulos 7 a 12 do plano e o estado de cada um", C, kv(m2_i[:3], 2), "dense", "central", parte=(1, 2)))
+    A(slide("cenmod2_b", "Central: módulos 7 a 12 do plano e o estado de cada um", C, kv(m2_i[3:], 2) + band("A página Central controla valores, não a lógica das regras, segredos nem limites de terceiros. Na página: Central."), "dense", "central", parte=(2, 2)))
     cen1 = g([
         cat("No ar: atendimento", ["Lista de conversas com selos de situação do lead; conversa completa com histórico, áudios e fotos", "Assumir, responder por texto ou pela voz da Ana, devolver, passar ao time comercial e pausar", "Instruir a Ana por texto ou áudio"], "chat"),
         cat("No ar: a Ana", ["Aba da Ana: modo, parada de emergência, voz e base de conhecimento editável, com versões", "Aprendizado por polegar para cima ou para baixo, com análise que a gestão aprova"], "ctrl"),

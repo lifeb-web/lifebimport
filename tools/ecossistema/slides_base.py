@@ -50,7 +50,7 @@ REG = []   # registro de slides: (n, chave, titulo, capitulo, secoes)
 def slide(chave, titulo, cap, corpo, cls="", sec="", parte=None):
     """Um slide. cap = capítulo (agrupa no índice). sec = ids de seções da página longa que este slide cobre. parte = (i, total) para fluxos em várias partes."""
     _n[0] += 1; n = _n[0]
-    kick = e(cap) + (f" · parte {parte[0]}/{parte[1]}" if parte else "")
+    kick = e(cap) + (f" · parte {parte[0]} de {parte[1]}" if parte else "")
     REG.append((n, chave, titulo, cap, sec))
     ptxt = f" (parte {parte[0]} de {parte[1]})" if parte else ""
     return (f'<section class="slide {cls}" id="sl-{chave}" data-t="{e(titulo)}" data-cap="{e(cap)}" data-sec="{e(sec)}" aria-label="Slide {n}: {e(titulo)}{ptxt}" aria-hidden="true">'

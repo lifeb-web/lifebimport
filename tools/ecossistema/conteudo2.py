@@ -286,12 +286,22 @@ def s_outras():
     return sec("outras", "Páginas e sistemas", "Painel do Representante, Dash e demais sistemas", "As outras peças que a equipe usa.", corpo)
 
 def s_meta():
+    full = [
+      "A Ana e a Bia usam números de WhatsApp diferentes. O webhook do número da Ana na Meta é vigiado a cada 5 minutos e recolocado se sumir.",
+      "Dentro de 24 horas da última mensagem do lead, a Ana responde livremente. Fora dela, só modelos aprovados. A janela só reabre quando a pessoa responde; por isso a Bia manda, antes de fechar, um \"tá tudo certo?\" com botões, em dia útil, das 8h às 18h, sem empilhar mensagens.",
+      "Aberturas usam modelos de marketing, com texto humano; modelos utilitários só para retorno com data. Os modelos de \"cadastro recebido\" ficam como reserva, sem uso. Arquivar modelos antigos só depois de os novos estarem estáveis.",
+      "Conservador de propósito, para proteger a qualidade do número: aviso da Bia a representantes, no máximo 1 a cada 20 minutos por pessoa e 30 por hora no total; a Ana só toma a iniciativa dentro do horário de contato (8h às 22h em dia útil; 9h às 20h em fim de semana e feriado); cada aviso tem regra de não repetir; nada vai a um lead real em teste.",
+      "A Bia só considera \"enviado\" quando o WhatsApp aceitou. Qualquer outro retorno vira erro e o aviso entra na fila durável.",
+      "Nos avisos da Bia, a falha de ENTREGA recusada pela Meta fica registrada, mas ainda não gera reenvio automático (planejado); a falha de ENVIO entra na fila e é reenviada. O reenvio por utilidade da abertura da Ana foi corrigido em 17/11/2026 (23h40): no ar; resultado em caso real ainda a provar (18/11/2026).",
+    ]
+    def cartao(t, topicos, k, p=None):
+        return card(t, ul(topicos) + det("Texto completo", "<p class=\"full\">" + full[k] + "</p>"), p=p)
     corpo = (grid([
-      card("Números separados", "<p>A Ana e a Bia usam números de WhatsApp diferentes. O webhook do número da Ana na Meta é vigiado a cada 5 minutos e recolocado se sumir.</p>"),
-      card("Janela de 24 horas", "<p>Dentro de 24 horas da última mensagem do lead, a Ana responde livremente. Fora dela, só modelos aprovados. A janela só reabre quando a pessoa responde; por isso a Bia manda, antes de fechar, um \"tá tudo certo?\" com botões, em dia útil, das 8h às 18h, sem empilhar mensagens.</p>"),
-      card("Modelos aprovados", "<p>Aberturas usam modelos de marketing, com texto humano; modelos utilitários só para retorno com data. Os modelos de \"cadastro recebido\" ficam como reserva, sem uso. Arquivar modelos antigos só depois de os novos estarem estáveis.</p>", p="pl"),
-      card("Ritmo e limites", "<p>Conservador de propósito, para proteger a qualidade do número: aviso da Bia a representantes, no máximo 1 a cada 20 minutos por pessoa e 30 por hora no total; a Ana só toma a iniciativa dentro do horário de contato (8h às 22h em dia útil; 9h às 20h em fim de semana e feriado); cada aviso tem regra de não repetir; nada vai a um lead real em teste.</p>"),
-      card("Entrega", "<p>A Bia só considera \"enviado\" quando o WhatsApp aceitou. Qualquer outro retorno vira erro e o aviso entra na fila durável.</p>", p="ok"),
-      card("Falha de entrega da própria Meta", "<p>Nos avisos da Bia, a falha de ENTREGA recusada pela Meta fica registrada, mas ainda não gera reenvio automático (planejado); a falha de ENVIO entra na fila e é reenviada. O reenvio por utilidade da abertura da Ana (se a Meta recusar o modelo de marketing, um único reenvio por modelo de utilidade; se falhar de novo, espera o lead escrever e cria tarefa humana com alerta) foi construído em 15/11/2026, não funcionou no caso real de 17/11/2026 (a cadência de abertura cancelou o reenvio agendado) e foi corrigido no pacote da Ana de 17/11/2026 (23h40), agora com tarefa humana em 24 h: no ar; resultado em caso real ainda a provar (18/11/2026).</p>", p="ap"),
+      cartao("Números separados", ["Ana e Bia usam números diferentes", "Webhook da Ana vigiado a cada 5 min", "Se sumir, é recolocado"], 0),
+      cartao("Janela de 24 horas", ["Até 24 h da última fala: a Ana responde livre", "Depois: só modelos aprovados", "A Bia pergunta \"tá tudo certo?\" antes de fechar"], 1),
+      cartao("Modelos aprovados", ["Abertura: modelo de marketing, texto humano", "Retorno com data: modelo utilitário", "Arquivar os antigos só com os novos estáveis"], 2, "pl"),
+      cartao("Ritmo e limites", ["Aviso a representante: 1 a cada 20 min por pessoa", "No máximo 30 por hora no total", "Nada vai a lead real em teste"], 3),
+      cartao("Entrega", ["\"Enviado\" só se o WhatsApp aceitou", "Outro retorno vira erro", "O aviso entra na fila durável"], 4, "ok"),
+      cartao("Falha de entrega da Meta", ["Entrega recusada: registrada, sem reenvio automático", "Envio com falha: fila e reenvio", "Abertura da Ana: 1 reenvio por utilidade (no ar, a provar)"], 5),
     ], 2))
     return sec("meta", "Plataforma", "WhatsApp e Meta", "Modelos, janela de 24 horas e limites que protegem o número.", corpo)

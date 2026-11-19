@@ -65,11 +65,12 @@ def extras():
     return [
       ("Painel do Representante (nova recarga)", "ok", "Painel no ar; o pacote novo (recarga em horário comercial) aguarda auditoria", "09/11/2026"),
       ("Este Ecossistema", "te", "Atualizado, com apresentação em slides; publica depois do teste visual e do auditor", "19/11/2026"),
+      ("Playbook comercial", "te", "Em construção (página /playbook/ atrás do login da página Central)", "sem data"),
       ("Plataforma", "pl", "Mineração de leads; arquivar modelos antigos da Meta; revisão das cadências com dados reais", "sem data"),
     ]
 
 def peca_extra(n, k, t, d):
-    return (f'<div class="peca"><div class="peca-h"><b>{n}</b>{pill(k)}</div><p class="peca-m">{d}</p><ul class="peca-t"><li>{e(t)}</li></ul></div>')
+    return (f'<div class="peca"><div class="peca-h"><b>{n}</b>{pill(k, "Em construção" if n == "Playbook comercial" else None)}</div><p class="peca-m">{d}</p><ul class="peca-t"><li>{e(t)}</li></ul></div>')
 
 def figura_papeis():
     """Os 3 papéis e os 4 jeitos de entrada (fonte: pedido do dono em 19/11/2026 e seções Ana/Outbound desta página)."""

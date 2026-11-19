@@ -63,19 +63,36 @@ def s_seguranca():
       + ul(["<b>Uma coisa de cada vez:</b> antes de criar algo, a Bia reserva o direito de fazer, para duas rotinas não agirem ao mesmo tempo.", "<b>Criação sem resposta:</b> a Bia procura se o negócio já existe antes de tentar de novo.", "<b>Aprovações e identidade:</b> avisos a representantes passam por aprovação e a identidade de quem pede cada ação é verificada.", "<b>Interruptores de emergência:</b> a gestão pode pausar a Bia inteira, só os avisos ou cada regra.", "<b>Segredos fora do código:</b> chaves e senhas ficam em cofre e nunca em páginas, documentos ou conversas.", "<b>Dados de clientes:</b> nenhum telefone, CNPJ ou nome de cliente é exibido em guias como este; pedido de não contatar é respeitado e registrado."]))
     return sec("seguranca", "Plataforma", "Segurança e engenharia", "Cinto de segurança, roteiro único de publicação, auditoria independente, antirregressão e fumaça.", corpo)
 
+RESUMO_CAMADA = {
+    "Nova tentativa": ["Falha passageira: repete com pausa crescente", "Aviso que falhou volta a cada 5 min, por até 24 h"],
+    "Plano B": ["IA falhou: texto padrão seguro", "Voz falhou: voz reserva, depois texto", "Rota do Agendor bloqueada: rota alternativa"],
+    "Só conta se saiu": ["\"Enviado\" só quando o WhatsApp aceitou", "Cada tentativa fica registrada"],
+    "Falha da Meta na abertura da Ana": ["Reenvio por utilidade e tarefa humana em 24 h", "No ar desde 17/11/2026 (23h40); resultado em caso real a provar"],
+    "Status visível": ["Fila por pessoa e avisos pendentes", "Saúde das rotinas na página Central e no Dash"],
+    "Alerta sem barulho": ["Esgotou as tentativas: para e avisa a gestão", "Falha passageira só alerta na 2ª seguida"],
+}
+
+def camadas_cards(rows):
+    cards = []
+    for nome, texto, onde in rows:
+        tops = RESUMO_CAMADA.get(nome, [texto])
+        cards.append(card(nome, ul(tops) + f'<p class="peca-m">Onde aparece: {onde}</p>' + det("Texto completo", f'<p class="full">{texto}</p>')))
+    return grid(cards, 3)
+
 def s_observ():
     corpo = (
       '<p>Uma falha silenciosa é inaceitável. Cada ponto crítico tem um vigia, uma nova tentativa e um alerta para a gestão.</p>'
       + '<h3 class="mt">Do evento ao aviso enviado, passo a passo</h3>' + fig("avisos")
       + '<h3 class="mt">A camada de entrega</h3>'
-      + tabela(["Camada", "O que faz", "Onde aparece"], [
+      + camadas_cards([
+
         ["Nova tentativa", "Falha temporária é repetida com pausa crescente, com teto de tentativas. Aviso cujo envio falhou volta a cada 5 minutos por até 24 horas.", "Fila durável"],
         ["Plano B", "IA falhou: texto padrão seguro. Voz falhou: voz reserva e depois a da Bia, e por fim texto. Rota de saída do Agendor bloqueada: rota alternativa.", "Dentro da própria conversa"],
         ["Só conta se saiu", "\"Enviado\" só quando o WhatsApp aceitou.", "Registro de cada tentativa"],
         ["Falha da Meta na abertura da Ana", "Reenvio por utilidade e tarefa humana em 24 h: construído em 15/11/2026, não funcionou no caso real de 17/11/2026 e corrigido no pacote da Ana de 17/11/2026 (23h40): no ar; resultado em caso real ainda a provar (18/11/2026).", "Central e alerta à gestão"],
         ["Status visível", "Fila por pessoa, avisos pendentes e saúde das rotinas.", "Central e aba BIA do Dash"],
         ["Alerta sem barulho", "Se esgotar, a rotina para de insistir e avisa a gestão; falha passageira só alerta na segunda ocorrência seguida.", "WhatsApp da gestão"],
-      ], "", "Camadas de entrega")
+            ])
       + '<h3 class="mt">Os vigias</h3>'
       + grid([
         card("Dados e rotinas", ul(["Negócio sem tarefa, cadastro incompleto, funil errado, duplicados, tarefa duplicada e congelados.", "Se os avisos do Agendor pararam de chegar, a Bia passa a conferir a cada 2 minutos até normalizar.", "Sincronização do Dash: alerta se parar por mais de 15 minutos."])),
@@ -83,7 +100,7 @@ def s_observ():
         card("Coerência", ul(["Auditor de coerência: lê o que a Bia disse e confere no Agendor se foi feito de verdade; divergência vai à gestão.", ])),
         card("Custo", ul(["Dash, aba Agentes: gasto por modelo, por lead novo, por qualificado e projeção do mês.", "Alerta de custo diário e mensal."])),
       ], 2)
-      + aviso("Limites declarados", "Falha de ENVIO entra na fila e é reenviada; falha de ENTREGA recusada pela Meta, nos avisos da Bia, ainda não gera reenvio automático (planejado). O reenvio por utilidade da abertura da Ana foi corrigido em 17/11/2026 (23h40): no ar; resultado em caso real ainda a provar (18/11/2026). O custo real da Bia ainda não é medido por completo. A conferência do Agendor só enxerga tarefas abertas há menos de 31 dias nas buscas por filtro.", "w"))
+      + aviso("Limites declarados", ul(["Entrega recusada pela Meta, nos avisos da Bia: ainda sem reenvio automático (planejado).", "Reenvio por utilidade da abertura da Ana: no ar desde 17/11/2026 (23h40); resultado em caso real a provar.", "O custo real da Bia ainda não é medido por completo.", "A conferência do Agendor só vê tarefas abertas há menos de 31 dias nas buscas por filtro."]), "w"))
     return sec("observ", "Plataforma", "Observabilidade e entrega de avisos", "Vigias, nova tentativa, plano B e status visível na página Central.", corpo)
 
 def s_duvidas():
@@ -124,7 +141,7 @@ def s_versoes():
     for x in d["sistemas"]:
         v = x["verif"]
         est = pill("ok", "No ar") if x["estado"] == "no ar" else pill("te", "Em implantação")
-        vf = "<br>".join(f"<b>{k.capitalize() if k!='fumaca' else 'Fumaça'}:</b> {val}" for k, val in v.items())
+        vf = "<ul class=\"vf\">" + "".join(f"<li><b>{k.capitalize() if k!='fumaca' else 'Fumaça'}:</b> {val}</li>" for k, val in v.items()) + "</ul>"
         rows.append([x["nome"], f"<b>{vis(x['versao'])}</b>" + (f"<br><span class=\"muted\">{x['nota']}</span>" if x["nota"] else ""), x["data"], est + "<br><span class=\"muted\">Fonte: " + x["fonte"] + "</span>", vf])
     ciclo = passos([("Varredura de todos os lugares", "A regra mudada é procurada no código, nas mensagens, nas páginas, na página Central, neste Ecossistema e nos documentos. O roteiro exige a linha \"Varredura:\"."),
         ("Testes", "Suíte principal (cerca de 12 mil verificações) e suítes dos módulos; nas páginas, testes de tela em navegador real, 5 larguras e dois temas."),
@@ -135,7 +152,7 @@ def s_versoes():
         ("Rollback", "A versão anterior fica guardada e a volta atrás é testada. Registrada aqui, junto da versão e da data.")])
     corpo = (aviso("De onde vêm estes números", "Quando dá, a versão é lida ao vivo (rota de versão ou lista de versões do servidor). Quando não dá, vem do arquivo de dados desta página, atualizado pelo roteiro de deploy de cada sistema. \"A registrar\" significa que a leitura ainda não existe: nada é inventado. Posição de " + d["atualizado_em"] + ".", "n")
       + tabela(["Sistema", "Versão em produção", "Último deploy", "Estado", "Checklist de verificação do último deploy"], rows, "ver", "Versão de cada sistema e verificações do último deploy")
-      + '<h3 class="mt">Deploys recentes e o que foi verificado em cada um</h3>' + tabela_curta(["Sistema", "Data", "Verificações"], [[x["sistema"], x["data"], "<br>".join(f"<b>{k}:</b> {x[k]}" for k in ("varredura", "testes", "auditor", "fumaca", "rollback"))] for x in d.get("deploys", [])], "ver", "Deploys recentes")
+      + '<h3 class="mt">Deploys recentes e o que foi verificado em cada um</h3>' + tabela_curta(["Sistema", "Data", "Verificações"], [[x["sistema"], x["data"], "<ul class=\"vf\">" + "".join(f"<li><b>{k}:</b> {x[k]}</li>" for k in ("varredura", "testes", "auditor", "fumaca", "rollback")) + "</ul>"] for x in d.get("deploys", [])], "ver", "Deploys recentes")
       + '<h3 class="mt">O que se verifica em todo deploy</h3>' + ciclo
       + grid([card("Atualização automática pelo deploy", "<p>O roteiro de deploy de cada sistema chama a atualização do arquivo de versões depois de publicar (versão, data e resultado de cada verificação) e remonta esta página. Hoje o comando existe; ligá-lo em cada roteiro de deploy é o próximo passo.</p>", p="pl"),
               card("Documentação de cada verificação", "<p>Cada deploy deixa registro: o que foi varrido, quais testes rodaram e o resultado, quem auditou e o veredito, o resultado da fumaça e como voltar atrás. Os registros ficam nos documentos do projeto e as linhas de resumo aparecem aqui.</p>", p="ok")], 2)

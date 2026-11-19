@@ -70,7 +70,8 @@ def passos(lista):
     return '<ol class="steps">' + "".join(out) + "</ol>"
 
 def aviso(titulo, corpo, k="n"):
-    return f'<div class="callout c-{k}"><b>{titulo}</b><p>{corpo}</p></div>'
+    corpo_h = corpo if corpo.lstrip().startswith("<ul") else f"<p>{corpo}</p>"
+    return f'<div class="callout c-{k}"><b>{titulo}</b>{corpo_h}</div>'
 
 def stats(lista):
     return '<div class="stats">' + "".join(f'<div class="stat s-{k}"><b>{n}</b><span>{t}</span></div>' for n, t, k in lista) + "</div>"
