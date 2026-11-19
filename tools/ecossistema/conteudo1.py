@@ -26,8 +26,8 @@ def s_inicio():
 
 def s_status():
     import pecas as P
-    area = "".join(f'<h3 class="mt">{e(nome)}</h3>' + grid([P.peca(P.COMP[i]) for i in ids], 3 if len(ids) > 2 else 2) for nome, ids in P.AREAS)
-    area += '<h3 class="mt">Outras peças</h3>' + grid([P.peca_extra(*x) for x in P.extras()], 3)
+    cards = [P.peca(P.COMP[i], area=nome) for nome, ids in P.AREAS for i in ids] + [P.peca_extra(*x) for x in P.extras()]
+    area = grid(cards, 3)
     corpo = (f'<div class="areas">{area}</div>'
       + '<h3 class="mt">Depende de decisão da gestão</h3>' + ul(S.DEPENDE)
       + aviso("Como ler este status", "\"No ar\": conferido em produção, sem pendência declarada. \"Em implantação\": pronto, ainda não no ar. \"Planejado\": futuro. \"Em voo\": publicando agora. \"Em correção\": publicação abortou ou achou-se defeito; não está no ar.", "n"))

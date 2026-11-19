@@ -69,7 +69,7 @@ def todos():
 
     import pecas as P
     def pg(ids): return '<div class="dg3 dgx pecas">' + "".join(P.peca(P.COMP[i], deck=True) for i in ids) + '</div>'
-    A(slide("papeis", "Quem atende cada entrada", C, P.figura_papeis() + band("Quatro jeitos de entrada, três papéis. A Ana não atende lista: lista é do SDR humano."), "nofit", "visao,ana,recuperacao"))
+    A(slide("papeis", "Quem atende cada entrada", C, P.figura_papeis() + band("Quatro jeitos de entrada, três papéis. A Ana não atende lista: lista é do SDR humano."), "", "visao,ana,recuperacao"))
     A(slide("estado", "Estado das peças: atendimento, SDR e Central", C, pg(["ana", "hoje", "central"]) + band(f"Posição de {ATUAL}. No ar: conferido em produção. Em implantação: pronto, ainda não no ar. Checklist completo na página."), "dense", "status,checklist"))
     A(slide("estadob", "Estado das peças: agentes, números e CRM", C, pg(["bia", "dash", "agendor"]) + band("No ar: conferido em produção. Checklist completo na página."), "dense", "status,checklist"))
     impl = [c for c in ESTADO["componentes"] if c["implantacao"]]

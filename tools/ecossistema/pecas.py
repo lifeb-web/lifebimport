@@ -19,7 +19,7 @@ TOPICOS = {
 }
 VERSAO = {"ana": "pacote de 17/11/2026", "bia": "atualização de 17/11/2026", "hoje": "página 2026-11-17.5", "central": "publicada em 17/11/2026", "dash": "página de 17/11/2026", "agendor": "sem versão própria"}
 
-def peca(c, deck=False):
+def peca(c, deck=False, area=None):
     i = c["id"]; nome = c["nome"]
     tops = "".join(f"<li>{e(t)}</li>" for t in TOPICOS[i])
     extra = ""
@@ -29,7 +29,8 @@ def peca(c, deck=False):
     PK = {"no_ar": ("ok", "No ar"), "implantacao": ("te", "Em implantação"), "planejado": ("pl", "Planejado")}
     linha = "".join(f'<li class="full"><span class="pill p-{PK[k][0]}">{PK[k][1]}</span> {selo(x, deck)}</li>' for k in ("no_ar", "implantacao", "planejado") for x in c[k])
     tl = f'<details class="mais pc-tl"><summary><span>Histórico de versões (linha do tempo)</span></summary><ol class="tl">{linha}</ol></details>'
-    return (f'<div class="peca"><div class="peca-h"><b>{nome}</b>{pill("ok" if c["estado"] == "no ar" else "te")}</div>'
+    kick = f'<span class="peca-k">{e(area)}</span>' if area else ""
+    return (f'<div class="peca">{kick}<div class="peca-h"><b>{nome}</b>{pill("ok" if c["estado"] == "no ar" else "te")}</div>'
             f'<p class="peca-m">{e(c["papel"])} · versão: {e(VERSAO[i])} · {c["data"]}</p><ul class="peca-t">{tops}</ul>{extra}{tl}</div>')
 
 def extras():
@@ -59,6 +60,7 @@ def figura_papeis():
 CSS = '''
 .peca{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px;min-width:0;box-shadow:var(--shadow)}
 .peca-h{display:flex;align-items:center;justify-content:space-between;gap:8px}.peca-h b{font-size:19px;color:var(--purple-d)}
+.peca-k{display:block;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);font-weight:800;margin-bottom:2px}
 .peca-m{margin:2px 0 8px;font-size:13.5px;color:var(--muted)}
 .peca-t{margin:0 0 6px;padding-left:1.1em}.peca-t li{margin:3px 0}
 .pc-x{margin:6px 0;font-size:14px}.pc-x ul{margin:4px 0 0;padding-left:1.1em}
