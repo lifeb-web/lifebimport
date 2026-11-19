@@ -68,7 +68,7 @@ const cena_ = async (nome, fn) => { try { await fn(); } catch (e) { S.F("EXCEÇ�
     // ---- 0. servidor novo: `atendimento` manda em 'Precisam de você', no status e no selo REPASSADA ----
     S.ok((await chip(p, "precisa")) === "5", tag("com `atendimento`: Precisam de você = 5 (4 com_equipe + 1 esperando_pessoa; repassada_felipe NÃO conta): " + (await chip(p, "precisa"))));
     const lEsp = await linha(p, F.ESP); S.ok(/Precisa de você/.test(lEsp) && !/REPASSADA/.test(lEsp), tag("esperando_pessoa: 'Precisa de você' e SEM selo REPASSADA (repasse.repassada da Ana não vale sem prova) | " + lEsp.replace(/\n/g, " / ")));
-    const lRep = await linha(p, F.REP); S.ok(/REPASSADA AO FELIPE por Robert, 16\/11 23:55/.test(lRep) && /Com o Felipe/.test(lRep) && !/Precisa de você/.test(lRep), tag("repassada_felipe: selo REPASSADA + status 'Com o Felipe', não é 'precisa' | " + lRep.replace(/\n/g, " / ")));
+    const lRep = await linha(p, F.REP); S.ok(/REPASSADA AO FELIPE/.test(lRep) && /Com o Felipe/.test(lRep) && !/Precisa de você/.test(lRep), tag("repassada_felipe: selo REPASSADA + status 'Com o Felipe', não é 'precisa' | " + lRep.replace(/\n/g, " / ")));
     S.ok(/nota de repasse manual/.test(await p.$eval(`#atItens .ri[data-fone="${F.REP}"] .tg.rep`, (e) => e.title)), tag("dica do selo traz a prova (nota manual)"));
     await p.click('#atFiltros button[data-f="precisa"]'); await p.waitForTimeout(250); const cp = await cards(p); S.ok(cp.includes(F.ESP) && cp.includes(F.EQ) && !cp.includes(F.REP) && !cp.includes(F.ABERTA), tag("filtro 'Precisam de você' com o campo: " + cp.join(","))); await p.click('#atFiltros button[data-f="todos"]'); await p.waitForTimeout(200);
     // arquivar quem está esperando uma pessoa (servidor novo aceita): sai de 'Precisam de você'
@@ -126,8 +126,8 @@ const cena_ = async (nome, fn) => { try { await fn(); } catch (e) { S.F("EXCEÇ�
   // ---- 7. servidor ATUAL (recusa 409 para assumida): a página mostra o motivo e a conversa fica onde estava ----
   await cena_("recusa", async () => { const E = estadoInicial(); E.srv = "recusa"; const { ctx, p } = await abrir(b, E, { width: 1440, height: 900 });
     S.ok((await chip(p, "precisa")) === "6", "sem `atendimento` (servidor atual): Precisam de você = 6 (4 humano + 2 aguardando_humano), regra antiga: " + (await chip(p, "precisa")));
-    const lE0 = await linha(p, F.ESP); S.ok(/Precisa de você/.test(lE0) && /REPASSADA AO FELIPE por Ana/.test(lE0), "sem campo: aguardando_humano com repasse.repassada da Ana ainda mostra 'REPASSADA AO FELIPE por Ana' (contrato atual) | " + lE0.replace(/\n/g, " / "));
-    const lR0 = await linha(p, F.REP); S.ok(/REPASSADA AO FELIPE por Robert/.test(lR0) && /Precisa de você/.test(lR0), "sem campo: repassada manual também conta como 'precisa' (regra antiga, sem prova do servidor)");
+    const lE0 = await linha(p, F.ESP); S.ok(/Precisa de você/.test(lE0) && /REPASSADA AO FELIPE/.test(lE0), "sem campo: aguardando_humano com repasse.repassada da Ana ainda mostra 'REPASSADA AO FELIPE' (regra 19/11: lista so o selo curto; quem/quando no title e na ficha) (contrato atual) | " + lE0.replace(/\n/g, " / "));
+    const lR0 = await linha(p, F.REP); S.ok(/REPASSADA AO FELIPE/.test(lR0) && /Precisa de você/.test(lR0), "sem campo: repassada manual também conta como 'precisa' (regra antiga, sem prova do servidor)");
     await arquivarPeloMenu(p, F.EQ); await p.waitForTimeout(400);
     S.ok(E.posts.length === 1, "409: a página pediu ao servidor (1 POST)");
     const t = await p.$eval("#toast", (e) => e.textContent); S.ok(/A equipe está atendendo esta conversa/.test(t) && /continua onde estava/.test(t), "409: mostra o motivo do servidor e diz que a conversa continua onde estava: " + t);
