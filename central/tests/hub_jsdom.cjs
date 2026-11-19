@@ -196,5 +196,10 @@ const nomes = (W) => W.$$(".hcard .htxt b").map((x) => x.textContent);
     pv.scrollTop = 600; pv.dispatchEvent(new W.win.Event("scroll")); ok(W.$("#igConfirmar").disabled === false && W.$("#igDicaRolar").hidden, "H13 rolou até o fim: Aprovar libera");
     await W.clica("#igConfirmar"); await tick(20); ok(W.m.chamadas.some((x) => x.caminho === "/instagram/decisao"), "H14 depois de liberar, aprova de verdade"); }
   { const W = await mundo({ aba: "instagram" }); await W.abrir("telaInstagram"); await W.clica(".igp[data-post='ig_a1'] [data-acao='ajuste']"); await tick(30); ok(!W.$("#igPrevAprov") && !W.$("#igConfirmar").disabled, "H15 pedir ajuste não tem a trava de rolagem"); }
+  // ================= 19/11 VISUAL: destaque da Hoje do SDR e relógios =================
+  { const W = await mundo(); await W.abrir("telaInicio"); const d = [...W.$$("[data-destaque]")]; ok(d.length >= 1 && d.every((a) => /^\//.test(a.getAttribute("href")) && a.rel === "noopener noreferrer"), "V1 destaque da Hoje do SDR com link interno e noopener (" + d.length + ")"); ok(/PRIORIDADE DO DIA/.test(W.$(".hfeat").textContent), "V2 faixa de destaque desenhada");
+    ok(/^\d\d:\d\d:\d\d UTC$/.test(W.$("#hubHoraUtc").textContent) && /Brasília/.test(W.$("#hubHora").textContent), "V3 relógios UTC e Brasília"); W.run("hubTick")(); ok(/UTC$/.test(W.$("#hubHoraUtc").textContent), "V4 hubTick mantém os dois relógios");
+    const W2 = await mundo({ cfg: { v: 1, cards: { hoje: { oculto: true }, "hoje-felipe": { oculto: true } } } }); await W2.abrir("telaInicio"); ok(!W2.$(".hfeat"), "V5 cartões ocultos: nenhum destaque (não libera nada novo)");
+    const inp = W.$("#hubBusca"); inp.value = "dash"; inp.dispatchEvent(new W.win.Event("input", { bubbles: true })); await tick(30); ok(!W.$(".hfeat"), "V6 em busca o destaque some"); }
   console.log(`hub_jsdom: ${n} verificações; falhas: ${falhas.length}`); falhas.forEach((f) => console.log(" - " + f)); process.exit(falhas.length ? 1 : 0);
 })().catch((e) => { console.log("ERRO NO TESTE:", e.stack); process.exit(2); });
