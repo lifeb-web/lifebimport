@@ -14,7 +14,7 @@ D["mapa"] = dict(cols=4, titulo="Mapa do ecossistema: quem escreve onde",
   N("hist","Histórico","Toda mensagem é guardada antes de qualquer ação","n",0,1),
   N("bia","Bia, quem escreve no CRM","Confere as regras, escreve no Agendor, relê para confirmar e avisa a equipe","m",1,1,3),
   N("ag","Agendor, a fonte da verdade","Empresa, pessoa, negócio, etapa, notas e tarefas","g",0,2,2),
-  N("av","Avisos no WhatsApp","Gestão, SDR, closer e representantes; muitos com botão","n",2,2,2),
+  N("av","Avisos no WhatsApp","Gestão, SDR e representantes; muitos com botão","n",2,2,2),
   N("pag","Páginas de trabalho","Hoje, Central, Painel do Representante e Dash leem o Agendor ao vivo","n",0,3,2)],
  edges=[("lead","meta",""),("meta","ana",""),("ana","hist","grava"),("ana","bia","pede"),("bia","ag","escreve"),("bia","av","avisa"),("ag","pag","lê")])
 

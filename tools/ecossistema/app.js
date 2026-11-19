@@ -32,7 +32,17 @@
     if (menuBtn) menuBtn.setAttribute('aria-expanded', abrir ? 'true' : 'false');
     if (abrir) { var f = $('.busca', side); if (f && W.innerWidth < 1180) f.focus({ preventScroll: true }); }
   }
-  if (menuBtn) menuBtn.addEventListener('click', function () { menu(!side.classList.contains('open')); });
+  /* lateral recolhível no desktop (19/11/2026): botão Menu e tecla M; a escolha fica em localStorage */
+  var H_ = D.documentElement, largo = function () { return W.innerWidth >= 1180; };
+  function lateral(fora) {
+    H_.classList.toggle('side-off', fora); ls('eco.lateral', fora ? 'off' : 'on');
+    if (menuBtn) { menuBtn.setAttribute('aria-expanded', fora ? 'false' : 'true'); menuBtn.setAttribute('aria-label', fora ? 'Mostrar o índice de seções' : 'Recolher o índice de seções'); }
+  }
+  if (ls('eco.lateral') === 'off') lateral(true); else if (menuBtn && largo()) menuBtn.setAttribute('aria-expanded', 'true');
+  if (menuBtn) menuBtn.addEventListener('click', function () { if (largo()) lateral(!H_.classList.contains('side-off')); else menu(!side.classList.contains('open')); });
+  D.addEventListener('keydown', function (e) {
+    if ((e.key === 'm' || e.key === 'M') && !e.ctrlKey && !e.metaKey && !e.altKey && !/^(INPUT|TEXTAREA|SELECT)$/.test((e.target || {}).tagName || '') && !H_.classList.contains('deck-on')) { e.preventDefault(); if (largo()) lateral(!H_.classList.contains('side-off')); else menu(!side.classList.contains('open')); }
+  });
   $$('.fechar', side).forEach(function (b) { b.addEventListener('click', function () { menu(false); if (menuBtn) menuBtn.focus(); }); });
   $$('.toc a', side).forEach(function (a) { a.addEventListener('click', function () { menu(false); }); });
   D.addEventListener('keydown', function (e) { if (e.key === 'Escape' && side && side.classList.contains('open')) { menu(false); if (menuBtn) menuBtn.focus(); } });

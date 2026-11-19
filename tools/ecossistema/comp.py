@@ -149,7 +149,7 @@ def _por_br(frs):
 
 def dividir(h, maximo=MAX_PAL):
     """Devolve (inicio_html, [restos_html]) ou None se não precisa/der para dividir."""
-    if n_palavras(h) <= maximo + 4:
+    if n_palavras(h) <= maximo:
         return None
     fr = _por_br(_fragmentos(h))
     fr = [y for f in fr for y in (_virgulas(f) if n_palavras(f) > maximo else [f])]

@@ -69,7 +69,7 @@ def s_bia():
       '<p>A Bia é o conjunto de rotinas automáticas que opera o dia a dia comercial. Tem duas metades que trabalham juntas: um programa que roda continuamente na nuvem, verificando o Agendor a cada minuto e executando as regras no horário certo, e uma conversa por WhatsApp, em que a equipe pede informações e ações em linguagem natural.</p>'
       + grid([
         card("Escreve no Agendor", "<p>Cria tarefas, move etapas, passa o negócio ao representante que o SDR escolheu e fecha ciclos. Só diz \"feito\" depois de reler.</p>"),
-        card("Avisa a equipe", "<p>WhatsApp para gestão, SDR, closer e representantes, cada um com o que lhe cabe; muitos avisos trazem botões.</p>"),
+        card("Avisa a equipe", "<p>WhatsApp para gestão, SDR e representantes, cada um com o que lhe cabe; muitos avisos trazem botões.</p>"),
         card("Confere", "<p>Compara o que foi feito com o Agendor e mantém o combinado, sem apagar histórico.</p>"),
         card("Tem modo e interruptor", "<p>Cada automação é desligada, só observa (simulação) ou vale de verdade, e pode ser pausada individualmente.</p>"),
       ], 4)
@@ -211,7 +211,7 @@ def s_hoje():
         card("Fila completa em linhas por lista", "<p>Mostra a contagem real da fila, carrega rápido e traz o restante por trás, com \"Mostrar mais\". Cada lista é uma linha que abre e fecha. Sem \"Iniciar TODOS\" e com limite de leads por clique; quem acabou de ser iniciado some da fila na hora.</p>", p="ok"),
         card("Hoje 17.6", "<p>Em construção, sem data, por regra da gestão de 17/11/2026: toda ação do SDR instantânea e nunca revertida na tela; raia do closer; topo recolhível e de largura total, sem rolagem lateral, com as 13 raias. A prévia do topo será mostrada antes de construir.</p>", p="pl"),
         card("Hoje 2.0", "<p>Nova geração da página, lendo de um espelho dos dados (hoje em modo sombra, só copiando e comparando). Futuro: ainda não existe para o SDR.</p>", p="pl"),
-        card("Raia do closer e modo foco", "<p>Negócios do Arena em que o closer atende, em uma raia no topo, recolhida por padrão e aberta sozinha quando há ação vencida ou do dia; o ganho do closer exige valor e data. Modo foco: tela cheia da página, só com o kanban.</p>", p="pl"),
+        card("Raia Closer e modo foco", "<p>Raia Closer: negócios do Arena em que o SDR é dono, em uma raia no topo, recolhida por padrão e aberta sozinha quando há ação vencida ou do dia; o ganho exige valor e data. Modo foco: tela cheia da página, só com o kanban.</p>", p="pl"),
       ], 2)
       + '<h3 class="mt">O cartão e o painel do lead</h3>'
       + grid([

@@ -18,7 +18,7 @@ parte("mapa", "Como as peças se conectam", "O lead escreve no WhatsApp. A Meta 
    N("bia", "Bia", "Aplica as regras, escreve no Agendor, relê para confirmar e avisa a equipe", "m", 0, 1, 3), N("ag", "Agendor (CRM)", "Empresas, negócios, funis e tarefas", "g", 0, 2), N("av", "Avisos no WhatsApp", "Gestão, SDR, closer e representantes", "n", 2, 2)],
   [("lead", "meta", ""), ("meta", "ana", ""), ("ana", "bia", "pede"), ("bia", "ag", "escreve"), ("bia", "av", "avisa")],
   nodes_n=[N("lead", "Lead e WhatsApp (Meta)", "Chega por anúncio, site, lista ou WhatsApp direto", "n", 0, 0), N("ana", "Ana", "Conversa, qualifica e guarda o histórico", "p", 0, 1), N("bia", "Bia", "Aplica as regras, escreve no Agendor, relê e avisa a equipe", "m", 0, 2),
-           N("ag", "Agendor (CRM) e avisos", "A Bia grava empresas, negócios, funis e tarefas e envia os avisos no WhatsApp a gestão, SDR, closer e representantes", "g", 0, 3)],
+           N("ag", "Agendor (CRM) e avisos", "A Bia grava empresas, negócios, funis e tarefas e envia os avisos no WhatsApp a gestão, SDR e representantes", "g", 0, 3)],
   edges_n=[("lead", "ana", ""), ("ana", "bia", "pede"), ("bia", "ag", "escreve e avisa")])
 
 # ---- a ponte: só a Bia escreve no CRM

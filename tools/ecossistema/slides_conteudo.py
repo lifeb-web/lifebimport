@@ -1,5 +1,5 @@
 """Conteúdo dos slides (16/11/2026): deck enxuto (cerca de 20 slides) que explica COMO TUDO FUNCIONA E SE CONECTA. A página longa traz todos os detalhes; cada slide cita as seções.
-Tom sóbrio: sem métricas de resultado, sem adjetivos de venda, só o que foi conferido no código e nos documentos. Sem nomes de pessoas (papéis: SDR, representante, closer, gestão).
+Tom sóbrio: sem métricas de resultado, sem adjetivos de venda, só o que foi conferido no código e nos documentos. Sem nomes de pessoas (papéis: SDR, representante (closer), gestão).
 Estado (no ar, em implantação, planejado) vem de estado.json. Terminologia: página Hoje, página Central (Central só como nome próprio em títulos)."""
 from comp import e
 import slides_base as B
@@ -61,39 +61,25 @@ def todos():
         ("Qualificar e repassar", "Confirmar segmento, lojas, decisor e CNPJ ativo e entregar o lead ao time comercial, com o contexto."),
         ("CRM, funil e etapa", "CRM é o cadastro. Funil é o caminho em etapas que um negócio percorre. Ana, SDR Inbound, SDR Outbound e Arena são funis."),
         ("Cadência", "Sequência combinada de contatos em dias úteis (segunda a sexta, sem feriado)."),
-        ("Arena", "Funil de vendas dos representantes de campo (e do closer, em redes). A IA não vende: a venda é feita por pessoas."),
-        ("Closer e representante", "Closer: especialista que atende redes e fecha vendas. Representante: vendedor de campo, que atende a carteira."),
+        ("Arena", "Funil de vendas dos representantes (closers). A IA não vende: a venda é feita por pessoas."),
+        ("Representante (closer)", "Vendedor de campo: atende a carteira e FECHA a venda."),
         ("Juízes de IA", "Planejado: revisores automáticos que conferem cada resposta da Ana em tempo real. Ainda não existem."),
     ], 3)
     A(slide("quem2", "Quem é quem: os termos", C, termos, "dense", "quem,duvidas,visao"))
 
-    cols = {"no_ar": [], "implantacao": [], "planejado": []}
-    for c in ESTADO["componentes"]:
-        for k in cols:
-            if c[k]:
-                cols[k].append(sub_estado(c["nome"], c[k]))
-    def no_ar(ids):   # no ar por componente; dividido em 2 slides para caber legível no celular em pé
-        return "".join(sub_estado(COMP[i]["nome"], COMP[i]["no_ar"]) for i in ids if COMP[i]["no_ar"])
-    est = ('<div class="dg1 est dgx">'
-        f'<div class="ec e-ok"><h3>{pill("no ar")}</h3><ul>{no_ar(["ana", "agendor"])}</ul></div></div>'
-        + band(f'Posição de {ATUAL}. No ar: conferido em produção. Em implantação: pronto, ainda não no ar. Planejado: futuro. Checklist completo na página.'))
-    A(slide("estado", "Estado de cada peça: no ar (Ana e Agendor)", C, est, "dense", "status,checklist"))
-    estb = ('<div class="dg1 est dgx">'
-        f'<div class="ec e-ok"><h3>{pill("no ar")}</h3><ul>{no_ar(["bia"])}</ul></div></div>'
-        + band("No ar: conferido em produção. Checklist completo na página."))
-    A(slide("estadob", "Estado de cada peça: no ar (Bia)", C, estb, "dense", "status,checklist"))
-    estc = ('<div class="dg1 est dgx">'
-        f'<div class="ec e-ok"><h3>{pill("no ar")}</h3><ul>{no_ar(["hoje", "central", "dash"])}</ul></div></div>'
-        + band("No ar: conferido em produção. Checklist na página."))
-    A(slide("estadoc", "Estado de cada peça: no ar (páginas e Dash)", C, estc, "dense", "status,checklist"))
-    est2 = ('<div class="dg1 est dgx">'
-        f'<div class="ec e-te"><h3>{pill("em implantação")}</h3><ul>{"".join(cols["implantacao"]) or "<li>Nada pendente de entrada neste momento.</li>"}</ul></div></div>'
-        + band("Em implantação: pronto, ainda não no ar. " + '<span class="dp dp-corr">Em correção</span>' + " a publicação abortou ou achou-se defeito; não no ar. Checklist na página."))
-    A(slide("estado2", "Estado de cada peça: em implantação", C, est2, "dense", "status,checklist"))
-    est3 = ('<div class="dg1 est dgx">'
-        f'<div class="ec e-pl"><h3>{pill("planejado")}</h3><ul>{"".join(cols["planejado"])}</ul></div></div>'
-        + band("Planejado: futuro, ainda não existe. Checklist completo na página."))
-    A(slide("estado3", "Estado de cada peça: planejado", C, est3, "dense", "status,checklist"))
+    import pecas as P
+    def pg(ids): return '<div class="dg3 dgx pecas">' + "".join(P.peca(P.COMP[i], deck=True) for i in ids) + '</div>'
+    A(slide("papeis", "Quem atende cada entrada", C, P.figura_papeis() + band("Quatro jeitos de entrada, três papéis. A Ana não atende lista: lista é do SDR humano."), "nofit", "visao,ana,recuperacao"))
+    A(slide("estado", "Estado das peças: atendimento, SDR e Central", C, pg(["ana", "hoje", "central"]) + band(f"Posição de {ATUAL}. No ar: conferido em produção. Em implantação: pronto, ainda não no ar. Checklist completo na página."), "dense", "status,checklist"))
+    A(slide("estadob", "Estado das peças: agentes, números e CRM", C, pg(["bia", "dash", "agendor"]) + band("No ar: conferido em produção. Checklist completo na página."), "dense", "status,checklist"))
+    impl = [c for c in ESTADO["componentes"] if c["implantacao"]]
+    est2 = ('<div class="dg3 dgx pecas">' + "".join(f'<div class="peca"><div class="peca-h"><b>{c["nome"]}</b>{pill("em implantação")}</div><ul class="peca-t">' + "".join(f"<li>{e(P.curto(x, 14))}</li>" for x in c["implantacao"]) + "</ul></div>" for c in impl) + "</div>"
+            + band("Em implantação: pronto, ainda não no ar. " + '<span class="dp dp-corr">Em correção</span>' + " a publicação abortou ou achou-se defeito; não no ar."))
+    A(slide("estado2", "Em implantação (ainda não no ar)", C, est2, "dense", "status,checklist"))
+    plan = [c for c in ESTADO["componentes"] if c["planejado"]]
+    est3 = ('<div class="dg3 dgx pecas">' + "".join(f'<div class="peca"><div class="peca-h"><b>{c["nome"]}</b>{pill("planejado")}</div><ul class="peca-t">' + "".join(f"<li>{e(P.curto(x, 14))}</li>" for x in c["planejado"][:3]) + "</ul></div>" for c in plan) + "</div>"
+            + band("Planejado: futuro, ainda não existe. Checklist completo na página."))
+    A(slide("estado3", "Planejado", C, est3, "dense", "status,checklist"))
 
     # ================= COMO SE CONECTA =================
     C = "Como se conecta"
@@ -105,7 +91,7 @@ def todos():
     C = "Ana"
     ana1 = g([
         cat("O que faz", ["Atende lojistas no WhatsApp (farmácias, supermercados, conveniências e outros) e qualifica: segmento, lojas, decisor e CNPJ ativo", "Apresenta o projeto Mega Vision USA e repassa ao time comercial", "Responde em áudio quando o lead manda áudio; mostra digitando e faz pausas", "Retoma quem some, com toques em dias úteis"], "chat"),
-        cat("Como trata cada caso", ["Foco (farmácia, drogaria, supermercado): atendimento completo", "Outros segmentos e MEI: aviso educado de pedido mínimo", "Empresa nova: informa a condição de pagamento; o especialista decide", "Rede: repasse direto ao closer", "Fora do perfil, incluindo vendedor de sistema: encerra com educação"], "list"),
+        cat("Como trata cada caso", ["Foco (farmácia, drogaria, supermercado): atendimento completo", "Outros segmentos e MEI: aviso educado de pedido mínimo", "Empresa nova: informa a condição de pagamento; o especialista decide", "Rede: repasse direto ao time comercial", "Fora do perfil, incluindo vendedor de sistema: encerra com educação"], "list"),
     ], 2) + band("Na página: Ana; Ana: a conversa.")
     A(slide("ana", "Ana: o que faz e como trata cada caso", C, ana1, "dense", "ana"))
     ana2 = g([
@@ -136,7 +122,7 @@ def todos():
     fun2 = g([
         cat("Arena, Pós-venda e Reativação", ["Arena: Conexão, Diagnóstico/Solução e Negociação; ganho é venda e exige o valor", "Pós-venda: ciclos de reposição, com janela para repor", "Reativação: cliente que não repôs no prazo"], "crm"),
         cat("Voltas ao SDR", ["Recuperação SDR, Recuperação e Reativação criam negócio novo na fila de espera do Outbound, com nota de origem", "Uma volta por empresa a cada 180 dias; prazos em revisão na semana de 18/11/2026"], "git"),
-    ], 2) + band("Quem vende no Arena são os representantes de campo (e o closer, em redes). Na página: Funis do Agendor; Recuperação e reativação.")
+    ], 2) + band("Quem vende no Arena são os representantes (closers). Na página: Funis do Agendor; Recuperação e reativação.")
     A(slide("funis2", "Arena, Pós-venda e voltas ao SDR", C, fun2, "dense", "destinos,recuperacao"))
     A(slide("volta", "Voltas ao SDR", C, fx("volta", "Cada rotina tem nome e origem próprios. Na página: Recuperação e reativação."), "flow", "recuperacao"))
 

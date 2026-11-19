@@ -60,12 +60,16 @@
     deck.classList.remove('quieto'); clearTimeout(quietoT);
     quietoT = setTimeout(function () { if (aberto && !D.activeElement.closest('.dctl')) deck.classList.add('quieto'); }, 3000);
   }
-  function tentaFs() {
-    var f = H.requestFullscreen || H.webkitRequestFullscreen; if (!f) return;
-    try { var p = f.call(H); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+  var toastT = 0;
+  function aviso(t) { var el = D.getElementById('dToast'); if (!el) return; el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(function () { el.hidden = true; }, 5000); }
+  var MSG_FS = 'Tela cheia não disponível aqui (navegador, celular ou quadro embutido recusou). A apresentação já ocupa 100% da janela.';
+  function tentaFs(avisar) {
+    var f = H.requestFullscreen || H.webkitRequestFullscreen;
+    if (!f || emIf) { if (avisar) aviso(MSG_FS); return; }
+    try { var p = f.call(H); if (p && p.catch) p.catch(function () { if (avisar) aviso(MSG_FS); }); } catch (e) { if (avisar) aviso(MSG_FS); }
   }
   function saiFs() { if (fsEl()) { var x = D.exitFullscreen || D.webkitExitFullscreen; try { var p = x.call(D); if (p && p.catch) p.catch(function () {}); } catch (e) {} } }
-  function alternaFs() { if (!temFs) return; fsManter = true; if (fsEl()) saiFs(); else tentaFs(); setTimeout(function () { fsManter = false; }, 700); }
+  function alternaFs() { if (!temFs) { aviso(MSG_FS); return; } fsManter = true; if (fsEl()) saiFs(); else tentaFs(true); setTimeout(function () { fsManter = false; }, 700); }
   function onFs() {
     var agora = !!fsEl();
     if (aberto && fsEstava && !agora && !fsManter) fecha();
@@ -79,7 +83,7 @@
     aberto = true; deck.hidden = false; H.classList.add('deck-on');
     ajusta(); mostra(i || 0); acorda();
     var bt = D.querySelectorAll('[data-apres]'); [].forEach.call(bt, function (b) { b.setAttribute('aria-pressed', 'true'); });
-    if (!opt.semFs && !emIf) tentaFs();
+    if (!opt.semFs) { if (emIf || !temFs) aviso(MSG_FS); else tentaFs(true); }
     try { deck.setAttribute('tabindex', '-1'); deck.focus({ preventScroll: true }); } catch (e) {}
   }
   function fecha() {
@@ -94,7 +98,6 @@
 
   [].forEach.call(D.querySelectorAll('[data-apres]'), function (b) { b.addEventListener('click', function () { if (aberto) fecha(); else abre(0); }); });
   bPrev.addEventListener('click', ant); bNext.addEventListener('click', prox); bExit.addEventListener('click', fecha); bFs.addEventListener('click', alternaFs);
-  if (!temFs) bFs.hidden = true;
   function indice(abrir) { if (!idx) return; idx.hidden = !abrir; bIdx.setAttribute('aria-expanded', abrir ? 'true' : 'false'); if (abrir) { var on = idx.querySelector('.ix-b.on'); if (on) { try { on.scrollIntoView({ block: 'center' }); on.focus({ preventScroll: true }); } catch (e) {} } } else { try { deck.focus({ preventScroll: true }); } catch (e) {} } }
   bIdx.addEventListener('click', function () { indice(idx.hidden); });
   D.getElementById('ixFecha').addEventListener('click', function () { indice(false); });
