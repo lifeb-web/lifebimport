@@ -60,7 +60,8 @@ async function cena(b, vp, tema, nome) {
   // ---- 1c. entrega: selo limitadaMeta na lista e texto na ficha ----
   S.ok(/Meta limitou: reenviando por utilidade/.test(await txt(F.M)), nome + ": M: selo 'Meta limitou: reenviando por utilidade' na lista | " + (await txt(F.M)).replace(/\n/g, " / "));
   // ---- 2. repasse ----
-  S.ok(/REPASSADA AO FELIPE por Robert, 16\/11 23:55/.test(await txt(F.C)), nome + ": C: selo REPASSADA AO FELIPE por Robert, 16/11 23:55 | " + (await txt(F.C)).replace(/\n/g, " / "));
+  S.ok(/REPASSADA AO FELIPE/.test(await txt(F.C)) && !/por Robert/.test(await txt(F.C)), nome + ": C: na lista so o selo curto REPASSADA AO FELIPE (regra 19/11) | " + (await txt(F.C)).replace(/\n/g, " / "));
+  S.ok(/por Robert, 16\/11 23:55/.test(await p.$eval('#atItens .ri[data-fone="' + F.C + '"] .tg.rep', (e) => e.title)), nome + ": C: quem/quando do repasse no title do selo");
   S.ok(/Precisa de você/.test(await txt(F.C)), nome + ": C: 'precisa de você' continua");
   // ---- 3. nome do formulário na lista ----
   S.ok(/Natália|\+55 \(99\) 9232-0998/.test(await txt(F.N)), nome + ": N: lista sem nome do servidor (formulário só vem na ficha): mostra o telefone");

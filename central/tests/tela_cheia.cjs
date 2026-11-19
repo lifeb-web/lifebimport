@@ -64,8 +64,9 @@ const fbs = []; let fbFalha = false; const dess = []; let desStatus = 200;
   ok((await estado()).tc, "o modo deveria ser lembrado depois de recarregar");
   await p.keyboard.press("Escape"); await p.waitForTimeout(200); ok(!(await estado()).tc, "Esc depois de recarregar deveria sair");
   // 6) sair da aba remove o travamento de rolagem da página
-  await p.click(BT); await p.waitForTimeout(200); await p.evaluate(() => document.querySelectorAll("#nav a:not(.ext)")[0].click()); await p.waitForTimeout(500); ok(await p.evaluate(() => !document.documentElement.classList.contains("tcOn")), "deixar o Atendimento deveria liberar a rolagem da página"); await p.evaluate(() => document.querySelectorAll("#nav a:not(.ext)")[5].click()); await p.waitForTimeout(800); await p.waitForSelector("#atMsgs .bb", { timeout: 8000 }).catch(() => {});
+  await p.click(BT); await p.waitForTimeout(200); await p.evaluate(() => (location.hash = "#visao")); await p.waitForTimeout(500); ok(await p.evaluate(() => !document.documentElement.classList.contains("tcOn")), "deixar o Atendimento deveria liberar a rolagem da página"); await p.evaluate(() => document.querySelectorAll("#nav a:not(.ext)")[5].click()); await p.waitForTimeout(800); await p.waitForSelector("#atMsgs .bb", { timeout: 8000 }).catch(() => {});
   await p.evaluate(() => { try { localStorage.setItem("central_at_tc", "0"); } catch (e) {} });
+  await p.evaluate(() => { location.hash = "#atendimento"; }); await p.waitForSelector(".ax", { timeout: 8000 });
   if ((await estado()).tc) { await p.click(BT); await p.waitForTimeout(300); }
   // 7) tamanhos x temas: ocupa tudo, sem estourar, saída sempre acessível (no celular, pela barra)
   for (const [w, h] of [[390, 800], [768, 1024], [1366, 768], [1920, 1080]]) for (const tema of TEMAS) {
