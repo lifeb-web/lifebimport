@@ -259,7 +259,7 @@ def s_central():
         ["2. Interruptores", "Aba da Bia e automações: desligado, só observa ou ao vivo, com motivo e nível de risco.", "Fase 3: aprovar cada tipo de aviso pela página Central (fila de pendências)."],
         ["3. Números e prazos", "Números com limite nos controles.", "Fase 2: prazos de reposição e cota do SDR."],
         ["4. Calendário e horários", "Aba Calendário: dias de folga marcados à mão.", "Fase 2: calendário único e horários por pessoa e por tipo de aviso."],
-        ["5. Time e permissões", "Aba de acessos: já no ar.", "Tela nova de Usuários e papéis (com Instagram e hub): em construção, NÃO no ar. Fase 3: lista única de SDRs, representantes e gestão."],
+        ["5. Time e permissões", "Aba Usuários (só Robert): criar usuário (padrão SDR), gerar senha forte, redefinir senha (a pessoa troca no próximo acesso), mudar papel, ativar/desativar.", "Fase 3: lista única de SDRs, representantes e gestão."],
         ["6. Mensagens e botões", "—", "Fase 4: editar textos, botões e listas dos avisos, com prévia, aprovação e versão."],
         ["7. Histórico e desfazer", "Aba Histórico: quem mudou o quê, com motivo e desfazer.", "—"],
         ["8. Saúde e alertas", "Visão geral e aba Filas (mensagens esperando, por pessoa).", "Fase 2: absorver a aba da Bia no Dash (rotinas, portões, agendas, avisos pendentes)."],

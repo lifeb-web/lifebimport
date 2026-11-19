@@ -3,7 +3,7 @@
 const { chromium } = require(process.argv[2]); const B = require("./_base.cjs"); const T = B.suite("visual_17nov"); const fs = require("fs"); const path = require("path");
 const OUT = process.argv[4] || process.env.VIS_OUT || "/tmp/central-prints"; fs.mkdirSync(OUT, { recursive: true });
 const TAM = [[390, 844], [1024, 768], [1280, 800], [1440, 900], [1920, 1080]]; const TEMAS = ["light", "dark"];
-const ABAS = ["visao", "bia", "chaves", "filas", "calendario", "ana", "historico", "atalhos", "ecossistema", "usuarios", "conta"];
+const ABAS = ["visao", "bia", "chaves", "filas", "calendario", "ana", "historico", "inicio", "instagram", "ecossistema", "usuarios", "conta"];
 const hist = Array.from({ length: 40 }, (_, i) => ({ de: i % 3 === 0 ? "ana" : i % 7 === 6 ? "humano" : "lead", quem: "Maria", ts: B.T0 - (40 - i) * 600000, texto: "Mensagem " + i + " com um texto razoável para ver a quebra de linha na conversa do Atendimento." }));
 const conv = () => ({ ok: true, humano: false, pausado: false, estagio: "perguntou_cnpj", pendentes: 0, hist, nome: "Carlos da Drogaria Central", notas: [{ ts: B.T0 - 3e5, texto: "Cliente é parente do dono", quem: "Maria" }], instrucoes: [{ ts: B.T0 - 4e5, texto: "Não falar de preço antes do CNPJ", quem: "Robert" }], log: [], dados: {} });
 function sim(msgs) { return { ok: true, turnos: msgs.map((m, i) => ({ lead: m, ana: i === 1 ? ["Entendi, você tem uma farmácia em Goiânia.", "Posso te ajudar com isso agora.", "Qual é o seu CNPJ?"] : ["Oi! Aqui é a Ana, da Life B."], acao: "responder", motivo: null, origem: "ia", campo: "cnpj", anexos: [] })), dados: { segmento: "farmacia", cnpj: null, faturamento: 150000, decisor: true }, estagio: "perguntou_cnpj", recusou: {} }; }

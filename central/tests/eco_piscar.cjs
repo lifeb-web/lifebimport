@@ -20,10 +20,10 @@ const B = require("./_base.cjs"); const { chromium } = require(process.argv[2]);
   S.ok(await p.evaluate(() => document.querySelector("#ecoHold iframe.frame").__marca) === "A", "60 s simulados: mesmo iframe");
   S.ok(navEco === nav0, "60 s simulados: nenhuma navegação nova no iframe (" + navEco + ")");
   // trocar de aba e voltar cria de novo (esperado, uma vez)
-  await p.evaluate(() => window.__centralTeste.ir("atalhos")); await p.evaluate(() => window.__centralTeste.ir("eco")); await p.waitForSelector("#ecoHold iframe.frame"); await p.waitForTimeout(500);
+  await p.evaluate(() => window.__centralTeste.ir("inicio")); await p.evaluate(() => window.__centralTeste.ir("eco")); await p.waitForSelector("#ecoHold iframe.frame"); await p.waitForTimeout(500);
   S.ok(navEco === nav0, "17/11: voltar à aba NÃO recarrega o iframe (guardado e só escondido) (" + navEco + ")");
-  // Atalhos: sem iframe nem mídia pesada; só cartões estáticos
-  await p.evaluate(() => window.__centralTeste.ir("atalhos")); S.ok(await p.evaluate(() => document.querySelectorAll("#conteudo iframe,#conteudo img,#conteudo video").length) === 0, "Atalhos não tem iframe/imagem/vídeo (render barato)");
+  // Início: sem iframe nem mídia pesada; só cartões estáticos
+  await p.evaluate(() => window.__centralTeste.ir("inicio")); S.ok(await p.evaluate(() => document.querySelectorAll("#conteudo iframe,#conteudo img,#conteudo video").length) === 0, "Atalhos não tem iframe/imagem/vídeo (render barato)");
   S.ok(!(p._erros && p._erros.length), "sem erro no console " + JSON.stringify(p._erros));
   await b.close(); S.fim();
 })();

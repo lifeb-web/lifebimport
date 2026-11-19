@@ -188,7 +188,7 @@ def todos():
         mod(2, "Interruptores", ("no ar",), "Aba da Bia: desligado, só observa ou ao vivo, com motivo. Planejado (fase 3): aprovar avisos por tipo pela página Central."),
         mod(3, "Números e prazos", ("no ar",), "Números com limite nos controles. Planejado (fase 2): prazos de reposição e cota do SDR."),
         mod(4, "Calendário e horários", ("no ar",), "Dias de folga. Planejado (fase 2): horários por pessoa e por tipo de aviso."),
-        mod(5, "Time e permissões", ("no ar",), "Aba de acessos: já no ar. Tela nova de Usuários e papéis, Instagram e hub: em construção, NÃO no ar."),
+        mod(5, "Time e permissões", ("no ar",), "Aba Usuários (só Robert): criar, redefinir senha, mudar papel, ativar/desativar. Planejado (fase 3): lista única de SDRs e representantes."),
         mod(6, "Mensagens e botões", ("planejado",), "Fase 4: editar textos, botões e listas dos avisos, com prévia, aprovação e versão."),
     ]
     A(slide("cenmod", "Central: módulos 1 a 6 do plano e o estado de cada um", C, kv(m1_i[:3], 2), "dense", "central", parte=(1, 2)))

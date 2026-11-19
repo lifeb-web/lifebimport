@@ -27,7 +27,9 @@ const MEDIDA = () => {
     item.vazaPai = (() => { const p = e.parentElement; if (!p) return false; const pr = p.getBoundingClientRect(); return r.right > pr.right + 1.5 && getComputedStyle(p).overflowX === "visible" && p.scrollWidth > p.clientWidth + 1; })();
     const cx = r.left + r.width / 2, cy = r.top + r.height / 2; const topo = document.elementFromPoint(Math.min(cx, innerWidth - 1), Math.min(cy, innerHeight - 1));
     const recortado = (() => { for (let a = e.parentElement; a && a !== document.body; a = a.parentElement) { const o = getComputedStyle(a).overflowY; if (o === "auto" || o === "scroll" || o === "hidden") { const ar = a.getBoundingClientRect(); if (cy < ar.top || cy > ar.bottom) return true; } } return false; })();   // fora da área visível de uma lista com rolagem: não conta como coberto
-    item.coberto = !recortado && cy >= 0 && cy <= innerHeight && cx >= 0 && cx <= innerWidth && topo && !(e === topo || e.contains(topo) || topo.contains(e));
+    // 19/11: EXCEÇÃO ÚNICA a "coberto": o elemento está sob a barra de navegação inferior do celular, e só ela. Exige: largura <= 620 px, a barra (aside > nav) com position:fixed colada no rodapé da janela, o ponto testado dentro do retângulo da barra, e o elemento testado fora da barra. Qualquer outra sobreposição (modal, menu, rodapé de outra tela) continua falhando.
+    const sobBarraFixa = (() => { if (innerWidth > 620 || !topo) return false; const nav = document.querySelector("aside > nav"); if (!nav || getComputedStyle(nav).position !== "fixed") return false; const r = nav.getBoundingClientRect(); if (Math.abs(r.bottom - innerHeight) > 1) return false; if (e === nav || nav.contains(e)) return false; return (topo === nav || nav.contains(topo)) && cy >= r.top && cy <= r.bottom && cx >= r.left && cx <= r.right; })();
+    item.coberto = !recortado && !sobBarraFixa && cy >= 0 && cy <= innerHeight && cx >= 0 && cx <= innerWidth && topo && !(e === topo || e.contains(topo) || topo.contains(e));
     out.push(item);
   }
   return { itens: out, sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth };
@@ -35,7 +37,7 @@ const MEDIDA = () => {
 (async () => {
   const b = await chromium.launch({ executablePath: process.argv[3] });
   const users = [{ usuario: "robert@x.com", nome: "Robert", papel: "robert", ativo: true, ultimoAcesso: Date.now() }, { usuario: "luiz", nome: "Luiz", papel: "admin", ativo: false, ultimoAcesso: null }];
-  const TELAS = ["Visão geral", "Bia e automações", "Todas as chaves", "Filas de mensagens", "Calendário", "Atendimento", "Ana", "Histórico", "Atalhos", "Usuários", "Minha conta"];
+  const TELAS = ["Visão geral", "Bia e automações", "Todas as chaves", "Filas de mensagens", "Calendário", "Atendimento", "Ana", "Histórico", "Início e atalhos", "Instagram", "Usuários", "Minha conta"];
   const COMBOS = [[1920, 1080, "light"], [1440, 900, "light"], [1440, 900, "dark"], [1280, 800, "light"], [1024, 768, "light"], [768, 1024, "light"], [390, 844, "light"], [390, 844, "dark"], [360, 740, "dark"]];
   for (const [w, h, tema] of COMBOS.filter((c) => !process.env.ONLY || String(c[0]) === process.env.ONLY)) {
     const ctx = await b.newContext({ viewport: { width: w, height: h }, colorScheme: tema }); const p = await ctx.newPage(); const tag = `${w}x${h}-${tema}`; let erroApi = null;
