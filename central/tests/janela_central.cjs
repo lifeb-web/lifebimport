@@ -48,13 +48,13 @@ async function cena(b, vp, tema, nome) {
   const cls0 = await p.evaluate(() => window.__cls);
   await p.screenshot({ path: `${PR}/1_lista_${nome}.png` });
   // ---- 1. lista: selo de janela em cada conversa ----
-  S.ok(/Janela ABERTA, fecha em 3h(0[5-9]|1[0-2])/.test(await txt(F.A)), nome + ": A: janela aberta 3h12 | " + (await txt(F.A)).replace(/\n/g, " / "));
+  S.ok(/Janela aberta · 3h(0[5-9]|1[0-2])/.test(await txt(F.A)), nome + ": A: janela aberta 3h12 | " + (await txt(F.A)).replace(/\n/g, " / "));
   S.ok(/ok/.test(await cls(F.A, ".jan")) && !/\bpr\b/.test(await cls(F.A, ".jan")), nome + ": A: selo verde");
-  S.ok(/Janela FECHADA há 2 dias/.test(await txt(F.B)) && /\bpr\b/.test(await cls(F.B, ".jan")), nome + ": B: fechada há 2 dias, vermelho");
-  S.ok(/Janela FECHADA há 2 dias/.test(await txt(F.C)), nome + ": C (servidor): fechada há 2 dias");
-  S.ok(/Janela ABERTA, fecha em (1h0\d|[1-5]?\d min)/.test(await txt(F.D)) && /fch/.test(await cls(F.D, ".jan")), nome + ": D: fechando (1h00), destaque");
-  S.ok(/Janela FECHADA há 4 dias/.test(await txt(F.E)) && /Número não existe/.test(await txt(F.E)), nome + ": E: fechada + número inválido preservado");
-  S.ok(/Janela ABERTA, fecha em (10h0\d|9h5\d)/.test(await txt(F.N)), nome + ": N (servidor): aberta 10h05");
+  S.ok(/Janela fechada · há 2 dias/.test(await txt(F.B)) && /\bpr\b/.test(await cls(F.B, ".jan")), nome + ": B: fechada há 2 dias, vermelho");
+  S.ok(/Janela fechada · há 2 dias/.test(await txt(F.C)), nome + ": C (servidor): fechada há 2 dias");
+  S.ok(/Janela aberta · (1h0\d|[1-5]?\d min)/.test(await txt(F.D)) && /fch/.test(await cls(F.D, ".jan")), nome + ": D: fechando (1h00), destaque");
+  S.ok(/Janela fechada · há 4 dias/.test(await txt(F.E)) && /Número não existe/.test(await txt(F.E)), nome + ": E: fechada + número inválido preservado");
+  S.ok(/Janela aberta · (10h0\d|9h5\d)/.test(await txt(F.N)), nome + ": N (servidor): aberta 10h05");
   S.ok(/Janela/.test(await txt("55629" + String(10000000 + 5))), nome + ": linha comum também tem janela");
   S.ok((await p.$$(`#atItens .ri[data-fone="${F.G}"]`)).length === 0, nome + ": arquivada fora da lista principal");
   // ---- 1c. entrega: selo limitadaMeta na lista e texto na ficha ----
@@ -75,7 +75,7 @@ async function cena(b, vp, tema, nome) {
   await p.clock.fastForward(3 * M); await p.waitForTimeout(250);
   const dep = await p.$eval(`#atItens .ri[data-fone="${F.A}"] .jan`, (e) => e.textContent).catch(() => "(linha refeita)");
   const mesma = await p.evaluate(() => { const e = document.querySelector('#atItens .ri[data-fone="5562900000001"]'); return !!(e && e.__marca === 1); });
-  S.ok(antes !== dep && /fecha em 3h0[5-9]/.test(dep), nome + ": a contagem andou sem ação do usuário: '" + antes + "' -> '" + dep + "'"); S.ok(mesma, nome + ": a linha NÃO foi redesenhada pela contagem (mesmo nó do DOM)");
+  S.ok(antes !== dep && /aberta · 3h0[5-9]/.test(dep), nome + ": a contagem andou sem ação do usuário: '" + antes + "' -> '" + dep + "'"); S.ok(mesma, nome + ": a linha NÃO foi redesenhada pela contagem (mesmo nó do DOM)");
   S.ok((await p.evaluate(() => document.getElementById("atItens").scrollTop)) === (await p.evaluate(() => window.__st0)), nome + ": scrollTop da lista preservado");
   // ---- 7. filtro 'Janela fechando' ----
   const chip = await p.$('#atFiltros button[data-f="fechando"]'); S.ok(!!chip, nome + ": existe o filtro 'Janela fechando (<2 h)'");
@@ -90,7 +90,7 @@ async function cena(b, vp, tema, nome) {
   S.ok(fich && /VEIO DO FORMULÁRIO|Veio do formulário/i.test(fich.txt) && /rede_farma/.test(fich.txt) && /Farma Bem/.test(fich.txt) && /farmacia \(cnpj\)/.test(fich.txt) && /Quero saber do projeto/.test(fich.txt) && /9232-0998/.test(fich.txt), nome + ": N: bloco 'Veio do formulário' com nome, telefone, origem, campanha, quando e o preenchido");
   S.ok(fich && /Janela ABERTA, fecha em 1\dh|Janela ABERTA, fecha em 10h/.test(fich.txt), nome + ": N: janela na ficha");
   const ordem = fich ? fich.cards.map((c) => c.split(":")[0]) : []; const rank = { jan: 0, rep: 1, ins: 2, dados: 3, hist: 4 }; S.ok(ordem.every((v, i) => i === 0 || rank[ordem[i - 1]] <= rank[v]), nome + ": cartões na ordem dos blocos " + JSON.stringify(ordem));
-  const faixaN = await p.$$eval("#atChat .selosHd .tg", (x) => x.map((e) => e.textContent)); S.ok(faixaN.some((t) => /^Janela ABERTA/.test(t)), nome + ": topo da conversa tem o selo da janela " + JSON.stringify(faixaN));
+  const faixaN = await p.$$eval("#atChat .selosHd .tg", (x) => x.map((e) => e.textContent)); S.ok(faixaN.some((t) => /^Janela aberta/.test(t)), nome + ": topo da conversa tem o selo da janela " + JSON.stringify(faixaN));
   await p.screenshot({ path: `${PR}/2_ficha_formulario_${nome}.png` });
   const sc = await p.evaluate(() => ({ w: document.documentElement.scrollWidth, c: document.documentElement.clientWidth, fw: document.getElementById("atFicha") ? document.getElementById("atFicha").scrollWidth - document.getElementById("atFicha").clientWidth : 0 })); S.ok(sc.w <= sc.c + 1 && sc.fw <= 1, nome + ": sem rolagem lateral (página " + sc.w + "/" + sc.c + ", ficha +" + sc.fw + ")");
   await p.evaluate((f) => { location.hash = "#atendimento-" + f; }, F.M); await p.waitForSelector("#atChat .hd", { timeout: 8000 }); await p.waitForTimeout(500); if (mob) await p.click("#atChat .hd .ib.fx").catch(() => {}); await p.waitForTimeout(300);
@@ -102,7 +102,7 @@ async function cena(b, vp, tema, nome) {
   S.ok(/REPASSADA AO FELIPE por Robert, 16\/11 23:55/.test(fc2.txt), nome + ": Diego: selo do repasse na ficha"); S.ok(/Janela FECHADA há 2 dias/.test(fc2.txt) && /modelo aprovado/.test(fc2.txt), nome + ": Diego: janela fechada + 'só modelo aprovado'");
   S.ok(fc2.heads.join("|") === "Janela e entrada|Repasse ao Felipe|Instrução da equipe|Dados qualificados|Histórico", nome + ": Diego: os 5 blocos na ordem pedida " + JSON.stringify(fc2.heads));
   S.ok(/Não oferecer desconto/.test(fc2.txt), nome + ": Diego: instrução da equipe no bloco certo");
-  const hd2 = await p.$$eval("#atChat .selosHd .tg", (x) => x.map((e) => e.textContent)); S.ok(hd2.some((t) => /REPASSADA AO FELIPE/.test(t)) && hd2.some((t) => /Janela FECHADA/.test(t)), nome + ": Diego: topo com repasse e janela " + JSON.stringify(hd2));
+  const hd2 = await p.$$eval("#atChat .selosHd .tg", (x) => x.map((e) => e.textContent)); S.ok(hd2.some((t) => /REPASSADA AO FELIPE/.test(t)) && hd2.some((t) => /Janela fechada/.test(t)), nome + ": Diego: topo com repasse e janela " + JSON.stringify(hd2));
   await p.screenshot({ path: `${PR}/2_ficha_repasse_${nome}.png` });
   // lead aberto não é redesenhado pela atualização da lista; ficha preserva rolagem
   await p.evaluate(() => { const f = document.getElementById("atFicha"); f.querySelector(".fgh").__m = 1; document.querySelector("#atChat .hd").__m = 1; f.scrollTop = 40; });
@@ -126,7 +126,7 @@ async function fecharSozinha(b) {
   await p.evaluate(() => { document.querySelector('#atItens .ri[data-fone="5562900000001"]').__marca = 1; });
   await p.clock.fastForward(21 * H + 10 * M); await p.waitForTimeout(300);
   const fe = await p.$eval(`#atItens .ri[data-fone="${F.A}"] .jan`, (e) => ({ t: e.textContent, c: e.className })).catch(() => null);
-  S.ok(fe && /Janela FECHADA há/.test(fe.t) && /\bpr\b/.test(fe.c) && !/\bok\b/.test(fe.c), "passou de 24 h: virou FECHADA/vermelho sozinha " + JSON.stringify(fe));
+  S.ok(fe && /Janela fechada · há/.test(fe.t) && /\bpr\b/.test(fe.c) && !/\bok\b/.test(fe.c), "passou de 24 h: virou FECHADA/vermelho sozinha " + JSON.stringify(fe));
   S.ok(await p.evaluate(() => { const e = document.querySelector('#atItens .ri[data-fone="5562900000001"]'); return !!(e && e.__marca === 1); }), "e continuou sem redesenhar a lista");
   await ctx.close();
 }
