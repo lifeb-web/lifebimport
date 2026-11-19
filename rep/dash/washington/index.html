@@ -631,6 +631,10 @@
     .summary-strip, html.lm .summary-strip { grid-template-columns:repeat(6,1fr); gap:8px; }
     .summary-strip .sum-card { grid-column:span 2; }
     .summary-strip .sum-card.s-pv, .summary-strip .sum-card.s-tot { grid-column:span 3; }
+    .lcp-label, .lcp-val, .lc-toggle, .lc-toggle .tt, .lc-toggle .ti, .obsr-add-btn small, .lc-task-time-wrap .lc-sp-label, #error-banner { font-size:13px; }
+    .lcp-label { text-transform:none; letter-spacing:0; }
+    #error-banner { font-size:15px; }
+    #error-banner button { margin-left:10px; min-height:48px; padding:0 18px; border-radius:12px; border:2px solid #b0134a; background:#fff; color:#b0134a; font-family:var(--font); font-size:15px; font-weight:800; cursor:pointer; }
     .lc-sp-prev { min-height:22px; margin-top:6px; font-size:14px; font-weight:800; line-height:1.3; }
     .lc-sp-prev.ok { color:#14532d; } .lc-sp-prev.erro { color:#991b1b; }
     html.lm .lc-sp-prev { font-size:17px; }
@@ -3544,7 +3548,7 @@ async function loadData() {
     _retryCount = 0;
     if (!_rawLeads.length) {
       const err = document.getElementById('error-banner');
-      if (err) { err.textContent='Não foi possível carregar os dados. Verifique sua conexão.'; err.style.display='block'; }
+      if (err) { err.innerHTML='Não foi possível carregar os dados. Verifique sua conexão. <button type="button" onclick="_retryCount=0; loadData()">Tentar de novo</button>'; err.style.display='block'; }
       if (_firstLoad) { const l=document.getElementById('leads-list'); if(l) l.innerHTML=''; }
     }
   } finally { _isLoading=false; loadEnd(); }

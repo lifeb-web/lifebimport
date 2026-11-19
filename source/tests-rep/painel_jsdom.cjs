@@ -450,6 +450,11 @@ async function rodar(htmlTpl) {
     eq('J rótulos sem abreviação', txt, 'Aguardando|Em contato|Negociação|Pós-venda|Total'); c.w.close();
   }
 
+  {   // erro de rede na 1ª carga: mensagem + botão para tentar de novo
+    const c = boot(html, { leads: () => { throw new Error('rede'); } }); await sleep(14000); const e = c.w.document.getElementById('error-banner');
+    chk('K erro de rede: mensagem em português', /Não foi possível carregar os dados/.test(e.textContent)); chk('K erro de rede: botão "Tentar de novo"', !!e.querySelector('button') && /Tentar de novo/.test(e.textContent)); c.w.close();
+  }
+
   // ───────── I. texto simples / português ─────────
   {
     const c = boot(html); await sleep(450); const cl = c.w.document.body.cloneNode(true); cl.querySelectorAll('script,style').forEach(e => e.remove()); const txt = cl.textContent;
