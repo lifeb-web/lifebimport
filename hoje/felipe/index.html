@@ -49,7 +49,7 @@ input[type=password],input[type=search],select{font-family:var(--font);font-size
 #s-dia{display:flex;flex-direction:column;flex:1;min-height:0}
 #cab{position:sticky;top:0;z-index:20;background:var(--head);border-bottom:1px solid var(--border);box-shadow:0 2px 10px rgba(60,30,100,.15);padding:8px 20px}
 .cab1{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
-.cab1 img{height:30px}
+.cab1 img{height:30px;width:auto} /* 17.6A (QA CLS): width/height no <img> reservam a proporcao (512x228) antes de a imagem chegar; width:auto mantem o tamanho de antes (altura manda) */
 .logo-escuro{display:none}
 :root[data-tema="dark"] .logo-claro{display:none}
 :root[data-tema="dark"] .logo-escuro{display:inline-block}
@@ -165,7 +165,7 @@ button.recolher{background:transparent;color:var(--muted);border:0;min-height:0;
 @media(max-width:1499px){ /* notebooks: topo compacto para sobrar altura às colunas */
   .atalhos,.col-h .dica{display:none} .chips{gap:6px} .chip{min-width:0;padding:2px 8px} .chip b{font-size:18px} .relogio{font-size:20px} #cab{padding:5px 10px} .cab1{gap:10px} .cab2{margin-top:4px;gap:8px} .ctl{margin-top:5px;padding-top:5px;gap:10px} .histo,.msgacao{margin-top:2px;font-size:13px} .atual{font-size:13px} button{font-size:13px;min-height:32px;padding:3px 10px} .cab2 input[type=search]{width:200px} .cab1 img{height:24px}
 }
-@media(max-width:1099px) and (min-width:1000px){ #blocos{grid-template-columns:var(--tpl2,repeat(5,minmax(0,1fr)));grid-template-rows:repeat(2,minmax(0,1fr))} }
+/* 17.6A: abaixo de 1100px as raias NÃO quebram mais em 2 linhas: cabem na largura e as de menor volume viram tira (ver planoColunas) */
 @media(min-width:1000px){ #s-dia{height:100vh} body{height:100vh;overflow:hidden} }
 @media(max-width:999px){
   #blocos{display:flex;flex-direction:column;padding:10px;overflow:visible} .lista{overflow:visible} .col.colapsada button.faixa{writing-mode:horizontal-tb;text-align:left;padding:8px 10px}
@@ -205,6 +205,7 @@ textarea.recup-pend{border:2.5px solid var(--amber)!important;background:var(--a
 
 /* contato do cartão, estados, faixa de iniciar, ajuda, "você abriu" */
 .item .pes{grid-column:1 / -1;font-size:13px;color:var(--text);overflow-wrap:anywhere;min-width:0;line-height:1.2}
+.item .fone-aguarda{grid-column:1 / -1;font-size:13px;color:var(--muted);min-height:24px;display:flex;align-items:center} /* 17.6A: reserva a linha do telefone até o servidor responder (sem pulo de layout) */
 .item .fone{grid-column:1 / -1;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;user-select:all;overflow-wrap:anywhere}
 .item .cid{grid-column:1 / -1;font-size:13px;color:var(--muted);font-style:italic}
 .item .nota{grid-column:1 / -1;font-size:13px;font-weight:600;color:var(--magenta);overflow-wrap:anywhere}
@@ -369,6 +370,7 @@ a.subir{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:6
 .selo button{margin-left:8px;min-height:28px;padding:2px 10px;font-size:13px}.selo.sync-ok{background:var(--card);color:var(--muted);border-color:var(--border);font-weight:600}.selo.sync-sync{background:var(--card);color:var(--text);border-color:var(--border)}.selo.sync-erro{background:var(--red-bg,var(--amber-bg));color:var(--red,var(--amber));border-color:var(--red,var(--amber))}
 .saida-lista{position:absolute;z-index:60;margin-top:6px;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:10px 12px;box-shadow:0 6px 24px rgba(0,0,0,.25);max-width:420px}.saida-item{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:4px 0}
 .item,.fi{content-visibility:auto;contain-intrinsic-size:auto 110px}.col-mais{margin:8px auto;display:block}
+@media(max-width:999px){.item{contain-intrinsic-size:auto 150px}} /* 17.6A (QA CLS): celular/tablet empilhado: o cartao real tem ~150 px (com a linha do telefone); a estimativa de 110 px fazia a pagina pular ao desenhar */
 .pend-tag{display:inline-block;margin-left:8px;font-size:13px;color:var(--muted);font-weight:600}
 .col-h .conf.velho{color:var(--amber);font-weight:700}
 .contador.amber{color:var(--amber);font-weight:700}
@@ -440,6 +442,7 @@ details.mais{display:contents}
   .item .emp{font-size:15px}
   .item .acoes button.abrir,.item .acoes a.bt,.item .acoes a.ana-at{min-height:44px}
   .item .fone a.wa{font-size:14px;min-height:32px}
+  .item .fone-aguarda{min-height:32px}
   .item button.copiar{min-height:36px}
   .orgfiltro{flex-wrap:nowrap;overflow-x:auto;gap:6px}
   .orgfiltro button.of{flex:none}
@@ -511,6 +514,35 @@ details.sec-empresa>summary,details.dados-opcional>summary{cursor:pointer;font-w
   a.wa{display:inline-flex;align-items:center}
   input[type=checkbox],input[type=radio]{width:44px!important;height:44px!important;min-height:44px!important;margin:0}
 }
+
+/* 17.6A (Robert 17/11 #3168/#3172): cabeçalho recolhível (padrão recolhido) e raias que se ajustam à largura (computador). O visual de antes não muda. */
+html{overflow-x:hidden}
+#bTopo{white-space:nowrap}
+@media(min-width:1000px){ .tp-dir #atualizado{min-width:320px} } /* 17.6A (QA CLS): o texto "Conferido às 00:00:00. Confere sozinho a cada 60 s." (315 px) chega com o /dados; antes havia so "Atualizando…" (81 px) e o bloco da direita quebrava de linha (+46 px) quando o texto chegava. Reserva a largura (texto alinhado a direita, nada muda a vista) */
+#chips[data-esqueleto]{visibility:hidden;pointer-events:none} /* 17.6A (QA CLS): esqueleto invisivel dos numeros do topo, ocupa o mesmo lugar e quebra de linha dos numeros reais; desenharTopo troca por chips de verdade (textContent=''), entao o cabecalho nao cresce quando o /dados chega */
+#cab.rec .tp-sec,#cab.rec .tp-dir{display:none!important}
+#cab.rec .tp-fil:not(.fx){display:none!important}
+#cab.rec .chips .chip:not([data-k]){display:none}
+#cab.rec .chips .cg:not(:has([data-k])){display:none}
+#cab.rec .msgacao:empty{display:none}
+.tp-fil.fx{outline:2px solid var(--amber);outline-offset:1px;border-radius:8px}
+@media(min-width:1000px){
+  #cab.rec{display:flex;align-items:center;flex-wrap:wrap;gap:4px 12px;padding:4px 12px}
+  #cab.rec .cab1,#cab.rec .cab2{display:contents}
+  #cab.rec .cab1 img{order:0;height:22px} #cab.rec .tp-tit{order:1;display:flex;align-items:baseline;gap:8px} #cab.rec .relogio{font-size:18px}
+  #cab.rec .chips{order:2;flex:0 1 auto;flex-basis:auto;flex-wrap:nowrap;gap:6px}
+  #cab.rec #seloSaida{order:3}
+  #cab.rec .cab2 input[type=search]{order:4;flex:1 1 140px;min-width:140px;width:auto}
+  #cab.rec .cab2 .seg{order:5} #cab.rec #bAguard{order:6} #cab.rec .tp-fil{order:7}
+  #cab.rec #bTopo{order:9;margin-left:auto}
+  #cab.rec>.pcx,#cab.rec>.ajuda-box,#cab.rec>.msgacao,#cab.rec>#detLiberados{order:20;flex:1 1 100%}
+}
+@media(min-width:1000px) and (max-width:1279px){ #cab.rec .cab1 img{display:none!important} }
+/* 17.6A (QA): sem pulo no carregamento. Os números (#chips) chegam depois do 1º desenho; entre 1000 e 1599 px a barra recolhida passa de 1 para 2 linhas (76 a 85 px) e empurrava as raias. Reserva a altura de 2 linhas desde o início (só recolhido). */
+@media(min-width:1000px) and (max-width:1599px){ #cab.rec{min-height:85px;box-sizing:border-box} }
+/* 17.6A (QA CLS, dono: 1 linha de 1600 px em diante): de 1600 a 1699 px o conteudo real somava ~1700 px e quebrava em 2 linhas (85 px). Espacos menores so na barra recolhida nessa faixa (so o espaco entre itens e a busca mais estreita; nada some) */
+@media(min-width:1600px) and (max-width:1699px){ #cab.rec{gap:4px 4px;padding:4px 6px} #cab.rec .cab2 input[type=search]{min-width:70px;flex-basis:70px} #cab.rec .chips{gap:4px} }
+@media(max-width:700px){ #bTopo{order:1} }
 </style>
 </head>
 <body>
@@ -545,15 +577,16 @@ details.sec-empresa>summary,details.dados-opcional>summary{cursor:pointer;font-w
 </section>
 
 <section id="s-dia" class="hide">
-  <header id="cab">
+  <header id="cab" class="rec">
     <div class="cab1">
-      <img class="logo-claro" src="/logo-lifeb.png" alt="Life B"><img class="logo-escuro" src="/logo-lifeb-escuro.png" alt="Life B">
-      <div><div class="titulo">Hoje do SDR</div><div class="relogio" id="relogio">--:--</div></div>
-      <div class="chips" id="chips"></div>
+      <img class="logo-claro" src="/logo-lifeb.png" alt="Life B" width="512" height="228"><img class="logo-escuro" src="/logo-lifeb-escuro.png" alt="Life B" width="1024" height="456">
+      <div class="tp-tit"><div class="titulo">Hoje do SDR</div><div class="relogio" id="relogio">--:--</div></div>
+      <div class="chips" id="chips" aria-hidden="true" data-esqueleto="1"><div class="cg"><span class="gl">Hoje</span><div class="chip" data-k="1"><b>4</b>Inbound novo</div><div class="chip" data-k="1"><b>7</b>empresas com tarefas atrasadas</div><div class="chip forte" data-k="1"><b>74</b>empresas para atender hoje (88 tarefas)</div><button type="button" tabindex="-1" class="chip cl"><b>4</b>iniciados hoje</button></div><div class="cg"><span class="gl">Agora</span><div class="chip"><b>120</b>esperando você iniciar (Outbound)</div><button type="button" tabindex="-1" class="chip mes"><b>120</b>em cadência</button></div><div class="cg"><span class="gl">Em novembro</span><button type="button" tabindex="-1" class="chip mes"><b>120</b>iniciados</button><button type="button" tabindex="-1" class="chip mes ok"><b>12</b>finalizados</button><button type="button" tabindex="-1" class="chip mes perd"><b>12</b>perdidos</button><button type="button" tabindex="-1" class="chip mes ok"><b>12</b>qualificados</button></div></div>
       <span id="seloSaida" class="selo hide" role="status" aria-live="polite"></span>
-      <a class="subir" id="bSubir" href="https://projetojlbv.com.br/lista/" target="_blank" rel="noopener noreferrer" title="Subir uma lista de leads (a mesma senha)">⬆ Subir lista</a>
-      <div class="espaco"></div>
-      <div style="text-align:right">
+      <a class="subir tp-sec" id="bSubir" href="https://projetojlbv.com.br/lista/" target="_blank" rel="noopener noreferrer" title="Subir uma lista de leads (a mesma senha)">⬆ Subir lista</a>
+      <button class="sec" id="bTopo" type="button" aria-expanded="false" aria-controls="cab" title="Recolher ou expandir o cabeçalho">Expandir</button>
+      <div class="espaco tp-sec"></div>
+      <div class="tp-dir" style="text-align:right">
         <div class="atual" id="atualizado" aria-live="polite"></div>
         <div class="row" style="justify-content:flex-end;margin-top:4px">
           <button class="sec" id="bAtualizar" title="Atualizar agora (R)">Atualizar</button>
@@ -573,11 +606,11 @@ details.sec-empresa>summary,details.dados-opcional>summary{cursor:pointer;font-w
     <div class="cab2">
       <input type="search" id="busca" placeholder="Buscar em todos os leads: loja, pessoa, telefone, CNPJ..." aria-label="Buscar em todos os leads por loja, pessoa, telefone, CNPJ, número do negócio ou cidade" autocomplete="off">
       <div class="seg" role="group" aria-label="Funil"><button id="fTodos" aria-pressed="true">Todos</button><button id="fOut" aria-pressed="false">Outbound</button><button id="fIn" aria-pressed="false">Inbound</button></div>
-      <select id="ordem" aria-label="Ordenar"><option value="pend">Pendentes primeiro</option><option value="az">Ordem alfabética</option><option value="hora">Hora em que foi iniciado</option></select>
+      <select id="ordem" class="tp-fil" aria-label="Ordenar"><option value="pend">Pendentes primeiro</option><option value="az">Ordem alfabética</option><option value="hora">Hora em que foi iniciado</option></select>
       <button class="sec" id="bAguard" title="Leads que você qualificou e ainda esperam representante">Aguardando representante (0)</button>
-      <label><input type="checkbox" id="esconder"> Esconder feitos (H)</label>
+      <label class="tp-fil" id="lbEsconder"><input type="checkbox" id="esconder"> Esconder feitos (H)</label>
     </div>
-    <details id="blocoIniciar" class="iniciar-faixa">
+    <details id="blocoIniciar" class="iniciar-faixa tp-sec">
       <summary id="iniciarResumo">Começar leads novos</summary>
       <div class="ctl" id="ctl">
         <div class="grupo">
@@ -670,7 +703,7 @@ var $ = function (id) { return document.getElementById(id); };
 var S = { diaOrigem: '', rotOrigemDia: {}, token: '', timer: null, relogio: null, pollTimer: null, carregando: false, reqSeq: 0, ctrlCarregar: null, tem: false, dados: null, vm: null, ctl: null, fila: [], filaVis: [], filaTotais: {}, filaFunil: 'outbound', sel: {}, idem: null, ocupado: false, funil: 'todos', msgFixa: false, expande: {}, conferindo: false, ocultoDesde: 0, ocultos: {}, filaOrigem: '', L: null, emVoo: {}, saidaMem: null, abaId: 'a' + Math.random().toString(36).slice(2, 10), canal: null, pre: {}, doCache: false, saidaTimer: null, processando: false };
 function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { logFalha('l8 storage bloqueado = comportamento sem cache', e);  return null; /* seguro: storage bloqueado = comportamento sem cache */ } }
 function lsAvisaCheio(k) { try { if (k === SAIDA_KEY || /^sh_(rasc|nota)_/.test(k)) faixa('armazenamento', 'Este aparelho não está conseguindo guardar o que você digita (sem espaço ou bloqueado). Não feche a página até terminar.', 'erro'); } catch (e) { logFalha('l9 o aviso é extra', e); /* o aviso é extra */ } }
-function lsSet(k, v) { try { localStorage.setItem(k, v); if (k === SAIDA_KEY || /^sh_(rasc|nota)_/.test(k)) faixa('armazenamento', ''); } catch (e) { try { var vel = ['sh_ultimo', 'sh_fila_outbound', 'sh_fila_inbound', 'sh_abriu']; for (var i = 0; i < vel.length; i++) { if (vel[i] !== k && localStorage.getItem(vel[i]) != null) { localStorage.removeItem(vel[i]); try { localStorage.setItem(k, v); return; } catch (e2) { logFalha('l10 1ª tentativa de liberar espaço falhou: o laço segue e o aviso de a', e2); /* 1ª tentativa de liberar espaço falhou: o laço segue e o aviso de armazenamento cheio sai no fim */ } } } } catch (e3) { logFalha('l10 idem', e3); /* idem */ } lsAvisaCheio(k); } } // cota cheia: apaga o cache mais velho e tenta de novo (rascunhos e caixa de saída nunca são apagados)
+function lsSet(k, v) { try { localStorage.setItem(k, v); if (k === SAIDA_KEY || /^sh_(rasc|nota)_/.test(k)) faixa('armazenamento', ''); } catch (e) { try { var vel = ['sh_fones', 'sh_ultimo', 'sh_fila_outbound', 'sh_fila_inbound', 'sh_abriu']; for (var i = 0; i < vel.length; i++) { if (vel[i] !== k && localStorage.getItem(vel[i]) != null) { localStorage.removeItem(vel[i]); try { localStorage.setItem(k, v); return; } catch (e2) { logFalha('l10 1ª tentativa de liberar espaço falhou: o laço segue e o aviso de a', e2); /* 1ª tentativa de liberar espaço falhou: o laço segue e o aviso de armazenamento cheio sai no fim */ } } } } catch (e3) { logFalha('l10 idem', e3); /* idem */ } lsAvisaCheio(k); } } // cota cheia: apaga o cache mais velho e tenta de novo (rascunhos e caixa de saída nunca são apagados)
 function lsDel(k) { try { localStorage.removeItem(k); } catch (e) { logFalha('l11 remover chave que não existe ou storage bloqueado: nada a avisar', e); /* remover chave que não existe ou storage bloqueado: nada a avisar */ } }
 function mostrar(id) { ['s-login', 's-off', 's-erro', 's-dia'].forEach(function (x) { $(x).classList.toggle('hide', x !== id); }); }
 function corta(t, n) { t = String(t == null ? '' : t); return t.length > n ? t.slice(0, n - 1) + '…' : t; }   // nome gigante não estoura o cartão: corta com reticências (o texto inteiro vai no title)
@@ -797,7 +830,7 @@ function casaBusca(it, q) {
 })();
 // ---------- chamadas ----------
 // ---------- resiliência: rede com retry, disjuntor, caixa de saída, versão, relógio do servidor, telemetria ----------
-var PAGINA_VERSAO = '2026-11-17.5';
+var PAGINA_VERSAO = '2026-11-18.6B';
 var REDE = { escala: 1, falhas: 0, ultima: 0, desvio: 0 };
 function dormir(ms) { return new Promise(function (r) { setTimeout(r, ms * REDE.escala); }); }
 function jitter(ms) { return ms * (0.5 + Math.random() * 0.5); }
@@ -867,6 +900,116 @@ async function api(path, corpo, ext, base, opt) {
 var SAIDA_KEY = 'sh_saida';
 function lerSaida() { var raw = lsGet(SAIDA_KEY); try { var a = JSON.parse(raw || 'null'); if (Array.isArray(a)) return a; } catch (e) { try { faixa('saida', 'Não consegui ler as ações guardadas neste aparelho. Se alguma não saiu, faça de novo.', 'erro'); falhaDePagina('saida ilegível: ' + (e && e.message), 'saida'); } catch (e2) { logFalha('l189 o aviso é extra; o retorno abaixo não depende dele', e2); /* o aviso é extra; o retorno abaixo não depende dele */ } } return S.saidaMem || []; }
 function gravarSaida(a) { S.saidaMem = a; if (!a.length) lsDel(SAIDA_KEY); else lsSet(SAIDA_KEY, JSON.stringify(a)); atualizarSelo(); try { if (S.canal) S.canal.postMessage({ t: 'saida' }); } catch (e) { logFalha('l190 aviso a outras abas é opcional; elas atualizam sozinhas', e); /* aviso a outras abas é opcional; elas atualizam sozinhas */ } }
+// ---------- 17.6B: LIVRO LOCAL DE AÇÕES (a Hoje é um sistema independente: toda ação vale na hora do nosso lado e a sincronização é em segundo plano; o usuário nunca vê o estado velho) ----------
+// Uma entrada por ação de tarefa (concluir, adiar, criar), guardada SÓ na memória da aba (nada novo no aparelho: a fila sh_saida já existia). Estados: 'fila' (na fila adiada de 5 s ou esperando rede), 'voo' (enviada, sem resposta),
+// 'confirmada' (o servidor aceitou) e 'falhou' (recusa definitiva: deixa de valer e a tarefa reabre SÓ ela). Toda resposta de lead (e o cartão do Hoje 2.0) passa por livroLead: primeiro OBSERVA (se o servidor já mostra o efeito, a entrada vira 'obs'), depois APLICA o livro por cima do que veio.
+// A entrada NUNCA sai por tempo: só por confirmação observada ou falha definitiva. Depois de observada, fica 90 s como lápide SÓ contra leituras INICIADAS antes da observação (fotos velhas em voo); leitura iniciada DEPOIS vale como verdade (o servidor já aplica sobreposição) e remove a entrada: se a tarefa foi reaberta no Agendor, a tela mostra aberta. Sem confirmação em 15 min do envio: faixa avisando (nunca reverte em silêncio).
+S.livro = Object.create(null); var LIVRO_TETO_MS = 15 * 60000, LIVRO_CAUDA_MS = 90000, LIVRO_PODA_MS = 60 * 60000, LIVRO_MAX = 300, LIVRO_FALHA_MS = 30 * 60000;
+S.livroTrilha = []; // os últimos 6 passos do livro (tipo + tempo), só para o relato de regressão: sem nome, sem telefone, sem texto
+function livroHash(x) { var h = 5381, q = String(x); for (var i = 0; i < q.length; i++) h = ((h * 33) ^ q.charCodeAt(i)) >>> 0; return ('000000' + h.toString(16)).slice(-6); }
+function livroPasso(k, tid) { var a = S.livroTrilha; a.push({ k: k, t: Date.now(), h: tid ? livroHash(tid) : '' }); if (a.length > 6) a.shift(); }
+function livroRelata(tipo, tid, ant, atu, onde) { // INVARIANTE em tempo de execução: tarefa que o usuário já viu feita/adiada reapareceu aberta. A tela já foi corrigida (o livro reaplica); aqui só se REGISTRA no servidor (rota /erro que a 17.5 já usa), sem dado pessoal: ≤1 por tarefa por minuto, ≤10 por sessão (leitura velha corrigida: ≤4, para não esconder regressão de verdade)
+  try {
+    var R = S.livroRel = S.livroRel || { ult: {}, n: 0, nv: 0 }; var agora = Date.now(); var h = livroHash(tid); var vel = tipo === 'leitura_velha';
+    var ch = tipo + h; if (R.ult[ch] && agora - R.ult[ch] < 60000) return; if (vel ? R.nv >= 4 : R.n >= 10) return; if (vel) R.nv++; else R.n++; R.ult[ch] = agora; /* 1 por tarefa e tipo por minuto: uma leitura velha já relatada não pode esconder uma regressão de tela da mesma tarefa */
+    var tr = S.livroTrilha.map(function (q, i, a) { return q.k + (q.h ? ':' + q.h : '') + '@' + (i ? q.t - a[i - 1].t : 0) + 'ms'; }).join(',');
+    var msg = ('regressao_livro tipo=' + tipo + ' onde=' + String(onde).replace(/[^\w.]/g, '') + ' tid=' + h + ' ant=' + ant + ' atu=' + atu + ' passos=' + tr).slice(0, 200); // prefixo fixo PRIMEIRO (o servidor corta em 200 e agrupa por msg|rota); o variável depois
+    S.errRep = S.errRep || { ult: {}, ultimoEnvio: 0, n: 0, off: 0 }; if (!S.token || S.errRep.off > agora) return;
+    fetch(API + '/erro', { method: 'POST', headers: { 'Authorization': 'Bearer ' + S.token, 'Content-Type': 'application/json' }, body: JSON.stringify({ msg: msg, rota: 'livro', versao: PAGINA_VERSAO }) }).then(function (r) { if (!r || r.status >= 400) S.errRep.off = Date.now() + 300000; }, function () { S.errRep.off = Date.now() + 300000; }); // o mesmo freio do reportarErro: 5 min parado se o /erro falhar
+  } catch (e) { logFalha('livro: relato nunca gera erro', e); }
+}
+function livroDif(pre, pos) { // o que a reaplicação do livro mudou em relação ao que estava na tela (= tarefa que tinha voltado)
+  var r = []; if (!pre || !pos || pre === pos) return r; var ids = {}; (pre.tarefas || []).forEach(function (t) { ids[String(t.id)] = t; });
+  (pos.tarefas || []).forEach(function (t) { var a = ids[String(t.id)]; if (a && t.feita && !a.feita) r.push({ tid: t.id, k: 'concluir' }); else if (a && !t.feita && t.venc !== a.venc) r.push({ tid: t.id, k: 'adiar' }); });
+  return r;
+}
+function livroNorm(t) { return semAcento(limpaTarefa(t) || String(t || '')).toLowerCase().replace(/\s+/g, ' ').trim(); }
+function livroCasaCriar(en, t) { if (!t || t.id === 'novo' || String(t.id).indexOf('novo:') === 0 || en.idsAntes.indexOf(String(t.id)) >= 0) return false; var a = livroNorm(t.texto), b = livroNorm(en.texto); return !!a && !!b && (a === b || a.indexOf(b) === 0 || b.indexOf(a) === 0); }
+function livroAdd(e, antes) { // chamado quando a ação entra na fila (concluirComDesfazer, enviarAcao) ou, de reserva, quando a fila (sh_saida) já tem uma ação que o livro não conhece
+  if (!e || e.tipo !== 'tarefa') return null; if (S.livro[e.id]) return S.livro[e.id];
+  var m = /^\/tarefa\/(\d+)\/(concluir|resultado|adiar)$/.exec(e.caminho || ''); var cr = /^\/tarefa$/.test(e.caminho || ''); if (!m && !cr) return null;
+  try { livroPoda(); } catch (eP) { logFalha('livro: poda', eP); } var en = { id: e.id, dealId: String(e.dealId), op: m ? (m[2] === 'adiar' ? 'adiar' : 'concluir') : 'criar', tid: m ? m[1] : '', estado: 'fila', criado: Date.now(), tEnv: 0, obs: 0, avisado: false, texto: '' };
+  var tar = (antes && antes.tarefas) || ((S.L && String(S.L.dealId) === en.dealId && S.L.lead && S.L.lead.tarefas) || []); var corpo = e.corpo || {};
+  var tk = m ? tar.filter(function (x) { return String(x.id) === m[1]; })[0] : null; if (tk) en.texto = limpaTarefa(tk.texto) || tk.texto || '';
+  if (en.op === 'adiar') { en.para = corpo.para; en.vencAntes = tk ? tk.venc : undefined; }
+  if (en.op === 'criar') { en.texto = String(corpo.texto || '').trim(); en.venc = corpo.venc; en.idsAntes = tar.map(function (x) { return String(x.id); }).filter(function (x) { return x !== 'novo' && x.indexOf('novo:') !== 0; }); }
+  if (en.op === 'concluir') Object.keys(S.livro).forEach(function (k) { var o = S.livro[k]; if (o.op === 'criar' && o.dealId === en.dealId && o.realTid === en.tid) delete S.livro[k]; }); // a tarefa criada agora foi concluída: o placeholder dela não pode reaparecer aberto
+  en.idsAntes = en.idsAntes || []; S.livro[e.id] = en; livroPasso(en.op, en.tid || e.id); return en;
+}
+function livroSupera(dealId, tid) { Object.keys(S.livro).forEach(function (k) { var o = S.livro[k]; if (o.op === 'adiar' && o.dealId === String(dealId) && o.tid === String(tid)) o.sup = true; }); } // um novo Adiar da mesma tarefa vale mais que o anterior: o anterior continua rastreado (sai, é observado), mas não pinta mais a tela
+function livroLimpa() { Object.keys(S.livro).forEach(function (k) { livroDel(k); }); S.livro = Object.create(null); S.livroRel = null; S.livroTrilha = []; } // sair, 401 e troca de usuário: nada do livro de uma pessoa vale para a próxima
+function livroDel(id) { var en = S.livro[id]; if (en) livroPasso('desf', en.tid || id); if (en && en.faixa && en.faixa.remove) { try { en.faixa.remove(); } catch (x) { logFalha('livro: faixa', x); } } delete S.livro[id]; }
+function livroTem(dealId, tid) { return Object.keys(S.livro).some(function (k) { var o = S.livro[k]; return o.dealId === String(dealId) && o.op === 'concluir' && o.tid === String(tid) && o.estado !== 'falhou'; }); }
+function livroVoo(id) { var en = S.livro[id]; if (en && en.estado === 'fila') { en.estado = 'voo'; en.tEnv = en.tEnv || Date.now(); livroPasso('env', en.tid || id); } }
+function livroResultado(id, c, j) { // c: 'ok' | 'fila' (o servidor guardou na fila durável) | 'rede' (volta para a fila, tenta de novo) | 'recusa' (definitivo)
+  var en = S.livro[id]; if (!en) return; livroPasso(c === 'ok' || c === 'fila' ? 'ok' : c, en.tid || id); if (c === 'ok' || c === 'fila') { if (en.estado !== 'falhou') en.estado = 'confirmada'; } else if (c === 'rede') { if (en.estado === 'voo' || en.estado === 'fila') { en.estado = 'fila'; en.tEnv = 0; } } else if (c === 'recusa') { en.estado = 'falhou'; en.tFalha = Date.now(); if (en.op === 'adiar') Object.keys(S.livro).forEach(function (k2) { var o = S.livro[k2]; if (o.op === 'adiar' && o.dealId === en.dealId && o.tid === en.tid && o.estado !== 'falhou' && o.criado < en.criado) o.sup = false; }); /* o Adiar anterior volta a valer */ if (en.faixa && en.faixa.remove) { try { en.faixa.remove(); } catch (x) { logFalha('livro: faixa', x); } } }
+}
+function livroSync() { // a fila guardada no aparelho (sh_saida, também de outras abas) é a verdade do que ainda não saiu
+  var a = lerSaida(), ids = {}; a.forEach(function (x) { ids[x.id] = 1; if (!S.livro[x.id]) livroAdd(x); });
+  Object.keys(S.livro).forEach(function (k) { var en = S.livro[k]; if (en.estado === 'fila' && (S.emVoo[k] || !ids[k])) { en.estado = 'voo'; en.tEnv = en.tEnv || Date.now(); } }); // saiu da fila sem resposta registrada aqui: foi enviada (por outra aba ou por este caminho): fica 'em voo' até a resposta
+}
+function livroDoLead(lead, dealId) { var d = String(dealId != null ? dealId : (lead && lead.dealId)); return Object.keys(S.livro).map(function (k) { return S.livro[k]; }).filter(function (o) { return o.dealId === d; }).sort(function (a, b) { return a.criado - b.criado; }); }
+function livroObserva(lead, dealId, t0) { // o servidor mostra o efeito da ação? então ela está confirmada (lápide de 90 s). t0 = quando a leitura COMEÇOU (sem t0: resposta de escrita, vale como atual)
+  if (!lead || !Array.isArray(lead.tarefas)) return; var agora = Date.now();
+  livroDoLead(lead, dealId).forEach(function (en) {
+    if (en.obs && en.estado !== 'falhou') { if (typeof t0 !== 'number' || t0 < en.obs) return; /* leitura que começou antes da observação: a lápide segura */ var tk = lead.tarefas.filter(function (x) { return String(x.id) === en.tid; })[0]; var aberta = en.op === 'concluir' ? !!tk && !tk.feita : en.op === 'adiar' ? !!tk && !tk.feita && tk.venc !== en.para : en.op === 'criar' ? !lead.tarefas.some(function (x) { return String(x.id) === en.realTid; }) : false; if (aberta) { livroPasso('reab', en.tid); livroDel(en.id); } return; }
+    if (en.obs || en.estado === 'falhou') return; var t = lead.tarefas.filter(function (x) { return String(x.id) === en.tid; })[0]; var ok = false, achada = null;
+    if (en.op === 'concluir') ok = t ? !!t.feita : en.estado === 'confirmada';
+    else if (en.op === 'adiar') ok = t ? (!!t.feita || (en.estado !== 'fila' && (t.venc === en.para || (en.vencAntes !== undefined && t.venc !== en.vencAntes)))) : en.estado === 'confirmada';
+    else { achada = lead.tarefas.filter(function (x) { return livroCasaCriar(en, x); })[0]; ok = !!achada; }
+    if (!ok) return; en.obs = agora; if (en.estado !== 'falhou') en.estado = 'confirmada'; if (achada) { en.realTid = String(achada.id); en.snap = copia(achada); } if (en.faixa && en.faixa.remove) { try { en.faixa.remove(); } catch (x) { logFalha('livro: faixa', x); } }
+  });
+}
+function livroAplica(lead, dealId) { // devolve o lead com as ações do livro por cima (cópia; nunca altera o que veio do servidor)
+  if (!lead || !Array.isArray(lead.tarefas)) return lead; livroSync(); var ens = livroDoLead(lead, dealId).filter(function (o) { return o.estado !== 'falhou' && !o.sup; }); if (!ens.length) return lead;
+  var tar = lead.tarefas.slice(), mudou = false;
+  var textos = ens.filter(function (o) { return o.op === 'criar'; }).map(function (o) { return livroNorm(o.texto); });
+  if (textos.length) { var ant = tar.length; tar = tar.filter(function (t) { return !(t && t.id === 'novo' && textos.indexOf(livroNorm(t.texto)) >= 0); }); if (tar.length !== ant) mudou = true; } // o placeholder 'novo' da tela otimista dá lugar ao do livro
+  ens.forEach(function (en) {
+    if (en.op === 'criar') {
+      var ja = en.realTid ? tar.some(function (t) { return String(t.id) === en.realTid; }) : tar.some(function (t) { return t.id === 'novo:' + en.id || livroCasaCriar(en, t); }); /* o placeholder do próprio livro já na lista conta (reaplicar não duplica) */
+      if (!ja) { tar.push(en.snap ? Object.assign({}, en.snap, { feita: false }) : { id: 'novo:' + en.id, texto: en.texto, venc: en.venc === 'hoje' ? hojeISO() : en.venc, feita: false, atrasada: false, _salvando: true }); mudou = true; } return;
+    }
+    var i = -1; for (var q = 0; q < tar.length; q++) if (String(tar[q].id) === en.tid) { i = q; break; } if (i < 0) return; var t = tar[i];
+    if (en.op === 'concluir') { if (!t.feita) { tar[i] = Object.assign({}, t, { feita: true }); mudou = true; } }
+    else if (!t.feita && (t.venc !== en.para || t.atrasada)) { tar[i] = Object.assign({}, t, { venc: en.para, atrasada: false }); mudou = true; }
+  });
+  return mudou ? Object.assign({}, lead, { tarefas: tar }) : lead;
+}
+function livroLead(lead, dealId, onde, t0) { // leitura VELHA do servidor (a tarefa já vista feita/adiada vem aberta): corrige na hora (o livro reaplica) e registra
+  if (lead && Array.isArray(lead.tarefas)) { try { livroDoLead(lead, dealId).forEach(function (en) { if (en.estado === 'falhou' || en.op !== 'concluir') return; var t = lead.tarefas.filter(function (x) { return String(x.id) === en.tid; })[0]; if (t && !t.feita) { livroPasso('leit', en.tid); livroRelata('leitura_velha', en.tid, en.estado + (en.obs ? '+obs' : ''), 'aberta', onde || 'resposta'); } }); } catch (x) { logFalha('livro: relato', x); } }
+  livroObserva(lead, dealId, t0); return livroAplica(lead, dealId); } // TODA resposta de lead passa por aqui antes de trocar L.lead // TODA resposta de lead passa por aqui antes de trocar L.lead
+function livroTela(L, onde) { // chamado em todo desenho do lead: se o que está na tela tem uma tarefa que o livro dá como feita/adiada mas aparece aberta, corrige na hora e registra a regressão
+  var pre = L.lead, pos = livroAplica(pre, L.dealId); if (pos !== pre) { try { livroDif(pre, pos).forEach(function (d) { var en = livroDoLead(pre, L.dealId).filter(function (o) { return o.tid === String(d.tid); })[0]; livroPasso('reg', d.tid); livroRelata('regressao_tela', d.tid, en ? en.estado + (en.obs ? '+obs' : '') : '?', 'aberta', onde); }); } catch (x) { logFalha('livro: relato', x); } } L.lead = pos;
+}
+function livroReverte(en) { // recusa definitiva: reabre SÓ essa tarefa na tela aberta
+  var L = S.L; if (!L || !L.lead || String(L.dealId) !== en.dealId || !Array.isArray(L.lead.tarefas)) return;
+  if (en.op === 'concluir') L.lead.tarefas.forEach(function (x) { if (String(x.id) === en.tid) x.feita = false; });
+  else if (en.op === 'adiar') L.lead.tarefas.forEach(function (x) { if (String(x.id) === en.tid && en.vencAntes !== undefined) x.venc = en.vencAntes; });
+  else L.lead.tarefas = L.lead.tarefas.filter(function (x) { return !(String(x.id).indexOf('novo') === 0 && livroNorm(x.texto) === livroNorm(en.texto)); });
+  try { renderLead(); } catch (x) { falhaDePagina('livro: reabrir tarefa: ' + (x && x.message), 'render'); }
+}
+function livroPoda() { // teto de entradas e idade: nada fica para sempre na memória da aba
+  var ks = Object.keys(S.livro), agora = Date.now();
+  ks.forEach(function (k) { var en = S.livro[k]; if (en && !en.obs && en.estado !== 'falhou' && agora - en.criado >= LIVRO_PODA_MS) livroDel(k); }); // 60 min sem confirmar: já foi avisado aos 15 min; a fila do aparelho (sh_saida) continua sendo a verdade do que não saiu
+  ks = Object.keys(S.livro); if (ks.length > LIVRO_MAX) { ks.sort(function (a, b) { var x = S.livro[a], y = S.livro[b]; return ((x.obs || x.estado === 'falhou') ? 0 : 1) - ((y.obs || y.estado === 'falhou') ? 0 : 1) || x.criado - y.criado; }); ks.slice(0, ks.length - LIVRO_MAX).forEach(livroDel); }
+}
+async function livroConfere(en) { // 15 min sem confirmação: ANTES de avisar, relê o lead (o aviso só vale se, relido agora, o servidor ainda não mostra o efeito)
+  var j; try { invalidaLead(en.dealId); j = await buscarLead(en.dealId); } catch (x) { j = null; logFalha('livro: reler antes de avisar', x); }
+  if (!S.livro[en.id]) return; if (j && j.ok && j.lead) { var L = S.L; if (L && String(L.dealId) === en.dealId) { aplicarResposta(L, j, 'livroConfere'); try { renderLead(); } catch (x2) { logFalha('livro: desenho', x2); } } else livroObserva(j.lead, en.dealId, j._t0); }
+  if (!S.livro[en.id] || en.obs) return; /* confirmou (ou foi tirada) enquanto relia */
+  var rot = en.op === 'adiar' ? 'adiada' : en.op === 'criar' ? 'criada' : 'concluída';
+  en.faixa = avisar('A tarefa' + (en.texto ? ' "' + corta(en.texto, 60) + '"' : '') + ' ainda não aparece ' + rot + ' no CRM. Continuo mostrando como você deixou. Se já conferiu lá, toque em Entendi.', 'aviso', { rot: 'Entendi', f: function () { livroDel(en.id); if (S.L && String(S.L.dealId) === en.dealId) { try { carregarLead(S.L, true); } catch (x3) { logFalha('livro: reler', x3); } } } }) || null;
+}
+function livroVarre() { // a cada 3 s (junto da fila): lápides velhas saem; sem confirmação em 15 min: relê e, se ainda não confirmou, faixa (uma vez), sem reverter
+  var agora = Date.now(); livroPoda();
+  Object.keys(S.livro).forEach(function (k) {
+    var en = S.livro[k]; if (!en) return;
+    if (en.obs) { if (agora - en.obs > LIVRO_CAUDA_MS) delete S.livro[k]; return; }
+    if (en.estado === 'falhou') { if (agora - (en.tFalha || 0) > LIVRO_FALHA_MS) delete S.livro[k]; return; }
+    if (en.tEnv && en.estado !== 'fila' && !en.avisado && agora - en.tEnv >= LIVRO_TETO_MS) { en.avisado = true; livroConfere(en); }
+  });
+}
 // ---- indicador ÚNICO de sincronização (Hoje 2.0, seção 3 do plano): Salvo ✓ / Sincronizando… / Aguardando conexão: n ações (nada se perde) / Não consegui salvar: motivo + Tentar agora. Diz a verdade, sem citar o fornecedor. ----
 S.h2Ops = { pendentes: 0, falhou: [] }; S.salvoAte = 0; S.h2Visto = Object.create(null);
 function marcaSalvo(j) { if (j && j.notaPendente) { S.syncAte = Date.now() + 60000; S.salvoAte = 0; atualizarSelo(); setTimeout(atualizarSelo, 60200); return; } S.salvoAte = Date.now() + 5000; atualizarSelo(); setTimeout(atualizarSelo, 5200); }   // parte ainda por gravar (ex.: a nota do Perdido): continua 'Sincronizando…', nunca 'Salvo ✓'
@@ -886,7 +1029,7 @@ function rotuloAcao(e) { var nome = (e.meta && e.meta.titulo) || 'Lead'; var m =
 function desfazerSaida(id) {
   if (S.emVoo[id]) { msg('Essa ação já está sendo enviada; não dá mais para desfazer.', 'aviso'); return false; }
   var a = lerSaida(); var e = a.filter(function (x) { return x.id === id; })[0]; if (!e) return false;
-  var rest = a.filter(function (x) { return x.id !== id && !(e.tipo === 'campos' && x.dealId === e.dealId && x.tipo === 'ganho'); }); gravarSaida(rest);   // desfazer os campos leva junto o ganho que vinha atrás
+  livroDel(id); var rest = a.filter(function (x) { return x.id !== id && !(e.tipo === 'campos' && x.dealId === e.dealId && x.tipo === 'ganho'); }); gravarSaida(rest);   // desfazer os campos leva junto o ganho que vinha atrás
   if (e.tipo === 'perdido') { delete S.ocultos[e.dealId]; redesenharTudo(); }
   if (e.tipo === 'ganho' || e.tipo === 'campos') { delete S.qualif[e.dealId]; limpaQualificando(); redesenharTudo(); }
   if (e.tipo === 'campos' && e.meta && e.meta.edits) { try { var cur = lerRascunho(e.dealId); Object.keys(e.meta.edits).forEach(function (k) { cur[k] = e.meta.edits[k]; }); lsSet(rascKey(e.dealId), JSON.stringify({ t: Date.now(), e: cur })); if (S.L && S.L.dealId === e.dealId) Object.keys(e.meta.edits).forEach(function (k) { S.L.edits[k] = e.meta.edits[k]; }); } catch (er) { logFalha('desfazer: guardar rascunho', er); } }
@@ -926,7 +1069,7 @@ function jaSalvo(corpo, j) { // 409 "conflito" em que o valor atual é exatament
   return j.conflitos.every(function (c) { var env = valorEnviado(corpo, c.campo); return env !== undefined && normCmp(c.campo, env) === normCmp(c.campo, c.atual); });
 }
 async function executar(e, keepalive) {
-  S.emVoo[e.id] = true; invalidaLead(e.dealId); atualizarSelo();
+  S.emVoo[e.id] = true; livroVoo(e.id); invalidaLead(e.dealId); atualizarSelo();
   try {
     var j = await api('/lead/' + e.dealId + e.caminho, e.corpo || {}, null, null, { idem: e.id, keepalive: keepalive });
     if (e.tipo === 'campos' && jaSalvo(e.corpo, j)) return Object.assign({}, j, { ok: true, confirmado: true, _status: 200, naoConfirmados: [], _jaSalvo: true });
@@ -952,11 +1095,12 @@ async function enviarAcao(def) {
   var e = { id: novaChave(), dealId: def.dealId, caminho: def.caminho, corpo: def.corpo, tipo: def.tipo, meta: def.meta || {}, criado: Date.now(), tent: 0, proximo: 0 };
   var a = lerSaida(); var chaveE = e.dealId + '|' + e.caminho + '|' + JSON.stringify(semBase(e.corpo)); var igual = a.filter(function (x) { return x.dealId === e.dealId && x.caminho === e.caminho && x.tipo === e.tipo && (x.dealId + '|' + x.caminho + '|' + JSON.stringify(semBase(x.corpo))) === chaveE; })[0];
   if (igual) { setTimeout(processarSaida, 0); return { _status: 0, ok: false, _enfileirado: true }; } // a mesma ação já está na fila (ex.: depois de um 401): não entra duas vezes
-  var atras = a.some(function (x) { return x.dealId === e.dealId; }); a.push(e); gravarSaida(a); // grava ANTES de enviar: se a aba morrer, a ação não se perde
+  livroAdd(e, def.antes); var atras = a.some(function (x) { return x.dealId === e.dealId; }); a.push(e); gravarSaida(a); // grava ANTES de enviar: se a aba morrer, a ação não se perde
   if (atras) { S.proxTick = 0; setTimeout(processarSaida, 0); return { _status: 0, ok: false, _enfileirado: true }; } // mesma ordem por lead
   var j = await executar(e);
-  if (j._status === 401) { return j; }
+  if (j._status === 401) { livroResultado(e.id, 'rede'); return j; }
   var c; if (j._status === 502 && !(j.erro && j.mensagem) && !idempotente(e)) { var cf = await confirmar502(e); j = cf.j; c = cf.c; } else c = classe(j, true);
+  livroResultado(e.id, c, j);
   if (c === 'fila') { gravarSaida(lerSaida().filter(function (x) { return x.id !== e.id; })); try { faixa('fila', j.mensagem || 'Sincronizando…: a ação ficou na fila e conclui sozinha.', ''); setTimeout(function () { faixa('fila', ''); }, 15000); } catch (x) { logFalha('l229 faixa é só aviso', x); /* faixa é só aviso */ } return { _status: 0, ok: false, _enfileirado: true, _naFila: true }; }
   if (c === 'rede') { e.tent = 1; e.proximo = Date.now() + jitter(2000) * REDE.escala; gravarSaida(lerSaida().map(function (x) { return x.id === e.id ? e : x; })); return { _status: 0, ok: false, _enfileirado: true }; }
   gravarSaida(lerSaida().filter(function (x) { return x.id !== e.id; })); if (c === 'ok') marcaSalvo(j);
@@ -970,8 +1114,9 @@ async function processarSaida(opt) {
       for (var i = 0; i < a.length; i++) { if (vistos[a[i].dealId]) continue; vistos[a[i].dealId] = true; if (S.emVoo[a[i].id]) continue; if ((a[i].proximo || 0) <= Date.now() || (opt && opt.agora && !a[i].adiado) || (opt && opt.keepalive)) { alvo = a[i]; break; } }
       if (!alvo) break;
       var j = await executar(alvo, opt && opt.keepalive);
-      if (j._status === 401) { sair('Senha não confere. O que estava guardado continua aqui e sai quando você entrar de novo.'); return; }
+      if (j._status === 401) { livroResultado(alvo.id, 'rede'); sair('Senha não confere. O que estava guardado continua aqui e sai quando você entrar de novo.'); return; }
       var c; if (j._status === 502 && !(j.erro && j.mensagem) && !idempotente(alvo)) { var cf2 = await confirmar502(alvo); j = cf2.j; c = cf2.c; } else c = classe(j, false);
+      livroResultado(alvo.id, c, j);
       if (c === 'rede') { alvo.tent = (alvo.tent || 0) + 1; var espera = j._status === 429 ? 5000 : Math.min(30000, 1000 * Math.pow(2, alvo.tent)); alvo.proximo = Date.now() + jitter(espera) * REDE.escala; gravarSaida(lerSaida().map(function (x) { return x.id === alvo.id ? alvo : x; })); if (alvo.tent >= 12 && j._status !== 0) { gravarSaida(lerSaida().filter(function (x) { return x.id !== alvo.id; })); saidaRecusada(alvo, j); } break; }
       gravarSaida(lerSaida().filter(function (x) { return x.id !== alvo.id; }));
       if (c === 'fila') { soltarBase(alvo); try { faixa('fila', j.mensagem || 'Sincronizando…: a ação ficou na fila e conclui sozinha.', ''); setTimeout(function () { faixa('fila', ''); }, 15000); } catch (x) { logFalha('l246 faixa é só aviso', x); /* faixa é só aviso */ } }
@@ -990,7 +1135,7 @@ function soltarBase(e) { if (e.tipo !== 'campos' || !S.L || S.L.dealId !== e.dea
 function avisar(texto, tipo, acao) { // aviso que fica na tela até ele fechar (nunca descarta em silêncio)
   var box = $('faixas'); if (!box) return; var f = el('div', 'faixa ' + (tipo || 'aviso')); f.setAttribute('role', 'alert'); f.appendChild(el('span', null, semForn(texto)));
   if (acao) { var b = el('button', 'sec', acao.rot); b.type = 'button'; b.onclick = function () { acao.f(); f.remove(); }; f.appendChild(b); }
-  var x = el('button', 'link', 'Fechar'); x.type = 'button'; x.onclick = function () { f.remove(); }; f.appendChild(x); box.appendChild(f);
+  var x = el('button', 'link', 'Fechar'); x.type = 'button'; x.onclick = function () { f.remove(); }; f.appendChild(x); box.appendChild(f); return f;
 }
 podarRascunhos(); S.repPend = {}; try { S.repPend = JSON.parse(lsGet('sh_reppend') || '{}') || {}; var _hj = Date.now(); Object.keys(S.repPend).forEach(function (k) { if (_hj - (S.repPend[k].t || 0) > 2 * 86400000) delete S.repPend[k]; }); } catch (e) { logFalha('l264 catch', e);  S.repPend = {}; }
 function guardaRepPend() { try { lsSet('sh_reppend', JSON.stringify(S.repPend)); } catch (e) { logFalha('l265 lsSet já avisa quando não consegue guardar', e); /* lsSet já avisa quando não consegue guardar */ } }
@@ -1009,7 +1154,8 @@ function saidaOk(e, j) {
     else { if (Lg) { aplicarResposta(Lg, j); renderLead(); } avisar(titulo + ' qualificado.' + (j.mensagem ? ' ' + j.mensagem : ''), 'ok', tinha ? { rot: 'Escolher representante', f: function () { abrirEscolhaRep(e.dealId); } } : null); }
     carregarAguardando(true); carregarPerdasCtx(); carregar(true, 'tarefas'); return;
   }
-  if (e.tipo === 'tarefa' && /\/concluir$/.test(e.caminho || '')) atrasConcluida(e.dealId, j && j.lead);
+  if (e.tipo === 'tarefa') livroObserva(j && j.lead, e.dealId); // a resposta de sucesso do próprio pedido já pode mostrar o efeito
+  if (e.tipo === 'tarefa' && /\/concluir$/.test(e.caminho || '')) atrasConcluida(e.dealId, livroAplica(j && j.lead, e.dealId));
   var L = S.L; if (L && L.dealId === e.dealId && L.lead) { if (j.lead) { aplicarResposta(L, j); limparEditsIguais(L); redesenhar(L); setEstado(L, 'ok', e.tipo === 'tarefa' ? 'Tarefa concluída. Salvo ✓' : 'Salvo ✓ (enviado quando a conexão voltou)'); } else carregarLead(L, true); }
   if (e.tipo === 'perdido') avisar((e.meta.titulo || 'Lead') + ': marcado como Perdido. Salvo ✓', 'ok');
   else if (e.tipo === 'campos') avisar((e.meta.titulo || 'Lead') + ': alterações salvas e conferidas ✓', 'ok');
@@ -1018,6 +1164,7 @@ function saidaOk(e, j) {
 function saidaRecusada(e, j) {
   if (e.tipo === 'ganho') { var Lr = S.L && S.L.dealId === e.dealId && S.L.lead ? S.L : null; limpaQualificando(); if (Lr) { resolverGanho(Lr, j); return; } delete S.qualif[e.dealId]; redesenharTudo(); avisar((e.meta.titulo || 'Lead') + ': não consegui qualificar. ' + ((j && j.mensagem) || 'O servidor não aceitou.'), 'erro', { rot: 'Abrir o lead', f: function () { abrirLead(e.dealId, null); } }); return; }
   var m = (j && j.mensagem) || 'O servidor não aceitou.';
+  if (e.tipo === 'tarefa') { livroResultado(e.id, 'recusa', j); if (S.livro[e.id]) livroReverte(S.livro[e.id]); }
   if (e.tipo === 'perdido') { delete S.ocultos[e.dealId]; redesenharTudo(); }
   if (e.tipo === 'campos') { var rest = lerSaida(); var temGanho = rest.some(function (x) { return x.dealId === e.dealId && x.tipo === 'ganho'; }); if (temGanho) gravarSaida(rest.filter(function (x) { return !(x.dealId === e.dealId && x.tipo === 'ganho'); })); if (temGanho || S.qualif[e.dealId]) { delete S.qualif[e.dealId]; redesenharTudo(); } e.reabrirGanho = temGanho || !!(S.L && S.L.ganhoRodando && S.L.dealId === e.dealId); } // campos recusado: o ganho que vinha logo atrás NUNCA sai sem os campos corrigidos
   if (e.tipo === 'tarefa') { invalidaLead(e.dealId); if (S.L && S.L.dealId === e.dealId) carregarLead(S.L, true); }
@@ -1027,7 +1174,7 @@ function saidaRecusada(e, j) {
 }
 function iniciarSaida() {
   atualizarSelo(); if (S.saidaTimer) return;
-  S.saidaTimer = setInterval(function () { if (!document.hidden) { processarSaida(); souLider(); } }, 3000);
+  S.saidaTimer = setInterval(function () { try { livroVarre(); } catch (x) { logFalha('livro: varredura', x); } if (!document.hidden) { processarSaida(); souLider(); } }, 3000);
   window.addEventListener('online', function () { processarSaida({ agora: true }); });
 }
 
@@ -1049,8 +1196,8 @@ function rascunhoValido(k) { try { var o = JSON.parse(localStorage.getItem(k) ||
 function podarRascunhos() { try { var mortos = []; for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k.indexOf('sh_rasc_') === 0 && !rascunhoValido(k)) mortos.push(k); } mortos.forEach(function (k) { lsDel(k); }); return mortos.length; } catch (e) { logFalha('podar rascunhos: só limpeza', e); return 0; } } // ao entrar: chaves vencidas, vazias ou ilegíveis saem
 function temRascunho() { try { var meu = S.L ? rascKey(S.L.dealId) : null; var real = !!(S.L && calcDiff(S.L).length); for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k.indexOf('sh_rasc_') === 0) { if (!rascunhoValido(k)) continue; if (k === meu && !real && Object.keys(S.L.edits).length) continue; /* só o rascunho DESTE lead gerado por campo tocado e devolvido ao original; rascunho vindo de outro lugar segura */ return true; } } } catch (e) { logFalha('l303 só pergunta se há rascunho: na dúvida a página trata como se houvesse (não recarrega sozinha)', e); return true; } return !!(S.L && (S.L.ocupado || calcDiff(S.L).length)); } // 17.5: campo tocado e devolvido ao valor original NÃO é rascunho (calcDiff); rascunho vencido/vazio/ilegível também não
 function podeRecarregarSozinha() { return !temRascunho() && !lerSaida().length && !S.ocupado && !(S.L && S.L.ocupado) && $('painelLead').classList.contains('hide') && $('modalGanho').classList.contains('hide'); }
-function parseVersao(v) { var m = /^(\d{4})-(\d{2})-(\d{2})\.(\d+)$/.exec(String(v || '')); return m ? [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4])] : null; }
-function versaoMaisNova(a, b) { var x = parseVersao(a), y = parseVersao(b); if (!x || !y) return false; for (var i = 0; i < 4; i++) { if (x[i] !== y[i]) return x[i] > y[i]; } return false; } // 'AAAA-MM-DD.N': o dia e depois o N como número ('.10' é maior que '.9')
+function parseVersao(v) { var m = /^(\d{4})-(\d{2})-(\d{2})\.(\d+)([A-Za-z]?)$/.exec(String(v || '')); return m ? [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4]), m[5] ? m[5].toUpperCase().charCodeAt(0) - 64 : 0] : null; } // 17.6A: sufixo de letra opcional ('17.6' < '17.6A' < '17.6B' < '17.7'); sem isso a página 17.6A não saberia comparar e nunca avisaria de versão mais nova
+function versaoMaisNova(a, b) { var x = parseVersao(a), y = parseVersao(b); if (!x || !y) return false; for (var i = 0; i < 5; i++) { if (x[i] !== y[i]) return x[i] > y[i]; } return false; } // 'AAAA-MM-DD.N': o dia e depois o N como número ('.10' é maior que '.9')
 S.recargaMem = null;
 function lerRecarga() { var o = null; try { o = JSON.parse(sessionStorage.getItem('sh_recarga') || 'null'); } catch (e) { logFalha('l308 lê o contador de recargas: sem ele assume 0', e); /* lê o contador de recargas: sem ele assume 0 */ } if (!o) { try { o = JSON.parse(localStorage.getItem('sh_recarga') || 'null'); } catch (e) { logFalha('l308 idem', e); /* idem */ } } if (!o) o = S.recargaMem; return o; }
 function gravarRecarga(v) { S.recargaMem = { v: v, t: Date.now() }; var t = JSON.stringify({ v: v, t: Date.now() }); try { sessionStorage.setItem('sh_recarga', t); } catch (e) { logFalha('l309 contador de recargas é opcional', e); /* contador de recargas é opcional */ } try { localStorage.setItem('sh_recarga', t); } catch (e) { logFalha('l309 contador de recargas é opcional', e); /* contador de recargas é opcional */ } }
@@ -1139,16 +1286,16 @@ function fadeChips() { var c = $('chips'); if (c) c.classList.toggle('tem-mais',
 function mesAtualSP() { try { var p = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit' }).format(new Date(agoraMs())); return p.slice(0, 7); } catch (e) { logFalha('mes real: Intl indisponível, usa o relógio do aparelho', e); var dd = new Date(agoraMs() - 3 * 3600000); return dd.getUTCFullYear() + '-' + hh(dd.getUTCMonth() + 1); } }
 function nomeMes(m) { var k = String(m && m.mes || mesAtualSP()); var i = Number(k.slice(5, 7)) - 1; return MESES[i] || ''; } // o nome do mês vem do mês REAL (o do servidor, fuso de Brasília; sem ele, o de agora em Brasília)
 function desenharTopo(d) {
-  var c = contar(d); var chips = $('chips'); chips.textContent = '';
+  var c = contar(d); var chips = $('chips'); chips.textContent = ''; chips.removeAttribute('data-esqueleto'); chips.removeAttribute('aria-hidden'); // 17.6A: sai o esqueleto invisivel, entram os numeros de verdade
   var grp = null; function grupo(rot, titulo) { grp = el('div', 'cg'); grp.setAttribute('role', 'group'); grp.setAttribute('aria-label', titulo || rot); var l = el('span', 'gl', rot); l.setAttribute('aria-hidden', 'true'); grp.appendChild(l); chips.appendChild(grp); }
   function chip(n, t, cls, ac, quando) { var x = el(ac ? 'button' : 'div', 'chip' + (cls ? ' ' + cls : '')); x.appendChild(el('b', null, String(n))); x.appendChild(document.createTextNode(t)); if (quando) x.setAttribute('aria-label', n + ' ' + t + ' ' + quando); if (ac) { x.type = 'button'; x.onclick = ac; x.title = 'Clique para abrir a lista'; } grp.appendChild(x); return x; }
   // 17/11 (Robert #2334): cada número diz o período. Três grupos com um cabeçalho minúsculo: Hoje | Agora | Em <mês>. Não ocupa linha nova: o cabeçalho vai na mesma linha, antes dos números.
   var _dadoAntigo = !!(S.dados && S.dados.tarefasEm && diaBRT(S.dados.tarefasEm) !== diaBRT(agoraMs()));   // 17/11 (auditor): dado de OUTRO dia não pode parecer de hoje: o cabeçalho do grupo avisa
   grupo(_dadoAntigo ? 'Hoje (dado antigo)' : 'Hoje', _dadoAntigo ? 'Hoje, mas o dado é de outro dia: atualizando' : 'Hoje');
-  if (S.funil !== 'outbound') chip(c.inboundNovo, 'Inbound novo', c.inboundNovo ? 'inbc' : '', null, 'hoje');
-  chip(c.atrasadasEmpresas, c.atrasadasEmpresas === 1 ? 'empresa com tarefa atrasada' : 'empresas com tarefas atrasadas', c.atrasadasEmpresas ? 'alerta' : '', null, 'hoje');
-  chip(c.empresas, 'empresas para atender hoje (' + plural(c.tarefas, 'tarefa', 'tarefas') + ')', 'forte');
-  chip((d.liberadosHoje || []).filter(visivel).length, 'iniciados hoje', 'cl', function () { S.expande.liberados = !S.expande.liberados; desenharBlocos(); });
+  if (S.funil !== 'outbound') chip(c.inboundNovo, 'Inbound novo', c.inboundNovo ? 'inbc' : '', null, 'hoje').setAttribute('data-k', '1'); // data-k: os 3 números que ficam na barra recolhida
+  chip(c.atrasadasEmpresas, c.atrasadasEmpresas === 1 ? 'empresa com tarefa atrasada' : 'empresas com tarefas atrasadas', c.atrasadasEmpresas ? 'alerta' : '', null, 'hoje').setAttribute('data-k', '1');
+  chip(c.empresas, 'empresas para atender hoje (' + plural(c.tarefas, 'tarefa', 'tarefas') + ')', 'forte').setAttribute('data-k', '1');
+  chip((d.liberadosHoje || []).filter(visivel).length, 'iniciados hoje', 'cl', function () { fixaColuna('liberados', !S.expande.liberados); desenharBlocos(); });
   var m = d && d.mes; // 04/11: números do mês NO TOPO, pequenos e na mesma fileira dos outros (não tomam espaço do kanban); clicar abre o detalhe
   var temMes = !!(m && typeof m.emCadencia === 'number'); var nm = temMes ? nomeMes(m) : '';
   var algumAgora = (S.funil !== 'inbound') || temMes;
@@ -1211,6 +1358,7 @@ function desenharControle(d) {
 function linhaContato(li, it) {
   if (it.pessoa) li.appendChild(el('div', 'pes', it.pessoa));
   var f = foneLinha(it.fone, 'fone'); if (f) li.appendChild(f); // número clicável (WhatsApp) + copiar
+  else if (S.doCache) { var fa = el('div', 'fone-aguarda', S.foneSemResp ? 'sem telefone' : 'atualizando contato…'); fa.setAttribute('data-fk', 'fone-aguarda'); li.appendChild(fa); } // 17.6A: pintura inicial sem o número (nem no mapa sh_fones): linha reservada até o /dados chegar
   if (it.cidade) li.appendChild(el('div', 'cid', it.cidade));
 }
 function acoesCartao(li, dealId, link, aoAbrirAgendor, item) {
@@ -1272,6 +1420,47 @@ function coluna(id, titulo, dica, contTxt, cls, confTs) {
   var l = el('div', 'lista'); l.setAttribute('data-bloco', id); c.appendChild(l);
   return { c: c, l: l };
 }
+// ---------- 17.6A: raias na largura (computador) ----------
+var COL_MIN = 220, COL_TIRA = 34;
+function fixaColuna(id, on) { S.expande[id] = !!on; S.expOrd = S.expOrd || {}; S.expSeq = (S.expSeq || 0) + 1; if (on) S.expOrd[id] = S.expSeq; else delete S.expOrd[id]; } // quem foi aberto por último tem prioridade quando falta largura
+function larguraBlocos(bl) { try { var w = bl && bl.clientWidth; return w > 0 ? w : 0; } catch (e) { logFalha('largura das raias', e); return 0; } }
+function modoComputador() { try { if (typeof window.matchMedia === 'function') return !!window.matchMedia('(min-width: 1000px)').matches; return window.innerWidth >= 1000; } catch (e) { logFalha('matchMedia das raias', e); return false; } } // abaixo de 1000 px a página empilha como na 17.5: não mexe
+function medidasBlocos(bl) { var gap = 8, pad = 20; try { var cs = window.getComputedStyle(bl); var g = parseFloat(cs.columnGap || cs.gap); if (g >= 0) gap = g; var pl = parseFloat(cs.paddingLeft), pr = parseFloat(cs.paddingRight); if (pl >= 0 && pr >= 0) pad = pl + pr; } catch (e) { logFalha('medidas das raias', e); } return { gap: gap, pad: pad }; }
+// Devolve a lista de ids que ficam ABERTOS (ou null = não se aplica: tela estreita/sem medida, tudo como a 17.5). Prioridade: abertas por você (a mais recente primeiro), depois maior volume, depois a ordem da tela.
+function planoColunas(meta, W, med) {
+  if (!W || !modoComputador()) return null; med = med || { gap: 8, pad: 20 };
+  var abertas = meta.filter(function (m) { return m.abre; }); var total = meta.length; var util = W - med.pad;
+  function cabe(k) { return k * COL_MIN + (total - k) * COL_TIRA + Math.max(0, total - 1) * med.gap <= util; }
+  var k = abertas.length; while (k > 1 && !cabe(k)) k--;
+  if (k >= abertas.length) return abertas.map(function (m) { return m.id; });
+  var ord = abertas.map(function (m, i) { return { m: m, i: i, o: (S.expOrd && S.expOrd[m.id]) || 0 }; });
+  ord.sort(function (a, b) { return (b.o - a.o) || (b.m.n - a.m.n) || (a.i - b.i); });
+  var fica = {}; ord.slice(0, k).forEach(function (x) { fica[x.m.id] = 1; });
+  return abertas.filter(function (m) { return fica[m.id]; }).map(function (m) { return m.id; });
+}
+var _obsBlocos = null, _obsTm = null;
+function reajustaColunas() { // largura mudou: só redesenha se o plano de raias abertas/tiras mudou
+  try { var bl = $('blocos'); if (!bl || !S.dados || !S.planoMeta) return; var w = larguraBlocos(bl); var pl = planoColunas(S.planoMeta, w, medidasBlocos(bl)); var sig = pl ? pl.join(',') : ''; if (sig === S.planoSig && !(w && !S.planoW) && !(!w && S.planoW)) return; desenharBlocos(); } catch (e) { logFalha('reajustar as raias à largura', e); }
+}
+function agendaReajuste() { if (_obsTm) clearTimeout(_obsTm); _obsTm = setTimeout(function () { _obsTm = null; reajustaColunas(); }, 80); }
+function observaLargura() { try { if (typeof ResizeObserver === 'function' && !_obsBlocos) { _obsBlocos = new ResizeObserver(agendaReajuste); _obsBlocos.observe($('blocos')); } } catch (e) { logFalha('ResizeObserver das raias', e); } window.addEventListener('resize', agendaReajuste); }
+// ---------- 17.6A: cabeçalho recolhível ----------
+function topoLer() { var v = lsGet('sh_topo'); return v === 'e' ? 'e' : 'r'; } // nunca escolheu (ou storage bloqueado) = recolhido
+function topoAplicar(rec) { var c = $('cab'), b = $('bTopo'); if (!c || !b) return; c.classList.toggle('rec', !!rec); b.textContent = rec ? 'Expandir' : 'Recolher'; b.setAttribute('aria-expanded', rec ? 'false' : 'true'); b.title = rec ? 'Mostrar o cabeçalho completo (todos os botões e números)' : 'Recolher o cabeçalho numa barra fina'; topoFiltros(); }
+function topoFiltros() { try { var o = $('ordem'), e = $('esconder'); if (o) o.classList.toggle('fx', o.value !== 'pend'); var lb = $('lbEsconder'); if (lb) lb.classList.toggle('fx', !!(e && e.checked)); } catch (e2) { logFalha('marca de filtro ativo no cabeçalho recolhido', e2); } } // filtro ligado nunca fica invisível na barra recolhida
+// ---------- 17.6A: raia Closer (negócios do Arena em que o Felipe é o DONO, por id) ----------
+// Contrato com o servidor (ainda não existe; ver PENDENCIA-CLOSER-SERVIDOR.md): d.closer = { donoId: <id do Felipe>, itens: [{ dealId, donoId, empresa, subtitulo, pessoa, fone, cidade, link, venceEm (ISO da tarefa aberta mais antiga), vencida (bool), ultimaAtividadeEm (ISO) }] }. Sem d.closer.donoId e d.closer.itens a raia fica OCULTA (nada é inventado nem varrido).
+var CLOSER_PARADA_MS = 3 * 86400000;
+function closerItens(d) {
+  var c = d && d.closer; if (!c || !Array.isArray(c.itens) || c.donoId == null || c.donoId === '') return null;
+  var eu = String(c.donoId); return c.itens.filter(function (i) { return i && i.dealId != null && i.donoId != null && String(i.donoId) === eu && !S.ocultos[i.dealId] && !(S.diaOrigem && origemDoItem(i) !== undefined && origemChave(i) !== S.diaOrigem); });
+}
+function closerClasse(i, agora) { var v = i.venceEm ? Date.parse(i.venceEm) : NaN; if (i.vencida === true || (!isNaN(v) && v < agora)) return 0; var u = i.ultimaAtividadeEm ? Date.parse(i.ultimaAtividadeEm) : NaN; if (!isNaN(u) && agora - u > CLOSER_PARADA_MS) return 1; return 2; }
+function closerOrdenar(itens, agora) {
+  var m = itens.map(function (i, n) { var v = i.venceEm ? Date.parse(i.venceEm) : NaN, u = i.ultimaAtividadeEm ? Date.parse(i.ultimaAtividadeEm) : NaN; return { i: i, n: n, c: closerClasse(i, agora), v: isNaN(v) ? Infinity : v, u: isNaN(u) ? Infinity : u }; });
+  m.sort(function (a, b) { if (a.c !== b.c) return a.c - b.c; if (a.c === 0 && a.v !== b.v) return a.v < b.v ? -1 : 1; if (a.u !== b.u) return a.u < b.u ? -1 : 1; var ea = String(a.i.empresa || ''), eb = String(b.i.empresa || ''); var cmp = ea.localeCompare(eb, 'pt-BR'); return cmp || (a.n - b.n); });
+  return m.map(function (x) { return { it: x.i, c: x.c }; });
+}
 function desenharOrigensDia(d) { // chips de origem do dia: aparecem sozinhos conforme os leads que existem hoje (origem nova no Agendor = chip novo)
   var box = $('diaOrigens'); if (!box) return; box.textContent = ''; var cont = {}, ordem = [];
   function conta(it) { if (!it || origemDoItem(it) === undefined || !visivelFunil(it)) return; var k = origemChave(it); if (!cont[k]) { cont[k] = 0; ordem.push(k); } cont[k]++; if (!S.rotOrigemDia[k] && origemDoItem(it)) S.rotOrigemDia[k] = origemDoItem(it); }
@@ -1285,7 +1474,7 @@ function desenharOrigensDia(d) { // chips de origem do dia: aparecem sozinhos co
   ordem.forEach(function (k) { var r = S.rotOrigemDia[k] || (k === SEM_ORIGEM ? 'Sem origem' : k); chip(k, r, cont[k], k === SEM_ORIGEM ? null : seloOrigem(r)); });
 }
 function desenharBlocos() {
-  var d = S.dados; if (!d) return; desenharOrigensDia(d);
+  var d = S.dados; if (!d) return; desenharOrigensDia(d); topoFiltros();
   var bl = $('blocos'); var rolagem = {};
   Array.prototype.forEach.call(bl.querySelectorAll('.lista'), function (l) { rolagem[l.getAttribute('data-bloco')] = l.scrollTop; });
   var busca = $('busca').value.trim(), modo = $('ordem').value, esconder = $('esconder').checked, atrasado = passouDas18();
@@ -1309,6 +1498,17 @@ function desenharBlocos() {
     k2.vazio = itens.length === 0; k2.id = b.id; k2.titulo = b.titulo; k2.n = itens.length; cols.push(k2);
   }
   colBloco(porId.ana_qualificou); colBloco(porId.repasse_ana); colBloco(porId.inbound_novo);
+  // CLOSER (17.6A): negócios do Arena em que o Felipe é o dono (por id). Só existe se o servidor mandar d.closer; fica entre Inbound novo e Atrasadas.
+  var clr = closerItens(d);
+  if (clr) {
+    var agoraC = agoraMs(); var ord = closerOrdenar(clr, agoraC); var nVenc = ord.filter(function (x) { return x.c === 0; }).length;
+    var kc = coluna('closer', 'Closer', 'Negócios do Arena em que você é o dono. Primeiro os com tarefa vencida, depois os sem atividade há mais de 3 dias.', plural(ord.length, 'negócio', 'negócios') + ' · ' + plural(nVenc, 'vencida', 'vencidas'), 'closer-col');
+    if (!ord.length) kc.l.appendChild(el('p', 'vazio', 'Nenhum negócio seu no Arena agora.'));
+    var lc = ord.filter(function (x) { return casaBusca(x.it, busca); });
+    if (ord.length && !lc.length) kc.l.appendChild(el('p', 'vazio', 'Nenhum resultado para essa busca aqui.'));
+    anexarEmBlocos(kc.l, lc, function (x) { return cartao(x.it, { atras: x.c === 0, sem_abriu: false, texto: function (y) { return x.c === 0 ? 'Tarefa vencida' + (y.venceEm ? ' em ' + dataBR(y.venceEm) : '') : (x.c === 1 ? 'Sem atividade há mais de 3 dias' : ''); } }); });
+    kc.vazio = ord.length === 0; kc.id = 'closer'; kc.titulo = 'Closer'; kc.n = ord.length; cols.push(kc);
+  }
   // ATRASADAS (nunca somem), agrupadas por empresa
   if (d.atrasadas && d.atrasadas.total) {
     var gr = (d.atrasadas.grupos || []).filter(visivel); var ta = gr.reduce(function (s, g) { return s + g.n; }, 0);
@@ -1324,16 +1524,18 @@ function desenharBlocos() {
   if (!lib.length) kl.l.appendChild(el('p', 'vazio', 'Nenhum lead iniciado hoje. Os do Outbound ficam em "Esperando você iniciar" e só começam quando você clica em Iniciar. Nada do Outbound começa sozinho.'));
   li.forEach(function (it) { it.feito = it.estado === 'feito'; kl.l.appendChild(cartao(it, { estado: true, texto: function (x) { return (x.funil === 'inbound' ? 'Inbound' : 'Outbound') + (x.quando ? ', iniciado às ' + x.quando : '') + (x.origem === 'auto' ? ' pela Bia' : ' por você'); } })); });
   kl.vazio = false; kl.id = 'liberados'; kl.titulo = 'Iniciados hoje'; kl.n = lib.length; kl.recolherPadrao = true; cols.push(kl);
-  // colunas vazias (e "Iniciados hoje", por padrão) viram uma faixa fina clicável; as demais dividem a largura da tela, sem rolagem lateral
+  // colunas vazias (e "Iniciados hoje", por padrão) viram uma faixa fina clicável; as demais dividem a largura da tela, sem rolagem lateral.
+  // 17.6A: se as abertas não cabem com ~220 px cada, as de MENOR volume (e não escolhidas por você) também viram faixa clicável. Nenhuma raia some.
+  var meta = cols.map(function (k) { return { id: k.id, n: k.n || 0, abre: !(k.recolherPadrao ? !S.expande[k.id] : (k.vazio && !S.expande[k.id])) }; });
+  var plano = planoColunas(meta, larguraBlocos(bl)); S.planoMeta = meta; S.planoSig = plano ? plano.join(',') : ''; S.planoW = larguraBlocos(bl);
   cols = cols.map(function (k) {
-    var colapsar = k.recolherPadrao ? !S.expande[k.id] : (k.vazio && !S.expande[k.id]);
-    if (!colapsar) { if ((k.vazio || k.recolherPadrao) && S.expande[k.id]) { var rc = el('button', 'recolher', 'recolher'); rc.onclick = function () { S.expande[k.id] = false; desenharBlocos(); }; k.c.querySelector('.col-h h3').appendChild(rc); } return k; }
-    var f = el('section', 'col colapsada'); f.setAttribute('data-col', k.id); var fb = el('button', 'faixa', k.titulo + ' (' + k.n + ')'); fb.setAttribute('aria-expanded', 'false'); fb.title = 'Clique para abrir'; fb.onclick = function () { S.expande[k.id] = true; desenharBlocos(); }; f.appendChild(fb);
+    var colapsar = k.recolherPadrao ? !S.expande[k.id] : (k.vazio && !S.expande[k.id]); var porLargura = false;
+    if (!colapsar && plano && plano.indexOf(k.id) < 0) { colapsar = true; porLargura = true; }
+    if (!colapsar) { if ((k.vazio || k.recolherPadrao) && S.expande[k.id]) { var rc = el('button', 'recolher', 'recolher'); rc.onclick = function () { fixaColuna(k.id, false); desenharBlocos(); }; k.c.querySelector('.col-h h3').appendChild(rc); } return k; }
+    var f = el('section', 'col colapsada'); f.setAttribute('data-col', k.id); if (porLargura) f.setAttribute('data-por-largura', '1'); var fb = el('button', 'faixa', k.titulo + ' (' + k.n + ')'); fb.type = 'button'; fb.setAttribute('aria-expanded', 'false'); fb.title = porLargura ? 'Não coube na largura da tela. Clique para abrir esta raia (a de menor volume vira faixa).' : 'Clique para abrir'; fb.onclick = function () { fixaColuna(k.id, true); desenharBlocos(); }; f.appendChild(fb);
     return { c: f, l: el('div'), vazio: true, colapsada: true, id: k.id };
   });
-  var n = cols.length; var per2 = Math.max(1, Math.ceil(n / 2));
   bl.style.setProperty('--tpl1', cols.map(function (k) { return k.colapsada ? '34px' : 'minmax(0,560px)'; }).join(' '));
-  bl.style.setProperty('--tpl2', 'repeat(' + per2 + ',minmax(0,1fr))');
   cols.forEach(function (k) { bl.appendChild(k.c); var id = k.c.getAttribute('data-col'); if (rolagem[id]) { k.l._rolar = rolagem[id]; k.l.scrollTop = rolagem[id]; } });
 }
 // 14/11 (Robert #1049): "lista incompleta" NUNCA vira texto de alarme. Servidor devolve truncado => indicador neutro e pequeno, nova leitura sozinha (espera crescente 15 s a 120 s, uma por vez);
@@ -1401,7 +1603,33 @@ function mesclar(j, manual) { // junta camada por camada, guardando a MAIS NOVA 
   if (novoAtr && v.atrasadas > m.atrasadas && j.atrasadas) { base.atrasadas = j.atrasadas; base.atrasadasEm = j.atrasadasEm; base.versao.atrasadas = v.atrasadas; algo = true; }
   return algo ? base : null;
 }
-function semFoneCarrega(j) { var tel = {}; todosItens(S.dados || {}, function (i) { if (i.fone) tel[i.dealId] = i.fone; }); todosItens(j, function (i) { if (!i.fone && tel[i.dealId]) i.fone = tel[i.dealId]; }); } // o sh_ultimo não guarda telefone: o que já está na tela continua
+// ---------- 17.6A: mapa de telefones sh_fones (dealId -> {f: só dígitos, p: nome do contato, t: quando}) só dos cartões já exibidos, para a pintura inicial mostrar o número na hora ----------
+// O sh_ultimo continua SEM telefone. Este mapa é a decisão EXPLÍCITA (dono, 18/11): validade de 24 h por entrada, teto de 3.000, ligado à senha (identificador aleatório do aparelho, nada derivado da senha), apagado no sair()/senha trocada. Nunca CPF/CNPJ/e-mail.
+var FONES_KEY = 'sh_fones', FONES_TTL = 86400000, FONES_MAX = 3000;
+function fonesId() { var out = ''; try { var a = new Uint8Array(16); crypto.getRandomValues(a); for (var i = 0; i < a.length; i++) out += (a[i] % 36).toString(36); } catch (e) { out = ''; } if (!out) out = 'x' + Date.now().toString(36) + Math.random().toString(36).slice(2); return out; } // identificador ALEATÓRIO deste aparelho/sessão (16 bytes); nada derivado da senha
+function fonesStore() { try { return S.lembrar === false ? window.sessionStorage : window.localStorage; } catch (e) { return null; } } // 'Lembrar neste aparelho' desmarcado: o mapa fica só na aba (sessionStorage), como o sh_tok que nem é gravado
+function fonesAguardaFim() { if (!S.doCache) return; S.foneSemResp = true; try { var ls = document.querySelectorAll('.fone-aguarda'); for (var i = 0; i < ls.length; i++) ls[i].textContent = 'sem telefone'; } catch (e) { logFalha('fone-aguarda: texto', e); } } // /dados falhou ou passou de 15 s: a MESMA linha reservada passa a dizer 'sem telefone' (sem mudar a altura); quando o /dados chegar o cartão é redesenhado normalmente
+function fonesApagar() { try { localStorage.removeItem(FONES_KEY); } catch (e) { logFalha('sh_fones: apagar (localStorage)', e); } try { sessionStorage.removeItem(FONES_KEY); } catch (e) { logFalha('sh_fones: apagar (sessionStorage)', e); } }
+function fonesLerBruto() { var st = fonesStore(); if (!st) return null; try { var m = JSON.parse(st.getItem(FONES_KEY) || 'null'); return m && typeof m === 'object' && m._fmt === 1 && typeof m.u === 'string' && m.u.length >= 16 && m.d && typeof m.d === 'object' ? m : null; } catch (e) { logFalha('sh_fones ilegível: segue sem o mapa', e); return null; } }
+function fonesPoda(d) { // 24 h por entrada, formato válido, e teto de 3.000 (as mais antigas saem): vale na leitura E na gravação
+  var out = {}, agora = Date.now(); Object.keys(d || {}).forEach(function (id) { var e = d[id]; if (!e || typeof e !== 'object' || typeof e.f !== 'string' || !/^\d{8,15}$/.test(e.f) || typeof e.t !== 'number' || !(agora - e.t < FONES_TTL) || e.t > agora + 300000) return; out[id] = { f: e.f, p: typeof e.p === 'string' ? e.p.slice(0, 80) : '', t: e.t }; });
+  var ids = Object.keys(out); if (ids.length > FONES_MAX) { ids.sort(function (a, b) { return out[b].t - out[a].t; }); ids.slice(FONES_MAX).forEach(function (id) { delete out[id]; }); }
+  return out;
+}
+function fonesNome(n) { return String(n || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase(); }
+function fonesMesmoContato(nomeCartao, nomeMapa) { var a = fonesNome(nomeCartao), b = fonesNome(nomeMapa); if (!a) return true; /* o cartão ainda não tem nome: nada a comparar */ if (!b) return false; /* o cartão tem nome e o mapa não: não dá para provar que é o mesmo contato */ return a === b; } // 17.6A (auditor): contato trocado no negócio = telefone do contato antigo NUNCA é aplicado ao nome novo
+function fonesLer() { var m = fonesLerBruto(); return m ? fonesPoda(m.d) : {}; }
+function fonesGravar(d) { // depois que o /dados chegou: o valor do servidor vence e renova a entrada
+  try { var st = fonesStore(); if (!st) return; var m = fonesLerBruto(), mp = m ? fonesPoda(m.d) : {}, agora = Date.now();
+    todosItens(d || {}, function (i) { if (i.dealId == null) return; var dg = soDigitos(i.fone); if (!/^\d{8,15}$/.test(dg)) { var ex = mp[String(i.dealId)]; if (ex && i.pessoa && !fonesMesmoContato(i.pessoa, ex.p)) delete mp[String(i.dealId)]; return; } mp[String(i.dealId)] = { f: dg, p: i.pessoa ? String(i.pessoa).slice(0, 80) : '', t: agora }; });
+    mp = fonesPoda(mp); st.setItem(FONES_KEY, JSON.stringify({ _fmt: 1, u: m ? m.u : fonesId(), d: mp })); // direto: cota cheia/modo privado só significa 'sem mapa', nunca apaga outro cache
+    try { (st === window.localStorage ? window.sessionStorage : window.localStorage).removeItem(FONES_KEY); } catch (e2) { logFalha('sh_fones: limpar o outro storage', e2); }
+  } catch (e) { logFalha('sh_fones: gravar é opcional (cota cheia/privado)', e); }
+}
+function fonesAplicar(ult) { // pintura inicial: completa o fone (e o nome, se faltar) dos cartões do dado guardado; o que não estiver no mapa fica sem fone (linha reservada)
+  try { var mp = fonesLer(); todosItens(ult || {}, function (i) { var e = i.dealId != null ? mp[String(i.dealId)] : null; if (!e || i.fone) return; if (!fonesMesmoContato(i.pessoa, e.p)) return; i.fone = e.f; if (!i.pessoa && e.p) i.pessoa = e.p; }); } catch (e) { logFalha('sh_fones: aplicar', e); }
+}
+function semFoneCarrega(j) { var tel = {}; todosItens(S.dados || {}, function (i) { if (i.fone) tel[i.dealId] = { f: i.fone, p: i.pessoa }; }); todosItens(j, function (i) { var x = tel[i.dealId]; if (!i.fone && x && (!i.pessoa || !x.p || fonesNome(i.pessoa) === fonesNome(x.p))) i.fone = x.f; }); } // o sh_ultimo não guarda telefone: o que já está na tela continua
 function aceitar(j, manual) { return !!mesclar(j, manual); }
 function leadAberto() { return !$('painelLead').classList.contains('hide') || !$('modalGanho').classList.contains('hide'); }
 function sessaoCaiu(m) { // 17/11 (.3): com lead aberto a tela não cai: guarda o rascunho e pede para entrar de novo
@@ -1453,7 +1681,7 @@ async function carregar(silencioso, modo) {
     if (j._status === 401) { sessaoCaiu('Senha não confere.'); return; }
     if (j._status === 429) { j.ok = false; j.mensagem = j.mensagem || 'O sistema pediu um tempo (muitas consultas). Tento de novo sozinha.'; } // 17.5: 429 em /dados é limite passageiro, nunca derruba a sessão (a trava de senha errada é outra rota)
     if (j._status === 409) { mostrar('s-off'); return; }
-    if (!j.ok) { var m = semForn(j.mensagem) || 'Não consegui atualizar agora.'; if (!S.tem) { $('erroMsg').textContent = m; mostrar('s-erro'); } else { S.conferindo = false; S.falhasDados = (S.falhasDados || 0) + 1; if (S.falhasDados >= 2) S.erroCarregar = m + ' Tento de novo sozinha.'; tickRelogio(); } retentaParte('dados', function () { return carregar(true, false).then(function () { return !S.erroCarregar && S.tem; }); }); return; }
+    if (!j.ok) { fonesAguardaFim(); var m = semForn(j.mensagem) || 'Não consegui atualizar agora.'; if (!S.tem) { $('erroMsg').textContent = m; mostrar('s-erro'); } else { S.conferindo = false; S.falhasDados = (S.falhasDados || 0) + 1; if (S.falhasDados >= 2) S.erroCarregar = m + ' Tento de novo sozinha.'; tickRelogio(); } retentaParte('dados', function () { return carregar(true, false).then(function () { return !S.erroCarregar && S.tem; }); }); return; }
     var jm = mesclar(j, fresco); if (!jm) { S.conferindo = false; tickRelogio(); return; }
     if (silencioso && !fresco && !S.aplicaTudo && S.tem && S.dados && S.L && leadAberto()) { // 17/11: com lead aberto a fila fica retida; só o estado (verde/andamento) das tarefas DESTE lead entra, sem redesenhar o resto
       var alvo = S.L.dealId, nj = {}; todosItens(jm, function (i) { if (i.dealId === alvo) nj[alvo] = i; }); var np = copia(S.dados), mudouAlvo = false;
@@ -1461,12 +1689,13 @@ async function carregar(silencioso, modo) {
       S.conferindo = false; S.erroCarregar = ''; S.falhasDados = 0; if (mudouAlvo) { S.dados = np; desenhar(np); } S.atualizaPendente = true; try { var vj = versaoDe(jm), vv = S.vm; if (vj && vv && (vj.tarefas > vv.tarefas || vj.negocios > vv.negocios || vj.atrasadas > vv.atrasadas)) avisaFilaMudou(); } catch (e) { logFalha('aviso de fila mudou', e); } tickRelogio(); return;
     } // todas as camadas mais velhas que as já exibidas: ignora, o número nunca volta atrás
     j = jm; S.vm = j.versao ? { negocios: j.versao.negocios, atrasadas: j.versao.atrasadas, tarefas: j.versao.tarefas } : S.vm;
-    S.conferindo = false; S.doCache = false; S.erroCarregar = ''; S.falhasDados = 0; limpaRetenta('dados'); clearTimeout(S.vigiaTm); desenhar(j); S.tem = true; mostrar('s-dia'); if (S.atualizaPendente || S.filaMudou) { S.atualizaPendente = false; S.filaMudou = false; pontoFila(false); } /* 17.5 (auditor): a fila inteira acabou de entrar (Atualizar/R, teto, fechar): nada fica pendente nem com ponto */
-    try { j._fmt = 2; var tx = JSON.stringify(j, function (k2, v2) { return k2 === 'fone' ? undefined : v2; }); /* sh_ultimo SEM telefones: só ids e contagens */ if (tx.length < 1500000) lsSet('sh_ultimo', tx); } catch (e) { logFalha('l630 cache do último dado é opcional (lsSet avisa se for rascunho/saíd', e); /* cache do último dado é opcional (lsSet avisa se for rascunho/saída) */ } // último dado conhecido: aparece na hora na próxima abertura (e nas outras abas)
+    S.conferindo = false; S.doCache = false; S.foneSemResp = false; clearTimeout(S.foneTm); S.erroCarregar = ''; S.falhasDados = 0; limpaRetenta('dados'); clearTimeout(S.vigiaTm); desenhar(j); S.tem = true; mostrar('s-dia'); if (S.atualizaPendente || S.filaMudou) { S.atualizaPendente = false; S.filaMudou = false; pontoFila(false); } /* 17.5 (auditor): a fila inteira acabou de entrar (Atualizar/R, teto, fechar): nada fica pendente nem com ponto */
+    try { j._fmt = 2; var tx = JSON.stringify(j, function (k2, v2) { return k2 === 'fone' ? undefined : v2; }); /* sh_ultimo SEM telefones: só ids e contagens */ if (tx.length < 1500000) lsSet('sh_ultimo', tx); fonesGravar(j); } catch (e) { logFalha('l630 cache do último dado é opcional (lsSet avisa se for rascunho/saíd', e); /* cache do último dado é opcional (lsSet avisa se for rascunho/saída) */ } // último dado conhecido: aparece na hora na próxima abertura (e nas outras abas)
   } catch (e) {
     if (S.reqSeq !== meu) return;
     S.conferindo = false;
     if (e && e.name === 'AbortError' && S.tem) { tickRelogio(); return; }
+    fonesAguardaFim();
     if (!S.tem) { $('erroMsg').textContent = navigator.onLine === false ? 'Sem internet. Volto sozinha quando ela voltar.' : 'Sem conexão. Tente de novo.'; mostrar('s-erro'); } else { S.falhasDados = (S.falhasDados || 0) + 1; if (S.falhasDados >= 2) S.erroCarregar = 'Não consegui atualizar os números do dia (sem conexão). Tento de novo sozinha.'; tickRelogio(); } retentaParte('dados', function () { return carregar(true, false).then(function () { return !S.erroCarregar && S.tem; }); });
   } finally { if (S.carregando === meu) S.carregando = false; if (fresco && S.carregando === false) { bt.textContent = 'Atualizar'; bt.disabled = false; } if (S.carregando === false) { S.conferindo = false; tickRelogio(); } }
 }
@@ -1503,18 +1732,19 @@ window.addEventListener('storage', function (e) { // outra aba leu mais novo: es
 
 function lerUltimo() { var ult = null; try { ult = JSON.parse(lsGet('sh_ultimo') || 'null'); } catch (e) { logFalha('l674 catch', e); ult = null; } return ult && ult.ok && ult._fmt === 2 ? ult : null; }
 function pintarInicial(ult) { // pinta a tela na hora: com o último dado salvo (cinza, com selo 'Dado de há X min, atualizando…') ou, sem ele, com esqueleto leve. Nunca tela vazia.
-  if (ult) { S.doCache = true; S.vm = ult.versao ? { negocios: ult.versao.negocios, atrasadas: ult.versao.atrasadas, tarefas: ult.versao.tarefas } : null; desenhar(ult); S.tem = true; mostrar('s-dia'); $('atualizado').classList.add('velho'); aplicarVista(); } // troca sozinho quando o novo chegar
+  if (ult) { fonesAplicar(ult); S.doCache = true; S.foneSemResp = false; clearTimeout(S.foneTm); S.foneTm = setTimeout(fonesAguardaFim, 15000); S.vm = ult.versao ? { negocios: ult.versao.negocios, atrasadas: ult.versao.atrasadas, tarefas: ult.versao.tarefas } : null; desenhar(ult); S.tem = true; mostrar('s-dia'); $('atualizado').classList.add('velho'); aplicarVista(); } // troca sozinho quando o novo chegar
   else { S.tem = false; var bl = $('blocos'); bl.textContent = ''; bl.appendChild(el('div', 'carregando-msg', 'Carregando o seu dia... a primeira leitura pode levar alguns segundos.')); for (var q = 0; q < 4; q++) bl.appendChild(el('div', 'esq')); mostrar('s-dia'); }
 }
 async function entrar(token, silencioso) {
-  S.token = token; avisoOffline();
+  if (S.livroToken && S.livroToken !== token) { try { livroLimpa(); } catch (eL) { logFalha('livro: limpar na troca de usuário', eL); } } S.livroToken = token;
+  S.token = token; S.lembrar = silencioso ? true : !!$('lembrar').checked; /* com a senha já salva (silencioso) o 'lembrar' estava marcado */ avisoOffline();
   var ult = silencioso ? lerUltimo() : null; var dadosP = null;
   if (silencioso) { pintarInicial(ult); S.conferindo = true; dadosP = carregar(false, false); } // 17/11: com a senha já salva, pinta o dado guardado AGORA e dispara o dia em paralelo com a conferência do /status (antes: status, depois tela, depois dia)
   var j;
   try { j = await api('/status'); } catch (e) { logFalha('l665 catch', e);  j = { _status: 0 }; }
   function desfazPintura() { if (silencioso) { try { S.ctrlCarregar.abort(); } catch (e) { logFalha('entrar: cancelar leitura', e); } S.carregando = false; S.tem = false; S.doCache = false; S.dados = null; S.token = ''; S.reqSeq++; } } // zera o token e invalida o pedido em voo: o catch do carregar vê que não é mais o atual e não escreve 'Sem conexão' por cima do login
   if (j._status === 0) { if (silencioso) j = { ok: true, modo: 'on', _status: 200 }; else { $('loginMsg').textContent = 'Sem conexão com a Bia. Tente de novo.'; return false; } } // sem rede: abre o painel com o que já tem (ou o esqueleto com 'Tentar agora'), nunca volta para o login
-  if (j._status === 401) { desfazPintura(); lsDel('sh_tok'); if (!silencioso) $('loginMsg').textContent = 'Senha não confere.'; return false; }
+  if (j._status === 401) { desfazPintura(); lsDel('sh_tok'); fonesApagar(); if (!silencioso) $('loginMsg').textContent = 'Senha não confere.'; return false; }
   if (j._status === 429) { desfazPintura(); if (!silencioso) $('loginMsg').textContent = 'Muitas tentativas. Espere 10 minutos.'; return false; }
   if (!j.ok) { desfazPintura(); if (!silencioso) $('loginMsg').textContent = 'Não consegui entrar agora.'; return false; }
   if ($('lembrar').checked) lsSet('sh_tok', token);
@@ -1528,7 +1758,7 @@ async function entrar(token, silencioso) {
   if (haAbertoSemConfirmar()) iniciarPoll();
   return true;
 }
-function sair(msg) { try { bgFechar(); } catch (e) { logFalha('l682 fechar a busca que já estava fechada', e); /* fechar a busca que já estava fechada */ } S.cont.rodando = false; S.L = null; S.atualizaPendente = false; S.filaMudou = false; pontoFila(false); /* 17.5 (auditor): sem ponto velho no 1º lead depois de relogar */ S.ag.itens = []; S.ag.total = 0; S.ag.ocultos = {}; if (S.ag.timer) { clearInterval(S.ag.timer); S.ag.timer = null; } S.ag.aberto = false; $('painelAguard').classList.add('hide'); S.ocultos = {}; $('painelLead').classList.add('hide'); $('painelFila').classList.add('hide'); lsDel('sh_tok'); lsDel('sh_ultimo'); S.token = ''; S.tem = false; S.dados = null; S.vm = null; if (S.timer) clearInterval(S.timer); if (S.relogio) clearInterval(S.relogio); if (S.pollTimer) { clearInterval(S.pollTimer); S.pollTimer = null; } $('tok').value = ''; $('loginMsg').textContent = msg || ''; mostrar('s-login'); }
+function sair(msg) { try { livroLimpa(); } catch (eL) { logFalha('livro: limpar ao sair', eL); } try { bgFechar(); } catch (e) { logFalha('l682 fechar a busca que já estava fechada', e); /* fechar a busca que já estava fechada */ } S.cont.rodando = false; S.L = null; S.atualizaPendente = false; S.filaMudou = false; pontoFila(false); /* 17.5 (auditor): sem ponto velho no 1º lead depois de relogar */ S.ag.itens = []; S.ag.total = 0; S.ag.ocultos = {}; if (S.ag.timer) { clearInterval(S.ag.timer); S.ag.timer = null; } S.ag.aberto = false; $('painelAguard').classList.add('hide'); S.ocultos = {}; $('painelLead').classList.add('hide'); $('painelFila').classList.add('hide'); lsDel('sh_tok'); lsDel('sh_ultimo'); fonesApagar(); S.token = ''; S.tem = false; S.dados = null; S.vm = null; if (S.timer) clearInterval(S.timer); if (S.relogio) clearInterval(S.relogio); if (S.pollTimer) { clearInterval(S.pollTimer); S.pollTimer = null; } $('tok').value = ''; $('loginMsg').textContent = msg || ''; mostrar('s-login'); }
 
 // ---------- iniciar ----------
 function novaChave() { var a = new Uint8Array(12); try { crypto.getRandomValues(a); } catch (e) { for (var i = 0; i < 12; i++) a[i] = Math.floor(Math.random() * 256); } return 'c' + Array.prototype.map.call(a, function (x) { return ('0' + x.toString(16)).slice(-2); }).join(''); }
@@ -2011,7 +2241,7 @@ function msgErro(j) {
 }
 async function chamarLead(L, caminho, corpo, idAlvo, fila) {
   var alvo = idAlvo || L.dealId; var j;
-  if (fila) j = await enviarAcao({ dealId: alvo, caminho: caminho, corpo: corpo || {}, tipo: fila.tipo, meta: fila.meta });
+  if (fila) j = await enviarAcao({ dealId: alvo, caminho: caminho, corpo: corpo || {}, tipo: fila.tipo, meta: fila.meta, antes: fila.antes });
   else { invalidaLead(alvo); j = await api('/lead/' + alvo + caminho, corpo || {}, null, null, { idem: novaChave() }); invalidaLead(alvo); } // x-idem: repetir a mesma chamada nunca grava duas vezes
   if (j._status === 401) { sair('Senha não confere. O que você digitou continua guardado neste aparelho.'); return null; }
   return j;
@@ -2033,7 +2263,7 @@ function invalidaLead(id) { delete S.pre[id]; delete S.preProm[id]; S.inval[id] 
 function guardaPre(id, j) { S.pre[id] = { t: Date.now(), j: j }; var ks = Object.keys(S.pre); if (ks.length > 30) { ks.sort(function (a, b) { return S.pre[a].t - S.pre[b].t; }); delete S.pre[ks[0]]; } }
 function buscarLead(id) { // várias chamadas para o mesmo lead reaproveitam a mesma leitura
   if (S.preProm[id]) return S.preProm[id]; var t0 = Date.now();
-  var p = api('/lead/' + encodeURIComponent(id)).then(function (j) { if (j && j.ok && j.lead && !(S.inval[id] > t0)) guardaPre(id, j); return j; }, function () { return { _status: 0, ok: false }; }).then(function (j) { if (S.preProm[id] === p) delete S.preProm[id]; return j; });
+  var p = api('/lead/' + encodeURIComponent(id)).then(function (j) { if (j && typeof j === 'object') j._t0 = t0; if (j && j.ok && j.lead && !(S.inval[id] > t0)) guardaPre(id, j); return j; }, function () { return { _status: 0, ok: false }; }).then(function (j) { if (S.preProm[id] === p) delete S.preProm[id]; return j; });
   S.preProm[id] = p; return p;
 }
 function prefetchLead(id) { // pré-carga: no máximo 1 em voo, 1,5 s entre uma e outra, nunca durante gravação nem com a leitura do lead real em andamento
@@ -2054,9 +2284,9 @@ function limpaTarefa(t) { return String(t || '').replace(/^\s*\[[^\]]*\]\s*/, ''
 function hoje2CartaoValido(j, id) { return !!(j && j.ok && j.fonte === 'espelho' && typeof j.idadeS === 'number' && j.idadeS <= HOJE2_IDADE_MAX_S && j.lead && j.lead.dealId === id && Array.isArray(j.lead.tarefas) && Array.isArray(j.lead.pessoas)); }
 async function hoje2Cartao(L) {
   var id = L.dealId, j = null;
-  try { j = await api('/hoje2/lead/' + encodeURIComponent(id), null, null, null, { uma: true, h2: true, timeout: 6000 }); } catch (e) { logFalha('hoje2 cartão: pedido falhou', e); return; }
+  var t0h2 = Date.now(); try { j = await api('/hoje2/lead/' + encodeURIComponent(id), null, null, null, { uma: true, h2: true, timeout: 6000 }); if (j && typeof j === 'object') j._t0 = t0h2; } catch (e) { logFalha('hoje2 cartão: pedido falhou', e); return; }
   if (!hoje2CartaoValido(j, id)) { try { console.info('[hoje] cartão: caminho normal (' + (j && j._status) + ')'); } catch (eC) { logFalha('console', eC); } return; }
-  L.h2 = j.lead; if (S.L !== L || L.dealId !== id) return;
+  L.h2 = livroLead(j.lead, id, 'hoje2Cartao', j._t0); if (S.L !== L || L.dealId !== id) return;
   if (!L.lead) { try { renderCardInfo(L); } catch (e2) { logFalha('hoje2 cartão: desenho', e2); } }
   h2EstadoLead(L);
 }
@@ -2067,7 +2297,7 @@ function h2EstadoLead(L) {
   else if (falhou) { setEstado(L, 'erro', 'Não consegui salvar: ' + (semForn(falhou.motivo) || 'confira o lead'), function () { L.h2 = null; L.estado = null; carregarLead(L, false); }); if (L.estado) L.estado.h2 = true; }
 }
 function renderCardInfo(L) { // o que o cartão já sabe + esqueleto onde ainda falta: o painel abre na hora
-  var it = L.item || {}; var h = L.h2 || null; var corpo = $('leadCorpo'); corpo.textContent = '';
+  var it = L.item || {}; var h = L.h2 ? livroAplica(L.h2, L.dealId) : null; /* o cartão do Hoje 2.0 também passa pelo livro */ var corpo = $('leadCorpo'); corpo.textContent = '';
   var p0 = h && h.pessoas && h.pessoas[0] || null; var pessoa = it.pessoa || (p0 && p0.nome) || ''; var fone = it.fone || (p0 && p0.telefones && p0.telefones[0] && (p0.telefones[0].e164 || p0.telefones[0].numero)) || '';
   var cidade = it.cidade || (h && h.empresa && h.empresa.endereco && [h.empresa.endereco.cidade, h.empresa.endereco.uf].filter(Boolean).join('/')) || '';
   var bar = $('leadBarra'); bar.textContent = ''; var so = seloOrigem(it.origem, true); if (so) bar.appendChild(so); if (it.etiqueta) bar.appendChild(el('span', 'etq', it.etiqueta));
@@ -2098,7 +2328,7 @@ async function abrirLead(dealId, opener, item, ctx) {
   if (!mesmo) limpaQualificando(); L.opener = opener || L.opener || null; L.item = item || L.item || null; L.ctx = ctx || L.ctx || null; S.L = L; painel.classList.remove('hide'); S.leadAbertoEm = Date.now();
   try { if (location.hash !== '#lead=' + dealId) { history.pushState(null, '', '#lead=' + dealId); S.pushou = true; } } catch (e) { logFalha('l1202 histórico indisponível: o lead abre do mesmo jeito', e); /* histórico indisponível: o lead abre do mesmo jeito */ }
   var cache = S.pre[dealId]; var fresco = cache && Date.now() - cache.t < 3000;
-  var pintouCache = false; if (!mesmo && cache) { aplicarResposta(L, cache.j); limparEditsIguais(L); recomputarMostrar(L); mesmo = true; pintouCache = true; L.revalidado = !!fresco; }
+  var pintouCache = false; if (!mesmo && cache) { aplicarResposta(L, cache.j, 'S.pre'); limparEditsIguais(L); recomputarMostrar(L); mesmo = true; pintouCache = true; L.revalidado = !!fresco; }
   $('leadTitulo').textContent = mesmo ? (L.lead.titulo || 'Lead') : ((L.item && L.item.empresa) || 'Carregando o lead...'); $('leadRodape').textContent = ''; if (!mesmo) rodapeEsqueleto();
   if (mesmo) renderLead(); else renderCardInfo(L);
   try { $('leadTitulo').focus({ preventScroll: true }); } catch (e) { logFalha('l1207 foco/rolagem/seleção é só conforto; se falhar a ação já foi feit', e); /* foco/rolagem/seleção é só conforto; se falhar a ação já foi feita */ }
@@ -2119,14 +2349,15 @@ async function carregarLead(L, silencioso) {
     var b = el('button', null, 'Tentar de novo'); b.type = 'button'; b.style.marginLeft = '8px'; b.onclick = function () { renderCardInfo(L); carregarLead(L, false); }; cx.appendChild(b); c.insertBefore(cx, c.firstChild); try { b.focus({ preventScroll: true }); } catch (e) { logFalha('l1221 foco/rolagem/seleção é só conforto; se falhar a ação já foi feit', e); /* foco/rolagem/seleção é só conforto; se falhar a ação já foi feita */ } return;
   }
   if (silencioso && L.ocupado) return;
-  if (silencioso && L.lead && !L.modalAberto) { var igual = false; try { igual = JSON.stringify(L.lead) === JSON.stringify(j.lead); } catch (e0) { logFalha('comparar lead igual: na dúvida redesenha', e0); igual = false; } if (igual) { aplicarResposta(L, j); return; } } // 17/11 (.3): o dado do lead não mudou: não redesenha o painel (nada pisca nem atualiza de novo)
-  aplicarResposta(L, j); limparEditsIguais(L); recomputarMostrar(L); redesenhar(L); if (L.h2) h2EstadoLead(L);
+  livroObserva(j.lead, L.dealId, j._t0); // antes de comparar: a leitura iniciada depois da observação pode tirar a lápide (tarefa reaberta no CRM)
+  if (silencioso && L.lead && !L.modalAberto) { var igual = false; try { igual = JSON.stringify(L.lead) === JSON.stringify(livroAplica(j.lead, L.dealId)); } catch (e0) { logFalha('comparar lead igual: na dúvida redesenha', e0); igual = false; } if (igual) { aplicarResposta(L, j, 'carregarLead'); return; } } // 17/11 (.3): o dado do lead não mudou: não redesenha o painel (nada pisca nem atualiza de novo)
+  aplicarResposta(L, j, 'carregarLead'); limparEditsIguais(L); recomputarMostrar(L); redesenhar(L); if (L.h2) h2EstadoLead(L);
   // 12/11 (Robert, lead 46964046): o cartão ATRASADA veio de um instantâneo (até alguns minutos de idade) e o Agendor já não tem a tarefa aberta (ex.: a automação fechou ao mudar de etapa). Em vez de deixar "2 tarefas atrasadas" sem tarefa nenhuma ao abrir, avisa e atualiza a lista na hora.
   // 17/11 (.3): NUNCA recarrega a página aqui (antes: location.reload() com o lead aberto, em ciclo). O grupo atrasado já resolvido sai da tela localmente, uma vez por lead; o servidor confirma ao fechar.
   try { var it = L.item; S.atrasFant = S.atrasFant || {}; if (it && typeof it.n === 'number' && it.n > 0 && Array.isArray(it.passos) && L.lead && L.lead.status === 'andamento' && !(L.lead.tarefas || []).some(function (t) { return !t.feita; }) && !S.atrasFant[L.dealId]) { S.atrasFant[L.dealId] = true; ocultaGrupoAtrasado(L.dealId); S.atualizaPendente = true; } } catch (e) { logFalha('l1226 grupo atrasado já resolvido: só tira da tela', e); }
 }
 function ocultaGrupoAtrasado(id) { var a = S.dados && S.dados.atrasadas; if (!a || !Array.isArray(a.grupos)) return; var ant = a.grupos.length; var tira = 0; a.grupos = a.grupos.filter(function (g) { if (String(g.dealId) === String(id)) { tira += Number(g.n) || 0; return false; } return true; }); if (a.grupos.length === ant) return; a.total = Math.max(0, (Number(a.total) || 0) - tira); desenharBlocos(); }
-function aplicarResposta(L, j) { if (j.lead) L.lead = j.lead; if (j.opcoes && typeof j.opcoes === 'object') { var op0 = Object.assign({}, L.opcoes); Object.keys(j.opcoes).forEach(function (k) { if (Array.isArray(j.opcoes[k]) && j.opcoes[k].length) op0[k] = j.opcoes[k]; }); L.opcoes = op0; } if (j.motivosPerda) L.motivos = j.motivosPerda; if (j.responsaveis) L.responsaveis = j.responsaveis; S.listas = { opcoes: L.opcoes, motivos: L.motivos, responsaveis: L.responsaveis }; if (Array.isArray(j.avisos)) L.avisos = j.avisos; } // guarda as listas do pop-up de Ganho: o próximo lead já abre com elas
+function aplicarResposta(L, j, onde) { if (j.lead) L.lead = livroLead(j.lead, L.dealId, onde, j._t0); if (j.opcoes && typeof j.opcoes === 'object') { var op0 = Object.assign({}, L.opcoes); Object.keys(j.opcoes).forEach(function (k) { if (Array.isArray(j.opcoes[k]) && j.opcoes[k].length) op0[k] = j.opcoes[k]; }); L.opcoes = op0; } if (j.motivosPerda) L.motivos = j.motivosPerda; if (j.responsaveis) L.responsaveis = j.responsaveis; S.listas = { opcoes: L.opcoes, motivos: L.motivos, responsaveis: L.responsaveis }; if (Array.isArray(j.avisos)) L.avisos = j.avisos; } // guarda as listas do pop-up de Ganho: o próximo lead já abre com elas
 // 17.5 (Robert #2915): a função MINIMIZAR foi removida (a bandeja de pílulas ficava por cima do cartão no celular). Fechar o lead mantém o que foi digitado: S.L e o rascunho em sh_rasc_<id> continuam e voltam ao reabrir o mesmo lead.
 function fecharLead() { var L = S.L; $('painelLead').classList.add('hide'); try { if (/^#lead=/.test(location.hash)) { if (S.pushou) { S.pushou = false; S.ignoraPop = Date.now(); history.back(); } else history.replaceState(null, '', location.pathname + location.search); } } catch (e) { logFalha('l1255 histórico indisponível: o lead fecha do mesmo jeito', e); /* histórico indisponível: o lead fecha do mesmo jeito */ } if (L && L.opener) { try { L.opener.focus(); } catch (e) { logFalha('l1255 foco/rolagem/seleção é só conforto; se falhar a ação já foi feit', e); /* foco/rolagem/seleção é só conforto; se falhar a ação já foi feita */ } }  setTimeout(aplicaAtualizaPendente, 0); }
 function aoMudarHash() {
@@ -2140,7 +2371,7 @@ function acoesDe(L) { if (L.lead && L.lead.status && L.lead.status !== 'andament
 
 function redesenhar(L) { if (L.modalAberto) renderGanho(L); else renderLead(); }
 function renderLead() {
-  var L = S.L; if (!L || !L.lead) return; var lead = L.lead; var corpo = $('leadCorpo'); var rol = corpo.scrollTop;
+  var L = S.L; if (!L || !L.lead) return; livroTela(L, 'renderLead'); var lead = L.lead; var corpo = $('leadCorpo'); var rol = corpo.scrollTop;
   var af = document.activeElement, afSel = null, afKey = null; if (af && corpo.contains(af)) { afKey = af.getAttribute('data-fk') ? '[data-fk="' + af.getAttribute('data-fk') + '"]' : (af.id ? '#' + af.id : null); try { afSel = [af.selectionStart, af.selectionEnd]; } catch (e) { logFalha('l1268 foco/rolagem/seleção é só conforto; se falhar a ação já foi feit', e); /* foco/rolagem/seleção é só conforto; se falhar a ação já foi feita */ } } // guarda o foco para não perdê-lo quando o dado completo chega
   $('leadTitulo').textContent = corta(lead.titulo || 'Lead', 160); $('leadTitulo').title = String(lead.titulo || '').length > 160 ? String(lead.titulo).slice(0, 400) : '';
   var bar = $('leadBarra'); bar.textContent = '';
@@ -2403,7 +2634,7 @@ async function reabrirLead(L) {
   if (!window.confirm((eraGanho ? 'Tirar o Ganho de "' : 'Reabrir "') + nome + '" e voltar para Em andamento?')) return;
   L.ocupado = true; setEstado(L, '', 'Reabrindo…'); renderRodape(L);
   var j = await chamarLead(L, '/reabrir', {}, null, null); L.ocupado = false; if (!j) return;
-  if (j.ok && j.confirmado !== false) { if (j.lead) L.lead = j.lead; L.estado = null; delete S.ocultos[L.dealId]; msg(nome + ' reaberto. Salvo ✓', 'ok'); renderLead(); carregar(true, 'tarefas'); }
+  if (j.ok && j.confirmado !== false) { if (j.lead) L.lead = livroLead(j.lead, L.dealId, 'reabrir'); L.estado = null; delete S.ocultos[L.dealId]; msg(nome + ' reaberto. Salvo ✓', 'ok'); renderLead(); carregar(true, 'tarefas'); }
   else { var t0 = j.mensagem || msgErro(j); setEstado(L, 'erro', t0, function () { reabrirLead(L); }); renderRodape(L); }
 }
 // ---- perdido (otimista) ----
@@ -2690,7 +2921,7 @@ function secaoOrigem(L) {
   return box;
 }
 function secaoTarefas(L) {
-  var s = el('div', 'secao secao-tarefas'); s.appendChild(el('h3', null, 'Tarefas')); var todas = L.lead.tarefas || []; var pode = !!acoesDe(L).tarefas && L.lead.status === 'andamento';
+  var s = el('div', 'secao secao-tarefas'); s.appendChild(el('h3', null, 'Tarefas')); livroTela(L, 'secaoTarefas'); var todas = L.lead.tarefas || []; var pode = !!acoesDe(L).tarefas && L.lead.status === 'andamento';
   var abertas = todas.filter(function (t) { return !t.feita; }).sort(function (a, b) { return (b.atrasada ? 1 : 0) - (a.atrasada ? 1 : 0) || String(a.venc).localeCompare(String(b.venc)); }); var feitas = todas.filter(function (t) { return t.feita && !RE_NOTA_SDR.test(t.texto || ''); }); // as notas do SDR aparecem em "Anotar", não aqui
   var emFila = L.ctx && L.ctx.fila;
   if (!abertas.length) s.appendChild(el('p', 'sub', 'Nenhuma tarefa aberta.'));
@@ -2737,7 +2968,7 @@ async function salvarNota(L) {
   L.notaOcupada = false; if (!j) { if (S.L === L) renderLead(); return; } // 401: já saiu para o login, o texto fica guardado
   if (j.ok !== false && j._status < 300 && j.confirmado !== false) {
     if (L.notaTexto === tx || !String(L.notaTexto || '').trim()) { L.notaTexto = ''; notaRascGravar(L.dealId, ''); } // se ele já começou outra nota, não apaga
-    if (j.lead) L.lead = j.lead; else { var q = new Date(); L.lead.notas = [{ id: 'novo', quando: ('0' + q.getDate()).slice(-2) + '/' + ('0' + (q.getMonth() + 1)).slice(-2) + ' ' + ('0' + q.getHours()).slice(-2) + ':' + ('0' + q.getMinutes()).slice(-2), texto: tx.slice(0, 200) }].concat(L.lead.notas || []).slice(0, 3); }
+    if (j.lead) L.lead = livroLead(j.lead, L.dealId, 'nota'); else { var q = new Date(); L.lead.notas = [{ id: 'novo', quando: ('0' + q.getDate()).slice(-2) + '/' + ('0' + (q.getMonth() + 1)).slice(-2) + ' ' + ('0' + q.getHours()).slice(-2) + ':' + ('0' + q.getMinutes()).slice(-2), texto: tx.slice(0, 200) }].concat(L.lead.notas || []).slice(0, 3); }
     L.notaEst = { tipo: 'ok', texto: j.jaEstava ? 'Essa nota já estava salva.' : 'Nota salva.', retry: null }; if (S.L === L) renderLead();
     setTimeout(function () { if (L.notaEst && L.notaEst.tipo === 'ok') setNota(L, '', ''); }, 4000);
   } else { L.notaEst = { tipo: 'erro', texto: msgErro(j), retry: function () { salvarNota(L); } }; if (S.L === L) renderLead(); }
@@ -2948,21 +3179,22 @@ function perguntarLigacao(L, t, cont) {
   document.body.appendChild(ov); bSim.focus();
 }
 function concluirComDesfazer(L, t, corpo) {
-  var tid = t.id; var semLig = !!(corpo && corpo.ligacao && corpo.ligacao.feita === false); var antes = copia(L.lead); L.lead.tarefas.forEach(function (x) { if (x.id === tid) x.feita = true; }); renderLead();
+  var tid = t.id; if (livroTem(L.dealId, tid)) return; /* clique duplo / tarefa já na fila, em voo ou confirmada: ignora, sem nova chamada */ var semLig = !!(corpo && corpo.ligacao && corpo.ligacao.feita === false); var antes = copia(L.lead); L.lead.tarefas.forEach(function (x) { if (x.id === tid) x.feita = true; });
   var e = guardarAcaoAdiada({ dealId: L.dealId, caminho: '/tarefa/' + tid + '/concluir', corpo: corpo || {}, tipo: 'tarefa', meta: { titulo: L.lead.titulo } }, 5000);
+  livroAdd(e, antes); invalidaLead(L.dealId); renderLead(); // o livro vale na hora e o que estava guardado do lead não vale mais
   var fx = function () { faixa('desfazer', ''); }; clearTimeout(S.desfazTimer);
   faixa('desfazer', (semLig ? 'Tarefa excluída (sem ligação). ' : 'Tarefa concluída. ') + 'Dá para desfazer por 5 segundos.', 'ok', { rot: 'Desfazer', acao: function () {
     var ainda = lerSaida().some(function (x) { return x.id === e.id; }) && !S.emVoo[e.id];
-    if (ainda) { gravarSaida(lerSaida().filter(function (x) { return x.id !== e.id; })); if (S.L === L) { L.lead.tarefas.forEach(function (x) { if (x.id === tid) x.feita = false; }); renderLead(); setEstado(L, 'ok', 'Desfeito. A tarefa continua aberta.'); } fx(); }
+    if (ainda) { gravarSaida(lerSaida().filter(function (x) { return x.id !== e.id; })); livroDel(e.id); if (S.L === L) { L.lead.tarefas.forEach(function (x) { if (x.id === tid) x.feita = false; }); renderLead(); setEstado(L, 'ok', 'Desfeito. A tarefa continua aberta.'); } fx(); }
     else { faixa('desfazer', 'Essa tarefa já foi enviada, não dá mais para desfazer.', 'aviso'); setTimeout(fx, 3000); }
   } });
   S.desfazTimer = setTimeout(fx, 5200);
 }
 function hojeISO() { try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(agoraMs())); } catch (e) { var d = new Date(agoraMs()); return d.getFullYear() + '-' + hh(d.getMonth() + 1) + '-' + hh(d.getDate()); } }
 async function acaoTarefa(L, caminho, corpo, otimista) { // aparece na hora; se o servidor não confirmar, volta como estava e mostra a mensagem
-  if (L.ocupado) return; var antes = copia(L.lead); L.lead.tarefas = L.lead.tarefas || []; otimista(L.lead);
+  if (L.ocupado) return; var antes = copia(L.lead); var mAd = /\/tarefa\/(\d+)\/adiar$/.exec(caminho || ''); if (mAd) livroSupera(L.dealId, mAd[1]); L.lead.tarefas = L.lead.tarefas || []; otimista(L.lead);
   L.ocupado = true; renderLead(); setEstado(L, 'salvando', 'Salvando a tarefa… já mostrei na tela.');
-  var j = await chamarLead(L, caminho, corpo, null, { tipo: 'tarefa', meta: { titulo: L.lead.titulo } }); if (!j) return; L.ocupado = false;
+  var j = await chamarLead(L, caminho, corpo, null, { tipo: 'tarefa', meta: { titulo: L.lead.titulo }, antes: antes }); if (!j) return; L.ocupado = false;
   if (j._enfileirado) { if (S.L === L) { renderLead(); setEstado(L, 'salvando', 'Sem conexão. Guardei a tarefa e envio sozinho quando a rede voltar.'); } return; }
   if (j.ok !== false && j._status < 300 && j.confirmado !== false) { aplicarResposta(L, j); if (/\/concluir$/.test(caminho)) atrasConcluida(L.dealId, j.lead); if (S.L === L) { renderLead(); setEstado(L, 'ok', j.mensagem || 'Tarefa atualizada e conferida ✓'); } carregar(true, 'tarefas'); }
   else { L.lead = antes; if (S.L === L) { renderLead(); setEstado(L, 'erro', j.ok !== false && j.confirmado === false ? 'Não consegui salvar. Desfiz na tela. ' + (j.mensagem || '') : msgErro(j), function () { acaoTarefa(L, caminho, corpo, otimista); }); } }
@@ -3052,13 +3284,14 @@ var larguraLarga = null;
 function ajustaMais() { var largo = window.innerWidth >= 700; if (largo === larguraLarga) return; larguraLarga = largo; var m = $('maisMenu'); if (m) m.open = largo; } // no computador o menu "Mais" já vem aberto; no celular fica recolhido
 ajustaMais(); window.addEventListener('resize', ajustaMais); $('chips').addEventListener('scroll', fadeChips, { passive: true }); window.addEventListener('resize', fadeChips);
 // ---------- eventos ----------
+$('lembrar').onchange = function () { if (!this.checked) fonesApagar(); }; // desmarcar 'Lembrar': nenhum telefone fica guardado (nos dois storages)
 $('bEntrar').onclick = async function () { var v = $('tok').value.trim(); if (!v) { $('loginMsg').textContent = 'Digite a senha.'; return; } $('loginMsg').textContent = ''; await entrar(v, false); };
 $('tok').onkeydown = function (e) { if (e.key === 'Enter') $('bEntrar').click(); };
 $('bTentar').onclick = function () { carregar(false, false); };
 $('bAtualizar').onclick = function () { carregar(false, true); };
 function apagarDadosLocais(incluiSaida) { // tudo que a página guardou neste aparelho (menos o tema e preferências de tela)
-  try { var ks = []; for (var i = 0; i < localStorage.length; i++) ks.push(localStorage.key(i)); ks.forEach(function (k) { if (k && (/^(sh_rasc_|sh_nota_|sh_fila_|sh_abriu|sh_ultimo|sh_poll_ate|sh_ult_poll|sh_lider|sh_reppend|sh_recarga)/.test(k) || (incluiSaida && k === SAIDA_KEY))) { try { localStorage.removeItem(k); } catch (e) { logFalha('l2152 limpar cache ao sair: melhor esforço', e); /* limpar cache ao sair: melhor esforço */ } } }); } catch (e) { logFalha('l2152 idem', e); /* idem */ }
-  if (incluiSaida) S.saidaMem = null; S.pre = {}; S.repPend = {}; atualizarSelo(); limparBaseSeVazia();
+  try { var ks = []; for (var i = 0; i < localStorage.length; i++) ks.push(localStorage.key(i)); ks.forEach(function (k) { if (k && (/^(sh_rasc_|sh_nota_|sh_fila_|sh_abriu|sh_ultimo|sh_fones|sh_poll_ate|sh_ult_poll|sh_lider|sh_reppend|sh_recarga)/.test(k) || (incluiSaida && k === SAIDA_KEY))) { try { localStorage.removeItem(k); } catch (e) { logFalha('l2152 limpar cache ao sair: melhor esforço', e); /* limpar cache ao sair: melhor esforço */ } } }); } catch (e) { logFalha('l2152 idem', e); /* idem */ }
+  fonesApagar();   if (incluiSaida) { S.saidaMem = null; S.livro = Object.create(null); } S.pre = {}; S.repPend = {}; atualizarSelo(); limparBaseSeVazia();
 }
 function contarRascunhos() { // rascunhos digitados e não enviados (não vazios e dentro da validade)
   var n = 0; try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k.indexOf('sh_rasc_') === 0) { try { var o = JSON.parse(localStorage.getItem(k) || 'null'); if (o && o.e && Object.keys(o.e).length && Date.now() - (o.t || 0) < 3 * 86400000) n++; } catch (e) { logFalha('l2156 conta rascunhos: só informativo', e); /* conta rascunhos: só informativo */ } } } } catch (e) { logFalha('l2156 idem', e); /* idem */ }
@@ -3077,6 +3310,8 @@ function sairManual(apagar) {
 $('bSair1').onclick = function () { sairManual(false); };
 $('bSair2').onclick = function () { sairManual(false); };
 $('bTema').onclick = alternarTema;
+$('bTopo').onclick = function () { var rec = !$('cab').classList.contains('rec'); lsSet('sh_topo', rec ? 'r' : 'e'); topoAplicar(rec); }; // 17.6A: lembra a escolha por usuário (neste aparelho); sem escolha = recolhido
+topoAplicar(topoLer() !== 'e'); observaLargura();
 $('bAjuda').onclick = function () { var b = $('ajudaBox'); b.classList.toggle('hide'); $('bAjuda').setAttribute('aria-expanded', b.classList.contains('hide') ? 'false' : 'true'); };
 var debBusca = null; $('busca').oninput = function () { clearTimeout(debBusca); debBusca = setTimeout(function () { desenharBlocos(); }, 150); bgAgendar(); }; $('ordem').onchange = desenharBlocos; $('esconder').onchange = desenharBlocos;
 function setFunil(f) { S.funil = f; [['fTodos', 'todos'], ['fOut', 'outbound'], ['fIn', 'inbound']].forEach(function (p) { $(p[0]).setAttribute('aria-pressed', p[1] === f ? 'true' : 'false'); }); if (S.dados) { desenharTopo(S.dados); desenharBlocos(); } }
@@ -3102,7 +3337,7 @@ document.addEventListener('keydown', function (e) {
 desenharTopo = seguro('desenharTopo', desenharTopo); desenharControle = seguro('desenharControle', desenharControle); desenharBlocos = seguro('desenharBlocos', desenharBlocos); desenharFila = seguro('desenharFila', desenharFila); desenharAguardando = seguro('desenharAguardando', desenharAguardando); renderLead = seguro('renderLead', renderLead); renderGanho = seguro('renderGanho', renderGanho);
 cartao = seguro('cartao', cartao, function (it) { var f = el('div', 'item'); f.appendChild(el('div', 'emp', (it && it.empresa) || 'Item')); f.appendChild(el('div', 'pas', 'Não consegui mostrar os detalhes deste item.')); return f; });
 cartaoAtrasado = seguro('cartaoAtrasado', cartaoAtrasado, function (g) { var f = el('div', 'item'); f.appendChild(el('div', 'emp', (g && g.empresa) || 'Item')); return f; });
-window.__shTeste = { agOc: agOc, atrasConcluida: atrasConcluida, aplicaAtrasOcultos: aplicaAtrasOcultos, atribuirAguardando: atribuirAguardando, carregarAguardando: carregarAguardando, desenharAguardando: desenharAguardando, carregar: carregar, calcDiff: calcDiff, normVal: normVal, mostrarConflitos: mostrarConflitos, enviarCampos: enviarCampos, tetoAtualiza: tetoAtualiza, leadAberto: leadAberto, aplicaAtualizaPendente: aplicaAtualizaPendente, carregarAuto: carregarAuto, aplicaAtualizaPendente: aplicaAtualizaPendente, contextoAuto: contextoAuto, mesAtualSP: mesAtualSP, nomeMes: nomeMes, decideVersao: decideVersao, verificarVersaoPagina: verificarVersaoPagina, salvarVista: salvarVista, aplicarVista: aplicarVista, ociosoMs: ociosoMs, retentaParte: retentaParte, logFalha: logFalha, falhas: function () { return FALHAS; }, estadoSync: estadoSync, desfazerSaida: desfazerSaida, atualizarSelo: atualizarSelo, semForn: semForn, hoje2Valido: hoje2Valido, hoje2Cartao: hoje2Cartao, processarSaida: processarSaida, tentarAgora: tentarAgora, buscarGeral: buscarGeral, bgValida: bgValida, opcoesAdiar: opcoesAdiar, enviarAcao: enviarAcao, versaoMaisNova: versaoMaisNova, iniciarContinuar: iniciarContinuar, continuarLaco: continuarLaco, fmtCampo: fmtCampo, fadeChips: fadeChips, REDE: REDE, lerSaida: lerSaida, processarSaida: processarSaida, reportarErro: reportarErro, aplicarStatus: aplicarStatus, hooks: { recarregar: null }, falhaDePagina: falhaDePagina, verificarVersao: verificarVersao, agoraMs: agoraMs, PAGINA_VERSAO: PAGINA_VERSAO, carregarAguardando: carregarAguardando, S: S, desenhar: desenhar, carregar: carregar, casaBusca: casaBusca, foneFmt: foneFmt, aceitar: aceitar, abrirLead: abrirLead, abrirGanho: abrirGanho, cnpjValido: cnpjValido, desenharFila: desenharFila, carregarFila: carregarFila, origemClasse: origemClasse, mascCnpj: mascCnpj, renderLead: renderLead, carregarLead: carregarLead, contextoAuto: contextoAuto, tipoContexto: tipoContexto, secaoOrigem: secaoOrigem, obsSdrPronta: obsSdrPronta, validarCampo: validarCampo, valorOrig: valorOrig, valorAtual: valorAtual, faltaAinda: faltaAinda, atualizarGanhoBtn: atualizarGanhoBtn };
+window.__shTeste = { sair: sair, entrar: entrar, livroPoda: livroPoda, renderCardInfo: renderCardInfo, renderLead: renderLead, livroVarre: livroVarre, livroAplica: livroAplica, livroLead: livroLead, livroObserva: livroObserva, livroDoLead: livroDoLead, livroAdd: livroAdd, livroDel: livroDel, aplicarResposta: aplicarResposta, aplicarStatus: aplicarStatus, estado: function () { return S; }, planoColunas: planoColunas, closerOrdenar: closerOrdenar, closerItens: closerItens, topoAplicar: topoAplicar, topoLer: topoLer, parseVersao: parseVersao, versaoMaisNova: versaoMaisNova, reajustaColunas: reajustaColunas, fixaColuna: fixaColuna, agOc: agOc, atrasConcluida: atrasConcluida, aplicaAtrasOcultos: aplicaAtrasOcultos, atribuirAguardando: atribuirAguardando, carregarAguardando: carregarAguardando, desenharAguardando: desenharAguardando, carregar: carregar, calcDiff: calcDiff, normVal: normVal, mostrarConflitos: mostrarConflitos, enviarCampos: enviarCampos, tetoAtualiza: tetoAtualiza, leadAberto: leadAberto, aplicaAtualizaPendente: aplicaAtualizaPendente, carregarAuto: carregarAuto, aplicaAtualizaPendente: aplicaAtualizaPendente, contextoAuto: contextoAuto, mesAtualSP: mesAtualSP, nomeMes: nomeMes, decideVersao: decideVersao, verificarVersaoPagina: verificarVersaoPagina, salvarVista: salvarVista, aplicarVista: aplicarVista, ociosoMs: ociosoMs, retentaParte: retentaParte, logFalha: logFalha, falhas: function () { return FALHAS; }, estadoSync: estadoSync, desfazerSaida: desfazerSaida, atualizarSelo: atualizarSelo, semForn: semForn, hoje2Valido: hoje2Valido, hoje2Cartao: hoje2Cartao, processarSaida: processarSaida, tentarAgora: tentarAgora, buscarGeral: buscarGeral, bgValida: bgValida, opcoesAdiar: opcoesAdiar, enviarAcao: enviarAcao, versaoMaisNova: versaoMaisNova, iniciarContinuar: iniciarContinuar, continuarLaco: continuarLaco, fmtCampo: fmtCampo, fadeChips: fadeChips, REDE: REDE, lerSaida: lerSaida, processarSaida: processarSaida, reportarErro: reportarErro, aplicarStatus: aplicarStatus, hooks: { recarregar: null }, falhaDePagina: falhaDePagina, verificarVersao: verificarVersao, agoraMs: agoraMs, PAGINA_VERSAO: PAGINA_VERSAO, carregarAguardando: carregarAguardando, S: S, desenhar: desenhar, carregar: carregar, casaBusca: casaBusca, foneFmt: foneFmt, aceitar: aceitar, abrirLead: abrirLead, abrirGanho: abrirGanho, cnpjValido: cnpjValido, desenharFila: desenharFila, carregarFila: carregarFila, origemClasse: origemClasse, mascCnpj: mascCnpj, renderLead: renderLead, carregarLead: carregarLead, contextoAuto: contextoAuto, tipoContexto: tipoContexto, secaoOrigem: secaoOrigem, obsSdrPronta: obsSdrPronta, validarCampo: validarCampo, valorOrig: valorOrig, valorAtual: valorAtual, faltaAinda: faltaAinda, atualizarGanhoBtn: atualizarGanhoBtn };
 (async function () {
   var t = lsGet('sh_tok');
   if (t) { var ok = await entrar(t, true); if (ok) return; }
