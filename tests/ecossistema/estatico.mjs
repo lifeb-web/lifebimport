@@ -18,7 +18,7 @@ t("html lang pt-BR, viewport, título e versão", D.documentElement.lang === "pt
 const versao = D.querySelector('meta[name=versao]').content; t("versão aparece na capa, no topo, no rodapé e no histórico", ["#inicio", ".mast", ".foot", "#sobre"].every((s) => D.querySelector(s).textContent.includes(versao)), versao);
 t("histórico de versões tem a versão atual e a anterior (09/11)", /Histórico de versões/.test(D.querySelector("#sobre").innerHTML) && D.querySelector("#sobre").textContent.includes("2026-11-09"));
 t("há seção Central com o desenho das conexões", !!D.querySelector("#central figure.fig") && /Ana/.test(D.querySelector("#central").textContent) && /Canal/.test(D.querySelector("#central").textContent) && /Dash/.test(D.querySelector("#central").textContent));
-t("modo apresentação: deck com slides, controles e botão Apresentar", !!D.getElementById("deck") && D.querySelectorAll("#deck .slide").length >= 15 && D.querySelectorAll("#deck .slide").length <= 38 && !!D.getElementById("dctl") && !!D.getElementById("apBtn") && !!D.getElementById("estado-eco"));
+t("modo apresentação: deck com slides, controles e botão Apresentar", !!D.getElementById("deck") && D.querySelectorAll("#deck .slide").length >= 15 && D.querySelectorAll("#deck .slide").length <= 42 && !!D.getElementById("dctl") && !!D.getElementById("apBtn") && !!D.getElementById("estado-eco"));
 t("imagens com alt; botões só com ícone têm aria-label", [...D.querySelectorAll("img")].every((i) => i.hasAttribute("alt")) && [...D.querySelectorAll("button")].every((b) => b.getAttribute("aria-label") || b.textContent.trim()));
 t("seções-chave presentes (Ana, Bia, funis, 3 destinos, cadência, recuperação, Hoje, Central, Meta, segurança, observabilidade, status, checklist)", ["ana", "ana-seguranca", "bia", "destinos", "cadencia", "recuperacao", "hoje", "central", "meta", "seguranca", "observ", "status", "checklist", "crm", "regras"].every((i) => ids.includes(i)));
 const texto = (D.body.textContent || "").replace(/\s+/g, " "); const bruto = HTML;
@@ -47,9 +47,9 @@ t("papéis: a IA não vende (nenhum \"até a venda\" ligado à IA, à Ana ou à 
   const itens = J.componentes.flatMap((c) => [...c.no_ar, ...c.implantacao, ...c.planejado]);
   const stat = (D.querySelector("#status") || { textContent: "" }).textContent.replace(/\s+/g, " ");
   t("todo item de estado.json aparece no slide de estado e na seção Status (mesmo estado nos dois)", itens.every((i) => deckTxt.includes(i) && stat.includes(i)), itens.filter((i) => !deckTxt.includes(i) || !stat.includes(i)));
-  const nDeck = [...D.querySelectorAll("#deck .est .ec li b")].map((b) => b.textContent.trim());
+  const nDeck = [...D.querySelectorAll("#deck .peca-h b")].map((b) => b.textContent.trim());
   t("o slide de estado só lista componentes que existem no estado.json", nDeck.length > 0 && nDeck.every((n) => nomes.includes(n)), nDeck);
-  const EXTRAS = ["SDR e cadência", "Painel do Representante (nova recarga)", "Este Ecossistema", "Bia", "Plataforma"]; const nPag = [...D.querySelectorAll("#status .col li b")].map((b) => b.textContent.trim());
+  const EXTRAS = ["SDR e cadência", "Painel do Representante (nova recarga)", "Este Ecossistema", "Bia", "Plataforma", "Playbook comercial"]; const nPag = [...D.querySelectorAll("#status .peca-h b")].map((b) => b.textContent.trim());
   t("a seção Status só lista componentes do estado.json (ou itens fixos conhecidos)", nPag.length > 0 && nPag.every((n) => nomes.includes(n) || EXTRAS.includes(n)), nPag.filter((n) => !nomes.includes(n) && !EXTRAS.includes(n)));
   const datas = { json: J.atualizado_em, paginaCapa: /atualizado em (\d\d\/\d\d\/\d{4})/.exec(D.querySelector("#inicio").textContent)?.[1], rodape: (D.getElementById("atualizadoEm") || {}).textContent?.trim(), capaApresentacao: /Atualizado em (\d\d\/\d\d\/\d{4})/.exec(D.getElementById("sl-capa").textContent)?.[1], statusSecao: /Posição de (\d\d\/\d\d\/\d{4})/.exec(D.getElementById("sl-estado").textContent)?.[1] };
   t("'atualizado em' igual no estado.json, na capa da página, no rodapé, na capa da apresentação e no slide de estado", new Set(Object.values(datas)).size === 1, datas); }
@@ -66,5 +66,5 @@ tecla("Escape"); t("jsdom: Esc sai da apresentação", !w.document.documentEleme
 const est = JSON.parse(D.getElementById("estado-eco").textContent);
 t("estado.json embutido: data dd/mm/aaaa e estados válidos", /^\d{2}\/\d{2}\/\d{4}$/.test(est.atualizado_em) && est.componentes.every((c) => ["no ar", "em implantação", "planejado"].includes(c.estado) && Array.isArray(c.no_ar) && Array.isArray(c.implantacao) && Array.isArray(c.planejado)));
 t("página mostra 'Atualizado em' com a data do estado.json", texto.includes(est.atualizado_em) && /tualizado em/.test(texto));
-t("futuro marcado como planejado e nada 'em implantação' aparece como 'no ar' no deck", (() => { const d = D.getElementById("deck").textContent; return /Planejado/.test(d) && /Em implantação/.test(d) && est.componentes.every((c) => c.implantacao.every((x) => !D.querySelector("#deck .e-ok").textContent.includes(x))); })());
+t("futuro marcado como planejado e nada 'em implantação' aparece como 'no ar' no deck", (() => { const d = D.getElementById("deck").textContent; return /Planejado/.test(d) && /Em implantação/.test(d) && est.componentes.every((c) => c.implantacao.every((x) => ![...D.querySelectorAll("#deck li.full")].some((li) => li.textContent.includes(x) && li.querySelector(".p-ok")))); })());
 resumo();

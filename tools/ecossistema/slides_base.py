@@ -50,7 +50,7 @@ REG = []   # registro de slides: (n, chave, titulo, capitulo, secoes)
 def slide(chave, titulo, cap, corpo, cls="", sec="", parte=None):
     """Um slide. cap = capítulo (agrupa no índice). sec = ids de seções da página longa que este slide cobre. parte = (i, total) para fluxos em várias partes."""
     _n[0] += 1; n = _n[0]
-    kick = e(cap) + (f" · parte {parte[0]}/{parte[1]}" if parte else "")
+    kick = e(cap) + (f" · parte {parte[0]} de {parte[1]}" if parte else "")
     REG.append((n, chave, titulo, cap, sec))
     ptxt = f" (parte {parte[0]} de {parte[1]})" if parte else ""
     return (f'<section class="slide {cls}" id="sl-{chave}" data-t="{e(titulo)}" data-cap="{e(cap)}" data-sec="{e(sec)}" aria-label="Slide {n}: {e(titulo)}{ptxt}" aria-hidden="true">'
@@ -63,8 +63,8 @@ def estado_barra(*ids):
 def faixa_estado(i):
     c = COMP[i]; out = []
     if c["implantacao"]:
-        out.append('<div class="dfx dfx-te">' + pill("em implantação") + "<span>" + "; ".join(selo(x, deck=True) for x in c["implantacao"]) + ". Ainda não está no ar.</span></div>")
+        out.append('<div class="dfx dfx-te">' + pill("em implantação") + "<span>" + "; ".join(selo(__import__("pecas").palavras(x, 16), deck=True) for x in c["implantacao"]) + ". Ainda não está no ar.</span></div>")
     if c["planejado"]:
-        out.append('<div class="dfx dfx-pl">' + pill("planejado") + "<span>" + "; ".join(selo(x, deck=True) for x in c["planejado"]) + ".</span></div>")
+        out.append('<div class="dfx dfx-pl">' + pill("planejado") + "<span>" + "; ".join(selo(__import__("pecas").palavras(x, 16), deck=True) for x in c["planejado"]) + ".</span></div>")
     return '<div class="dfxs">' + "".join(out) + "</div>"
 

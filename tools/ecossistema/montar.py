@@ -4,7 +4,7 @@
 import os, sys, re, json
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, AQUI)
-from comp import NAV, e
+from comp import NAV, e, encurtar
 import conteudo1 as c1, conteudo2 as c2, conteudo3 as c3
 VERSAO = c3.VERSAO
 
@@ -28,6 +28,7 @@ def montar():
     nav = [d[i] for i in ordem]
     # números das seções = posição real
     html_corpo = "".join(corpo)
+    html_corpo = encurtar(html_corpo)
     html_corpo = sem_hashes(html_corpo)
     for pos, i in enumerate(ordem, 1):
         html_corpo = re.sub(r'(<section class="sec[^"]*" id="%s" data-n=")\d+(")' % re.escape(i), r'\g<1>%d\g<2>' % pos, html_corpo)

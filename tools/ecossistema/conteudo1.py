@@ -9,11 +9,9 @@ DATA = _j0.load(open(_o0.path.join(_o0.path.dirname(_o0.path.abspath(__file__)),
 def s_inicio():
     c = S.contagem()
     corpo = (
-      '<div class="hero-b"><div class="hero-t"><p class="eyebrow">Guia do projeto · Life B Importadora</p>'
-      '<p class="h1" role="presentation">Ecossistema Life B</p>'
-      '<p class="hero-p">O mapa completo da operação comercial: como o lead chega, como a Ana (SDR Inbound virtual no WhatsApp) e a Bia (assistente de operação) trabalham, onde cada informação é escrita e quais regras mantêm tudo em ordem. Feito para a equipe, para parceiros e para quem está conhecendo a empresa agora.</p>'
-      '<div class="chips"><span class="chip">Versão '+__import__("conteudo3").VERSAO+' · atualizado em '+DATA+'</span><span class="chip">Sem dados pessoais de clientes</span><span class="chip">Conferido no código e nos painéis</span></div>'
-      '<div class="hero-a"><a class="btn pri" href="#status">Ver o status de hoje</a><button type="button" class="btn" data-apres>Apresentar em tela cheia</button></div></div></div>'
+      '<div class="faixa-i"><span class="chip">Versão '+__import__("conteudo3").VERSAO+' · atualizado em '+DATA+'</span><span class="chip">Sem dados pessoais de clientes</span><span class="chip">Conferido no código e nos painéis</span>'
+      '<span class="faixa-t">Mapa da operação comercial: como o lead chega, quem atende, onde fica cada informação e quais regras seguram tudo.</span>'
+      '<a class="btn pri" href="#status">Ver o status de hoje</a></div>'
       + stats([(c["ok"], "entregas no ar e conferidas", "ok"), (c["te"], "prontas e em implantação (ainda não no ar)", "te"), (c["pl"] + c["of"] + c["lm"] + c["ap"], "planejadas, desligadas de propósito, com limite conhecido ou no ar com resultado a provar", "pl"), (c["de"], "dependem de decisão da gestão", "de")])
       + '<h3 class="mt">Em 1 minuto</h3>'
       + grid([
@@ -27,53 +25,41 @@ def s_inicio():
             f'<h2 id="h-inicio" class="sr">Capa e resumo do Ecossistema Life B</h2>{corpo}</div></section>')
 
 def s_status():
-    import json as _j, os as _o
-    est = _j.load(open(_o.path.join(_o.path.dirname(_o.path.abspath(__file__)), "estado.json"), encoding="utf-8"))["componentes"]
-    ok = [(c["nome"], "; ".join(c["no_ar"]) + ".") for c in est if c["no_ar"]]
-    ok.append(("SDR e cadência", "Cadência por dia útil, repasse com trava, inbound direto, Subir lista, enriquecimento por CNPJ e voltas ao SDR."))
-    te = [(c["nome"], "; ".join(selo(x) for x in c["implantacao"]) + ".") for c in est if c["implantacao"]] + [
-      ("Painel do Representante (nova recarga)", "O painel já está no ar; falta só o pacote novo, com recarga em horário comercial, que aguarda auditoria."),
-      ("Este Ecossistema", "Atualizado, com apresentação em slides; publica depois do teste visual e do auditor independente."),
-    ]
-    pl = [(c["nome"], "; ".join(selo(x) for x in c["planejado"]) + ".") for c in est if c["planejado"]] + [
-      ("Bia", "Limite por clique no servidor, reenvio quando a Meta recusa a entrega, backup fora do ambiente de trabalho."),
-      ("Plataforma", "Mineração de leads, arquivar modelos antigos da Meta, revisão das cadências com dados reais."),
-    ]
-    def col(tit, k, itens):
-        lis = "".join(f"<li><b>{a}</b>{b}</li>" for a, b in itens)
-        return f'<div class="col col-{k}"><h3>{pill(k)} {tit}</h3><ul class="plain">{lis}</ul></div>'
-    corpo = (f'<div class="cols3">{col("O que está valendo agora", "ok", ok)}{col("Pronto, em implantação", "te", te)}{col("Na fila", "pl", pl)}</div>'
+    import pecas as P
+    cards = [P.peca(P.COMP[i], area=nome) for nome, ids in P.AREAS for i in ids] + [P.peca_extra(*x) for x in P.extras()]
+    area = grid(cards, 3)
+    corpo = (f'<div class="areas">{area}</div>'
       + '<h3 class="mt">Depende de decisão da gestão</h3>' + ul(S.DEPENDE)
-      + aviso("Como ler este status", "\"No ar\" só aparece quando foi conferido em produção e não tem pendência declarada. Se existe pendência, ela aparece escrita ao lado, no checklist. \"Em implantação\" quer dizer pronto, mas ainda não no ar. Dois selos detalham esse estado: \"Em voo\", quando a publicação está acontecendo neste momento, e \"Em correção\", quando a publicação abortou ou um defeito foi encontrado; nenhum dos dois é no ar. \"Planejado\" é futuro: ainda não existe.", "n"))
-    return sec("status", "Começar", "Status: no ar, em teste e planejado", f"Posição de {DATA}. O que está no ar, o que está pronto e em implantação (ainda não no ar) e o que é futuro planejado, em ordem.", corpo)
+      + aviso("Como ler este status", "\"No ar\": conferido em produção, sem pendência declarada. \"Em implantação\": pronto, ainda não no ar. \"Planejado\": futuro. \"Em voo\": publicando agora. \"Em correção\": publicação abortou ou achou-se defeito; não está no ar.", "n"))
+    return sec("status", "Começar", "Status: no ar, em teste e planejado", f"Posição de {DATA}. Uma ficha por peça, em ordem por área; a linha do tempo de cada ficha guarda o texto completo.", corpo)
 
 def s_checklist():
-    rows = []
-    for g, i, s, p in S.CHECK:
-        rows.append([g, i, pill(s), p])
-    corpo = (aviso("Checklist honesto", "Uma entrega só entra como \"No ar\" quando foi conferida em produção. Quando existe pendência, ela é escrita na última coluna e o item não é tratado como concluído.", "n")
-      + tabela(["Área", "Entrega", "Estado", "Prova ou pendência"], rows, "ck", "Checklist de entregas com estado e prova"))
+    grupos = {}
+    for g, i, st, p in S.CHECK:
+        grupos.setdefault(g, []).append([g, i, pill(st), p])
+    blocos = "".join(det(f"{g} ({len(rows)} itens)", tabela(["Área", "Entrega", "Estado", "Prova ou pendência"], rows, "ck", f"Checklist de entregas: {g}"), aberto=(k == 0)) for k, (g, rows) in enumerate(grupos.items()))
+    corpo = (aviso("Checklist honesto", "Uma entrega só entra como \"No ar\" quando foi conferida em produção. Quando existe pendência, ela é escrita na última coluna e o item não é tratado como concluído. Cada área abre e fecha.", "n") + blocos)
     return sec("checklist", "Começar", "Checklist de entregas", f"Cada entrega, o estado dela em {DATA} e o que ainda falta. Atualizado a cada publicação.", corpo)
 
 def s_visao():
+    import pecas as P
     vocab = [
       ["Life B Importadora", "Importadora que vende para drogarias e supermercados, por meio de representantes de campo."],
       ["Representante", "Vendedor de campo: atende as lojas, negocia e fecha pedidos."],
       ["SDR", "Profissional de pré-venda: faz os primeiros contatos, descobre quem tem interesse e entrega ao time de vendas. A <b>Ana</b> é o SDR Inbound virtual (IA) do WhatsApp."],
-      ["Closer", "Especialista que atende e fecha os leads de rede e de fora de Goiás e do Distrito Federal."],
-      ["Lead e lead qualificado", "Lead é a empresa com interesse ou potencial de compra. Qualificado é o que confirmou interesse e foi entregue ao time de vendas."],
+      ["Lead e lead qualificado", "Lead é a empresa com interesse ou potencial de compra; entra por anúncio, site, lista ou WhatsApp direto. Qualificado é o que confirmou interesse e foi entregue ao time de vendas."],
       ["Cadência", "Sequência de contatos em dias úteis combinados."],
-      ["Outbound e Inbound", "Outbound: a Life B vai atrás do lead. Inbound: o lead chega sozinho, por anúncio ou formulário."],
+      ["Inbound e lista", "Inbound: o lead chega por anúncio, site (formulário) ou WhatsApp direto e é atendido pela Ana. Lista (outbound): a Life B vai atrás do lead; quem trabalha as listas é o SDR humano."],
       ["Funil e etapa", "Sequência de etapas pela qual um negócio avança no Agendor."],
-      ["Arena", "O funil de vendas dos representantes de campo (e do closer, em redes). A IA não vende: a venda é feita por pessoas."],
+      ["Arena", "O funil de vendas dos representantes (closers). A IA não vende: a venda é feita por pessoas."],
       ["Agendor", "O CRM da empresa (clientes, negócios e tarefas). É a fonte da verdade."],
       ["Bia", "A assistente de operação: aplica as regras, escreve no Agendor, avisa a equipe pelo WhatsApp e faz o trabalho repetitivo."],
       ["Central, Hoje, Painel do Representante e Dash", "As páginas de trabalho: controle, mesa do SDR, carteira de cada representante e painel de números."],
     ]
     pecas = [
-      ["Agendor", "Clientes, negócios, tarefas e funis. Fonte da verdade.", "SDR, closer, representantes e gestão"],
+      ["Agendor", "Clientes, negócios, tarefas e funis. Fonte da verdade.", "SDR, representantes e gestão"],
       ["Ana", "SDR Inbound virtual que conversa pelo WhatsApp, qualifica e registra. Serviço próprio na nuvem, 24 horas.", "Leads (quem conversa); gestão (quem controla)"],
-      ["Bia", "Por desenho, quem escreve no Agendor e envia os avisos. Roda o tempo todo e conversa com a equipe pelo WhatsApp.", "Gestão, SDR, closer e representantes"],
+      ["Bia", "Por desenho, quem escreve no Agendor e envia os avisos. Roda o tempo todo e conversa com a equipe pelo WhatsApp.", "Gestão, SDR e representantes"],
       ["Hoje e Lista", "Mesa de trabalho do SDR e envio de listas de empresas.", "SDR"],
       ["Central", "Painel de controle com login: saúde, interruptores, atendimento da Ana, filas e calendário de folga.", "Gestão (muda tudo), administradores (risco baixo e médio), SDR (só lê)"],
       ["Painel do Representante", "Carteira ao vivo, com as ações do dia.", "Representantes e SDR que também vende"],
@@ -84,7 +70,6 @@ def s_visao():
     papeis = [
       ["Gestão", "Decide o que a Bia e a Ana podem fazer, aprova avisos sensíveis, vê todos os números e é avisada quando algo precisa de atenção.", "WhatsApp, Central, Dash, Agendor"],
       ["SDR", "Primeiro contato, qualificação e distribuição do lead qualificado.", "Hoje, Lista, WhatsApp"],
-      ["Closer", "Atende e fecha redes no Arena.", "Agendor, WhatsApp"],
       ["Representante", "Vende no Arena e cuida do Pós-venda e da Reativação.", "WhatsApp, Painel do Representante, Agendor"],
       ["Administrador", "Acompanha e muda só o que tem risco baixo ou médio.", "Central"],
       ["Conta técnica \"Sistema\"", "Conta que a Bia usa para escrever no Agendor. Em regra, nenhuma pessoa a usa e ela não deve ser dona de um negócio.", "Só a Bia"],
@@ -104,6 +89,7 @@ def s_visao():
       ], "", "Infraestrutura")
       + '<h3 class="mt">As peças e quem usa cada uma</h3>' + tabela(["Peça", "O que é", "Quem usa"], pecas, "", "Peças do ecossistema")
       + '<h3 class="mt">Quem faz o quê, por papel</h3>' + tabela(["Papel", "O que faz", "Onde trabalha"], papeis, "", "Papéis")
+      + '<h3 class="mt">Quem atende cada entrada</h3>' + P.figura_papeis()
       + det("Vocabulário essencial (toque para abrir)", tabela(["Termo", "Quer dizer"], vocab, "", "Vocabulário")))
     return sec("visao", "Entender", "Como tudo se conecta", "As peças, quem usa cada uma e onde cada informação é escrita.", corpo)
 
@@ -153,13 +139,13 @@ def s_ana():
         ["Foco: farmácia, drogaria e supermercado", "Atendimento completo e acolhedor, sem conversa de valor mínimo."],
         ["Outros segmentos e MEI", "Todos podem comprar, mas no fim a Ana avisa com educação que o pedido começa em R$ 2 mil e pergunta se o interesse é real. " + pill("te", "Em teste: perguntar se quer testar com um primeiro pedido, sem valor em reais")],
         ["Empresa nova (CNPJ com menos de 2 anos)", "Deixa o lead ciente de que o fechamento é à vista ou no cartão, em até 3x sem juros ou 12x com juros. Não dispensa: passa ao especialista decidir."],
-        ["Rede (quatro ou mais lojas)", "Sem qualificar: repasse direto ao closer, com atenção humana, e continua respondendo."],
+        ["Rede (quatro ou mais lojas)", "Sem qualificar: repasse direto ao time comercial, com atenção humana, e continua respondendo."],
         ["Só empresa, sem CNPJ", "Explica com educação, continua tirando dúvidas e só repassa com o CNPJ."],
         ["Já é da casa (cliente com negócio ganho ou em Pós-venda, ou lead em atendimento)", "Não requalifica: avisa a gestão e o dono do negócio e aguarda a equipe."],
-        ["Fora de Goiás e do Distrito Federal", "O lead qualificado vai ao Arena, com o closer como dono."],
+        ["Fora de Goiás e do Distrito Federal", "O lead qualificado vai ao Arena."],
       ], "", "Portões de segmento e porte")
       + '<h3 class="mt">Quando o lead some ou pede para voltar</h3>'
-      + fluxo([("Retorno combinado", "\"Me chama amanhã às 10h\": a Ana cria a tarefa e volta no horário, ajustado ao horário de contato da Ana."), ("Toques de retomada", "Quem para no meio da conversa recebe toques de retomada em dias úteis, espaçados, e o número varia conforme o perfil (quem está fora do foco recebe menos). O primeiro vem poucas horas depois e os seguintes em dias úteis, em horários comerciais. Quem se cadastrou e nunca escreveu: abertura em poucos toques (abertura, caso ou pergunta, valor e encerramento). Retorno combinado: poucas tentativas.", "m"), ("Sem resposta", "Qualquer resposta do lead cancela o que falta. No fim, o negócio vai para a etapa de encerramento por silêncio.", "x")])
+      + fluxo([("Retorno combinado", "\"Me chama amanhã às 10h\": a Ana cria a tarefa e volta no horário, ajustado ao horário de contato da Ana."), ("Toques de retomada", "<ul class=\"pts\"><li>Quem para no meio: o 1º toque vem poucas horas depois; os seguintes, em dias úteis e horário comercial.</li><li>Fora do foco recebe menos toques.</li><li>Cadastrou e nunca escreveu: poucos toques (abertura, caso ou pergunta, valor, encerramento).</li><li>Retorno combinado: poucas tentativas.</li></ul>", "m"), ("Sem resposta", "Qualquer resposta do lead cancela o que falta. No fim, o negócio vai para a etapa de encerramento por silêncio.", "x")])
       + '<p class="legenda">Quando o lead escreve, a Ana responde a qualquer hora e dia. Quando a iniciativa é dela, só dentro do horário de contato (horário de Brasília): 8h às 22h em dia útil e 9h às 20h em fim de semana e feriado. Fora da janela de 24 horas da Meta ela usa um modelo aprovado. Tudo cancela sozinho se o lead voltou, se a equipe assumiu ou se a Ana está pausada. ' + '</p>'
       + '<h3 class="mt">Quando uma pessoa entra na conversa</h3>'
       + fluxo([("Gatilhos", "Lead pede uma pessoa, mídia ilegível, resposta bloqueada, dúvida fora da base, irritação ou insistência depois do repasse."), ("Equipe assume ou instrui", "Pela Central, no mesmo número. Assumir faz a Ana se calar; instruir faz ela agir sem a equipe assumir.", "m"), ("Devolve à Ana", "Com um clique. Ela relê tudo, inclusive o que a equipe escreveu, e segue.", "g")])
@@ -251,7 +237,7 @@ def s_destinos():
         ["Ana", "Ganho ao qualificar; encerra quem é fora do perfil", "Cria o negócio no SDR Inbound (etapa \"Ana qualificou\"), tarefa de retorno e nota."],
         ["SDR", "Ganho = qualificação do lead; perdido com motivo", "Ao qualificar pela página Hoje nasce o negócio no Arena. Ganho do SDR não é venda."],
         ["Bia", "Perdido: Cadência esgotada, depois do Fim", "Automático, em dia útil. No funil da Ana, o fechamento automático está desligado."],
-        ["Representante e closer", "Ganho e perda de venda no Arena", "Aí é venda de verdade."],
+        ["Representante (closer)", "Ganho e perda de venda no Arena", "Aí é venda de verdade."],
       ], "", "Quem marca ganho e perdido")
       + aviso("Pendência declarada", "Ao qualificar, o negócio da Ana vira Ganho. Nos finais Encerrado e Sem resposta o negócio ainda fica aberto, mesmo quando o lead foi perdido ou parou de responder, e isso pode bloquear a recuperação. A decisão sobre fechar esses negócios está com a gestão.", "w")
       + '<h3 class="mt">Funil da Ana (Ana SDR IA)</h3>' + '<p>Registro da conversa. A etapa muda sozinha conforme a conversa, e a Bia lê de volta para confirmar. O sem resposta vai para uma etapa de encerramento por silêncio; o fechamento automático por Cadência esgotada está implementado e desligado.</p>'
@@ -285,9 +271,9 @@ def s_quem():
       ("Qualificar", "Confirmar que o lojista tem perfil e interesse (segmento, lojas, quem decide, CNPJ ativo)."),
       ("Repasse", "Entregar o lead qualificado ao time comercial, com o contexto da conversa."),
       ("Cadência", "Sequência combinada de contatos em dias úteis, para não deixar o lead esfriar."),
-      ("Arena", "O funil de vendas dos representantes de campo (e do closer, em redes). A IA não vende: a venda é feita por pessoas."),
+      ("Arena", "O funil de vendas dos representantes (closers). A IA não vende: a venda é feita por pessoas."),
       ("Meta (WhatsApp)", "A empresa dona do WhatsApp Business. Define as regras de mensagens e modelos aprovados."),
-      ("Closer e representante", "Closer: especialista que fecha redes. Representante: vendedor de campo que atende a carteira."),
+      ("Representante (closer)", "Vendedor de campo: atende a carteira e FECHA a venda."),
       ("Juízes de IA", "Planejado: revisores automáticos que conferem cada resposta da Ana em tempo real, como guarda-corpo."),
     ]
     corpo = ('<h3>As seis peças</h3>' + grid([card(n, f"<p>{d}</p>", p=p) for n, d, p in pecas], 3)

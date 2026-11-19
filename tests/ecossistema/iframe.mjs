@@ -15,7 +15,7 @@ for (const [w, h] of [[1280, 720], [390, 844]]) {
   await fr.waitForSelector("#apBtn");
   t(`${w}x${h}: dentro do iframe a página marca o modo iframe`, await fr.evaluate(() => document.documentElement.classList.contains("emif")));
   await fr.click("#apBtn"); await page.waitForTimeout(600);
-  t(`${w}x${h}: Apresentar no iframe abre o deck sem tela cheia automática`, await fr.evaluate(() => window.__deck.estado().aberto && !document.fullscreenElement && document.getElementById("dFs").hidden === true));
+  t(`${w}x${h}: Apresentar no iframe abre o deck sem tela cheia, com botão Tela cheia visível e aviso`, await fr.evaluate(() => window.__deck.estado().aberto && !document.fullscreenElement && document.getElementById("dFs").hidden === false && document.getElementById("dToast").hidden === false && /100% da janela/.test(document.getElementById("dToast").textContent)));
   await page.keyboard.press("ArrowRight"); await page.keyboard.press("ArrowRight"); await page.waitForTimeout(300);
   t(`${w}x${h}: navegar slides dentro do iframe funciona`, (await fr.evaluate(() => window.__deck.estado().i)) === 2);
   const sem = await fr.evaluate(() => ({ sx: document.documentElement.scrollWidth <= innerWidth + 1, hash: location.hash }));

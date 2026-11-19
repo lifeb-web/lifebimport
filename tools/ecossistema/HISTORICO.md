@@ -13,3 +13,5 @@
 | 2026-11-09 | 09/11/2026 | Versão anterior de 20 seções (cópia em `versoes/2026-11-09_antiga.html`). |
 
 Cada nova versão: subir `VERSAO` em `conteudo3.py`, acrescentar linha aqui e na seção "Sobre"/"Versões" (tabelas em `conteudo3.py`), copiar a versão anterior para `versoes/`.
+
+- 19/11/2026 (branch ecossistema-cards, NAO publicada): textos curtos. Todo paragrafo, item ou celula acima de ~25 palavras vira resumo + "Ver mais" (comp.encurtar); Status e apresentacao com titulo curto por item e texto completo na sanfona; nada apagado. Testes jsdom (estatico.mjs) 42/42; visual/apresentacao em Chromium NAO rodados (pausa do Mac).
