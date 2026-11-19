@@ -12,7 +12,7 @@
 
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-  function money(v) { try { return typeof fmtMoney === 'function' ? fmtMoney(v) : 'R$ ' + Number(v || 0).toFixed(2); } catch (_) { return 'R$ ' + v; } }
+  function money(v) { var n = Number(v); if (!isFinite(n)) return ''; try { return esc(typeof fmtMoney === 'function' ? fmtMoney(n) : 'R$ ' + n.toFixed(2)); } catch (_) { return 'R$ ' + esc(String(n)); } }   // 19/11 (revisão de segurança): valor SEMPRE numérico e escapado antes de ir para innerHTML
   function dataBr(iso) { if (!iso) return '—'; var m = String(iso).match(/(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '/' + m[2] : '—'; }
   function nomeOrigem(o, e) { return NOME[e] || NOME[o] || (o || '—'); }
   function seteDiasAtras() { var d = new Date(Date.now() - 7 * 86400000); return d.toISOString(); }
