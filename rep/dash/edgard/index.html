@@ -624,6 +624,16 @@
     .px-btn { display:block; width:100%; margin-top:10px; min-height:52px; border:none; border-radius:12px; background:var(--purple-txt); color:#fff; font-family:var(--font); font-size:16px; font-weight:800; cursor:pointer; }
     .lead-card.lc-proximo { box-shadow:0 0 0 3px var(--purple-txt), 0 6px 18px rgba(90,58,133,.25); }
     .lc-proximo-tag { display:inline-block; margin:0 0 6px; padding:3px 10px; border-radius:999px; background:var(--purple-txt); color:#fff; font-size:12px; font-weight:800; letter-spacing:.5px; }
+    /* letra normal também tem mínimo de 13px e rótulos sem abreviação (auditor 19/11) */
+    .sum-label { font-size:13px; white-space:normal; line-height:1.15; letter-spacing:0; }
+    .m-label, .lc-tag, .lc-nome, .lc-last-updated, .lc-task-due, .lc-status-warn, .lc-sp-label, .lc-sp-sublabel, .lc-obs-label, .lc-funil-badge, .lc-seg-badge, .hist-nome, .hist-badge, .hist-tab-label, #last-sync, .lc-confirm-sub, .lc-obs-fb, .lc-feedback { font-size:13px; }
+    .m-sub, .lc-task-more, .hist-counts, .metric-toggle button, #filter-clear, .lc-sa-badge, .lc-obs-sdr-label, .lc-obs-sdr-text, .obsr-text { font-size:13px; }
+    .summary-strip, html.lm .summary-strip { grid-template-columns:repeat(6,1fr); gap:8px; }
+    .summary-strip .sum-card { grid-column:span 2; }
+    .summary-strip .sum-card.s-pv, .summary-strip .sum-card.s-tot { grid-column:span 3; }
+    .lc-sp-prev { min-height:22px; margin-top:6px; font-size:14px; font-weight:800; line-height:1.3; }
+    .lc-sp-prev.ok { color:#14532d; } .lc-sp-prev.erro { color:#991b1b; }
+    html.lm .lc-sp-prev { font-size:17px; }
     #fila-em-dia { display:none !important; }
     #toast .toast-undo-btn { min-height:48px; min-width:48px; padding:0 18px; font-size:16px; }
     .empty-state .es-btn { margin-top:14px; min-height:48px; padding:0 22px; border-radius:12px; border:2px solid var(--purple-txt); background:#fff; color:var(--purple-txt); font-family:var(--font); font-size:15px; font-weight:800; cursor:pointer; }
@@ -657,7 +667,6 @@
     html.lm #refresh-dot { width:11px; height:11px; }
     html.lm .metric-toggle button { font-size:15px; padding:10px 4px; }
     html.lm .m-label { font-size:14px; } html.lm .m-val { font-size:28px; } html.lm .m-sub { font-size:15px; }
-    html.lm .summary-strip { grid-template-columns:repeat(3,1fr); gap:8px; }
     html.lm .sum-card { min-height:84px; padding:10px 6px; }
     html.lm .sum-label { font-size:14px; white-space:normal; line-height:1.15; } html.lm .sum-val { font-size:30px; }
     html.lm #filter-bar { font-size:16px; } html.lm #filter-clear { font-size:15px; padding:0 16px; }
@@ -774,15 +783,15 @@
          "não tira o card não, entendi que pode ser só um filtro" — fica como filtro ADICIONAL,
          Reposição/Reativação sempre continuam na mesma fila única por padrão, nunca escondidas). -->
     <div class="sum-card s-ag"   data-filter="Aguardando contato" onclick="toggleFilter(this)">
-      <div class="sum-label">Aguard.</div>
+      <div class="sum-label">Aguardando</div>
       <div class="sum-val" id="sum-ag">—</div>
     </div>
     <div class="sum-card s-cont" data-filter="Em contato" onclick="toggleFilter(this)">
-      <div class="sum-label">Contato</div>
+      <div class="sum-label">Em contato</div>
       <div class="sum-val" id="sum-cont">—</div>
     </div>
     <div class="sum-card s-neg"  data-filter="Em negociação" onclick="toggleFilter(this)">
-      <div class="sum-label">Negoc.</div>
+      <div class="sum-label">Negociação</div>
       <div class="sum-val" id="sum-neg">—</div>
     </div>
     <div class="sum-card s-pv"   data-filter="__pos_venda__" onclick="toggleFilter(this)">
@@ -922,6 +931,9 @@ function _mapTarefaAberta(l) {
 // endereço reais (enriquecerContato, via /people e /organizations do Agendor) mas o mapeamento aqui
 // nunca lia esses campos. Corrigido: usa os campos reais, com `titulo` só como fallback pra negócios
 // sem organização vinculada (deal só com pessoa física).
+function _jaComprouAnterior(dealId) {
+  try { const a = _rawLeads.find(x => x.row === Number(dealId)); return !!(a && a.ja_comprou); } catch (_) { return false; }
+}
 function _transformarLeadAgendor(l) {
   return {
     row: Number(l.dealId), // dealId do Agendor — SEMPRE número, mesmo tipo em toda comparação (=== estrito)
@@ -936,7 +948,8 @@ function _transformarLeadAgendor(l) {
     status: BUCKET_TO_STATUS[l.bucket] || 'Em contato',
     funil_tag: l.funilTag || '',
     tipo_negocio: l.tipoNegocio || (l.funilTag === 'reposicao' ? 'reposicao' : (l.funilTag === 'reativacao75' ? 'reativacao' : 'venda')),
-    ja_comprou: l.jaComprou === true,
+    // lista completa traz true/false; a resposta de 1 lead só (depois de uma escrita) traz null = "não sei": mantém o que a tela já sabia
+    ja_comprou: l.jaComprou == null ? _jaComprouAnterior(l.dealId) : l.jaComprou === true,
     superagos: !!l.superagos, // 03/10: lead da cadência SUPERAGOS 2026 = prioridade máxima (decisão do backend)
     segmento: l.segmento || '',
     pot: Number(l.valorPotencial) || 0,
@@ -1030,27 +1043,50 @@ function fmtCEP(s) {
 }
 
 // Converte string de valor monetário em número, suportando formato BR (1.200,64) e simples (1200.64).
-function parseMoney(s) {
-  const c = String(s || '').trim().replace(/[^\d,.]/g, '');
-  if (!c) return NaN;
-  if (c.includes(',')) return parseFloat(c.replace(/\./g, '').replace(',', '.'));
-  // sem vírgula: se um único ponto com ≤2 dígitos depois → decimal; senão → separador de milhar
-  const parts = c.split('.');
-  if (parts.length === 2 && parts[1].length <= 2) return parseFloat(c);
-  return parseFloat(c.replace(/\./g, ''));
+// 19/11 (auditor: "5200 virava R$ 52,00"): o representante digita em REAIS, do jeito que fala.
+//   5200 = R$ 5.200,00 | 5.200 = R$ 5.200,00 | 5.200,50 = R$ 5.200,50 | 5,2k = R$ 5.200 | 5k = R$ 5.000 | 5,200 = R$ 5.200 (3 dígitos depois da vírgula = milhar)
+// Vírgula/ponto só são decimais com 1 ou 2 dígitos depois. Negativo e letras são recusados com mensagem; NUNCA corta dígito em silêncio.
+const VALOR_MAX = 99999999.99;
+function parseReais(texto) {
+  let t = String(texto == null ? '' : texto).trim().toLowerCase().replace(/r\$/g, '').replace(/\s+/g, '');
+  if (!t) return { ok: false, erro: 'Digite o valor em reais. Exemplo: 5200' };
+  if (/^[-−–(]/.test(t)) return { ok: false, erro: 'Não use sinal de menos. Digite só o valor.' };
+  let mult = 1;
+  if (/mil$/.test(t)) { mult = 1000; t = t.slice(0, -3); } else if (/k$/.test(t)) { mult = 1000; t = t.slice(0, -1); }
+  if (!t || !/^[\d.,]+$/.test(t) || !/\d/.test(t)) return { ok: false, erro: 'Use só números. Exemplo: 5200 ou 5.200,50' };
+  const ruim = { ok: false, erro: 'Não entendi esse valor. Exemplo: 5200 ou 5.200,50' };
+  let num;
+  const vir = t.lastIndexOf(',');
+  if (vir >= 0) {
+    const inteiro = t.slice(0, vir), dec = t.slice(vir + 1);
+    if (/^\d{1,3}(,\d{3})+$/.test(t)) num = parseFloat(t.replace(/,/g, ''));                       // 1,234,567 (milhar com vírgula)
+    else if (dec.length >= 1 && dec.length <= 2 && /^\d+$/.test(dec) && /^(\d+|\d{1,3}(\.\d{3})+)$/.test(inteiro)) num = parseFloat(inteiro.replace(/\./g, '') + '.' + dec);
+    else return ruim;
+  } else if (/^\d+$/.test(t)) num = parseFloat(t);
+  else if (/^\d{1,3}(\.\d{3})+$/.test(t)) num = parseFloat(t.replace(/\./g, ''));
+  else if (/^\d+\.\d{1,2}$/.test(t)) num = parseFloat(t);
+  else return ruim;
+  num = Math.round(num * mult * 100) / 100;
+  if (!isFinite(num)) return ruim;
+  if (num <= 0) return { ok: false, erro: 'Digite um valor maior que zero.' };
+  if (num > VALOR_MAX) return { ok: false, erro: 'Valor alto demais (máximo R$ 99.999.999,99). Confira os zeros.' };
+  return { ok: true, valor: num };
 }
-// 🔴 FIX 21/09 (Robert: "o campo dinheiro já deve formatar certinho, não só aparecer formato
-// embaixo como atualmente"): o campo em si agora formata ENQUANTO digita — mesmo padrão de app de
-// banco (digita "150000", o campo já mostra "1.500,00" na hora, dígito vira centavo da direita pra
-// esquerda). Antes só existia um texto formatado ABAIXO do campo (`sp-preview`), o campo continuava
-// cru — removido, virou redundante.
+function parseMoney(s) { const r = parseReais(s); return r.ok ? r.valor : NaN; }
+function fmtReais(v) {
+  const n = Number(v) || 0;
+  try { return 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  catch (_) { return 'R$ ' + n.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+}
+// Mostra ao lado do campo, ANTES de confirmar, como o sistema entendeu o que foi digitado (nunca altera o que a pessoa digitou).
 function spPreview(input, row) {
-  let digitos = input.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
-  if (!digitos) { input.value = ''; return; }
-  digitos = digitos.slice(0, 12); // teto de sanidade — nunca deixa crescer sem limite
-  while (digitos.length < 3) digitos = '0' + digitos;
-  const inteiro = digitos.slice(0, -2).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  input.value = inteiro + ',' + digitos.slice(-2);
+  const el = document.getElementById('sp-prev-' + row);
+  if (!el) return;
+  const txt = input.value;
+  if (!txt.trim()) { el.textContent = ''; el.className = 'lc-sp-prev'; return; }
+  const r = parseReais(txt);
+  el.className = 'lc-sp-prev ' + (r.ok ? 'ok' : 'erro');
+  el.textContent = r.ok ? 'Valor entendido: ' + fmtReais(r.valor) : r.erro;
 }
 
 function fmtWA(num) {
@@ -1544,6 +1580,7 @@ _obSincronizar();
   addEventListener('online', function () { _outbox.forEach(o => { if (o.st !== 'falhou') o.nextAt = 0; }); setTimeout(_obDrenar, Math.floor(Math.random() * 1500)); });
   addEventListener('pagehide', _obSoltarLease);
   addEventListener('storage', function (e) { if (e.key && e.key.indexOf(OB_PREFIX) === 0) { _obSincronizar(); _obBanner(); } });
+  addEventListener('storage', function (e) { if (e.key === REC_KEY) { try { _recMesclar(JSON.parse(e.newValue || '[]')); } catch (_) {} } });   // 2 abas: o que a outra aba confirmou vale aqui também
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { _outbox.forEach(o => { if (o.st !== 'falhou') o.nextAt = 0; }); _obDrenar(); } });
   setInterval(_obDrenar, 15000);
   setInterval(_obVigiaPresas, 5 * 60000);
@@ -2632,7 +2669,7 @@ function openPipelinePrompt(row) {
   if (warn) warn.style.display = 'none'; // não é "escrita mais pesada" (não fecha o negócio) — não precisa do aviso de espera
   const valorIn = document.getElementById('sp-valor-' + row);
   const lead = _rawLeads.find(l => l.row === row);
-  if (valorIn) { valorIn.value = ''; if (lead && lead.pot > 0) { valorIn.value = String(Math.round(lead.pot * 100)); spPreview(valorIn, row); } }
+  if (valorIn) { valorIn.value = ''; if (lead && lead.pot > 0) { valorIn.value = lead.pot.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); spPreview(valorIn, row); } }
   const saveBtn = document.getElementById('sp-save-' + row);
   if (saveBtn) saveBtn.textContent = 'Salvar valor';
   prompt.classList.add('visible');
@@ -2681,13 +2718,16 @@ async function submitStatusPrompt(row) {
   if (tipo === 'pipeline') {
     const valorIn = document.getElementById('sp-valor-' + row);
     const valorTexto = valorIn ? valorIn.value : '';
-    const n = parseMoney(valorTexto);
-    if (isNaN(n) || n <= 0) { showToast('Informe um valor estimado'); if (valorIn) valorIn.focus(); return; }
+    const _rp = parseReais(valorTexto);
+    if (!_rp.ok) { showToast(_rp.erro); if (valorIn) valorIn.focus(); return; }
+    const n = _rp.valor;
+    const _leadP = _rawLeads.find(x => x.row === row);
+    if ((await _perguntarValor(_leadP, n)) !== 'ok') { if (valorIn) valorIn.focus(); return; }   // mesma conferência do ganho: valor 10x diferente do estimado pergunta antes
     prompt.classList.remove('visible');
     const _card = document.querySelector(`.lead-card[data-row="${row}"]`);
     if (_card) _card.classList.add('lc-salvando');
     _confirmarComJanela('pipeline-' + row, {
-      mensagem: '💰 Pipeline atualizado para ' + cur(n) + ' — Desfazer?',
+      mensagem: '💰 Valor estimado: ' + fmtReais(n) + ' — Desfazer?',
       ms: 5000,
       aoDesfazer: () => {
         if (_card) _card.classList.remove('lc-salvando');
@@ -2722,8 +2762,9 @@ async function submitStatusPrompt(row) {
   if (tipo === 'ganho') {
     const valorIn = document.getElementById('sp-valor-' + row);
     const valorTexto = valorIn ? valorIn.value : '';
-    const n = parseMoney(valorTexto);
-    if (isNaN(n) || n <= 0) { showToast('Informe o valor do fechamento'); if (valorIn) valorIn.focus(); return; }
+    const _rg = parseReais(valorTexto);
+    if (!_rg.ok) { showToast(_rg.erro); if (valorIn) valorIn.focus(); return; }
+    const n = _rg.valor;
     // 🔴 FIX 19/09 (Robert: "coloca confirmação em toda escrita sensível" + "volta o desfazer"):
     // Ganho é a escrita mais sensível do painel — mesma janela de "Desfazer" de todas as outras
     // (ver _confirmarComJanela), só que um pouco maior (6s) dado o peso da ação.
@@ -2737,7 +2778,7 @@ async function submitStatusPrompt(row) {
     const _card = document.querySelector(`.lead-card[data-row="${row}"]`);
     if (_card) _card.classList.add('lc-salvando');
     _confirmarComJanela('status-' + row, {
-      mensagem: '🎉 Ganho' + (_tipoG === 'reposicao' ? ' de reposição' : '') + ' de ' + cur(n) + ' — Desfazer?',
+      mensagem: '🎉 Ganho' + (_tipoG === 'reposicao' ? ' de reposição' : '') + ' de ' + fmtReais(n) + ' — Desfazer?',
       ms: 6000,
       aoDesfazer: () => {
         if (_card) _card.classList.remove('lc-salvando');
@@ -3071,7 +3112,8 @@ function renderLeads(leads, highlightRow) {
             <div class="lc-sp-label" id="sp-label-${l.row}"></div>
             <div class="lc-sp-row" id="sp-row-valor-${l.row}" style="display:none">
               <div class="lc-sp-pfx-wrap">
-                <input class="lc-sp-input" id="sp-valor-${l.row}" type="text" inputmode="decimal" placeholder="0,00" onkeydown="spKeyDown(event,${l.row})" oninput="spPreview(this,${l.row})">
+                <input class="lc-sp-input" id="sp-valor-${l.row}" type="text" inputmode="decimal" placeholder="Ex.: 5200" autocomplete="off" aria-describedby="sp-prev-${l.row}" onkeydown="spKeyDown(event,${l.row})" oninput="spPreview(this,${l.row})">
+                <div class="lc-sp-prev" id="sp-prev-${l.row}" role="status" aria-live="polite"></div>
               </div>
             </div>
             <select class="lc-sp-input lc-sp-sel" id="sp-motivo-${l.row}" style="display:none">
@@ -3768,7 +3810,7 @@ function _quadro(render, decidir) {
 function _perguntarTipoGanho(l, valor) {
   const modo = _tipoGanhoModo(l);
   if (!modo) return Promise.resolve('sem');
-  const f = { cliente: toTitleCase((l.empresa || l.nome || '').trim()) || 'Cliente', valor: cur(valor) || 'R$ 0', data: _dataHojeBR() };
+  const f = { cliente: toTitleCase((l.empresa || l.nome || '').trim()) || 'Cliente', valor: fmtReais(valor), data: _dataHojeBR() };
   return _quadro(tela => _tipoModalHtml(modo, f, tela), (a, tela) => {
     if (a === 'entendi') return { resolve: 'bloqueado' };
     if (a === 'venda_nova' && modo !== 'jacomprou') return { tela: 'nada' };   // reposição dita "venda nova": nada é gravado
@@ -3779,18 +3821,18 @@ function _perguntarTipoGanho(l, valor) {
 function _valorSuspeito(valor, pot) {
   const v = Number(valor) || 0, p = Number(pot) || 0;
   if (!(v > 0)) return false;
-  if (v < 100) return true;
-  return p > 0 && (v * 10 <= p || v >= p * 10);
+  if (p > 0) return v < 100 || v * 10 <= p || v >= p * 10;
+  return v < 500;   // sem valor estimado antes: abaixo de R$ 500 também pergunta
 }
 function _valorModalHtml(f) {
   return '<button type="button" class="tm-fecha" data-acao="cancelar" aria-label="Fechar e corrigir o valor">✕</button><span class="tm-selo alerta">Confira o valor</span><div class="tm-titulo" id="tm-titulo">O valor está certo?</div>' +
     '<div class="tm-fatos"><div><span>Você digitou</span><b>' + esc(f.digitado) + '</b></div>' + (f.estimado ? '<div><span>Valor estimado antes</span><b>' + esc(f.estimado) + '</b></div>' : '') + '</div>' +
-    '<div class="tm-sub">Parece diferente do esperado. Lembre: o campo conta os centavos (digitar 5200 vira R$ 52,00).</div>' +
+    '<div class="tm-sub">Parece diferente do esperado. Confira os zeros.</div>' +
     '<button type="button" class="tm-btn sim" data-acao="corrigir">Corrigir o valor</button><button type="button" class="tm-btn nao" data-acao="certo">Está certo, usar ' + esc(f.digitado) + '</button>';
 }
 function _perguntarValor(l, valor) {
   if (!_valorSuspeito(valor, l && l.pot)) return Promise.resolve('ok');
-  const f = { digitado: cur(valor) || ('R$ ' + String(valor)), estimado: (l && l.pot > 0) ? cur(l.pot) : '' };
+  const f = { digitado: fmtReais(valor), estimado: (l && l.pot > 0) ? fmtReais(l.pot) : '' };
   return _quadro(() => _valorModalHtml(f), a => ({ resolve: a === 'certo' ? 'ok' : 'cancelar' }));
 }
 
@@ -3810,6 +3852,14 @@ function _recAdd(op) {
   _recentes = _recentes.filter(r => Date.now() - r.tsConf < _recTtl(r.path));
   _recentes.push({ id: op.id, path: op.path, body: op.body, ts: op.ts, tsConf: Date.now(), st: 'recente' });
   _recGravar();
+}
+// Junta o livro de outra aba (por id), descartando o que já venceu; nunca apaga o que só esta aba conhece.
+function _recMesclar(outras) {
+  if (!Array.isArray(outras)) return;
+  const ids = new Set(_recentes.map(r => r.id));
+  outras.forEach(r => { if (r && r.id && r.path && r.body && !ids.has(r.id) && Date.now() - r.tsConf < _recTtl(r.path)) _recentes.push(r); });
+  try { const _h = _obDealsPendentes('/status'); _rawLeads = _rawLeads.filter(l => !_h.has(l.row)); } catch (_) {}
+  try { if (_rawLeads.length && !document.querySelector('.lc-status-prompt.visible, .lc-task-form.visible, .lead-card.concluding') && typeof _aplicarFilaNaTela === 'function') _aplicarFilaNaTela(); } catch (_) {}
 }
 function _recAtivos() { _recentes = _recentes.filter(r => Date.now() - r.tsConf < _recTtl(r.path)); return _recentes; }
 

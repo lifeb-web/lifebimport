@@ -225,12 +225,12 @@ async function rodar(htmlTpl) {
   {
     const { w } = boot(html); await sleep(300);
     const V = (v, p) => w.eval(`_valorSuspeito(${v}, ${p})`);
-    [[52, 5200, true], [99, 0, true], [100, 0, false], [150, 0, false], [5200, 5200, false], [8000, 8000, false], [60000, 5200, true], [52000, 5200, true], [51999, 5200, false], [30000, 5200, false], [520, 5200, true], [521, 5200, false], [0, 5200, false], [-5, 100, false], [NaN, 100, false], [1e6, 0, false], [100, 100000, true]].forEach(([v, p, e], i) => eq('C2 suspeito ' + i + ' (' + v + ' / ' + p + ')', V(v, p), e));
+    [[52, 5200, true], [99, 0, true], [100, 0, true], [150, 0, true], [499, 0, true], [500, 0, false], [5200, 5200, false], [8000, 8000, false], [60000, 5200, true], [52000, 5200, true], [51999, 5200, false], [30000, 5200, false], [520, 5200, true], [521, 5200, false], [0, 5200, false], [-5, 100, false], [NaN, 100, false], [1e6, 0, false], [100, 100000, true], [99, 150, true], [100, 150, false]].forEach(([v, p, e], i) => eq('C2 suspeito ' + i + ' (' + v + ' / ' + p + ')', V(v, p), e));
     w.close();
   }
   await ganhar({}, 102, 52, async c => {
     const m = c.w.document.getElementById('tipo-modal'); chk('C2 valor 100x menor: quadro "O valor está certo?"', m && /O valor está certo\?/.test(m.textContent));
-    chk('C2 mostra o digitado e o estimado', /R\$\s?52/.test(m.textContent) && /R\$\s?5\.200/.test(m.textContent)); chk('C2 explica os centavos', /centavos/.test(m.textContent));
+    chk('C2 mostra o digitado e o estimado', /R\$\s?52/.test(m.textContent) && /R\$\s?5\.200/.test(m.textContent)); chk('C2 pede para conferir os zeros', /zeros/.test(m.textContent));
     eq('C2 nada enviado antes da resposta', c.posts.length, 0);
     clk(c.w, '#tipo-modal [data-acao="corrigir"]'); await sleep(120);
     eq('C2 Corrigir → ZERO envio', c.posts.length, 0); chk('C2 Corrigir: valor continua na caixinha', c.w.document.getElementById('sp-valor-102').value === '52' && c.w.document.getElementById('sp-102').classList.contains('visible'));
@@ -384,6 +384,70 @@ async function rodar(htmlTpl) {
     const lead0 = { row: 101, empresa: 'Cache Rápido', nome: 'X', status: 'Aguardando contato', pot: 0, tarefaAberta: null, tipo_negocio: 'venda', ja_comprou: false, funil_tag: '', superagos: false, segmento: '', cidade: '', estado: '', whatsapp: '', obs_sdr: '', obs_rep: '', data: '', ts_vend: 0 };
     const c2 = boot(html, { leads: () => { return new Promise(() => {}); }, storage: { lifeb_cache_TESTE: JSON.stringify({ rep: 'TESTE', leads: [lead0], ts: Date.now() }) } });
     await sleep(250); chk('H cache local pinta a lista antes da rede responder', /Cache Rápido/.test(c2.w.document.getElementById('leads-list').textContent)); c2.w.close();
+  }
+
+
+  // ───────── J. DINHEIRO: o representante digita em REAIS ─────────
+  {
+    const { w } = boot(html); await sleep(300);
+    const P = x => JSON.parse(w.eval(`JSON.stringify(parseReais(${JSON.stringify(x)}))`));
+    const OK = [['5200', 5200], ['5.200', 5200], ['5.200,50', 5200.5], ['5,2k', 5200], ['5k', 5000], ['5K', 5000], ['5,2 mil', 5200], ['R$ 5.200,00', 5200], ['r$5200', 5200], ['  5200  ', 5200], ['150', 150], ['150,5', 150.5], ['150,50', 150.5], ['0,5', 0.5], ['1.000.000', 1000000], ['1.000.000,99', 1000000.99], ['5,200', 5200], ['1,234,567', 1234567], ['5200.50', 5200.5], ['5200.5', 5200.5], ['52', 52], ['99999999,99', 99999999.99], ['10k', 10000], ['1,5k', 1500], ['0,25k', 250], ['30.000', 30000], ['30000,00', 30000], ['8.000,00', 8000], ['12.345,67', 12345.67], ['7', 7]];
+    OK.forEach(([x, v]) => { const r = P(x); eq('J "' + x + '" → ' + v, r.ok ? r.valor : r.erro, v); });
+    const BAD = [['', /Digite o valor/], ['   ', /Digite o valor/], ['-500', /menos/], ['−500', /menos/], ['(500)', /menos/], ['abc', /só números/], ['12a', /só números/], ['5200 reais', /só números/], ['k', /só números/], ['5,2,3', /Não entendi/], ['5,', /Não entendi/], ['5,2000', /Não entendi/], ['1.2.3', /Não entendi/], ['5.2000', /Não entendi/], ['0', /maior que zero/], ['0,00', /maior que zero/], ['100000000', /alto demais/], ['99999999,995', /Não entendi/], ['999999999', /alto demais/], ['1.000.000.000', /alto demais/], ['1e5', /só números/], ['5..200', /Não entendi/], [',50', /Não entendi/], ['5.200,5,0', /Não entendi/], ['9999999k', /alto demais/]];
+    BAD.forEach(([x, re]) => { const r = P(x); chk('J rejeita "' + x + '" com mensagem clara', r.ok === false && re.test(r.erro || '')); });
+    chk('J nunca devolve NaN nem corta dígito: 12 dígitos viram erro, não valor menor', P('123456789012').ok === false);
+    eq('J fmtReais 5200', w.eval('fmtReais(5200)'), 'R$ 5.200,00'); eq('J fmtReais centavos', w.eval('fmtReais(5200.5)'), 'R$ 5.200,50'); eq('J fmtReais 0', w.eval('fmtReais(0)'), 'R$ 0,00'); eq('J fmtReais milhão', w.eval('fmtReais(1234567.89)'), 'R$ 1.234.567,89');
+    eq('J parseMoney compatível (ok)', w.eval("parseMoney('5.200,50')"), 5200.5); chk('J parseMoney compatível (erro = NaN)', w.eval("isNaN(parseMoney('abc'))"));
+    w.close();
+  }
+  {   // campo: a pessoa digita e vê, ao lado, o valor entendido; o campo não é alterado
+    const c = boot(html); await sleep(450); const d = c.w.document;
+    clk(c.w, '.lead-card[data-row="101"] .lc-status-btn.ganho'); await sleep(50);
+    const inp = d.getElementById('sp-valor-101'); const prev = d.getElementById('sp-prev-101');
+    inp.value = '5200'; inp.dispatchEvent(new c.w.Event('input', { bubbles: true })); eq('J campo mostra o valor entendido', prev.textContent, 'Valor entendido: R$ 5.200,00'); eq('J campo NÃO é reformatado', inp.value, '5200');
+    inp.value = '5,2k'; inp.dispatchEvent(new c.w.Event('input', { bubbles: true })); eq('J 5,2k → R$ 5.200,00', prev.textContent, 'Valor entendido: R$ 5.200,00');
+    inp.value = 'abc'; inp.dispatchEvent(new c.w.Event('input', { bubbles: true })); chk('J letras: erro visível', /só números/.test(prev.textContent) && prev.classList.contains('erro'));
+    inp.value = ''; inp.dispatchEvent(new c.w.Event('input', { bubbles: true })); eq('J vazio limpa', prev.textContent, '');
+    inp.value = '-5'; clk(c.w, '#sp-save-101'); await sleep(100); eq('J negativo não envia', c.posts.length, 0); chk('J negativo: mensagem no aviso', /menos/.test(d.getElementById('toast').textContent));
+    inp.value = '100000000'; clk(c.w, '#sp-save-101'); await sleep(100); eq('J acima do limite não envia', c.posts.length, 0); chk('J acima do limite: erro visível', /alto demais/.test(d.getElementById('toast').textContent));
+    c.w.close();
+  }
+  await ganhar({}, 101, '5.200,50', async c => { const p = c.posts.find(x => x.p === '/status'); chk('J ganho com 5.200,50 envia 5200.5', p && p.body.valor === 5200.5); });
+  await ganhar({}, 101, '8k', async c => { const p = c.posts.find(x => x.p === '/status'); chk('J ganho com 8k envia 8000', p && p.body.valor === 8000); });
+  await ganhar({}, 102, '5200', async c => { const m = c.w.document.getElementById('tipo-modal'); chk('J quadro mostra R$ 5.200,00 com centavos', m && /R\$\s?5\.200,00/.test(m.textContent)); });
+  await ganhar({}, 104, '300', async c => { const m = c.w.document.getElementById('tipo-modal'); chk('J sem valor antes, R$ 300 pergunta (piso 500)', m && /O valor está certo\?/.test(m.textContent)); });
+  {   // pipeline passa pela mesma conferência
+    const c = boot(html); await sleep(450); c.w._confirmarComJanela = (k, o) => o.executar();
+    clk(c.w, '#pot-101'); await sleep(50);
+    eq('J pipeline: abre já preenchido em reais', c.w.document.getElementById('sp-valor-101').value, '8.000,00');
+    c.w.document.getElementById('sp-valor-101').value = '80'; clk(c.w, '#sp-save-101'); await sleep(150);
+    chk('J pipeline 100x menor: quadro de conferência', /O valor está certo\?/.test((c.w.document.getElementById('tipo-modal') || { textContent: '' }).textContent)); eq('J pipeline: nada enviado ainda', c.posts.length, 0);
+    clk(c.w, '#tipo-modal [data-acao="corrigir"]'); await sleep(100); eq('J pipeline Corrigir → ZERO envio', c.posts.length, 0);
+    c.w.document.getElementById('sp-valor-101').value = '9000'; clk(c.w, '#sp-save-101'); await sleep(400);
+    const p = c.posts.find(x => x.p === '/pipeline'); chk('J pipeline 9000 envia direto', p && p.body.valor === 9000);
+    c.w.close();
+  }
+  {   // 3) resposta de 1 lead (jaComprou null) mantém o que a tela já sabia
+    const c = boot(html); await sleep(450);
+    eq('J já comprou conhecido', c.w.eval("_rawLeads.find(l=>l.row===105).ja_comprou"), true);
+    eq('J null mantém true', c.w.eval("_transformarLeadAgendor({dealId:105, jaComprou:null}).ja_comprou"), true);
+    eq('J false explícito vale', c.w.eval("_transformarLeadAgendor({dealId:105, jaComprou:false}).ja_comprou"), false);
+    eq('J null de lead desconhecido = false', c.w.eval("_transformarLeadAgendor({dealId:999, jaComprou:null}).ja_comprou"), false);
+    eq('J undefined mantém', c.w.eval("_transformarLeadAgendor({dealId:105}).ja_comprou"), true);
+    c.w.close();
+  }
+  {   // 4) duas abas: o livro escuta o evento storage
+    const c = boot(html); await sleep(450);
+    const reg = JSON.stringify([{ id: 'outra1', path: '/status', ts: Date.now(), tsConf: Date.now(), body: { dealId: 103, acao: 'ganho', valor: 1 }, st: 'recente' }]);
+    c.w.dispatchEvent(new c.w.StorageEvent('storage', { key: 'lifeb_rec_v1_TESTE', newValue: reg })); await sleep(150);
+    chk('J outra aba confirmou ganho → esta aba também esconde', c.w.eval("_obDealsPendentes('/status').has(103)")); chk('J mesclou sem duplicar', (c.w.dispatchEvent(new c.w.StorageEvent('storage', { key: 'lifeb_rec_v1_TESTE', newValue: reg })), c.w.eval("_recentes.filter(r=>r.id==='outra1').length")) === 1);
+    chk('J tela atualizada: card 103 sumiu', !c.w.document.querySelector('.lead-card[data-row="103"]'));
+    c.w.dispatchEvent(new c.w.StorageEvent('storage', { key: 'lifeb_rec_v1_TESTE', newValue: '{lixo' })); chk('J valor corrompido não derruba', true);
+    c.w.dispatchEvent(new c.w.StorageEvent('storage', { key: 'outra_chave', newValue: reg })); c.w.close();
+  }
+  {   // 5) rótulos sem abreviação
+    const c = boot(html); await sleep(400); const txt = [...c.w.document.querySelectorAll('.sum-label')].map(e => e.textContent).join('|');
+    eq('J rótulos sem abreviação', txt, 'Aguardando|Em contato|Negociação|Pós-venda|Total'); c.w.close();
   }
 
   // ───────── I. texto simples / português ─────────
