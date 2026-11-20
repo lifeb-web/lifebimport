@@ -1,5 +1,5 @@
 // Teste estático + jsdom do Ecossistema (14/11/2026): estrutura, links internos, nomes proibidos, segredos, versão, acessibilidade básica e JS sem erro.
-import { createRequire } from "node:module"; import { t, resumo, HTML } from "./_comum.mjs";
+import { createRequire } from "node:module"; import fs from "node:fs"; import path from "node:path"; import { t, resumo, HTML, RAIZ } from "./_comum.mjs";
 const require = createRequire((process.env.JSDOM_DIR || "/private/tmp/jsd") + "/node_modules/"); const { JSDOM, VirtualConsole } = require("jsdom");
 const erros = []; const vc = new VirtualConsole(); vc.on("jsdomError", (e) => erros.push(String(e.message).slice(0, 160)));
 const dom = new JSDOM(HTML, { runScripts: "dangerously", pretendToBeVisual: true, url: "https://projetojlbv.com.br/ecossistema/", virtualConsole: vc });
@@ -24,8 +24,27 @@ t("seções-chave presentes (Ana, Bia, funis, 3 destinos, cadência, recuperaç�
 const texto = (D.body.textContent || "").replace(/\s+/g, " "); const bruto = HTML;
 // ---- nomes de pessoas proibidos ----
 const NOMES = ["Robert", "Roberto", "Felipe", "Cassiano", "Luiz", "Bruno", "Thais", "Thaís", "Giselle", "Guilherme", "Natan", "Gabriella", "Gabriela", "Cleomar", "Isabela", "Eduardo", "Nathalia", "Natália", "Washington", "Anderson", "Francinaldo", "Felicio", "Manoel", "Diego", "Trajano", "Samarah", "Cleber", "Alline", "Camello", "Marques", "Claude", "Codex", "Anthropic", "OpenAI", "Keychain", "OneDrive"];
-const achados = NOMES.filter((n) => new RegExp("(^|[^\\p{L}])" + n + "([^\\p{L}]|$)", "u").test(bruto.replace(/<style[\s\S]*?<\/style>|<script[\s\S]*?<\/script>/g, " ")));
+const temNome = (n, txt) => new RegExp("(^|[^\\p{L}])" + n + "([^\\p{L}]|$)", "iu").test(txt);   // 20/11/2026: sem diferenciar maiúsculas (felipe e ROBERT também são nomes); palavra inteira
+const achados = NOMES.filter((n) => temNome(n, bruto.replace(/<style[\s\S]*?<\/style>|<script[\s\S]*?<\/script>/g, " ")));
+t("detector de nomes pega felipe, ROBERT e Robert, mas não palavras que só contêm o nome", temNome("Felipe", "ligar para felipe agora") && temNome("Robert", "AVISO ROBERT.") && temNome("Robert", "o Robert") && !temNome("Luiz", "Luizinho") && !temNome("Bruno", "brunoso") && !temNome("Diego", "diegos"));
 const rep = /(^|[^\p{L}])Rep([^\p{L}]|$)/u.test(texto); t("regra do projeto: \"representante\" nunca abreviado como \"Rep\"", !rep);
+// 20/11/2026: tabela de versões por deploy: nenhum deploy repete a verificação de outro, a fumaça não cita outra versão e a cadeia "anterior" é estritamente cronológica
+{
+  const vj = JSON.parse(fs.readFileSync(process.env.ECO_VERSOES_TESTE || path.join(RAIZ, "tools/ecossistema/versoes.json"), "utf8")); const dep = vj.deploys;
+  const quando = (d) => { const m = /(\d\d)\/(\d\d)\/(\d{4})(?: \(~?(\d\d)h(\d\d)?)?/.exec(d || ""); return m ? Date.UTC(+m[3], +m[2] - 1, +m[1], +(m[4] || 0), +(m[5] || 0)) : null; };
+  const hexo = (v) => (/^[0-9a-f]{8}/.exec(v || "") || [])[0];
+  const igualVerif = []; const vistos = {};
+  for (const d of dep) { const k = d.sistema + "|" + ["varredura", "testes", "auditor", "fumaca", "rollback"].map((c) => d[c]).join("|"); if (d.testes && d.testes !== "a registrar" && d.fumaca !== "a registrar") { if (vistos[k]) igualVerif.push(d.sistema + " " + d.versao.slice(0, 8) + " repete " + vistos[k]); else vistos[k] = d.versao.slice(0, 8); } }
+  t("nenhum deploy repete a verificação (varredura, testes, auditor, fumaça, rollback) de outro", igualVerif.length === 0, igualVerif);
+  const fumaca = dep.filter((d) => hexo(d.versao) && /[0-9a-f]{8}/.test(d.fumaca || "")).filter((d) => !(d.fumaca.match(/[0-9a-f]{8}/g) || []).every((h) => h === hexo(d.versao))).map((d) => d.versao.slice(0, 8) + ": " + d.fumaca.slice(0, 60));
+  t("a fumaça de cada deploy cita só a própria versão", fumaca.length === 0, fumaca);
+  const laco = []; const porSis = {};
+  for (const d of dep) (porSis[d.sistema] ||= []).push(d);
+  for (const [sis, lst] of Object.entries(porSis)) for (const d of lst) { const ant = hexo(d.anterior); if (!ant) continue; const a = lst.find((x) => hexo(x.versao) === ant); if (a) { const q1 = quando(a.data), q2 = quando(d.data); if (!(q1 != null && q2 != null && q1 < q2)) laco.push(sis + ": " + d.versao.slice(0, 8) + " (" + d.data + ") tem anterior " + ant + " (" + a.data + ") que não é mais antigo"); } else if (hexo(d.versao) === ant) laco.push(sis + ": " + ant + " é anterior de si mesmo"); }
+  const ordem = dep.filter((d) => /Ana|Bia/.test(d.sistema)).map((d) => quando(d.data)); // lista em ordem decrescente por sistema
+  for (const [sis, lst] of Object.entries(porSis)) { const q = lst.map((d) => quando(d.data)).filter((x) => x != null); for (let i = 1; i < q.length; i++) if (q[i] > q[i - 1] && !/Ecossistema|Dash/.test(sis)) laco.push(sis + ": linha " + lst[i].versao.slice(0, 8) + " fora da ordem cronológica"); }
+  t("cadeia 'anterior' dos deploys é estritamente cronológica (sem laço nem futuro)", laco.length === 0, laco);
+}
 t("nenhum nome de pessoa (nem ferramenta interna) no HTML", achados.length === 0, achados);
 // ---- segredos e dados pessoais ----
 const PADROES = { "token sk-": /sk-[A-Za-z0-9_-]{16,}/, "JWT": /eyJ[A-Za-z0-9_-]{15,}\./, "Bearer": /Bearer\s+[A-Za-z0-9._-]{12,}/, "github/slack": /(ghp_|gho_|xox[bpa]-)[A-Za-z0-9-]{10,}/, "hex longo": /\b[a-f0-9]{32,}\b/i, "telefone (62) 9": /\(?\b\d{2}\)?\s?9?\d{4}[-\s]?\d{4}\b/, "telefone com 55": /\b55\d{10,11}\b/, "CNPJ formatado": /\b\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}\b/, "CNPJ cru": /\b\d{14}\b/, "CPF": /\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/, "e-mail": /[\w.+-]+@[\w-]+\.[\w.]+/, "senha=": /(senha|password|token|secret)\s*[:=]\s*\S{6,}/i, "chave de API": /(api[_-]?key|apikey)\s*[:=]/i, "id longo (>=8 dígitos)": /\b\d{8,}\b/ };
