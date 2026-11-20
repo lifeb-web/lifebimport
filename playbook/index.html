@@ -216,6 +216,9 @@ main{min-width:0;padding:26px max(18px,env(safe-area-inset-left)) 100px 34px;out
 .modelo h3{font-size:1.1rem}
 .modelo .txt{white-space:pre-wrap;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:.98rem;line-height:1.45}
 mark.ph{background:var(--rosa-bg);color:var(--rosa-ink);padding:0 3px;border-radius:4px;font-weight:700}
+.dep{display:block;margin-top:6px;font-size:13px;font-weight:700;color:var(--av)}
+span.dep{display:inline;margin:0 0 0 4px;background:var(--av-bg);border-radius:8px;padding:1px 8px}
+.nao-prom{margin-top:10px;padding:10px 14px;border-radius:12px;background:var(--nao-bg);color:var(--ink);font-weight:700}
 .meta-m{font-size:14px;color:var(--mut)}
 .preenche{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0;padding:12px 14px;background:var(--surf);border:1.5px solid var(--line);border-radius:14px}
 .preenche label{display:flex;flex-direction:column;gap:4px;font-weight:700;font-size:14px;flex:1;min-width:180px}
@@ -488,7 +491,7 @@ body.campo .so-campo{display:block}
   function btnCopia(texto, rotulo, classe, rot) { var b = h('button', { type: 'button', class: classe || 'btn peq', 'aria-label': 'Copiar: ' + (rotulo || 'texto') }, ico('copiar'), (classe && classe.indexOf('btn') < 0) ? null : h('span', { text: rot || 'Copiar' })); b.addEventListener('click', function () { copia(texto, rotulo); }); return b; }
   function etapaPorId(id) { return DADOS.jornada.filter(function (e) { return e.id === id; })[0]; }
   function papelOk(p) { return papel === 'todos' || !p || p === 'todos' || p === papel; }
-  function nomePapel(p) { return p === 'sdr' ? 'SDR' : p === 'vend' ? 'Representante' : 'SDR e representante'; }
+  function nomePapel(p) { return p === 'sdr' ? 'SDR' : p === 'vend' ? 'Especialista' : 'SDR e especialista'; }
   function confirma() { return h('span', { class: 'confirma', text: 'a confirmar com o Robert' }); }
 
   /* ---------- componentes ---------- */
@@ -498,10 +501,12 @@ body.campo .so-campo{display:block}
     c.msgs.forEach(function (m) {
       if (c.canal === 'whatsapp') {
         var b = h('div', { class: 'bal ' + m.de }, comCampos(m.t));
+        if (m.depende) b.appendChild(h('small', { class: 'dep', text: 'Depende da ' + m.depende }));
         if (m.de === 'eu') b.appendChild(btnCopia(m.t, 'sua fala', 'cp'));
         corpo.appendChild(b);
       } else {
         var l = h('div', { class: 'fala-lig ' + m.de }, h('div', { class: 'q', text: m.de === 'eu' ? 'Você' : 'Lojista' }), h('div', { class: 't' }, comCampos(m.t)));
+        if (m.depende) $('.t', l).appendChild(h('small', { class: 'dep', text: 'Depende da ' + m.depende }));
         if (m.de === 'eu') $('.t', l).appendChild(btnCopia(m.t, 'sua fala', 'cp'));
         corpo.appendChild(l);
       }
@@ -542,7 +547,7 @@ body.campo .so-campo{display:block}
     var box = h('div', { class: 'mapa' }), ol = h('ol', { 'aria-label': 'Jornada de venda em 10 etapas' }), painel = h('div', { class: 'painel-porta', hidden: true, role: 'region', 'aria-live': 'polite' });
     DADOS.jornada.forEach(function (e, i) {
       var prox = DADOS.jornada[i + 1];
-      var a = h('a', { class: 'no', href: '#/etapa/' + e.id, 'aria-label': 'Etapa ' + e.num + ': ' + e.nome + ' (' + nomePapel(e.papel) + ')' }, h('span', { class: 'bola', text: String(e.num) }), h('span', { class: 'nm' }, e.nome, h('br'), h('span', { class: 'papel', text: e.papel === 'sdr' ? 'SDR' : 'Representante' })));
+      var a = h('a', { class: 'no', href: '#/etapa/' + e.id, 'aria-label': 'Etapa ' + e.num + ': ' + e.nome + ' (' + nomePapel(e.papel) + ')' }, h('span', { class: 'bola', text: String(e.num) }), h('span', { class: 'nm' }, e.nome, h('br'), h('span', { class: 'papel', text: e.papel === 'sdr' ? 'SDR' : 'Especialista' })));
       var li = h('li', { class: (e.papel === 'vend' ? 'vend ' : '') + (papelOk(e.papel) ? '' : 'apaga ') + (i === 3 ? 'passa' : '') }, a);
       if (prox) {
         var p = h('button', { type: 'button', class: 'porta', 'aria-expanded': 'false', 'aria-label': 'Portão entre ' + e.nome + ' e ' + prox.nome + ': ver o que precisa estar pronto' }, h('span'));
@@ -551,7 +556,7 @@ body.campo .so-campo{display:block}
           $$('.porta', box).forEach(function (x) { x.setAttribute('aria-expanded', 'false'); });
           if (aberto) { painel.hidden = true; return; }
           p.setAttribute('aria-expanded', 'true'); painel.textContent = '';
-          painel.appendChild(h('h3', { text: 'Portão da etapa ' + e.num + ' para a ' + prox.num + (i === 3 ? ' (passagem do SDR ao representante)' : '') }));
+          painel.appendChild(h('h3', { text: 'Portão da etapa ' + e.num + ' para a ' + prox.num + (i === 3 ? ' (passagem do SDR ao especialista)' : '') }));
           painel.appendChild(h('p', { text: 'Para sair de “' + e.nome + '”:' }));
           painel.appendChild(h('ul', null, e.sai.map(function (t) { return h('li', { text: '• ' + t }); })));
           painel.hidden = false;
@@ -561,7 +566,7 @@ body.campo .so-campo{display:block}
       ol.appendChild(li);
     });
     box.appendChild(ol); box.appendChild(painel);
-    if (!opts.semLeg) box.appendChild(h('div', { class: 'leg' }, h('span', null, h('i', { style: 'background:var(--roxo)' }), 'SDR'), h('span', null, h('i', { style: 'background:var(--rosa-ink)' }), 'Representante'), h('span', null, '◇ Portão: toque para ver o que precisa estar pronto')));
+    if (!opts.semLeg) box.appendChild(h('div', { class: 'leg' }, h('span', null, h('i', { style: 'background:var(--roxo)' }), 'SDR'), h('span', null, h('i', { style: 'background:var(--rosa-ink)' }), 'Especialista'), h('span', null, '◇ Portão: toque para ver o que precisa estar pronto')));
     return box;
   }
 
@@ -646,7 +651,7 @@ body.campo .so-campo{display:block}
     var tb = h('tbody');
     t.linhas.forEach(function (l) {
       var linha = h('tr'); l.forEach(function (c, k) { linha.appendChild(h('td', { class: (k > 0 && /^[\d.,]+$/.test(c)) ? 'n' : '', text: c })); });
-      var txt = l[0] + ': ' + l[1] + ' modelos, ' + l[2] + ' unidades; produtos R$ ' + l[t.colunas.indexOf('Produtos (R$)')] + ' + IPI R$ ' + l[t.colunas.indexOf('IPI (R$)')] + ' = total R$ ' + l[t.colunas.indexOf('Total (R$)')] + '.';
+      var txt = l[0] + ': ' + l[1] + ' modelos, ' + l[2] + ' unidades; valor total R$ ' + l[t.colunas.indexOf('Total (R$)')] + '.';
       linha.appendChild(h('td', null, btnCopia(txt, l[0], 'btn peq cp-l', 'Copiar'))); tb.appendChild(linha);
     });
     wrap.appendChild(h('div', { class: 'tw', role: 'region', tabindex: '0', 'aria-label': t.titulo }, h('table', null, h('thead', null, th), tb)));
@@ -658,7 +663,8 @@ body.campo .so-campo{display:block}
     pg.appendChild(secao('Qual combo oferecer', es));
     var tabs = h('div'); C.tabelas.forEach(function (t) { tabs.appendChild(tabela(t)); }); pg.appendChild(secao('Valores', tabs));
     pg.appendChild(secao('Os combos com expositor, por dentro', h('ul', { class: 'lista-chk' }, C.detalhes.map(function (d) { return h('li', null, h('span', { text: d.t })); })), 'mesa'));
-    pg.appendChild(secao('Diga assim', h('div', { class: 'card' }, C.fala.map(function (f) { return h('div', { style: 'margin-bottom:10px' }, h('p', { text: '“' + f.t + '”' }), h('div', { class: 'acoes' }, btnCopia(f.t, 'fala'))); }))));
+    pg.appendChild(secao('O que o SDR e a Ana dizem', h('div', { class: 'card' }, C.sdrDiz.map(function (f) { return h('div', { style: 'margin-bottom:10px' }, h('p', { text: '“' + f.t + '”' }), h('div', { class: 'acoes' }, btnCopia(f.t, 'fala'))); }), h('p', { class: 'nao-prom', text: C.sdrNunca }))));
+    pg.appendChild(secao('O que o especialista pode oferecer', h('div', { class: 'card' }, h('p', { class: 'meta-m', text: 'Só o especialista decide e promete, e cada item depende da negociação do combo.' }), h('ul', { class: 'lista-chk' }, C.especialistaPode.map(function (x) { return h('li', null, h('span', null, x.t, ' ', h('span', { class: 'dep', text: 'depende: ' + x.depende }), x.confirmar ? confirma() : null)); })))));
     pg.appendChild(secao('Cuidado', h('ul', { class: 'lista-chk' }, C.naoFazer.map(function (x) { return h('li', null, h('span', null, x.t, x.v ? confirma() : null)); }))));
     return pg;
   };
@@ -797,6 +803,8 @@ body.campo .so-campo{display:block}
     d.modelos.forEach(function (m) { add('#/modelos', m.titulo, 'Modelo', m.texto); });
     d.combos.tabelas.forEach(function (t) { t.linhas.forEach(function (l) { add('#/combos', l[0], 'Combo', l.join(' ')); }); });
     d.combos.escolha.forEach(function (x) { add('#/combos', x.se, 'Combos', x.entao); });
+    d.combos.sdrDiz.forEach(function (x) { add('#/combos', 'O que o SDR e a Ana dizem', 'Combos', x.t); });
+    d.combos.especialistaPode.forEach(function (x) { add('#/combos', 'O que o especialista pode oferecer', 'Combos', x.t); });
     d.visita.minutos.forEach(function (m) { add('#/visita', m.titulo, 'Visita', m.fazer + ' ' + m.fala); });
     d.treino.cenarios.forEach(function (s) { add('#/treino', s.titulo, 'Cenário de treino', s.situacao + ' ' + s.falas.join(' ')); });
     d.treino.quiz.forEach(function (q) { add('#/treino?a=quiz', q.q, 'Quiz', q.op.join(' ')); });
