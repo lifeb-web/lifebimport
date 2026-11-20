@@ -544,6 +544,11 @@ html{overflow-x:hidden}
 @media(min-width:1600px) and (max-width:1699px){ #cab.rec{gap:4px 4px;padding:4px 6px} #cab.rec .cab2 input[type=search]{min-width:70px;flex-basis:70px} #cab.rec .chips{gap:4px} }
 @media(max-width:700px){ #bTopo{order:1} }
 .obs-sdr-closer { border-left: 4px solid var(--accent, #564B99); background: var(--surface, #fff); } .obs-sdr-closer p { white-space: pre-wrap; margin: 4px 0 0; font-size: 15px; line-height: 1.4; }
+/* 20/11 (Robert #3789, caso Geanny): bloco 'Repasse da Ana' no TOPO do lead do SDR Inbound (observação de quem repassou, resumo da Ana, de onde veio). Sem nota = aviso vermelho visível. */
+#painelLead .secao.repasse-ana{border-left:5px solid var(--purple);background:var(--card)} #painelLead .secao.repasse-ana h3{margin:0 0 4px} #painelLead .secao.repasse-ana .ra-meta{color:var(--muted);font-size:13px;margin:0 0 8px}
+#painelLead .secao.repasse-ana .ra-rot{font-size:12px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;color:var(--purple);margin:8px 0 2px} #painelLead .secao.repasse-ana .ra-txt{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;font-size:15px;line-height:1.45}
+#painelLead .secao.repasse-ana .ra-obs{background:var(--mag-bg);border-radius:8px;padding:8px 10px} #painelLead .secao.repasse-ana .ra-aviso{color:var(--muted);font-size:13px;margin:8px 0 0}
+#painelLead .secao.repasse-ana.sem-nota{border-left-color:var(--red);background:var(--red-bg)} #painelLead .secao.repasse-ana.sem-nota h3{color:var(--red)}
 </style>
 </head>
 <body>
@@ -832,7 +837,7 @@ function casaBusca(it, q) {
 })();
 // ---------- chamadas ----------
 // ---------- resiliência: rede com retry, disjuntor, caixa de saída, versão, relógio do servidor, telemetria ----------
-var PAGINA_VERSAO = '2026-11-19.8';
+var PAGINA_VERSAO = '2026-11-20.1';
 var REDE = { escala: 1, falhas: 0, ultima: 0, desvio: 0 };
 function dormir(ms) { return new Promise(function (r) { setTimeout(r, ms * REDE.escala); }); }
 function jitter(ms) { return ms * (0.5 + Math.random() * 0.5); }
@@ -2392,6 +2397,20 @@ window.addEventListener('hashchange', aoMudarHash); window.addEventListener('pop
 function acoesDe(L) { if (L.lead && L.lead.status && L.lead.status !== 'andamento') return {}; return (L.lead && L.lead.acoes) || {}; } // lead ganho ou perdido: somente leitura
 
 function redesenhar(L) { if (L.modalAberto) renderGanho(L); else renderLead(); }
+function fmtQuandoRepasse(q) { var m = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/.exec(String(q || '')); return m ? (m[3] + '/' + m[2] + '/' + m[1] + (m[4] ? ' ' + m[4] + ':' + m[5] : '')) : ''; }
+// 20/11 (Robert #3789, caso Geanny 47179411): o lead repassado pela Ana abre com a OBSERVAÇÃO de quem repassou, o RESUMO da Ana e de onde veio, em destaque no topo. Tudo por textContent (nada de HTML). Sem nenhuma nota = aviso 'SEM nota de repasse'.
+function blocoRepasseAna(rp) {
+  if (!rp || typeof rp !== 'object') return null; var bx = el('div', 'secao repasse-ana' + (rp.semNota ? ' sem-nota' : '')); bx.setAttribute('data-fk', 'repasse-ana');
+  if (rp.semNota) { bx.appendChild(el('h3', null, 'SEM nota de repasse')); var pz = el('p', 'ra-txt', 'Este lead veio de um repasse da Ana, mas a observação e o resumo NÃO foram encontrados no negócio. O sistema já foi avisado e tenta reparar sozinho. Antes de ligar, abra a conversa no WhatsApp (Central) para ver o que foi dito.'); pz.setAttribute('data-fk', 'repasse-sem-nota'); bx.appendChild(pz); return bx; }
+  bx.appendChild(el('h3', null, 'Repasse da Ana'));
+  var meta = []; if (rp.origem) meta.push('De onde veio: ' + rp.origem); var qd = fmtQuandoRepasse(rp.quando); if (qd) meta.push(qd); if (rp.quem) meta.push('Repassado por ' + rp.quem); if (rp.motivo === 'handoff_manual') meta.push('repasse manual (sem qualificar)'); else if (rp.motivo) meta.push(String(rp.motivo).replace(/_/g, ' '));
+  if (meta.length) bx.appendChild(el('p', 'ra-meta', meta.join(' · ')));
+  if (rp.observacao && rp.observacao.texto) { bx.appendChild(el('div', 'ra-rot', rp.observacao.auto ? 'Observação automática da Ana' : 'Observação de ' + (rp.observacao.quem || 'quem repassou'))); var po = el('p', 'ra-txt ra-obs', rp.observacao.texto); po.setAttribute('data-fk', 'repasse-obs'); bx.appendChild(po); }
+  if (rp.resumo) { bx.appendChild(el('div', 'ra-rot', 'Resumo da Ana')); var pr = el('p', 'ra-txt', rp.resumo); pr.setAttribute('data-fk', 'repasse-resumo'); bx.appendChild(pr); }
+  if (!rp.observacao && !rp.resumo && rp.campo) { bx.appendChild(el('div', 'ra-rot', 'Observação do negócio')); bx.appendChild(el('p', 'ra-txt', rp.campo)); }
+  if (rp.tarefasNaoLidas) bx.appendChild(el('p', 'ra-aviso', 'Não consegui ler as notas agora; atualize para ver o resumo completo.'));
+  return bx;
+}
 function renderLead() {
   var L = S.L; if (!L || !L.lead) return; livroTela(L, 'renderLead'); var lead = L.lead; var corpo = $('leadCorpo'); var rol = corpo.scrollTop;
   var af = document.activeElement, afSel = null, afKey = null; if (af && corpo.contains(af)) { afKey = af.getAttribute('data-fk') ? '[data-fk="' + af.getAttribute('data-fk') + '"]' : (af.id ? '#' + af.id : null); try { afSel = [af.selectionStart, af.selectionEnd]; } catch (e) { logFalha('l1268 foco/rolagem/seleção é só conforto; se falhar a ação já foi feit', e); /* foco/rolagem/seleção é só conforto; se falhar a ação já foi feita */ } } // guarda o foco para não perdê-lo quando o dado completo chega
@@ -2405,6 +2424,7 @@ function renderLead() {
   if (lead.status && lead.status !== 'andamento') { var st = el('div', 'secao'); st.appendChild(el('strong', null, lead.status === 'ganho' ? 'Este negócio já está Ganho.' : 'Este negócio está Perdido.')); corpo.appendChild(st); }
   // 19/11 (Robert #3623, lead 46044521): no negócio do ARENA (raia Closer) a OBSERVAÇÃO DO SDR é o que o SDR escreveu para o representante: aparece em destaque, inteira, logo no topo (antes só aparecia 'Resumo da Ana: Origem INBOUND')
   if (lead.funil === 'closer' && String(lead.observacaoSdr || '').trim()) { var ob = el('div', 'secao obs-sdr-closer'); ob.setAttribute('data-fk', 'obs-sdr-closer'); ob.appendChild(el('h3', null, 'Observação do SDR (vai para o representante)')); ob.appendChild(el('p', null, String(lead.observacaoSdr).trim())); corpo.appendChild(ob); }
+  if (lead.repasse) { var bra = blocoRepasseAna(lead.repasse); if (bra) corpo.appendChild(bra); }   // 20/11 (Robert #3789): repasse da Ana em destaque no topo
   // 1) pessoas e telefones (o que o SDR mais usa)
   var s4 = el('div', 'secao'); s4.appendChild(el('h3', null, 'Pessoas e telefones'));
   if (!(lead.pessoas || []).length) s4.appendChild(el('p', 'sub', 'Nenhuma pessoa cadastrada.'));
