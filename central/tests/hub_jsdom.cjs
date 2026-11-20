@@ -278,5 +278,12 @@ const nomes = (W) => W.$$(".hcard .htxt b").map((x) => x.textContent);
   { const W = await trocaW([RODADA()], true, { rejeita: true }); await W.abrir("telaInstagram"); await W.clica(".igtab:nth-of-type(4)"); await tick(60); await W.clica(".igto input[value='A']"); await W.clica(".igt-aprovar"); await tick(60); ok(/mudou desde que você abriu/.test(W.$(".igtcorpo .hint").textContent) && W.$(".igt-aprovar").disabled === false, "G19 conflito (409): mostra o motivo e deixa tentar de novo"); }
   { const W = await trocaW(Array.from({ length: 60 }, (_, i) => RODADA({ id: "r" + i, titulo: "R" + i }))); await W.abrir("telaInstagram"); await W.clica(".igtab:nth-of-type(4)"); await tick(60); ok(W.$$(".igtc").length === 60 && W.$$(".igtcorpo").length === 1, "G20 60 rodadas: só a primeira abre; as outras recolhidas"); }
   { const src = html.slice(html.indexOf("function igTrocaTela"), html.indexOf("function telaInstagram")); ok(!/innerHTML|insertAdjacentHTML|document\.write/.test(src), "G21 a Troca com o designer não usa innerHTML (tudo textContent)"); ok(!/\/instagram\/(post|reabrir|resultado)/.test(src), "G22 a Troca não chama nenhuma rota de post/publicação"); }
+  // ---- 20/11 (auditor): favoritos de atalhos removidos migram para a entrada que ficou ----
+  { const W = await mundo(); W.win.localStorage.setItem("central_hub_fav_robert", JSON.stringify(["hoje-felipe", "kit-sdr", "dash-outbound", "hoje"])); mm(W, false); await W.abrir("telaInicio");
+    const fav = (id) => W.$("[data-card='" + id + "'] .hfav").getAttribute("aria-pressed") === "true";
+    ok(fav("hoje") && fav("kit-sdr") && fav("dash-geral"), "F1 favorito de 'Hoje do Felipe' vira 'Hoje' e o de 'Dash Outbound' vira 'Dash Geral' (não somem)");
+    const gravado = JSON.parse(W.win.localStorage.getItem("central_hub_fav_robert")); ok(gravado.join() === "hoje,kit-sdr,dash-geral", "F2 migração gravada, sem repetir 'hoje': " + gravado.join());
+    ok(W.$$(".sec h3")[0].textContent === "Favoritos", "F3 aparece na seção Favoritos"); }
+  { const W = await mundo(); W.win.localStorage.setItem("central_hub_fav_robert", JSON.stringify(["hoje", "dash-geral"])); await W.abrir("telaInicio"); ok(JSON.parse(W.win.localStorage.getItem("central_hub_fav_robert")).join() === "hoje,dash-geral", "F4 favoritos normais ficam como estão"); }
   console.log(`hub_jsdom: ${n} verificações; falhas: ${falhas.length}`); falhas.forEach((f) => console.log(" - " + f)); process.exit(falhas.length ? 1 : 0);
 })().catch((e) => { console.log("ERRO NO TESTE:", e.stack); process.exit(2); });

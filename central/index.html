@@ -788,17 +788,18 @@ async function iniciar(){
   if(av){var la=$('loginAviso');la.textContent=av;la.classList.remove('hide');}
   if(e.status!==200){$('boot').classList.remove('hide');$('boot').textContent='Não consegui falar com o servidor. Atualize a página.';return;}
   if(e.j.precisaPrimeiroAcesso){$('lgSub').textContent='Bem-vindo. Vamos criar o primeiro acesso.';$('fPrimeiro').classList.remove('hide');}
-  else{$('lgSub').textContent='Use seu usuário e sua senha.';$('fEntrar').classList.remove('hide');$('usuario').focus();}
+  else{$('lgSub').textContent='Use seu usuário e sua senha.';$('fEntrar').classList.remove('hide');loginSenhaOcultar();$('usuario').focus();}
 }
 // 20/11 (Robert #3729): login com mostrar/ocultar senha aberto só por clique, aviso de Caps Lock, estado 'Entrando...', erro curto ligado aos campos (aria-invalid) e foco volta ao campo certo.
 (function(){var bv=$('btnVerSenha'),sn=$('senha');if(!bv||!sn)return;bv.onclick=function(){var ver=sn.type==='password';sn.type=ver?'text':'password';bv.textContent=ver?'Ocultar':'Mostrar';bv.setAttribute('aria-pressed',ver?'true':'false');bv.setAttribute('aria-label',ver?'Ocultar a senha':'Mostrar a senha');sn.focus();};
   function caps(ev){try{$('capsDica').classList.toggle('hide',!(ev.getModifierState&&ev.getModifierState('CapsLock')));}catch(e){}}sn.addEventListener('keyup',caps);sn.addEventListener('keydown',caps);sn.addEventListener('blur',function(){$('capsDica').classList.add('hide');});})();
+function loginSenhaOcultar(){var sn=$('senha'),bv=$('btnVerSenha');if(sn)sn.type='password';if(bv){bv.textContent='Mostrar';bv.setAttribute('aria-pressed','false');bv.setAttribute('aria-label','Mostrar a senha');}var cd=$('capsDica');if(cd)cd.classList.add('hide');}   // 20/11: quem clicou em 'Mostrar' não deixa a senha à mostra no próximo login (entrou, saiu, aba reaberta)
 function loginOcupado(on){var b=$('btnEntrar');b.disabled=on;if(on)b.setAttribute('aria-busy','true');else b.removeAttribute('aria-busy');$('btnEntrarTx').textContent=on?'Entrando...':'Entrar';}
 function loginErroMostrar(msg){var e=$('loginErro');e.textContent=msg;[$('usuario'),$('senha')].forEach(function(i){i.setAttribute('aria-invalid','true');});var sn=$('senha');sn.focus();try{sn.select();}catch(x){}}
 $('fEntrar').addEventListener('submit',async function(ev){ev.preventDefault();var b=$('btnEntrar');if(b.disabled)return;loginOcupado(true);$('loginErro').textContent='';[$('usuario'),$('senha')].forEach(function(i){i.removeAttribute('aria-invalid');});
   var r;try{var manter=$('manter').checked;gravarManterPref(manter);r=await api('POST','/acesso/entrar',{usuario:$('usuario').value,senha:$('senha').value,manter:manter});}catch(e){r={status:0,j:{mensagem:'Sem conexão com o servidor.'}};}
   loginOcupado(false);
-  if(r.status===200&&r.j.token){S.tok=r.j.token;S.ate=Number(r.j.expiraEm)||0;var gravou=setTok(r.j.token,S.ate,manter);if(!gravou)toast('Não consegui guardar o acesso neste aparelho (navegação privada?). Você fica conectado só enquanto esta aba estiver aberta.');S.eu={usuario:r.j.usuario,nome:r.j.nome,papel:r.j.papel,trocarSenha:!!r.j.trocarSenha};try{sessionStorage.setItem('central_eu',JSON.stringify(S.eu));}catch(e){}$('senha').value='';abrirApp();}
+  if(r.status===200&&r.j.token){S.tok=r.j.token;S.ate=Number(r.j.expiraEm)||0;var gravou=setTok(r.j.token,S.ate,manter);if(!gravou)toast('Não consegui guardar o acesso neste aparelho (navegação privada?). Você fica conectado só enquanto esta aba estiver aberta.');S.eu={usuario:r.j.usuario,nome:r.j.nome,papel:r.j.papel,trocarSenha:!!r.j.trocarSenha};try{sessionStorage.setItem('central_eu',JSON.stringify(S.eu));}catch(e){}$('senha').value='';loginSenhaOcultar();abrirApp();}
   else loginErroMostrar((r.j&&r.j.mensagem)||(r.status===401||r.status===403?'Usuário ou senha incorretos.':erroTxt(r)));});
 $('btnCodigo').onclick=async function(){var b=this;b.disabled=true;$('codigoErro').textContent='';
   var r;try{r=await api('POST','/acesso/codigo');}catch(e){r={status:0,j:{mensagem:'Sem conexão com o servidor.'}};}
@@ -815,7 +816,7 @@ function limparTudoLocal(manterRascunhos){   // Sair (ação da pessoa) apaga ta
 async function sair(){   // revoga no servidor (com prazo de 5 s) e limpa o aparelho de qualquer jeito; se o servidor não confirmou, diz isso na tela de login
   var tok=S.tok,revogou=true;
   try{if(tok){var ac=typeof AbortController==='function'?new AbortController():null;var tm=setTimeout(function(){if(ac)ac.abort();},5000);var rs=await fetch(API+'/acesso/sair',{method:'POST',headers:{'x-central-token':tok},signal:ac?ac.signal:undefined});clearTimeout(tm);revogou=rs.status===200;}}catch(e){revogou=false;}
-  var ate=S.ate;limparTudoLocal();
+  var ate=S.ate;limparTudoLocal();loginSenhaOcultar();
   avisoLogin(revogou?'':'Você saiu deste aparelho, mas não consegui avisar o servidor (sem conexão). A sessão antiga continua valendo no servidor'+(ate?' até '+fmtAte(ate):'')+'. Se este aparelho for de outra pessoa, troque a senha em Minha conta.');
   location.reload();
 }
@@ -1387,7 +1388,7 @@ function atFiltrosAlterna(){AT.filtrosAberta=!AT.filtrosAberta;atFiltrosGravar(a
 function atDesenharLista(){
   var box=document.getElementById('atItens');if(!box)return;atArqLimpa();var todas=(S.ag&&S.ag.conversas)||[];var lista=atFiltrar(todas);var cn=axContagens(todas);var _rolou=box.scrollTop;var _foco=document.activeElement&&box.contains(document.activeElement)?document.activeElement.dataset&&document.activeElement.dataset.fone:null;box.textContent='';
   atDesenharFiltros(cn,lista.length);
-  var ct=document.getElementById('atContagem');if(ct)ct.textContent=todas.length+(todas.length===1?' conversa':' conversas');
+  var ct=document.getElementById('atContagem');if(ct){ct.textContent=todas.length>=200?'Mostrando as '+todas.length+' mais recentes':todas.length+(todas.length===1?' conversa':' conversas');ct.title=todas.length>=200?'O servidor da Ana entrega só as conversas mais recentes. As mais antigas não aparecem aqui nem na busca.':'';}
   if(!lista.length){var v=el('div','vz');v.appendChild(el('b',null,AT.filtro==='arq'?'Nenhuma conversa arquivada':(todas.length?'Nenhuma conversa neste filtro':'Nenhuma conversa ainda')));v.appendChild(document.createTextNode(AT.filtro==='arq'?'Arquive uma conversa pelo menu de três pontos e ela fica aqui. Se o lead escrever de novo, ela volta para a lista principal.':todas.length?'Troque o filtro ou limpe a busca.':'Quando um lead chamar a Ana, a conversa aparece aqui.'));box.appendChild(v);return;}
   var _tot=lista.length;if(AT.fone){var _ix=-1;for(var _i=0;_i<lista.length;_i++){if(lista[_i].fone===AT.fone){_ix=_i;break;}}if(_ix>=AT.lim)AT.lim=_ix+1;}   // 16/11: só desenha as primeiras AT.lim linhas (60); a conversa aberta sempre entra
   if(_tot>AT.lim)lista=lista.slice(0,AT.lim);
@@ -2233,7 +2234,10 @@ function hubBuscar(cards,termo,areas){
   return cards.filter(function(c){var h=hubNorm([c.nome,c.desc,(c.tags||[]).join(' '),nomeArea[c.area]||c.area,(HUB_STATUS[c.status]||[''])[0]].join(' '));return ts.every(function(t){return h.indexOf(t)>=0;});});
 }
 function hubChaveFav(usuario){return 'central_hub_fav_'+hubNorm(usuario).replace(/[^a-z0-9._@-]/g,'');}
-function hubFavLer(usuario){try{var v=JSON.parse(localStorage.getItem(hubChaveFav(usuario))||'[]');return Array.isArray(v)?v.filter(function(x){return typeof x==='string';}).slice(0,60):[];}catch(e){return [];}}
+// 20/11: atalhos que saíram (duplicado ou só redirecionavam) levam o favorito para a entrada que ficou, em vez de sumir.
+var HUB_FAV_MIGRA={'hoje-felipe':'hoje','dash-outbound':'dash-geral','dash-leads':'dash-geral','dash-leads-telao':'dash-telao'};
+function hubFavMigrar(l){var mudou=false,out=[];l.forEach(function(x){var n=Object.prototype.hasOwnProperty.call(HUB_FAV_MIGRA,x)?HUB_FAV_MIGRA[x]:x;if(n!==x)mudou=true;if(out.indexOf(n)<0)out.push(n);else mudou=true;});return {lista:out,mudou:mudou};}
+function hubFavLer(usuario){try{var v=JSON.parse(localStorage.getItem(hubChaveFav(usuario))||'[]');if(!Array.isArray(v))return [];v=v.filter(function(x){return typeof x==='string';}).slice(0,60);var m=hubFavMigrar(v);if(m.mudou){try{localStorage.setItem(hubChaveFav(usuario),JSON.stringify(m.lista));}catch(e){}}return m.lista;}catch(e){return [];}}
 function hubFavGravar(usuario,lista){try{localStorage.setItem(hubChaveFav(usuario),JSON.stringify(lista.slice(0,60)));return true;}catch(e){return false;}}
 function hubFavAlternar(usuario,id){var l=hubFavLer(usuario);var i=l.indexOf(id);if(i>=0)l.splice(i,1);else l.unshift(id);var ok=hubFavGravar(usuario,l);return {lista:l,gravou:ok};}
 function hubAgrupar(cards,areas){var por={};cards.forEach(function(c){(por[c.area]=por[c.area]||[]).push(c);});return areas.filter(function(a){return por[a.id]&&por[a.id].length;}).map(function(a){return {area:a,cards:por[a.id]};});}

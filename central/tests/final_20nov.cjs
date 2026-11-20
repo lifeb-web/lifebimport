@@ -39,7 +39,8 @@ const sobra = (p) => p.evaluate(() => document.documentElement.scrollWidth - win
     S.ok(!(await p.isDisabled("#btnEntrar")) && /^Entrar$/.test((await p.textContent("#btnEntrar")).trim()), t + "login: botão volta ao normal depois do erro");
     await p.screenshot({ path: PR + "/login_erro_" + w + "_" + tema + ".png" });
     S.ok(await p.evaluate(() => { const l = document.querySelector('label[for="usuario"]'), l2 = document.querySelector('label[for="senha"]'); return !!l && !!l2 && document.getElementById("loginErro").getAttribute("role") === "alert"; }), t + "login: rótulos ligados aos campos e erro com role=alert");
-    await p.fill("#senha", "certa"); await p.keyboard.press("Enter"); await p.waitForSelector("#app:not(.hide)", { timeout: 8000 }); await p.waitForTimeout(600);
+    await p.click("#btnVerSenha"); await p.fill("#senha", "certa"); await p.keyboard.press("Enter"); await p.waitForSelector("#app:not(.hide)", { timeout: 8000 }); await p.waitForTimeout(600);
+    S.ok((await p.getAttribute("#senha", "type")) === "password", t + "login: depois de entrar a senha volta a ficar oculta");
     // ---- MENU ----
     const grupos = await p.$$eval("#nav .grp", (x) => x.map((e) => e.textContent)); S.ok(grupos.join("|") === "Atendimento|Marketing e vendas|Sistema|Guias|Administração", t + "menu: grupos na ordem " + grupos.join("|"));
     const itens = await p.$$eval("#nav a:not(.ext)", (x) => x.map((e) => e.textContent.replace(/\d+$/, ""))); S.ok(itens[0] === "Início e atalhos" && itens.length === 14, t + "menu: Início primeiro e 14 itens (" + itens.length + ")");
@@ -69,6 +70,8 @@ const sobra = (p) => p.evaluate(() => document.documentElement.scrollWidth - win
     await p.screenshot({ path: PR + "/troca_" + w + "_" + tema + ".png" });
     await p.click(".igto:nth-of-type(1) input"); S.ok(!(await p.$eval(".igt-aprovar", (e) => e.disabled)), t + "troca: escolher liga o Aprovar");
     S.ok(await p.evaluate(() => [...document.querySelectorAll(".igtbt .btn, .igto")].every((e) => e.getBoundingClientRect().height >= 40)), t + "troca: botões e opções com altura de toque");
+    await p.evaluate(() => window.__centralTeste.sair()); await p.waitForSelector("#usuario", { state: "visible", timeout: 8000 }); await p.waitForTimeout(300);
+    S.ok((await p.getAttribute("#senha", "type")) === "password" && /Mostrar/.test(await p.textContent("#btnVerSenha")) && (await p.getAttribute("#btnVerSenha", "aria-pressed")) === "false", t + "login: depois de sair a senha continua oculta");
     S.ok(!(p._erros || []).length, t + "sem erro de JS: " + (p._erros || []).slice(0, 2).join(" | "));
     await ctx.close();
   }
