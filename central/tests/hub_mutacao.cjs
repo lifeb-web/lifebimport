@@ -7,7 +7,7 @@ const M = [
   ["http permitido", "if(x.protocol!=='https:'||x.username||x.password||x.port)return false;", "if(x.username)return false;"],
   ["protocolo relativo permitido", "return u.charAt(1)!=='/'&&u.indexOf('\\\\')<0;", "return true;"],
   ["em publicação com url", "else if((c.status==='em_publicacao'||c.status==='a_confirmar')&&c.url!=null)", "else if(false)"],
-  ["no ar sem url", "else if(c.status==='no_ar'&&c.url==null)", "else if(false)"],
+  ["no ar sem url", "else if(c.status==='no_ar'&&c.url==null&&c.lista==null)", "else if(false)"],
   ["id repetido", "else if(vistos[c.id])", "else if(false)"],
   ["aba interna inexistente", "(abasConhecidas&&abasConhecidas.indexOf(c.aba)<0)", "false"],
   ["robert filtrado pela lista", "if(ctx.papel!=='robert'){var p=hubPapeis", "if(true){var p=hubPapeis"],
@@ -42,8 +42,8 @@ const M = [
   ["Instagram: publicado editável", "if(p.status!=='publicado'){var ed=el('button','btn ghost sm','Editar');", "if(true){var ed=el('button','btn ghost sm','Editar');"],
   ["atualização automática refaz a tela", "if(auto&&((S.aba==='inicio'&&c.querySelector('.hub'))||(S.aba==='instagram'&&c.querySelector('.ig'))))return;", ""],
   ["modo claro por padrão", "t==='light'||t==='dark'?t:'dark'", "t==='light'||t==='dark'?t:'light'"],
-  ["sdr com Instagram na matriz", "sdr:['inicio','visao','estado','leitura','filas','cal','atend','agentes','hist','eco','conta']", "sdr:['inicio','visao','estado','leitura','filas','cal','atend','agentes','hist','instagram','eco','conta']"],
-  ["admin com Usuários na matriz", "admin:['inicio','visao','estado','leitura','filas','cal','atend','agentes','hist','instagram','eco','conta']", "admin:['inicio','visao','estado','leitura','filas','cal','atend','agentes','hist','instagram','eco','usuarios','conta']"],
+  ["sdr com Instagram na matriz", "sdr:['inicio','visao','estado','leitura','filas','cal','atend','agentes','hist','eco','playbook','conta']", "sdr:['inicio','visao','estado','leitura','filas','cal','atend','agentes','hist','instagram','eco','playbook','conta']"],
+  ["admin com Usuários na matriz", "admin:['inicio','visao','estado','leitura','filas','cal','atend','agentes','hist','instagram','eco','playbook','conta']", "admin:['inicio','visao','estado','leitura','filas','cal','atend','agentes','hist','instagram','eco','playbook','usuarios','conta']"],
   ["papel novo oferece Instagram", "return l.filter(function(a){return a.id!=='usuarios'&&a.id!=='instagram'&&PAP_ABAS_FIXAS.indexOf(a.id)<0;});", "return l;"],
   ["Instagram: host liberado para qualquer https", "IG_HOSTS_PAG.indexOf(h)>=0||IG_HOSTS_MIDIA.test(h);}catch", "true;}catch"],
   ["Instagram: artefato aceito como mídia (guarda removida + host na lista)", [["var HUB_HOSTS=['projetojlbv.com.br',", "var HUB_HOSTS=['claude.ai','projetojlbv.com.br',"], ["if(/(^|\\.)claude\\.ai$/.test(h))return false;return HUB_HOSTS.indexOf(h)>=0||/^[a-z0-9-]+\\.robert131196\\.workers\\.dev$/.test(h)||IG_HOSTS_PAG", "return HUB_HOSTS.indexOf(h)>=0||/^[a-z0-9-]+\\.robert131196\\.workers\\.dev$/.test(h)||IG_HOSTS_PAG"]], null],
@@ -68,6 +68,30 @@ const M = [
   ["papel novo some do select", "if(!p.embutido&&base.every(function(b){return b[0]!==p.id;}))base.push([p.id,p.nome]);", ""],
   ["papel removido some do select", "if(!l.some(function(x){return x[0]===atual;}))l.push([atual,usuPapelNome(atual)]);", ""],
   ["bloco de papéis para não-robert", "if(!S.eu||S.eu.papel!=='robert')return;\n  var sec=el('div','sec');sec.appendChild(el('h3',null,'Papéis e áreas'));", "var sec=el('div','sec');sec.appendChild(el('h3',null,'Papéis e áreas'));"],
+  // ---- 20/11: aparelho, conferência do No ar, painéis de representantes, Troca com o designer ----
+  ["aparelho: celular mostra tudo", "return cards.filter(function(c){return !c.disp||c.disp==='todos'||c.disp===aparelho;});", "return cards.slice();"],
+  ["aparelho: 'Ver todos' não vale", "if(modo==='todos')return cards.slice();", ""],
+  ["aparelho: largura do celular errada", "'(max-width:860px)').matches?'mobile':'desktop'", "'(max-width:100px)').matches?'mobile':'desktop'"],
+  ["aparelho inválido aceito", "else if(c.disp!=null&&['todos','desktop','mobile'].indexOf(c.disp)<0)m='aparelho inválido: '+c.id;", ""],
+  ["No ar sem conferir (falha vira 'No ar')", "r.ok){tt=", "true){tt="],
+  ["No ar: 404 conta como aberto", "ok:ext?true:(r.ok||r.status===401||r.status===403)", "ok:true"],
+  ["No ar: conferência sem limite de 4", "await Promise.all([trab(),trab(),trab(),trab()]);", "await Promise.all(alvos.map(function(){return trab();}));"],
+  ["No ar: repete sempre", "if(!forcar&&Date.now()-HUB.sondaTs<300000)return;", ""],
+  ["No ar: método diferente de HEAD", "var op={method:'HEAD',", "var op={method:'GET',"],
+  ["No ar: outro servidor sem no-cors", "if(ext)op.mode='no-cors';", ""],
+  ["representantes: sem busca acima de 8", "if(R.itens.length>8){", "if(false){"],
+  ["representantes: sem paginar", "lista.slice(0,HUB.reps.mostra).forEach", "lista.forEach"],
+  ["representantes: link de fora aceito", "/^\\/rep\\/dash\\/[a-z0-9-]{1,40}\\/$/.test(x.url||'')", "true"],
+  ["representantes: busca sem normalizar", "var h=hubNorm(x.nome+' '+(x.primeiro||''));", "var h=x.nome+' '+(x.primeiro||'');"],
+  ["representantes: cartão sempre aberto", "corpo.onclick=function(){HUB.exp[c.id]=!HUB.exp[c.id];", "corpo.onclick=function(){HUB.exp[c.id]=true;"],
+  ["representantes: nome com HTML", "a.appendChild(el('span','hrn',x.nome));", "var sp=el('span','hrn');sp.innerHTML=x.nome;a.appendChild(sp);"],
+  ["Troca: aprovar sem escolher opção", "ap.disabled=!IGT.euPosso||(op.length>0&&!IGT.opcao[r.id]);", "ap.disabled=!IGT.euPosso;"],
+  ["Troca: admin aprova", "ap.disabled=!IGT.euPosso||", "ap.disabled=false||"],
+  ["Troca: correção sem texto", "if(v.length<3){ms.textContent='Explique o que precisa corrigir.';t.focus();return;}", ""],
+  ["Troca: não manda o hash", "var corpo={id:r.id,v:r.v,hash:r.hash,decisao:dec};", "var corpo={id:r.id,v:r.v,decisao:dec};"],
+  ["Troca: HTML do pedido interpretado", "p.textContent=txt||'(vazio)';", "p.innerHTML=txt||'(vazio)';"],
+  ["Troca: some o aviso de que não publica", "Não publica nada: o post só sai pela Fila de aprovação, com o seu OK no texto final.", "Aprova o post."],
+  ["menu: Usuários para todos", "if(id==='usuarios'&&S.eu.papel!=='robert')return false;", ""],
 ];
 let vivos = 0; const dir = fs.mkdtempSync(path.join(os.tmpdir(), "hubmut-")); const alvo = path.join(dir, "index.html");
 for (const [nome, de, para] of M) {
@@ -75,7 +99,7 @@ for (const [nome, de, para] of M) {
   for (const [a, b] of pares) { if (!src.includes(a)) { semAlvo = true; break; } src = src.replace(a, b); }
   if (semAlvo) { console.log("MUTAÇÃO SEM ALVO:", nome); vivos++; continue; }
   fs.writeFileSync(alvo, src); let morreu = false;
-  for (const s of ["hub_jsdom.cjs", "papeis_jsdom.cjs"]) { const r = spawnSync("node", [path.join(__dirname, s)], { env: { ...process.env, CENTRAL_HTML: alvo }, encoding: "utf8", timeout: 120000 }); if (r.status !== 0) { morreu = true; break; } }
+  for (const s of ["hub_jsdom.cjs", "papeis_jsdom.cjs", "usuarios_jsdom.cjs"]) { const r = spawnSync("node", [path.join(__dirname, s), process.argv[2] || "/tmp/jsd/node_modules/jsdom"], { env: { ...process.env, CENTRAL_HTML: alvo }, encoding: "utf8", timeout: 120000 }); if (r.status !== 0) { morreu = true; break; } }
   if (!morreu) { vivos++; console.log("SOBREVIVEU:", nome); }
 }
 console.log(`mutações: ${M.length}; sobreviventes: ${vivos}`); process.exit(vivos ? 1 : 0);
