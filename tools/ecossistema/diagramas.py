@@ -74,7 +74,7 @@ D["cad_in"] = dict(cols=6, titulo="Cadência do SDR Inbound",
  edges=[("d0","d1",""),("d1","d2",""),("d2","d3",""),("d3","d4",""),("d4","fim",""),("fim","e","sem ação"),("fim","g","qualifica"),("fim","p","não serve")])
 
 D["volta"] = dict(cols=4, titulo="Recuperação e reativação: quando o lead volta ao SDR",
- desc="Quatro origens devolvem negócios ao SDR: recuperação do SDR, dos representantes, reativação do pós-venda e segunda onda. Nasce um negócio novo na fila do Outbound e o SDR clica Iniciar.",
+ desc="Três rotinas devolvem negócios ao SDR: recuperação do SDR, recuperação dos representantes e reativação do pós-venda, esta com uma segunda onda. Nasce um negócio novo na fila do Outbound e o SDR clica Iniciar.",
  nodes=[N("s1","Recuperação SDR","Lead do SDR perdido: volta 14 dias depois","n",0,0),
   N("s2","Recuperação","Perdido por representante no Arena: 10 a 60 dias, conforme o motivo","n",1,0),
   N("s3","Reativação","Cliente sem repor: 75 dias (drogaria) ou 45 (supermercado)","n",2,0),

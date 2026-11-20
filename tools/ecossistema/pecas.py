@@ -76,7 +76,7 @@ def peca(c, deck=False, area=None):
 
 def extras():
     return [
-      ("Painel do Representante (nova recarga)", "ok", "Painel no ar; o pacote novo (recarga em horário comercial) aguarda auditoria", "09/11/2026"),
+      ("Painel do Representante (nova recarga)", "ok", "Painel no ar (deploy de 09/11/2026); pacote novo de recarga em horário comercial: a conferir (20/11/2026)", "09/11/2026"),
       ("Este Ecossistema", "te", "Atualizado, com apresentação em slides; publica depois do teste visual e do auditor", "19/11/2026"),
       ("Playbook comercial", "te", "Em construção (página /playbook/ atrás do login da página Central)", "sem data"),
       ("Plataforma", "pl", "Mineração de leads; arquivar modelos antigos da Meta; revisão das cadências com dados reais", "sem data"),

@@ -17,7 +17,8 @@ python3 tools/ecossistema/montar.py /tmp/eco_conferencia.html >/dev/null; cmp -s
 roda() { local n="$1" f="$2" out; echo "$n"; out="$(node "tests/ecossistema/$f" 2>&1)" || true; echo "$out" | tail -3; echo "$out" | grep -q "TOTAL: .* 0 falhou" || { echo "❌ ABORTADO: $f falhou (prints em /tmp/ecossistema_prints)"; exit 1; }; }
 roda "🧪 1/4 estrutura, links, nomes proibidos, segredos e JS (jsdom)" estatico.mjs
 roda "🖼️ 2/4 visual no Chromium: 5 larguras, claro e escuro, sem rolagem lateral, contraste, desenhos" visual.mjs
-roda "📚 2a/4 etapas dos funis iguais às do Agendor e nenhuma data passada como prevista" etapas.mjs
+echo "📚 2a/4 etapas dos funis lidas AO VIVO no Agendor (só GET; falha fecha a publicação) e nenhuma data passada como prevista"; out="$(ECO_ETAPAS_AO_VIVO=1 node tests/ecossistema/etapas.mjs 2>&1)" || true; echo "$out" | tail -3; echo "$out" | grep -q "TOTAL: .* 0 falhou" || { echo "❌ ABORTADO: etapas.mjs falhou (ou não conseguiu ler o Agendor ao vivo)"; exit 1; }
+echo "🔢 2a/4 versões dos Workers ao vivo contra versoes.json"; vv="$(node tools/ecossistema/versoes_ao_vivo.mjs 2>&1)" || true; echo "$vv" | tail -6; if echo "$vv" | grep -q "ATUALIZA\|NÃO foi possível"; then echo "❌ ABORTADO: versoes.json defasado ou leitura ao vivo indisponível. Rode node tools/ecossistema/versoes_ao_vivo.mjs --aplicar, remonte e refaça os testes."; exit 1; fi
 roda "🧭 2b/4 fluxogramas medidos no Chromium: rótulo colado na própria seta, sem colisão, sem texto cortado, perdido nunca vira qualificado sem reabrir" fluxos.mjs
 echo "🔗 pós-deploy (atualizar_versao, marcador e vigia)"; bash tests/ecossistema/pos_deploy.test.sh | tail -2 | grep -q " 0 falhou" || { echo "❌ ABORTADO: pos_deploy.test.sh falhou"; exit 1; }
 roda "🕹️ 3/4 interação: menu, hash, posição ao atualizar" interacao.mjs

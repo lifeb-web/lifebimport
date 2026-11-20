@@ -8,7 +8,7 @@ from comp import NAV, e, encurtar
 import conteudo1 as c1, conteudo2 as c2, conteudo3 as c3
 VERSAO = c3.VERSAO
 
-HEX = r'(?=[0-9a-f]*\d)(?=[0-9a-f]*[a-f])[0-9a-f]{8}'
+HEX = r'(?:(?=[0-9a-f]*\d)(?=[0-9a-f]*[a-f])[0-9a-f]{8}|\d{8})'
 def sem_hashes(h):
     """A página pública não mostra identificadores técnicos de commit ou versão (ficam só em HISTORICO.md e versoes.json)."""
     h = re.sub(r'\s*\((?:commit |versão )?' + HEX + r'\b[^)]*\)', '', h)

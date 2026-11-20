@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Confere se o Ecossistema pode estar desatualizado (somente leitura). Uso: node tools/ecossistema/conferir_estado.mjs [caminho-do-repo-da-Bia]
-// Lê os commits "deploy:" de origin/main do repositório da Bia e da Ana (gs-agendor-worker) e a data de estado.json; imprime quais componentes (Ana, Bia, Hoje, Central) tiveram deploy DEPOIS dessa data.
+// Lê os commits "deploy:" de origin/main do repositório da Bia e da Ana (gs-agendor-worker) e a data de estado.json; imprime quais componentes (Ana, Bia, Hoje, Central; Canal, Dash e Painel pela lista de versões ao vivo) tiveram deploy DEPOIS dessa data.
 // Último passo de todo deploy (ver ATUALIZAR-A-CADA-DEPLOY.md). Sai com código 0; o aviso é só informativo.
 import { execFileSync } from "node:child_process"; import fs from "node:fs"; import path from "node:path"; import os from "node:os";
 const AQUI = path.dirname(new URL(import.meta.url).pathname);
@@ -25,3 +25,18 @@ for (const c of ["Ana", "Bia", "Hoje", "Central"]) {
   console.log(`  ${c}: último deploy em ${u.quando.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}${depois ? "  <-- DEPOIS da data do estado.json" : ""}\n      ${u.resumo}`);
 }
 console.log(atrasado ? "AVISO: Ecossistema pode estar desatualizado. Revise estado.json e os textos (ver ATUALIZAR-A-CADA-DEPLOY.md)." : "Nenhum deploy depois da data do estado.json.");
+
+// 20/11/2026: além dos commits "deploy:" (Ana, Bia, Hoje, Central), confere AO VIVO os Workers Canal, Dash (sincronizador), Painel, Ana e Bia
+// comparando a última implantação (wrangler deployments list) com versoes.json. Somente leitura; precisa do wrangler logado (ECO_WRANGLER_CWD opcional).
+{
+  const { WORKERS, ultima } = await import("./versoes_ao_vivo.mjs");
+  const v = JSON.parse(fs.readFileSync(process.env.ECO_VERSOES || path.join(AQUI, "versoes.json"), "utf8")); let atras = false;
+  console.log("Versões ao vivo (Workers) contra versoes.json:");
+  for (const [id, worker] of Object.entries(WORKERS)) {
+    let t = ""; try { t = execFileSync("wrangler", ["deployments", "list", "--name", worker], { cwd: process.env.ECO_WRANGLER_CWD || os.tmpdir(), encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }); } catch (e) { console.log(`  ${id} (${worker}): não foi possível ler ao vivo`); continue; }
+    const u = ultima(t), s = v.sistemas.find((x) => x.id === id); if (!u || !s) continue;
+    const ok = s.versao.includes(u.versao.slice(0, 8)); atras ||= !ok;
+    console.log(`  ${id} (${worker}): ao vivo ${u.versao.slice(0, 8)}; versoes.json ${s.versao.slice(0, 40)}${ok ? "" : "  <-- DEFASADO: rode node tools/ecossistema/versoes_ao_vivo.mjs --aplicar"}`);
+  }
+  console.log(atras ? "AVISO: versoes.json defasado em relação ao que está no ar." : "Versões dos Workers em dia com o que está no ar.");
+}
