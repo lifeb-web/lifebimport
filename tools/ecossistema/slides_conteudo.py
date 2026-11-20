@@ -171,7 +171,7 @@ def todos():
         no("4. A fila entra", "Ao fechar o lead, ou no teto de 3 minutos. A faixa de aviso saiu de vez", "n-g"),
         no("5. Se der erro", "Limite do Agendor não desloga; 502 confirma por releitura antes de repetir; botão de repetir"),
     ]) + '</div>'
-        + band("Versão 2026-11-18.6B, no ar desde 19/11/2026 (01h14). No celular: topo solto, alvos de toque de 44 px e tela estável ao abrir o lead. Na página: Página Hoje."))
+        + band("Versão 2026-11-20.1, no ar em 20/11/2026: lead do closer com controle completo e bloco Repasse da Ana. No celular: topo solto, alvos de toque de 44 px e tela estável ao abrir o lead. Na página: Página Hoje."))
     A(slide("hoje3", "Página Hoje: o que o SDR vê", C, hoje3, "dense", "hoje"))
     hoje2 = g([
         cat("Cuidados", ["Clique repetido nunca duplica; sem internet, a ação espera numa caixa de saída", "Ação que bate no limite do Agendor fica numa fila e é tentada de novo, com teto de tentativas e alerta", "Chave de emergência desliga a gravação pela página"], "shield"),
@@ -215,7 +215,7 @@ def todos():
         ("Repassado ao time comercial", "Conversa já passada ao SDR, com quem e quando."),
         ("Passar ao SDR → Passando…", "A tela não trava; o servidor responde e a página consulta o resultado. Repetir é seguro."),
         ("Ocultar e Arquivar", "Qualquer mensagem nova, do lead ou da equipe, traz a conversa de volta: voltou, nova mensagem."),
-    ], 2) + band("Página publicada em 17/11/2026 (20h48); o servidor da Ana que entrega janela, formulário, repasse e a volta automática está no ar desde 23h40. Na página: Central.")
+    ], 2) + band("Versão final de 20/11/2026: menu em grupos, Playbook comercial e Instagram. Repasse blindado e janela de 24 h no ar. Na página: Central.")
     A(slide("central3", "Página Central: a conversa como a equipe vê", C, cen3, "dense", "central"))
     cen2 = g([
         cat("No ar: pacote de 17/11/2026 (página)", ["Botões com confirmação, que leem de volta antes de dizer que deu certo", "Selos do CRM e do início agendado; lista leve; erro 409 explicado", "Aba Ecossistema sem recarregar; saúde sem alerta falso"], "rocket"),

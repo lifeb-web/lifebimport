@@ -34,7 +34,8 @@ CHECK = [
  ("Bia", "Saúde do n8n conferida em 2 tentativas antes de alarmar, com histórico", "ok", "No ar desde 17/11/2026 (23h51); na fumaça, saúde geral e n8n \"ok\"."),
  ("Hoje", "Hoje 17.6B (2026-11-18.6B): livro local de ações, cabeçalho recolhido, colunas que se ajustam à tela, raia Closer", "ok", "No ar desde 19/11/2026 (01h14). Testes da publicação sem falha: 490 larguras, caminho crítico em navegador real (17 de 17), livro de ações (133 de 133), sessão real (120 de 120)."),
  ("Ana", "Deploy de 19/11/2026 (00h58): a reação do lead nunca vira fala; a página Central atualiza a conversa ao assumir; a Sentinela registra o motivo do juiz", "ok", "No ar desde 19/11/2026 (00h58)."),
- ("Central", "Tela de Usuários e Instagram na página Central; playbook comercial", "pl", "Em construção, ainda NÃO no ar (19/11/2026)."),
+ ("Central", "Abas Usuários (só o dono), Início e atalhos, Instagram e papéis por área; aba Playbook comercial (conteúdo v2026.11.20.1)", "ok", "No ar desde 19/11/2026 e atualizado em 20/11/2026. A página Central ao vivo é idêntica ao repositório (conferido em 20/11/2026)."),
+ ("Central", "Central versão final: menu em grupos, painéis dos representantes expansíveis (lista única do sistema, só nome e link do painel), login com mostrar senha e a Troca com o designer na aba Instagram (nunca publica)", "ok", "Servidor no ar em 20/11/2026 (03h08); a Troca fica vazia até existir o segredo técnico (decisão do dono)."),
  ("Bia", "Servidor da Bia anuncia a versão da página Hoje (conferência da versão no ar)", "ok", "No ar desde 17/11/2026 (23h51)."),
  ("Bia", "Servidor do Hoje 2.0 (rota da fila do espelho) e limite por clique", "of", "Código no ar na Bia de 15/11/2026 às 04h49; o limite no servidor está DESLIGADO e o espelho segue em sombra, sem uso real."),
  ("Bia", "Nota de handoff nova", "ok", "No ar desde 17/11/2026 (~03h)."),
@@ -49,6 +50,14 @@ CHECK = [
  ("Bia", "Alertas internos com DDD e número completo em vez de \"final\" do telefone (texto nasce no servidor da Ana; a Bia repassa)", "ok", "No ar desde 17/11/2026 (Ana 23h40, Bia 23h51)."),
  ("Ana", "Vácuo corrigido (conversa parada volta a ser retomada) e despedida ancorada para quem pede vaga", "ok", "No ar desde 17/11/2026 (23h40)."),
  ("Dash", "Fase 2 do Dash (ajustes seguintes à faixa de dados congelados)", "te", "Em correção, sem data."),
+ ("Bia", "Repasse blindado: o repasse manual só conclui com a nota de repasse, o resumo da Ana e a observação do SDR lidos de volta; sem observação humana a Ana escreve uma automática; 409 pede para esperar 70 s; todo 409 ou 502 grava diagnóstico", "ok", "No ar desde 20/11/2026 (03h19; Ana 03h35). Cada parte tem chave de emergência para desligar."),
+ ("Bia", "Vigia do repasse (cron de 1 minuto): repara repasse sem nota, resumo ou observação, com teto de 3 alertas por rodada", "of", "No ar em modo SIMULAR (não escreve no Agendor; manda 1 resumo por dia). Conferido ao vivo em 20/11/2026: a chave que liga a escrita do vigia não existe, então ele só simula. Só liga a escrita depois de conferir os casos simulados."),
+ ("Bia", "Repasse manual fecha a Ana como Ganho (só depois de nota, resumo e campo lidos de volta)", "of", "Pronto e desligado: o padrão é deixar o negócio da Ana como está (a chave que liga o fechamento não existe, conferido ao vivo em 20/11/2026). Pendência apontada pela revisão do funil da Ana de 20/11/2026: repasses manuais antigos deixaram negócios da Ana abertos."),
+ ("Hoje", "Hoje 17.8: lead do Closer com controle completo (tarefa, nota, dados, ganho como venda com valor, perdido com motivo, passar para representante); Reativação pede só o Aprovado Serasa", "ok", "No ar desde 19/11/2026 (18h36 servidor, 18h15 página). Provas: 439 testes das ações do Closer e 21 mutantes mortas."),
+ ("Hoje", "Hoje 2026-11-20.1: bloco 'Repasse da Ana' no topo do lead e aviso 'SEM nota de repasse'; busca em tela cheia; desempenho com chamadas em paralelo", "ok", "No ar em 20/11/2026 (página conferida ao vivo, idêntica ao repositório; servidor 03h19)."),
+ ("Ana", "Repasse manual espera 70 s quando a Bia está ocupada (409) e a nota mostra o erro real; aviso da cadência parada só com contagem e link; número recusado pela Meta sem prova de vida não recebe nova tentativa", "ok", "No ar em 19/11/2026 (22h28) e 20/11/2026 (03h35)."),
+ ("Bia", "Renomear empresa sem colidir (tenta 'Nome - cidade', depois 'Nome - CNPJ'); Passar ao SDR em modo rápido", "ok", "No ar em 19/11/2026 (12h43 e 23h23)."),
+ ("Dash", "Cartão 'Conferência de origem' na aba Vendas: vendas sem origem confirmada e origens que mudaram em 7 dias", "ok", "No ar desde 19/11/2026 (16h20). A origem do Dash é a gravada no primeiro toque; mudança posterior no Agendor aparece no cartão, não nos números."),
  ("Bia", "Limpeza de avisos (menos ruído); cópia automática de avisos ao gestor desligada", "ok", "No ar desde a noite de 16/11/2026."),
  ("Bia", "Aviso NOVO LEAD com vigia de reenvio e pacote do Arena", "ok", "No ar na Bia de 15/11/2026 às 04h49. Achado médio da auditoria: o vigia enxerga só os 100 primeiros registros; correção prevista."),
  ("Bia", "Reenvio automático quando a Meta recusa a ENTREGA do aviso", "lm", "Falha de ENVIO entra na fila e é reenviada; falha de ENTREGA recusada pela Meta fica registrada e ainda não gera reenvio automático (planejado)."),
@@ -75,7 +84,7 @@ CHECK = [
  ("SDR e cadência", "Cadência por dia útil, repasse com trava, inbound direto, Subir lista e enriquecimento por CNPJ", "ok", "No ar desde 20/10/2026."),
  ("SDR e cadência", "Recuperação SDR, Recuperação e Reativação", "ok", "Em operação; revisão dos prazos prevista para a semana de 18/11/2026, junto com a revisão das cadências com dados reais."),
  ("Plataforma", "Roteiro único de publicação com cópia de segurança, varredura e antirregressão", "ok", "No ar. A exigência de antirregressão da Ana espera o primeiro deploy para ser exercitada."),
- ("Plataforma", "Este Ecossistema refeito (estrutura, fluxogramas, modo apresentação)", "te", "Pronto em disco; publica depois do teste visual e do auditor independente."),
+ ("Plataforma", "Este Ecossistema refeito (estrutura, fluxogramas, modo apresentação)", "ok", "No ar desde 19/11/2026. Revisado em 20/11/2026: arte dos fluxogramas (rótulo sempre colado à sua seta, no computador e no celular) e regras conferidas com o sistema."),
  ("Plataforma", "Mineração de leads (itens de qualidade e duplicidade)", "pl", "Em evolução, na fila."),
  ("Plataforma", "Meta: arquivar modelos antigos de mensagem", "pl", "Só depois de os modelos novos ficarem estáveis."),
 ]
@@ -83,7 +92,7 @@ CHECK = [
 # o que depende da gestão (sem nomes)
 DEPENDE = [
   "Confirmar a grafia e quais empresas citar na prova social por estado.",
- "Decidir o que fazer com o negócio da Ana que nunca fecha (hoje fica aberto em Encerrado e Sem resposta).",
+ "Decidir o que fazer com o negócio da Ana que nunca fecha (hoje fica aberto em Encerrado e Sem resposta e, nos repasses manuais, até a gestão ligar o fechamento como Ganho) e quando ligar a escrita do vigia do repasse.",
  "Renovar, se a gestão quiser, a trava de segurança do ambiente de desenvolvimento, que tem prazo de validade.",
 ]
 

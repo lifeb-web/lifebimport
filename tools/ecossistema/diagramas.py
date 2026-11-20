@@ -19,20 +19,20 @@ D["mapa"] = dict(cols=4, titulo="Mapa do ecossistema: quem escreve onde",
  edges=[("lead","meta",""),("meta","ana",""),("ana","hist","grava"),("ana","bia","pede"),("bia","ag","escreve"),("bia","av","avisa"),("ag","pag","lê")])
 
 D["jornada"] = dict(cols=4, titulo="Jornada do lead novo até o destino final",
- desc="Ao qualificar, o negócio da Ana vira Ganho e nasce no SDR Inbound. O Arena só nasce pela página Hoje. Quem some recebe retomada.",
+ desc="Ao qualificar, o negócio da Ana vira Ganho e nasce um negócio novo no SDR Inbound, na etapa Ana qualificou. Quem pede uma pessoa vai à etapa Repasse da Ana. A Ana nunca cria o Arena: ele só nasce quando o SDR qualifica pela página Hoje. Quem não serve é perdido com motivo e quem some recebe retomada.",
  nodes=[N("lead","Lead novo","Anúncio, site ou WhatsApp direto","n",0,0),
   N("ana","Ana conversa","Nome, segmento, CNPJ e apresentação completa do projeto","p",1,0,2),
-  N("som","Lead some","Lead some: retorno combinado ou toques; qualquer resposta cancela o que falta","x",3,0),
+  N("som","Lead some","Retorno combinado ou toques de retomada; qualquer resposta cancela o que falta","x",3,0),
   N("qual","Qualificação","Segmento, CNPJ, lojas e quem decide. Portões: foco, rede, empresa nova, já é cliente","m",1,1,2),
-  N("sem","Sem resposta","Fim dos toques: etapa de encerramento por silêncio","x",3,1),
+  N("sem","Sem resposta","Fim dos toques: o negócio da Ana segue aberto, não é perdido","x",3,1),
   N("gan","Ganho na Ana","Ao qualificar, o negócio da Ana vira Ganho (qualificação)","g",0,2),
-  N("rep","SDR Inbound","Novo negócio na etapa Ana qualificou, com o SDR como dono","p",1,2,2),
-  N("per","Perdido, com motivo","Sem interesse, não contatar ou fora do perfil","x",3,2),
-  N("clo","Arena","Só nasce quando o SDR qualifica pela página Hoje; ganho aqui é venda","g",0,3,2),
+  N("rep","SDR Inbound","Novo negócio na etapa Ana qualificou (dono: o SDR). Quem pediu uma pessoa entra em Repasse da Ana","p",1,2,2),
+  N("per","Perdido, com motivo","Fora do perfil, sem interesse ou não contatar. Nunca volta a qualificado sem reabrir","x",3,2),
+  N("clo","Arena","Só nasce quando o SDR qualifica pela página Hoje e escolhe o representante (closer); ganho aqui é venda confirmada por ele","g",0,3,2),
   N("sdr","SDR na página Hoje","Cadência D0 a D4, ligação e qualificação","n",2,3),
   N("rec","Recuperação","Volta depois de 14 dias, se o motivo permitir","n",3,3)],
- edges=[("lead","ana",""),("ana","qual",""),("ana","som",""),("som","sem",""),("qual","gan","qualificou"),("qual","rep","novo negócio"),("qual","per","descarta"),("rep","sdr","trabalha"),("sdr","clo",""),("per","rec","")],
- ordem_narrow=["lead","ana","qual","rep","sdr","gan","clo","per","rec"])
+ edges=[("lead","ana",""),("ana","qual",""),("ana","som",""),("som","sem",""),("qual","gan","qualificou"),("qual","rep","novo negócio"),("qual","per","não serve"),("rep","sdr","trabalha"),("sdr","clo",""),("per","rec","")],
+ ordem_narrow=["lead","ana","som","sem","qual","gan","rep","sdr","clo","per","rec"])
 
 D["msg"] = dict(cols=4, titulo="O caminho de cada mensagem dentro da Ana",
  desc="A mensagem é guardada, juntada e entendida; o cérebro decide e a IA escreve. O validador confere; se reprovar, vai um texto padrão seguro.",
@@ -102,8 +102,8 @@ D["avisos"] = dict(cols=4, titulo="Aviso: da regra à confirmação de entrega",
 
 D["funis"] = dict(cols=4, titulo="Mapa dos funis do Agendor",
  desc="A Ana registra a conversa; ao qualificar, nasce um negócio no SDR Inbound. O SDR leva ao Arena pela página Hoje; depois vem o Pós-venda.",
- nodes=[N("ana","Ana SDR IA","Registro da conversa. Ao qualificar, vira Ganho e nasce o negócio no SDR Inbound","p",1,0,2),
-  N("inb","SDR Inbound","D0 a D4 e Fim. O lead chega sozinho e o SDR atende pela página Hoje","n",0,1,2),
+ nodes=[N("ana","Ana SDR IA","Registro da conversa. Ao qualificar, vira Ganho e nasce o negócio no SDR Inbound (Ana qualificou); no repasse, o mesmo negócio vai à etapa Repasse da Ana","p",1,0,2),
+  N("inb","SDR Inbound","D0 a D4 e Fim, mais Ana qualificou e Repasse da Ana. O lead chega sozinho e o SDR atende pela página Hoje","n",0,1,2),
   N("out","SDR Outbound","D1 a D10 e Fim. A Life B vai buscar; o SDR trabalha pela página Hoje","n",2,1,2),
   N("are","Arena","Conexão, Diagnóstico/Solução, Negociação. Ganho aqui é venda de verdade","g",1,2,2),
   N("pv","Pós-venda","Ciclo Ativo, Contato e Negociação de Reposição","n",0,3,2),
@@ -149,25 +149,15 @@ def fig(k):
     d = D[k]
     return figura(k, d["titulo"], d["desc"], d["nodes"], d["edges"], d["cols"], d.get("ordem_narrow"))
 
-if __name__ == "__main__":
-    import sys
-    ok = 0
-    for k in D:
-        try:
-            fig(k); ok += 1; print("ok", k)
-        except Exception as e:
-            print("ERRO", k, e)
-    print(ok, "/", len(D))
-
 D["hoje"] = dict(cols=4, titulo="Hoje: da fila do SDR ao negócio no Arena",
- desc="O SDR trabalha a fila da página Hoje, por listas. Ao qualificar, a Bia cria o negócio no Arena; quem não serve vai a perdido.",
+ desc="O SDR trabalha a fila da página Hoje, por listas. Ao qualificar e escolher o representante, a Bia cria o negócio no Arena e o representante (closer) segue na própria Hoje, com controle completo. Quem não serve vai a perdido.",
  nodes=[N("fila","Fila por listas","Leads do SDR Inbound e Outbound; tarefas atrasadas lidas aos poucos","n",0,0,2),
   N("sdr","SDR trabalha na página Hoje","Liga, anota, completa dados e decide, sem horário travado","p",2,0,2),
-  N("q","Qualificou","Pela Hoje, com representante escolhido","g",0,1,2),
+  N("q","Qualificou","Pela Hoje, com representante escolhido; Reativação pede só o Aprovado Serasa","g",0,1,2),
   N("per","Perdido, com motivo","Sai da fila e o motivo é registrado","x",2,1,2),
   N("bia","Bia cria o negócio","No funil certo, e relê o Agendor para confirmar","m",0,2,2),
   N("rec","Volta depois","Motivo recuperável: nasce negócio novo no prazo","n",2,2,2),
-  N("are","Arena","O representante de campo recebe o lead e vende","g",0,3,2)],
+  N("are","Arena","O representante (closer) recebe o lead e vende; na página Hoje tem tarefa, nota, dados, ganho (valor) e perdido","g",0,3,2)],
  edges=[("fila","sdr",""),("sdr","q","qualifica"),("sdr","per","descarta"),("q","bia",""),("per","rec",""),("bia","are","")],
  ordem_narrow=["fila","sdr","q","bia","are","per","rec"])
 
@@ -193,3 +183,14 @@ D["autom"] = dict(cols=4, titulo="Automações no CRM: quem dispara, o que faz e
   N("a","Avisa e registra","Aviso a quem precisa agir, com registro do autor","n",0,1,2),
   N("g","Alerta à gestão","Se a rotina falhar ou esgotar as tentativas","x",0,2,4)],
  edges=[("t","m",""),("m","b",""),("b","a",""),("a","g","")])
+
+if __name__ == "__main__":
+    import sys
+    ok = 0
+    for k in D:
+        try:
+            fig(k); ok += 1; print("ok", k)
+        except Exception as e:
+            print("ERRO", k, e)
+    print(ok, "/", len(D))
+

@@ -32,7 +32,7 @@ parte("ponte", "Quem escreve no CRM: a Bia", "Por desenho, a Ana pede à Bia por
   edges_n=[("ana", "ponte", ""), ("ponte", "bia", ""), ("bia", "ag", "escreve")])
 
 # ---- jornada do lead
-parte("jor", "Jornada do lead", "O lead conversa com a Ana. Ao qualificar, o negócio dela vira Ganho e nasce um negócio no SDR Inbound, com o SDR como dono. O SDR atende pela página Hoje e, ao qualificar, nasce o negócio no Arena.", 4,
+parte("jor", "Jornada do lead", "O lead conversa com a Ana. Ao qualificar, o negócio dela vira Ganho e nasce um negócio no SDR Inbound, com o SDR como dono; quem pede uma pessoa vai à etapa Repasse da Ana. A Ana nunca cria o Arena: ele nasce quando o SDR qualifica pela página Hoje.", 4,
   [N("lead", "Lead", "WhatsApp, anúncio ou site", "n", 0, 0), N("ana", "Ana conversa", "Segmento, lojas, decisor e CNPJ", "p", 1, 0, 2), N("per", "Fora do perfil", "Encerra com educação, com motivo registrado", "x", 3, 0),
    N("inb", "SDR Inbound", "Negócio nasce na etapa Ana qualificou, com o SDR como dono", "g", 0, 1, 2), N("hoje", "SDR na página Hoje", "Atende, liga e confirma o perfil", "p", 2, 1, 2), N("are", "Arena", "Nasce quando o SDR qualifica pela página Hoje. O representante de campo vende", "g", 2, 2, 2)],
   [("lead", "ana", ""), ("ana", "per", ""), ("ana", "inb", "qualificou"), ("inb", "hoje", ""), ("hoje", "are", "qualifica")],
