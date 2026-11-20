@@ -39,7 +39,7 @@ const linha = (W, u) => W.$(`tr[data-usuario="${u}"]`);
   for (const papel of ["admin", "sdr", undefined]) { const W = await mundo({ eu: { usuario: "x", papel } }); ok(W.$("#c").children.length === 0, `papel ${papel}: tela não desenha nada`); ok(!W.document.body.textContent.includes("Novo usuário"), `papel ${papel}: sem 'Novo usuário'`); ok(!W.$("#usuLista"), `papel ${papel}: sem lista`); }
   { const W = await mundo(); ok(!!W.$("#usuNovo") && !!W.$("#usuLista"), "robert vê formulário e lista"); ok(W.$("h4").textContent === "Novo usuário", "título do formulário"); }
   // a aba só aparece para robert (menu) e o hash é barrado: guardas reais no arquivo
-  ok((html.match(/if\(a\[0\]==='usuarios'&&S\.eu\.papel!=='robert'\)return;/g) || []).length === 2, "menu e busca global escondem Usuários para quem não é robert (2 guardas)");
+  ok((html.match(/if\((a\[0\]|id)==='usuarios'&&S\.eu\.papel!=='robert'\)return( false)?;/g) || []).length === 2, "menu e busca global escondem Usuários para quem não é robert (2 guardas)");
   ok(html.includes("if(aba==='usuarios'&&!(S.eu&&S.eu.papel==='robert'))return false;"), "hash #usuarios barrado para quem não é robert");
   ok(html.includes("if(a[0]==='usuarios'&&S.eu.papel!=='robert')return;if(!abaPermitida(a[0],true))return;itens.push"), "busca global também esconde Usuários (e o que a matriz do papel não libera)");
   // ---- 2. lista ----
