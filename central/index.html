@@ -2357,7 +2357,7 @@ function hubDesenhar(){
   var visTodos=hubVisiveis();var ap=hubAparelho();var vis=hubDoAparelho(visTodos,HUB.disp,ap);var escondidos=visTodos.length-vis.length;
   var res=hubBuscar(vis,HUB.busca,HUB.areas);
   box.appendChild(hubSemaforoEl());var dst=hubDestaque(vis);if(dst&&!HUB.busca)box.appendChild(dst);var tel=hubTelemetria(vis);box.appendChild(tel);
-  if(escondidos>0){var fa=el('div','hdisp');fa.setAttribute('role','status');fa.appendChild(el('span',null,HUB.disp==='todos'?'Mostrando os atalhos de todos os aparelhos.':'Mostrando os atalhos para '+(ap==='mobile'?'celular':'computador')+' ('+escondidos+' de outro aparelho escondido'+(escondidos>1?'s':'')+').'));var bt=el('button','btn ghost sm',HUB.disp==='todos'?'Só deste aparelho':'Ver todos');bt.type='button';bt.id='hubVerTodos';bt.onclick=function(){HUB.disp=HUB.disp==='todos'?'auto':'todos';hubDispGravar(HUB.disp);hubDesenhar();};fa.appendChild(bt);box.insertBefore(fa,box.firstChild);}
+  if(escondidos>0){var fa=el('div','hdisp');fa.setAttribute('role','status');fa.appendChild(el('span',null,HUB.disp==='todos'?'Mostrando os atalhos de todos os aparelhos.':'Mostrando os atalhos para '+(ap==='mobile'?'celular':'computador')+'. '+escondidos+(escondidos>1?' atalhos':' atalho')+' '+(ap==='mobile'?'de computador':'de celular')+(escondidos>1?' escondidos.':' escondido.')));var bt=el('button','btn ghost sm',HUB.disp==='todos'?'Só deste aparelho':'Ver todos');bt.type='button';bt.id='hubVerTodos';bt.onclick=function(){HUB.disp=HUB.disp==='todos'?'auto':'todos';hubDispGravar(HUB.disp);hubDesenhar();};fa.appendChild(bt);box.insertBefore(fa,box.firstChild);}
   else if(HUB.disp==='todos'){var fb=el('div','hdisp');fb.appendChild(el('span',null,'Mostrando os atalhos de todos os aparelhos.'));var b2=el('button','btn ghost sm','Só deste aparelho');b2.type='button';b2.id='hubVerTodos';b2.onclick=function(){HUB.disp='auto';hubDispGravar('auto');hubDesenhar();};fb.appendChild(b2);box.insertBefore(fb,box.firstChild);}
   if(!visTodos.length){var v0=el('div','vazio','Nenhum atalho liberado para o seu perfil ainda. Peça ao Robert para liberar.');box.appendChild(v0);return;}
   if(!res.length){var v1=el('div','vazio');v1.appendChild(el('p',null,'Nenhum atalho encontrado para "'+HUB.busca+'".'));var lb=el('button','btn ghost sm','Limpar busca');lb.type='button';lb.onclick=function(){HUB.busca='';var i=document.getElementById('hubBusca');if(i)i.value='';hubDesenhar();};v1.appendChild(lb);box.appendChild(v1);return;}
@@ -2596,6 +2596,7 @@ function igResultados(box){
 }
 function igDesenhar(){
   var box=document.getElementById('igCorpo');if(!box)return;box.textContent='';
+  var avg=document.getElementById('igAvisoGeral');if(avg)avg.hidden=IG.sub==='troca';   // na Troca com o designer vale o aviso próprio (um só, sem repetir)
   if(IG.sub==='troca'){igTrocaTela(box);return;}   // a Troca com o designer tem o próprio carregamento (não depende da fila)
   if(IG.estado==='carregando'||IG.estado==='idle'){box.setAttribute('aria-busy','true');var g=el('div','iglista');for(var i=0;i<3;i++){var s=el('div','igp sk');s.style.minHeight='140px';g.appendChild(s);}box.appendChild(g);return;}
   box.removeAttribute('aria-busy');
@@ -2663,7 +2664,7 @@ function telaInstagram(c){
   [['fila','Fila de aprovação'],['cal','Calendário'],['res','Resultados'],['troca','Troca com o designer']].forEach(function(x){var b=el('button','igtab'+(IG.sub===x[0]?' on':''),x[1]);b.type='button';b.setAttribute('role','tab');b.setAttribute('aria-selected',IG.sub===x[0]?'true':'false');b.onclick=function(){IG.sub=x[0];[].slice.call(tabs.children).forEach(function(t,i){var on=['fila','cal','res','troca'][i]===x[0];t.className='igtab'+(on?' on':'');t.setAttribute('aria-selected',on?'true':'false');});igDesenhar();};tabs.appendChild(b);});top.appendChild(tabs);
   var nv=el('button','btn sm','Novo post');nv.type='button';nv.id='igNovo';nv.onclick=function(){igEditar(null);};top.appendChild(nv);
   var at=el('button','btn ghost sm','Atualizar');at.type='button';at.onclick=function(){igCarregar();if(IG.estado!=='ok')igDesenhar();else toast('Atualizando...');};top.appendChild(at);w.appendChild(top);
-  var rg=el('div','aviso','Aprovar aqui só registra a decisão do dono. A publicação segue só pelo agente local e só com a aprovação válida para este mesmo texto.');rg.setAttribute('role','note');w.appendChild(rg);
+  var rg=el('div','aviso','Aprovar aqui só registra a decisão do dono. A publicação segue só pelo agente local e só com a aprovação válida para este mesmo texto.');rg.setAttribute('role','note');rg.id='igAvisoGeral';w.appendChild(rg);
   var corpo=el('div',null);corpo.id='igCorpo';w.appendChild(corpo);c.appendChild(w);igDesenhar();
   if(IG.estado!=='ok'||Date.now()-IG.ult>60000)igCarregar();
   if(HUB.estado!=='ok')hubCarregar(false);
