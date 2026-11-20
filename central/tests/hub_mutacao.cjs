@@ -85,7 +85,6 @@ const M = [
   ["representantes: busca sem normalizar", "var h=hubNorm(x.nome+' '+(x.primeiro||''));", "var h=x.nome+' '+(x.primeiro||'');"],
   ["representantes: cartão sempre aberto", "corpo.onclick=function(){HUB.exp[c.id]=!HUB.exp[c.id];", "corpo.onclick=function(){HUB.exp[c.id]=true;"],
   ["representantes: nome com HTML", "a.appendChild(el('span','hrn',x.nome));", "var sp=el('span','hrn');sp.innerHTML=x.nome;a.appendChild(sp);"],
-  ["Hoje: segundo atalho de volta", "var l=['hoje'].map(", "var l=['hoje','hoje-felipe'].map("],
   ["Troca: aprovar sem escolher opção", "ap.disabled=!IGT.euPosso||(op.length>0&&!IGT.opcao[r.id]);", "ap.disabled=!IGT.euPosso;"],
   ["Troca: admin aprova", "ap.disabled=!IGT.euPosso||", "ap.disabled=false||"],
   ["Troca: correção sem texto", "if(v.length<3){ms.textContent='Explique o que precisa corrigir.';t.focus();return;}", ""],
@@ -100,7 +99,7 @@ for (const [nome, de, para] of M) {
   for (const [a, b] of pares) { if (!src.includes(a)) { semAlvo = true; break; } src = src.replace(a, b); }
   if (semAlvo) { console.log("MUTAÇÃO SEM ALVO:", nome); vivos++; continue; }
   fs.writeFileSync(alvo, src); let morreu = false;
-  for (const s of ["hub_jsdom.cjs", "papeis_jsdom.cjs"]) { const r = spawnSync("node", [path.join(__dirname, s), process.argv[2] || "/tmp/jsd/node_modules/jsdom"], { env: { ...process.env, CENTRAL_HTML: alvo }, encoding: "utf8", timeout: 120000 }); if (r.status !== 0) { morreu = true; break; } }
+  for (const s of ["hub_jsdom.cjs", "papeis_jsdom.cjs", "usuarios_jsdom.cjs"]) { const r = spawnSync("node", [path.join(__dirname, s), process.argv[2] || "/tmp/jsd/node_modules/jsdom"], { env: { ...process.env, CENTRAL_HTML: alvo }, encoding: "utf8", timeout: 120000 }); if (r.status !== 0) { morreu = true; break; } }
   if (!morreu) { vivos++; console.log("SOBREVIVEU:", nome); }
 }
 console.log(`mutações: ${M.length}; sobreviventes: ${vivos}`); process.exit(vivos ? 1 : 0);
