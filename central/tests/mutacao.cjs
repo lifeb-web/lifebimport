@@ -1,5 +1,5 @@
 // Central: TESTE DE MUTAÇÃO das guardas novas (17/11). Estraga de propósito UMA guarda por vez numa cópia da página e confirma que o teste correspondente FALHA. Se algum teste continuar verde, a guarda não está protegida.
-// Rodar: node central/tests/mutacao.cjs <playwright-core> <chromium> [filtro]     (precisa do servidor local na porta 8802)
+// Rodar: node central/tests/mutacao.cjs <playwright-core> <chromium> [filtro]     (servidor próprio em memória; nada é gravado no repositório)
 const fs = require("fs"); const path = require("path"); const { spawnSync } = require("child_process");
 const RAIZ = path.join(__dirname, ".."); const ORIG = fs.readFileSync(path.join(RAIZ, "index.html"), "utf8");
 // Fora da lista de propósito (camadas REDUNDANTES, provado em 15/11): tirar só a trava de altura, ou só as restaurações finais de rolagem, não muda nada porque cada camada sozinha basta (o DOM é refeito sem layout intermediário). A proteção que importa (uiRepor: foco/campos/caixas internas) e a largura fixa do topo estão cobertas abaixo.
@@ -46,12 +46,18 @@ const M = [
   ["nomes_curtos.cjs", "empresa corta em conector", "while(c.length>1&&NOME_CONECT[c[c.length-1].toLowerCase()])c.pop();", ""],
 ];
 const filtro = process.argv[4]; let vivos = [];
-for (const [teste, nome, de, para, extra] of M) {
-  if (filtro && !(teste + nome).includes(filtro)) continue;
-  if (!ORIG.includes(de)) { console.log(`?? trecho não encontrado: ${nome}`); vivos.push(`${nome} (trecho não achado)`); continue; }
-  const arq = path.join(RAIZ, "_mut.html"); let src = ORIG.replace(de, para); if (extra) src = src.replace(extra[0], extra[1]); fs.writeFileSync(arq, src);
-  const r = spawnSync("node", [path.join(__dirname, teste), process.argv[2], process.argv[3]], { env: { ...process.env, CENTRAL_URL: process.env.CENTRAL_MUT_URL || "http://localhost:8802/central/_mut.html" }, encoding: "utf8", timeout: 420000 });
-  const falhou = r.status !== 0; console.log(`${falhou ? "MORTA " : "VIVA  "} [${teste}] ${nome}`); if (!falhou) vivos.push(`${teste}: ${nome}`);
-}
-try { fs.unlinkSync(path.join(RAIZ, "_mut.html")); } catch (e) {}
-console.log(`mutações: ${M.length}; sobreviventes: ${vivos.length}`); vivos.forEach((v) => console.log(" - " + v)); process.exit(vivos.length ? 1 : 0);
+// 20/11: o html mutado NUNCA é gravado no repositório (já subiu 2 vezes por engano: 1e2616f6 e 97a9db79). Um servidor local em memória entrega a página mutada em /central/_mut.html e o resto de central/ vem do repositório, só leitura.
+const http = require("http"); let SRC = ORIG;
+const srv = http.createServer((req, res) => { const u = decodeURIComponent(req.url.split("?")[0]); if (u === "/central/_mut.html") { res.writeHead(200, { "content-type": "text/html; charset=utf-8" }); return res.end(SRC); }
+  const f = path.join(RAIZ, u.replace(/^\/central\//, "")); if (!f.startsWith(RAIZ) || !fs.existsSync(f) || !fs.statSync(f).isFile()) { res.writeHead(404); return res.end(); } const ext = path.extname(f); res.writeHead(200, { "content-type": ext === ".json" ? "application/json" : ext === ".png" ? "image/png" : "text/plain" }); res.end(fs.readFileSync(f)); });
+const rodar = (teste, url) => new Promise((ok) => { const c = require("child_process").spawn("node", [path.join(__dirname, teste), process.argv[2], process.argv[3]], { env: { ...process.env, CENTRAL_URL: url }, stdio: "ignore" }); const tm = setTimeout(() => c.kill(), 420000); c.on("close", (code) => { clearTimeout(tm); ok(code); }); });
+(async () => {
+  await new Promise((r) => srv.listen(0, "127.0.0.1", r)); const url = "http://127.0.0.1:" + srv.address().port + "/central/_mut.html";
+  for (const [teste, nome, de, para, extra] of M) {
+    if (filtro && !(teste + nome).includes(filtro)) continue;
+    if (!ORIG.includes(de)) { console.log(`?? trecho não encontrado: ${nome}`); vivos.push(`${nome} (trecho não achado)`); continue; }
+    SRC = ORIG.replace(de, para); if (extra) SRC = SRC.replace(extra[0], extra[1]);
+    const falhou = (await rodar(teste, url)) !== 0; console.log(`${falhou ? "MORTA " : "VIVA  "} [${teste}] ${nome}`); if (!falhou) vivos.push(`${teste}: ${nome}`);
+  }
+  srv.close(); console.log(`mutações: ${M.length}; sobreviventes: ${vivos.length}`); vivos.forEach((v) => console.log(" - " + v)); process.exit(vivos.length ? 1 : 0);
+})();
