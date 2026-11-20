@@ -1,7 +1,7 @@
 // Teste visual do Ecossistema no Chromium real (14/11/2026): 5 larguras x claro/escuro, sem rolagem lateral, sem corte, SVG dentro das caixas, contraste >= 4,5, prints.
 import { t, resumo, abrirNavegador, abrirPagina, semRolagemLateral, PRINTS } from "./_comum.mjs";
 const nav = await abrirNavegador();
-const TAM = [[390, 844], [768, 1024], [1024, 768], [1440, 900], [1920, 1080]];
+const TAM = [[320, 640], [390, 844], [768, 1024], [1024, 768], [1440, 900], [1920, 1080]];
 const CONTRASTE = () => {
   const rgb = (c) => { const m = /rgba?\(([^)]+)\)/.exec(c || ""); if (!m) return null; const p = m[1].split(/[ ,\/]+/).filter(Boolean).map(Number); return { r: p[0], g: p[1], b: p[2], a: p.length > 3 ? p[3] : 1 }; };
   const lum = ({ r, g, b }) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
@@ -38,7 +38,7 @@ for (const tema of ["light", "dark"]) for (const [w, h] of TAM) {
   t(`${id}: desenhos legíveis (uma versão visível, texto dentro das caixas)`, svg.out.length === 0 && svg.vis === 15, svg);
   // tamanho real do texto dos desenhos na tela (>= 9 px)
   const tamTxt = await page.evaluate(() => { let min = 99; document.querySelectorAll("figure.fig").forEach((f) => { const d = [...f.querySelectorAll(".svgd")].find((x) => getComputedStyle(x).display !== "none"); const svg = d.querySelector("svg"); const esc = svg.getBoundingClientRect().width / svg.viewBox.baseVal.width; min = Math.min(min, 12.5 * esc); }); return min; });
-  t(`${id}: texto menor dos desenhos >= 11 px na tela`, tamTxt >= 11, tamTxt);
+  t(`${id}: texto menor dos desenhos >= ${w <= 320 ? 9 : 11} px na tela`, tamTxt >= (w <= 320 ? 9 : 11), tamTxt);   // 20/11: 320 px entrou nos testes; o desenho de 400 px cabe a 0,72 (9 px)
   const ct = await page.evaluate(CONTRASTE); t(`${id}: contraste >= 4,5 em ${ct.n} textos`, ct.ruins.length === 0, ct.ruins.slice(0, 8));
   // prints: topo, e seções-chave
   const sec = async (nome, sid) => { await page.evaluate((s) => { const e = document.getElementById(s); window.scrollTo({ top: e.getBoundingClientRect().top + scrollY - 70, behavior: "instant" }); }, sid); await page.waitForTimeout(120); await page.screenshot({ path: `${PRINTS}/${id}_${nome}.png` }); };

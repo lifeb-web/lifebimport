@@ -17,6 +17,7 @@ python3 tools/ecossistema/montar.py /tmp/eco_conferencia.html >/dev/null; cmp -s
 roda() { local n="$1" f="$2" out; echo "$n"; out="$(node "tests/ecossistema/$f" 2>&1)" || true; echo "$out" | tail -3; echo "$out" | grep -q "TOTAL: .* 0 falhou" || { echo "❌ ABORTADO: $f falhou (prints em /tmp/ecossistema_prints)"; exit 1; }; }
 roda "🧪 1/4 estrutura, links, nomes proibidos, segredos e JS (jsdom)" estatico.mjs
 roda "🖼️ 2/4 visual no Chromium: 5 larguras, claro e escuro, sem rolagem lateral, contraste, desenhos" visual.mjs
+roda "📚 2a/4 etapas dos funis iguais às do Agendor e nenhuma data passada como prevista" etapas.mjs
 roda "🧭 2b/4 fluxogramas medidos no Chromium: rótulo colado na própria seta, sem colisão, sem texto cortado, perdido nunca vira qualificado sem reabrir" fluxos.mjs
 echo "🔗 pós-deploy (atualizar_versao, marcador e vigia)"; bash tests/ecossistema/pos_deploy.test.sh | tail -2 | grep -q " 0 falhou" || { echo "❌ ABORTADO: pos_deploy.test.sh falhou"; exit 1; }
 roda "🕹️ 3/4 interação: menu, hash, posição ao atualizar" interacao.mjs

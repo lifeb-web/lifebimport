@@ -196,9 +196,11 @@ def s_ana2():
 
 def s_destinos():
     etapas = [
-      ["Novo lead", "Primeira mensagem."], ["Em conversa", "Qualificando, ou a equipe precisou intervir sem repasse."],
+      ["Novo lead", "Primeira mensagem."], ["Abertura enviada", "A Ana começou a falar e aguarda a resposta. A Bia nunca rebaixa um negócio que já está em Qualificando, Apresentação ou Com o especialista."],
+      ["Qualificando", "A Ana está colhendo segmento, CNPJ, lojas e decisor."], ["Apresentação", "A Ana está apresentando o projeto."],
       ["Retorno combinado", "O lead pediu para chamar depois; a Ana criou a tarefa com a data."],
-      ["Repassado ao time comercial", "Qualificou: o negócio da Ana virou Ganho e o negócio do SDR Inbound nasceu."], ["Sem resposta", "Toques sem resposta."], ["Encerrado", "Sem interesse ou pediu para parar."]]
+      ["Com o especialista", "Etapa para o lead já passado ao especialista (hoje a Bia não move para ela no repasse: o repasse é Ganho da Ana ou nota)."],
+      ["Deal breaker", "Toques de retomada sem resposta: a Ana pede esta etapa no fim dos toques (sem resposta)."], ["Fim da cadência", "Final do funil, reservado ao fechamento automático por Cadência esgotada (desligado no funil da Ana)."]]
     out = [
       ["D1 · Abertura", "Pesquisar a empresa (Google, Instagram, CNPJ), mandar a primeira mensagem no WhatsApp e ligar para quem decide.", "3º dia útil, sozinho"],
       ["D3 · Follow-up", "WhatsApp de novo contato e WhatsApp com uma novidade, sem pedir nada.", "5º dia útil"],
@@ -208,7 +210,7 @@ def s_destinos():
       ["Fim da cadência", "Sala de espera de 3 dias úteis (\"Tentativas acabaram\" na página Hoje): Ganho, Perdido ou Voltar para a cadência.", "Sem ação em 3 dias úteis, fecha como Cadência esgotada"]]
     inb = [
       ["D0 · Novo lead", "Lead quente: atender primeiro, antes de qualquer outra fila.", "Dia útil seguinte"],
-      ["D1 · Abertura", "WhatsApp com a primeira mensagem.", "Dia útil seguinte"], ["D2 · Follow-up", "WhatsApp de novo contato.", "Dia útil seguinte"],
+      ["D1 · Abertura e ligação", "WhatsApp com a primeira mensagem.", "Dia útil seguinte"], ["D2 · Follow-up", "WhatsApp de novo contato.", "Dia útil seguinte"],
       ["D3 · Follow-up 2", "WhatsApp de novo contato.", "Dia útil seguinte"], ["D4 · Deal breaker", "WhatsApp de última tentativa.", "Depois do D4, vai ao Fim"],
       ["Fim da cadência", "Igual ao Outbound: 3 dias úteis de espera.", "Sem ação, fecha como Cadência esgotada"]]
     arena = [
@@ -232,7 +234,7 @@ def s_destinos():
         card("Qualificou", "<p>O negócio da Ana vira <b>Ganho</b> (qualificação, nunca venda) e nasce um negócio no <b>SDR Inbound</b>, na etapa \"Ana qualificou\", com o SDR como dono.</p><p class=\"muted\">O Arena só nasce depois, quando o SDR completa os dados e qualifica o lead pela página Hoje, escolhendo o representante.</p>", p="ok"),
         card("Repasse (pediu uma pessoa)", "<p>Sem qualificar: o <b>mesmo negócio</b> muda do funil da Ana para a etapa \"Repasse da Ana\" do SDR Inbound, com nota, resumo da Ana e observação. O repasse manual (\"Passar ao SDR\") só conclui depois de ler de volta a nota, o resumo e o campo de observação; um vigia confere os que ficaram incompletos (hoje em modo simulado).</p>", p="ok"),
         card("Perdido, com motivo", "<p>Sem interesse, não contatar (pediu para parar) ou fora do perfil, incluindo quem vende sistema. O motivo é buscado por nome na lista do Agendor e relido.</p><p class=\"muted\">Fora do perfil inclui vendedor de sistema, e CNPJ baixado é tratado (no ar desde 16/11/2026).</p>", p="ok"),
-        card("Sem resposta", "<p>Fim dos toques de retomada: o negócio vai para a etapa de encerramento por silêncio. Se o lead voltar a escrever, a Ana retoma.</p>", p="ok"),
+        card("Sem resposta", "<p>Fim dos toques de retomada: o negócio vai para a etapa Deal breaker e segue aberto. Se o lead voltar a escrever, a Ana retoma.</p>", p="ok"),
       ], 2)
       + tabela(["Quem", "Marca", "Observação"], [
         ["Ana", "Ganho ao qualificar; encerra quem é fora do perfil", "Cria o negócio no SDR Inbound (etapa \"Ana qualificou\"), tarefa de retorno e nota."],
@@ -240,8 +242,8 @@ def s_destinos():
         ["Bia", "Perdido: Cadência esgotada, depois do Fim", "Automático, em dia útil. No funil da Ana, o fechamento automático está desligado."],
         ["Representante (closer)", "Ganho e perda de venda no Arena", "Aí é venda de verdade; o ganho vale quando o representante confirma. Na página Hoje, o lead do closer tem controle completo (tarefa, nota, dados, ganho com valor, perdido com motivo)."],
       ], "", "Quem marca ganho e perdido")
-      + aviso("Pendência declarada", "Ao qualificar, o negócio da Ana vira Ganho. Nos finais Encerrado e Sem resposta o negócio ainda fica aberto, mesmo quando o lead foi perdido ou parou de responder, e isso pode bloquear a recuperação. Também na revisão do funil da Ana de 20/11/2026: repasses manuais antigos deixaram o negócio da Ana aberto (o padrão de hoje mantém assim até a gestão ligar o fechamento como Ganho) e há negócios de pessoas que não são lojistas ainda abertos. A decisão sobre fechar esses negócios está com a gestão.", "w")
-      + '<h3 class="mt">Funil da Ana (Ana SDR IA)</h3>' + '<p>Registro da conversa. A etapa muda sozinha conforme a conversa, e a Bia lê de volta para confirmar. O sem resposta vai para uma etapa de encerramento por silêncio; o fechamento automático por Cadência esgotada está implementado e desligado.</p>'
+      + aviso("Pendência declarada", "Ao qualificar, o negócio da Ana vira Ganho. Quem parou de responder fica aberto na etapa Deal breaker e a etapa Fim da cadência não é usada (o fechamento automático está desligado); quem a Ana encerra por falta de interesse vira Perdido com motivo. Na revisão de 20/11/2026, \"Com o especialista\" e \"Fim da cadência\" tinham 0 negócios. Também na revisão do funil da Ana de 20/11/2026: repasses manuais antigos deixaram o negócio da Ana aberto (o padrão de hoje mantém assim até a gestão ligar o fechamento como Ganho) e há negócios de pessoas que não são lojistas ainda abertos. A decisão sobre fechar esses negócios está com a gestão.", "w")
+      + '<h3 class="mt">Funil da Ana (Ana SDR IA)</h3>' + '<p>Registro da conversa. A etapa muda sozinha conforme a conversa, e a Bia lê de volta para confirmar. O sem resposta vai para a etapa Deal breaker; o fechamento automático por Cadência esgotada está implementado e desligado.</p>'
       + tabela(["Etapa", "Quando o negócio fica nela"], etapas, "", "Etapas do funil da Ana")
       + '<h3 class="mt">Etapa por etapa dos outros funis</h3>'
       + det("SDR Outbound: a Life B vai buscar (10 dias úteis, mais 3 de espera)", tabela(H, out, "", "Etapas do SDR Outbound"))

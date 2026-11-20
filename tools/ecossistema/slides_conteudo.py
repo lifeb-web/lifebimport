@@ -124,13 +124,13 @@ def todos():
     A(slide("sdr_listas", "O SDR: listas, fila e o que a Bia faz", C, sdr2, "dense", "entrada,hoje,cadencia"))
     A(slide("sdrfluxo", "Da lista ao representante", C, fx("sdr", "O Inbound não passa pela fila: entra como negócio novo e é atendido primeiro. Na página: Cadência do SDR."), "flow", "hoje,cadencia,entrada"))
     fun1 = g([
-        cat("Ana e SDR Inbound", ["Funil da Ana: Novo lead, Em conversa, Retorno combinado, Repassado, Sem resposta, Encerrado", "SDR Inbound: Ana qualificou (SDR como dono), D0 a D4 e Fim da cadência, tudo por WhatsApp"], "chat"),
-        cat("SDR Outbound", ["D1 Abertura, D3 Follow-up, D5 Ligação, D8 Follow-up 3, D10 Última tentativa", "Fim da cadência: 3 dias úteis de espera; sem ação, fecha como cadência esgotada", "Tarefas criadas pela Bia: pesquisar, ligar e mandar WhatsApp"], "list"),
-    ], 2) + band("Os dias contam sempre como dias úteis. Os prazos das cadências curtas serão revistos com dados reais na semana de 18/11/2026. Na página: Funis do Agendor; Cadência do SDR.")
+        cat("Ana e SDR Inbound", ["Funil da Ana: Novo lead, Abertura enviada, Qualificando, Apresentação, Retorno combinado, Com o especialista, Deal breaker, Fim da cadência", "SDR Inbound: Ana qualificou (SDR como dono), D0 a D4 e Fim da cadência, tudo por WhatsApp"], "chat"),
+        cat("SDR Outbound", ["D1 Abertura, D3 Follow-up, D5 Ligação, D8 Follow-up 3, D10 Deal breaker", "Fim da cadência: 3 dias úteis de espera; sem ação, fecha como cadência esgotada", "Tarefas criadas pela Bia: pesquisar, ligar e mandar WhatsApp"], "list"),
+    ], 2) + band("Os dias contam sempre como dias úteis. A revisão dos prazos das cadências curtas, antes marcada para a semana de 18/11/2026, ainda não foi feita. Na página: Funis do Agendor; Cadência do SDR.")
     A(slide("funis", "Funis do SDR e cadências", C, fun1, "dense", "destinos,cadencia"))
     fun2 = g([
         cat("Arena, Pós-venda e Reativação", ["Arena: Conexão, Diagnóstico/Solução e Negociação; ganho é venda e exige o valor", "Pós-venda: ciclos de reposição, com janela para repor", "Reativação: cliente que não repôs no prazo"], "crm"),
-        cat("Voltas ao SDR", ["Recuperação SDR, Recuperação e Reativação criam negócio novo na fila de espera do Outbound, com nota de origem", "Uma volta por empresa a cada 180 dias; prazos em revisão na semana de 18/11/2026"], "git"),
+        cat("Voltas ao SDR", ["Recuperação SDR, Recuperação e Reativação criam negócio novo na fila de espera do Outbound, com nota de origem", "Uma volta por empresa a cada 180 dias; revisão dos prazos pendente, sem data"], "git"),
     ], 2) + band("Quem vende no Arena são os representantes (closers). Na página: Funis do Agendor; Recuperação e reativação.")
     A(slide("funis2", "Arena, Pós-venda e voltas ao SDR", C, fun2, "dense", "destinos,recuperacao"))
     A(slide("volta", "Voltas ao SDR", C, fx("volta", "Cada rotina tem nome e origem próprios. Na página: Recuperação e reativação."), "flow", "recuperacao"))

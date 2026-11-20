@@ -12,7 +12,7 @@ Branch: `ecossistema-20nov` (repositório de páginas, a partir de `origin/gh-pa
 ## Ordem de publicação (só com liberação do dono; nada disto foi executado)
 1. `git -C /tmp/eco_pg fetch origin gh-pages` e conferir que `origin/gh-pages` ainda é 5bc673ce ou descendente (se avançou, `git rebase origin/gh-pages` e remontar).
 2. `python3 tools/ecossistema/montar.py` e `cmp` com `ecossistema/index.html` (o publicar.sh já faz isso).
-3. Segurar a trava do Chromium e rodar UM teste por vez, com `TZ=UTC JSDOM_DIR=<pasta com jsdom>`: `estatico.mjs`, `visual.mjs`, `fluxos.mjs`, `interacao.mjs`, `iframe.mjs`, `apresentacao.mjs`, `pos_deploy.test.sh`, depois `bash tests/ecossistema/mutacao_fluxos.sh`.
+3. Segurar a trava do Chromium e rodar UM teste por vez, com `TZ=UTC JSDOM_DIR=<pasta com jsdom>`: `estatico.mjs`, `etapas.mjs` (ECO_ETAPAS_AO_VIVO=1 relê o Agendor, só GET), `visual.mjs` (agora com 320 px), `fluxos.mjs` (320, 390, 768, 1440; caixa sem seta), `interacao.mjs`, `iframe.mjs`, `apresentacao.mjs`, `pos_deploy.test.sh`, depois `bash tests/ecossistema/mutacao_fluxos.sh`.
 4. Auditor independente + auditoria visual dos prints (`/tmp/ecossistema_prints`), depois `ECO_AUDITOR_OK=sim tools/ecossistema/publicar.sh "Ecossistema 2026-11-20.1: revisão de arte e regras"` (dois commits, um push `HEAD:gh-pages` sem force; trava de caminhos: só `ecossistema/`, `tools/ecossistema/`, `tests/ecossistema/`).
 5. Fumaça no ar: abrir https://projetojlbv.com.br/ecossistema/ (versão 2026-11-20.1 no topo e "Atualizado em 20/11/2026"), os fluxos "Do lead novo ao destino final" e "Cadência do SDR Outbound" em 390 e 1440 px, e o modo Apresentar. A aba Ecossistema da Central carrega a mesma página (iframe).
 6. Depois: `node tools/ecossistema/conferir_estado.mjs` (avisa se algum deploy novo deixou o Ecossistema para trás) e atualizar `versoes.json` com `atualizar_versao.py ecossistema 2026-11-20.1 "<data>"` se a hora da publicação for registrada.
@@ -25,3 +25,6 @@ Bia 3cfccc9b (20/11 03h19), Ana 64ab8c96 (20/11 03h34); chaves: modo do vigia do
 
 ## O que NÃO foi verificado
 Dash "sync só do que mudou" (só vi o registro de origem fixa e o cartão de conferência no código da página); funcionamento real do vigia do repasse (está em simulação); página Central e Hoje em uso real por usuários; slides do celular em pé além do teste automático; prints de claro/escuro de TODOS os 15 desenhos foram conferidos só para os que mudaram ou estavam suspeitos (ver relatório).
+
+## Atualização de 20/11/2026 (correções do auditor)
+Etapas reais do funil da Ana e do SDR (fixture `tests/ecossistema/etapas_agendor.json`, lido ao vivo); versões das fichas geradas de `versoes.json` (`pecas.py`); datas vencidas como 'prevista' removidas e testadas; feriados móveis citados; Central estreita com setas; 320 px sem rolagem lateral; `ecossistema_auditoria.cjs` agora falha se medir nada (antes media outro servidor na porta 8803 e dava 0 em branco; use `ECO_URL`). Mutação: 10 de 10 mortas.

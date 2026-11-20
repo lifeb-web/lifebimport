@@ -26,11 +26,32 @@ s=s.replace("    def toca_seta(rb, ignorar, folga):\n","    def toca_seta(rb, ig
 PY
 python3 "$D2/montar.py" "$D2/pagina.html" >/dev/null 2>&1 && { if PAGINA="$D2/pagina.html" ECO_PRINTS="$D2/prints" node tests/ecossistema/fluxos.mjs >"$D2/saida.txt" 2>&1; then echo "❌ SOBREVIVEU: rotulo_sobre_seta (cotovelo + toca_seta desligados)"; SOBREV=$((SOBREV+1)); else echo "✅ morta: rotulo_sobre_seta com a checagem de seta alheia desligada ($(grep -c FALHOU "$D2/saida.txt") falha(s))"; MORTAS=$((MORTAS+1)); fi; }
 # 2) fluxo em que Perdido leva a qualificado sem reabrir
-muta perdido_vira_qualificado diagramas.py '("per","rec","")],' '("per","rec",""),("per","gan","")],'
+# 2) fluxo em que Perdido leva a Arena/qualificado sem reabrir, com o verificador do gerador DESLIGADO: quem tem de matar é o teste no Chromium
+D3="$BASE/perdido_vira_qualificado"; mkdir -p "$D3"; cp -R tools/ecossistema/. "$D3/"
+python3 - "$D3" <<'PY'
+import sys
+d=sys.argv[1]
+s=open(d+"/diagramas.py",encoding="utf-8").read(); s=s.replace('("per","rec","")],','("per","rec",""),("per","clo","")],',1); open(d+"/diagramas.py","w",encoding="utf-8").write(s)
+f=open(d+"/fluxo.py",encoding="utf-8").read(); f=f.replace("    if erros:\n        raise Erro(","    if False:\n        raise Erro(",1); open(d+"/fluxo.py","w",encoding="utf-8").write(f)
+PY
+python3 "$D3/montar.py" "$D3/pagina.html" >/dev/null 2>&1 && { if PAGINA="$D3/pagina.html" ECO_PRINTS="$D3/prints" node tests/ecossistema/fluxos.mjs >"$D3/saida.txt" 2>&1; then echo "❌ SOBREVIVEU: perdido_vira_qualificado (teste do Chromium não pegou)"; SOBREV=$((SOBREV+1)); elif grep -q "perdido vira qualificado" "$D3/saida.txt"; then echo "✅ morta pelo teste do Chromium (regra Perdido→qualificado): perdido_vira_qualificado"; MORTAS=$((MORTAS+1)); else echo "✅ morta pelo teste do Chromium (outra falha): perdido_vira_qualificado"; MORTAS=$((MORTAS+1)); fi; }
+# 2b) etapas: etapa legada no texto e data passada como prevista (teste etapas.mjs, sem navegador)
+muta_et() { local D="$BASE/$1"; mkdir -p "$D"; cp -R tools/ecossistema/. "$D/"; python3 - "$D/$2" "$3" "$4" <<'PY' || { echo "❌ mutação $1: trecho não encontrado"; return 2; }
+import sys
+f,a,b=sys.argv[1:4]; s=open(f,encoding='utf-8').read()
+if a not in s: sys.exit(1)
+open(f,'w',encoding='utf-8').write(s.replace(a,b,1))
+PY
+  python3 "$D/montar.py" "$D/pagina.html" >/dev/null 2>&1 || { echo "✅ o gerador derrubou: $1"; MORTAS=$((MORTAS+1)); return 0; }
+  if PAGINA="$D/pagina.html" node tests/ecossistema/etapas.mjs >"$D/saida.txt" 2>&1; then echo "❌ SOBREVIVEU: $1"; SOBREV=$((SOBREV+1)); else echo "✅ morta: $1 ($(grep -c FALHOU "$D/saida.txt") falha(s))"; MORTAS=$((MORTAS+1)); fi; }
+muta_et etapa_em_conversa conteudo1.py '["Abertura enviada", "A Ana começou' '["Em conversa", "A Ana começou'
+muta_et etapa_inexistente_slide slides_conteudo.py 'Com o especialista, Deal breaker, Fim da cadência' 'Repassado, Sem resposta, Encerrado'
+muta_et data_passada_prevista dados_status.py 'antes marcada para a semana de 18/11/2026, ainda não foi feita' 'prevista para a semana de 18/11/2026'
+muta_et d1_inbound_nome conteudo1.py '["D1 · Abertura e ligação", "WhatsApp' '["D1 · Abertura", "WhatsApp'
 # 3) rótulo do celular longe da seta (faixa lateral sem rótulo colado)
 muta rotulo_celular_longe fluxo.py "cand.append((lx - tw / 2 + 6, gy + dy))" "cand.append((M + 4 + tw / 2, gy + dy - 60))"
 # 4) texto cortado no celular (selo longo sem quebra de linha)
-muta selo_estoura estilo.css ".full .pill,p .pill,li .pill{white-space:normal;max-width:100%}" ".full .pill{white-space:nowrap}"
+muta selo_estoura estilo.css ".full .pill,p .pill,li .pill,.faixa-i .chip{white-space:normal;max-width:100%}" ".full .pill{white-space:nowrap}"
 # 5) papel errado ao lead
 muta lead_representante conteudo1.py 'ao lead sempre se diz "especialista"' 'ao lead se diz "representante"'
 echo "TOTAL: $MORTAS mutantes mortas, $SOBREV sobreviveram"; [ "$SOBREV" -eq 0 ]

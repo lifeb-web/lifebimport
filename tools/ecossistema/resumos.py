@@ -10,7 +10,7 @@ R = {
  "Todos podem comprar, mas": "Todos podem comprar; no fim a Ana avisa que o pedido começa em R$ 2 mil e pergunta se o interesse é real.",
  "Falar preço de produto": "Nunca fala preço, desconto, bonificação ou resultado garantido (exceções: mínimo de R$ 2 mil e condição de pagamento da empresa nova).",
  "O negócio da Ana vira Ganho": "A qualificação é Ganho na Ana (nunca venda) e abre um negócio no SDR Inbound, etapa \"Ana qualificou\".",
- "Lead que volta é tratado": "Ganho é duplicata (avisa o SDR); Perdido reabre; Encerrado reabre e a Ana retoma. Nunca cria segundo negócio da Ana.",
+ "Lead que volta é tratado": "Ganho é duplicata (avisa o SDR); Perdido reabre; parado em Deal breaker ou Fim da cadência segue aberto e a Ana retoma. Nunca cria segundo negócio da Ana.",
  "Só dentro do horário de contato": "Só 8h às 22h em dia útil e 9h às 20h em fim de semana e feriado; cancela se o lead escrever antes.",
  "Toda ação do SDR é instantânea": "Toda ação do SDR é instantânea e nunca parece revertida por uma leitura atrasada.",
  "O topo vai ganhar largura total": "O topo ganha largura total (13 raias, sem rolagem lateral) e um botão Recolher, lembrado por usuário.",

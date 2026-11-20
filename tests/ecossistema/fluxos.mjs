@@ -3,7 +3,7 @@
 // rótulo longe da própria seta (ambíguo), caixa ou rótulo fora do desenho, texto cortado (scrollWidth > clientWidth) e fluxo que liga "Perdido" a "qualificado/ganho"
 // sem a palavra "reabrir". Também confere a página inteira: nada de "segmento diferente" dito ao lead e o papel certo ("especialista" ao lead).
 // Mutação: tests/ecossistema/mutacao_fluxos.sh reintroduz o bug e este teste tem de falhar.
-import { t, resumo, abrirNavegador, abrirPagina, HTML } from "./_comum.mjs";
+import { t, resumo, abrirNavegador, abrirPagina, semRolagemLateral, HTML } from "./_comum.mjs";
 const nav = await abrirNavegador();
 const MEDIR = () => {
   const out = [], aviso = [];
@@ -44,8 +44,10 @@ const MEDIR = () => {
     for (const s of setas) {
       const a = porId[s.a], b = porId[s.b]; if (!a || !b) continue;
       const rot = (rots.find((l) => l.e === s.e) || {}).txt || "";
-      if (/^perdid/i.test(a.t) && /qualific|ganho/i.test(b.tudo) && !/reabr/i.test(rot + " " + a.tudo)) out.push(`${nome}: "${a.t}" liga a "${b.t}" (perdido vira qualificado) sem reabrir`);
+      if (/^perdid/i.test(a.t) && /qualific|ganho/i.test(b.tudo) && !/reabr/i.test(rot)) out.push(`${nome}: "${a.t}" liga a "${b.t}" (perdido vira qualificado) sem reabrir`);
     }
+    // 6) caixa sem nenhuma seta (órfã): toda caixa é origem ou destino de alguma seta
+    for (const n of nos) if (!setas.some((s) => s.a === n.id || s.b === n.id)) out.push(`${nome}: caixa "${n.t}" sem seta`);
     aviso.push(`${nome}: ${nos.length} caixas, ${setas.length} setas, ${rots.length} rótulos`);
   }
   return { out, n: visiveis.length, aviso };
@@ -60,10 +62,11 @@ const CORTE = () => {   // texto cortado: conteúdo mais largo que a caixa que o
   });
   return out.slice(0, 8);
 };
-for (const tema of ["light", "dark"]) for (const w of [390, 768, 1440]) {
+for (const tema of ["light", "dark"]) for (const w of [320, 390, 768, 1440]) {
   const id = `${tema}_${w}`; const { ctx, page } = await abrirPagina(nav, { w, h: 900, tema, touch: false });
   await page.evaluate(() => document.querySelectorAll("details").forEach((d) => (d.open = true))); await page.waitForTimeout(200);
   const r = await page.evaluate(MEDIR);
+  t(`${id}: sem rolagem lateral na página`, await semRolagemLateral(page));
   t(`${id}: 15 desenhos medidos`, r.n === 15, r.n);
   t(`${id}: rótulos, setas e caixas sem colisão nem ambiguidade`, r.out.length === 0, r.out.slice(0, 10));
   const c = await page.evaluate(CORTE); t(`${id}: nenhum texto cortado (scrollWidth > clientWidth)`, c.length === 0, c);

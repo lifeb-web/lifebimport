@@ -1,6 +1,7 @@
 """Seções 9 a 15 do Ecossistema."""
 from comp import *
 from diagramas import fig
+from pecas import versao_de
 
 def s_cadencia():
     corpo = (
@@ -61,7 +62,7 @@ def s_recuperacao():
                 ("Passou do prazo sem reposição", "A Bia cria o negócio novo no SDR Outbound, na fila, com a origem Reativação e a nota de onde veio."),
                 ("Se o SDR qualificar", "O negócio vai ao funil de Reativação com o representante original, se ele ainda estiver no time. Se não estiver, fica com o SDR, que escolhe quem assume. O ciclo aberto do Pós-venda é fechado."),
                 ("O representante é avisado", "Com aviso de lead novo, depois da aprovação da gestão, e a Bia cria a tarefa de primeiro contato no nome dele.")])
-      + aviso("Em revisão", "Os prazos de Recuperação e as cadências curtas serão revistos com dados reais na semana de 18/11/2026. Esta página será atualizada junto.", "w"))
+      + aviso("Em revisão", "Os prazos de Recuperação e as cadências curtas continuam sem revisão: a revisão antes marcada para a semana de 18/11/2026 ainda não foi feita (conferido em 20/11/2026) e não tem nova data. Esta página será atualizada junto.", "w"))
     return sec("recuperacao", "Funis e cadência", "Recuperação e reativação", "Quando e por que um lead perdido ou um cliente parado volta ao SDR.", corpo)
 
 def s_bia():
@@ -77,7 +78,7 @@ def s_bia():
       + grid([
         card("Funil da Ana por nome", "<p>A Bia identifica as etapas do funil da Ana pelo <b>nome</b>, e não por código. Se alguém renomear ou apagar uma etapa, ela não escreve em uma etapa errada. Há uma chave de emergência: desligada, a Bia só grava nota e não move nada.</p>", p="ok"),
         card("Vínculo de empresa", "<p>Se a empresa já existe no Agendor (mesmo CNPJ), a Bia vincula o negócio à empresa existente, em vez de dar erro ou duplicar.</p>", p="ok"),
-        card("Reabertura e lead repetido", "<p>Lead que volta é tratado por status e nome: ganho é duplicata (avisa o SDR); perdido reabre; encerrado e sem resposta reabrem e a Ana retoma. Falha ao reabrir é erro com nova tentativa; nunca cria um segundo negócio da Ana.</p>", p="ok"),
+        card("Reabertura e lead repetido", "<p>Lead que volta é tratado por status e nome: ganho é duplicata (avisa o SDR); perdido reabre; o negócio parado em Deal breaker ou Fim da cadência segue aberto e a Ana retoma. Falha ao reabrir é erro com nova tentativa; nunca cria um segundo negócio da Ana.</p>", p="ok"),
         card("Fila durável de avisos", "<p>Aviso cujo envio falha entra em uma fila que dura 24 horas e é reenviada a cada 5 minutos, até 5 por rodada. Só conta como enviado quando o WhatsApp aceitou.</p>", p="ok"),
       ], 2)
       + '<h3 class="mt">Folga e horários: quem nunca é segurado</h3>'
@@ -121,7 +122,7 @@ def s_automacoes():
         ["Recuperação SDR, Recuperação e Reativação", "Relógio, diário e a cada 30 min", "Cria negócio novo no SDR Outbound para perdidos antigos e clientes que não repuseram", "Uma volta por empresa a cada 180 dias; limite por dia", pill("ok", "Em operação; prazos em revisão")],
         ["Motores de Reposição e Reativação +75 (cards ao representante)", "Relógio", "Cobrança ao representante nos funis de Pós-venda e Reativação", "Aprovação da gestão; isolados do Arena", pill("de", "Estado ao vivo não verificado: estavam em modo sombra (só simulavam) em 27/09/2026, com a camada de entrega construída; não verificado desde então")],
         ["Ana: abertura", "Relógio, 5 minutos depois do cadastro", "Pede à Bia o negócio no funil da Ana e a nota", "Só dentro do horário de contato (8h às 22h em dia útil; 9h às 20h em fim de semana e feriado); cancela se o lead escrever antes", pill("ok", "No ar")],
-        ["Ana: retomada por abandono", "Relógio, dias úteis", "Pede à Bia a etapa Sem resposta no fim dos toques", "Toques em dias úteis; qualquer resposta cancela o que falta", pill("ok", "No ar")],
+        ["Ana: retomada por abandono", "Relógio, dias úteis", "Pede à Bia a etapa Deal breaker no fim dos toques (sem resposta)", "Toques em dias úteis; qualquer resposta cancela o que falta", pill("ok", "No ar")],
         ["Ana: retorno combinado e vigias", "Relógio", "Cria a tarefa de retorno com a data pedida; vigia webhook, conversas sem resposta e custo", "Retorno ajustado ao horário de contato; vigia a cada 5 minutos", pill("ok", "No ar")],
         ["Ana: cadência de 3 toques com mensagens de utilidade", "—", "—", "—", pill("pl", "Planejado")],
       ], "ver", "Automações da Bia e da Ana, com disparo, regra e estado")
@@ -209,7 +210,7 @@ def s_hoje():
         card("No topo", ul(["Números do dia e do mês.", "Busca geral por nome da loja ou da pessoa, CNPJ, telefone, número do negócio ou cidade, nos dois funis do SDR.", "Filtro por origem e opção de esconder o que já foi feito.", "Atalhos para Subir lista, Dash Geral, Como funciona e Meu painel.", "Aviso vermelho quando algum lead foi perdido sem explicação."]), p="ok"),
         card("As colunas do dia", ul(["Inbound novo: lead quente que acabou de chegar.", "Aberturas novas e 2º, 3º e 4º contato; Última tentativa.", "Tentativas acabaram: leads no fim da cadência.", "Atrasadas e Iniciados hoje.", "Começar leads novos: a fila de espera, com os botões Iniciar."]), p="ok"),
         card("Fila completa em linhas por lista", "<p>Mostra a contagem real da fila, carrega rápido e traz o restante por trás, com \"Mostrar mais\". Cada lista é uma linha que abre e fecha. Sem \"Iniciar TODOS\" e com limite de leads por clique; quem acabou de ser iniciado some da fila na hora.</p>", p="ok"),
-        card("Hoje 2026-11-18.6B", "<p>No ar desde 19/11/2026 (01h14): livro local de ações, cabeçalho recolhido por padrão, colunas que se ajustam à tela e raia Closer.</p>", p="ok"),
+        card("Hoje " + versao_de("hoje").replace("página ", ""), "<p>No ar em 20/11/2026 (versão lida de versoes.json): livro local de ações e cabeçalho recolhido (18.6B, 19/11/2026), lead do closer com controle completo (17.8, 19/11/2026) e bloco Repasse da Ana (20/11/2026).</p>", p="ok"),
         card("Hoje 2.0", "<p>Nova geração da página, lendo de um espelho dos dados (hoje em modo sombra, só copiando e comparando). Futuro: ainda não existe para o SDR.</p>", p="pl"),
         card("Raia Closer (controle completo, 19/11/2026)", "<p>Negócios do Arena em que o SDR é dono, escolhidos pelo identificador do dono, nunca pelo nome. O lead do closer abre com controle completo: criar, concluir e adiar tarefa, registrar resultado, nota, corrigir dados, <b>Ganho</b> como venda fechada (valor e confirmação, duas escritas relidas), <b>Perdido</b> (motivo da lista do Agendor, observação e confirmação) e \"Passar para representante\". Se o Agendor limitar (429) aparece \"Tentar de novo\".</p>", p="ok"),
         card("Reativação e repasse (20/11/2026)", "<p>Negócio da Reativação pede só o Aprovado Serasa para repassar; SDR e Arena normais continuam exigindo tudo. No topo do lead repassado pela Ana aparecem a observação de quem repassou, o resumo da Ana e de onde veio, e o aviso \"SEM nota de repasse\" se faltar.</p>", p="ok"),
@@ -268,7 +269,7 @@ def s_central():
         ["9. Cadência e funis", "—", "Fase 5: dias, passos e textos da cadência do SDR (delicado)."],
         ["10. Hoje e Lista", "Interruptor que permite à página Hoje escrever no Agendor.", "Fase 3: editar colunas, cota, fila, textos, regras de ligação e perda e campos exigidos."],
         ["11. Intensidade de cobrança", "—", "Fase 2: semanas em que a Bia aumenta a cobrança (mais lembretes, intervalo menor, horário estendido)."],
-        ["12. Dias off e feriados", "Dias de folga marcados à mão, lidos pela trava de folga, mais os feriados nacionais fixos no código (Ano Novo, Tiradentes, Dia do Trabalho, Independência, Nossa Senhora Aparecida, Finados, Proclamação da República, Consciência Negra e Natal; conferido em 20/11/2026). Fim de semana e feriado não contam como dia útil na cadência.", "Fase 2: adicionar por empresa, cidade ou pessoa; todas as rotinas leem o mesmo calendário."],
+        ["12. Dias off e feriados", "Dias de folga marcados à mão, lidos pela trava de folga, mais os feriados do código: os nacionais fixos (Ano Novo, Tiradentes, Dia do Trabalho, Independência, Nossa Senhora Aparecida, Finados, Proclamação da República, Consciência Negra e Natal) e os móveis, que valem para qualquer ano (Carnaval na segunda e na terça, Sexta-Feira Santa e Corpus Christi); conferido em 20/11/2026. Fim de semana e feriado não contam como dia útil na cadência.", "Fase 2: adicionar por empresa, cidade ou pessoa; todas as rotinas leem o mesmo calendário."],
       ], "", "Os 12 módulos do plano da página Central e o estado de cada um")
       + aviso("Fases do plano", "Fase 0: fundamentos e segurança (registro de configuração único com versão e trilha). Fase 1: interruptores com trava, histórico e desfazer (base no ar). Fase 2: aprovação por tipo, números, calendário, intensidade de cobrança e saúde. Fase 3: time e permissões, páginas Hoje e Lista editáveis, acesso por usuário. Fase 4: mensagens, botões e notificações novas. Fase 5: cadência e funis. O que a página Central tem além dos 12 módulos já está no ar: atendimento da Ana e aba da Ana. Central 2.0 aguarda decisões da gestão.", "n")
       + '<h3 class="mt">Controle de acesso e exclusão</h3>'

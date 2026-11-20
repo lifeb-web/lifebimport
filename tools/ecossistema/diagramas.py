@@ -24,7 +24,7 @@ D["jornada"] = dict(cols=4, titulo="Jornada do lead novo até o destino final",
   N("ana","Ana conversa","Nome, segmento, CNPJ e apresentação completa do projeto","p",1,0,2),
   N("som","Lead some","Retorno combinado ou toques de retomada; qualquer resposta cancela o que falta","x",3,0),
   N("qual","Qualificação","Segmento, CNPJ, lojas e quem decide. Portões: foco, rede, empresa nova, já é cliente","m",1,1,2),
-  N("sem","Sem resposta","Fim dos toques: o negócio da Ana segue aberto, não é perdido","x",3,1),
+  N("sem","Sem resposta","Fim dos toques: o negócio da Ana vai à etapa Deal breaker e segue aberto, não é perdido","x",3,1),
   N("gan","Ganho na Ana","Ao qualificar, o negócio da Ana vira Ganho (qualificação)","g",0,2),
   N("rep","SDR Inbound","Novo negócio na etapa Ana qualificou (dono: o SDR). Quem pediu uma pessoa entra em Repasse da Ana","p",1,2,2),
   N("per","Perdido, com motivo","Fora do perfil, sem interesse ou não contatar. Nunca volta a qualificado sem reabrir","x",3,2),
@@ -142,7 +142,7 @@ D["central"] = dict(cols=6, titulo="A página Central e como ela se conecta",
   N("canal","Canal","Conversa da gestão com o assistente","n",4,1),
   N("sol","Solicita","Atalho para pedidos","n",5,1),
   N("ag","Agendor, a fonte da verdade","A Ana pede à Bia; a Bia escreve; a página Central e a página Hoje leem","g",0,2,3)],
- edges=[("c","ana","controla",),("c","bia","controla","w"),("c","hoje","","w"),("c","dash","","w"),("c","canal","","w"),("c","sol","","w"),("ana","bia",""),("bia","ag","escreve"),("hoje","ag","lê","w")],
+ edges=[("c","ana","controla",),("c","bia","controla","w"),("c","hoje",""),("c","dash",""),("c","canal",""),("c","sol",""),("ana","bia",""),("bia","ag","escreve"),("hoje","ag","lê")],
  ordem_narrow=["c","ana","bia","ag","hoje","dash","canal","sol"])
 
 def fig(k):

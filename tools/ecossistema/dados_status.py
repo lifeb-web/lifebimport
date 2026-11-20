@@ -82,7 +82,7 @@ CHECK = [
  ("Central", "Silenciar a Bia por pessoa", "pl", "Na fila."),
  ("Painel do Representante", "Painel ao vivo da carteira com ações do dia", "ok", "No ar. Correções de recarga em horário comercial estão prontas e aguardam auditoria."),
  ("SDR e cadência", "Cadência por dia útil, repasse com trava, inbound direto, Subir lista e enriquecimento por CNPJ", "ok", "No ar desde 20/10/2026."),
- ("SDR e cadência", "Recuperação SDR, Recuperação e Reativação", "ok", "Em operação; revisão dos prazos prevista para a semana de 18/11/2026, junto com a revisão das cadências com dados reais."),
+ ("SDR e cadência", "Recuperação SDR, Recuperação e Reativação", "ok", "Em operação. A revisão dos prazos, antes marcada para a semana de 18/11/2026, ainda não foi feita (conferido em 20/11/2026) e não tem nova data."),
  ("Plataforma", "Roteiro único de publicação com cópia de segurança, varredura e antirregressão", "ok", "No ar. A exigência de antirregressão da Ana espera o primeiro deploy para ser exercitada."),
  ("Plataforma", "Este Ecossistema refeito (estrutura, fluxogramas, modo apresentação)", "ok", "No ar desde 19/11/2026. Revisado em 20/11/2026: arte dos fluxogramas (rótulo sempre colado à sua seta, no computador e no celular) e regras conferidas com o sistema."),
  ("Plataforma", "Mineração de leads (itens de qualidade e duplicidade)", "pl", "Em evolução, na fila."),
@@ -92,7 +92,7 @@ CHECK = [
 # o que depende da gestão (sem nomes)
 DEPENDE = [
   "Confirmar a grafia e quais empresas citar na prova social por estado.",
- "Decidir o que fazer com o negócio da Ana que nunca fecha (hoje fica aberto em Encerrado e Sem resposta e, nos repasses manuais, até a gestão ligar o fechamento como Ganho) e quando ligar a escrita do vigia do repasse.",
+ "Decidir o que fazer com o negócio da Ana que nunca fecha (hoje fica aberto em Deal breaker, quando parou de responder, e, nos repasses manuais, até a gestão ligar o fechamento como Ganho) e quando ligar a escrita do vigia do repasse.",
  "Renovar, se a gestão quiser, a trava de segurança do ambiente de desenvolvimento, que tem prazo de validade.",
 ]
 

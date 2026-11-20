@@ -2,7 +2,7 @@ const { chromium } = require(process.argv[2]);
 const VPS=[[320,640],[360,740],[390,844],[430,932],[768,1024],[1024,768],[1366,768],[1920,1080]];
 (async()=>{const b=await chromium.launch({executablePath:process.argv[3]});let total=0;
 for(const [w,h] of VPS){const p=await b.newPage({viewport:{width:w,height:h}});
-await p.goto('http://localhost:8803/ecossistema/');await p.evaluate(()=>document.fonts.ready);await p.waitForTimeout(2500);console.log(await p.evaluate(()=>[...document.fonts].filter(f=>f.status==='loaded').length+' fontes carregadas'));
+await p.goto((process.env.ECO_URL||'http://localhost:8803/ecossistema/'));await p.evaluate(()=>document.fonts.ready);await p.waitForTimeout(2500);console.log(await p.evaluate(()=>[...document.fonts].filter(f=>f.status==='loaded').length+' fontes carregadas'));
 // abre todos os details para medir o conteúdo escondido
 await p.evaluate(()=>document.querySelectorAll('details').forEach(d=>d.open=true));await p.waitForTimeout(300);
 const r=await p.evaluate(()=>{
@@ -10,7 +10,7 @@ const r=await p.evaluate(()=>{
  if(document.documentElement.scrollWidth>vw+1) out.push(['PAGINA rola de lado',document.documentElement.scrollWidth,vw]);
  const id=(e)=>{let s=e.tagName.toLowerCase();if(e.id)s+='#'+e.id;if(e.className&&typeof e.className==='string')s+='.'+e.className.trim().split(/\s+/).join('.');const sec=e.closest('section');return s+(sec?' @'+sec.id:'')+' "'+(e.textContent||'').trim().slice(0,40)+'"'};
  // 1) elemento de texto cujo conteúdo estoura a própria caixa
- document.querySelectorAll('section *').forEach(e=>{ if(e.closest('svg')||e.closest('.tw')||e.closest('pre')||e.closest('.svgw')) return; const cs=getComputedStyle(e); if(cs.display==='inline'||cs.display==='none') return; if(e.scrollWidth>e.clientWidth+2 && !/auto|scroll/.test(cs.overflowX)) out.push(['ESTOURA largura',id(e),e.scrollWidth,e.clientWidth]); });
+ document.querySelectorAll('section *').forEach(e=>{ if(e.closest('.sr')||e.closest('svg')||e.closest('.tw')||e.closest('pre')||e.closest('.svgw')) return; const cs=getComputedStyle(e); if(cs.display==='inline'||cs.display==='none') return; if(e.scrollWidth>e.clientWidth+2 && !/auto|scroll/.test(cs.overflowX)) out.push(['ESTOURA largura',id(e),e.scrollWidth,e.clientWidth]); });
  // 2) filho que passa da borda do card/pai
  document.querySelectorAll('.card, .note, .flow .b, .step, details, .grid > *').forEach(c=>{const cr=c.getBoundingClientRect(); if(cr.width===0) return; c.querySelectorAll('*').forEach(e=>{ if(e.closest('svg')||e.closest('.tw')||e.closest('pre')) return; const r=e.getBoundingClientRect(); if(r.width===0||r.height===0) return; if(r.right>cr.right+2||r.left<cr.left-2) out.push(['FORA do card',id(c),id(e),Math.round(r.right-cr.right)]);});});
  // 3) cards vizinhos que se sobrepõem
@@ -24,6 +24,7 @@ const r=await p.evaluate(()=>{
  // 6) fonte pequena demais
  let menor=99;document.querySelectorAll('section p,section li,section td,section h3,section h4,.card *').forEach(e=>{if(e.children.length||!e.textContent.trim()||e.closest('svg'))return;const f=parseFloat(getComputedStyle(e).fontSize);if(f<menor)menor=f;});out.push(['INFO menor fonte html',menor]);
  return out;});
-const uniq=[...new Set(r.map(x=>JSON.stringify(x)))].map(x=>JSON.parse(x));const probs=uniq.filter(x=>x[0]!=='INFO menor fonte html');total+=probs.length;
+const uniq=[...new Set(r.map(x=>JSON.stringify(x)))].map(x=>JSON.parse(x));const menorF=(uniq.find(x=>x[0]==='INFO menor fonte html')||[0,99])[1];const probs=uniq.filter(x=>x[0]!=='INFO menor fonte html');if(menorF>=99||menorF<11)probs.push(['VAZIO ou fonte pequena demais: menor fonte',menorF]);total+=probs.length;   // 20/11: 99 = nada foi medido (servidor errado: antes passava 'vazio' em silêncio)
+
 console.log(`${w}x${h}: ${probs.length} problemas`,uniq.filter(x=>x[0]==='INFO menor fonte html').map(x=>'menor fonte '+x[1]).join(''));probs.slice(0,14).forEach(x=>console.log('  ',JSON.stringify(x).slice(0,230)));await p.close();}
-await b.close();console.log('TOTAL',total)})();
+await b.close();console.log('TOTAL',total);process.exit(total?1:0)})();

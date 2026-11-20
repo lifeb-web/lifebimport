@@ -17,7 +17,20 @@ TOPICOS = {
   "dash": ["Vendas, SDR, anúncios e agentes", "Faixa vermelha quando os dados congelam", "Rosca sem corte"],
   "agendor": ["Funis: Ana, SDR Inbound e Arena", "A Ana ganha ao qualificar", "O Arena só nasce quando o SDR qualifica pela página Hoje"],
 }
-VERSAO = {"ana": "pacote de 17/11/2026", "bia": "deploy de 18/11/2026 (19h05)", "hoje": "página 2026-11-18.6B", "central": "publicada em 17/11/2026", "dash": "página de 17/11/2026", "agendor": "sem versão própria"}
+import json as _json, os as _os
+def _carregar_versoes():
+    f = _os.environ.get("ECO_VERSOES") or _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "versoes.json")
+    return {x["id"]: x for x in _json.load(open(f, encoding="utf-8"))["sistemas"]}
+def versao_de(i):
+    """20/11/2026: a versão mostrada na ficha de cada peça sai SÓ de versoes.json (fonte única; antes havia um dict fixo que ficou velho).
+    A página pública não mostra hash: sistema com hash mostra o tipo e a data/hora do último deploy."""
+    import re as _re
+    if i == "agendor": return "sem versão própria"
+    x = _carregar_versoes()[i]; v = x["versao"]; d = x["data"].replace("página ", "")
+    if _re.search(r"[0-9a-f]{8}", v):
+        return {"ana": "deploy de ", "bia": "deploy de ", "central": "publicada em ", "dash": "página de "}.get(i, "publicada em ") + d
+    return v
+VERSAO = {i: versao_de(i) for i in ("ana", "bia", "hoje", "central", "dash", "agendor")}
 
 RES_ITEM = {
  "Preparados e desligados por chave": "Contador de chamadas ao Agendor e nota única de repasse (desligados por chave)",
