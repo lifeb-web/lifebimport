@@ -2139,13 +2139,18 @@ async function buscarGeral() {
   var seq = ++S.bg.seq; if (S.bg.ctrl) { try { S.bg.ctrl.abort(); } catch (e) { logFalha('l966 cancelar busca que já terminou', e); /* cancelar busca que já terminou */ } } var ctrl = new AbortController(); S.bg.ctrl = ctrl;
   var box = $('buscaGeral'); box.classList.remove('hide'); $('s-dia').classList.add('buscando'); box.setAttribute('aria-busy', 'true'); S.bg.q = q;
   if (!S.bg.ultimo && !$('bgLista').children.length) { $('bgAviso').classList.add('hide'); bgMsg('Procurando em todos os leads...'); } else if (S.bg.ultimo) $('bgResumo').textContent = 'Procurando...'; // com resultado antigo na tela, só avisa; a lista não pisca
-  var j; try { j = await api('/busca?q=' + encodeURIComponent(q) + '&funil=' + S.bg.funil + '&status=' + S.bg.status, null, { signal: ctrl.signal }, null, { timeout: 8000 }); } catch (e) { logFalha('l969 catch', e);  if (e && e.name === 'AbortError') return; j = { _status: 0, ok: false }; }
+  var j; try { j = await api('/busca?q=' + encodeURIComponent(q) + '&funil=' + S.bg.funil + '&status=' + S.bg.status, null, { signal: ctrl.signal }, null, { timeout: 8000, uma: true }); /* 19/11 (auditor): UMA tentativa de 8 s (antes 3 x 8 s = ~25 s de 'Procurando...'); o 'Tentar de novo' fica a um toque */ } catch (e) { logFalha('l969 catch', e);  if (e && e.name === 'AbortError') return; j = { _status: 0, ok: false }; }
   if (seq !== S.bg.seq) return; // chegou uma resposta de uma busca antiga: ignora
   S.bg.ctrl = null; box.removeAttribute('aria-busy');
   if (j._status === 401) { sair('Senha não confere.'); return; }
   if (!j || !j.ok) {
     var msg = j && j._status === 409 && j.erro === 'desligado' ? (j.mensagem || 'A página está desligada no momento.') : (j && (j._status === 404 || j.erro === 'rota_desconhecida')) ? 'A busca em todos os leads ainda não está ligada no servidor. Avise o Robert.' : (j && j.mensagem) || 'Não consegui buscar agora.';
-    $('bgResumo').textContent = ''; $('bgLista').textContent = ''; $('bgAviso').classList.add('hide'); S.bg.ultimo = null; bgMsg(msg + ' O filtro das colunas continua funcionando.', true, { rot: 'Tentar de novo', acao: buscarGeral }); return;
+    // 19/11 (auditor): erro do servidor da busca (404/rede/tempo esgotado) NUNCA apaga o que já está na tela: mostra os leads LOCAIS que casam (se houver) ou devolve as colunas do dia; a mensagem diz só o que é verdade.
+    $('bgAviso').classList.add('hide'); S.bg.ultimo = null; var locais = []; try { locais = bgLocalItens(q); } catch (e1) { logFalha('busca: leads locais no erro do servidor', e1); }
+    $('bgLista').textContent = ''; locais.slice(0, 30).forEach(function (x) { x.localErro = true; $('bgLista').appendChild(bgCartao(x)); }); S.bg.ativo = -1;
+    $('bgResumo').textContent = locais.length ? locais.length + (locais.length === 1 ? ' lead na tela' : ' leads na tela') : '';
+    if (!locais.length) $('s-dia').classList.remove('buscando');   // nada para mostrar aqui: as colunas do dia voltam
+    bgMsg(msg + (locais.length ? ' Mostro só os leads que já estão na tela.' : ' Os leads do dia continuam logo abaixo.'), true, { rot: 'Tentar de novo', acao: buscarGeral }); return;
   }
   if (j.curta) { bgFechar(); return; }
   j.q = q; S.bg.ultimo = j; desenharBuscaGeral(j);
@@ -2161,7 +2166,7 @@ function bgCartao(it) {
   if (it.entrada) li.appendChild(el('div', 'pas', 'Entrou em ' + dataBR(it.entrada)));
   if (it.achouPor && it.achouPor.length) li.appendChild(el('div', 'pas', 'Achei por: ' + it.achouPor.join(', ')));
   if (it.aoVivo) li.appendChild(el('div', 'pas', 'Atualizado agora (ainda não estava na lista rápida).'));
-  if (it.local) li.appendChild(el('div', 'bg-nota', 'Da lista de hoje (conferindo nos outros leads...)'));
+  if (it.local) li.appendChild(el('div', 'bg-nota', it.localErro ? 'Da lista de hoje (não consegui conferir os outros leads)' : 'Da lista de hoje (conferindo nos outros leads...)'));
   var ac = el('div', 'acoes');
   var ab = el('button', 'abrir', 'Abrir'); ab.type = 'button'; ab.setAttribute('aria-label', 'Abrir o lead completo: ' + it.empresa); ab.onclick = function () { abrirLead(it.dealId, ab, it); }; ligaPrefetch(ab, it.dealId); ac.appendChild(ab);
   var tb = el('button', 'sec', 'Tarefas'); tb.type = 'button'; tb.setAttribute('aria-label', 'Ver as tarefas de ' + it.empresa); tb.onclick = function () { abrirLead(it.dealId, tb, it); var n = 0; var rola = function () { var sec = document.querySelector('#painelLead .secao-tarefas'); if (sec) { try { sec.scrollIntoView({ block: 'start' }); } catch (e) { logFalha('l993 foco/rolagem/seleção é só conforto; se falhar a ação já foi feita', e); /* foco/rolagem/seleção é só conforto; se falhar a ação já foi feita */ } } else if (++n < 12) setTimeout(rola, 250); }; setTimeout(rola, 250); }; ac.appendChild(tb);
