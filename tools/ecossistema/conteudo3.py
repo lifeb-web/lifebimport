@@ -95,6 +95,7 @@ def s_observ():
             ])
       + '<h3 class="mt">Os vigias</h3>'
       + grid([
+        card("Avisos só à gestão (20/11/2026)", ul(["Erro de rotina em português, com botão para abrir a página Central; recusa do Agendor com o nome do negócio e botão para abrir no Agendor; Dash desatualizado; backup no máximo 1 por dia.", "Ana: conversas sem próximo toque com os nomes e botão Abrir Atendimento, ciclo de retornos explicado e resumo diário único da simulação.", "Conferência dos leads do site: quem tem abertura agendada só alerta 15 minutos depois do horário marcado.", "O SDR só recebe os avisos de sempre, das 7h às 21h; nenhum destinatário novo."])),
         card("Dados e rotinas", ul(["Negócio sem tarefa, cadastro incompleto, funil errado, duplicados, tarefa duplicada e congelados.", "Se os avisos do Agendor pararam de chegar, a Bia passa a conferir a cada 2 minutos até normalizar.", "Sincronização do Dash: alerta se parar por mais de 15 minutos."])),
         card("Infraestrutura", ul(["Agendor e automações do n8n nas últimas 24 horas, batimento cardíaco e autoteste.", "Webhook do número da Ana na Meta, a cada 5 minutos.", "Backups: alerta se uma parte passar de 30 horas sem sucesso."])),
         card("Coerência", ul(["Auditor de coerência: lê o que a Bia disse e confere no Agendor se foi feito de verdade; divergência vai à gestão.", ])),

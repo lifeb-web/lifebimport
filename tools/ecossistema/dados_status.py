@@ -61,6 +61,12 @@ CHECK = [
  ("Ana", "Detector de intenção de compra: quem pede para comprar ou pede valor duas vezes nunca é descartado (vira repasse ao especialista, sem preço); filtro de saída barra preço, à vista e valores por extenso; palavra ininteligível não vira dado", "ok", "No ar desde 20/11/2026 (05h30), a partir das conversas reais da revisão do funil."),
  ("Ana", "Um toque automático por lead por dia (nunca 2 em 5 h; excedente vai ao dia útil seguinte, teto de 10 por dia); \"por enquanto não\" tem 1 despedida e retorno em 20 dias úteis", "ok", "No ar desde 20/11/2026 (05h30). O prazo de 20 dias úteis está a confirmar com a gestão."),
  ("Ana", "Autocura da cadência parada (recria os toques cancelados por engano)", "of", "No ar em modo SIMULAR: só lê e manda 1 resumo por dia. Só age quando a gestão ligar a chave dela (padrão seguro)."),
+ ("Ana", "Abertura duplicada: quem já está conversando não recebe a segunda apresentação (na dúvida a abertura sai); lead sem nome só ouve \"Oi!\"", "ok", "No ar desde 20/11/2026 (10h09); 241 verificações e 13 mutantes mortas."),
+ ("Ana", "Avisos à gestão em português, no formato o que aconteceu, o que já fiz e o que fazer: conversas sem próximo toque com nomes e botão Abrir Atendimento, ciclo de retornos, resumo diário único da simulação e conferência automática", "ok", "No ar desde 20/11/2026 (13h48); nenhum destinatário nem gatilho mudou."),
+ ("Ana", "Repasse manual cancela os toques pendentes da Ana; o próximo toque é garantido depois do turno (só agenda, nunca envia na hora)", "ok", "No ar desde 20/11/2026 (18h11); o fechamento da Ana como Ganho no repasse manual NÃO mudou (segue desligado)."),
+ ("Ana", "Vaga e currículo: quem pede vaga nunca recebe apresentação nem convite (aviso curto e silêncio com alerta); só vale como loja própria quem diz com palavras próprias; quem diz que é lojista reabre", "ok", "No ar desde 20/11/2026 (19h13). Ressalva: \"trabalho numa drogaria e quero vaga\" recebe o aviso fixo e pode responder que é lojista."),
+ ("Bia", "Avisos só à gestão: erro de rotina em português com botão, recusa do Agendor com nome e botão, Dash, backup no máximo 1 por dia, conferência dos leads do site sem alarme falso para abertura agendada", "ok", "No ar desde 20/11/2026 (14h09); 161 verificações e 50 mutantes mortas."),
+ ("Bia", "Tarefa de equipe pedida pela Ana (ligar, mensagem não entregue) vai ao SDR: 1 aberta por tipo e negócio; a aberta no robô é reatribuída", "ok", "No ar desde 20/11/2026 (17h53); 114 verificações. Se o Agendor recusar, fica no robô e avisa a gestão."),
  ("Bia", "Limpeza de avisos (menos ruído); cópia automática de avisos ao gestor desligada", "ok", "No ar desde a noite de 16/11/2026."),
  ("Bia", "Aviso NOVO LEAD com vigia de reenvio e pacote do Arena", "ok", "No ar na Bia de 15/11/2026 às 04h49. Achado médio da auditoria: o vigia enxerga só os 100 primeiros registros; correção prevista."),
  ("Bia", "Reenvio automático quando a Meta recusa a ENTREGA do aviso", "lm", "Falha de ENVIO entra na fila e é reenviada; falha de ENTREGA recusada pela Meta fica registrada e ainda não gera reenvio automático (planejado)."),
@@ -95,7 +101,7 @@ CHECK = [
 # o que depende da gestão (sem nomes)
 DEPENDE = [
   "Confirmar a grafia e quais empresas citar na prova social por estado.",
- "Decidir o que fazer com o negócio da Ana que nunca fecha (hoje fica aberto em Deal breaker, quando parou de responder, e, nos repasses manuais, até a gestão ligar o fechamento como Ganho) e quando ligar a escrita do vigia do repasse.",
+ "Decidir o que fazer com o negócio da Ana que nunca fecha (hoje fica aberto em Deal breaker, quando parou de responder, e, nos repasses manuais, até a gestão ligar o fechamento como Ganho) e quando ligar a escrita do vigia do repasse e o fechamento automático da cadência parada (todos seguem desligados ou simulados, conferido ao vivo em 20/11/2026).",
  "Renovar, se a gestão quiser, a trava de segurança do ambiente de desenvolvimento, que tem prazo de validade.",
 ]
 
