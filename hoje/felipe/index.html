@@ -391,6 +391,20 @@ a.subir{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:6
 .bg-lista .est.bgst-perdido{color:var(--red)} .bg-lista .est.bgst-ganho{color:var(--green)} .bg-lista .est.bgst-fila,.bg-lista .est.bgst-pendente{color:var(--amber)} .bg-lista .est.bgst-cadencia,.bg-lista .est.bgst-fim{color:var(--purple)}
 .bg-lista .item .acoes button{min-height:26px;padding:1px 10px;font-size:13px;border-radius:7px}
 @media(max-width:700px){ .busca-geral{max-height:none;margin:8px 8px 0} .busca-geral .seg{flex:1 1 100%} .busca-geral .seg button{flex:1;min-height:44px} .bg-lista{grid-template-columns:1fr} .bg-lista .item .acoes{flex-wrap:wrap} .bg-lista .item .acoes button,.bg-lista .item .acoes a.bt{min-height:44px;flex:1 1 40%} }
+/* 19/11 (PESQUISA, Robert #3678 "a busca corta os cartões, resultados cortados em cima e embaixo"): causa PROVADA em Chromium 1440: o painel tinha altura máxima de 46vh COM rolagem própria (cabia 1,5 fileira e o resto era cortado no meio do cartão) e as colunas do dia continuavam embaixo;
+   no celular os botões de filtro estouravam a largura. Agora: com a busca aberta o painel ocupa TODO o espaço abaixo do cabeçalho (as colunas do dia saem de cena enquanto se busca), UMA só rolagem (a da lista), cartões inteiros, filtros que quebram linha, cabeçalho do painel fixo. */
+.busca-geral{max-height:none;overflow:visible;display:flex;flex-direction:column}
+.busca-geral .bg-topo{position:sticky;top:0;z-index:4;background:var(--card);padding:2px 0 4px;border-radius:8px}
+.busca-geral .seg{flex-wrap:wrap;max-width:100%} .busca-geral .seg button{flex:1 1 auto;min-width:0}
+.bg-lista{align-content:start;grid-auto-rows:max-content}
+.bg-lista .item{scroll-margin:10px;content-visibility:visible;contain-intrinsic-size:none}   /* 2ª causa PROVADA do corte: `.item{content-visibility:auto}` estimava 110-150 px por cartão (o da busca tem 160-270 px): a altura da lista mudava ao rolar, o fim da lista nunca era alcançado de primeira e cartões apareciam cortados/pulando; a busca tem no máximo ~50 cartões, desenha todos de verdade */
+.bg-lista .item.bg-ativo{outline:3px solid var(--purple);outline-offset:1px}
+.bg-lista mark{background:var(--amber-bg);color:inherit;font-weight:800;border-radius:3px;padding:0 1px;box-shadow:inset 0 -2px 0 var(--amber)}
+.bg-lista .item .bg-nota{font-size:13px;color:var(--muted)}
+.busca-geral .bg-dicas{font-size:13px;color:var(--muted);margin:2px 0 4px}
+#s-dia.buscando #blocos,#s-dia.buscando #diaOrigens{display:none}
+@media(max-width:700px){ #s-dia.buscando .cab1 .chips,#s-dia.buscando .cab2 .seg,#s-dia.buscando .cab2 select,#s-dia.buscando #bAguard,#s-dia.buscando .cab2 label,#s-dia.buscando #blocoIniciar,#s-dia.buscando .busca-geral .bg-dicas{display:none} }   /* celular: com a busca aberta, o espaço é dos resultados (o resto do cabeçalho volta ao fechar a busca) */
+@media(min-width:1000px){ #s-dia.buscando .busca-geral{flex:1 1 auto;min-height:0;overflow:hidden;margin-bottom:8px} #s-dia.buscando .bg-lista{flex:1 1 0;min-height:0;overflow-y:auto;overscroll-behavior:contain;scroll-snap-type:y proximity;padding:2px 6px 16px 2px} .bg-lista .item{scroll-snap-align:start} }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 /* revisão de design 28/10: leitura rápida do cartão, cabeçalho enxuto no celular, nada pulando de lugar */
 .org{flex-wrap:wrap;border-radius:12px;line-height:1.25;row-gap:2px}
@@ -605,7 +619,7 @@ html{overflow-x:hidden}
     <div id="perdasCtx" class="pcx hide" role="alert"></div>
     <div class="ajuda-box hide" id="ajudaBox" role="note"><kbd>/</kbd> buscar &nbsp; <kbd>R</kbd> atualizar &nbsp; <kbd>H</kbd> esconder feitos &nbsp; <kbd>T</kbd> tema &nbsp; <kbd>F</kbd> fila de espera &nbsp; <kbd>Esc</kbd> limpar a busca ou fechar</div>
     <div class="cab2">
-      <input type="search" id="busca" placeholder="Buscar em todos os leads: loja, pessoa, telefone, CNPJ..." aria-label="Buscar em todos os leads por loja, pessoa, telefone, CNPJ, número do negócio ou cidade" autocomplete="off">
+      <input type="search" id="busca" maxlength="80" placeholder="Buscar em todos os leads: loja, pessoa, telefone, CNPJ..." aria-label="Buscar em todos os leads por loja, pessoa, telefone, CNPJ, número do negócio ou cidade" autocomplete="off">
       <div class="seg" role="group" aria-label="Funil"><button id="fTodos" aria-pressed="true">Todos</button><button id="fOut" aria-pressed="false">Outbound</button><button id="fIn" aria-pressed="false">Inbound</button></div>
       <select id="ordem" class="tp-fil" aria-label="Ordenar"><option value="pend">Pendentes primeiro</option><option value="az">Ordem alfabética</option><option value="hora">Hora em que foi iniciado</option></select>
       <button class="sec" id="bAguard" title="Leads que você qualificou e ainda esperam representante">Aguardando representante (0)</button>
@@ -638,6 +652,7 @@ html{overflow-x:hidden}
       <div class="seg" role="group" aria-label="Funil da busca"><button id="bgfTodos" type="button" aria-pressed="true">Todos</button><button id="bgfOut" type="button" aria-pressed="false">Outbound</button><button id="bgfIn" type="button" aria-pressed="false">Inbound</button></div>
       <div class="seg" role="group" aria-label="Situação do lead"><button id="bgsTodos" type="button" aria-pressed="true">Todos</button><button id="bgsAndamento" type="button" aria-pressed="false">Em andamento</button><button id="bgsFila" type="button" aria-pressed="false">Na fila</button><button id="bgsPerdido" type="button" aria-pressed="false">Perdidos</button><button id="bgsGanho" type="button" aria-pressed="false">Ganhos</button></div>
     </div>
+    <div class="bg-dicas" id="bgDicas">Use <kbd>↑</kbd> <kbd>↓</kbd> para escolher, <kbd>Enter</kbd> para abrir, <kbd>Esc</kbd> para fechar. Vale nome, pessoa, telefone (até só o final), CNPJ, número do negócio ou cidade.</div>
     <div class="aviso bg-aviso hide" id="bgAviso" role="status"></div>
     <div class="bg-lista" id="bgLista"></div>
     <div class="bg-msg" id="bgMsg" role="status"></div>
@@ -2061,9 +2076,54 @@ atualizaRotuloLiberar();
 // ---------- busca geral (29/10): acha QUALQUER lead dos funis SDR (em andamento, perdido, ganho), não só o que está na tela ----------
 // O campo de busca do topo continua filtrando as colunas na hora (local). Com 2+ letras ou 4+ números, além disso, pergunta ao servidor (índice no KV, não varre o Agendor).
 S.bg = { seq: 0, ctrl: null, timer: null, funil: 'todos', status: 'todos', ultimo: null };
+// ---- 19/11 (PESQUISA): motor de busca LOCAL (instantâneo, sem rede): normaliza (acento, caixa, pontuação), todas as palavras precisam casar, ranking e destaque. Entrada hostil (10 mil letras, emoji, símbolos de regex, HTML) é só texto: nada vira regex nem HTML.
+var BG_MAX = 80;
+function bgNorm(t) { var s = String(t == null ? '' : t).slice(0, 400), o = ''; for (var i = 0; i < s.length; i++) { var n = s.charAt(i).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); o += /^[a-z0-9]$/.test(n) ? n : ' '; } return o; }   // 1 caractere de entrada = 1 de saída (as posições servem ao destaque)
+function bgTokens(q) { var seen = {}, out = []; bgNorm(String(q == null ? '' : q).slice(0, BG_MAX)).split(' ').forEach(function (w) { if (w && !seen[w] && out.length < 6) { seen[w] = 1; out.push(w.slice(0, 40)); } }); return out; }
+function bgDist1(a, b) { if (a === b) return true; var la = a.length, lb = b.length; if (Math.abs(la - lb) > 1) return false; var i = 0; while (i < la && i < lb && a.charAt(i) === b.charAt(i)) i++; if (la === lb) { if (a.slice(i + 1) === b.slice(i + 1)) return true; return i + 1 < la && a.charAt(i) === b.charAt(i + 1) && a.charAt(i + 1) === b.charAt(i) && a.slice(i + 2) === b.slice(i + 2); } return la > lb ? a.slice(i + 1) === b.slice(i) : b.slice(i + 1) === a.slice(i); }   // 1 letra a mais, a menos, trocada ou 2 trocadas de lugar
+// pontuação de um cartão para a busca: 0 = não casa (todas as palavras têm de casar); maior = melhor
+function bgPontuar(it, q) {
+  var tk = bgTokens(q); if (!tk.length) return 0; var dgQ = soDigitos(String(q == null ? '' : q).slice(0, BG_MAX)); if (dgQ.length >= 4 && !/[a-z]/.test(bgNorm(String(q).slice(0, BG_MAX)))) tk = [dgQ.slice(0, 40)];   // só números/máscara (telefone, CNPJ, id): vira UM número ("+55 (62) 98000-1234" = 556298000 1234)
+  var emp = bgNorm(it.empresa), pes = bgNorm(it.pessoa), cid = bgNorm(it.cidade), sub = bgNorm(it.subtitulo), fone = soDigitos(it.fone), cn = soDigitos(it.cnpj), id = String(it.dealId == null ? '' : it.dealId);
+  var total = 0;
+  for (var i = 0; i < tk.length; i++) {
+    var w = tk[i], best = 0, num = /^\d+$/.test(w);
+    if (num && w.length >= 4) { if (id === w) best = 100; else if (w.length >= 6 && id.indexOf(w) === 0) best = 70; if (fone && fone.slice(-w.length) === w && fone.length >= w.length) best = Math.max(best, 92); else if (fone.indexOf(w) >= 0) best = Math.max(best, 60); if (cn.indexOf(w) === 0) best = Math.max(best, 88); else if (cn.indexOf(w) >= 0) best = Math.max(best, 66); }
+    if (emp) { if (emp.replace(/^ +/, '').indexOf(w) === 0) best = Math.max(best, 90); else if (emp.indexOf(' ' + w) >= 0) best = Math.max(best, 80); else if (emp.indexOf(w) >= 0) best = Math.max(best, 50); }
+    if (pes) { if (pes.replace(/^ +/, '').indexOf(w) === 0) best = Math.max(best, 70); else if (pes.indexOf(' ' + w) >= 0) best = Math.max(best, 62); else if (pes.indexOf(w) >= 0) best = Math.max(best, 40); }
+    if (cid && cid.indexOf(w) >= 0) best = Math.max(best, 35); if (sub && sub.indexOf(w) >= 0) best = Math.max(best, 20);
+    if (!best && w.length >= 5 && !num) { var pal = (emp + ' ' + pes).split(' '); for (var k = 0; k < pal.length; k++) if (pal[k].length >= 4 && bgDist1(w, pal[k])) { best = 25; break; } }   // erro de digitação leve (1 letra)
+    if (!best) return 0; total += best;
+  }
+  return Math.round(total / tk.length);
+}
+// destaque do trecho achado (por DOM, nunca innerHTML): percorre os textos do cartão, fora dos botões
+function bgDestacar(raiz, q) {
+  var tk = bgTokens(q); if (!tk.length || !raiz) return; var alvos = [], w = document.createTreeWalker(raiz, 4, null), n; while ((n = w.nextNode())) { var pai = n.parentNode; if (!pai || /^(BUTTON|MARK|SCRIPT|STYLE)$/.test(pai.nodeName) || (pai.closest && pai.closest('button,a.bt,.acoes'))) continue; if (n.nodeValue && n.nodeValue.trim()) alvos.push(n); }
+  alvos.forEach(function (nodo) {
+    var txt = nodo.nodeValue, nt = bgNorm(txt), marca = new Array(txt.length), achou = false;
+    tk.forEach(function (t) { var ini = 0, pos; while (t && (pos = nt.indexOf(t, ini)) >= 0) { for (var i = pos; i < pos + t.length; i++) marca[i] = 1; ini = pos + t.length; achou = true; } });
+    if (!achou) return; var frag = document.createDocumentFragment(), i = 0;
+    while (i < txt.length) { var j = i, m = !!marca[i]; while (j < txt.length && !!marca[j] === m) j++; var parte = txt.slice(i, j); if (m) { var mk = document.createElement('mark'); mk.textContent = parte; frag.appendChild(mk); } else frag.appendChild(document.createTextNode(parte)); i = j; }
+    nodo.parentNode.replaceChild(frag, nodo);
+  });
+}
+// leads que já estão na tela (colunas do dia) casados na hora, sem esperar o servidor
+function bgLocalItens(q) {
+  var d = S.dados; if (!d || !Array.isArray(d.blocos)) return []; var vistos = {}, out = [];
+  d.blocos.forEach(function (b) { (b.itens || []).forEach(function (it) { if (!it || it.dealId == null || vistos[it.dealId]) return; var sc = bgPontuar(it, q); if (!sc) return; vistos[it.dealId] = 1; var feito = it.feito || it.estado === 'feito'; out.push({ dealId: it.dealId, funil: it.funil, funilNome: it.funil === 'inbound' ? 'SDR · Inbound' : 'SDR · Outbound', empresa: it.empresa, pessoa: it.pessoa || '', fone: it.fone || '', cidade: it.cidade || '', origem: it.origem || '', origemNome: it.origemNome, tipoRetorno: it.tipoRetorno, status: feito ? 'cadencia' : 'pendente', statusTexto: feito ? 'Feito hoje' : 'Na lista de hoje', etapa: it.subtitulo || '', podeIniciar: false, achouPor: [], local: true, _sc: sc }); }); });
+  out.sort(function (a, b) { return (b._sc - a._sc) || String(a.empresa).localeCompare(String(b.empresa), 'pt-BR'); }); return out;
+}
 function bgValida(q) { var l = semAcento(q).replace(/[^a-z]/g, '').length; return l >= 2 || soDigitos(q).length >= 4; }
-function bgFechar() { clearTimeout(S.bg.timer); S.bg.seq++; if (S.bg.ctrl) { try { S.bg.ctrl.abort(); } catch (e) { logFalha('l952 cancelar busca que já terminou', e); /* cancelar busca que já terminou */ } } S.bg.ctrl = null; S.bg.ultimo = null; $('buscaGeral').classList.add('hide'); $('buscaGeral').removeAttribute('aria-busy'); }
-function bgAgendar() { clearTimeout(S.bg.timer); var q = $('busca').value.trim(); if (!S.token || !bgValida(q)) { bgFechar(); return; } S.bg.timer = setTimeout(buscarGeral, 350); } // debounce: não pergunta a cada tecla
+function bgFechar() { clearTimeout(S.bg.timer); S.bg.seq++; if (S.bg.ctrl) { try { S.bg.ctrl.abort(); } catch (e) { logFalha('l952 cancelar busca que já terminou', e); /* cancelar busca que já terminou */ } } S.bg.ctrl = null; S.bg.ultimo = null; S.bg.ativo = -1; $('buscaGeral').classList.add('hide'); $('s-dia').classList.remove('buscando'); $('buscaGeral').removeAttribute('aria-busy'); }
+function bgAgendar() { clearTimeout(S.bg.timer); var q = $('busca').value.trim().slice(0, BG_MAX); if (!S.token || !bgValida(q)) { bgFechar(); return; } try { bgInstantaneo(q); } catch (e) { logFalha('busca instantânea: o servidor responde em seguida', e); } S.bg.timer = setTimeout(buscarGeral, 350); } // debounce: não pergunta a cada tecla; a resposta LOCAL aparece na hora // debounce: não pergunta a cada tecla
+// resposta local imediata (os leads que já estão na tela), antes da resposta do servidor; só pinta se o painel ainda não tem resultado do servidor para esta busca
+function bgInstantaneo(q) {
+  var box = $('buscaGeral'); box.classList.remove('hide'); $('s-dia').classList.add('buscando'); if (S.bg.ultimo && S.bg.ultimo.q === q) return;
+  var itens = bgLocalItens(q); S.bg.q = q; if (!itens.length && S.bg.ultimo) return;
+  var lista = $('bgLista'); lista.textContent = ''; $('bgResumo').textContent = itens.length ? itens.length + (itens.length === 1 ? ' lead na tela, procurando nos outros...' : ' leads na tela, procurando nos outros...') : 'Procurando em todos os leads...'; $('bgAviso').classList.add('hide'); bgMsg(itens.length ? '' : 'Procurando em todos os leads...');
+  itens.slice(0, 30).forEach(function (it) { lista.appendChild(bgCartao(it)); }); S.bg.ativo = -1;
+}
 function bgMsg(texto, erro, botao) { var m = $('bgMsg'); m.textContent = texto || ''; m.className = 'bg-msg' + (erro ? ' erro' : ''); if (botao) { var b = el('button', 'sec', botao.rot); b.type = 'button'; b.style.marginLeft = '8px'; b.onclick = botao.acao; m.appendChild(b); } }
 function bgRotulos(c) {
   var f = (c && c.funil) || {}, st = (c && c.status) || {}; var and = (st.fila || 0) + (st.pendente || 0) + (st.cadencia || 0) + (st.fim || 0); var tot = and + (st.perdido || 0) + (st.ganho || 0);
@@ -2075,20 +2135,25 @@ function bgMarcar() {
   [['bgsTodos', 'todos'], ['bgsAndamento', 'andamento'], ['bgsFila', 'fila'], ['bgsPerdido', 'perdido'], ['bgsGanho', 'ganho']].forEach(function (p) { $(p[0]).setAttribute('aria-pressed', p[1] === S.bg.status ? 'true' : 'false'); });
 }
 async function buscarGeral() {
-  var q = $('busca').value.trim(); if (!S.token || !bgValida(q)) { bgFechar(); return; }
+  var q = $('busca').value.trim().slice(0, BG_MAX); if (!S.token || !bgValida(q)) { bgFechar(); return; }
   var seq = ++S.bg.seq; if (S.bg.ctrl) { try { S.bg.ctrl.abort(); } catch (e) { logFalha('l966 cancelar busca que já terminou', e); /* cancelar busca que já terminou */ } } var ctrl = new AbortController(); S.bg.ctrl = ctrl;
-  var box = $('buscaGeral'); box.classList.remove('hide'); box.setAttribute('aria-busy', 'true');
-  if (!S.bg.ultimo) { $('bgLista').textContent = ''; $('bgAviso').classList.add('hide'); bgMsg('Procurando em todos os leads...'); } else $('bgResumo').textContent = 'Procurando...'; // com resultado antigo na tela, só avisa; a lista não pisca
-  var j; try { j = await api('/busca?q=' + encodeURIComponent(q) + '&funil=' + S.bg.funil + '&status=' + S.bg.status, null, { signal: ctrl.signal }, null, { timeout: 8000 }); } catch (e) { logFalha('l969 catch', e);  if (e && e.name === 'AbortError') return; j = { _status: 0, ok: false }; }
+  var box = $('buscaGeral'); box.classList.remove('hide'); $('s-dia').classList.add('buscando'); box.setAttribute('aria-busy', 'true'); S.bg.q = q;
+  if (!S.bg.ultimo && !$('bgLista').children.length) { $('bgAviso').classList.add('hide'); bgMsg('Procurando em todos os leads...'); } else if (S.bg.ultimo) $('bgResumo').textContent = 'Procurando...'; // com resultado antigo na tela, só avisa; a lista não pisca
+  var j; try { j = await api('/busca?q=' + encodeURIComponent(q) + '&funil=' + S.bg.funil + '&status=' + S.bg.status, null, { signal: ctrl.signal }, null, { timeout: 8000, uma: true }); /* 19/11 (auditor): UMA tentativa de 8 s (antes 3 x 8 s = ~25 s de 'Procurando...'); o 'Tentar de novo' fica a um toque */ } catch (e) { logFalha('l969 catch', e);  if (e && e.name === 'AbortError') return; j = { _status: 0, ok: false }; }
   if (seq !== S.bg.seq) return; // chegou uma resposta de uma busca antiga: ignora
   S.bg.ctrl = null; box.removeAttribute('aria-busy');
   if (j._status === 401) { sair('Senha não confere.'); return; }
   if (!j || !j.ok) {
     var msg = j && j._status === 409 && j.erro === 'desligado' ? (j.mensagem || 'A página está desligada no momento.') : (j && (j._status === 404 || j.erro === 'rota_desconhecida')) ? 'A busca em todos os leads ainda não está ligada no servidor. Avise o Robert.' : (j && j.mensagem) || 'Não consegui buscar agora.';
-    $('bgResumo').textContent = ''; $('bgLista').textContent = ''; $('bgAviso').classList.add('hide'); S.bg.ultimo = null; bgMsg(msg + ' O filtro das colunas continua funcionando.', true, { rot: 'Tentar de novo', acao: buscarGeral }); return;
+    // 19/11 (auditor): erro do servidor da busca (404/rede/tempo esgotado) NUNCA apaga o que já está na tela: mostra os leads LOCAIS que casam (se houver) ou devolve as colunas do dia; a mensagem diz só o que é verdade.
+    $('bgAviso').classList.add('hide'); S.bg.ultimo = null; var locais = []; try { locais = bgLocalItens(q); } catch (e1) { logFalha('busca: leads locais no erro do servidor', e1); }
+    $('bgLista').textContent = ''; locais.slice(0, 30).forEach(function (x) { x.localErro = true; $('bgLista').appendChild(bgCartao(x)); }); S.bg.ativo = -1;
+    $('bgResumo').textContent = locais.length ? locais.length + (locais.length === 1 ? ' lead na tela' : ' leads na tela') : '';
+    if (!locais.length) $('s-dia').classList.remove('buscando');   // nada para mostrar aqui: as colunas do dia voltam
+    bgMsg(msg + (locais.length ? ' Mostro só os leads que já estão na tela.' : ' Os leads do dia continuam logo abaixo.'), true, { rot: 'Tentar de novo', acao: buscarGeral }); return;
   }
   if (j.curta) { bgFechar(); return; }
-  S.bg.ultimo = j; desenharBuscaGeral(j);
+  j.q = q; S.bg.ultimo = j; desenharBuscaGeral(j);
 }
 function bgCartao(it) {
   var li = el('div', 'item bgitem bg-' + it.status);
@@ -2101,6 +2166,7 @@ function bgCartao(it) {
   if (it.entrada) li.appendChild(el('div', 'pas', 'Entrou em ' + dataBR(it.entrada)));
   if (it.achouPor && it.achouPor.length) li.appendChild(el('div', 'pas', 'Achei por: ' + it.achouPor.join(', ')));
   if (it.aoVivo) li.appendChild(el('div', 'pas', 'Atualizado agora (ainda não estava na lista rápida).'));
+  if (it.local) li.appendChild(el('div', 'bg-nota', it.localErro ? 'Da lista de hoje (não consegui conferir os outros leads)' : 'Da lista de hoje (conferindo nos outros leads...)'));
   var ac = el('div', 'acoes');
   var ab = el('button', 'abrir', 'Abrir'); ab.type = 'button'; ab.setAttribute('aria-label', 'Abrir o lead completo: ' + it.empresa); ab.onclick = function () { abrirLead(it.dealId, ab, it); }; ligaPrefetch(ab, it.dealId); ac.appendChild(ab);
   var tb = el('button', 'sec', 'Tarefas'); tb.type = 'button'; tb.setAttribute('aria-label', 'Ver as tarefas de ' + it.empresa); tb.onclick = function () { abrirLead(it.dealId, tb, it); var n = 0; var rola = function () { var sec = document.querySelector('#painelLead .secao-tarefas'); if (sec) { try { sec.scrollIntoView({ block: 'start' }); } catch (e) { logFalha('l993 foco/rolagem/seleção é só conforto; se falhar a ação já foi feita', e); /* foco/rolagem/seleção é só conforto; se falhar a ação já foi feita */ } } else if (++n < 12) setTimeout(rola, 250); }; setTimeout(rola, 250); }; ac.appendChild(tb);
@@ -2110,16 +2176,17 @@ function bgCartao(it) {
     ib.onclick = function () { if (!window.confirm('Iniciar ' + it.empresa + ' agora? As tarefas do 1º contato são criadas na hora.' + avisoTarde())) return; liberar({ dealIds: [it.dealId], funil: it.funil }).then(function () { buscarGeral(); }); };
     ac.appendChild(ib);
   }
-  li.appendChild(ac); return li;
+  li.appendChild(ac); try { bgDestacar(li, S.bg.q || ''); } catch (e) { logFalha('destaque da busca é só conforto', e); } return li;
 }
 function desenharBuscaGeral(j) {
   bgMarcar(); bgRotulos(j.contagem);
   var av = $('bgAviso'); av.textContent = ''; var avs = (j.avisos || []).slice(); if (avs.length) { av.classList.remove('hide'); avs.forEach(function (t, i) { av.appendChild(el('div', null, t)); }); } else av.classList.add('hide');
-  var lista = $('bgLista'); lista.textContent = ''; var itens = j.itens || [];
+  var lista = $('bgLista'); lista.textContent = ''; var itens = (j.itens || []).slice(); S.bg.ativo = -1;
+  try { var ja = {}; itens.forEach(function (x) { ja[x.dealId] = 1; }); var so = bgLocalItens(S.bg.q || '').filter(function (x) { return !ja[x.dealId] && (S.bg.funil === 'todos' || x.funil === S.bg.funil) && S.bg.status === 'todos'; }); if (so.length && !j.truncado) { so.forEach(function (x) { x.local = true; itens.push(x); }); j = Object.assign({}, j, { total: (j.total || 0) + so.length }); } } catch (e) { logFalha('mesclar leads da tela na busca', e); }
   $('bgResumo').textContent = !j.total ? 'Nenhum lead encontrado' : (j.total === 1 ? '1 lead achado' : j.total + ' leads achados') + (j.truncado ? ', mostrando os ' + j.mostrando + ' primeiros' : '') + (j.parcial ? ' (busca parcial)' : '');
   anexarEmBlocos(lista, itens, bgCartao);
   var c = j.contagem || {}, st = c.status || {}; var outros = (st.fila || 0) + (st.pendente || 0) + (st.cadencia || 0) + (st.fim || 0) + (st.perdido || 0) + (st.ganho || 0);
-  if (!itens.length) bgMsg(outros ? 'Nenhum lead com esse filtro, mas há ' + outros + ' em outra situação. Clique em "Todos".' : (c.semFiltroDeFunil ? 'Nenhum lead deste funil. Há ' + c.semFiltroDeFunil + ' no outro funil. Clique em "Todos".' : 'Não achei nenhum lead com isso. Confira o nome, o telefone ou o CNPJ. Lead criado há poucos minutos pode demorar a aparecer.'));
+  if (!itens.length) bgMsg(outros ? 'Nenhum lead com esse filtro, mas há ' + outros + ' em outra situação. Clique em "Todos".' : (c.semFiltroDeFunil ? 'Nenhum lead deste funil. Há ' + c.semFiltroDeFunil + ' no outro funil. Clique em "Todos".' : 'Não achei nenhum lead com isso: «' + String(S.bg.q || '').slice(0, 40) + '». Confira o nome, o telefone (pode ser só o final) ou o CNPJ. Lead criado há poucos minutos pode demorar a aparecer.'));
   else if (j.truncado) bgMsg('Tem mais leads do que cabem na tela. Escreva mais letras ou números para achar o que procura.'); else bgMsg('');
 }
 function bgFiltro(chave, valor) { S.bg[chave] = valor; bgMarcar(); buscarGeral(); }
@@ -3375,6 +3442,12 @@ $('bTema').onclick = alternarTema;
 $('bTopo').onclick = function () { var rec = !$('cab').classList.contains('rec'); lsSet('sh_topo', rec ? 'r' : 'e'); topoAplicar(rec); }; // 17.6A: lembra a escolha por usuário (neste aparelho); sem escolha = recolhido
 topoAplicar(topoLer() !== 'e'); observaLargura();
 $('bAjuda').onclick = function () { var b = $('ajudaBox'); b.classList.toggle('hide'); $('bAjuda').setAttribute('aria-expanded', b.classList.contains('hide') ? 'false' : 'true'); };
+// 19/11 (PESQUISA): teclado na busca: ↑ ↓ escolhem o cartão (o campo continua com o foco), Enter abre o escolhido (ou o 1º), Esc fecha/limpa (já tratado no atalho global)
+$('busca').addEventListener('keydown', function (e) {
+  var box = $('buscaGeral'); if (box.classList.contains('hide')) return; var cards = Array.prototype.slice.call($('bgLista').querySelectorAll(':scope > .item'));
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { if (!cards.length) return; e.preventDefault(); var i = S.bg.ativo == null ? -1 : S.bg.ativo; i = e.key === 'ArrowDown' ? Math.min(cards.length - 1, i + 1) : Math.max(0, i - 1); S.bg.ativo = i; cards.forEach(function (c, k) { c.classList.toggle('bg-ativo', k === i); }); try { cards[i].scrollIntoView({ block: 'nearest' }); } catch (x) { logFalha('rolagem da busca é só conforto', x); } $('bgResumo').setAttribute('aria-activedescendant', ''); }
+  else if (e.key === 'Enter') { var alvo = cards[S.bg.ativo >= 0 ? S.bg.ativo : 0]; var b = alvo && alvo.querySelector('button.abrir'); if (b) { e.preventDefault(); b.click(); } }
+});
 var debBusca = null; $('busca').oninput = function () { clearTimeout(debBusca); debBusca = setTimeout(function () { desenharBlocos(); }, 150); bgAgendar(); }; $('ordem').onchange = desenharBlocos; $('esconder').onchange = desenharBlocos;
 function setFunil(f) { S.funil = f; [['fTodos', 'todos'], ['fOut', 'outbound'], ['fIn', 'inbound']].forEach(function (p) { $(p[0]).setAttribute('aria-pressed', p[1] === f ? 'true' : 'false'); }); if (S.dados) { desenharTopo(S.dados); desenharBlocos(); } }
 $('fTodos').onclick = function () { setFunil('todos'); }; $('fOut').onclick = function () { setFunil('outbound'); }; $('fIn').onclick = function () { setFunil('inbound'); };
@@ -3399,7 +3472,7 @@ document.addEventListener('keydown', function (e) {
 desenharTopo = seguro('desenharTopo', desenharTopo); desenharControle = seguro('desenharControle', desenharControle); desenharBlocos = seguro('desenharBlocos', desenharBlocos); desenharFila = seguro('desenharFila', desenharFila); desenharAguardando = seguro('desenharAguardando', desenharAguardando); renderLead = seguro('renderLead', renderLead); renderGanho = seguro('renderGanho', renderGanho);
 cartao = seguro('cartao', cartao, function (it) { var f = el('div', 'item'); f.appendChild(el('div', 'emp', (it && it.empresa) || 'Item')); f.appendChild(el('div', 'pas', 'Não consegui mostrar os detalhes deste item.')); return f; });
 cartaoAtrasado = seguro('cartaoAtrasado', cartaoAtrasado, function (g) { var f = el('div', 'item'); f.appendChild(el('div', 'emp', (g && g.empresa) || 'Item')); return f; });
-window.__shTeste = { desenharBlocos: desenharBlocos, sair: sair, entrar: entrar, livroPoda: livroPoda, renderCardInfo: renderCardInfo, renderLead: renderLead, livroVarre: livroVarre, livroAplica: livroAplica, livroLead: livroLead, livroObserva: livroObserva, livroDoLead: livroDoLead, livroAdd: livroAdd, livroDel: livroDel, aplicarResposta: aplicarResposta, aplicarStatus: aplicarStatus, estado: function () { return S; }, planoColunas: planoColunas, closerOrdenar: closerOrdenar, closerItens: closerItens, topoAplicar: topoAplicar, topoLer: topoLer, parseVersao: parseVersao, versaoMaisNova: versaoMaisNova, reajustaColunas: reajustaColunas, fixaColuna: fixaColuna, agOc: agOc, atrasConcluida: atrasConcluida, aplicaAtrasOcultos: aplicaAtrasOcultos, atribuirAguardando: atribuirAguardando, carregarAguardando: carregarAguardando, desenharAguardando: desenharAguardando, carregar: carregar, calcDiff: calcDiff, normVal: normVal, mostrarConflitos: mostrarConflitos, enviarCampos: enviarCampos, tetoAtualiza: tetoAtualiza, leadAberto: leadAberto, aplicaAtualizaPendente: aplicaAtualizaPendente, carregarAuto: carregarAuto, aplicaAtualizaPendente: aplicaAtualizaPendente, contextoAuto: contextoAuto, mesAtualSP: mesAtualSP, nomeMes: nomeMes, decideVersao: decideVersao, verificarVersaoPagina: verificarVersaoPagina, salvarVista: salvarVista, aplicarVista: aplicarVista, ociosoMs: ociosoMs, retentaParte: retentaParte, logFalha: logFalha, falhas: function () { return FALHAS; }, estadoSync: estadoSync, desfazerSaida: desfazerSaida, atualizarSelo: atualizarSelo, semForn: semForn, hoje2Valido: hoje2Valido, hoje2Cartao: hoje2Cartao, processarSaida: processarSaida, tentarAgora: tentarAgora, buscarGeral: buscarGeral, bgValida: bgValida, opcoesAdiar: opcoesAdiar, enviarAcao: enviarAcao, versaoMaisNova: versaoMaisNova, iniciarContinuar: iniciarContinuar, continuarLaco: continuarLaco, fmtCampo: fmtCampo, fadeChips: fadeChips, REDE: REDE, lerSaida: lerSaida, processarSaida: processarSaida, reportarErro: reportarErro, aplicarStatus: aplicarStatus, hooks: { recarregar: null }, falhaDePagina: falhaDePagina, verificarVersao: verificarVersao, agoraMs: agoraMs, PAGINA_VERSAO: PAGINA_VERSAO, carregarAguardando: carregarAguardando, S: S, desenhar: desenhar, carregar: carregar, casaBusca: casaBusca, foneFmt: foneFmt, aceitar: aceitar, abrirLead: abrirLead, abrirGanho: abrirGanho, cnpjValido: cnpjValido, desenharFila: desenharFila, carregarFila: carregarFila, origemClasse: origemClasse, mascCnpj: mascCnpj, renderLead: renderLead, carregarLead: carregarLead, contextoAuto: contextoAuto, tipoContexto: tipoContexto, secaoOrigem: secaoOrigem, obsSdrPronta: obsSdrPronta, validarCampo: validarCampo, valorOrig: valorOrig, valorAtual: valorAtual, faltaAinda: faltaAinda, atualizarGanhoBtn: atualizarGanhoBtn };
+window.__shTeste = { bgPontuar: bgPontuar, bgTokens: bgTokens, bgNorm: bgNorm, bgDestacar: bgDestacar, bgLocalItens: bgLocalItens, bgDist1: bgDist1, desenharBlocos: desenharBlocos, sair: sair, entrar: entrar, livroPoda: livroPoda, renderCardInfo: renderCardInfo, renderLead: renderLead, livroVarre: livroVarre, livroAplica: livroAplica, livroLead: livroLead, livroObserva: livroObserva, livroDoLead: livroDoLead, livroAdd: livroAdd, livroDel: livroDel, aplicarResposta: aplicarResposta, aplicarStatus: aplicarStatus, estado: function () { return S; }, planoColunas: planoColunas, closerOrdenar: closerOrdenar, closerItens: closerItens, topoAplicar: topoAplicar, topoLer: topoLer, parseVersao: parseVersao, versaoMaisNova: versaoMaisNova, reajustaColunas: reajustaColunas, fixaColuna: fixaColuna, agOc: agOc, atrasConcluida: atrasConcluida, aplicaAtrasOcultos: aplicaAtrasOcultos, atribuirAguardando: atribuirAguardando, carregarAguardando: carregarAguardando, desenharAguardando: desenharAguardando, carregar: carregar, calcDiff: calcDiff, normVal: normVal, mostrarConflitos: mostrarConflitos, enviarCampos: enviarCampos, tetoAtualiza: tetoAtualiza, leadAberto: leadAberto, aplicaAtualizaPendente: aplicaAtualizaPendente, carregarAuto: carregarAuto, aplicaAtualizaPendente: aplicaAtualizaPendente, contextoAuto: contextoAuto, mesAtualSP: mesAtualSP, nomeMes: nomeMes, decideVersao: decideVersao, verificarVersaoPagina: verificarVersaoPagina, salvarVista: salvarVista, aplicarVista: aplicarVista, ociosoMs: ociosoMs, retentaParte: retentaParte, logFalha: logFalha, falhas: function () { return FALHAS; }, estadoSync: estadoSync, desfazerSaida: desfazerSaida, atualizarSelo: atualizarSelo, semForn: semForn, hoje2Valido: hoje2Valido, hoje2Cartao: hoje2Cartao, processarSaida: processarSaida, tentarAgora: tentarAgora, buscarGeral: buscarGeral, bgValida: bgValida, opcoesAdiar: opcoesAdiar, enviarAcao: enviarAcao, versaoMaisNova: versaoMaisNova, iniciarContinuar: iniciarContinuar, continuarLaco: continuarLaco, fmtCampo: fmtCampo, fadeChips: fadeChips, REDE: REDE, lerSaida: lerSaida, processarSaida: processarSaida, reportarErro: reportarErro, aplicarStatus: aplicarStatus, hooks: { recarregar: null }, falhaDePagina: falhaDePagina, verificarVersao: verificarVersao, agoraMs: agoraMs, PAGINA_VERSAO: PAGINA_VERSAO, carregarAguardando: carregarAguardando, S: S, desenhar: desenhar, carregar: carregar, casaBusca: casaBusca, foneFmt: foneFmt, aceitar: aceitar, abrirLead: abrirLead, abrirGanho: abrirGanho, cnpjValido: cnpjValido, desenharFila: desenharFila, carregarFila: carregarFila, origemClasse: origemClasse, mascCnpj: mascCnpj, renderLead: renderLead, carregarLead: carregarLead, contextoAuto: contextoAuto, tipoContexto: tipoContexto, secaoOrigem: secaoOrigem, obsSdrPronta: obsSdrPronta, validarCampo: validarCampo, valorOrig: valorOrig, valorAtual: valorAtual, faltaAinda: faltaAinda, atualizarGanhoBtn: atualizarGanhoBtn };
 (async function () {
   var t = lsGet('sh_tok');
   if (t) { var ok = await entrar(t, true); if (ok) return; }
