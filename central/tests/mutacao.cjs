@@ -57,6 +57,9 @@ const M = [
   ["lista_paradas_20nov.cjs", "paradas: o chip não existe", "AT_FILTROS.concat([AT_PARADAS])", "AT_FILTROS"],
   ["lista_paradas_20nov.cjs", "paradas: erro vira lista vazia 'ok'", "P.est=P.itens.length?'ok':'erro';", "P.est='ok';"],
   ["lista_paradas_20nov.cjs", "paradas: não pede o cursor ao conferir mais", "(mais?'&cursor='+encodeURIComponent(P.cursor):'')", "''"],
+  ["lista_paradas_20nov.cjs", "paradas: o chip mostra 'undefined' (contagens sem paradas)", "fechando:0,aberta:0,fechada:0,paradas:atParCount()}", "fechando:0,aberta:0,fechada:0}"],
+  ["lista_paradas_20nov.cjs", "paradas: a frase de erro se repete", "tx.textContent=P.msg||'Não consegui carregar as conversas sem próximo toque agora.';", "tx.textContent='Não consegui carregar as conversas sem próximo toque. '+(P.msg||'');"],
+  ["lista_paradas_20nov.cjs", "paradas: some o aviso de que a lista é maior que o do aviso", "nt.style.cssText='flex:1 1 100%;font-size:12px;color:var(--muted)';av.appendChild(nt);", ""],
   ["lista_paradas_20nov.cjs", "paradas: mostra só as já carregadas (sem as mais antigas)", "var ext=P.itens.filter(function(x){return !vis[x.fone];})", "var ext=[].filter(function(x){return !vis[x.fone];})"],
 ];
 const filtro = process.argv[4]; let vivos = [];
