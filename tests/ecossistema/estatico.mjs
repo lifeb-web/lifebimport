@@ -55,7 +55,19 @@ const rep = /(^|[^\p{L}])Rep([^\p{L}]|$)/u.test(texto); t("regra do projeto: \"r
   t("'nunca apaga por filtro' só aparece junto de 'ligar' (em simular o apagamento por filtro passa)", ruim2.length === 0, ruim2.map((f) => f.slice(0, 160)));
   const ruim3 = frases.filter((f) => /lista inteira/i.test(f) && /Central/.test(f) && !/(ocultas|checagem)/i.test(f));
   t("'lista inteira' junto de 'Central' só com 'ocultas' ou 'checagem' (a lista visível da página Central segue limitada a 200)", ruim3.length === 0, ruim3.map((f) => f.slice(0, 160)));
-  t("a ponte do Dash em simulação nunca tem selo 'No ar' (selo Em simulação)", !/Em simulação[^<]{0,5}<\/span>[\s\S]{0,40}escrita incremental/i.test("") && /Em simulação/.test(HTML));
+  // selo certo no bloco do Dash: card, ficha (item e linha do tempo) com 'Em simulação' e nunca 'Planejado' nem 'No ar'
+  const card = /<h3>((?:(?!<\/h3>)[^])*Escrita incremental do Dash(?:(?!<\/h3>)[^])*)<\/h3>/.exec(HTML);
+  t("card do Dash (escrita incremental): selo Em simulação, nunca Planejado nem No ar", !!card && /p-sim/.test(card[1]) && !/p-(pl|ok|te)\b/.test(card[1]), card && card[1].slice(0, 200));
+  const itens = [...HTML.matchAll(/escrita incremental de anúncios e leads do Dash\./gi)].map((m) => HTML.slice(Math.max(0, m.index - 220), m.index)).filter((h) => !/Em simulação: $/.test(h));   // fora o dado embutido no script
+  const pillAntes = (h) => { const m = [...h.matchAll(/class="(?:pill p|dp dp)-(\w+)"/g)]; return m.length ? m[m.length - 1][1] : null; };
+  t("ficha do Dash: cada item da escrita incremental vem logo depois do selo Em simulação (item e linha do tempo)", itens.length >= 4 && itens.every((h) => pillAntes(h) === "sim"), itens.map(pillAntes));
+  const linha = /<tr[^>]*>(?:(?!<\/tr>)[^])*Escrita incremental de anúncios e leads: ponte(?:(?!<\/tr>)[^])*<\/tr>/.exec(HTML);
+  t("checklist do Dash: a escrita incremental não tem selo No ar", !!linha && !/p-ok\b/.test(linha[0]), linha && linha[0].slice(0, 120));
+  const frasesLigar = frases.filter((f) => f.length < 500 && /\bligar\b/i.test(f) && /(ponte|incremental|leads|Dash)/i.test(f));
+  const semCautela = frasesLigar.filter((f) => !/(ainda não|pendente|falta|só depois|antes de|ao ligar|só ao ligar|em ligar|depois de|critério)/i.test(f));
+  t("frases sobre ligar a escrita do Dash sempre trazem 'ainda não', pendente, falta ou critério", semCautela.length === 0, semCautela.map((f) => f.slice(0, 160)));
+  const promessa = frases.filter((f) => /\bligar\b/i.test(f) && /(pronto|liberad|seguro|ok para)/i.test(f) && !/(não|NÃO|falta|pendente|simul|antes de|só depois|chave|autocura)/.test(f));
+  t("nenhuma frase diz que ligar está pronto, liberado, seguro ou ok", promessa.length === 0, promessa.map((f) => f.slice(0, 160)));
 }
 t("nenhum nome de pessoa (nem ferramenta interna) no HTML", achados.length === 0, achados);
 // ---- segredos e dados pessoais ----

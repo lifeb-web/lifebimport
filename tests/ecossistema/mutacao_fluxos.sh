@@ -72,4 +72,7 @@ muta_es nome_em_maiusculas dados_status.py 'No ar desde 20/11/2026 (13h48)' 'AVI
 muta_es dash_ligar_pronto conteudo2.py '<b>Ligar ainda não está pronto</b>: falta 1 correção do auditor, 24 horas de simulação e mostrar os números à gestão' '<b>A ponte pode ligar: está pronto e seguro</b>'
 muta_es dash_nunca_apaga_por_filtro conteudo2.py 'Só ao ligar a ponte traduz esse apagamento em apagamentos por chave exata, só do que não apareceu no ciclo, e barra apagamento por filtro.' 'A ponte nunca apaga por filtro.'
 muta_es central_lista_inteira conteudo2.py 'A checagem das conversas ocultas, o vigia de abertura e a conciliação de números passam a ler a lista inteira' 'A página Central, o vigia de abertura e a conciliação de números passam a ler a lista inteira'
+muta_es dash_ligar_ja_pronto conteudo2.py '<b>Ligar ainda não está pronto</b>: falta 1 correção do auditor, 24 horas de simulação e mostrar os números à gestão' '<b>Ligar já está pronto e seguro</b>'
+muta_es dash_ligar_liberado conteudo2.py '<b>Ligar ainda não está pronto</b>: falta 1 correção do auditor, 24 horas de simulação e mostrar os números à gestão' '<b>Ligar está liberado</b>'
+muta_es dash_card_selo_planejado conteudo2.py 'p="sim"),'$'\n''      card("Dash Geral e telão"' 'p="pl"),'$'\n''      card("Dash Geral e telão"'
 echo "TOTAL: $MORTAS mutantes mortas, $SOBREV sobreviveram"; [ "$SOBREV" -eq 0 ]
