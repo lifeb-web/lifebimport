@@ -197,8 +197,8 @@ def s_ana2():
 
 def s_destinos():
     etapas = [
-      ["Novo lead", "Primeira mensagem."], ["Abertura enviada", "A Ana começou a falar e aguarda a resposta. A Bia nunca rebaixa um negócio que já está em Qualificando, Apresentação ou Com o especialista."],
-      ["Qualificando", "A Ana está colhendo segmento, CNPJ, lojas e decisor."], ["Apresentação", "A Ana está apresentando o projeto."],
+      ["Novo lead", "Primeira mensagem."], ["Abertura enviada", "A Ana começou a falar e aguarda a resposta: quando a abertura sai, o negócio passa de Novo lead para cá (20/11/2026). A Bia nunca rebaixa um negócio que já está em Qualificando, Apresentação ou Com o especialista."],
+      ["Qualificando", "A Ana está colhendo segmento, CNPJ, lojas e decisor (a confirmação de segmento move para cá). Retorno combinado, Deal breaker, Fim da cadência e negócios fechados nunca são movidos nem reabertos por esse caminho."], ["Apresentação", "A Ana está apresentando o projeto."],
       ["Retorno combinado", "O lead pediu para chamar depois; a Ana criou a tarefa com a data."],
       ["Com o especialista", "Etapa para o lead já passado ao especialista (hoje a Bia não move para ela no repasse: o repasse é Ganho da Ana ou nota)."],
       ["Deal breaker", "Toques de retomada sem resposta: a Ana pede esta etapa no fim dos toques (sem resposta)."], ["Fim da cadência", "Final do funil, reservado ao fechamento automático por Cadência esgotada (desligado no funil da Ana)."]]

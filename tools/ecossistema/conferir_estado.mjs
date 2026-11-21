@@ -29,12 +29,12 @@ console.log(atrasado ? "AVISO: Ecossistema pode estar desatualizado. Revise esta
 // 20/11/2026: além dos commits "deploy:" (Ana, Bia, Hoje, Central), confere AO VIVO os Workers Canal, Dash (sincronizador), Painel, Ana e Bia
 // comparando a última implantação (wrangler deployments list) com versoes.json. Somente leitura; precisa do wrangler logado (ECO_WRANGLER_CWD opcional).
 {
-  const { WORKERS, ultima } = await import("./versoes_ao_vivo.mjs");
+  const { WORKERS: W0, ultima, PONTE_DASH } = await import("./versoes_ao_vivo.mjs"); const WORKERS = { ...W0, "dash (ponte)": PONTE_DASH };
   const v = JSON.parse(fs.readFileSync(process.env.ECO_VERSOES || path.join(AQUI, "versoes.json"), "utf8")); let atras = false;
   console.log("Versões ao vivo (Workers) contra versoes.json:");
   for (const [id, worker] of Object.entries(WORKERS)) {
     let t = ""; try { t = execFileSync("wrangler", ["deployments", "list", "--name", worker], { cwd: process.env.ECO_WRANGLER_CWD || os.tmpdir(), encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }); } catch (e) { console.log(`  ${id} (${worker}): não foi possível ler ao vivo`); continue; }
-    const u = ultima(t), s = v.sistemas.find((x) => x.id === id); if (!u || !s) continue;
+    const u = ultima(t), s = v.sistemas.find((x) => x.id === id.replace(" (ponte)", "")); if (!u || !s) continue;
     const ok = s.versao.includes(u.versao.slice(0, 8)); atras ||= !ok;
     console.log(`  ${id} (${worker}): ao vivo ${u.versao.slice(0, 8)}; versoes.json ${s.versao.slice(0, 40)}${ok ? "" : "  <-- DEFASADO: rode node tools/ecossistema/versoes_ao_vivo.mjs --aplicar"}`);
   }
