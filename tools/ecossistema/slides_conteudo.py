@@ -81,8 +81,12 @@ def todos():
     A(slide("estadob", "Estado das peças: agentes, números e CRM", C, pg(["bia", "dash", "agendor"]) + band("No ar: conferido em produção. Checklist completo na página."), "dense", "status,checklist"))
     impl = [c for c in ESTADO["componentes"] if c["implantacao"]]
     def selo_impl(c):
-        return '<span class="dp dp-corr">Em correção</span>' if any(x.startswith("Em correção") for x in c["implantacao"]) else pill("em implantação")
-    est2 = ('<div class="dg3 dgx pecas">' + "".join('<div class="peca"><div class="peca-h"><b>' + c["nome"] + "</b>" + selo_impl(c) + '</div><ul class="peca-t">' + "".join(f"<li>{e(P.palavras(x, 14))}</li>" for x in c["implantacao"]) + "</ul></div>" for c in impl) + "</div>"
+        return '<span class="dp dp-corr">Em correção</span>' if all(x.startswith("Em correção") for x in c["implantacao"]) else pill("em implantação")
+    def item_impl(x):   # 20/11/2026: item com selo próprio (Em correção, Em simulação) mostra o seu, não o do cabeçalho
+        for pref, k, rot in (("Em correção: ", "corr", "Em correção"), ("Em simulação: ", "sim", "Em simulação")):
+            if x.startswith(pref): return f'<span class="dp dp-{k}">{rot}</span> {e(P.palavras(x, 14))}'
+        return e(P.palavras(x, 14))
+    est2 = ('<div class="dg3 dgx pecas">' + "".join('<div class="peca"><div class="peca-h"><b>' + c["nome"] + "</b>" + selo_impl(c) + '</div><ul class="peca-t">' + "".join(f"<li>{item_impl(x)}</li>" for x in c["implantacao"]) + "</ul></div>" for c in impl) + "</div>"
             + band("Em implantação: pronto, ainda não no ar. " + '<span class="dp dp-corr">Em correção</span>' + " a publicação abortou ou achou-se defeito; não no ar."))
     A(slide("estado2", "Em implantação (ainda não no ar)", C, est2, "dense", "status,checklist"))
     plan = [c for c in ESTADO["componentes"] if c["planejado"]]

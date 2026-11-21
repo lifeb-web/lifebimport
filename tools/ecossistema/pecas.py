@@ -10,8 +10,8 @@ AREAS = [
   ("Atendimento", ["ana"]), ("SDR e Hoje", ["hoje"]), ("Central", ["central"]), ("Agentes", ["bia"]), ("Números e CRM", ["dash", "agendor"]),
 ]
 TOPICOS = {
-  "ana": ["Atende lojistas do inbound no WhatsApp", "Qualifica e repassa ao SDR", "Retoma quem some; encerra fora do perfil com educação", "Deploy de 20/11/2026 (05h30): quem pede comprar ou valor nunca é descartado e 1 toque por dia"],
-  "bia": ["Avisa a equipe no WhatsApp, muitos com botão", "Escreve no Agendor e relê para confirmar", "Motores proativos e painel do representante", "Repasse blindado e etapa pelo nome (20/11/2026)"],
+  "ana": ["Atende lojistas do inbound no WhatsApp, qualifica e repassa ao SDR", "Retoma quem some; encerra fora do perfil com educação", "Deploys de 20/11/2026 até 22h51: lista paginada, movimento no CRM, aviso das paradas, avisos à gestão, repasse cancela toques"],
+  "bia": ["Avisa a equipe no WhatsApp (muitos com botão) e escreve no Agendor, relendo para confirmar", "Motores proativos e painel do representante", "Lote 2 de avisos à gestão, leitura completa das ocultas e movimento no CRM (20/11/2026)"],
   "hoje": ["Mesa do SDR sem travas de horário", "Fila por listas; atrasadas lidas aos poucos", "Qualificação cria o negócio no funil certo", "Livro local de ações e raia Closer (19/11/2026)"],
   "central": ["Atendimento: conversas com selos, histórico e áudios", "Assumir, devolver, repassar, pausar, instruir", "Controles da Bia com desfazer, filas, folga e custo", "Selo da janela de 24 h e filtros"],
   "dash": ["Vendas, SDR, anúncios e agentes", "Faixa vermelha quando os dados congelam", "Rosca sem corte"],
@@ -47,7 +47,7 @@ def palavras(x, n):
     for k, v in RES_ITEM.items():
         if x.startswith(k):
             return v
-    for pref in ("Em voo: ", "Em correção: "):
+    for pref in ("Em voo: ", "Em simulação: ", "Em correção: "):
         if x.startswith(pref): x = x[len(pref):]
     w = x.split()
     return " ".join(w[:n]).rstrip(",.:;") + ("…" if len(w) > n else "")
@@ -61,14 +61,16 @@ def peca(c, deck=False, area=None):
             for x in c[k][:3]:
                 if x.startswith("Em correção: "):
                     extra += f'<div class="pc-x"><span class="pill p-corr">Em correção</span><ul><li>{e(palavras(x, 12))}</li></ul></div>'
+                elif x.startswith("Em simulação: "):
+                    extra += f'<div class="pc-x"><span class="pill p-sim">Em simulação</span><ul><li>{e(palavras(x, 12))}</li></ul></div>'
                 else:
                     extra += f'<div class="pc-x"><span class="pill p-{cl}">{rot}</span><ul><li>{e(palavras(x, 12))}</li></ul></div>'
     PK = {"no_ar": ("ok", "No ar"), "implantacao": ("te", "Em implantação"), "planejado": ("pl", "Planejado")}
     def selo_item(k, x):
-        if x.startswith("Em correção: "):
-            return '<span class="pill p-corr">Em correção</span>'
+        if x.startswith(("Em correção: ", "Em simulação: ", "Em voo: ")):
+            return ""   # o próprio item já mostra o selo (antes saía o selo duplicado)
         return '<span class="pill p-' + PK[k][0] + '">' + PK[k][1] + '</span>'
-    linha = "".join('<li class="full">' + selo_item(k, x) + " " + selo(x, deck) + "</li>" for k in ("no_ar", "implantacao", "planejado") for x in c[k])
+    linha = "".join('<li class="full">' + selo_item(k, x) + (" " if selo_item(k, x) else "") + selo(x, deck) + "</li>" for k in ("no_ar", "implantacao", "planejado") for x in c[k])
     tl = f'<details class="mais pc-tl"><summary><span>Histórico de versões (linha do tempo)</span></summary><ol class="tl">{linha}</ol></details>'
     kick = f'<span class="peca-k">{e(area)}</span>' if area else ""
     return (f'<div class="peca">{kick}<div class="peca-h"><b>{nome}</b>{pill("ok" if c["estado"] == "no ar" else "te")}</div>'

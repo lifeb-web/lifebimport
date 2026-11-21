@@ -54,4 +54,25 @@ muta rotulo_celular_longe fluxo.py "cand.append((lx - tw / 2 + 6, gy + dy))" "ca
 muta selo_estoura estilo.css ".full .pill,p .pill,li .pill,.faixa-i .chip{white-space:normal;max-width:100%}" ".full .pill{white-space:nowrap}"
 # 5) papel errado ao lead
 muta lead_representante conteudo1.py 'ao lead sempre se diz "especialista"' 'ao lead se diz "representante"'
+# 6) tabela de versões por deploy e nomes (estatico.mjs, com jsdom): verificação repetida, fumaça de outra versão, anterior no futuro, nome em minúsculas
+muta_es() { local D="$BASE/$1"; mkdir -p "$D"; cp -R tools/ecossistema/. "$D/"; python3 - "$D/$2" "$3" "$4" <<'PY' || { echo "❌ mutação $1: trecho não encontrado"; return 2; }
+import sys
+f,a,b=sys.argv[1:4]; s=open(f,encoding='utf-8').read()
+if a not in s: sys.exit(1)
+open(f,'w',encoding='utf-8').write(s.replace(a,b,1))
+PY
+  python3 "$D/montar.py" "$D/pagina.html" >/dev/null 2>&1 || { echo "✅ o gerador derrubou: $1"; MORTAS=$((MORTAS+1)); return 0; }
+  if PAGINA="$D/pagina.html" ECO_VERSOES_TESTE="$D/versoes.json" node tests/ecossistema/estatico.mjs >"$D/saida.txt" 2>&1; then echo "❌ SOBREVIVEU: $1"; SOBREV=$((SOBREV+1)); else echo "✅ morta: $1 ($(grep -c FALHOU "$D/saida.txt") falha(s))"; MORTAS=$((MORTAS+1)); fi; }
+muta_es deploy_anterior_no_futuro versoes.json '"anterior": "b8b99806-7643-4883-9931-abf9654dae30"' '"anterior": "719bf381-837e-4cdd-a60f-d795fc0e2255"'
+muta_es fumaca_de_outra_versao versoes.json '
+   "fumaca": "deploy concluído e fumaça pós-deploy OK no log do próprio deploy;' '
+   "fumaca": "fumaça: b8b99806 a 100%; deploy concluído e fumaça pós-deploy OK no log do próprio deploy;'
+muta_es nome_em_minusculas conteudo1.py 'a decisão do dono no chat do projeto foi manter assim' 'o felipe decidiu manter assim'
+muta_es nome_em_maiusculas dados_status.py 'No ar desde 20/11/2026 (13h48)' 'AVISO ROBERT No ar desde 20/11/2026 (13h48)'
+muta_es dash_ligar_pronto conteudo2.py '<b>Ligar ainda não está pronto</b>: falta 1 correção do auditor, 24 horas de simulação e mostrar os números à gestão' '<b>A ponte pode ligar: está pronto e seguro</b>'
+muta_es dash_nunca_apaga_por_filtro conteudo2.py 'Só ao ligar a ponte traduz esse apagamento em apagamentos por chave exata, só do que não apareceu no ciclo, e barra apagamento por filtro.' 'A ponte nunca apaga por filtro.'
+muta_es central_lista_inteira conteudo2.py 'A checagem das conversas ocultas, o vigia de abertura e a conciliação de números passam a ler a lista inteira' 'A página Central, o vigia de abertura e a conciliação de números passam a ler a lista inteira'
+muta_es dash_ligar_ja_pronto conteudo2.py '<b>Ligar ainda não está pronto</b>: falta 1 correção do auditor, 24 horas de simulação e mostrar os números à gestão' '<b>Ligar já está pronto e seguro</b>'
+muta_es dash_ligar_liberado conteudo2.py '<b>Ligar ainda não está pronto</b>: falta 1 correção do auditor, 24 horas de simulação e mostrar os números à gestão' '<b>Ligar está liberado</b>'
+muta_es dash_card_selo_planejado conteudo2.py 'p="sim"),'$'\n''      card("Dash Geral e telão"' 'p="pl"),'$'\n''      card("Dash Geral e telão"'
 echo "TOTAL: $MORTAS mutantes mortas, $SOBREV sobreviveram"; [ "$SOBREV" -eq 0 ]
