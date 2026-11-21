@@ -67,6 +67,9 @@ muta_es deploy_anterior_no_futuro versoes.json '"anterior": "b8b99806-7643-4883-
 muta_es fumaca_de_outra_versao versoes.json '
    "fumaca": "deploy concluído e fumaça pós-deploy OK no log do próprio deploy;' '
    "fumaca": "fumaça: b8b99806 a 100%; deploy concluído e fumaça pós-deploy OK no log do próprio deploy;'
-muta_es nome_em_minusculas conteudo1.py 'a gestão confirmou manter assim' 'o felipe confirmou manter assim'
+muta_es nome_em_minusculas conteudo1.py 'a decisão do dono no chat do projeto foi manter assim' 'o felipe decidiu manter assim'
 muta_es nome_em_maiusculas dados_status.py 'No ar desde 20/11/2026 (13h48)' 'AVISO ROBERT No ar desde 20/11/2026 (13h48)'
+muta_es dash_ligar_pronto conteudo2.py '<b>Ligar ainda não está pronto</b>: falta 1 correção do auditor, 24 horas de simulação e mostrar os números à gestão' '<b>A ponte pode ligar: está pronto e seguro</b>'
+muta_es dash_nunca_apaga_por_filtro conteudo2.py 'Só ao ligar a ponte traduz esse apagamento em apagamentos por chave exata, só do que não apareceu no ciclo, e barra apagamento por filtro.' 'A ponte nunca apaga por filtro.'
+muta_es central_lista_inteira conteudo2.py 'A checagem das conversas ocultas, o vigia de abertura e a conciliação de números passam a ler a lista inteira' 'A página Central, o vigia de abertura e a conciliação de números passam a ler a lista inteira'
 echo "TOTAL: $MORTAS mutantes mortas, $SOBREV sobreviveram"; [ "$SOBREV" -eq 0 ]

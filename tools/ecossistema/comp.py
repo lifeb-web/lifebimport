@@ -7,14 +7,14 @@ def e(s):
 _det = [0]
 
 # estados de entrega: ok = no ar; te = pronto/em teste; pl = planejado; de = depende de decisão; lm = limite conhecido; of = desligado de propósito
-PILL = {"ok": "No ar", "te": "Em implantação", "pl": "Planejado", "de": "Depende de decisão", "lm": "Limite conhecido", "of": "Desligado de propósito", "voo": "Em voo", "corr": "Em correção", "ap": "No ar, a provar"}
+PILL = {"ok": "No ar", "te": "Em implantação", "pl": "Planejado", "de": "Depende de decisão", "lm": "Limite conhecido", "of": "Desligado de propósito", "voo": "Em voo", "sim": "Em simulação", "corr": "Em correção", "ap": "No ar, a provar"}
 
 def pill(k, txt=None):
     return f'<span class="pill p-{k}">{txt or PILL[k]}</span>'
 
 # prefixos de item do estado.json que ganham selo próprio: "Em voo" = deploy em andamento (pronto, publicando agora; ainda não no ar);
 # "Em correção" = estava pronto, mas a publicação abortou ou um defeito foi encontrado (não está no ar)
-SELOS = {"Em voo: ": "voo", "Em correção: ": "corr"}
+SELOS = {"Em voo: ": "voo", "Em simulação: ": "sim", "Em correção: ": "corr"}
 
 def selo(txt, deck=False):
     """Item de estado: se começa com um prefixo de SELOS, o prefixo vira um selo (o texto lido por máquina continua igual, com os dois pontos escondidos)."""

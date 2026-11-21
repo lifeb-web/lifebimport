@@ -45,6 +45,18 @@ const rep = /(^|[^\p{L}])Rep([^\p{L}]|$)/u.test(texto); t("regra do projeto: \"r
   for (const [sis, lst] of Object.entries(porSis)) { const q = lst.map((d) => quando(d.data)).filter((x) => x != null); for (let i = 1; i < q.length; i++) if (q[i] > q[i - 1] && !/Ecossistema|Dash/.test(sis)) laco.push(sis + ": linha " + lst[i].versao.slice(0, 8) + " fora da ordem cronológica"); }
   t("cadeia 'anterior' dos deploys é estritamente cronológica (sem laço nem futuro)", laco.length === 0, laco);
 }
+// 20/11/2026: teste semântico barato (auditor): frases que prometem mais do que o sistema faz
+{
+  const txt = bruto.replace(/<style[\s\S]*?<\/style>|<script[\s\S]*?<\/script>/g, " ").replace(/<[^>]+>/g, " ").replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/\s+/g, " ");
+  const frases = txt.split(/(?<=[.;!?])\s+/);
+  const ruim1 = frases.filter((f) => /(ponte|incremental)/i.test(f) && /\b(ligar|ligado|ligada)\b/i.test(f) && /(pronto|seguro|no ar)/i.test(f) && !/(não|NÃO|falta|simul|antes de|só depois)/.test(f));
+  t("Dash: nenhuma frase diz que ligar a escrita incremental está pronto, seguro ou no ar", ruim1.length === 0, ruim1.map((f) => f.slice(0, 160)));
+  const ruim2 = frases.filter((f) => /(nunca apaga por filtro|nunca apagam por filtro)/i.test(f) && !/(ligar|ligado|ligada|em ligar)/i.test(f));
+  t("'nunca apaga por filtro' só aparece junto de 'ligar' (em simular o apagamento por filtro passa)", ruim2.length === 0, ruim2.map((f) => f.slice(0, 160)));
+  const ruim3 = frases.filter((f) => /lista inteira/i.test(f) && /Central/.test(f) && !/(ocultas|checagem)/i.test(f));
+  t("'lista inteira' junto de 'Central' só com 'ocultas' ou 'checagem' (a lista visível da página Central segue limitada a 200)", ruim3.length === 0, ruim3.map((f) => f.slice(0, 160)));
+  t("a ponte do Dash em simulação nunca tem selo 'No ar' (selo Em simulação)", !/Em simulação[^<]{0,5}<\/span>[\s\S]{0,40}escrita incremental/i.test("") && /Em simulação/.test(HTML));
+}
 t("nenhum nome de pessoa (nem ferramenta interna) no HTML", achados.length === 0, achados);
 // ---- segredos e dados pessoais ----
 const PADROES = { "token sk-": /sk-[A-Za-z0-9_-]{16,}/, "JWT": /eyJ[A-Za-z0-9_-]{15,}\./, "Bearer": /Bearer\s+[A-Za-z0-9._-]{12,}/, "github/slack": /(ghp_|gho_|xox[bpa]-)[A-Za-z0-9-]{10,}/, "hex longo": /\b[a-f0-9]{32,}\b/i, "telefone (62) 9": /\(?\b\d{2}\)?\s?9?\d{4}[-\s]?\d{4}\b/, "telefone com 55": /\b55\d{10,11}\b/, "CNPJ formatado": /\b\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}\b/, "CNPJ cru": /\b\d{14}\b/, "CPF": /\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/, "e-mail": /[\w.+-]+@[\w-]+\.[\w.]+/, "senha=": /(senha|password|token|secret)\s*[:=]\s*\S{6,}/i, "chave de API": /(api[_-]?key|apikey)\s*[:=]/i, "id longo (>=8 dígitos)": /\b\d{8,}\b/ };
