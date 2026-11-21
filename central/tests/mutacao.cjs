@@ -44,6 +44,20 @@ const M = [
   ["acoes_manuais.cjs", "botão não volta depois da falha", "if(b){b.disabled=false;b.removeAttribute('aria-busy');if(alvo)alvo.textContent=rotOrig;}}", "if(b){b.removeAttribute('aria-busy');}}"],
   ["acoes_manuais.cjs", "409 é repetido sem necessidade", "var incerto=q.status===0||q.status>=500;", "var incerto=true;"],
   ["nomes_curtos.cjs", "empresa corta em conector", "while(c.length>1&&NOME_CONECT[c[c.length-1].toLowerCase()])c.pop();", ""],
+  // 20/11 (lista sem corte + 'Sem próximo toque'): rodar com LP_RAPIDO=1 (só 2 larguras) para ser rápido
+  ["lista_paradas_20nov.cjs", "lista: o corte volta a ser silencioso", "ag.conversasTruncado===true&&(tot===null||n<tot||!!cur)", "false"],
+  ["lista_paradas_20nov.cjs", "lista: Carregar mais não envia o cursor", "'/agentes?leve=1&limite=200&cursor='+encodeURIComponent(cur)", "'/agentes?leve=1&limite=200'"],
+  ["lista_paradas_20nov.cjs", "lista: a atualização de 4 s apaga as páginas extras", "S.agCache=false;agGuardaCache(S.ag);atMaisMesclar();atRefrescaLista();}}", "S.agCache=false;agGuardaCache(S.ag);atRefrescaLista();}}"],
+  ["lista_paradas_20nov.cjs", "lista: falha ao carregar o resto fica muda", "m.erro='falha';if(S.aba==='atend')atDesenharLista();return;", "return;"],
+  ["lista_paradas_20nov.cjs", "lista: erro da Ana (conversasErro) fica mudo", "else if(ag.conversasErro&&!(ag.conversas||[]).length)", "else if(false)"],
+  ["lista_paradas_20nov.cjs", "lista: Bia antiga perde o aviso das 200", "else if(ag.conversasTruncado===undefined&&n>=200)", "else if(false)"],
+  ["lista_paradas_20nov.cjs", "paradas: #atendimento-paradas não é reconhecido", "if(t==='atendimento-paradas')return", "if(false)return"],
+  ["lista_paradas_20nov.cjs", "paradas: o endereço não vira #atendimento-paradas", "if(aba==='atend'&&!fone&&AT.filtro==='paradas')return '#atendimento-paradas';", ""],
+  ["lista_paradas_20nov.cjs", "paradas: o filtro não filtra", "if(AT.filtro==='paradas'&&!AT.par.map[x.fone])return false;", ""],
+  ["lista_paradas_20nov.cjs", "paradas: o chip não existe", "AT_FILTROS.concat([AT_PARADAS])", "AT_FILTROS"],
+  ["lista_paradas_20nov.cjs", "paradas: erro vira lista vazia 'ok'", "P.est=P.itens.length?'ok':'erro';", "P.est='ok';"],
+  ["lista_paradas_20nov.cjs", "paradas: não pede o cursor ao conferir mais", "(mais?'&cursor='+encodeURIComponent(P.cursor):'')", "''"],
+  ["lista_paradas_20nov.cjs", "paradas: mostra só as já carregadas (sem as mais antigas)", "var ext=P.itens.filter(function(x){return !vis[x.fone];})", "var ext=[].filter(function(x){return !vis[x.fone];})"],
 ];
 const filtro = process.argv[4]; let vivos = [];
 // 20/11: o html mutado NUNCA é gravado no repositório (já subiu 2 vezes por engano: 1e2616f6 e 97a9db79). Um servidor local em memória entrega a página mutada em /central/_mut.html e o resto de central/ vem do repositório, só leitura.

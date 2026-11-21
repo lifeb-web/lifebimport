@@ -1,0 +1,110 @@
+// Central 20/11: aba Atendimento sem corte silencioso ('Mostrando N de TOTAL' + 'Carregar mais' por cursor) e filtro 'Sem próximo toque' (#atendimento-paradas). Chromium real + Bia simulada pelo CONTRATO (conversasTotal/Truncado/ProximoCursor, /agentes/paradas).
+// Rodar: node central/tests/lista_paradas_20nov.cjs <playwright-core> <chromium>   (CENTRAL_URL próprio; PRINTS=pasta)
+const B = require("./_base.cjs"); const { chromium } = require(process.argv[2]); const S = B.suite("lista_paradas_20nov"); const fs = require("fs");
+const PR = process.env.PRINTS || "/tmp/central_lista_prints"; fs.mkdirSync(PR, { recursive: true });
+const NOW = Date.now(), H = 3600000, D = 24 * H;
+const F = (i) => "55629" + String(10000000 + i).padStart(8, "0");
+const NOMES = ["Ana Paula Souza", "Farmácia São João", "José da Silva", "Drogaria Ágil Ltda", "Maria Conceição de Albuquerque Nogueira"];
+const conv = (i) => ({ fone: F(i), nome: NOMES[i % NOMES.length] + " " + i, ts: NOW - (i + 1) * 60000, ultimaDe: i % 3 ? "lead" : "ana", previa: "oi " + i, estagio: "perguntou_cnpj", humano: false, pausado: false });
+const paradasDe = (n) => Array.from({ length: n }, (_, i) => ({ fone: F(5000 + i), nome: i % 4 === 0 ? "" : "Parada " + NOMES[i % NOMES.length] + " " + i, empresa: i % 2 ? "Farmácia Boa Vista" : "", estagio: "qualificando", atrasado: i % 5 === 0, desde: NOW - (i + 1) * 20 * H, diasParada: Math.floor(((i + 1) * 20) / 24) }));
+// Bia simulada. opts: total, modo ('ok'|'erro'|'conversasErro'|'antiga'), paradas (n), paradasModo, pgParadas
+function bia(o = {}) {
+  const st = { total: o.total ?? 63, reqs: [], parErr: o.parErr || 0, maisErr: o.maisErr || 0 };
+  const all = Array.from({ length: st.total }, (_, i) => conv(i));
+  const pars = paradasDe(o.paradas ?? 12);
+  st.over = async (u, url) => {
+    if (u === "/agentes") { const cur = url.searchParams.get("cursor"); const lim = Math.min(1000, Number(url.searchParams.get("limite")) || 200); st.reqs.push({ u, q: url.search });
+      if (o.modo === "conversasErro") { const a = B.agentesPadrao(); a.agentes[0].conversas = []; a.agentes[0].conversasErro = "http_500"; a.agentes[0].auditoria = []; return { json: a }; }
+      if (cur && st.maisErr > 0) { st.maisErr--; return { abort: true }; }
+      const off = cur ? Number(cur) : 0; const itens = all.slice(off, off + lim); const a = B.agentesPadrao(); const g = a.agentes[0]; g.conversas = itens; g.auditoria = [];
+      if (o.modo !== "antiga") { g.conversasTotal = st.total; if (off + lim < st.total) { g.conversasTruncado = true; g.conversasProximoCursor = String(off + lim); g.conversasRestantes = st.total - off - lim; } }
+      return { json: a }; }
+    if (u === "/agentes/paradas") { st.reqs.push({ u, q: url.search }); if (o.paradasModo === "501") return { status: 501, json: { ok: false, erro: "paradas_indisponivel", mensagem: "O agente ainda não tem a lista de conversas sem próximo toque." } };
+      if (st.parErr > 0) { st.parErr--; return { status: 502, json: { ok: false, erro: "agente_indisponivel", mensagem: "Não consegui carregar as conversas sem próximo toque agora." } }; }
+      const cur = Number(url.searchParams.get("cursor")) || 0; const lim = Number(url.searchParams.get("limite")) || 100; const page = pars.slice(cur, cur + lim); const j = { ok: true, itens: page, total: page.length, universo: 300, visitadas: page.length, semLeitura: 0, naoVisitadas: Math.max(0, pars.length - cur - lim), geradoEm: Date.now() };
+      if (cur + lim < pars.length) { j.truncado = true; j.proximoCursor = String(cur + lim); } return { json: j }; }
+    return null; };
+  return st;
+}
+async function abrir(b, o, hash, vp, tema, mob) { const st = bia(o); const mock = B.criarMock({ over: st.over }); const ctx = await b.newContext({ viewport: vp, colorScheme: tema, hasTouch: !!mob, isMobile: !!mob && vp.width < 500 }); await ctx.addInitScript((tm) => { window.__CENTRAL_TESTE = true; try { localStorage.setItem("central_tema", tm); } catch (e) {} }, tema); const p = await B.novaPagina(ctx, mock); await B.entrar(p, hash); return { st, ctx, p, mock }; }
+const sobra = (p) => p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+const txt = (p, sel) => p.evaluate((s) => { const e = document.querySelector(s); return e ? e.textContent.trim() : null; }, sel);
+const visivel = (p, sel) => p.evaluate((s) => { const e = document.querySelector(s); if (!e || e.hidden) return false; const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; }, sel);
+// contraste WCAG do texto de um elemento contra o fundo efetivo
+const contraste = (p, sel) => p.evaluate((s) => { const e = document.querySelector(s); if (!e) return null; const rgb = (c) => { const m = c.match(/rgba?\(([^)]+)\)/); if (!m) return null; const v = m[1].split(/[ ,\/]+/).filter(Boolean).map(Number); return { r: v[0], g: v[1], b: v[2], a: v.length > 3 ? v[3] : 1 }; }; const lum = (c) => { const f = (x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b); };
+  let bg = null, n = e; while (n && !bg) { const c = rgb(getComputedStyle(n).backgroundColor); if (c && c.a > 0.9) bg = c; n = n.parentElement; } if (!bg) bg = { r: 255, g: 255, b: 255 }; const fg = rgb(getComputedStyle(e).color); const a = lum(fg), b2 = lum(bg); return (Math.max(a, b2) + 0.05) / (Math.min(a, b2) + 0.05); }, sel);
+(async () => {
+  const b = await chromium.launch({ executablePath: process.argv[3] });
+  // ---------- A. funcional (1440 claro): contagens 0/63/200/201/1000 ----------
+  for (const n of [0, 63, 200, 201, 1000]) { try {
+    const { st, ctx, p } = await abrir(b, { total: n }, "#atendimento", { width: 1440, height: 900 }, "light", false); const t = "A" + n + ": ";
+    await p.waitForSelector("#atContagem", { state: "attached", timeout: 10000 }); await p.waitForTimeout(400);
+    const ct = await txt(p, "#atContagem"); const aviso = await visivel(p, "#atAviso");
+    if (n <= 200) { S.ok(!aviso, t + "sem aviso quando nada foi cortado"); S.ok(ct === (n === 1 ? "1 conversa" : n + " conversas") || (n >= 200 && /200/.test(ct)), t + "contagem '" + ct + "'"); }
+    else { S.ok(aviso, t + "aviso visível quando cortado"); S.ok(ct === "200 de " + n.toLocaleString("pt-BR") && /Mostrando 200 de /.test(await txt(p, "#atAviso")), t + "texto 'Mostrando 200 de " + n + " conversas' (cabeçalho: " + ct + ")"); S.ok(/Carregar mais/.test(await txt(p, "#atAviso")), t + "botão Carregar mais"); S.ok(/A busca e os filtros só valem para as carregadas/.test(await txt(p, "#atAviso")), t + "avisa que a busca vale só para as carregadas"); }
+    if (n > 200) { const antes = st.reqs.filter((r) => !/cursor/.test(r.q)).length; await p.click("#atAviso button"); await p.waitForTimeout(700);
+      const ct2 = await txt(p, "#atContagem"); const esp = Math.min(n, 400); S.ok(n === 201 ? /^201 conversas$/.test(ct2) : ct2 === esp + " de " + n.toLocaleString("pt-BR"), t + "depois de Carregar mais: '" + ct2 + "'");
+      const comCursor = st.reqs.filter((r) => /cursor=200/.test(r.q)); S.ok(comCursor.length === 1 && /limite=200/.test(comCursor[0].q), t + "pediu só a página seguinte (cursor=200)");
+      if (n === 1000) { for (let k = 0; k < 4; k++) { const bt = await p.$("#atAviso button"); if (!bt) break; await bt.click(); await p.waitForTimeout(500); } const ct3 = await txt(p, "#atContagem"); S.ok(/^1\.000 conversas$/.test(ct3), t + "5 páginas carregam as 1.000 e o aviso some (" + ct3 + ")"); S.ok(!(await visivel(p, "#atAviso")), t + "aviso some quando tudo foi carregado"); }
+      // a atualização automática (4 s) não faz as páginas extras sumirem
+      if (n === 1000 || n === 201) { await p.waitForTimeout(5500); const ct4 = await txt(p, "#atContagem"); S.ok(n === 201 ? /^201 conversas$/.test(ct4) : /^1\.000 conversas$/.test(ct4), t + "depois da atualização automática continua com tudo (" + ct4 + ")"); } }
+    S.ok((await sobra(p)) <= 0, t + "sem rolagem lateral"); S.ok(!(p._erros && p._erros.length), t + "console limpo " + JSON.stringify(p._erros)); await ctx.close(); } catch (e) { S.F("EXCECAO A" + n + ": " + String(e.message).split("\n")[0].slice(0, 220)); } }
+  // ---------- B. falhas ----------
+  try { const { st, ctx, p } = await abrir(b, { total: 1000, maisErr: 1 }, "#atendimento", { width: 1440, height: 900 }, "light", false); const t = "B1: "; await p.waitForSelector("#atAviso button", { timeout: 10000 }); await p.click("#atAviso button"); await p.waitForTimeout(700);
+    const a1 = await txt(p, "#atAviso"); S.ok(/Não consegui carregar o resto das conversas/.test(a1) && /Tentar de novo/.test(a1), t + "falha visível com 'tentar de novo': " + a1); S.ok(/^200 de 1\.000$/.test(await txt(p, "#atContagem")), t + "a lista que já estava continua");
+    await p.click("#atAviso button"); await p.waitForTimeout(700); S.ok(/^400 de 1\.000$/.test(await txt(p, "#atContagem")), t + "tentar de novo funciona"); await ctx.close(); } catch (e) { S.F("EXCECAO B1: " + String(e.message).split("\n")[0].slice(0, 220)); }
+  try { const { ctx, p } = await abrir(b, { total: 63, modo: "conversasErro" }, "#atendimento", { width: 1440, height: 900 }, "light", false); await p.waitForSelector("#atAviso:not([hidden])", { timeout: 10000 }); const a = await txt(p, "#atAviso"); S.ok(/Não consegui carregar a lista de conversas/.test(a) && /Tentar de novo/.test(a), "B2: erro da Ana mostrado (não 'nenhuma conversa' mudo): " + a); await ctx.close(); } catch (e) { S.F("EXCECAO B2: " + String(e.message).split("\n")[0].slice(0, 220)); }
+  try { const { ctx, p } = await abrir(b, { total: 300, modo: "antiga" }, "#atendimento", { width: 1440, height: 900 }, "light", false); await p.waitForSelector("#atContagem", { state: "attached" }); await p.waitForTimeout(500); S.ok(!(await visivel(p, "#atAviso")) && /^Mostrando as 200 mais recentes$/.test(await txt(p, "#atContagem")), "B3: Bia antiga (sem campos novos) continua como antes: " + (await txt(p, "#atContagem"))); await ctx.close(); } catch (e) { S.F("EXCECAO B3: " + String(e.message).split("\n")[0].slice(0, 220)); }
+  // ---------- C. filtro 'Sem próximo toque' ----------
+  try { const { st, ctx, p } = await abrir(b, { total: 63, paradas: 12 }, "#atendimento", { width: 1440, height: 900 }, "light", false); const t = "C1: "; await p.waitForSelector('#atFiltros button[data-f="paradas"]', { timeout: 10000 });
+    const rot = await txt(p, '#atFiltros button[data-f="paradas"]'); S.ok(/^Sem próximo toque/.test(rot), t + "chip 'Sem próximo toque' ao lado dos outros: " + rot);
+    S.ok(!st.reqs.some((r) => r.u === "/agentes/paradas"), t + "não consulta as paradas antes de o filtro ser aberto");
+    await p.click('#atFiltros button[data-f="paradas"]'); await p.waitForTimeout(800); const n = await p.$$eval("#atItens .ri", (x) => x.length); S.ok(n === 12, t + "12 conversas listadas (inclusive as que não estão nas 63 carregadas): " + n);
+    const pv = await p.$$eval("#atItens .ri .pv", (x) => x.map((e) => e.textContent)); S.ok(pv.every((s) => /Sem próximo toque|Toque atrasado/.test(s) && /há \d+ dias?|hoje/.test(s)), t + "cada linha diz 'há N dias': " + pv.slice(0, 2).join(" | ")); S.ok(pv.some((s) => /Toque atrasado/.test(s)) && pv.some((s) => /Sem próximo toque/.test(s)), t + "separa 'toque atrasado' de 'sem próximo toque'");
+    S.ok((await p.evaluate(() => location.hash)) === "#atendimento-paradas", t + "o endereço vira #atendimento-paradas: " + (await p.evaluate(() => location.hash)));
+    S.ok(/12 conversas ativas sem próximo toque/.test(await txt(p, "#atAviso")), t + "faixa: " + (await txt(p, "#atAviso")));
+    S.ok(!/disse|CPF|CNPJ/.test(await p.evaluate(() => document.querySelector("#atItens").textContent)), t + "nenhuma fala do lead na lista");
+    // ordem: da mais recente para a mais antiga
+    const ds = await p.$$eval("#atItens .ri", (x) => x.map((e) => e.dataset.fone)); S.ok(ds[0] === F(5000) && ds[11] === F(5011), t + "ordem da mais recente para a mais antiga");
+    await p.click('#atFiltros button[data-f="todos"]'); await p.waitForTimeout(300); S.ok((await p.evaluate(() => location.hash)) === "#atendimento" && (await p.$$eval("#atItens .ri", (x) => x.length)) === 60, t + "'Todas' volta (hash #atendimento)"); await ctx.close(); } catch (e) { S.F("EXCECAO C1: " + String(e.message).split("\n")[0].slice(0, 220)); }
+  // abrir direto pelo link do aviso
+  try { const { st, ctx, p } = await abrir(b, { total: 63, paradas: 12 }, "#atendimento-paradas", { width: 1440, height: 900 }, "light", false); const t = "C2: "; await p.waitForSelector("#atItens .ri", { timeout: 10000 }); await p.waitForTimeout(800);
+    S.ok((await p.getAttribute('#atFiltros button[data-f="paradas"]', "aria-pressed")) === "true", t + "#atendimento-paradas abre com o filtro ligado"); S.ok((await p.$$eval("#atItens .ri", (x) => x.length)) === 12, t + "lista das 12 direto"); S.ok(st.reqs.filter((r) => r.u === "/agentes/paradas").length === 1, t + "uma só consulta de paradas");
+    // trocar de hash depois (link colado com a aba já aberta)
+    await p.evaluate(() => { location.hash = "#atendimento"; }); await p.waitForTimeout(400); await p.evaluate(() => { location.hash = "#atendimento-paradas"; }); await p.waitForTimeout(500); S.ok((await p.getAttribute('#atFiltros button[data-f="paradas"]', "aria-pressed")) === "true", t + "colar o link com a aba aberta também liga o filtro");
+    await ctx.close(); } catch (e) { S.F("EXCECAO C2: " + String(e.message).split("\n")[0].slice(0, 220)); }
+  // abrir sem o filtro: hashes antigos seguem iguais
+  try { const { ctx, p } = await abrir(b, { total: 63 }, "#atendimento", { width: 1440, height: 900 }, "light", false); await p.waitForSelector("#atItens .ri"); S.ok((await p.getAttribute('#atFiltros button[data-f="todos"]', "aria-pressed")) === "true" && (await p.evaluate(() => location.hash)) === "#atendimento", "C3: #atendimento continua abrindo 'Todas'"); await ctx.close(); } catch (e) { S.F("EXCECAO C3: " + String(e.message).split("\n")[0].slice(0, 220)); }
+  // 250 paradas: 'Conferir mais' por cursor, sem refazer
+  try { const { st, ctx, p } = await abrir(b, { total: 63, paradas: 250 }, "#atendimento-paradas", { width: 1440, height: 900 }, "light", false); const t = "C4: "; await p.waitForSelector("#atAviso button", { timeout: 10000 }); await p.waitForTimeout(500);
+    S.ok(/Conferir mais \(150\)/.test(await txt(p, "#atAviso")), t + "'Conferir mais (150)': " + (await txt(p, "#atAviso"))); await p.click("#atAviso button"); await p.waitForTimeout(600); await p.click("#atAviso button"); await p.waitForTimeout(600);
+    S.ok(/250 conversas ativas sem próximo toque/.test(await txt(p, "#atAviso")), t + "3 passos conferem as 250: " + (await txt(p, "#atAviso")));
+    S.ok(st.reqs.filter((r) => r.u === "/agentes/paradas").length === 3 && st.reqs.some((r) => /cursor=100/.test(r.q)) && st.reqs.some((r) => /cursor=200/.test(r.q)), t + "só 3 consultas, por cursor"); await ctx.close(); } catch (e) { S.F("EXCECAO C4: " + String(e.message).split("\n")[0].slice(0, 220)); }
+  // falha das paradas + tentar de novo; 501 (Ana antiga); vazio
+  try { const { st, ctx, p } = await abrir(b, { total: 63, parErr: 1 }, "#atendimento-paradas", { width: 1440, height: 900 }, "light", false); const t = "D1: "; await p.waitForSelector("#atAviso button", { timeout: 10000 }); await p.waitForTimeout(400);
+    S.ok(/Não consegui carregar as conversas sem próximo toque/.test(await txt(p, "#atAviso")), t + "falha visível: " + (await txt(p, "#atAviso"))); S.ok(/Não consegui conferir agora/.test(await txt(p, "#atItens")), t + "lista não finge 'nenhuma': " + (await txt(p, "#atItens")).slice(0, 60));
+    await p.click("#atAviso button"); await p.waitForTimeout(700); S.ok((await p.$$eval("#atItens .ri", (x) => x.length)) === 12, t + "tentar de novo traz a lista"); await ctx.close(); } catch (e) { S.F("EXCECAO D1: " + String(e.message).split("\n")[0].slice(0, 220)); }
+  try { const { ctx, p } = await abrir(b, { total: 63, paradasModo: "501" }, "#atendimento-paradas", { width: 1440, height: 900 }, "light", false); await p.waitForSelector("#atAviso button", { timeout: 10000 }); await p.waitForTimeout(400); S.ok(/Não consegui carregar|ainda não tem a lista/.test(await txt(p, "#atAviso")), "D2: servidor sem a rota: mensagem clara (" + (await txt(p, "#atAviso")).slice(0, 90) + ")"); await ctx.close(); } catch (e) { S.F("EXCECAO D2: " + String(e.message).split("\n")[0].slice(0, 220)); }
+  try { const { ctx, p } = await abrir(b, { total: 63, paradas: 0 }, "#atendimento-paradas", { width: 1440, height: 900 }, "light", false); await p.waitForTimeout(1200); S.ok(/Nenhuma conversa sem próximo toque/.test(await txt(p, "#atItens")), "D3: 0 paradas: 'Nenhuma conversa sem próximo toque'"); await ctx.close(); } catch (e) { S.F("EXCECAO D3: " + String(e.message).split("\n")[0].slice(0, 220)); }
+  // teclado: Tab chega ao botão e Enter carrega
+  try { const { st, ctx, p } = await abrir(b, { total: 1000 }, "#atendimento", { width: 1440, height: 900 }, "light", false); await p.waitForSelector("#atAviso button", { timeout: 10000 }); await p.focus("#atAviso button"); S.ok(await p.evaluate(() => document.activeElement.textContent === "Carregar mais"), "E1: botão focável"); await p.keyboard.press("Enter"); await p.waitForTimeout(700); S.ok(/^400 de 1\.000$/.test(await txt(p, "#atContagem")), "E1: Enter carrega mais");
+    await p.focus('#atFiltros button[data-f="paradas"]'); await p.keyboard.press("Enter"); await p.waitForTimeout(700); S.ok((await p.getAttribute('#atFiltros button[data-f="paradas"]', "aria-pressed")) === "true", "E2: teclado liga o filtro"); await ctx.close(); } catch (e) { S.F("EXCECAO E: " + String(e.message).split("\n")[0].slice(0, 220)); }
+  // ---------- F. visual: 10 larguras x claro/escuro ----------
+  const LARG = process.env.LP_RAPIDO ? [390, 1440] : [320, 360, 390, 414, 600, 768, 860, 1024, 1440, 1920];
+  for (const w of LARG) for (const tema of ["light", "dark"]) { const mob = w < 861; const t = "F" + w + "/" + tema + ": ";
+    try {
+      { const { ctx, p } = await abrir(b, { total: 1000, paradas: 12 }, "#atendimento", { width: w, height: 800 }, tema, mob); await p.waitForSelector("#atAviso button", { timeout: 12000 }); await p.waitForTimeout(500);
+        S.ok((await sobra(p)) <= 0, t + "truncado: sem rolagem lateral (" + (await sobra(p)) + ")");
+        const ov = await p.evaluate(() => { const rg = document.createRange(); rg.selectNodeContents(document.querySelector(".ax .lt h3")); const h = rg.getBoundingClientRect(), c = document.querySelector("#atContagem").getBoundingClientRect(); if (!c.width) return 0; return Math.max(0, Math.min(h.right, c.right) - Math.max(h.left, c.left)) * Math.max(0, Math.min(h.bottom, c.bottom) - Math.max(h.top, c.top)); }); S.ok(ov < 1, t + "título 'Conversas' e contagem do cabeçalho não se sobrepõem (" + Math.round(ov) + " px2)");
+        const cm = await contraste(p, "#atAviso .am"), cb = await contraste(p, "#atAviso .btn"); S.ok(cm >= 4.5, t + "contraste do aviso " + (cm && cm.toFixed(1))); S.ok(cb >= 4.5, t + "contraste do botão " + (cb && cb.toFixed(1)));
+        const box = await p.$eval("#atAviso", (e) => { const r = e.getBoundingClientRect(); const bt = e.querySelector("button").getBoundingClientRect(); return { l: r.left, r: r.right, bl: bt.left, br: bt.right, bh: bt.height, w: window.innerWidth }; }); S.ok(box.l >= 0 && box.r <= box.w + 0.5 && box.bl >= 0 && box.br <= box.w + 0.5, t + "aviso e botão dentro da tela " + JSON.stringify(box)); S.ok(box.bh >= (mob ? 36 : 28), t + "botão com altura de toque (" + Math.round(box.bh) + " px)");
+        await p.screenshot({ path: PR + "/truncado_" + w + "_" + tema + ".png" }); await p.click("#atAviso button"); await p.waitForTimeout(600); await p.screenshot({ path: PR + "/truncado_depois_" + w + "_" + tema + ".png" }); S.ok(!(p._erros && p._erros.length), t + "console limpo " + JSON.stringify(p._erros)); await ctx.close(); }
+      { const { ctx, p } = await abrir(b, { total: 63, paradas: 12 }, "#atendimento-paradas", { width: w, height: 800 }, tema, mob); await p.waitForSelector("#atItens .ri", { timeout: 12000 }); await p.waitForTimeout(600);
+        S.ok((await sobra(p)) <= 0, t + "paradas: sem rolagem lateral (" + (await sobra(p)) + ")"); const cm = await contraste(p, "#atAviso .am"); S.ok(cm >= 4.5, t + "contraste da faixa das paradas " + (cm && cm.toFixed(1)));
+        const cp = await contraste(p, "#atItens .ri .pv"); S.ok(cp >= 4.5, t + "contraste da linha 'parada há' " + (cp && cp.toFixed(1)));
+        const cut = await p.evaluate(() => { const o = []; document.querySelectorAll("#atItens .ri").forEach((e) => { if (e.scrollWidth > e.clientWidth + 1) o.push(e.dataset.fone); }); return o.length; }); S.ok(cut === 0, t + "nenhuma linha estoura a largura (" + cut + ")");
+        if (mob) { const fb = await p.$("#atFiltrosBt"); S.ok(!!fb, t + "celular: filtros recolhíveis como os outros"); const aberto = (await p.getAttribute("#atFiltrosBt", "aria-expanded")) === "true"; const n = await p.$$eval("#atFiltros button", (x) => x.length); S.ok(!aberto ? n === 1 : true, t + "celular: recolhido mostra só o filtro ativo (" + n + ")"); await p.click("#atFiltrosBt"); await p.waitForTimeout(200); const n2 = await p.$$eval("#atFiltros button", (x) => x.length); S.ok(n2 === 11, t + "aberto: 11 chips (8 situação + 3 janela): " + n2); }
+        await p.screenshot({ path: PR + "/paradas_" + w + "_" + tema + ".png" }); S.ok(!(p._erros && p._erros.length), t + "console limpo " + JSON.stringify(p._erros)); await ctx.close(); }
+    } catch (e) { S.F("EXCECAO " + t + String(e.message).split("\n")[0].slice(0, 220)); } }
+  S.fim(); await b.close();
+})();

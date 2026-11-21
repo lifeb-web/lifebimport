@@ -13,7 +13,7 @@ const cards = (p) => p.$$eval("#atItens .ri", (x) => x.map((e) => e.dataset.fone
       const aberta = async () => (await p.getAttribute("#atFiltrosBt", "aria-expanded")) === "true";
       S.ok((await aberta()) === !mob, t + "estado inicial: " + (mob ? "recolhida no celular" : "aberta no computador"));
       if (mob) { const n = await p.$$eval("#atFiltros button", (x) => x.length); S.ok(n === 1, t + "recolhida mostra so o filtro ativo (" + n + ")"); const h = await p.$eval("#atFiltrosBox", (e) => e.getBoundingClientRect().height); S.ok(h < 80, t + "recolhida ocupa pouca altura (" + Math.round(h) + " px)"); await p.click("#atFiltrosBt"); await p.waitForTimeout(200); }
-      S.ok(await aberta(), t + "aberta mostra todos os filtros"); S.ok((await p.$$("#atFiltros button")).length === 10, t + "10 chips (7 situacao + 3 janela)");
+      S.ok(await aberta(), t + "aberta mostra todos os filtros"); S.ok((await p.$$("#atFiltros button")).length === 11, t + "11 chips (8 situacao, com 'Sem proximo toque' desde 20/11, + 3 janela)");
       await p.click('#atFiltros button[data-f="fechada"]'); await p.waitForTimeout(200); S.ok((await cards(p)).sort().join() === "5562900000002,5562900000004", t + "Janela fechada: " + (await cards(p)).join());
       await p.click('#atFiltros button[data-f="precisa"]'); await p.waitForTimeout(200); S.ok((await cards(p)).join() === "5562900000004", t + "Precisam de voce E Janela fechada: " + (await cards(p)).join());
       await p.click('#atFiltros button[data-f="aberta"]'); await p.waitForTimeout(200); S.ok((await cards(p)).length === 0, t + "Precisam E aberta = vazio");
