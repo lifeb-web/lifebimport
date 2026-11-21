@@ -10,7 +10,7 @@ AREAS = [
   ("Atendimento", ["ana"]), ("SDR e Hoje", ["hoje"]), ("Central", ["central"]), ("Agentes", ["bia"]), ("Números e CRM", ["dash", "agendor"]),
 ]
 TOPICOS = {
-  "ana": ["Atende lojistas do inbound no WhatsApp, qualifica e repassa ao SDR", "Retoma quem some; encerra fora do perfil com educação", "Deploys de 20/11/2026 até 21h50: lista paginada, movimento no CRM, aviso das paradas, avisos à gestão, repasse cancela toques"],
+  "ana": ["Atende lojistas do inbound no WhatsApp, qualifica e repassa ao SDR", "Retoma quem some; encerra fora do perfil com educação", "Deploys de 20/11/2026 até 22h51: lista paginada, movimento no CRM, aviso das paradas, avisos à gestão, repasse cancela toques"],
   "bia": ["Avisa a equipe no WhatsApp (muitos com botão) e escreve no Agendor, relendo para confirmar", "Motores proativos e painel do representante", "Lote 2 de avisos à gestão, leitura completa das ocultas e movimento no CRM (20/11/2026)"],
   "hoje": ["Mesa do SDR sem travas de horário", "Fila por listas; atrasadas lidas aos poucos", "Qualificação cria o negócio no funil certo", "Livro local de ações e raia Closer (19/11/2026)"],
   "central": ["Atendimento: conversas com selos, histórico e áudios", "Assumir, devolver, repassar, pausar, instruir", "Controles da Bia com desfazer, filas, folga e custo", "Selo da janela de 24 h e filtros"],
