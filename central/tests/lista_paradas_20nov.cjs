@@ -36,7 +36,7 @@ const contraste = (p, sel) => p.evaluate((s) => { const e = document.querySelect
 (async () => {
   const b = await chromium.launch({ executablePath: process.argv[3] });
   // ---------- A. funcional (1440 claro): contagens 0/63/200/201/1000 ----------
-  for (const n of [0, 63, 200, 201, 1000]) { try {
+  for (const n of (process.env.LP_RAPIDO ? [201] : [0, 63, 200, 201, 1000])) { try {
     const { st, ctx, p } = await abrir(b, { total: n }, "#atendimento", { width: 1440, height: 900 }, "light", false); const t = "A" + n + ": ";
     await p.waitForSelector("#atContagem", { state: "attached", timeout: 10000 }); await p.waitForTimeout(400);
     const ct = await txt(p, "#atContagem"); const aviso = await visivel(p, "#atAviso");
@@ -90,7 +90,7 @@ const contraste = (p, sel) => p.evaluate((s) => { const e = document.querySelect
   try { const { st, ctx, p } = await abrir(b, { total: 1000 }, "#atendimento", { width: 1440, height: 900 }, "light", false); await p.waitForSelector("#atAviso button", { timeout: 10000 }); await p.focus("#atAviso button"); S.ok(await p.evaluate(() => document.activeElement.textContent === "Carregar mais"), "E1: botão focável"); await p.keyboard.press("Enter"); await p.waitForTimeout(700); S.ok(/^400 de 1\.000$/.test(await txt(p, "#atContagem")), "E1: Enter carrega mais");
     await p.focus('#atFiltros button[data-f="paradas"]'); await p.keyboard.press("Enter"); await p.waitForTimeout(700); S.ok((await p.getAttribute('#atFiltros button[data-f="paradas"]', "aria-pressed")) === "true", "E2: teclado liga o filtro"); await ctx.close(); } catch (e) { S.F("EXCECAO E: " + String(e.message).split("\n")[0].slice(0, 220)); }
   // ---------- F. visual: 10 larguras x claro/escuro ----------
-  const LARG = process.env.LP_RAPIDO ? [390, 1440] : [320, 360, 390, 414, 600, 768, 860, 1024, 1440, 1920];
+  const LARG = process.env.LP_RAPIDO ? [] : [320, 360, 390, 414, 600, 768, 860, 1024, 1440, 1920];
   for (const w of LARG) for (const tema of ["light", "dark"]) { const mob = w < 861; const t = "F" + w + "/" + tema + ": ";
     try {
       { const { ctx, p } = await abrir(b, { total: 1000, paradas: 12 }, "#atendimento", { width: w, height: 800 }, tema, mob); await p.waitForSelector("#atAviso button", { timeout: 12000 }); await p.waitForTimeout(500);
